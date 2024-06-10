@@ -1,0 +1,4 @@
+include pyproject.toml
+recursive-include dwave/optimization/include *.hpp *.h
+recursive-include dwave/optimization/src *.hpp *.cpp
+recursive-include dwave/optimization *.pyx *.pxd
