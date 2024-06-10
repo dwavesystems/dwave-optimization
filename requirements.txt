@@ -1,0 +1,11 @@
+cython==3.0.9
+numpy==1.21.6; python_version < '3.10'  # support numpy.typing
+oldest-supported-numpy; python_version >= '3.10'
+setuptools>=46.4.0  # to support setup.cfg getting __version__
+
+# On windows we don't distribute a dynamic library
+setuptools_dso>=2.10,<3.0; platform_system != 'Windows'
+
+# only while private:
+dwave-cloud-client @ git+https://github.com/dwavesystems/dwave-cloud-client.git@master
+dwave-system>=1.23.0
