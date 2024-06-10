@@ -1,0 +1,43 @@
+[build-system]
+requires = [
+    "cython==3.0.8",
+    'numpy==1.19.0;python_version<"3.9"',  # C API for numpy.random
+    'oldest-supported-numpy;python_version>="3.9"',
+    "setuptools>=46.4.0",
+    "setuptools_dso>=2.10,<3.0;platform_system != 'Windows'",  # On Windows we don't distribute a dynamic library
+    "wheel>=0.30.0",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+build-verbosity = "1"
+skip = "pp* *musllinux*"
+before-test = "pip install -r {project}/tests/requirements.txt"
+test-command = "python -m unittest discover {project}/tests/"
+
+[tool.cibuildwheel.linux]
+archs = "x86_64 aarch64"
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+
+[tool.cibuildwheel.macos]
+# We follow NumPy and don't build universal wheels, see https://github.com/numpy/numpy/pull/20787
+archs = "x86_64 arm64"
+
+# Lowest version that has the C++ features we want, see https://cibuildwheel.pypa.io/en/stable/cpp_standards/
+environment = "MACOSX_DEPLOYMENT_TARGET=10.13"
+
+[tool.cibuildwheel.windows]
+archs = "AMD64"
+before-build = "pip install delvewheel"
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
+
+[tool.coverage.run]
+source = ["dwave/optimization"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
