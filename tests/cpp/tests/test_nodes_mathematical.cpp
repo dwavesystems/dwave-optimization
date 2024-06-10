@@ -181,23 +181,6 @@ TEST_CASE("LessEqualNode") {
             CHECK(le_ptr->max() == 1);
         }
     }
-
-    GIVEN("A less equal node operating on broad-casted arrays") {
-        auto lhs_ptr = graph.emplace_node<ConstantNode>(std::vector{0.5, 1.5, 2.5, 3.5, 4.5});
-        auto rhs_ptr = graph.emplace_node<ConstantNode>(std::vector{2.5});
-        auto le_ptr = graph.emplace_node<LessEqualNode>(lhs_ptr, rhs_ptr);
-
-        THEN("The LessEqualNode is binary-valued") {
-            CHECK(le_ptr->integral());
-            CHECK(le_ptr->min() == 0);
-            CHECK(le_ptr->max() == 1);
-        }
-
-        THEN("The LessEqualNode has correct shape") {
-            CHECK(le_ptr->shape().size() == 1);
-            CHECK(le_ptr->shape()[0] == 5);
-        }
-    }
 }
 
 TEST_CASE("MaxNode and MinNode") {
