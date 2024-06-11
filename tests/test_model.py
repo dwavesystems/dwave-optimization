@@ -117,6 +117,12 @@ class TestModel(unittest.TestCase):
             self.assertTrue(model.is_locked())
         self.assertFalse(model.is_locked())
 
+        # Works in case of an exception
+        with model.lock(), self.assertRaises(ValueError):
+            self.assertTrue(model.is_locked())
+            raise ValueError
+        self.assertFalse(model.is_locked())
+
         # Works as a reentrant context manager
         with model.lock():
             self.assertTrue(model.is_locked())
