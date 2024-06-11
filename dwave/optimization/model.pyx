@@ -53,8 +53,10 @@ __all__ = ["Model"]
 @contextlib.contextmanager
 def locked(model):
     """Context manager that hold a locked model and unlocks it when the context is exited."""
-    yield
-    model.unlock()
+    try:
+        yield
+    finally:
+        model.unlock()
 
 
 cdef class Model:
