@@ -278,7 +278,19 @@ cdef bool _empty_slice(object slice_) noexcept:
 
 
 cdef class Absolute(ArrayObserver):
-    """Absolute value element-wise on a symbol."""
+    """Absolute value element-wise on a symbol.
+    
+    Examples:
+        This example adds the absolute value of an integer decision 
+        variable to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(1, lower_bound=-50, upper_bound=50) 
+        >>> i_abs = abs(i)
+        >>> type(i_abs)
+        dwave.optimization.symbols.Absolute
+    """
     def __init__(self, ArrayObserver x):
         cdef Model model = x.model
 
@@ -298,7 +310,19 @@ cdef class Absolute(ArrayObserver):
 
 
 cdef class Add(ArrayObserver):
-    """Addition element-wise of two symbols."""
+    """Addition element-wise of two symbols.
+    
+    Examples:
+        This example adds two integer symbols.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(10, lower_bound=-50, upper_bound=50) 
+        >>> j = model.integer(10, lower_bound=0, upper_bound=10)
+        >>> k = i + j
+        >>> type(k)
+        dwave.optimization.symbols.Add
+    """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
@@ -321,7 +345,18 @@ cdef class Add(ArrayObserver):
 
 
 cdef class All(ArrayObserver):
-    """Tests whether all elements evaluate to True."""
+    """Tests whether all elements evaluate to True.
+    
+    Examples:
+        This example checks all elements of a binary array.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> x = model.binary((20, 30)) 
+        >>> all_x = x.all()
+        >>> type(all_x)
+        dwave.optimization.symbols.All
+    """
     def __init__(self, ArrayObserver array):
         cdef Model model = array.model
         self.ptr = model._graph.emplace_node[cppAllNode](array.node_ptr)
@@ -340,7 +375,21 @@ cdef class All(ArrayObserver):
 
 
 cdef class And(ArrayObserver):
-    """Boolean AND element-wise between two symbols.""" 
+    """Boolean AND element-wise between two symbols.
+    
+    Examples:
+        This example creates an AND operation between binary arrays.
+        
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import logical_and
+        ...
+        >>> model = Model()
+        >>> x = model.binary(200)
+        >>> y = model.binary(200)
+        >>> z = logical_and(x, y)
+        >>> type(z)
+        dwave.optimization.symbols.And
+    """ 
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
@@ -381,7 +430,19 @@ cdef class _ArrayValidation(NodeObserver):
 
 
 cdef class AdvancedIndexing(ArrayObserver):
-    """Advanced indexing."""
+    """Advanced indexing.
+    
+    Examples:
+        This example uses advanced indexing to set a symbol's values.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> prices = model.constant([i for i in range(20)])
+        >>> items = model.set(20)
+        >>> values = prices[items]
+        >>> type(values)
+        dwave.optimization.symbols.AdvancedIndexing
+    """
     def __init__(self, ArrayObserver array, *indices):
         cdef Model model = array.model
 
@@ -494,7 +555,18 @@ cdef class AdvancedIndexing(ArrayObserver):
 
 
 cdef class BasicIndexing(ArrayObserver):
-    """Basic indexing."""
+    """Basic indexing.
+    
+    Examples:
+        This example uses basic indexing to set a symbol's values.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> prices = model.constant([i for i in range(20)])
+        >>> low_prices = prices[:10]
+        >>> type(low_prices)
+        dwave.optimization.symbols.BasicIndexing
+    """
     def __init__(self, ArrayObserver array, *indices):
 
         cdef Model model = array.model
@@ -582,7 +654,17 @@ cdef class BasicIndexing(ArrayObserver):
 
 
 cdef class BinaryVariable(ArrayObserver):
-    """Binary decision-variable symbol."""
+    """Binary decision-variable symbol.
+    
+    Examples:
+        This example adds a binary variable to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> x = model.binary((20, 30))
+        >>> type(x)
+        dwave.optimization.symbols.BinaryVariable
+    """
     def __init__(self, Model model, shape=None):
         # Get an observing pointer to the node
         cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape)
@@ -700,7 +782,17 @@ cdef class BinaryVariable(ArrayObserver):
 
 
 cdef class Constant(ArrayObserver):
-    """Constant symbol."""
+    """Constant symbol.
+    
+    Examples:
+        This example adds a constant symbol to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> a = model.constant(20)
+        >>> type(a)
+        dwave.optimization.symbols.Constant
+    """
     def __init__(self, Model model, array_like):
         # In the future we won't need to be contiguous, but we do need to be right now
         array = np.asarray(array_like, dtype=np.double, order="C")
@@ -826,7 +918,17 @@ cdef class Constant(ArrayObserver):
 
 
 cdef class DisjointBitSets(NodeObserver):
-    """Disjoint-sets decision-variable symbol."""
+    """Disjoint-sets decision-variable symbol.
+    
+    Examples:
+        This example adds a disjoint-sets symbol to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> s = model.disjoint_bit_sets(primary_set_size=100, num_disjoint_sets=5)
+        >>> type(s[0])
+        dwave.optimization.symbols.DisjointBitSets
+    """
     def __init__(
         self, Model model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets
     ):
@@ -962,7 +1064,17 @@ cdef class DisjointBitSets(NodeObserver):
 
 
 cdef class DisjointBitSet(ArrayObserver):
-    """Disjoint-sets successor symbol."""
+    """Disjoint-sets successor symbol.
+    
+    Examples:
+        This example adds a disjoint-sets symbol to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> s = model.disjoint_bit_sets(primary_set_size=100, num_disjoint_sets=5)
+        >>> type(s[1][0])
+        dwave.optimization.symbols.DisjointBitSet
+    """
     def __init__(self, DisjointBitSets parent, Py_ssize_t set_index):
         if set_index < 0 or set_index >= parent.num_disjoint_sets():
             raise ValueError(
@@ -1053,7 +1165,17 @@ cdef class DisjointBitSet(ArrayObserver):
 
 
 cdef class DisjointLists(NodeObserver):
-    """Disjoint-lists decision-variable symbol."""
+    """Disjoint-lists decision-variable symbol.
+    
+    Examples:
+        This example adds a disjoint-lists symbol to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> l = model.disjoint_lists(primary_set_size=10, num_disjoint_lists=2)
+        >>> type(l[0])
+        dwave.optimization.symbols.DisjointLists
+    """
     def __init__(
         self, Model model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists
     ):
@@ -1187,7 +1309,17 @@ cdef class DisjointLists(NodeObserver):
 
 
 cdef class DisjointList(ArrayObserver):
-    """Disjoint-lists successor symbol."""
+    """Disjoint-lists successor symbol.
+    
+    Examples:
+        This example adds a disjoint-lists symbol to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> l = model.disjoint_lists(primary_set_size=10, num_disjoint_lists=2)
+        >>> type(l[1][0])
+        dwave.optimization.symbols.DisjointList
+    """
     def __init__(self, DisjointLists parent, Py_ssize_t list_index):
         if list_index < 0 or list_index >= parent.num_disjoint_lists():
             raise ValueError(
@@ -1278,7 +1410,19 @@ cdef class DisjointList(ArrayObserver):
 
 
 cdef class Equal(ArrayObserver):
-    """Equality comparison element-wise between two symbols."""
+    """Equality comparison element-wise between two symbols.
+    
+    Examples:
+        This example creates an equality operation between integer symbols.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(25, upper_bound=100)
+        >>> j = model.integer(25, lower_bound=-100)
+        >>> k = i == j
+        >>> type(k)
+        dwave.optimization.symbols.Equal
+    """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
@@ -1301,7 +1445,19 @@ cdef class Equal(ArrayObserver):
 
 
 cdef class LessEqual(ArrayObserver):
-    """Smaller-or-equal comparison element-wise between two symbols."""
+    """Smaller-or-equal comparison element-wise between two symbols.
+    
+    Examples:
+        This example creates an inequality operation between integer symbols.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(25, upper_bound=100)
+        >>> j = model.integer(25, lower_bound=-100)
+        >>> k = i <= j
+        >>> type(k)
+        dwave.optimization.symbols.LessEqual
+    """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
@@ -1324,7 +1480,17 @@ cdef class LessEqual(ArrayObserver):
 
 
 cdef class ListVariable(ArrayObserver):
-    """List decision-variable symbol."""
+    """List decision-variable symbol.
+    
+    Examples:
+        This example adds a list symbol to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> l = model.list(10)
+        >>> type(l)
+        dwave.optimization.symbols.ListVariable
+    """
     def __init__(self, Model model, Py_ssize_t n):
         # Get an observing pointer to the node
         self.ptr = model._graph.emplace_node[cppListNode](n)
@@ -1393,7 +1559,17 @@ cdef class ListVariable(ArrayObserver):
 
 
 cdef class IntegerVariable(ArrayObserver):
-    """Integer decision-variable symbol."""
+    """Integer decision-variable symbol.
+    
+    Examples:
+        This example adds an integer symbol to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(25, upper_bound=100)
+        >>> type(i)
+        dwave.optimization.symbols.IntegerVariable
+    """
     def __init__(self, Model model, shape=None, lower_bound=None, upper_bound=None):
         cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape )
 
@@ -1481,7 +1657,19 @@ cdef class IntegerVariable(ArrayObserver):
 
 
 cdef class Max(ArrayObserver):
-    """Maximum value in the elements of a symbol."""
+    """Maximum value in the elements of a symbol.
+    
+    Examples:
+        This example adds the maximum value of an integer decision 
+        variable to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> i_max = i.max()
+        >>> type(i_max)
+        dwave.optimization.symbols.Max
+    """
     def __init__(self, ArrayObserver node):
         cdef Model model = node.model
 
@@ -1502,7 +1690,22 @@ cdef class Max(ArrayObserver):
 
 
 cdef class Maximum(ArrayObserver):
-    """Maximum values in an element-wise comparison of two symbols."""
+    """Maximum values in an element-wise comparison of two symbols.
+    
+    Examples:
+        This example sets a symbol's values to the maximum values of two 
+        integer decision variables.
+        
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import maximum
+        ...
+        >>> model = Model()
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> j = model.integer(100, lower_bound=-20, upper_bound=150)
+        >>> k = maximum(i, j)
+        >>> type(k)
+        dwave.optimization.symbols.Maximum
+    """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
@@ -1526,7 +1729,19 @@ cdef class Maximum(ArrayObserver):
 
 
 cdef class Min(ArrayObserver):
-    """Minimum value in the elements of a symbol."""
+    """Minimum value in the elements of a symbol.
+    
+    Examples:
+        This example adds the minimum value of an integer decision 
+        variable to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> i_min = i.min()
+        >>> type(i_min)
+        dwave.optimization.symbols.Min
+    """
     def __init__(self, ArrayObserver node):
         cdef Model model = node.model
 
@@ -1547,7 +1762,22 @@ cdef class Min(ArrayObserver):
 
 
 cdef class Minimum(ArrayObserver):
-    """Minimum values in an element-wise comparison of two symbols."""
+    """Minimum values in an element-wise comparison of two symbols.
+    
+    Examples:
+        This example sets a symbol's values to the minimum values of two 
+        integer decision variables.
+        
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import minimum
+        ...
+        >>> model = Model()
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> j = model.integer(100, lower_bound=-20, upper_bound=150)
+        >>> k = minimum(i, j)
+        >>> type(k)
+        dwave.optimization.symbols.Minimum
+    """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
@@ -1571,7 +1801,19 @@ cdef class Minimum(ArrayObserver):
 
 
 cdef class Multiply(ArrayObserver):
-    """Multiplication element-wise between two symbols."""
+    """Multiplication element-wise between two symbols.
+    
+    Examples:
+        This example multiplies two integer symbols.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(10, lower_bound=-50, upper_bound=50) 
+        >>> j = model.integer(10, lower_bound=0, upper_bound=10)
+        >>> k = i*j
+        >>> type(k)
+        dwave.optimization.symbols.Multiply
+    """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
@@ -1594,7 +1836,22 @@ cdef class Multiply(ArrayObserver):
 
 
 cdef class NaryAdd(ArrayObserver):
-    """Addition element-wise of `N` symbols."""
+    """Addition element-wise of `N` symbols.
+    
+    Examples:
+        This example add three integer symbols.
+        
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import add
+        ...
+        >>> model = Model()
+        >>> i = model.integer((10, 10), lower_bound=-50, upper_bound=50)
+        >>> j = model.integer((10, 10), lower_bound=-20, upper_bound=150)
+        >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
+        >>> l = add([i, j, k])
+        >>> type(l)
+        dwave.optimization.symbols.NaryAdd
+    """
     def __init__(self, *inputs):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")
@@ -1625,7 +1882,23 @@ cdef class NaryAdd(ArrayObserver):
 
 
 cdef class NaryMaximum(ArrayObserver):
-    """Maximum values in an element-wise comparison of `N` symbols."""
+    """Maximum values in an element-wise comparison of `N` symbols.
+    
+    Examples:
+        This example sets a symbol's values to the maximum values of  
+        three integer decision variables.
+        
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import maximum
+        ...
+        >>> model = Model()
+        >>> i = model.integer((10, 10), lower_bound=-50, upper_bound=50)
+        >>> j = model.integer((10, 10), lower_bound=-20, upper_bound=150)
+        >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
+        >>> l = maximum([i, j, k])
+        >>> type(l)
+        dwave.optimization.symbols.NaryMaximum
+    """
     def __init__(self, *inputs):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")
@@ -1656,7 +1929,23 @@ cdef class NaryMaximum(ArrayObserver):
 
 
 cdef class NaryMinimum(ArrayObserver):
-    """Minimum values in an element-wise comparison of `N` symbols."""
+    """Minimum values in an element-wise comparison of `N` symbols.
+    
+    Examples:
+        This example sets a symbol's values to the minimum values of  
+        three integer decision variables.
+        
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import minimum
+        ...
+        >>> model = Model()
+        >>> i = model.integer((10, 10), lower_bound=-50, upper_bound=50)
+        >>> j = model.integer((10, 10), lower_bound=-20, upper_bound=150)
+        >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
+        >>> l = minimum([i, j, k])
+        >>> type(l)
+        dwave.optimization.symbols.NaryMinimum
+    """
     def __init__(self, *inputs):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")
@@ -1687,7 +1976,22 @@ cdef class NaryMinimum(ArrayObserver):
 
 
 cdef class NaryMultiply(ArrayObserver):
-    """Multiplication element-wise between `N` symbols."""
+    """Multiplication element-wise between `N` symbols.
+    
+    Examples:
+        This example multiplies three integer decision variables.
+        
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import multiply
+        ...
+        >>> model = Model()
+        >>> i = model.integer((10, 10), lower_bound=-50, upper_bound=50)
+        >>> j = model.integer((10, 10), lower_bound=-20, upper_bound=150)
+        >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
+        >>> l = multiply([i, j, k])
+        >>> type(l)
+        dwave.optimization.symbols.NaryMultiply
+    """
     def __init__(self, *inputs):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")
@@ -1718,7 +2022,18 @@ cdef class NaryMultiply(ArrayObserver):
 
 
 cdef class Negative(ArrayObserver):
-    """Numerical negative element-wise on a symbol."""
+    """Numerical negative element-wise on a symbol.
+    
+    Examples:
+        This example add the negative of an integer array.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(100, upper_bound=50)
+        >>> i_minus = -i
+        >>> type(i_minus)
+        dwave.optimization.symbols.Negative
+    """
     def __init__(self, ArrayObserver x):
         cdef Model model = x.model
 
@@ -1738,7 +2053,21 @@ cdef class Negative(ArrayObserver):
 
 
 cdef class Or(ArrayObserver):
-    """Boolean OR element-wise between two symbols.""" 
+    """Boolean OR element-wise between two symbols.
+    
+    Examples:
+        This example creates an OR operation between binary arrays.
+        
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import logical_or
+        ...
+        >>> model = Model()
+        >>> x = model.binary(200)
+        >>> y = model.binary(200)
+        >>> z = logical_or(x, y)
+        >>> type(z)
+        dwave.optimization.symbols.Or
+    """ 
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
@@ -1761,7 +2090,19 @@ cdef class Or(ArrayObserver):
 
 
 cdef class Permutation(ArrayObserver):
-    """Permutation of the elements of a symbol."""
+    """Permutation of the elements of a symbol.
+    
+    Examples:
+        This example creates a permutation of a constant symbol.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> C = model.constant([[1, 2, 3], [2, 3, 1], [0, 1, 0]])
+        >>> l = model.list(3)
+        >>> p = C[l, :][:, l]
+        >>> type(p)
+        dwave.optimization.symbols.Permutation
+    """
     def __init__(self, Constant array, ListVariable x):
         # todo: Loosen the types accepted. But this Cython code doesn't yet have
         # the type heirarchy needed so for how we specify explicitly
@@ -1786,7 +2127,19 @@ cdef class Permutation(ArrayObserver):
 
 
 cdef class Prod(ArrayObserver):
-    """Product of the elements of a symbol."""
+    """Product of the elements of a symbol.
+    
+    Examples:
+        This example adds the product of an integer symbol's 
+        elements to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> i_prod = i.prod()
+        >>> type(i_prod)
+        dwave.optimization.symbols.Prod
+    """
     def __init__(self, ArrayObserver node):
         cdef Model model = node.model
 
@@ -1807,7 +2160,19 @@ cdef class Prod(ArrayObserver):
 
 
 cdef class QuadraticModel(ArrayObserver):
-    """Quadratic model."""
+    """Quadratic model.
+    
+    Examples:
+        This example adds a quadratic model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> x = model.binary(3) 
+        >>> Q = {(0, 0): 0, (0, 1): 1, (0, 2): 2, (1, 1): 1, (1, 2): 3, (2, 2): 2}
+        >>> qm = model.quadratic_model(x, Q)
+        >>> type(qm)
+        dwave.optimization.symbols.QuadraticModel
+    """
     def __init__(self, ArrayObserver x, quadratic, linear=None):
         # Some checking on x
         if x.array_ptr.dynamic():
@@ -2021,7 +2386,18 @@ cdef class QuadraticModel(ArrayObserver):
 
 
 cdef class Reshape(ArrayObserver):
-    """Reshaped symbol."""
+    """Reshaped symbol.
+    
+    Examples:
+        This example adds a reshaped binary symbol.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> x = model.binary((2, 3)) 
+        >>> x_t = x.reshape((3, 2))
+        >>> type(x_t)
+        dwave.optimization.symbols.Reshape
+    """
     def __init__(self, ArrayObserver node, shape):
         cdef Model model = node.model
 
@@ -2066,6 +2442,15 @@ cdef class SetVariable(ArrayObserver):
         n: The possible states of the set variable are the subsets of ``range(n)``.
         min_size: The minimum set size.
         max_size: The maximum set size.
+        
+    Examples:
+        This example adds a set symbol to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> s = model.set(10)
+        >>> type(s)
+        dwave.optimization.symbols.SetVariable
 
     """
     def __init__(self, Model model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
@@ -2142,7 +2527,19 @@ cdef class SetVariable(ArrayObserver):
 
 
 cdef class Square(ArrayObserver):
-    """Squares element-wise of a symbol."""
+    """Squares element-wise of a symbol.
+    
+    Examples:
+        This example adds the squares of an integer decision 
+        variable to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(10, lower_bound=-5, upper_bound=5) 
+        >>> ii = i**2
+        >>> type(ii)
+        dwave.optimization.symbols.Square
+    """
     def __init__(self, ArrayObserver x):
         cdef Model model = x.model
 
@@ -2161,7 +2558,19 @@ cdef class Square(ArrayObserver):
     cdef cppSquareNode* ptr
 
 cdef class Subtract(ArrayObserver):
-    """Subtraction element-wise of two symbols."""
+    """Subtraction element-wise of two symbols.
+    
+    Examples:
+        This example subtracts two integer symbols.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(10, lower_bound=-50, upper_bound=50) 
+        >>> j = model.integer(10, lower_bound=0, upper_bound=10)
+        >>> k = i - j
+        >>> type(k)
+        dwave.optimization.symbols.Subtract
+    """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
@@ -2184,7 +2593,19 @@ cdef class Subtract(ArrayObserver):
 
 
 cdef class Sum(ArrayObserver):
-    """Sum of the elements of a symbol."""
+    """Sum of the elements of a symbol.
+    
+    Examples:
+        This example adds the sum of an integer symbol's 
+        elements to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> i_sum = i.sum()
+        >>> type(i_sum)
+        dwave.optimization.symbols.Sum
+    """
     def __init__(self, ArrayObserver array):
         cdef Model model = array.model
         self.ptr = model._graph.emplace_node[cppSumNode](array.node_ptr)
