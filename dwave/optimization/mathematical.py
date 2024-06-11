@@ -83,11 +83,11 @@ def add(*args, **kwargs):
         >>> i = model.integer(2)
         >>> j = model.integer(2)
         >>> i_plus_j = add(i, j)    # alternatively: i_plus_j = i + j
-        >>> model.lock()
-        >>> model.states.resize(1)
-        >>> i.set_state(0, [3, 5])
-        >>> j.set_state(0, [7, 5])
-        >>> print(i_plus_j.state(0))
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [3, 5])
+        ...     j.set_state(0, [7, 5])
+        ...     print(i_plus_j.state(0))
         [10. 10.]
     """
     ...
@@ -114,11 +114,11 @@ def logical_and(lhs: ArrayObserver, rhs: ArrayObserver):
         >>> x = model.binary(3)
         >>> y = model.binary(3)
         >>> z = logical_and(x, y)
-        >>> model.lock()
-        >>> model.states.resize(1)
-        >>> x.set_state(0, [True, True, False])
-        >>> y.set_state(0, [False, True, False])
-        >>> print(z.state(0))
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     x.set_state(0, [True, True, False])
+        ...     y.set_state(0, [False, True, False])
+        ...     print(z.state(0))
         [0. 1. 0.]
     """
     return And(lhs, rhs)
@@ -145,11 +145,11 @@ def logical_or(lhs: ArrayObserver, rhs: ArrayObserver):
         >>> x = model.binary(3)
         >>> y = model.binary(3)
         >>> z = logical_or(x, y)
-        >>> model.lock()
-        >>> model.states.resize(1)
-        >>> x.set_state(0, [True, True, False])
-        >>> y.set_state(0, [False, True, False])
-        >>> print(z.state(0))
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     x.set_state(0, [True, True, False])
+        ...     y.set_state(0, [False, True, False])
+        ...     print(z.state(0))
         [1. 1. 0.]
     """
     return Or(lhs, rhs)
@@ -176,11 +176,11 @@ def maximum(*args, **kwargs):
         >>> i = model.integer(2)
         >>> j = model.integer(2)
         >>> m = maximum(i, j)
-        >>> model.lock()
-        >>> model.states.resize(1)
-        >>> i.set_state(0, [3, 5])
-        >>> j.set_state(0, [7, 2])
-        >>> print(m.state(0))
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [3, 5])
+        ...     j.set_state(0, [7, 2])
+        ...     print(m.state(0))
         [7. 5.]
     """
     ...
@@ -207,11 +207,11 @@ def minimum(*args, **kwargs):
         >>> i = model.integer(2)
         >>> j = model.integer(2)
         >>> m = minimum(i, j)
-        >>> model.lock()
-        >>> model.states.resize(1)
-        >>> i.set_state(0, [3, 5])
-        >>> j.set_state(0, [7, 2])
-        >>> print(m.state(0))
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [3, 5])
+        ...     j.set_state(0, [7, 2])
+        ...     print(m.state(0))
         [3. 2.]
     """
     ...
@@ -238,11 +238,11 @@ def multiply(*args, **kwargs):
         >>> i = model.integer(2)
         >>> j = model.integer(2)
         >>> k = multiply(i, j)   # alternatively: k = i * j
-        >>> model.lock()
-        >>> model.states.resize(1)
-        >>> i.set_state(0, [3, 5])
-        >>> j.set_state(0, [7, 2])
-        >>> print(k.state(0))
-        [21., 10.]
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [3, 5])
+        ...     j.set_state(0, [7, 2])
+        ...     print(k.state(0))
+        [21. 10.]
     """
     ...

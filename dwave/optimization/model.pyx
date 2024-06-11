@@ -580,7 +580,7 @@ cdef class Model:
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer(20, upper_bound=100)
-            >>> model.lock()
+            >>> cntx = model.lock()
             >>> model.is_locked()
             True
             >>> model.unlock()
@@ -621,6 +621,7 @@ cdef class Model:
             This example minimizes a simple polynomial, :math:`y = i^2 - 4i`, 
             within bounds. 
             
+            >>> from dwave.optimization import Model
             >>> model = Model()
             >>> i = model.integer(lower_bound=-5, upper_bound=5)
             >>> c = model.constant(4)
@@ -707,8 +708,8 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer(1)
             >>> c = model.constant([5, -14])
-            >>> model.add_constraint(i <= c[0])
-            >>> model.add_constraint(c[1] <= i)
+            >>> model.add_constraint(i.sum() <= c[0])
+            >>> model.add_constraint(c[1] <= i.sum())
             >>> model.num_constraints()
             2
         """
@@ -931,7 +932,7 @@ cdef class States:
         >>> model.states.resize(2)
         >>> items.set_state(0, [0, 1])
         >>> items.set_state(1, [0, 2, 3])
-        >>> with model.states.lock():
+        >>> with model.lock():
         ...     print(model.objective.state(0) > model.objective.state(1))
         True
 
@@ -1142,7 +1143,7 @@ cdef class States:
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> model.states.resize(3)
-            >>> model.size()
+            >>> model.states.size()
             3
         """
         self.resolve()
@@ -1266,8 +1267,8 @@ cdef class NodeObserver:
             
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> i = model.integer((2, 3), upper_bound=20)
-            >>> c = model.constant(4)
+            >>> i = model.integer((2, 2), upper_bound=20)
+            >>> c = model.constant([[21, 11], [10, 4]])
             >>> a = c * i
             >>> b = a.sum()
             >>> a.equals(next(b.iter_predecessors()))
@@ -1368,7 +1369,12 @@ cdef class NodeObserver:
             ...     lsymbol.reset_state(0)
             ...     print("After reset:")
             ...     print(f"state 0: {lsymbol_lists[0].state(0)} and {lsymbol_lists[1].state(0)}")
-            ...     print(f"state 1: {lsymbol_lists[0].state(1)} and {lsymbol_lists[1].state(1)}") 
+            ...     print(f"state 1: {lsymbol_lists[0].state(1)} and {lsymbol_lists[1].state(1)}")
+            state 0: [0. 4.] and [1. 2. 3.]
+            state 1: [3. 4.] and [0. 1. 2.]
+            After reset:
+            state 0: [0. 1. 2. 3. 4.] and []
+            state 1: [3. 4.] and [0. 1. 2.]
         """
         if not 0 <= index < self.model.states.size():
             raise ValueError(f"index out of range: {index}")
@@ -1442,7 +1448,7 @@ cdef class NodeObserver:
             >>> i = model.integer(100, lower_bound=20)
             >>> sum_i = i.sum()
             >>> with model.lock():
-            >>>     for symbol in model.iter_symbols():
+            ...     for symbol in model.iter_symbols():
             ...         print(f"Symbol {type(symbol)} is node {symbol.topological_index()}")
             Symbol <class 'dwave.optimization.symbols.IntegerVariable'> is node 0
             Symbol <class 'dwave.optimization.symbols.Sum'> is node 1
@@ -1628,6 +1634,7 @@ cdef class ArrayObserver(NodeObserver):
             of different sizes.
             
             >>> from dwave.optimization import Model
+            >>> model = Model()
             >>> i = model.integer(3, lower_bound=0, upper_bound=20)
             >>> j = model.integer(3, lower_bound=-10, upper_bound=10)
             >>> k = model.integer(5, upper_bound=55)
@@ -1679,14 +1686,14 @@ cdef class ArrayObserver(NodeObserver):
         data.
         
         Examples:
-            This example reshapes a row vector into a column vector.
+            This example reshapes a column vector into a row vector.
             
             >>> from dwave.optimization import Model
             >>> model = Model()
             >>> j = model.integer(3, lower_bound=-10, upper_bound=10)
             >>> j.shape()
             (3,)
-            >>> k = j.reshape((3,1))
+            >>> k = j.reshape((1, 3))
             >>> k.shape()
             (1, 3)
         """
