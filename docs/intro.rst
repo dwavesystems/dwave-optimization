@@ -44,8 +44,7 @@ flow of operations upon these symbols are represented as the graph's edges.
     :alt: Illustrative figure of a directed acyclic graph, with circles 
         representing symbols connected by directional lines with arrowheads.
     :align: center
-    :height: 225 pt
-    :width: 225 pt
+    :scale: 100%
 
     A nonlinear model as a directed acyclic graph.
 
@@ -58,8 +57,7 @@ integer variable, the polynomial :math:`y = i^2 - 4i`.
         the y-axis from -5 to +5, showing a parabola with its minimum at 
         (i,y) of (+2,-4).
     :align: center
-    :height: 250 pt
-    :width: 250 pt
+    :scale: 100%
 
     Minimum point of a simple polynomial, :math:`y = i^2 - 4i`. 
 
@@ -112,8 +110,7 @@ minimizing polynomial :math:`y = i^2 - 4i`.
         :math:`c*i` symbols, which then connect to a :math:`y = i*i -c*i` symbol, 
         which connects to a :code:`minimize()` symbol that outputs the objective.  
     :align: center
-    :height: 275 pt
-    :width: 275 pt
+    :scale: 100%
 
     An directed acyclic graph that illustrates one way of representing the model 
     for minimizing polynomial :math:`y = i^2 - 4i`. The package's 
@@ -207,8 +204,7 @@ acyclic graph.
     :alt: Illustrative directed acyclic graph of the model. The single circle 
         is the :math:`i` symbol.  
     :align: center
-    :height: 50 pt
-    :width: 150 pt
+    :scale: 100%
 
     An directed acyclic graph that shows a single primitive, decision variable 
     :math:`i`, an :class:`~dwave.optimization.symbols.IntegerVariable`.
@@ -226,8 +222,7 @@ symbol, for example, sums the 100 integer elements of the
     :alt: Illustrative directed acyclic graph of the model. The bottom circle 
         is the :math:`i` symbol and the top one is :math:`sum_i`.  
     :align: center
-    :height: 125 pt
-    :width: 200 pt
+    :scale: 100%
 
     An directed acyclic graph that shows a primitive, decision variable 
     :math:`i`, an :class:`~dwave.optimization.symbols.IntegerVariable`, 
@@ -255,8 +250,7 @@ integer.
         is the :math:`i` symbol, next are MAx and Sum circles, and then Equal, 
         and the top circle is SUM.  
     :align: center
-    :height: 300 pt
-    :width: 300 pt
+    :scale: 100%
 
     An directed acyclic graph that shows a primitive, decision variable 
     :math:`i`, an :class:`~dwave.optimization.symbols.IntegerVariable`, 
@@ -343,8 +337,7 @@ acyclic graphs for these two formulations.
     :alt: Illustrative directed acyclic graph of two models. The left graph has ten 
         nodes while the right one has thirty nodes.  
     :align: center
-    :height: 275 pt
-    :width: 650 pt
+    :scale: 80%
 
     Comparison between models using compact matrix operations (left) and 
     less-compact operations (right) in formulation. The less-compact formulation 
@@ -453,8 +446,7 @@ routes.
     :alt: Plot of two routes between four points, the green one, (3, 2, 1, 0) is 
     	the least costly while the red one, (2, 1, 3, 0), is the most costly.  
     :align: center
-    :height: 400 pt
-    :width: 300 pt
+    :scale: 80%
 
     Finding the optimal route between destinations.
 
@@ -484,8 +476,7 @@ acyclic graphs for these two formulations.
     :alt: Illustrative directed acyclic graph of two models. The left graph has 
         far fewer nodes than that one the right.  
     :align: center
-    :height: 210 pt
-    :width: 550 pt
+    :scale: 100%
 
     Comparison between models using explicitly-constrained decision symbol (left) 
     and explicit constrains on a simple binary symbol (right) in formulation. The 
