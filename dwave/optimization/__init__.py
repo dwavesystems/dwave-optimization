@@ -14,9 +14,6 @@
 
 import dwave.optimization.generators
 
-# monkeypatch the cloud-client to add NL support
-import dwave.optimization.client
-
 from dwave.optimization.model import Model, _register_node_subclasses
 from dwave.optimization.mathematical import *
 
