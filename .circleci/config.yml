@@ -221,6 +221,10 @@ workflows:
             parameters:
               # versions are built with ~= so the patch version doesn't matter
               python-version: &python-versions [3.8.0, 3.9.0, 3.10.0, 3.11.0, 3.12.0]
+          filters: &tags
+            # also run on tags so the deploy pipeline works
+            tags:
+              only: &version-string /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
       - python-linux-aarch64: *build-linux
       - python-linux-debug
       - python-macOS:
@@ -228,17 +232,20 @@ workflows:
             parameters:
               python-version: *python-versions
               cibw-arch: [x86_64, arm64]
+          filters: *tags
       - python-windows:
           matrix:
             parameters:
               python-version: *python-versions
-      - python-sdist
+          filters: *tags
+      - python-sdist:
+          filters: *tags
       - cpp-linux
       - cpp-macOS
       - deploy:
           filters:
             tags:
-              only: /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
+              only: *version-string
             branches:
               ignore: /.*/
           requires:
