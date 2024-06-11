@@ -194,6 +194,25 @@ jobs:
           command: |
             FLAGS=-Werror make -C tests/cpp/
 
+  deploy:
+    docker:
+      - image: cimg/python:3.9
+
+    steps:
+      - attach_workspace:
+          at: dist
+
+      - store_artifacts:
+          path: ./dist
+
+      - run:
+          name: deploy
+          command: |
+            python -m venv env
+            . env/bin/activate
+            python -m pip install twine
+            twine upload -u "$PYPI_USERNAME" -p "$PYPI_PASSWORD" --skip-existing ./dist/*
+
 workflows:
   tests:
     jobs:
@@ -216,3 +235,15 @@ workflows:
       - python-sdist
       - cpp-linux
       - cpp-macOS
+      - deploy:
+          filters:
+            tags:
+              only: /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
+            branches:
+              ignore: /.*/
+          requires:
+            - python-linux
+            - python-linux-aarch64
+            - python-macOS
+            - python-windows
+            - python-sdist
