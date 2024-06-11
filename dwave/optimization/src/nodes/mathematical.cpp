@@ -51,6 +51,11 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(Node* a_ptr, Node* b_ptr)
         throw std::invalid_argument("arrays must not be dynamic");
     }
 
+    // todo: broadcasting
+    if (!std::ranges::equal(lhs_ptr_->shape(), rhs_ptr_->shape())) {
+        throw std::invalid_argument("arrays must have the same shape");
+    }
+
     this->add_predecessor(a_ptr);
     this->add_predecessor(b_ptr);
 }
@@ -281,7 +286,7 @@ void NaryOpNode<BinaryOp>::add_node(Node* node_ptr) {
         throw std::invalid_argument("arrays must not be dynamic");
     }
 
-    if (predecessors().size() > 0 && !std::ranges::equal(this->shape(), array_ptr->shape())) {
+    if (!std::ranges::equal(this->shape(), array_ptr->shape())) {
         throw std::invalid_argument("arrays must all be the same shape");
     }
 

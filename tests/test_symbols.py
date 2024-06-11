@@ -248,6 +248,15 @@ class TestAdd(unittest.TestCase, SymbolTestsMixin):
         yield ab
         yield ba
 
+    def test_broadcasting(self):
+        # todo: allow array broadcasting, for now just test that it raises
+        # an error
+        model = Model()
+        a = model.integer(1)
+        b = model.integer(5)
+        with self.assertRaises(ValueError):
+            a + b
+
     def test_scalar_addition(self):
         model = Model()
         a = model.constant(5)
