@@ -69,8 +69,8 @@ as follows:
 >>> model = Model()
 >>> i = model.integer(lower_bound=-5, upper_bound=5)
 >>> c = model.constant(4)
->>> y = i*i - c*i
->>> model.minimize(y.sum())      
+>>> y = i**2 - c*i
+>>> model.minimize(y)      
 
 The code above has the following elements:
 
@@ -94,11 +94,6 @@ The code above has the following elements:
 *   The :meth:`~dwave.optimization.symbols.Min` symbol is a 
     mathematical operation on inputs from other symbols. In this model, it 
     generates the objective function. 
-*   The :meth:`~dwave.optimization.symbols.Sum` 
-    (:meth:`~dwave.optimization.mathematical.add` method) 
-    symbol is another mathematical operation. Here, it is used because the 
-    objective function being minimized must be a scalar and :code:`y`, like
-    :code:`i` and :code:`c` are matrices (of a single element each). 
 
 The directed acyclic graph below illustratively represents the model for 
 minimizing polynomial :math:`y = i^2 - 4i`.
