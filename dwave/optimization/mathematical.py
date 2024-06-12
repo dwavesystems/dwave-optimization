@@ -16,7 +16,7 @@ import collections
 import functools
 import itertools
 
-from dwave.optimization.model import ArrayObserver
+from dwave.optimization.model import ArraySymbol
 from dwave.optimization.symbols import (
     Add,
     And,
@@ -93,7 +93,7 @@ def add(*args, **kwargs):
     ...
 
 
-def logical_and(lhs: ArrayObserver, rhs: ArrayObserver):
+def logical_and(lhs: ArraySymbol, rhs: ArraySymbol):
     r"""Return an element-wise logical AND on the given symbols. 
     
     Args:
@@ -124,7 +124,7 @@ def logical_and(lhs: ArrayObserver, rhs: ArrayObserver):
     return And(lhs, rhs)
 
 
-def logical_or(lhs: ArrayObserver, rhs: ArrayObserver):
+def logical_or(lhs: ArraySymbol, rhs: ArraySymbol):
     r"""Return an element-wise logical OR on the given symbols. 
     
     Args:

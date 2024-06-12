@@ -15,7 +15,7 @@
 import numpy.typing
 
 
-class ArrayObserver:
+class ArraySymbol:
     state: StatesView
 
 
@@ -27,11 +27,11 @@ class Model:
     def resize_states(self, n: int): ...
 
 
-class Constant(ArrayObserver):
+class Constant(ArraySymbol):
     ...
 
 
-class ListVariable(ArrayObserver):
+class ListVariable(ArraySymbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike) -> None: ...
 
 

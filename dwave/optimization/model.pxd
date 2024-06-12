@@ -39,7 +39,7 @@ cdef class Model:
 
     cdef cppGraph _graph
 
-    cdef readonly object objective  # todo: cdef ArrayObserver?
+    cdef readonly object objective  # todo: cdef ArraySymbol?
 
     cdef readonly States states
 
@@ -81,7 +81,7 @@ cdef class States:
     cdef readonly object _result_hook
 
 
-cdef class NodeObserver:
+cdef class Symbol:
     # Inheriting nodes must call this method from their __init__()
     cdef void initialize_node(self, Model model, cppNode* node_ptr) noexcept
 
@@ -104,10 +104,10 @@ cdef class NodeObserver:
     cdef shared_ptr[bool] expired_ptr
 
 
-# Ideally this wouldn't subclass NodeObserver, but Cython only allows a single
-# extension base class, so to support that we assume all ArrayObservers are
-# also NodeObservers (probably a fair assumption)
-cdef class ArrayObserver(NodeObserver):
+# Ideally this wouldn't subclass Symbol, but Cython only allows a single
+# extension base class, so to support that we assume all ArraySymbols are
+# also Symbols (probably a fair assumption)
+cdef class ArraySymbol(Symbol):
     # Inheriting nodes must call this method from their __init__()
     cdef void initialize_array(self, cppArray* array_ptr) noexcept
 
@@ -119,4 +119,4 @@ cdef class ArrayObserver(NodeObserver):
 
 cdef class StateView:
     cdef readonly Py_ssize_t index  # which state we're accessing
-    cdef readonly ArrayObserver symbol
+    cdef readonly ArraySymbol symbol
