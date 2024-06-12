@@ -471,7 +471,7 @@ cdef class Model:
         cdef Py_ssize_t num_decisions = self.num_decisions()
         cdef Py_ssize_t seen_decisions = 0
 
-        cdef NodeObserver symbol
+        cdef Symbol symbol
         for symbol in self.iter_symbols():
             if 0 <= symbol.node_ptr.topological_index() < num_decisions:
                 # we found a decision!
@@ -605,7 +605,7 @@ cdef class Model:
 
         return locked(self)
 
-    def minimize(self, ArrayObserver value):
+    def minimize(self, ArraySymbol value):
         """Set the objective value to minimize.
         
         Optimization problems have an objective and/or constraints. The objective
@@ -637,7 +637,7 @@ cdef class Model:
         self._graph.set_objective(value.array_ptr)
         self.objective = value
 
-    def add_constraint(self, ArrayObserver value):
+    def add_constraint(self, ArraySymbol value):
         """Add a constraint to the model.
         
         Args:
@@ -738,7 +738,7 @@ cdef class Model:
         """
         return self.num_nodes()
 
-    def quadratic_model(self, ArrayObserver x, quadratic, linear=None):
+    def quadratic_model(self, ArraySymbol x, quadratic, linear=None):
         """Create a quadratic model from an array and a quadratic model.
         
         Args:
@@ -1155,8 +1155,17 @@ cdef class States:
         return self._model().to_file(only_decision=True, max_num_states=self.size())
 
 
-cdef class NodeObserver:
-    """Class for nodes in the directed acyclic graph of the model.""" 
+cdef class Symbol:
+    """Base class for symbols.
+
+    Each symbol corresponds to a node in the directed acyclic graph representing
+    the problem.
+    """ 
+    def __init__(self, *args, **kwargs):
+        # disallow direct construction of symbols, they should be constructed
+        # via their subclasses.
+        raise ValueError("Symbols cannot be constructed directly")
+
     cdef void initialize_node(self, Model model, cppNode* node_ptr) noexcept:
         self.model = model
 
@@ -1323,14 +1332,14 @@ cdef class NodeObserver:
         if self is other:
             return DEFINITELY
 
-        if not isinstance(other, NodeObserver):
+        if not isinstance(other, Symbol):
             return NOT
 
         # Should we require identical types?
         if not isinstance(self, type(other)) and not isinstance(other, type(self)):
             return NOT
 
-        cdef NodeObserver rhs = other
+        cdef Symbol rhs = other
 
         if self.shares_memory(rhs):
             return DEFINITELY
@@ -1400,9 +1409,9 @@ cdef class NodeObserver:
         Returns:
             True if the two symbols share memory.
         """
-        if not isinstance(other, NodeObserver):
+        if not isinstance(other, Symbol):
             return False
-        cdef NodeObserver rhs = other
+        cdef Symbol rhs = other
         return (
             <bool>(self.node_ptr)                    # Not pointing to a nullptr
             and self.node_ptr == rhs.node_ptr        # Shares an underlying node
@@ -1425,8 +1434,8 @@ cdef class NodeObserver:
         .. note::
 
             For most symbols, which are arrays, this method is 
-            subclassed by the :class:`~dwave.optimization.model.ArrayObserver
-            class's :meth:`~dwave.optimization.model.ArrayObserver.state_size`
+            subclassed by the :class:`~dwave.optimization.model.ArraySymbol
+            class's :meth:`~dwave.optimization.model.ArraySymbol.state_size`
             method.
         
         Returns:
@@ -1456,7 +1465,7 @@ cdef class NodeObserver:
         index = self.node_ptr.topological_index()
         return index if index >= 0 else None
 
-# We would really prefer to use NodeObserver.__init_subclass__ to register
+# We would really prefer to use Symbol.__init_subclass__ to register
 # new subclasses for de-serialization. But unfortunately __init_subclass__ does
 # not work with Cython cdef classes. So instead we have this function that we
 # call once everything has been imported and traverse the subclass DAG.
@@ -1475,7 +1484,7 @@ def _register_node_subclasses():
         for subclass in cls.__subclasses__():
             register(subclass)
 
-    for cls in NodeObserver.__subclasses__():
+    for cls in Symbol.__subclasses__():
         register(cls)
 
 
@@ -1503,7 +1512,7 @@ def _split_indices(indices):
                 # Advanced can only handle empty slices, so we do basic first
                 basic_indices.append(index)
                 advanced_indices.append(slice(None))
-        elif isinstance(index, (ArrayObserver, np.ndarray)):
+        elif isinstance(index, (ArraySymbol, np.ndarray)):
             # Only advanced handles arrays, it preserves the axis so basic gets
             # an empty slice.
             # We allow np.ndarray here for testing purposes. They are not (yet)
@@ -1518,11 +1527,17 @@ def _split_indices(indices):
     return tuple(basic_indices), tuple(advanced_indices)
 
 
-# Ideally this wouldn't subclass NodeObserver, but Cython only allows a single
-# extension base class, so to support that we assume all ArrayObservers are
-# also NodeObservers (probably a fair assumption)
-cdef class ArrayObserver(NodeObserver):
-    """Class for nodes of the model that handle arrays."""
+# Ideally this wouldn't subclass Symbol, but Cython only allows a single
+# extension base class, so to support that we assume all ArraySymbols are
+# also Symbols (probably a fair assumption)
+cdef class ArraySymbol(Symbol):
+    """Base class for symbols that can be interpreted as an array."""
+
+    def __init__(self, *args, **kwargs):
+        # disallow direct construction of array symbols, they should be constructed
+        # via their subclasses.
+        raise ValueError("ArraySymbols cannot be constructed directly")
+
     cdef void initialize_array(self, cppArray* array_ptr) noexcept:
         self.array_ptr = array_ptr
 
@@ -1530,11 +1545,11 @@ cdef class ArrayObserver(NodeObserver):
         from dwave.optimization.symbols import Absolute  # avoid circular import
         return Absolute(self)
 
-    def __add__(self, ArrayObserver rhs):
+    def __add__(self, ArraySymbol rhs):
         from dwave.optimization.symbols import Add  # avoid circular import
         return Add(self, rhs)
 
-    def __eq__(self, ArrayObserver rhs):
+    def __eq__(self, ArraySymbol rhs):
         from dwave.optimization.symbols import Equal # avoid circular import
         return Equal(self, rhs)
 
@@ -1553,7 +1568,7 @@ cdef class ArrayObserver(NodeObserver):
                 # https://numpy.org/doc/stable/user/basics.indexing.html#basic-indexing
                 return dwave.optimization.symbols.BasicIndexing(self, *index)
 
-            elif all(isinstance(idx, ArrayObserver)
+            elif all(isinstance(idx, ArraySymbol)
                      or idx.start is None and idx.stop is None and idx.step is None
                      for idx in index):
                 # Advanced indexing
@@ -1561,7 +1576,7 @@ cdef class ArrayObserver(NodeObserver):
 
                 return dwave.optimization.symbols.AdvancedIndexing(self, *index)
 
-            elif all(isinstance(idx, (ArrayObserver, slice, numbers.Integral)) for idx in index):
+            elif all(isinstance(idx, (ArraySymbol, slice, numbers.Integral)) for idx in index):
                 # Combined indexing
                 # https://numpy.org/doc/stable/user/basics.indexing.html#combining-advanced-and-basic-indexing
 
@@ -1581,11 +1596,11 @@ cdef class ArrayObserver(NodeObserver):
         else:
             return self[(index,)]
 
-    def __le__(self, ArrayObserver rhs):
+    def __le__(self, ArraySymbol rhs):
         from dwave.optimization.symbols import LessEqual # avoid circular import
         return LessEqual(self, rhs)
 
-    def __mul__(self, ArrayObserver rhs):
+    def __mul__(self, ArraySymbol rhs):
         from dwave.optimization.symbols import Multiply  # avoid circular import
         return Multiply(self, rhs)
 
@@ -1599,7 +1614,7 @@ cdef class ArrayObserver(NodeObserver):
             return Square(self)
         raise NotImplementedError("only squaring is currently supported")
 
-    def __sub__(self, ArrayObserver rhs):
+    def __sub__(self, ArraySymbol rhs):
         from dwave.optimization.symbols import Subtract  # avoid circular import
         return Subtract(self, rhs)
 
@@ -1650,7 +1665,7 @@ cdef class ArrayObserver(NodeObserver):
         cdef Py_ssize_t NOT = 0
         cdef Py_ssize_t MAYBE = 1
 
-        if not isinstance(other, ArrayObserver):
+        if not isinstance(other, ArraySymbol):
             return NOT
 
         if self.shape() != other.shape():
@@ -1874,7 +1889,7 @@ cdef class ArrayObserver(NodeObserver):
 
 
 cdef class StateView:
-    def __init__(self, ArrayObserver symbol, Py_ssize_t index):
+    def __init__(self, ArraySymbol symbol, Py_ssize_t index):
         self.symbol = symbol
         self.index = index
 

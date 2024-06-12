@@ -76,7 +76,7 @@ from dwave.optimization.libcpp.nodes cimport (
     SquareNode as cppSquareNode,
     SumNode as cppSumNode,
     )
-from dwave.optimization.model cimport ArrayObserver, Model, NodeObserver
+from dwave.optimization.model cimport ArraySymbol, Model, Symbol
 from cython.operator cimport dereference as deref
 
 __all__ = [
@@ -277,7 +277,7 @@ cdef bool _empty_slice(object slice_) noexcept:
     return slice_.start is None and slice_.stop is None and slice_.step is None
 
 
-cdef class Absolute(ArrayObserver):
+cdef class Absolute(ArraySymbol):
     """Absolute value element-wise on a symbol.
     
     Examples:
@@ -291,7 +291,7 @@ cdef class Absolute(ArrayObserver):
         >>> type(i_abs)
         <class 'dwave.optimization.symbols.Absolute'>
     """
-    def __init__(self, ArrayObserver x):
+    def __init__(self, ArraySymbol x):
         cdef Model model = x.model
 
         self.ptr = model._graph.emplace_node[cppAbsoluteNode](x.node_ptr)
@@ -309,7 +309,7 @@ cdef class Absolute(ArrayObserver):
     cdef cppAbsoluteNode* ptr
 
 
-cdef class Add(ArrayObserver):
+cdef class Add(ArraySymbol):
     """Addition element-wise of two symbols.
     
     Examples:
@@ -323,7 +323,7 @@ cdef class Add(ArrayObserver):
         >>> type(k)
         <class 'dwave.optimization.symbols.Add'>
     """
-    def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
@@ -344,7 +344,7 @@ cdef class Add(ArrayObserver):
     cdef cppAddNode* ptr
 
 
-cdef class All(ArrayObserver):
+cdef class All(ArraySymbol):
     """Tests whether all elements evaluate to True.
     
     Examples:
@@ -357,7 +357,7 @@ cdef class All(ArrayObserver):
         >>> type(all_x)
         <class 'dwave.optimization.symbols.All'>
     """
-    def __init__(self, ArrayObserver array):
+    def __init__(self, ArraySymbol array):
         cdef Model model = array.model
         self.ptr = model._graph.emplace_node[cppAllNode](array.node_ptr)
         self.initialize_node(model, self.ptr)
@@ -374,7 +374,7 @@ cdef class All(ArrayObserver):
     cdef cppAllNode* ptr
 
 
-cdef class And(ArrayObserver):
+cdef class And(ArraySymbol):
     """Boolean AND element-wise between two symbols.
     
     Examples:
@@ -390,7 +390,7 @@ cdef class And(ArrayObserver):
         >>> type(z)
         <class 'dwave.optimization.symbols.And'>
     """ 
-    def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
@@ -411,8 +411,8 @@ cdef class And(ArrayObserver):
     cdef cppAndNode* ptr
 
 
-cdef class _ArrayValidation(NodeObserver):
-    def __init__(self, ArrayObserver array_node):
+cdef class _ArrayValidation(Symbol):
+    def __init__(self, ArraySymbol array_node):
         cdef Model model = array_node.model
 
         self.ptr = model._graph.emplace_node[cppArrayValidationNode](array_node.node_ptr)
@@ -429,7 +429,7 @@ cdef class _ArrayValidation(NodeObserver):
     cdef cppArrayValidationNode* ptr
 
 
-cdef class AdvancedIndexing(ArrayObserver):
+cdef class AdvancedIndexing(ArraySymbol):
     """Advanced indexing.
     
     Examples:
@@ -443,12 +443,12 @@ cdef class AdvancedIndexing(ArrayObserver):
         >>> type(values)
         <class 'dwave.optimization.symbols.AdvancedIndexing'>
     """
-    def __init__(self, ArrayObserver array, *indices):
+    def __init__(self, ArraySymbol array, *indices):
         cdef Model model = array.model
 
         cdef vector[cppAdvancedIndexingNode.array_or_slice] cppindices
 
-        cdef ArrayObserver array_index
+        cdef ArraySymbol array_index
         for index in indices:
             if isinstance(index, slice):
                 if index != slice(None):
@@ -486,18 +486,18 @@ cdef class AdvancedIndexing(ArrayObserver):
 
             # check the [x, :][:, x] case
             if (isinstance(i0, slice) and _empty_slice(i0) and
-                    isinstance(i1, ArrayObserver) and
+                    isinstance(i1, ArraySymbol) and
                     holds_alternative[cppArrayPtr](self.ptr.indices()[0]) and
-                    get[cppArrayPtr](self.ptr.indices()[0]) == (<ArrayObserver>i1).array_ptr and
+                    get[cppArrayPtr](self.ptr.indices()[0]) == (<ArraySymbol>i1).array_ptr and
                     holds_alternative[cppSlice](self.ptr.indices()[1])):
 
                 return Permutation(array, i1)
 
             # check the [:, x][x, :] case
             if (isinstance(i1, slice) and _empty_slice(i1) and
-                    isinstance(i0, ArrayObserver) and
+                    isinstance(i0, ArraySymbol) and
                     holds_alternative[cppArrayPtr](self.ptr.indices()[1]) and
-                    get[cppArrayPtr](self.ptr.indices()[1]) == (<ArrayObserver>i0).array_ptr and
+                    get[cppArrayPtr](self.ptr.indices()[1]) == (<ArraySymbol>i0).array_ptr and
                     holds_alternative[cppSlice](self.ptr.indices()[0])):
 
                 return Permutation(array, i0)
@@ -554,7 +554,7 @@ cdef class AdvancedIndexing(ArrayObserver):
     cdef cppAdvancedIndexingNode* ptr
 
 
-cdef class BasicIndexing(ArrayObserver):
+cdef class BasicIndexing(ArraySymbol):
     """Basic indexing.
     
     Examples:
@@ -567,7 +567,7 @@ cdef class BasicIndexing(ArrayObserver):
         >>> type(low_prices)
         <class 'dwave.optimization.symbols.BasicIndexing'>
     """
-    def __init__(self, ArrayObserver array, *indices):
+    def __init__(self, ArraySymbol array, *indices):
 
         cdef Model model = array.model
 
@@ -653,7 +653,7 @@ cdef class BasicIndexing(ArrayObserver):
     cdef cppBasicIndexingNode* ptr
 
 
-cdef class BinaryVariable(ArrayObserver):
+cdef class BinaryVariable(ArraySymbol):
     """Binary decision-variable symbol.
     
     Examples:
@@ -781,7 +781,7 @@ cdef class BinaryVariable(ArrayObserver):
     cdef cppBinaryNode* ptr
 
 
-cdef class Constant(ArrayObserver):
+cdef class Constant(ArraySymbol):
     """Constant symbol.
     
     Examples:
@@ -917,7 +917,7 @@ cdef class Constant(ArrayObserver):
     cdef cppConstantNode* ptr
 
 
-cdef class DisjointBitSets(NodeObserver):
+cdef class DisjointBitSets(Symbol):
     """Disjoint-sets decision-variable symbol.
     
     Examples:
@@ -1063,7 +1063,7 @@ cdef class DisjointBitSets(NodeObserver):
     cdef cppDisjointBitSetsNode* ptr
 
 
-cdef class DisjointBitSet(ArrayObserver):
+cdef class DisjointBitSet(ArraySymbol):
     """Disjoint-sets successor symbol.
     
     Examples:
@@ -1164,7 +1164,7 @@ cdef class DisjointBitSet(ArrayObserver):
     cdef cppDisjointBitSetNode* ptr
 
 
-cdef class DisjointLists(NodeObserver):
+cdef class DisjointLists(Symbol):
     """Disjoint-lists decision-variable symbol.
     
     Examples:
@@ -1308,7 +1308,7 @@ cdef class DisjointLists(NodeObserver):
     cdef cppDisjointListsNode* ptr
 
 
-cdef class DisjointList(ArrayObserver):
+cdef class DisjointList(ArraySymbol):
     """Disjoint-lists successor symbol.
     
     Examples:
@@ -1409,7 +1409,7 @@ cdef class DisjointList(ArrayObserver):
     cdef cppDisjointListNode* ptr
 
 
-cdef class Equal(ArrayObserver):
+cdef class Equal(ArraySymbol):
     """Equality comparison element-wise between two symbols.
     
     Examples:
@@ -1423,7 +1423,7 @@ cdef class Equal(ArrayObserver):
         >>> type(k)
         <class 'dwave.optimization.symbols.Equal'>
     """
-    def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
@@ -1444,7 +1444,7 @@ cdef class Equal(ArrayObserver):
     cdef cppEqualNode* ptr
 
 
-cdef class LessEqual(ArrayObserver):
+cdef class LessEqual(ArraySymbol):
     """Smaller-or-equal comparison element-wise between two symbols.
     
     Examples:
@@ -1458,7 +1458,7 @@ cdef class LessEqual(ArrayObserver):
         >>> type(k)
         <class 'dwave.optimization.symbols.LessEqual'>
     """
-    def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
@@ -1479,7 +1479,7 @@ cdef class LessEqual(ArrayObserver):
     cdef cppLessEqualNode* ptr
 
 
-cdef class ListVariable(ArrayObserver):
+cdef class ListVariable(ArraySymbol):
     """List decision-variable symbol.
     
     Examples:
@@ -1558,7 +1558,7 @@ cdef class ListVariable(ArrayObserver):
     cdef cppListNode* ptr
 
 
-cdef class IntegerVariable(ArrayObserver):
+cdef class IntegerVariable(ArraySymbol):
     """Integer decision-variable symbol.
     
     Examples:
@@ -1656,7 +1656,7 @@ cdef class IntegerVariable(ArrayObserver):
     cdef cppIntegerNode* ptr
 
 
-cdef class Max(ArrayObserver):
+cdef class Max(ArraySymbol):
     """Maximum value in the elements of a symbol.
     
     Examples:
@@ -1670,7 +1670,7 @@ cdef class Max(ArrayObserver):
         >>> type(i_max)
         <class 'dwave.optimization.symbols.Max'>
     """
-    def __init__(self, ArrayObserver node):
+    def __init__(self, ArraySymbol node):
         cdef Model model = node.model
 
         self.ptr = model._graph.emplace_node[cppMaxNode](node.node_ptr)
@@ -1689,7 +1689,7 @@ cdef class Max(ArrayObserver):
     cdef cppMaxNode* ptr
 
 
-cdef class Maximum(ArrayObserver):
+cdef class Maximum(ArraySymbol):
     """Maximum values in an element-wise comparison of two symbols.
     
     Examples:
@@ -1706,7 +1706,7 @@ cdef class Maximum(ArrayObserver):
         >>> type(k)
         <class 'dwave.optimization.symbols.Maximum'>
     """
-    def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
@@ -1728,7 +1728,7 @@ cdef class Maximum(ArrayObserver):
     cdef cppMaximumNode* ptr
 
 
-cdef class Min(ArrayObserver):
+cdef class Min(ArraySymbol):
     """Minimum value in the elements of a symbol.
     
     Examples:
@@ -1742,7 +1742,7 @@ cdef class Min(ArrayObserver):
         >>> type(i_min)
         <class 'dwave.optimization.symbols.Min'>
     """
-    def __init__(self, ArrayObserver node):
+    def __init__(self, ArraySymbol node):
         cdef Model model = node.model
 
         self.ptr = model._graph.emplace_node[cppMinNode](node.node_ptr)
@@ -1761,7 +1761,7 @@ cdef class Min(ArrayObserver):
     cdef cppMinNode* ptr
 
 
-cdef class Minimum(ArrayObserver):
+cdef class Minimum(ArraySymbol):
     """Minimum values in an element-wise comparison of two symbols.
     
     Examples:
@@ -1778,7 +1778,7 @@ cdef class Minimum(ArrayObserver):
         >>> type(k)
         <class 'dwave.optimization.symbols.Minimum'>
     """
-    def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
@@ -1800,7 +1800,7 @@ cdef class Minimum(ArrayObserver):
     cdef cppMinimumNode* ptr
 
 
-cdef class Multiply(ArrayObserver):
+cdef class Multiply(ArraySymbol):
     """Multiplication element-wise between two symbols.
     
     Examples:
@@ -1814,7 +1814,7 @@ cdef class Multiply(ArrayObserver):
         >>> type(k)
         <class 'dwave.optimization.symbols.Multiply'>
     """
-    def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
@@ -1835,7 +1835,7 @@ cdef class Multiply(ArrayObserver):
     cdef cppMultiplyNode* ptr
 
 
-cdef class NaryAdd(ArrayObserver):
+cdef class NaryAdd(ArraySymbol):
     """Addition element-wise of `N` symbols.
     
     Examples:
@@ -1859,11 +1859,11 @@ cdef class NaryAdd(ArrayObserver):
         cdef Model model = inputs[0].model
         cdef vector[cppNode*] cppinputs
 
-        cdef ArrayObserver array
+        cdef ArraySymbol array
         for node in inputs:
             if node.model != model:
                 raise ValueError("all predecessors must be from the same model")
-            array = <ArrayObserver?>node
+            array = <ArraySymbol?>node
             cppinputs.push_back(array.node_ptr)
 
         self.ptr = model._graph.emplace_node[cppNaryAddNode](cppinputs)
@@ -1881,7 +1881,7 @@ cdef class NaryAdd(ArrayObserver):
     cdef cppNaryAddNode* ptr
 
 
-cdef class NaryMaximum(ArrayObserver):
+cdef class NaryMaximum(ArraySymbol):
     """Maximum values in an element-wise comparison of `N` symbols.
     
     Examples:
@@ -1906,11 +1906,11 @@ cdef class NaryMaximum(ArrayObserver):
         cdef Model model = inputs[0].model
         cdef vector[cppNode*] cppinputs
 
-        cdef ArrayObserver array
+        cdef ArraySymbol array
         for node in inputs:
             if node.model != model:
                 raise ValueError("all predecessors must be from the same model")
-            array = <ArrayObserver?>node
+            array = <ArraySymbol?>node
             cppinputs.push_back(array.node_ptr)
 
         self.ptr = model._graph.emplace_node[cppNaryMaximumNode](cppinputs)
@@ -1928,7 +1928,7 @@ cdef class NaryMaximum(ArrayObserver):
     cdef cppNaryMaximumNode* ptr
 
 
-cdef class NaryMinimum(ArrayObserver):
+cdef class NaryMinimum(ArraySymbol):
     """Minimum values in an element-wise comparison of `N` symbols.
     
     Examples:
@@ -1953,11 +1953,11 @@ cdef class NaryMinimum(ArrayObserver):
         cdef Model model = inputs[0].model
         cdef vector[cppNode*] cppinputs
 
-        cdef ArrayObserver array
+        cdef ArraySymbol array
         for node in inputs:
             if node.model != model:
                 raise ValueError("all predecessors must be from the same model")
-            array = <ArrayObserver?>node
+            array = <ArraySymbol?>node
             cppinputs.push_back(array.node_ptr)
 
         self.ptr = model._graph.emplace_node[cppNaryMinimumNode](cppinputs)
@@ -1975,7 +1975,7 @@ cdef class NaryMinimum(ArrayObserver):
     cdef cppNaryMinimumNode* ptr
 
 
-cdef class NaryMultiply(ArrayObserver):
+cdef class NaryMultiply(ArraySymbol):
     """Multiplication element-wise between `N` symbols.
     
     Examples:
@@ -1999,11 +1999,11 @@ cdef class NaryMultiply(ArrayObserver):
         cdef Model model = inputs[0].model
         cdef vector[cppNode*] cppinputs
 
-        cdef ArrayObserver array
+        cdef ArraySymbol array
         for node in inputs:
             if node.model != model:
                 raise ValueError("all predecessors must be from the same model")
-            array = <ArrayObserver?>node
+            array = <ArraySymbol?>node
             cppinputs.push_back(array.node_ptr)
 
         self.ptr = model._graph.emplace_node[cppNaryMultiplyNode](cppinputs)
@@ -2021,7 +2021,7 @@ cdef class NaryMultiply(ArrayObserver):
     cdef cppNaryMultiplyNode* ptr
 
 
-cdef class Negative(ArrayObserver):
+cdef class Negative(ArraySymbol):
     """Numerical negative element-wise on a symbol.
     
     Examples:
@@ -2034,7 +2034,7 @@ cdef class Negative(ArrayObserver):
         >>> type(i_minus)
         <class 'dwave.optimization.symbols.Negative'>
     """
-    def __init__(self, ArrayObserver x):
+    def __init__(self, ArraySymbol x):
         cdef Model model = x.model
 
         self.ptr = model._graph.emplace_node[cppNegativeNode](x.node_ptr)
@@ -2052,7 +2052,7 @@ cdef class Negative(ArrayObserver):
     cdef cppNegativeNode* ptr
 
 
-cdef class Or(ArrayObserver):
+cdef class Or(ArraySymbol):
     """Boolean OR element-wise between two symbols.
     
     Examples:
@@ -2068,7 +2068,7 @@ cdef class Or(ArrayObserver):
         >>> type(z)
         <class 'dwave.optimization.symbols.Or'>
     """ 
-    def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
@@ -2089,7 +2089,7 @@ cdef class Or(ArrayObserver):
     cdef cppOrNode* ptr
 
 
-cdef class Permutation(ArrayObserver):
+cdef class Permutation(ArraySymbol):
     """Permutation of the elements of a symbol.
     
     Examples:
@@ -2126,7 +2126,7 @@ cdef class Permutation(ArrayObserver):
     cdef cppPermutationNode* ptr
 
 
-cdef class Prod(ArrayObserver):
+cdef class Prod(ArraySymbol):
     """Product of the elements of a symbol.
     
     Examples:
@@ -2140,7 +2140,7 @@ cdef class Prod(ArrayObserver):
         >>> type(i_prod)
         <class 'dwave.optimization.symbols.Prod'>
     """
-    def __init__(self, ArrayObserver node):
+    def __init__(self, ArraySymbol node):
         cdef Model model = node.model
 
         self.ptr = model._graph.emplace_node[cppProdNode](node.node_ptr)
@@ -2159,7 +2159,7 @@ cdef class Prod(ArrayObserver):
     cdef cppProdNode* ptr
 
 
-cdef class QuadraticModel(ArrayObserver):
+cdef class QuadraticModel(ArraySymbol):
     """Quadratic model.
     
     Examples:
@@ -2173,7 +2173,7 @@ cdef class QuadraticModel(ArrayObserver):
         >>> type(qm)
         <class 'dwave.optimization.symbols.QuadraticModel'>
     """
-    def __init__(self, ArrayObserver x, quadratic, linear=None):
+    def __init__(self, ArraySymbol x, quadratic, linear=None):
         # Some checking on x
         if x.array_ptr.dynamic():
             raise ValueError("x cannot be dynamic")
@@ -2195,7 +2195,7 @@ cdef class QuadraticModel(ArrayObserver):
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    def _init_from_coords(self, ArrayObserver x, quadratic, linear):
+    def _init_from_coords(self, ArraySymbol x, quadratic, linear):
         # x type etc is checked by __init__
         cdef Py_ssize_t num_variables = x.size()
         cdef bint binary = x.array_ptr.logical()
@@ -2257,7 +2257,7 @@ cdef class QuadraticModel(ArrayObserver):
         self.initialize_array(self.ptr)
 
     @cython.wraparound(False)
-    def _init_from_qubo(self, ArrayObserver x, quadratic, linear):
+    def _init_from_qubo(self, ArraySymbol x, quadratic, linear):
         """Construct from a QUBO in D-Wave style. I.e. ``{(u, v): bias, ...}``"""
         # x type etc is checked by __init__
         cdef Py_ssize_t num_variables = x.size()
@@ -2385,7 +2385,7 @@ cdef class QuadraticModel(ArrayObserver):
     cdef cppQuadraticModelNode* ptr
 
 
-cdef class Reshape(ArrayObserver):
+cdef class Reshape(ArraySymbol):
     """Reshaped symbol.
     
     Examples:
@@ -2398,7 +2398,7 @@ cdef class Reshape(ArrayObserver):
         >>> type(x_t)
         <class 'dwave.optimization.symbols.Reshape'>
     """
-    def __init__(self, ArrayObserver node, shape):
+    def __init__(self, ArraySymbol node, shape):
         cdef Model model = node.model
 
         self.ptr = model._graph.emplace_node[cppReshapeNode](
@@ -2432,7 +2432,7 @@ cdef class Reshape(ArrayObserver):
     cdef cppReshapeNode* ptr
 
 
-cdef class SetVariable(ArrayObserver):
+cdef class SetVariable(ArraySymbol):
     """Set decision-variable symbol.
     
     A set variable's possible states are the subsets of ``range(n)``.
@@ -2525,7 +2525,7 @@ cdef class SetVariable(ArrayObserver):
     cdef cppSetNode* ptr
 
 
-cdef class Square(ArrayObserver):
+cdef class Square(ArraySymbol):
     """Squares element-wise of a symbol.
     
     Examples:
@@ -2539,7 +2539,7 @@ cdef class Square(ArrayObserver):
         >>> type(ii)
         <class 'dwave.optimization.symbols.Square'>
     """
-    def __init__(self, ArrayObserver x):
+    def __init__(self, ArraySymbol x):
         cdef Model model = x.model
 
         self.ptr = model._graph.emplace_node[cppSquareNode](x.node_ptr)
@@ -2556,7 +2556,7 @@ cdef class Square(ArrayObserver):
 
     cdef cppSquareNode* ptr
 
-cdef class Subtract(ArrayObserver):
+cdef class Subtract(ArraySymbol):
     """Subtraction element-wise of two symbols.
     
     Examples:
@@ -2570,7 +2570,7 @@ cdef class Subtract(ArrayObserver):
         >>> type(k)
         <class 'dwave.optimization.symbols.Subtract'>
     """
-    def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
@@ -2591,7 +2591,7 @@ cdef class Subtract(ArrayObserver):
     cdef cppSubtractNode* ptr
 
 
-cdef class Sum(ArrayObserver):
+cdef class Sum(ArraySymbol):
     """Sum of the elements of a symbol.
     
     Examples:
@@ -2605,7 +2605,7 @@ cdef class Sum(ArrayObserver):
         >>> type(i_sum)
         <class 'dwave.optimization.symbols.Sum'>
     """
-    def __init__(self, ArrayObserver array):
+    def __init__(self, ArraySymbol array):
         cdef Model model = array.model
         self.ptr = model._graph.emplace_node[cppSumNode](array.node_ptr)
         self.initialize_node(model, self.ptr)
