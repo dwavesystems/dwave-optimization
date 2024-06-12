@@ -84,6 +84,46 @@ cdef class Model:
 
         self._data_sources = []
 
+    def add_constraint(self, ArraySymbol value):
+        """Add a constraint to the model.
+        
+        Args:
+            value: Value that must evaluate to True for the state 
+                of the model to be feasible. 
+                
+        Examples:
+            This example adds a single constraint to a model.
+            
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer()
+            >>> c = model.constant(5)
+            >>> model.add_constraint(i <= c)
+        """
+        if value is None:
+            raise ValueError("value cannot be None")
+        # TODO: shall we accept array valued constraints?
+        self._graph.add_constraint(value.array_ptr)
+
+    def binary(self, shape=None):
+        r"""Create a binary symbol as a decision variable.
+        
+        Args:
+            shape: Shape of the binary array to create.
+            
+        Returns:
+            A binary symbol.
+            
+        Examples:
+            This example creates a :math:`1 \times 20`-sized binary symbol.
+            
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> x = model.binary((1,20))
+        """
+        from dwave.optimization.symbols import BinaryVariable #avoid circular import
+        return BinaryVariable(self, shape)
+
     def constant(self, array_like):
         r"""Create a constant symbol.
 
@@ -121,7 +161,7 @@ cdef class Model:
         """
         return sum(sym.state_size() for sym in self.iter_decisions())
 
-    def disjoint_bit_sets(self, int primary_set_size, int num_disjoint_sets):
+    def disjoint_bit_sets(self, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets):
         """Create a disjoint-sets symbol as a decision variable. 
         
         Divides a set of the elements of ``range(primary_set_size)`` into 
@@ -135,8 +175,8 @@ cdef class Model:
 
         Args:
             primary_set_size: Number of elements in the primary set that are
-                partitioned into disjoint sets.
-            num_disjoint_sets: Number of disjoint sets.
+                partitioned into disjoint sets. Must be non-negative.
+            num_disjoint_sets: Number of disjoint sets. Must be positive.
 
         Returns:
             A tuple where the first element is the disjoint-sets symbol and 
@@ -153,10 +193,10 @@ cdef class Model:
 
         from dwave.optimization.symbols import DisjointBitSets, DisjointBitSet  # avoid circular import
         main = DisjointBitSets(self, primary_set_size, num_disjoint_sets)
-        sets = [DisjointBitSet(main, i) for i in range(num_disjoint_sets)]
+        sets = tuple(DisjointBitSet(main, i) for i in range(num_disjoint_sets))
         return main, sets
 
-    def disjoint_lists(self, int primary_set_size, int num_disjoint_lists):
+    def disjoint_lists(self, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists):
         """Create a disjoint-lists symbol as a decision variable. 
         
         Divides a set of the elements of ``range(primary_set_size)`` into 
@@ -182,7 +222,6 @@ cdef class Model:
             >>> model = Model()
             >>> destinations, routes = model.disjoint_lists(10, 4)
         """
-
         from dwave.optimization.symbols import DisjointLists, DisjointList  # avoid circular import
         main = DisjointLists(self, primary_set_size, num_disjoint_lists)
         lists = [DisjointList(main, i) for i in range(num_disjoint_lists)]
@@ -288,6 +327,32 @@ cdef class Model:
                     )
 
         return model
+
+    def integer(self, shape=None, lower_bound=None, upper_bound=None):
+        r"""Create an integer symbol as a decision variable.
+        
+        Args:
+            shape: Shape of the integer array to create.
+    
+            lower_bound: Lower bound for the symbol, which is the 
+                smallest allowed integer value. If None, the default 
+                value is used.
+            upper_bound: Upper bound for the symbol, which is the 
+                largest allowed integer value. If None, the default 
+                value is used.
+                
+        Returns:
+            An integer symbol. 
+            
+        Examples:
+            This example creates a :math:`20 \times 20`-sized integer symbol.
+            
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer((20,20), lower_bound=-100, upper_bound=100)
+        """
+        from dwave.optimization.symbols import IntegerVariable #avoid circular import
+        return IntegerVariable(self, shape, lower_bound, upper_bound)
 
     def _header_data(self, *, only_decision, max_num_states=float('inf')):
         """The header data associated with the model (but not the states)."""
@@ -497,51 +562,6 @@ cdef class Model:
         for i in range(self._graph.num_nodes()):
             yield symbol_from_ptr(self, self._graph.nodes()[i].get())
 
-    def integer(self, shape=None, lower_bound=None, upper_bound=None):
-        r"""Create an integer symbol as a decision variable.
-        
-        Args:
-            shape: Shape of the integer array to create.
-    
-            lower_bound: Lower bound for the symbol, which is the 
-                smallest allowed integer value. If None, the default 
-                value is used.
-            upper_bound: Upper bound for the symbol, which is the 
-                largest allowed integer value. If None, the default 
-                value is used.
-                
-        Returns:
-            An integer symbol. 
-            
-        Examples:
-            This example creates a :math:`20 \times 20`-sized integer symbol.
-            
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> i = model.integer((20,20), lower_bound=-100, upper_bound=100)
-        """
-        from dwave.optimization.symbols import IntegerVariable #avoid circular import
-        return IntegerVariable(self, shape, lower_bound, upper_bound)
-
-    def binary(self, shape=None):
-        r"""Create a binary symbol as a decision variable.
-        
-        Args:
-            shape: Shape of the binary array to create.
-            
-        Returns:
-            A binary symbol.
-            
-        Examples:
-            This example creates a :math:`1 \times 20`-sized binary symbol.
-            
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> x = model.binary((1,20))
-        """
-        from dwave.optimization.symbols import BinaryVariable #avoid circular import
-        return BinaryVariable(self, shape)
-
     def list(self, n : int):
         """Create a list symbol as a decision variable.
 
@@ -637,26 +657,23 @@ cdef class Model:
         self._graph.set_objective(value.array_ptr)
         self.objective = value
 
-    def add_constraint(self, ArraySymbol value):
-        """Add a constraint to the model.
+    cpdef Py_ssize_t num_constraints(self) noexcept:
+        """Number of constraints in the model.
         
-        Args:
-            value: Value that must evaluate to True for the state 
-                of the model to be feasible. 
-                
         Examples:
-            This example adds a single constraint to a model.
+            This example checks the number of constraints in the model after 
+            adding a couple of constraints.
             
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer()
-            >>> c = model.constant(5)
-            >>> model.add_constraint(i <= c)
+            >>> c = model.constant([5, -14])
+            >>> model.add_constraint(i <= c[0])
+            >>> model.add_constraint(c[1] <= i)
+            >>> model.num_constraints()
+            2
         """
-        if value is None:
-            raise ValueError("value cannot be None")
-        # TODO: shall we accept array valued constraints?
-        self._graph.add_constraint(value.array_ptr)
+        return self._graph.num_constraints()
 
     cpdef Py_ssize_t num_decisions(self) noexcept:
         """Number of independent decision nodes in the model. 
@@ -696,24 +713,6 @@ cdef class Model:
             2
         """
         return self._graph.num_nodes()
-
-    cpdef Py_ssize_t num_constraints(self) noexcept:
-        """Number of constraints in the model.
-        
-        Examples:
-            This example checks the number of constraints in the model after 
-            adding a couple of constraints.
-            
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> i = model.integer()
-            >>> c = model.constant([5, -14])
-            >>> model.add_constraint(i <= c[0])
-            >>> model.add_constraint(c[1] <= i)
-            >>> model.num_constraints()
-            2
-        """
-        return self._graph.num_constraints()
 
     def num_symbols(self):
         """Number of symbols tracked by the model. 
@@ -1193,8 +1192,6 @@ cdef class Symbol:
         return deref(self.expired_ptr)
 
     @classmethod
-
-
     def _from_zipfile(cls, zf, directory, Model model, predecessors):
         """Construct a node from a compressed file.
 
@@ -1683,6 +1680,10 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Min  # avoid circular import
         return Min(self)
 
+    def ndim(self):
+        """Return the number of dimensions for a symbol."""
+        return self.array_ptr.ndim()
+
     def prod(self):
         """Create a :class:`~dwave.optimization.symbols.Prod` symbol.
         
@@ -1717,14 +1718,6 @@ cdef class ArraySymbol(Symbol):
             return Reshape(self, shape)
         else:
             return Reshape(self, shape[0])
-
-    def sum(self):
-        """Create a :class:`~dwave.optimization.symbols.Sum` symbol.
-        
-        The new symbol returns the sum of its elements.
-        """
-        from dwave.optimization.symbols import Sum  # avoid circular import
-        return Sum(self)
 
     def shape(self):
         """Return the shape of the symbol.
@@ -1883,9 +1876,13 @@ cdef class ArraySymbol(Symbol):
         strides = self.array_ptr.strides()
         return tuple(strides[i] for i in range(strides.size()))
 
-    def ndim(self):
-        """Return the number of dimensions for a symbol."""
-        return self.array_ptr.ndim()
+    def sum(self):
+        """Create a :class:`~dwave.optimization.symbols.Sum` symbol.
+        
+        The new symbol returns the sum of its elements.
+        """
+        from dwave.optimization.symbols import Sum  # avoid circular import
+        return Sum(self)
 
 
 cdef class StateView:

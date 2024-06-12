@@ -33,6 +33,10 @@ class SymbolTestsMixin(abc.ABC):
         The model must be topologically sorted before returning.
         The symbols must all be unique from eachother.
         """
+
+    @abc.abstractmethod
+    def assertEqual(self, *args, **kwargs): ...
+
     @abc.abstractmethod
     def assertFalse(self, *args, **kwargs): ...
 
@@ -593,6 +597,19 @@ class TestDisjointBitSetsVariable(unittest.TestCase, SymbolTestsMixin):
 
         model.disjoint_bit_sets(10, 4)
 
+    def test_construction(self):
+        model = Model()
+
+        with self.assertRaises(ValueError):
+            model.disjoint_bit_sets(-5, 1)
+        with self.assertRaises(ValueError):
+            model.disjoint_bit_sets(1, -5)
+
+        model.states.resize(1)
+
+        ds, (x,) = model.disjoint_bit_sets(0, 1)
+        self.assertEqual(x.shape(), (0,))
+
     def test_num_returned_nodes(self):
         model = Model()
 
@@ -695,6 +712,19 @@ class TestDisjointListsVariable(unittest.TestCase, SymbolTestsMixin):
         model = Model()
 
         model.disjoint_lists(10, 4)
+
+    def test_construction(self):
+        model = Model()
+
+        with self.assertRaises(ValueError):
+            model.disjoint_lists(-5, 1)
+        with self.assertRaises(ValueError):
+            model.disjoint_lists(1, -5)
+
+        model.states.resize(1)
+
+        ds, (x,) = model.disjoint_lists(0, 1)
+        self.assertEqual(x.shape(), (-1,))  # todo: handle this special case
 
     def test_num_returned_nodes(self):
         model = Model()
@@ -992,10 +1022,11 @@ class TestListVariable(unittest.TestCase, SymbolTestsMixin):
         model.lock()
         yield z
 
-    def test(self):
+    def test_construction(self):
         model = Model()
 
-        x = model.list(10)
+        with self.assertRaises(ValueError):
+            model.list(-1)
 
     def test_subscript(self):
         model = Model()

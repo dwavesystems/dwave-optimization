@@ -116,8 +116,7 @@ class DisjointBitSetsNode : public Node, public Decision {
  public:
     // `primary_set_size` is the size of the primary set that the node will partition,
     // i.e. the set `range(primary_set_size)`.
-    DisjointBitSetsNode(ssize_t primary_set_size, ssize_t num_disjoint_sets)
-            : primary_set_size_(primary_set_size), num_disjoint_sets_(num_disjoint_sets){};
+    DisjointBitSetsNode(ssize_t primary_set_size, ssize_t num_disjoint_sets);
 
     void initialize_state(State& state) const override;
 
@@ -135,11 +134,12 @@ class DisjointBitSetsNode : public Node, public Decision {
 
     // Overloads required by the Decision ABC
 
-    virtual void default_move(State& state, RngAdaptor& rng) const override;
+    void default_move(State& state, RngAdaptor& rng) const override;
 
     // Disjoint-Bitset-specific methods ********************************************
 
-    void swap_between_sets(State& state, ssize_t from_disjoint_set, ssize_t to_disjoint_set, ssize_t element_i) const;
+    void swap_between_sets(State& state, ssize_t from_disjoint_set, ssize_t to_disjoint_set,
+                           ssize_t element_i) const;
 
     ssize_t get_containing_set_index(State& state, ssize_t element_i) const;
 
@@ -155,13 +155,17 @@ class DisjointBitSetsNode : public Node, public Decision {
 // Successor node for the output of `DisjointBitSetsNode`
 class DisjointBitSetNode : public Node, public ArrayOutputMixin<Array> {
  public:
-    DisjointBitSetNode(DisjointBitSetsNode* disjoint_bit_sets_node) : Node(), ArrayOutputMixin(disjoint_bit_sets_node->primary_set_size()), disjoint_bit_sets_node(disjoint_bit_sets_node), set_index_(disjoint_bit_sets_node->successors().size()), primary_set_size_(disjoint_bit_sets_node->primary_set_size()) {
+    explicit DisjointBitSetNode(DisjointBitSetsNode* disjoint_bit_sets_node)
+            : Node(),
+              ArrayOutputMixin(disjoint_bit_sets_node->primary_set_size()),
+              disjoint_bit_sets_node(disjoint_bit_sets_node),
+              set_index_(disjoint_bit_sets_node->successors().size()),
+              primary_set_size_(disjoint_bit_sets_node->primary_set_size()) {
         if (set_index_ >= disjoint_bit_sets_node->num_disjoint_sets()) {
             throw std::length_error("disjoint-bit-set node already has all output nodes");
         }
-
         add_predecessor(disjoint_bit_sets_node);
-    };
+    }
 
     // Overloads needed by the Array ABC **************************************
 
@@ -195,8 +199,7 @@ class DisjointListsNode : public Node, public Decision {
  public:
     // `primary_set_size` is the size of the primary set that the node will partition,
     // i.e. the set `range(primary_set_size)`.
-    DisjointListsNode(ssize_t primary_set_size, ssize_t num_disjoint_lists)
-            : primary_set_size_(primary_set_size), num_disjoint_lists_(num_disjoint_lists){};
+    DisjointListsNode(ssize_t primary_set_size, ssize_t num_disjoint_lists);
 
     void initialize_state(State& state) const override;
 
@@ -214,7 +217,7 @@ class DisjointListsNode : public Node, public Decision {
 
     // Overloads required by the Decision ABC
 
-    virtual void default_move(State& state, RngAdaptor& rng) const override;
+    void default_move(State& state, RngAdaptor& rng) const override;
 
     // Disjoint-list-specific methods ********************************************
     ssize_t get_disjoint_list_size(State& state, ssize_t list_index) const;
@@ -236,7 +239,7 @@ class DisjointListsNode : public Node, public Decision {
 // Successor node for the output of `DisjointListsNode`
 class DisjointListNode : public Node, public ArrayOutputMixin<Array> {
  public:
-    DisjointListNode(DisjointListsNode* disjoint_list_node);
+    explicit DisjointListNode(DisjointListsNode* disjoint_list_node);
 
     // Overloads needed by the Array ABC **************************************
 
