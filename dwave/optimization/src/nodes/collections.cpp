@@ -309,6 +309,14 @@ struct DisjointBitSetsNodeData : NodeStateData {
     std::vector<std::vector<Update>> diffs;
 };
 
+DisjointBitSetsNode::DisjointBitSetsNode(ssize_t primary_set_size, ssize_t num_disjoint_sets)
+        : primary_set_size_(primary_set_size), num_disjoint_sets_(num_disjoint_sets) {
+    if (primary_set_size < 0)
+        throw std::invalid_argument("primary_set_size must be non-negative");
+    if (num_disjoint_sets < 1)
+        throw std::invalid_argument("num_disjoint_sets must be positive");
+}
+
 void DisjointBitSetsNode::initialize_state(State& state) const {
     int index = this->topological_index();
     state[index] = std::make_unique<DisjointBitSetsNodeData>(primary_set_size_, num_disjoint_sets_);
@@ -501,6 +509,12 @@ struct DisjointListStateData : NodeStateData {
     std::vector<ssize_t> list_sizes;  // used for the span returned by shape()
     std::vector<ssize_t> previous_list_sizes;
 };
+
+DisjointListsNode::DisjointListsNode(ssize_t primary_set_size, ssize_t num_disjoint_lists)
+        : primary_set_size_(primary_set_size), num_disjoint_lists_(num_disjoint_lists) {
+    if (primary_set_size < 0) throw std::invalid_argument("primary_set_size must be non-negative");
+    if (num_disjoint_lists < 1) throw std::invalid_argument("num_disjoint_lists must be positive");
+}
 
 void DisjointListsNode::initialize_state(State& state) const {
     int index = this->topological_index();

@@ -29,7 +29,7 @@ class TestArraySymbol(unittest.TestCase):
     def test_abstract(self):
         from dwave.optimization.model import ArraySymbol
         with self.assertRaisesRegex(ValueError, "ArraySymbols cannot be constructed directly"):
-            s = ArraySymbol()
+            ArraySymbol()
 
     class IndexTester:
         def __init__(self, array):
@@ -189,7 +189,6 @@ class TestModel(unittest.TestCase):
         self.assertFalse(a.has_state(1))
         np.testing.assert_array_equal(a.state(2), range(5))
 
-
     def test_serialization_by_filename(self):
         model = Model()
         c = model.constant([0, 1, 2, 3, 4])
@@ -337,7 +336,7 @@ class TestStates(unittest.TestCase):
         model.minimize(b + c)
         model.states.resize(1)
 
-        b.set_state(0, 1) 
+        b.set_state(0, 1)
         self.assertEqual(b.state(0), 1)
 
         # can set state when locked

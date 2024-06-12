@@ -1444,6 +1444,104 @@ cdef class Equal(ArraySymbol):
     cdef cppEqualNode* ptr
 
 
+cdef class IntegerVariable(ArraySymbol):
+    """Integer decision-variable symbol.
+    
+    Examples:
+        This example adds an integer symbol to a model.
+        
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(25, upper_bound=100)
+        >>> type(i)
+        <class 'dwave.optimization.symbols.IntegerVariable'>
+    """
+    def __init__(self, Model model, shape=None, lower_bound=None, upper_bound=None):
+        cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape )
+
+        if lower_bound is None and upper_bound is None:
+            self.ptr = model._graph.emplace_node[cppIntegerNode](vshape)
+        elif lower_bound is None:
+            self.ptr = model._graph.emplace_node[cppIntegerNode](vshape, nullopt, <double>upper_bound)
+        elif upper_bound is None:
+            self.ptr = model._graph.emplace_node[cppIntegerNode](vshape, <double>lower_bound)
+        else:
+            self.ptr = model._graph.emplace_node[cppIntegerNode](vshape, <double>lower_bound, <double>upper_bound)
+
+        self.initialize_node(model, self.ptr)
+        self.initialize_array(self.ptr)
+
+    @staticmethod
+    cdef IntegerVariable from_ptr(Model model, cppIntegerNode* ptr):
+        cdef IntegerVariable x = IntegerVariable.__new__(IntegerVariable)
+        x.ptr = ptr
+        x.initialize_node(model, ptr)
+        x.initialize_array(ptr)
+        return x
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+        if predecessors:
+            raise ValueError(f"{cls.__name__} cannot have predecessors")
+
+        with zf.open(directory + "shape.json", "r") as f:
+            shape_info = json.load(f)
+
+        return IntegerVariable(model,
+                               shape=shape_info["shape"],
+                               lower_bound=shape_info["lb"],
+                               upper_bound=shape_info["ub"],
+                               )
+
+    def _into_zipfile(self, zf, directory):
+        # the additional data we want to encode
+
+        shape_info = dict(
+            shape=self.shape(),
+            lb=self.lower_bound(),
+            ub=self.upper_bound(),
+            )
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+
+        zf.writestr(directory + "shape.json", encoder.encode(shape_info))
+
+    def lower_bound(self):
+        """The lowest value allowed for the integer symbol."""
+        return int(self.ptr.lower_bound())
+
+    def set_state(self, Py_ssize_t index, state):
+        """Set the state of the integer node.
+
+        The given state must be integer array of the integer node shape.
+        """
+        # Convert the state into something we can handle in C++.
+        # This also does some type checking etc
+        # We go ahead and do the translation to integer now
+        cdef Py_ssize_t[:] arr = np.asarray(state, dtype=np.intp).flatten()
+
+        # Reset our state, and check whether that's possible
+        self.reset_state(index)
+
+        # Convert to a vector. We could skip this copy if it ever becomes
+        # a performance bottleneck
+        cdef vector[double] items
+        items.reserve(arr.size)
+        cdef Py_ssize_t i
+        for i in range(arr.size):
+            items.push_back(arr[i])
+
+        # The validity of the state is checked in C++
+        self.ptr.initialize_state(self.model.states._states[index], move(items))
+
+    def upper_bound(self):
+        """The highest value allowed for the integer symbol."""
+        return int(self.ptr.upper_bound())
+
+    # An observing pointer to the C++ IntegerNode
+    cdef cppIntegerNode* ptr
+
+
 cdef class LessEqual(ArraySymbol):
     """Smaller-or-equal comparison element-wise between two symbols.
     
@@ -1556,104 +1654,6 @@ cdef class ListVariable(ArraySymbol):
 
     # An observing pointer to the C++ ListNode
     cdef cppListNode* ptr
-
-
-cdef class IntegerVariable(ArraySymbol):
-    """Integer decision-variable symbol.
-    
-    Examples:
-        This example adds an integer symbol to a model.
-        
-        >>> from dwave.optimization.model import Model
-        >>> model = Model()
-        >>> i = model.integer(25, upper_bound=100)
-        >>> type(i)
-        <class 'dwave.optimization.symbols.IntegerVariable'>
-    """
-    def __init__(self, Model model, shape=None, lower_bound=None, upper_bound=None):
-        cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape )
-
-        if lower_bound is None and upper_bound is None:
-            self.ptr = model._graph.emplace_node[cppIntegerNode](vshape)
-        elif lower_bound is None:
-            self.ptr = model._graph.emplace_node[cppIntegerNode](vshape, nullopt, <double>upper_bound)
-        elif upper_bound is None:
-            self.ptr = model._graph.emplace_node[cppIntegerNode](vshape, <double>lower_bound)
-        else:
-            self.ptr = model._graph.emplace_node[cppIntegerNode](vshape, <double>lower_bound, <double>upper_bound)
-
-        self.initialize_node(model, self.ptr)
-        self.initialize_array(self.ptr)
-
-    @staticmethod
-    cdef IntegerVariable from_ptr(Model model, cppIntegerNode* ptr):
-        cdef IntegerVariable x = IntegerVariable.__new__(IntegerVariable)
-        x.ptr = ptr
-        x.initialize_node(model, ptr)
-        x.initialize_array(ptr)
-        return x
-
-    @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
-        if predecessors:
-            raise ValueError(f"{cls.__name__} cannot have predecessors")
-
-        with zf.open(directory + "shape.json", "r") as f:
-            shape_info = json.load(f)
-
-        return IntegerVariable(model,
-                               shape=shape_info["shape"],
-                               lower_bound=shape_info["lb"],
-                               upper_bound=shape_info["ub"],
-                               )
-
-    def _into_zipfile(self, zf, directory):
-        # the additional data we want to encode
-
-        shape_info = dict(
-            shape=self.shape(),
-            lb=self.lower_bound(),
-            ub=self.upper_bound(),
-            )
-
-        encoder = json.JSONEncoder(separators=(',', ':'))
-
-        zf.writestr(directory + "shape.json", encoder.encode(shape_info))
-
-    def lower_bound(self):
-        """The lowest value the integer(s) can take (inclusive)."""
-        return int(self.ptr.lower_bound())
-
-    def set_state(self, Py_ssize_t index, state):
-        """Set the state of the integer node.
-
-        The given state must be integer array of the integer node shape.
-        """
-        # Convert the state into something we can handle in C++.
-        # This also does some type checking etc
-        # We go ahead and do the translation to integer now
-        cdef Py_ssize_t[:] arr = np.asarray(state, dtype=np.intp).flatten()
-
-        # Reset our state, and check whether that's possible
-        self.reset_state(index)
-
-        # Convert to a vector. We could skip this copy if it ever becomes
-        # a performance bottleneck
-        cdef vector[double] items
-        items.reserve(arr.size)
-        cdef Py_ssize_t i
-        for i in range(arr.size):
-            items.push_back(arr[i])
-
-        # The validity of the state is checked in C++
-        self.ptr.initialize_state(self.model.states._states[index], move(items))
-
-    def upper_bound(self):
-        """The highest value the integer(s) can take (inclusive)."""
-        return int(self.ptr.upper_bound())
-
-    # An observing pointer to the C++ IntegerNode
-    cdef cppIntegerNode* ptr
 
 
 cdef class Max(ArraySymbol):
