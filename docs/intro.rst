@@ -69,8 +69,8 @@ as follows:
 >>> model = Model()
 >>> i = model.integer(lower_bound=-5, upper_bound=5)
 >>> c = model.constant(4)
->>> y = i*i - c*i
->>> model.minimize(y.sum())      
+>>> y = i**2 - c*i
+>>> model.minimize(y)      
 
 The code above has the following elements:
 
@@ -94,11 +94,6 @@ The code above has the following elements:
 *   The :meth:`~dwave.optimization.symbols.Min` symbol is a 
     mathematical operation on inputs from other symbols. In this model, it 
     generates the objective function. 
-*   The :meth:`~dwave.optimization.symbols.Sum` 
-    (:meth:`~dwave.optimization.mathematical.add` method) 
-    symbol is another mathematical operation. Here, it is used because the 
-    objective function being minimized must be a scalar and :code:`y`, like
-    :code:`i` and :code:`c` are matrices (of a single element each). 
 
 The directed acyclic graph below illustratively represents the model for 
 minimizing polynomial :math:`y = i^2 - 4i`.
@@ -391,23 +386,23 @@ The two tabs below provide the two formulations.
         and value of each item is represented by a symbol.
 
         >>> model = Model()
-        >>> weight0 = model.constant([30]) 
-        >>> weight1 = model.constant([10])
-        >>> weight2 = model.constant([40])
-        >>> weight3 = model.constant([20])
-        >>> val0 = model.constant([10]) 
-        >>> val1 = model.constant([20])
-        >>> val2 = model.constant([30])
-        >>> val3 = model.constant([40])
-        >>> capacity = model.constant([30])
+        >>> weight0 = model.constant(30) 
+        >>> weight1 = model.constant(10)
+        >>> weight2 = model.constant(40)
+        >>> weight3 = model.constant(20)
+        >>> val0 = model.constant(10) 
+        >>> val1 = model.constant(20)
+        >>> val2 = model.constant(30)
+        >>> val3 = model.constant(40)
+        >>> capacity = model.constant(30)
         
         Add a binary variable for each item: should that item be loaded into 
         the truck (yes or no?).
         
-        >>> item0 = model.binary(1) 
-        >>> item1 = model.binary(1)
-        >>> item2 = model.binary(1)
-        >>> item3 = model.binary(1)
+        >>> item0 = model.binary() 
+        >>> item1 = model.binary()
+        >>> item2 = model.binary()
+        >>> item3 = model.binary()
 
         Add the constraint on the total weight:
 
@@ -417,13 +412,13 @@ The two tabs below provide the two formulations.
         Add the objective to maximize the transported value:
 
         >>> total_value = item0*val0 + item1*val1 + item2*val2 + item3*val3
-        >>> model.minimize(-total_value.sum())
+        >>> model.minimize(-total_value)
 
         The size of this model is triple the alternative formulation
         shown in the first tab:
 
         >>> model.num_nodes()
-        30
+        29
 
 Compare the two formulations. Prefer compact-matrix formulations for 
 your models. 

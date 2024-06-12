@@ -4,6 +4,7 @@ __pycache__/
 *.out
 *.so
 *.a
+*.pyd
 
 # Distribution / packaging
 .Python
@@ -65,3 +66,7 @@ ENV/
 tests/cpp/.deps/*.d
 dwave/optimization/*.cpp
 dwave/optimization/*.html
+
+# Sphinx documentation
+docs/_build/
+docs/reference/generated/
