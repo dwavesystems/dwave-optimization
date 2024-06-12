@@ -17,7 +17,7 @@ import dwave.optimization.generators
 from dwave.optimization.model import Model, _register_node_subclasses
 from dwave.optimization.mathematical import *
 
-__version__ = "0.1.0rc0"
+__version__ = "0.1.0rc1"
 
 
 def get_include():
