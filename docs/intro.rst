@@ -152,24 +152,24 @@ assigns values 0 to 4. It then prints the resulting value of the model's objecti
 function for each state.  
 
 >>> with model.lock():
->>>     model.states.resize(5)
->>>     for j in range(5):
+...     model.states.resize(5)
+...     for j in range(5):
 ...         i.set_state(j, [j])
->>>     for j in range(5):
+...     for j in range(5):
 ...         print(f"For state {j}, i={i.state(j)} results in objective {model.objective.state(j)}")
-For state 0, i=[0.] results in objective 0.0
-For state 1, i=[1.] results in objective -3.0
-For state 2, i=[2.] results in objective -4.0
-For state 3, i=[3.] results in objective -3.0
-For state 4, i=[4.] results in objective 0.0
+For state 0, i=0.0 results in objective 0.0
+For state 1, i=1.0 results in objective -3.0
+For state 2, i=2.0 results in objective -4.0
+For state 3, i=3.0 results in objective -3.0
+For state 4, i=4.0 results in objective 0.0
 
 The code above selects a symbol by label ('``i``'); however, you can also set states 
 for symbols of a model without using labels. 
 
 >>> with model.lock():
->>>     for symbol in model.iter_decisions():
+...     for symbol in model.iter_decisions():
 ...         symbol.set_state(0, [2])
->>>     model.objective.state(0) == -4
+...     model.objective.state(0) == -4
 True
 
 This process of iterating through a model to select symbols of various types 
@@ -231,7 +231,7 @@ symbol, for example, sums the 100 integer elements of the
 You can access these symbols by iterating on the model's symbols.
 
 >>> with model.lock():
->>>     for symbol in model.iter_symbols():
+...     for symbol in model.iter_symbols():
 ...         print(f"Symbol {type(symbol)} is node {symbol.topological_index()}")
 Symbol <class 'dwave.optimization.symbols.IntegerVariable'> is node 0
 Symbol <class 'dwave.optimization.symbols.Sum'> is node 1
@@ -391,15 +391,15 @@ The two tabs below provide the two formulations.
         and value of each item is represented by a symbol.
 
         >>> model = Model()
-        >>> weight0 = model.constant(30) 
-        >>> weight1 = model.constant(10)
-        >>> weight2 = model.constant(40)
-        >>> weight3 = model.constant(20)
-        >>> val0 = model.constant(10) 
-        >>> val1 = model.constant(20)
-        >>> val2 = model.constant(30)
-        >>> val3 = model.constant(40)
-        >>> capacity = model.constant(30)
+        >>> weight0 = model.constant([30]) 
+        >>> weight1 = model.constant([10])
+        >>> weight2 = model.constant([40])
+        >>> weight3 = model.constant([20])
+        >>> val0 = model.constant([10]) 
+        >>> val1 = model.constant([20])
+        >>> val2 = model.constant([30])
+        >>> val3 = model.constant([40])
+        >>> capacity = model.constant([30])
         
         Add a binary variable for each item: should that item be loaded into 
         the truck (yes or no?).
@@ -412,7 +412,7 @@ The two tabs below provide the two formulations.
         Add the constraint on the total weight:
 
         >>> total_weight = item0*weight0 + item1*weight1 + item2*weight2 + item3*weight3
-        >>> model.add_constraint(total_weight.sum() <= capacity)
+        >>> model.add_constraint(total_weight <= capacity)
 
         Add the objective to maximize the transported value:
 
@@ -507,10 +507,10 @@ The two tabs below provide the two formulations.
 	as permutations of the :math:`[0, 1, 2, 3]` list as follows:
 	
 	>>> with model.lock():
-	>>>     model.states.resize(2)
-	>>>     route.set_state(0, [3, 2, 1, 0])
-	>>>     route.set_state(1, [2, 1, 3, 0])
-	>>>     print(int(model.objective.state(0)), int(model.objective.state(1)))
+	...     model.states.resize(2)
+	...     route.set_state(0, [3, 2, 1, 0])
+	...     route.set_state(1, [2, 1, 3, 0])
+	...     print(int(model.objective.state(0)), int(model.objective.state(1)))
 	14 36
 	
     .. tab-item:: Explicit Constraints  
@@ -527,7 +527,7 @@ The two tabs below provide the two formulations.
 	
 	Define constants that are used to formulate the explicit constraints.
 	
-	>>> one = model.constant([1])
+	>>> one = model.constant(1)
 	>>> indx_int = model.constant([0, 1, 2, 3])
 	
 	Add the decision symbol: for each of the itinerary's four legs, each 
@@ -562,13 +562,13 @@ The two tabs below provide the two formulations.
 	as follows:
 	
 	>>> with model.lock():
-	>>>     model.states.resize(2)
-	>>>     itinerary_loc.set_state(0, [ 
+	...     model.states.resize(2)
+	...     itinerary_loc.set_state(0, [ 
         ...         [0, 0, 0, 1], 
         ...         [0, 0, 1, 0], 
         ...         [0, 1, 0, 0],
         ...         [1, 0, 0, 0]])
-	>>>     print(int(model.objective.state(0)))
+	...     print(int(model.objective.state(0)))
 	14 
 	
 The directed acyclic graph for the implicitly constrained model has few nodes 

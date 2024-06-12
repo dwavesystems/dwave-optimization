@@ -289,7 +289,7 @@ cdef class Absolute(ArrayObserver):
         >>> i = model.integer(1, lower_bound=-50, upper_bound=50) 
         >>> i_abs = abs(i)
         >>> type(i_abs)
-        dwave.optimization.symbols.Absolute
+        <class 'dwave.optimization.symbols.Absolute'>
     """
     def __init__(self, ArrayObserver x):
         cdef Model model = x.model
@@ -321,7 +321,7 @@ cdef class Add(ArrayObserver):
         >>> j = model.integer(10, lower_bound=0, upper_bound=10)
         >>> k = i + j
         >>> type(k)
-        dwave.optimization.symbols.Add
+        <class 'dwave.optimization.symbols.Add'>
     """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
@@ -355,7 +355,7 @@ cdef class All(ArrayObserver):
         >>> x = model.binary((20, 30)) 
         >>> all_x = x.all()
         >>> type(all_x)
-        dwave.optimization.symbols.All
+        <class 'dwave.optimization.symbols.All'>
     """
     def __init__(self, ArrayObserver array):
         cdef Model model = array.model
@@ -388,7 +388,7 @@ cdef class And(ArrayObserver):
         >>> y = model.binary(200)
         >>> z = logical_and(x, y)
         >>> type(z)
-        dwave.optimization.symbols.And
+        <class 'dwave.optimization.symbols.And'>
     """ 
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
@@ -441,7 +441,7 @@ cdef class AdvancedIndexing(ArrayObserver):
         >>> items = model.set(20)
         >>> values = prices[items]
         >>> type(values)
-        dwave.optimization.symbols.AdvancedIndexing
+        <class 'dwave.optimization.symbols.AdvancedIndexing'>
     """
     def __init__(self, ArrayObserver array, *indices):
         cdef Model model = array.model
@@ -565,7 +565,7 @@ cdef class BasicIndexing(ArrayObserver):
         >>> prices = model.constant([i for i in range(20)])
         >>> low_prices = prices[:10]
         >>> type(low_prices)
-        dwave.optimization.symbols.BasicIndexing
+        <class 'dwave.optimization.symbols.BasicIndexing'>
     """
     def __init__(self, ArrayObserver array, *indices):
 
@@ -663,7 +663,7 @@ cdef class BinaryVariable(ArrayObserver):
         >>> model = Model()
         >>> x = model.binary((20, 30))
         >>> type(x)
-        dwave.optimization.symbols.BinaryVariable
+        <class 'dwave.optimization.symbols.BinaryVariable'>
     """
     def __init__(self, Model model, shape=None):
         # Get an observing pointer to the node
@@ -791,7 +791,7 @@ cdef class Constant(ArrayObserver):
         >>> model = Model()
         >>> a = model.constant(20)
         >>> type(a)
-        dwave.optimization.symbols.Constant
+        <class 'dwave.optimization.symbols.Constant'>
     """
     def __init__(self, Model model, array_like):
         # In the future we won't need to be contiguous, but we do need to be right now
@@ -927,7 +927,7 @@ cdef class DisjointBitSets(NodeObserver):
         >>> model = Model()
         >>> s = model.disjoint_bit_sets(primary_set_size=100, num_disjoint_sets=5)
         >>> type(s[0])
-        dwave.optimization.symbols.DisjointBitSets
+        <class 'dwave.optimization.symbols.DisjointBitSets'>
     """
     def __init__(
         self, Model model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets
@@ -1073,7 +1073,7 @@ cdef class DisjointBitSet(ArrayObserver):
         >>> model = Model()
         >>> s = model.disjoint_bit_sets(primary_set_size=100, num_disjoint_sets=5)
         >>> type(s[1][0])
-        dwave.optimization.symbols.DisjointBitSet
+        <class 'dwave.optimization.symbols.DisjointBitSet'>
     """
     def __init__(self, DisjointBitSets parent, Py_ssize_t set_index):
         if set_index < 0 or set_index >= parent.num_disjoint_sets():
@@ -1174,7 +1174,7 @@ cdef class DisjointLists(NodeObserver):
         >>> model = Model()
         >>> l = model.disjoint_lists(primary_set_size=10, num_disjoint_lists=2)
         >>> type(l[0])
-        dwave.optimization.symbols.DisjointLists
+        <class 'dwave.optimization.symbols.DisjointLists'>
     """
     def __init__(
         self, Model model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists
@@ -1318,7 +1318,7 @@ cdef class DisjointList(ArrayObserver):
         >>> model = Model()
         >>> l = model.disjoint_lists(primary_set_size=10, num_disjoint_lists=2)
         >>> type(l[1][0])
-        dwave.optimization.symbols.DisjointList
+        <class 'dwave.optimization.symbols.DisjointList'>
     """
     def __init__(self, DisjointLists parent, Py_ssize_t list_index):
         if list_index < 0 or list_index >= parent.num_disjoint_lists():
@@ -1421,7 +1421,7 @@ cdef class Equal(ArrayObserver):
         >>> j = model.integer(25, lower_bound=-100)
         >>> k = i == j
         >>> type(k)
-        dwave.optimization.symbols.Equal
+        <class 'dwave.optimization.symbols.Equal'>
     """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
@@ -1456,7 +1456,7 @@ cdef class LessEqual(ArrayObserver):
         >>> j = model.integer(25, lower_bound=-100)
         >>> k = i <= j
         >>> type(k)
-        dwave.optimization.symbols.LessEqual
+        <class 'dwave.optimization.symbols.LessEqual'>
     """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
@@ -1489,7 +1489,7 @@ cdef class ListVariable(ArrayObserver):
         >>> model = Model()
         >>> l = model.list(10)
         >>> type(l)
-        dwave.optimization.symbols.ListVariable
+        <class 'dwave.optimization.symbols.ListVariable'>
     """
     def __init__(self, Model model, Py_ssize_t n):
         # Get an observing pointer to the node
@@ -1568,7 +1568,7 @@ cdef class IntegerVariable(ArrayObserver):
         >>> model = Model()
         >>> i = model.integer(25, upper_bound=100)
         >>> type(i)
-        dwave.optimization.symbols.IntegerVariable
+        <class 'dwave.optimization.symbols.IntegerVariable'>
     """
     def __init__(self, Model model, shape=None, lower_bound=None, upper_bound=None):
         cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape )
@@ -1668,7 +1668,7 @@ cdef class Max(ArrayObserver):
         >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
         >>> i_max = i.max()
         >>> type(i_max)
-        dwave.optimization.symbols.Max
+        <class 'dwave.optimization.symbols.Max'>
     """
     def __init__(self, ArrayObserver node):
         cdef Model model = node.model
@@ -1704,7 +1704,7 @@ cdef class Maximum(ArrayObserver):
         >>> j = model.integer(100, lower_bound=-20, upper_bound=150)
         >>> k = maximum(i, j)
         >>> type(k)
-        dwave.optimization.symbols.Maximum
+        <class 'dwave.optimization.symbols.Maximum'>
     """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
@@ -1740,7 +1740,7 @@ cdef class Min(ArrayObserver):
         >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
         >>> i_min = i.min()
         >>> type(i_min)
-        dwave.optimization.symbols.Min
+        <class 'dwave.optimization.symbols.Min'>
     """
     def __init__(self, ArrayObserver node):
         cdef Model model = node.model
@@ -1776,7 +1776,7 @@ cdef class Minimum(ArrayObserver):
         >>> j = model.integer(100, lower_bound=-20, upper_bound=150)
         >>> k = minimum(i, j)
         >>> type(k)
-        dwave.optimization.symbols.Minimum
+        <class 'dwave.optimization.symbols.Minimum'>
     """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
@@ -1812,7 +1812,7 @@ cdef class Multiply(ArrayObserver):
         >>> j = model.integer(10, lower_bound=0, upper_bound=10)
         >>> k = i*j
         >>> type(k)
-        dwave.optimization.symbols.Multiply
+        <class 'dwave.optimization.symbols.Multiply'>
     """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
@@ -1850,7 +1850,7 @@ cdef class NaryAdd(ArrayObserver):
         >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
         >>> l = add([i, j, k])
         >>> type(l)
-        dwave.optimization.symbols.NaryAdd
+        <class 'dwave.optimization.symbols.NaryAdd'>
     """
     def __init__(self, *inputs):
         if len(inputs) == 0:
@@ -1897,7 +1897,7 @@ cdef class NaryMaximum(ArrayObserver):
         >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
         >>> l = maximum([i, j, k])
         >>> type(l)
-        dwave.optimization.symbols.NaryMaximum
+        <class 'dwave.optimization.symbols.NaryMaximum'>
     """
     def __init__(self, *inputs):
         if len(inputs) == 0:
@@ -1944,7 +1944,7 @@ cdef class NaryMinimum(ArrayObserver):
         >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
         >>> l = minimum([i, j, k])
         >>> type(l)
-        dwave.optimization.symbols.NaryMinimum
+        <class 'dwave.optimization.symbols.NaryMinimum'>
     """
     def __init__(self, *inputs):
         if len(inputs) == 0:
@@ -1990,7 +1990,7 @@ cdef class NaryMultiply(ArrayObserver):
         >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
         >>> l = multiply([i, j, k])
         >>> type(l)
-        dwave.optimization.symbols.NaryMultiply
+        <class 'dwave.optimization.symbols.NaryMultiply'>
     """
     def __init__(self, *inputs):
         if len(inputs) == 0:
@@ -2032,7 +2032,7 @@ cdef class Negative(ArrayObserver):
         >>> i = model.integer(100, upper_bound=50)
         >>> i_minus = -i
         >>> type(i_minus)
-        dwave.optimization.symbols.Negative
+        <class 'dwave.optimization.symbols.Negative'>
     """
     def __init__(self, ArrayObserver x):
         cdef Model model = x.model
@@ -2066,7 +2066,7 @@ cdef class Or(ArrayObserver):
         >>> y = model.binary(200)
         >>> z = logical_or(x, y)
         >>> type(z)
-        dwave.optimization.symbols.Or
+        <class 'dwave.optimization.symbols.Or'>
     """ 
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
@@ -2101,7 +2101,7 @@ cdef class Permutation(ArrayObserver):
         >>> l = model.list(3)
         >>> p = C[l, :][:, l]
         >>> type(p)
-        dwave.optimization.symbols.Permutation
+        <class 'dwave.optimization.symbols.Permutation'>
     """
     def __init__(self, Constant array, ListVariable x):
         # todo: Loosen the types accepted. But this Cython code doesn't yet have
@@ -2138,7 +2138,7 @@ cdef class Prod(ArrayObserver):
         >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
         >>> i_prod = i.prod()
         >>> type(i_prod)
-        dwave.optimization.symbols.Prod
+        <class 'dwave.optimization.symbols.Prod'>
     """
     def __init__(self, ArrayObserver node):
         cdef Model model = node.model
@@ -2171,7 +2171,7 @@ cdef class QuadraticModel(ArrayObserver):
         >>> Q = {(0, 0): 0, (0, 1): 1, (0, 2): 2, (1, 1): 1, (1, 2): 3, (2, 2): 2}
         >>> qm = model.quadratic_model(x, Q)
         >>> type(qm)
-        dwave.optimization.symbols.QuadraticModel
+        <class 'dwave.optimization.symbols.QuadraticModel'>
     """
     def __init__(self, ArrayObserver x, quadratic, linear=None):
         # Some checking on x
@@ -2396,7 +2396,7 @@ cdef class Reshape(ArrayObserver):
         >>> x = model.binary((2, 3)) 
         >>> x_t = x.reshape((3, 2))
         >>> type(x_t)
-        dwave.optimization.symbols.Reshape
+        <class 'dwave.optimization.symbols.Reshape'>
     """
     def __init__(self, ArrayObserver node, shape):
         cdef Model model = node.model
@@ -2450,8 +2450,7 @@ cdef class SetVariable(ArrayObserver):
         >>> model = Model()
         >>> s = model.set(10)
         >>> type(s)
-        dwave.optimization.symbols.SetVariable
-
+        <class 'dwave.optimization.symbols.SetVariable'>
     """
     def __init__(self, Model model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
         self.ptr = model._graph.emplace_node[cppSetNode](n, min_size, max_size)
@@ -2538,7 +2537,7 @@ cdef class Square(ArrayObserver):
         >>> i = model.integer(10, lower_bound=-5, upper_bound=5) 
         >>> ii = i**2
         >>> type(ii)
-        dwave.optimization.symbols.Square
+        <class 'dwave.optimization.symbols.Square'>
     """
     def __init__(self, ArrayObserver x):
         cdef Model model = x.model
@@ -2569,7 +2568,7 @@ cdef class Subtract(ArrayObserver):
         >>> j = model.integer(10, lower_bound=0, upper_bound=10)
         >>> k = i - j
         >>> type(k)
-        dwave.optimization.symbols.Subtract
+        <class 'dwave.optimization.symbols.Subtract'>
     """
     def __init__(self, ArrayObserver lhs, ArrayObserver rhs):
         if lhs.model is not rhs.model:
@@ -2604,7 +2603,7 @@ cdef class Sum(ArrayObserver):
         >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
         >>> i_sum = i.sum()
         >>> type(i_sum)
-        dwave.optimization.symbols.Sum
+        <class 'dwave.optimization.symbols.Sum'>
     """
     def __init__(self, ArrayObserver array):
         cdef Model model = array.model
