@@ -1507,7 +1507,7 @@ cdef class IntegerVariable(ArraySymbol):
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
 
     def lower_bound(self):
-        """The lowest value the integer(s) can take (inclusive)."""
+        """The lowest value allowed for the integer symbol."""
         return int(self.ptr.lower_bound())
 
     def set_state(self, Py_ssize_t index, state):
