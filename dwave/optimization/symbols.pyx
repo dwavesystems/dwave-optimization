@@ -1535,7 +1535,7 @@ cdef class IntegerVariable(ArraySymbol):
         self.ptr.initialize_state(self.model.states._states[index], move(items))
 
     def upper_bound(self):
-        """The highest value the integer(s) can take (inclusive)."""
+        """The highest value allowed for the integer symbol."""
         return int(self.ptr.upper_bound())
 
     # An observing pointer to the C++ IntegerNode
