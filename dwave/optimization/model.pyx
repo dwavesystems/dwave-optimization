@@ -706,10 +706,10 @@ cdef class Model:
             
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> i = model.integer(1)
+            >>> i = model.integer()
             >>> c = model.constant([5, -14])
-            >>> model.add_constraint(i.sum() <= c[0])
-            >>> model.add_constraint(c[1] <= i.sum())
+            >>> model.add_constraint(i <= c[0])
+            >>> model.add_constraint(c[1] <= i)
             >>> model.num_constraints()
             2
         """
