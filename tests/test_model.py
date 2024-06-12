@@ -25,7 +25,12 @@ import dwave.optimization.symbols
 from dwave.optimization import Model
 
 
-class TestArrayObserver(unittest.TestCase):
+class TestArraySymbol(unittest.TestCase):
+    def test_abstract(self):
+        from dwave.optimization.model import ArraySymbol
+        with self.assertRaisesRegex(ValueError, "ArraySymbols cannot be constructed directly"):
+            s = ArraySymbol()
+
     class IndexTester:
         def __init__(self, array):
             self.array = array
@@ -413,3 +418,10 @@ class TestStates(unittest.TestCase):
         #     with model.states.to_file() as f:
         #         with self.assertRaises(ValueError):
         #             new.states.from_file(f)
+
+
+class TestSymbol(unittest.TestCase):
+    def test_abstract(self):
+        from dwave.optimization.model import Symbol
+        with self.assertRaisesRegex(ValueError, "Symbols cannot be constructed directly"):
+            Symbol()

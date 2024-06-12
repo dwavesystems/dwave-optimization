@@ -1160,6 +1160,11 @@ cdef class Symbol:
     Each symbol corresponds to a node in the directed acyclic graph representing
     the problem.
     """ 
+    def __init__(self, *args, **kwargs):
+        # disallow direct construction of symbols, they should be constructed
+        # via their subclasses.
+        raise ValueError("Symbols cannot be constructed directly")
+
     cdef void initialize_node(self, Model model, cppNode* node_ptr) noexcept:
         self.model = model
 
@@ -1520,7 +1525,13 @@ def _split_indices(indices):
 # extension base class, so to support that we assume all ArraySymbols are
 # also Symbols (probably a fair assumption)
 cdef class ArraySymbol(Symbol):
-    """Base class for symbols that can be interpreted as an array.""" 
+    """Base class for symbols that can be interpreted as an array."""
+
+    def __init__(self, *args, **kwargs):
+        # disallow direct construction of array symbols, they should be constructed
+        # via their subclasses.
+        raise ValueError("ArraySymbols cannot be constructed directly")
+
     cdef void initialize_array(self, cppArray* array_ptr) noexcept:
         self.array_ptr = array_ptr
 
