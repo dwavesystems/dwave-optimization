@@ -1,12 +1,12 @@
 .. _sdk_index_optimization:
 
+==================
+dwave-optimization
+==================
+
 .. include:: README.rst
    :start-after: index-start-marker1
    :end-before: index-end-marker1
-
-.. include:: README.rst
-   :start-after: index-start-marker2
-   :end-before: index-end-marker2
 
 .. include:: index.rst
    :start-after: sdk-start-marker
