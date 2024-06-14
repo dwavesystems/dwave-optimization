@@ -81,7 +81,7 @@ The code above has the following elements:
     decision variable: to find the minimum of the polynomial, 
     a :term:`solver` must assign values to decision variable :code:`i` such that 
     the objective function of this model is minimized.  
-*   :code:`c` is a :meth:`~dwave.optimization.symbols.Constant` 
+*   :code:`c` is a :class:`~dwave.optimization.symbols.Constant` 
     symbol that represents a single invariable value, :math:`4`, which is 
     the linear coefficient multiplying :math:`i` in the polynomial. This type 
     of symbol is used as input to mathematical operations but its value is never 
@@ -91,7 +91,7 @@ The code above has the following elements:
     symbols---the :code:`i` and :code:`c` symbols---and so implicitly constrained.
     A solver must update :code:`y` if it updates :code:`i`, to a value fully 
     determined by the value it selected to assign to :code:`i`.  
-*   The :meth:`~dwave.optimization.symbols.Min` symbol is a 
+*   The :class:`~dwave.optimization.symbols.Min` symbol is a 
     mathematical operation on inputs from other symbols. In this model, it 
     generates the objective function. 
 
@@ -284,7 +284,7 @@ As much as possible, design models along these lines:
     :class:`~dwave.optimization.symbols.ListVariable`, 
     :class:`~dwave.optimization.symbols.SetVariable`,
     :class:`~dwave.optimization.symbols.DisjointLists`,
-    and :meth:`~dwave.optimization.symbols.DisjointBitsets`.
+    and :class:`~dwave.optimization.symbols.DisjointBitSets`.
 
     Typically, solver performance strongly depends on the size of the solution
     space for your modelled problem: models with smaller spaces of feasible 
@@ -461,7 +461,7 @@ This section compares two formulations of this small routing problem: an
 intuitive model that uses the generic 
 :class:`~dwave.optimization.symbols.BinaryVariable` symbol to represent decisions
 on ordering the destinations versus a model that uses the implicitly constrained
-:meth:`~dwave.optimization.symbols.List` symbol, where the order of 
+:class:`~dwave.optimization.symbols.ListVariable` symbol, where the order of 
 destinations is a permutation of values. The figure below compares the directed 
 acyclic graphs for these two formulations.
 
