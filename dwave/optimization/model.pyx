@@ -704,12 +704,16 @@ cdef class Model:
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> c = model.constant([1, 5, 8.4])
-            >>> i = model.integer(20, upper_bound=100)
+            >>> c = model.constant(5)
+            >>> i = model.integer()
+            >>> model.minimize(c + i)
             >>> model.num_edges()
-            0
+            2
         """
-        return sum(1 for sym in self.iter_symbols() for _ in sym.iter_successors())
+        cdef Py_ssize_t num_edges = 0
+        for i in range(self._graph.num_nodes()):
+            num_edges += self._graph.nodes()[i].get().successors().size()
+        return num_edges
 
     cpdef Py_ssize_t num_nodes(self) noexcept:
         """Number of nodes in the directed acyclic graph for the model.
