@@ -698,9 +698,9 @@ cdef class Model:
         """Number of edges in the directed acyclic graph for the model.
 
         Examples:
-            This example add a single (size 20) decision symbol and
-            a single (size 3) constant symbol checks the number of
-            nodes in the model.
+            This example minimizes the sum of a single constant symbol and
+            a single decision symbol, then checks the number of edges in
+            the model.
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
