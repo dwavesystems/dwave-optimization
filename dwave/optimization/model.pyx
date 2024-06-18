@@ -694,6 +694,27 @@ cdef class Model:
         """
         return self._graph.num_decisions()
 
+    def num_edges(self):
+        """Number of edges in the directed acyclic graph for the model.
+
+        Examples:
+            This example minimizes the sum of a single constant symbol and
+            a single decision symbol, then checks the number of edges in
+            the model.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> c = model.constant(5)
+            >>> i = model.integer()
+            >>> model.minimize(c + i)
+            >>> model.num_edges()
+            2
+        """
+        cdef Py_ssize_t num_edges = 0
+        for i in range(self._graph.num_nodes()):
+            num_edges += self._graph.nodes()[i].get().successors().size()
+        return num_edges
+
     cpdef Py_ssize_t num_nodes(self) noexcept:
         """Number of nodes in the directed acyclic graph for the model.
         

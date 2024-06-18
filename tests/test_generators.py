@@ -42,6 +42,7 @@ class TestFlowShopScheduling(unittest.TestCase):
         self.assertEqual(model.num_decisions(), 1)
         self.assertEqual(model.num_constraints(), 0)
         self.assertEqual(model.num_nodes(), 27)
+        self.assertEqual(model.num_edges(), 38)
         self.assertEqual(model.is_locked(), True)
                 
         model.states.resize(1)
@@ -416,6 +417,7 @@ class TestCVRP(unittest.TestCase):
         self.assertEqual(model.num_decisions(), 1)
         self.assertEqual(model.num_constraints(), num_vehicles)
         self.assertEqual(model.num_nodes(), 34)
+        self.assertEqual(model.num_edges(), 46)
         self.assertEqual(model.is_locked(), True)
                 
         model.states.resize(1)

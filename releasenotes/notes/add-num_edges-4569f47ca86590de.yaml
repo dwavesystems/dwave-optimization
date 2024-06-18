@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add `Model.num_edges()` method.
+    See `#28 <https://github.com/dwavesystems/dwave-optimization/issues/28>`_.
