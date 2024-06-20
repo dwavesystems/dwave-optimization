@@ -86,6 +86,28 @@ def _2d_nonnegative_int_array(**kwargs: numpy.typing.ArrayLike) -> typing.Iterat
         yield array
 
 
+def _2d_nonnegative_square_array(**kwargs: numpy.typing.ArrayLike) -> typing.Iterator[np.ndarray]:
+    """Coerce all given array-likes to 2D NumPy arrays of non-negative floats
+    or integers and raise a consistent error message if it cannot be cast.
+
+    Keyword argument names must match the argument names of the calling function
+    for the error message to make sense.
+    """
+    for argname, array in kwargs.items():
+        try:
+            array = np.atleast_2d(np.asarray(array))
+        except (ValueError, TypeError):
+            raise ValueError(f"`{argname}` must be a square 2D array-like of non-negative numbers")
+
+        if not np.issubdtype(array.dtype, np.number):
+            raise ValueError(f"`{argname}` must be a square 2D array-like of non-negative numbers")
+
+        if array.shape[0] != array.shape[1] or (array < 0).any():
+            raise ValueError(f"`{argname}` must be a square 2D array-like of non-negative numbers")
+
+        yield array
+
+
 def _2d_nonnegative_symmetric_array(**kwargs: numpy.typing.ArrayLike) -> typing.Iterator[np.ndarray]:
     """Coerce all given array-likes to 2D NumPy arrays of non-negative floats
     or integers and raise a consistent error message if it cannot be cast.
@@ -259,7 +281,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         if depot_x_y is not None: 
             raise ValueError("`depot_x_y` and `distances` cannot be specified together.")
         
-        distances_array = next(_2d_nonnegative_symmetric_array(distances=distances))
+        distances_array = next(_2d_nonnegative_square_array(distances=distances))
 
         if len(distances_array) < 2:
             raise ValueError("Length of `distances` must be at least 2."
@@ -276,6 +298,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         customer_demand = demand[1:]
         distance_matrix = distances_array[1:, 1:]
         depot_distance_vector = distances_array[0][1:]
+        depot_distance_vector_return = distances_array[1:, 0]
 
     else:
         x, y = _1d_real_array(locations_x=locations_x,
@@ -321,7 +344,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         y0, y1 = np.meshgrid(customer_locations_y, customer_locations_y)
         distance_matrix = np.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
 
-        depot_distance_vector = np.sqrt(
+        depot_distance_vector = depot_distance_vector_return = np.sqrt(
             customer_locations_x ** 2 + customer_locations_y ** 2)
             
     if (customer_demand == 0).any():
@@ -336,6 +359,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     # Add the constants
     customer_dist = model.constant(distance_matrix)
     depot_dist = model.constant(depot_distance_vector)
+    depot_dist_return = model.constant(depot_distance_vector_return)
     demand = model.constant(customer_demand)
     capacity = model.constant(vehicle_capacity)
 
@@ -347,9 +371,9 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     # The objective is to minimize the distance traveled. 
     # This is calculated by adding the distance from the depot to the 1st customer
     # to the distance from the last customer back to the depot, using indices on
-    # `depot_dist` selected by the choice of decision variable's routes, and to the 
-    # distances between customers per route, using indices on `customer_dist` selected 
-    # similarly.   
+    # `depot_dist` and `depot_dist_return`, respectively, selected by the choice of
+    # decision variable's routes, and to the distances between customers per route,
+    # using indices on `customer_dist` selected similarly.
     # Python represents this slicing of a list with slice indices ``[:-1]`` and ``[1:]``, 
     # respectively, because Python slices are defined in the format of a
     # mathematical interval (see https://en.wikipedia.org/wiki/Interval_(mathematics)) 
@@ -358,8 +382,8 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     route_costs = []
     for r in range(number_of_vehicles):
         route_costs.append(depot_dist[routes[r][:1]].sum())
-        route_costs.append(depot_dist[routes[r][-1:]].sum())
-        route_costs.append(customer_dist[routes[r][1:], routes[r][:-1]].sum())
+        route_costs.append(depot_dist_return[routes[r][-1:]].sum())
+        route_costs.append(customer_dist[routes[r][:-1], routes[r][1:]].sum())
 
         model.add_constraint(demand[routes[r]].sum() <= capacity)
 
