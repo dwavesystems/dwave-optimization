@@ -15,5 +15,6 @@ Model Generators
    job_shop_scheduling
    flow_shop_scheduling
    knapsack
+   quadratic_assignment
    traveling_salesperson
 
