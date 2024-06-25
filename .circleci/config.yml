@@ -163,13 +163,39 @@ jobs:
             python -m venv env
             . env/bin/activate
             pip install dist/dwave-optimization*.tar.gz
-      - run:
-          name: test with install from sdist
+      - run: &run-tests
+          name: test with installed package
           command: |
             . env/bin/activate
             cd tests/
             pip install -r requirements.txt
             python -m unittest
+
+  python-dependencies:
+    parameters:
+      python-version:
+        type: string
+      dependency-versions:
+        type: string
+      only-binary:
+        type: string
+
+    docker:
+      - image: python:<< parameters.python-version >>-slim
+
+    steps:
+      - checkout
+      - attach_workspace:
+          at: dist
+      - run:
+          name: install
+          command: |
+            python -m venv env
+            . env/bin/activate
+            pip install << parameters.dependency-versions >> --upgrade --only-binary << parameters.only-binary >>
+            pip install dwave-optimization --no-index -f dist/ --no-deps --force-reinstall
+      - run: *run-tests
+
 
   cpp-linux:
     docker:
@@ -240,6 +266,20 @@ workflows:
           filters: *tags
       - python-sdist:
           filters: *tags
+      - python-dependencies:
+          name: python-dependencies-oldest
+          python-version: "3.8"
+          dependency-versions: numpy==1.20.0
+          only-binary: numpy
+          requires:
+            - python-linux
+      - python-dependencies:
+          name: python-dependencies-latest
+          python-version: "3.12"
+          dependency-versions: numpy
+          only-binary: numpy
+          requires:
+            - python-linux
       - cpp-linux
       - cpp-macOS
       - deploy:
