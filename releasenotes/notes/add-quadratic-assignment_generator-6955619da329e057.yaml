@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add quadratic assignment problem generator.
+    See `#29 <https://github.com/dwavesystems/dwave-optimization/issues/29>`_.

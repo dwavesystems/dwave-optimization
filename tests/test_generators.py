@@ -522,3 +522,88 @@ class TestCVRP(unittest.TestCase):
             model.states.from_file(f)
         self.assertGreater(model.objective.state(0), 212)
         self.assertLess(model.objective.state(0), 213)
+
+
+class TestQAP(unittest.TestCase):
+    def test_input_validations(self):
+        distance_matrix0 = [[0, 5, 3],
+                            [5, 0, 2],
+                            [3, 2, 0]]
+        flow_matrix0 = [[0, 1, 3],
+                        [4, 0, 2],
+                        [1, 1, 0]]
+
+        distance_matrix1 = [[0, 5, 3],
+                            [-5, 0, 2],
+                            [3, 2, 0]]
+        flow_matrix1 = [[0, 1, 3],
+                        [4, 0, -2],
+                        [1, 1, 0]]
+
+        distance_matrix2 = [[0, 5, 3],
+                            [5, 0, 2],
+                            [3, 2]]
+        flow_matrix2 = [[0, 1, 3]]
+
+        # Zero-length matrix
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.quadratic_assignment([], [])
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.quadratic_assignment([], flow_matrix0)
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.quadratic_assignment(distance_matrix0, [])
+
+        # Negative-value in the matrix
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.quadratic_assignment(distance_matrix1, flow_matrix0)
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.quadratic_assignment(distance_matrix0, flow_matrix1)
+
+        # Unacceptable matrix shape
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.quadratic_assignment(distance_matrix0, flow_matrix2)
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.quadratic_assignment(distance_matrix2, flow_matrix0)
+
+    def test_basics(self):
+        distance_matrix = [[0, 5, 3],
+                           [5, 0, 2],
+                           [3, 2, 0]]
+        flow_matrix = [[0, 1, 3],
+                       [4, 0, 2],
+                       [1, 1, 0]]
+
+        model = dwave.optimization.generators.quadratic_assignment(distance_matrix, flow_matrix)
+
+        self.assertEqual(model.num_decisions(), 1)
+        self.assertEqual(model.num_constraints(), 0)
+        self.assertEqual(model.num_nodes(), 7)
+        self.assertEqual(model.num_edges(), 7)
+        self.assertEqual(model.is_locked(), True)
+
+        model.states.resize(1)
+        order = next(model.iter_decisions())
+        self.assertEqual(order.size(), 3)
+        order.set_state(0, [0, 1, 2])
+        self.assertEqual(model.objective.state(0), 43)
+
+    def test_serialization(self):
+        distance_matrix = [[0, 5, 3],
+                           [5, 0, 2],
+                           [3, 2, 0]]
+        flow_matrix = [[0, 1, 3],
+                       [4, 0, 2],
+                       [1, 1, 0]]
+
+        model = dwave.optimization.generators.quadratic_assignment(distance_matrix, flow_matrix)
+
+        with model.to_file() as f:
+            copy = dwave.optimization.Model.from_file(f)
+
+        # a few smoke test checks
+        self.assertEqual(model.num_symbols(), copy.num_symbols())
+        self.assertEqual(model.state_size(), copy.state_size())

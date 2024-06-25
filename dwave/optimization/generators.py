@@ -655,6 +655,72 @@ def knapsack(values: numpy.typing.ArrayLike,
     return model
 
 
+def quadratic_assignment(
+    distance_matrix: numpy.typing.ArrayLike,
+    flow_matrix: numpy.typing.ArrayLike,
+    ) -> Model:
+    """Generate a model encoding a quadratic_assignment problem.
+
+    The
+    `quadratic assignment <https://en.wikipedia.org/wiki/Quadratic_assignment_problem>`_
+    is, for a given list of facilities, the distances between them, and the flow
+    between each pair of facilities, minimize the sum of the products of distances
+    and flows.
+
+    Args:
+        distance_matrix:
+            An array-like where ``distance_matrix[n, m]`` is the distance
+            between location ``n`` and ``m``. Represents the (known and constant)
+            distances between every possible pair of facility locations: in real-world
+            problems, such a matrix can be generated from an application with
+            access to an online map.
+
+        flow_matrix:
+            A array-like where ``flow_matrix[n, m]`` is the flow
+            between location ``n`` and ``m``. Represents the (known and constant)
+            flow between every possible pair of facility location
+
+    Returns:
+        A model encoding the quadratic_assignment problem.
+
+    """
+    distance_matrix = next(_2d_nonnegative_int_array(distance_matrix=distance_matrix))
+    flow_matrix = next(_2d_nonnegative_int_array(flow_matrix=flow_matrix))
+
+    if distance_matrix.shape[0] < 2:
+        raise ValueError("`distance_matrix` must be at least 2x2")
+
+    if np.diagonal(distance_matrix).any():
+        raise ValueError("Diagonal values of `distance_matrix` must all be zero")
+
+    if flow_matrix.shape[0] < 2:
+        raise ValueError("`flow_matrix` must be at least 2x2")
+
+    if np.diagonal(flow_matrix).any():
+        raise ValueError("Diagonal values of `flow_matrix` must all be zero")
+
+    # Construct the model
+    qap_model = Model()
+
+    # Represent the facility assignments efficiently using permutations of an ordered list
+    num_facilities = distance_matrix.shape[0]
+    ordered_facilities = qap_model.list(num_facilities)
+
+    # Add the constants
+    DISTANCE_MATRIX = qap_model.constant(distance_matrix)
+    FLOW_MATRIX = qap_model.constant(flow_matrix)
+
+    # Minimize the sum of distances multiplied by the flows.
+    qap_model.minimize(
+        (
+            FLOW_MATRIX * DISTANCE_MATRIX[ordered_facilities, :][:, ordered_facilities]
+        ).sum()
+    )
+
+    qap_model.lock()
+    return qap_model
+
+
 def traveling_salesperson(distance_matrix: numpy.typing.ArrayLike,
                          ) -> Model:
     r"""Generate a model encoding a traveling-salesperson problem.
