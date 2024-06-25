@@ -416,7 +416,7 @@ class TestCVRP(unittest.TestCase):
 
         self.assertEqual(model.num_decisions(), 1)
         self.assertEqual(model.num_constraints(), num_vehicles)
-        self.assertEqual(model.num_nodes(), 34)
+        self.assertEqual(model.num_nodes(), 35)
         self.assertEqual(model.num_edges(), 46)
         self.assertEqual(model.is_locked(), True)
                 
@@ -455,12 +455,12 @@ class TestCVRP(unittest.TestCase):
         route.set_state(0, [[0], [1]])
         self.assertEqual(model.objective.state(0), 10)
 
-        # Use distances array with depot at (3, 2) as above 
+        # Test asymmetric distances
         model = dwave.optimization.generators.capacitated_vehicle_routing(
-            demand=[0, 5, 5], 
+            demand=[0, 10, 10],
             number_of_vehicles=num_vehicles, 
             vehicle_capacity=10,
-            distances=[[0, 2, 3], [2, 0, np.sqrt(13)],[3, np.sqrt(13), 0]])
+            distances=[[0, 1, 3], [2, 0, np.sqrt(17)], [4, np.sqrt(13), 0]])
                 
         model.states.resize(1)
         route = next(model.iter_decisions())
