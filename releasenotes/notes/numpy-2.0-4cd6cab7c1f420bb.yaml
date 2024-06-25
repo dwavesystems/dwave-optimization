@@ -1,0 +1,3 @@
+---
+features:
+  - Support NumPy 2.0. Also, no longer require NumPy at build-time.

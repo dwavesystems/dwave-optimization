@@ -15,18 +15,12 @@
 import glob
 import platform
 
-import numpy
-
 # Source files for the dwave-optimization library
 sources = list(glob.glob("dwave/optimization/src/**/*.cpp", recursive=True))
 
 cython_kwargs = dict(
     annotate=True,
     language_level=3,
-)
-
-setup_kwargs = dict(
-    include_dirs=[numpy.get_include()],
 )
 
 # There is a pretty significant bifurcation between windows and unix because
@@ -50,7 +44,6 @@ if platform.system() == "Windows":
 
     setup(
         ext_modules=cythonize(extensions, **cython_kwargs),
-        **setup_kwargs,
         )
 
 else:  # unix
@@ -87,5 +80,4 @@ else:  # unix
     setup(
         ext_modules=cythonize(extensions, **cython_kwargs),
         x_dsos=x_dsos,
-        **setup_kwargs,
         )
