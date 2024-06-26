@@ -290,6 +290,10 @@ struct DisjointBitSetsNodeData : NodeStateData {
         }
     }
 
+    std::unique_ptr<NodeStateData> copy() const override {
+        return std::make_unique<DisjointBitSetsNodeData>(*this);
+    }
+
     void revert() {
         for (ssize_t set_index = 0; set_index < num_disjoint_sets; ++set_index) {
             for (const auto& update : diffs[set_index] | std::views::reverse) {
