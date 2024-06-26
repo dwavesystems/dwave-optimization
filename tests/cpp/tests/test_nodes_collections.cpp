@@ -69,6 +69,24 @@ TEST_CASE("DisjointBitSetsNode") {
                     CHECK(std::ranges::equal(bit_set, std::vector{1, 1, 1, 1, 1}));
                 }
 
+                AND_WHEN("We copy the state") {
+                    state[ptr->topological_index()] = state[ptr->topological_index()]->copy();
+
+                    THEN("The output nodes contain the whole set") {
+                        std::vector<int> bit_set(5, 0);
+
+                        for (auto const& set : sets) {
+                            REQUIRE(set->size(state) == 5);
+                            for (ssize_t i = 0; i < set->size(state); ++i) {
+                                REQUIRE((set->view(state)[i] == 0 || set->view(state)[i] == 1));
+                                bit_set[i] += set->view(state)[i];
+                            }
+                        }
+
+                        CHECK(std::ranges::equal(bit_set, std::vector{1, 1, 1, 1, 1}));
+                    }
+                }
+
                 AND_WHEN("We then mutate the node and propagate") {
                     ptr->swap_between_sets(state, 0, 1, 2);    // {0 1 3 4} {2} {}
                     ptr->swap_between_sets(state, 0, 2, 4);    // {0 1 3} {2} {4}
