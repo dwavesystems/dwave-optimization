@@ -244,6 +244,8 @@ cdef class Model:
         See also:
             :meth:`.into_file`, :meth:`.to_file`
         """
+        import dwave.optimization.symbols as symbols
+
         if isinstance(file, str):
             with open(file, "rb") as f:
                 return cls.from_file(f)
@@ -288,10 +290,15 @@ cdef class Model:
                     # now make the node
                     directory = f"nodes/{node_id}/"
                     classname = classname.decode("UTF-8").rstrip("\n")
-                    try:
-                        _node_subclasses[classname]._from_zipfile(zf, directory, model, predecessors=predecessors)
-                    except KeyError:
+
+                    # take advanctage of the symbols all being in the same namespace
+                    # and the fact that we (currently) encode them all by name
+                    cls = getattr(symbols, classname, None)
+
+                    if not issubclass(cls, Symbol):
                         raise ValueError("encoded model has an unsupported node type")
+
+                    cls._from_zipfile(zf, directory, model, predecessors=predecessors)
 
             objective_buff = zf.read("objective.json")
             if objective_buff:
@@ -1503,29 +1510,6 @@ cdef class Symbol:
         """
         index = self.node_ptr.topological_index()
         return index if index >= 0 else None
-
-# We would really prefer to use Symbol.__init_subclass__ to register
-# new subclasses for de-serialization. But unfortunately __init_subclass__ does
-# not work with Cython cdef classes. So instead we have this function that we
-# call once everything has been imported and traverse the subclass DAG.
-# For now we raise a RuntimeError for name conflicts. We could handle that in
-# various ways if it ever becomes a problem.
-_node_subclasses = dict()
-def _register_node_subclasses():
-    def register(cls):
-        if cls.__name__ in _node_subclasses:
-            if _node_subclasses[cls.__name__] != cls:
-                raise RuntimeError
-            return
-
-        _node_subclasses[cls.__name__] = cls
-
-        for subclass in cls.__subclasses__():
-            register(subclass)
-
-    for cls in Symbol.__subclasses__():
-        register(cls)
-
 
 def _split_indices(indices):
     """Given a set of indices, made up of slices, integers, and array symbols,
