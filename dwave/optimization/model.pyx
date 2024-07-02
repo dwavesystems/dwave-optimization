@@ -1212,6 +1212,27 @@ cdef class Symbol:
     cpdef bool expired(self) noexcept:
         return deref(self.expired_ptr)
 
+    @staticmethod
+    cdef Symbol from_ptr(Model model, cppNode* ptr):
+        """Construct a Symbol from a C++ Node pointer.
+
+        There are times when a Node* needs to be passed through the Python layer
+        and this method provides a mechanism to do so.
+        """
+        if not ptr:
+            raise ValueError("cannot construct a Symbol from a nullptr")
+        if model is None:
+            raise ValueError("model cannot be None")
+
+        cdef Symbol obj = Symbol.__new__(Symbol)
+        obj.initialize_node(model, ptr)
+        return obj
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        # Symbols must overload this method
+        raise ValueError("Symbols cannot be constructed directly")
+
     @classmethod
     def _from_zipfile(cls, zf, directory, Model model, predecessors):
         """Construct a node from a compressed file.
