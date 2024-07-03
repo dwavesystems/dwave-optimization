@@ -88,6 +88,9 @@ cdef class Symbol:
     # Exactly deref(self.expired_ptr)
     cpdef bool expired(self) noexcept
 
+    @staticmethod
+    cdef Symbol from_ptr(Model model, cppNode* ptr)
+
     # Hold on to a reference to the Model, both for access but also, importantly,
     # to ensure that the model doesn't get garbage collected unless all of
     # the observers have also been garbage collected.

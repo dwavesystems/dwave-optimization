@@ -14,7 +14,7 @@
 
 import dwave.optimization.generators
 
-from dwave.optimization.model import Model, _register_node_subclasses
+from dwave.optimization.model import Model
 from dwave.optimization.mathematical import *
 
 __version__ = "0.1.0"
@@ -41,7 +41,3 @@ def get_library():
     if platform.system() == "Windows":
         raise RuntimeError("dwave-optimization does not distribute a library on Windows")
     return "dwave-optimization"
-
-
-_register_node_subclasses()
-del _register_node_subclasses

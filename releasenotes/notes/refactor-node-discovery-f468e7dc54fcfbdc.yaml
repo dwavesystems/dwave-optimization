@@ -1,0 +1,5 @@
+---
+features:
+  - Speed up ``Model.iter_symbols()`` and other symbol iteration methods.
+upgrade:
+  - Remove ``.from_ptr()`` ``cdef`` method from all of the symbol classes.
