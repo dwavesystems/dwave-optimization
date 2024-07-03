@@ -1261,7 +1261,7 @@ class TestNaryMaximum(unittest.TestCase, NaryOpTestsMixin):
         return max(xs)
 
     def node_op(self, *xs):
-        return dwave.optimization.maximum(xs)
+        return dwave.optimization.maximum(*xs)
 
     def node_class(self):
         return dwave.optimization.symbols.NaryMaximum
@@ -1272,7 +1272,7 @@ class TestNaryMinimum(unittest.TestCase, NaryOpTestsMixin):
         return min(xs)
 
     def node_op(self, *xs):
-        return dwave.optimization.minimum(xs)
+        return dwave.optimization.minimum(*xs)
 
     def node_class(self):
         return dwave.optimization.symbols.NaryMinimum
@@ -1283,7 +1283,7 @@ class TestNaryMultiply(unittest.TestCase, NaryOpTestsMixin):
         return math.prod(xs)
 
     def node_op(self, *xs):
-        return dwave.optimization.multiply(xs)
+        return dwave.optimization.multiply(*xs)
 
     def node_class(self):
         return dwave.optimization.symbols.NaryMultiply
