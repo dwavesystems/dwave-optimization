@@ -59,7 +59,7 @@ class TestCVRP(unittest.TestCase):
 
             model.add_constraint(demands[routes[r]].sum() <= capacity)
 
-        model.minimize(add(route_costs))
+        model.minimize(add(*route_costs))
 
         model.states.resize(1)
         model.lock()

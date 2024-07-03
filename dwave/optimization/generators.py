@@ -387,7 +387,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 
         model.add_constraint(demand[routes[r]].sum() <= capacity)
 
-    model.minimize(add(route_costs))
+    model.minimize(add(*route_costs))
 
     model.lock()
     return model

@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    Add missing ``typing`` information to
+    ``dwave.optimization.add()``, ``dwave.optimization.maximum()``, 
+    ``dwave.optimization.minimum()``, and ``dwave.optimization.multiply()``.
+upgrade:
+  - |
+    ``dwave.optimization.add()``, ``dwave.optimization.maximum()``, 
+    ``dwave.optimization.minimum()``, and ``dwave.optimization.multiply()``
+    no longer accept a tuple of symbols as inputs.
+  - |
+    ``dwave.optimization.logical_and()`` and ``dwave.optimization.logical_or()``
+    arguments have been renamed.

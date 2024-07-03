@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave Systems Inc.
+# Copyright 2024 D-Wave Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,9 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import collections
 import functools
-import itertools
+import typing
 
 from dwave.optimization.model import ArraySymbol
 from dwave.optimization.symbols import (
@@ -41,41 +40,44 @@ __all__ = [
 ]
 
 
-def op(BinaryOp: type, NaryOp: type, reduce_method: str):
+def _op(BinaryOp: type, NaryOp: type, reduce_method: str):
     def decorator(f):
         @functools.wraps(f)
-        def wrapper(arg0, *args, **kwargs):
-            if len(args) == 0:
-                iterable = arg0
-                if not isinstance(iterable, collections.abc.Iterable):
-                    raise ValueError(
+        def wrapper(x1, *xi, **kwargs):
+            if not xi:
+                raise TypeError(
                         f"Cannot call {f.__name__} on a single node; did you mean to "
                         f"call `x.{reduce_method}()` ?"
                     )
-                return NaryOp(*iterable)
-            elif len(args) == 1:
-                lhs = arg0
-                rhs, = args
-                return BinaryOp(lhs, rhs)
+            elif len(xi) == 1:
+                return BinaryOp(x1, xi[0], **kwargs)
             else:
-                return NaryOp(arg0, *args)
+                return NaryOp(x1, *xi, **kwargs)
         return wrapper
     return decorator
 
-@op(Add, NaryAdd, "sum")
-def add(*args, **kwargs):
-    r"""Return an element-wise addition on the given symbols. 
-    
-    In the underlying directed acyclic expression graph, produces an ``Add`` 
-    node if two array nodes are provided and a ``NaryAdd`` node otherwise. 
-    
+
+@_op(Add, NaryAdd, "sum")
+def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add, NaryAdd]:
+    r"""Return an element-wise addition on the given symbols.
+
+    In the underlying directed acyclic expression graph, produces an ``Add``
+    node if two array nodes are provided and a ``NaryAdd`` node otherwise.
+
+    Args:
+        x1, x2: Input array symbol to be added.
+        *xi: Additional input array symbols to be added.
+
     Returns:
-        A symbol that sums the given symbols element-wise. 
-        
+        A symbol that sums the given symbols element-wise.
+        Adding two symbols returns a :class:`~dwave.optimization.symbols.Add`.
+        Adding three or more symbols returns a
+        :class:`~dwave.optimization.symbols.NaryAdd`.
+
     Examples:
         This example adds two integer symbols of size :math:`1 \times 2`.
         Equivalently, you can use the ``+`` operator (e.g., :code:`i + j`).
-        
+
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import add
         ...
@@ -90,23 +92,21 @@ def add(*args, **kwargs):
         ...     print(i_plus_j.state(0))
         [10. 10.]
     """
-    ...
+    raise RuntimeError("implementated by the op() decorator")
 
 
-def logical_and(lhs: ArraySymbol, rhs: ArraySymbol):
-    r"""Return an element-wise logical AND on the given symbols. 
-    
+def logical_and(x1: ArraySymbol, x2: ArraySymbol) -> And:
+    r"""Return an element-wise logical AND on the given symbols.
+
     Args:
-        lhs: Left-hand side symbol. 
-        
-        rhs: Right-hand side symbol. 
-    
+        x1, x2: Input array symbol.
+
     Returns:
-        A symbol that is the element-wise AND of the given symbols. 
-        
+        A symbol that is the element-wise AND of the given symbols.
+
     Examples:
         This example ANDs two binary symbols of size :math:`1 \times 3`.
-        
+
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical_and
         ...
@@ -121,23 +121,21 @@ def logical_and(lhs: ArraySymbol, rhs: ArraySymbol):
         ...     print(z.state(0))
         [0. 1. 0.]
     """
-    return And(lhs, rhs)
+    return And(x1, x2)
 
 
-def logical_or(lhs: ArraySymbol, rhs: ArraySymbol):
-    r"""Return an element-wise logical OR on the given symbols. 
-    
+def logical_or(x1: ArraySymbol, x2: ArraySymbol) -> Or:
+    r"""Return an element-wise logical OR on the given symbols.
+
     Args:
-        lhs: Left-hand side symbol. 
-        
-        rhs: Right-hand side symbol. 
-    
+        x1, x2: Input array symbol.
+
     Returns:
-        A symbol that is the element-wise OR of the given symbols. 
-        
+        A symbol that is the element-wise OR of the given symbols.
+
     Examples:
         This example ORs two binary symbols of size :math:`1 \times 3`.
-        
+
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical_or
         ...
@@ -152,23 +150,32 @@ def logical_or(lhs: ArraySymbol, rhs: ArraySymbol):
         ...     print(z.state(0))
         [1. 1. 0.]
     """
-    return Or(lhs, rhs)
+    return Or(x1, x2)
 
 
-@op(Maximum, NaryMaximum, "max")
-def maximum(*args, **kwargs):
-    r"""Return an element-wise maximum of the given symbols. 
-    
-    In the underlying directed acyclic expression graph, produces a 
-    ``Maximum`` node if two array nodes are provided and a 
-    ``NaryMaximum`` node otherwise. 
-    
+@_op(Maximum, NaryMaximum, "max")
+def maximum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
+            ) -> typing.Union[Maximum, NaryMaximum]:
+    r"""Return an element-wise maximum of the given symbols.
+
+    In the underlying directed acyclic expression graph, produces a
+    ``Maximum`` node if two array nodes are provided and a
+    ``NaryMaximum`` node otherwise.
+
+    Args:
+        x1, x2: Input array symbol.
+        *xi: Additional input array symbols.
+
     Returns:
         A symbol that is the element-wise maximum of the given symbols.
-        
+        Taking the element-wise maximum of two symbols returns a
+        :class:`~dwave.optimization.symbols.Maximum`.
+        Taking the element-wise maximum of three or more symbols returns a
+        :class:`~dwave.optimization.symbols.NaryMaximum`.
+
     Examples:
         This example maximizes two integer symbols of size :math:`1 \times 2`.
-        
+
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import maximum
         ...
@@ -183,23 +190,32 @@ def maximum(*args, **kwargs):
         ...     print(m.state(0))
         [7. 5.]
     """
-    ...
+    raise RuntimeError("implementated by the op() decorator")
 
 
-@op(Minimum, NaryMinimum, "min")
-def minimum(*args, **kwargs):
-    r"""Return an element-wise minimum of the given symbols. 
-    
-    In the underlying directed acyclic expression graph, produces a 
-    ``Minimum`` node if two array nodes are provided and a 
-    ``NaryMinimum`` node otherwise. 
-    
+@_op(Minimum, NaryMinimum, "min")
+def minimum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
+            ) -> typing.Union[Minimum, NaryMinimum]:
+    r"""Return an element-wise minimum of the given symbols.
+
+    In the underlying directed acyclic expression graph, produces a
+    ``Minimum`` node if two array nodes are provided and a
+    ``NaryMinimum`` node otherwise.
+
+    Args:
+        x1, x2: Input array symbol.
+        *xi: Additional input array symbols.
+
     Returns:
         A symbol that is the element-wise minimum of the given symbols.
-        
+        Taking the element-wise minimum of two symbols returns a
+        :class:`~dwave.optimization.symbols.Minimum`.
+        Taking the element-wise minimum of three or more symbols returns a
+        :class:`~dwave.optimization.symbols.NaryMinimum`.
+
     Examples:
         This example minimizes two integer symbols of size :math:`1 \times 2`.
-        
+
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import minimum
         ...
@@ -214,23 +230,33 @@ def minimum(*args, **kwargs):
         ...     print(m.state(0))
         [3. 2.]
     """
-    ...
+    raise RuntimeError("implementated by the op() decorator")
 
-@op(Multiply, NaryMultiply, "multiply")
-def multiply(*args, **kwargs):
-    r"""Return an element-wise multiplication on the given symbols. 
-    
-    In the underlying directed acyclic expression graph, produces a 
-    ``Multiply`` node if two array nodes are provided and a 
-    ``NaryMultiply`` node otherwise. 
-    
+
+@_op(Multiply, NaryMultiply, "multiply")
+def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
+             ) -> typing.Union[Multiply, NaryMultiply]:
+    r"""Return an element-wise multiplication on the given symbols.
+
+    In the underlying directed acyclic expression graph, produces a
+    ``Multiply`` node if two array nodes are provided and a
+    ``NaryMultiply`` node otherwise.
+
+    Args:
+        x1, x2: Input array symbol.
+        *xi: Additional input array symbols.
+
     Returns:
         A symbol that multiplies the given symbols element-wise.
-        
+        Multipying two symbols returns a
+        :class:`~dwave.optimization.symbols.Minimum`.
+        Multiplying three or more symbols returns a
+        :class:`~dwave.optimization.symbols.NaryMinimum`.
+
     Examples:
         This example multiplies two integer symbols of size :math:`1 \times 2`.
         Equivalently, you can use the ``*`` operator (e.g., :code:`i * j`).
-        
+
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import multiply
         ...
@@ -245,4 +271,4 @@ def multiply(*args, **kwargs):
         ...     print(k.state(0))
         [21. 10.]
     """
-    ...
+    raise RuntimeError("implementated by the op() decorator")
