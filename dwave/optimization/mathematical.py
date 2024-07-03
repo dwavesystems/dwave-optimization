@@ -40,7 +40,7 @@ __all__ = [
 ]
 
 
-def op(BinaryOp: type, NaryOp: type, reduce_method: str):
+def _op(BinaryOp: type, NaryOp: type, reduce_method: str):
     def decorator(f):
         @functools.wraps(f)
         def wrapper(x1, *xi, **kwargs):
@@ -57,7 +57,7 @@ def op(BinaryOp: type, NaryOp: type, reduce_method: str):
     return decorator
 
 
-@op(Add, NaryAdd, "sum")
+@_op(Add, NaryAdd, "sum")
 def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add, NaryAdd]:
     r"""Return an element-wise addition on the given symbols.
 
@@ -153,7 +153,7 @@ def logical_or(x1: ArraySymbol, x2: ArraySymbol) -> Or:
     return Or(x1, x2)
 
 
-@op(Maximum, NaryMaximum, "max")
+@_op(Maximum, NaryMaximum, "max")
 def maximum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
             ) -> typing.Union[Maximum, NaryMaximum]:
     r"""Return an element-wise maximum of the given symbols.
@@ -193,7 +193,7 @@ def maximum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
     raise RuntimeError("implementated by the op() decorator")
 
 
-@op(Minimum, NaryMinimum, "min")
+@_op(Minimum, NaryMinimum, "min")
 def minimum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
             ) -> typing.Union[Minimum, NaryMinimum]:
     r"""Return an element-wise minimum of the given symbols.
@@ -233,7 +233,7 @@ def minimum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
     raise RuntimeError("implementated by the op() decorator")
 
 
-@op(Multiply, NaryMultiply, "multiply")
+@_op(Multiply, NaryMultiply, "multiply")
 def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
              ) -> typing.Union[Multiply, NaryMultiply]:
     r"""Return an element-wise multiplication on the given symbols.
