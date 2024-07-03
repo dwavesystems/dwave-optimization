@@ -17,120 +17,64 @@ import typing
 import numpy as np
 import numpy.typing
 
-from dwave.optimization.mathematical import add, maximum 
+from dwave.optimization.mathematical import add, maximum
 from dwave.optimization.model import Model
 
-__all__ = ["capacitated_vehicle_routing", "flow_shop_scheduling", "job_shop_scheduling", 
-           "knapsack", "traveling_salesperson", ]
+__all__ = [
+    "capacitated_vehicle_routing",
+    "flow_shop_scheduling",
+    "job_shop_scheduling",
+    "knapsack",
+    "traveling_salesperson",
+    ]
 
 
-def _1d_real_array(**kwargs: numpy.typing.ArrayLike) -> typing.Iterator[np.ndarray]:
-    """Coerce all given array-likes to 1D NumPy arrays and raise a consistent 
-    error message if it cannot be cast.
-
-    Keyword argument names must match the argument names of the calling function
-    for the error message to make sense.
+def _require(argname: str,
+             array_like: numpy.typing.ArrayLike,
+             *,
+             dtype=None,
+             ndim: typing.Optional[int] = None,
+             nonnegative: bool = False,
+             positive: bool = False,
+             square: bool = False
+             ) -> np.ndarray:
+    """Coerce the given array-like into the form we want and raise a consistent
+    error message if it cannot be coerced.
     """
-    for argname, array in kwargs.items():
-        try:
-            array = np.asarray(array)
-        except (ValueError, TypeError):
-            raise ValueError(f"`{argname}` must be a 1D array-like of numbers")
+    try:
+        array = np.asarray(array_like, order="C", dtype=dtype)
+    except (ValueError, TypeError) as err:
+        raise ValueError(f"`{argname}` must be an array-like of numbers") from err
 
-        if array.ndim != 1 or not np.issubdtype(array.dtype, np.number):
-            raise ValueError(f"`{argname}` must be a 1D array-like of numbers")
+    if not np.issubdtype(array.dtype, np.number) or np.issubdtype(array.dtype, np.complexfloating):
+        raise ValueError(f"`{argname}` must be an array-like of numbers")
 
-        yield array
+    # Disallow inf and NaN. We could make this toggleable with a kwarg if there
+    # is eventually a reason for it
+    try:
+        array = np.asarray_chkfinite(array)
+    except ValueError as err:
+        raise ValueError(f"'{argname}' must not contain infs or NaNs") from err
 
-def _1d_nonnegative_real_array(**kwargs: numpy.typing.ArrayLike) -> typing.Iterator[np.ndarray]:
-    """Coerce all given array-likes to 1D NumPy arrays of non-negative numbers and
-    raise a consistent error message if it cannot be cast.
+    if ndim is not None and array.ndim != ndim:
+        # we don't "size down"
+        if array.ndim > ndim:
+            raise ValueError(f"'{argname}' must be a {ndim}D array-like")
 
-    Keyword argument names must match the argument names of the calling function
-    for the error message to make sense.
-    """
-    for argname, array in kwargs.items():
-        try:
-            array = np.asarray(array)
-        except (ValueError, TypeError):
-            raise ValueError(f"`{argname}` must be a 1D array-like of non-negative numbers")
-        
-        if not np.issubdtype(array.dtype, np.number):
-            raise ValueError(f"`{argname}` must be a 1D array-like of non-negative numbers")
+        # we do "size up"
+        while array.ndim < ndim:
+            array = array[np.newaxis]
 
-        if array.ndim != 1 or (array < 0).any():
-            raise ValueError(f"`{argname}` must be a 1D array-like of non-negative numbers")
+    if positive and (array <= 0).any():
+        raise ValueError(f"`{argname}` must be positive")
 
-        yield array
+    if nonnegative and (array < 0).any():
+        raise ValueError(f"`{argname}` must be nonnegative")
 
+    if square and len(set(array.shape)) > 1:
+        raise ValueError(f"`{argname}` must be a square array-like")
 
-def _2d_nonnegative_int_array(**kwargs: numpy.typing.ArrayLike) -> typing.Iterator[np.ndarray]:
-    """Coerce all given array-likes to 2d NumPy arrays of non-negative integers and
-    raise a consistent error message if it cannot be cast.
-
-    Keyword argument names must match the argument names of the calling function
-    for the error message to make sense.
-    """
-    for argname, array in kwargs.items():
-        try:
-            array = np.atleast_2d(np.asarray(array, dtype=int))
-        except (ValueError, TypeError):
-            raise ValueError(f"`{argname}` must be a 2d array-like of non-negative integers")
-        
-        if not np.issubdtype(array.dtype, np.number):
-            raise ValueError(f"`{argname}` must be a 2d array-like of non-negative integers")
-
-        if array.ndim != 2 or (array < 0).any():
-            raise ValueError(f"`{argname}` must be a 2d array-like of non-negative integers")
-
-        yield array
-
-
-def _2d_nonnegative_square_array(**kwargs: numpy.typing.ArrayLike) -> typing.Iterator[np.ndarray]:
-    """Coerce all given array-likes to 2D NumPy arrays of non-negative floats
-    or integers and raise a consistent error message if it cannot be cast.
-
-    Keyword argument names must match the argument names of the calling function
-    for the error message to make sense.
-    """
-    for argname, array in kwargs.items():
-        try:
-            array = np.atleast_2d(np.asarray(array))
-        except (ValueError, TypeError):
-            raise ValueError(f"`{argname}` must be a square 2D array-like of non-negative numbers")
-
-        if not np.issubdtype(array.dtype, np.number):
-            raise ValueError(f"`{argname}` must be a square 2D array-like of non-negative numbers")
-
-        if array.shape[0] != array.shape[1] or (array < 0).any():
-            raise ValueError(f"`{argname}` must be a square 2D array-like of non-negative numbers")
-
-        yield array
-
-
-def _2d_nonnegative_symmetric_array(**kwargs: numpy.typing.ArrayLike) -> typing.Iterator[np.ndarray]:
-    """Coerce all given array-likes to 2D NumPy arrays of non-negative floats
-    or integers and raise a consistent error message if it cannot be cast.
-
-    Keyword argument names must match the argument names of the calling function
-    for the error message to make sense.
-    """
-    for argname, array in kwargs.items():
-        try:
-            array = np.atleast_2d(np.asarray(array))
-        except (ValueError, TypeError):
-            raise ValueError(f"`{argname}` must be a symmetric 2D array-like of non-negative numbers")
-        
-        if not np.issubdtype(array.dtype, np.number):
-            raise ValueError(f"`{argname}` must be a symmetric 2D array-like of non-negative numbers")
-
-        if array.shape[0] != array.shape[1] or (array < 0).any():
-            raise ValueError(f"`{argname}` must be a symmetric 2D array-like of non-negative numbers")
-
-        if not np.array_equal(array, array.T):
-            raise ValueError(f"`{argname}` must be a symmetric 2D array-like of non-negative numbers")
-
-        yield array
+    return array
 
 
 # Dev note: this is currently private as it's not optimized and doesn't do the full
@@ -205,63 +149,63 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
                                 ) -> Model:
     r"""Generate a model encoding a capacitated vehicle routing problem.
 
-    The capacitated vehicle routing problem, 
+    The capacitated vehicle routing problem,
     `CVRP <https://en.wikipedia.org/wiki/Vehicle_routing_problem>`_,
-    is to find the shortest possible routes for a fleet of vehicles delivering 
-    to multiple customer locations from a central depot. Vehicles have a 
-    specified delivery capacity, and on the routes to locations and then back 
+    is to find the shortest possible routes for a fleet of vehicles delivering
+    to multiple customer locations from a central depot. Vehicles have a
+    specified delivery capacity, and on the routes to locations and then back
     to the depot, no vehicle is allowed to exceed its carrying capacity.
 
     Args:
-        demand: 
-            Customer demand, as an |array-like|_. If ``distances`` is specified, 
-            the first element must be zero. If ``distances`` is not specified 
-            and the first element is zero, ``[locations_x[0], locations_y[0]]`` 
-            must be the location of the depot. Elements other than the first 
-            must be positive numbers. 
+        demand:
+            Customer demand, as an |array-like|_. If ``distances`` is specified,
+            the first element must be zero. If ``distances`` is not specified
+            and the first element is zero, ``[locations_x[0], locations_y[0]]``
+            must be the location of the depot. Elements other than the first
+            must be positive numbers.
         number_of_vehicles:
-            Number of available vehicles, as an integer.   
-        vehicle_capacity: 
-            Maximum capacity for any vehicle. The total delivered demand by any 
+            Number of available vehicles, as an integer.
+        vehicle_capacity:
+            Maximum capacity for any vehicle. The total delivered demand by any
             vehicle on any route must not exceed this value.
         distances:
             Distances between **all** the problem's locations, as an |array-like|_
             of positive numbers, including both customer sites and the depot.
-            When specified, the first element of ``demand`` must be zero and 
-            specifying ``X coordinates`` or ``X coordinates`` is not supported 
+            When specified, the first element of ``demand`` must be zero and
+            specifying ``X coordinates`` or ``X coordinates`` is not supported
         locations_x:
-            X coordinates, as an |array-like|_, of locations for customers, and 
-            optionally the depot. When specified, 2D Euclidean distances are 
-            calculated and specifying ``distances`` is not supported. If the 
-            first element represents the X coordinate of the depot, the first 
-            element of ``demand`` must be zero. 
+            X coordinates, as an |array-like|_, of locations for customers, and
+            optionally the depot. When specified, 2D Euclidean distances are
+            calculated and specifying ``distances`` is not supported. If the
+            first element represents the X coordinate of the depot, the first
+            element of ``demand`` must be zero.
         locations_y:
-            Y coordinates, as an |array-like|_, of locations for customers, and 
-            optionally the depot. When specified, 2D Euclidean distances are 
-            calculated and specifying ``distances`` is not supported. If the 
-            first element represents the Y coordinate of the depot, the first 
+            Y coordinates, as an |array-like|_, of locations for customers, and
+            optionally the depot. When specified, 2D Euclidean distances are
+            calculated and specifying ``distances`` is not supported. If the
+            first element represents the Y coordinate of the depot, the first
             element of ``demand`` must be zero.
         depot_x_y:
-            Location of the depot, as an |array-like|_ of exactly two elements, 
+            Location of the depot, as an |array-like|_ of exactly two elements,
             ``[X, Y]``. Required if the first element of ``demand`` is nonzero
-            and ``distances`` is not specified; not allowed otherwise. 
-        
+            and ``distances`` is not specified; not allowed otherwise.
+
     Returns:
         A model encoding the CVRP problem.
 
     Notes:
-        The model uses a :class:`~dwave.optimization.model.Model.disjoint_lists` 
-        class as the decision variable being optimized, with permutations of its 
+        The model uses a :class:`~dwave.optimization.model.Model.disjoint_lists`
+        class as the decision variable being optimized, with permutations of its
         sublist representing various itineraries for each vehicle.
     """
 
     if not isinstance(number_of_vehicles, int):
-        raise ValueError("`number_of_vehicles` must be an integer.")    
+        raise ValueError("`number_of_vehicles` must be an integer.")
 
     if number_of_vehicles < 1:
         raise ValueError("`number_of_vehicles` must be at least 1."
                          f" Got {number_of_vehicles}.")
-    
+
     if vehicle_capacity <= 0:
         raise ValueError("`vehicle_capacity` must be a positive number."
                          f" Got {vehicle_capacity}.")
@@ -269,8 +213,8 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     if distances is not None and (locations_x is not None or locations_y is not None):
         raise ValueError("Either `locations_x` and `locations_y` or `distances`"
                          f" can be specified. Got both input formats.")
-    
-    demand = next(_1d_nonnegative_real_array(demand=demand))
+
+    demand = _require("demand", demand, dtype=float, ndim=1, nonnegative=True)
 
     if demand.sum() > number_of_vehicles*vehicle_capacity:
         raise ValueError(f"Total demand, {demand.sum()}, exceeds the "
@@ -278,10 +222,10 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 
     if distances is not None:
 
-        if depot_x_y is not None: 
+        if depot_x_y is not None:
             raise ValueError("`depot_x_y` and `distances` cannot be specified together.")
-        
-        distances_array = next(_2d_nonnegative_square_array(distances=distances))
+
+        distances_array = _require("distances", distances, ndim=2, nonnegative=True, square=True)
 
         if len(distances_array) < 2:
             raise ValueError("Length of `distances` must be at least 2."
@@ -291,45 +235,45 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
             raise ValueError("Lengths of `distances` and `demand` must be equal."
                              f" Got lengths {len(distances_array)} and"
                              f" {len(demand)}, respectively.")
-        
+
         if demand[0] != 0:
             raise ValueError("`demand[0]` must be zero when `distances` is specified.")
-        
+
         customer_demand = demand[1:]
         distance_matrix = distances_array[1:, 1:]
         depot_distance_vector = distances_array[0][1:]
         depot_distance_vector_return = distances_array[1:, 0]
 
     else:
-        x, y = _1d_real_array(locations_x=locations_x,
-                              locations_y=locations_y)
-        
+        x = _require("locations_x", locations_x, ndim=1, dtype=float)
+        y = _require("locations_x", locations_y, ndim=1, dtype=float)
+
         if not len(x) == len(y) == len(demand):
             raise ValueError("Lengths of `locations_x`, `locations_y`, and `demand`"
                              f" must be equal. Got lengths {len(x)}, {len(y)}, and"
                              f" {len(demand)}, respectively.")
-        if len(x) < 1:                   
+        if len(x) < 1:
             raise ValueError("Lengths of `locations_x`, `locations_y`, and `demand`"
                              " must be at least 1. Got length zero.")
-                             
+
         if demand[0] == 0:
             if len(x) < 2:
                 raise ValueError("Lengths of `locations_x` and `locations_y` must"
-                                f" be at least 2 when `demand[0]=0`.")
+                                 f" be at least 2 when `demand[0]=0`.")
 
             customer_demand = demand[1:]
             customer_locations_x = locations_x[1:]
             customer_locations_y = locations_y[1:]
-            
-            if depot_x_y is not None: 
+
+            if depot_x_y is not None:
                 raise ValueError("`depot_x_y` cannot be provided when "
-                                "`demand[0]` is zero.")
-            
+                                 "`demand[0]` is zero.")
+
             depot_x_y = np.asarray([locations_x[0], locations_y[0]]) 
-            
+
         else:
-        
-            if depot_x_y is None: 
+
+            if depot_x_y is None:
                 raise ValueError("`depot_x_y` must be provided when `demand[0]` is not"
                                  " 0 and `locations_x` and `locations_y` are specified.")
             customer_demand = demand
@@ -346,13 +290,13 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 
         depot_distance_vector = depot_distance_vector_return = np.sqrt(
             customer_locations_x ** 2 + customer_locations_y ** 2)
-            
+
     if (customer_demand == 0).any():
         raise ValueError("Only the first element of `demand` can be zero."
                          f" Got zeros for indices {list(np.where(demand == 0)[0])}.")
 
     num_customers = len(customer_demand)
-    
+
     # Construct the model
     model = Model()
 
@@ -368,17 +312,17 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         primary_set_size=num_customers,
         num_disjoint_lists=number_of_vehicles)
 
-    # The objective is to minimize the distance traveled. 
+    # The objective is to minimize the distance traveled.
     # This is calculated by adding the distance from the depot to the 1st customer
     # to the distance from the last customer back to the depot, using indices on
     # `depot_dist` and `depot_dist_return`, respectively, selected by the choice of
     # decision variable's routes, and to the distances between customers per route,
     # using indices on `customer_dist` selected similarly.
-    # Python represents this slicing of a list with slice indices ``[:-1]`` and ``[1:]``, 
+    # Python represents this slicing of a list with slice indices ``[:-1]`` and ``[1:]``,
     # respectively, because Python slices are defined in the format of a
-    # mathematical interval (see https://en.wikipedia.org/wiki/Interval_(mathematics)) 
-    # [a, b) and list indices start at zero. For example, ``routes[r][:-1]`` 
-    # excludes the last element of the sliced list. 
+    # mathematical interval (see https://en.wikipedia.org/wiki/Interval_(mathematics))
+    # [a, b) and list indices start at zero. For example, ``routes[r][:-1]``
+    # excludes the last element of the sliced list.
     route_costs = []
     for r in range(number_of_vehicles):
         route_costs.append(depot_dist[routes[r][:1]].sum())
@@ -396,14 +340,14 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
     r"""Generate a model encoding a flow-shop scheduling problem.
 
-    `Flow-shop scheduling <https://en.wikipedia.org/wiki/Flow-shop_scheduling>`_ 
-    is a variant of the renowned :func:`.job_shop_scheduling` optimization problem. 
-    Given `n` jobs to schedule on `m` machines, with specified processing 
-    times for each job per machine, minimize the makespan (the total 
-    length of the schedule for processing all the jobs). For every job, the 
-    `i`-th operation is executed on the `i`-th machine. No machine can 
-    perform more than one operation simultaneously. 
-   
+    `Flow-shop scheduling <https://en.wikipedia.org/wiki/Flow-shop_scheduling>`_
+    is a variant of the renowned :func:`.job_shop_scheduling` optimization problem.
+    Given `n` jobs to schedule on `m` machines, with specified processing
+    times for each job per machine, minimize the makespan (the total
+    length of the schedule for processing all the jobs). For every job, the
+    `i`-th operation is executed on the `i`-th machine. No machine can
+    perform more than one operation simultaneously.
+
     `E. Taillard <http://mistic.heig-vd.ch/taillard/problemes.dir/problemes.html>`_
     provides benchmark instances compatible with this generator.
 
@@ -414,27 +358,28 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
 
     Args:
         processing_times:
-            Processing times, as an :math:`n \times m` |array-like|_ of 
-            integers, where ``processing_times[n, m]`` is the time job 
+            Processing times, as an :math:`n \times m` |array-like|_ of
+            integers, where ``processing_times[n, m]`` is the time job
             `n` is on machine `m`.
-        
+
     Returns:
         A model encoding the flow-shop scheduling problem.
-        
+
     Examples:
-    
+
         This example creates a model for a flow-shop-scheduling problem
-        with two jobs on three machines. For example, the second job 
-        requires processing for 20 time units on the first machine in 
-        the flow of operations.  
-    
+        with two jobs on three machines. For example, the second job
+        requires processing for 20 time units on the first machine in
+        the flow of operations.
+
         >>> from dwave.optimization.generators import flow_shop_scheduling
         ...
         >>> processing_times = [[10, 5, 7], [20, 10, 15]]
         >>> model = flow_shop_scheduling(processing_times=processing_times)
 
     """
-    processing_times = next(_2d_nonnegative_int_array(processing_times=processing_times))
+    processing_times = _require("processing_times", processing_times,
+                                ndim=2, nonnegative=True)
 
     if not processing_times.size:
         raise ValueError("`processing_times` must not be empty")
@@ -442,10 +387,10 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
     num_machines, num_jobs = processing_times.shape
 
     model = Model()
-    
+
     # Add the constant processing-times matrix
     times = model.constant(processing_times)
-    
+
     # The decision symbol is a num_jobs-long array of integer variables
     order = model.list(num_jobs)
 
@@ -456,7 +401,6 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
         if machine_m == 0:
 
             for job_j in range(num_jobs):
-            
                 if job_j == 0:
                     machine_m_times.append(times[machine_m, :][order[job_j]])
                 else:
@@ -467,7 +411,6 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
         else:
 
             for job_j in range(num_jobs):
-            
                 if job_j == 0:
                     end_job_j = end_times[machine_m - 1][job_j]
                     end_job_j += times[machine_m, :][order[job_j]]
@@ -480,22 +423,22 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
         end_times.append(machine_m_times)
 
     makespan = end_times[-1][-1]
-    
+
     # The objective is to minimize the last end time
     model.minimize(makespan)
 
     model.lock()
-    
+
     return model
 
 
 def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.ArrayLike,
-                         *,
-                         upper_bound: typing.Optional[int] = None,
-                         ) -> Model:
+                        *,
+                        upper_bound: typing.Optional[int] = None,
+                        ) -> Model:
     """Generate a model encoding a job-shop scheduling problem.
 
-    `Job-shop scheduling <https://en.wikipedia.org/wiki/Job-shop_scheduling>`_ 
+    `Job-shop scheduling <https://en.wikipedia.org/wiki/Job-shop_scheduling>`_
     has many variant.  Here, what we have implemented is a variant of job-shop
     scheduling with the additional assumption that every job makes use of
     every machine.
@@ -530,7 +473,8 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
         A model encoding the job-shop scheduling problem.
 
     """
-    times, machines = _2d_nonnegative_int_array(times=times, machines=machines)
+    times = _require("times", times, ndim=2, dtype=int, nonnegative=True)
+    machines = _require("machines", machines, ndim=2, dtype=int, nonnegative=True)
 
     if times.shape != machines.shape:
         raise ValueError("`times` and `machines` must have the same shape")
@@ -575,9 +519,9 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     times = model.constant(times)
     machines = model.constant(machines)
 
-    # The "main" decision symbol is a num_machines x num_jobs array of integer variables
+    # The "main" decision symbol is a num_jobs x num_machines array of integer variables
     # giving the start time for each task
-    start_times = model.integer(shape=(num_machines, num_jobs),
+    start_times = model.integer(shape=(num_jobs, num_machines),
                                 lower_bound=0, upper_bound=upper_bound)
 
     # We also need a redundant decision symbol for each machine defining the
@@ -645,8 +589,8 @@ def knapsack(values: numpy.typing.ArrayLike,
     set representing possible items included in the knapsack.
 
     """
-    weights, values = _1d_nonnegative_real_array(weights=weights,
-                                                 values=values)
+    weights = _require("weights", weights, dtype=float, nonnegative=True, ndim=1)
+    values = _require("values", values, dtype=float, nonnegative=True, ndim=1)
 
     num_items = weights.shape[0]
 
@@ -679,11 +623,10 @@ def knapsack(values: numpy.typing.ArrayLike,
     return model
 
 
-def quadratic_assignment(
-    distance_matrix: numpy.typing.ArrayLike,
-    flow_matrix: numpy.typing.ArrayLike,
-    ) -> Model:
-    """Generate a model encoding a quadratic_assignment problem.
+def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
+                         flow_matrix: numpy.typing.ArrayLike,
+                         ) -> Model:
+    """Generate a model encoding a quadratic assignment problem.
 
     The
     `quadratic assignment <https://en.wikipedia.org/wiki/Quadratic_assignment_problem>`_
@@ -708,20 +651,13 @@ def quadratic_assignment(
         A model encoding the quadratic_assignment problem.
 
     """
-    distance_matrix = next(_2d_nonnegative_int_array(distance_matrix=distance_matrix))
-    flow_matrix = next(_2d_nonnegative_int_array(flow_matrix=flow_matrix))
+    distance_matrix = _require("distance_matrix", distance_matrix,
+                               dtype=float, ndim=2, nonnegative=True, square=True)
+    flow_matrix = _require("flow_matrix", flow_matrix,
+                           dtype=float, ndim=2, nonnegative=True, square=True)
 
-    if distance_matrix.shape[0] < 2:
-        raise ValueError("`distance_matrix` must be at least 2x2")
-
-    if np.diagonal(distance_matrix).any():
-        raise ValueError("Diagonal values of `distance_matrix` must all be zero")
-
-    if flow_matrix.shape[0] < 2:
-        raise ValueError("`flow_matrix` must be at least 2x2")
-
-    if np.diagonal(flow_matrix).any():
-        raise ValueError("Diagonal values of `flow_matrix` must all be zero")
+    if distance_matrix.shape != flow_matrix.shape:
+        raise ValueError("'distance_matrix' and 'flow_matrix' must have the same shape")
 
     # Construct the model
     qap_model = Model()
@@ -746,68 +682,61 @@ def quadratic_assignment(
 
 
 def traveling_salesperson(distance_matrix: numpy.typing.ArrayLike,
-                         ) -> Model:
+                          ) -> Model:
     r"""Generate a model encoding a traveling-salesperson problem.
 
-    The 
+    The
     `traveling salesperson <https://en.wikipedia.org/wiki/Travelling_salesman_problem>`_
-    is, for a given a list of cities and distances between each pair of cities, 
-    to find the shortest possible route that visits each city exactly once and 
+    is, for a given a list of cities and distances between each pair of cities,
+    to find the shortest possible route that visits each city exactly once and
     returns to the city of origin.
 
     Args:
         distance_matrix:
-            A symmetric array-like where ``distance_matrix[n, m]`` is the distance 
-            between city ``n`` and ``m``. Represents the (known and constant) 
-            distances between every possible pair of cities: in real-world 
-            problems, such a matrix can be generated from an application with 
-            access to an online map. Note that ``distance_matrix`` is symmetric 
-            because the distance between city ``n`` to city ``m`` is the same 
-            regardless of the direction of travel.
-        
+            An array-like where ``distance_matrix[n, m]`` is the distance
+            between city ``n`` and ``m``. Represents the (known and constant)
+            distances between every possible pair of cities: in real-world
+            problems, such a matrix can be generated from an application with
+            access to an online map.
+
     Returns:
         A model encoding the traveling-salesperson problem.
 
-    Typically, solver performance strongly depends on the size of the solution 
-    space for your modelled problem: models with smaller spaces of feasible 
-    solutions tend to perform better than ones with larger spaces. A powerful 
-    way to reduce the feasible-solutions space is by using variables that act 
-    as implicit constraints. This is analogous to judicious typing of a variable 
-    to meet but not exceed its required assignments: a Boolean variable, ``x``, 
-    has a solution space of size 2 (:math:`\{True, False\}`) while an integer 
-    variable, ``i``, might have a solution space of over 4 billion values.  
+    Typically, solver performance strongly depends on the size of the solution
+    space for your modelled problem: models with smaller spaces of feasible
+    solutions tend to perform better than ones with larger spaces. A powerful
+    way to reduce the feasible-solutions space is by using variables that act
+    as implicit constraints. This is analogous to judicious typing of a variable
+    to meet but not exceed its required assignments: a Boolean variable, ``x``,
+    has a solution space of size 2 (:math:`\{True, False\}`) while an integer
+    variable, ``i``, might have a solution space of over 4 billion values.
 
-    The model generated uses a :class:`dwave.optimization.Model.list` class as 
-    the decision variable being optimized, with permutations of this ordered 
+    The model generated uses a :class:`dwave.optimization.Model.list` class as
+    the decision variable being optimized, with permutations of this ordered
     list representing possible itineraries through the required cities.
 
-    The :class:`dwave.optimization.Model.list` class used to represent the 
-    decision variable as an ordered list is implicitly constrained in the 
-    possible values that can be assigned to it; for example, compare a model 
-    representing five cities as five variables of type ``int``, 
-    :math:`i_{Rome}, i_{Turin}, i_{Naples}, i_{Milan}, i_{Genoa}`, where 
-    :math:`i_{Rome} = 2` means Rome is the third city visited, versus a model 
-    using an ordered list, :math:`(city_0, city_1, city_2, city_3, city_4)`.  
-    The first model must explicitly constrain solutions to those that select 
-    a value between 0 to 4 for each decision variable with no repetitions; such 
+    The :class:`dwave.optimization.Model.list` class used to represent the
+    decision variable as an ordered list is implicitly constrained in the
+    possible values that can be assigned to it; for example, compare a model
+    representing five cities as five variables of type ``int``,
+    :math:`i_{Rome}, i_{Turin}, i_{Naples}, i_{Milan}, i_{Genoa}`, where
+    :math:`i_{Rome} = 2` means Rome is the third city visited, versus a model
+    using an ordered list, :math:`(city_0, city_1, city_2, city_3, city_4)`.
+    The first model must explicitly constrain solutions to those that select
+    a value between 0 to 4 for each decision variable with no repetitions; such
     constraints are implicit to the ordered-list variable.
 
-    The objective is to minimize the distance traveled. Permutations of indices 
-    :math:`(0, 1, 2, ...)` that order ``distance_matrix`` represent itineraries 
-    that travel from list-element :math:`i` to list-element :math:`i+1` for 
-    :math:`i \in [0, N-1]`, where :math:`N` is the length of the list (and the 
-    number of cities). Additionally, the problem requires a return to the city 
-    of origin (first element of the list) from the last city visited (the last 
+    The objective is to minimize the distance traveled. Permutations of indices
+    :math:`(0, 1, 2, ...)` that order ``distance_matrix`` represent itineraries
+    that travel from list-element :math:`i` to list-element :math:`i+1` for
+    :math:`i \in [0, N-1]`, where :math:`N` is the length of the list (and the
+    number of cities). Additionally, the problem requires a return to the city
+    of origin (first element of the list) from the last city visited (the last
     element of the list).
 
     """
-    distance_matrix = next(_2d_nonnegative_symmetric_array(distance_matrix=distance_matrix))
-
-    if distance_matrix.shape[0] <2:
-        raise ValueError("`distance_matrix` must be at least 2x2")
-
-    if np.diagonal(distance_matrix).any():
-        raise ValueError("Diagonal values of `distance_matrix` must all be zero")
+    distance_matrix = _require("distance_matrix", distance_matrix,
+                               dtype=float, ndim=2, nonnegative=True, square=True)
 
     # Construct the model
     tsp_model = Model()
@@ -819,31 +748,29 @@ def traveling_salesperson(distance_matrix: numpy.typing.ArrayLike,
     # Add the constants
     DISTANCE_MATRIX = tsp_model.constant(distance_matrix)
 
-    # The objective is to minimize the distance traveled. 
-    # The first elements of the pairs of cities traveled between are the 
-    # permuted indices excluding the last and the second elements are these 
-    # indices excluding the first. 
+    # The objective is to minimize the distance traveled.
+    # The first elements of the pairs of cities traveled between are the
+    # permuted indices excluding the last and the second elements are these
+    # indices excluding the first.
 
-    # Python represents this slicing of a list with slice indices ``[:-1]`` and ``[1:]``, 
+    # Python represents this slicing of a list with slice indices ``[:-1]`` and ``[1:]``,
     # respectively, because Python slices are defined in the format of a
-    # mathematical interval (see https://en.wikipedia.org/wiki/Interval_(mathematics)) 
-    # [a, b) and list indices start at zero. For example, ``ordered_cities[:-1]`` 
-    # excludes the last element of the sliced list. 
+    # mathematical interval (see https://en.wikipedia.org/wiki/Interval_(mathematics))
+    # [a, b) and list indices start at zero. For example, ``ordered_cities[:-1]``
+    # excludes the last element of the sliced list.
 
-    # Adding the return to the city of origin add the distance between the first 
-    # element of the list, or slice ``[0]``, and the last city visited, or slice 
+    # Adding the return to the city of origin add the distance between the first
+    # element of the list, or slice ``[0]``, and the last city visited, or slice
     # ``[-1]``
 
     itinerary = DISTANCE_MATRIX[ordered_cities[:-1], ordered_cities[1:]]
     return_to_origin = DISTANCE_MATRIX[ordered_cities[-1], ordered_cities[0]]
 
-    # Sum the distances along the full route traveled. 
-    travel_distance = itinerary.sum()
-    travel_distance += return_to_origin.sum()
-    
+    # Sum the distances along the full route traveled.
+    travel_distance = itinerary.sum() + return_to_origin.sum()
+
     # Minimize the total travel distance.
     tsp_model.minimize(travel_distance)
-    
+
     tsp_model.lock()
     return tsp_model
-

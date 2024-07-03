@@ -1,0 +1,6 @@
+---
+features:
+  - Allow ``dwave.optimization.generators.traveling_salesperson()`` to accept an asymmetric distance matrix.
+  - Allow ``dwave.optimization.generators.flow_shop_scheduling()`` to accept non-integer processing times.
+fixes:
+  - Fix ``dwave.optimization.generators.job_shop_scheduling()`` for problems with the number of jobs is different than the number of machines.
