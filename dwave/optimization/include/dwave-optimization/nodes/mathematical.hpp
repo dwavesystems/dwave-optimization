@@ -173,6 +173,10 @@ class ReduceNode : public Node, public ScalarOutputMixin<Array> {
 
 template <>
 template <class T>
+ReduceNode<std::logical_and<double>>::ReduceNode(T* array_ptr) : ReduceNode(array_ptr, 1) {}
+
+template <>
+template <class T>
 ReduceNode<std::multiplies<double>>::ReduceNode(T* array_ptr) : ReduceNode(array_ptr, 1) {}
 
 template <>
