@@ -61,7 +61,9 @@ def _require(argname: str,
         if array.ndim > ndim:
             raise ValueError(f"'{argname}' must be a {ndim}D array-like")
 
-        # we do "size up"
+        # We do "size up", following NumPy conventions that are usually permissive.
+        # e.g. it's silly, but well defined to have a distance matrix with only
+        # a single location. Or to have a JSS instance with only one job.
         while array.ndim < ndim:
             array = array[np.newaxis]
 
