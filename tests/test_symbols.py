@@ -301,6 +301,15 @@ class TestAll(unittest.TestCase, SymbolTestsMixin):
         model.lock()
         yield from nodes
 
+    def test_empty(self):
+        model = Model()
+        empty = model.constant([]).all()
+        model.lock()
+        model.states.resize(1)
+
+        self.assertTrue(empty.state())
+        self.assertEqual(empty.state(), np.asarray([]).all())  # confirm consistency with NumPy
+
     def test_scalar(self):
         model = Model()
         model.states.resize(1)
@@ -1103,6 +1112,11 @@ class TestMax(unittest.TestCase, SymbolTestsMixin):
         yield a
         yield b
 
+    def test_empty(self):
+        model = Model()
+        with self.assertRaisesRegex(ValueError, "no identity"):
+            model.constant([]).max()
+
     def test_state(self):
         model = Model()
 
@@ -1160,6 +1174,11 @@ class TestMin(unittest.TestCase, SymbolTestsMixin):
         model.lock()
         yield a
         yield b
+
+    def test_empty(self):
+        model = Model()
+        with self.assertRaisesRegex(ValueError, "no identity"):
+            model.constant([]).min()
 
     def test_state(self):
         model = Model()
@@ -1370,6 +1389,15 @@ class TestProd(unittest.TestCase, SymbolTestsMixin):
         model.lock()
         yield a
         yield b
+
+    def test_empty(self):
+        model = Model()
+        empty = model.constant([]).prod()
+        model.lock()
+        model.states.resize(1)
+
+        self.assertEqual(empty.state(), 1)
+        self.assertEqual(empty.state(), np.asarray([]).prod())  # confirm consistency with NumPy
 
     def test_state(self):
         model = Model()
@@ -1611,3 +1639,36 @@ class TestSubtract(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             a - b
+
+class TestSum(unittest.TestCase, SymbolTestsMixin):
+    def generate_symbols(self):
+        model = Model()
+        A = model.constant(np.arange(5))
+        B = model.constant(np.arange(5, 10))
+        a = A.sum()
+        b = B.sum()
+        model.lock()
+        yield a
+        yield b
+
+    def test_empty(self):
+        model = Model()
+        empty = model.constant([]).sum()
+        model.lock()
+        model.states.resize(1)
+
+        self.assertEqual(empty.state(), 0)
+        self.assertEqual(empty.state(), np.asarray([]).sum())  # confirm consistency with NumPy
+
+    def test_state(self):
+        model = Model()
+
+        A = model.constant(np.arange(5))
+        B = model.constant(np.arange(5, 10))
+        a = A.sum()
+        b = B.sum()
+        model.states.resize(1)
+        model.lock()
+
+        self.assertEqual(a.state(0), np.arange(5).sum())
+        self.assertEqual(b.state(0), np.arange(5, 10).sum())
