@@ -495,7 +495,8 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
 
         # the validity will be checked in the next for-loop
 
-    # Each row of machines must be a permutation of range(num_jobs) or of range(1, num_jobs+1)
+    # Each row of machines must be a permutation of range(num_machines) or of
+    # range(1, num_machines+1)
     arange = np.arange(num_machines)
     for row in machines:
         if (np.sort(row) != arange).any():
