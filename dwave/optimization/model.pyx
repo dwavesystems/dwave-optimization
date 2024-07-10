@@ -1358,7 +1358,10 @@ cdef class Symbol:
             inc(it)
 
     def maybe_equals(self, other):
-        """Compare to another node.
+        """Compare to another node. This method exists because a complete equality test can be expensive.
+        A return value of ``0`` guarantees the two nodes are not equal.
+        A return value of ``1`` is indecisive and a more expensive, complete equality test is necessary.
+        A return value of ``2`` guarantees the two nodes are equal.
 
         Args:
             other: Another node in the model's directed acyclic graph.
@@ -1682,11 +1685,12 @@ cdef class ArraySymbol(Symbol):
             0
         """
         cdef Py_ssize_t maybe = super().maybe_equals(other)
-        if maybe != 1:
-            return True if maybe else False
-
         cdef Py_ssize_t NOT = 0
         cdef Py_ssize_t MAYBE = 1
+        cdef Py_ssize_t DEFINITELY = 2
+
+        if maybe != 1:
+            return DEFINITELY if maybe else NOT
 
         if not isinstance(other, ArraySymbol):
             return NOT

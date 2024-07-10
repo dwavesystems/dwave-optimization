@@ -56,17 +56,19 @@ class SymbolTestsMixin(abc.ABC):
     def assertTrue(self, *args, **kwargs): ...
 
     def test_equality(self):
+        DEFINITELY = 2
         for x in self.generate_symbols():
-            self.assertTrue(x.maybe_equals(x))
+            self.assertEqual(DEFINITELY, x.maybe_equals(x))
             self.assertTrue(x.equals(x))
 
         for x, y in zip(self.generate_symbols(), self.generate_symbols()):
-            self.assertTrue(x.maybe_equals(y))
+            self.assertTrue(DEFINITELY, x.maybe_equals(y))
             self.assertTrue(x.equals(y))
 
     def test_inequality(self):
+        MAYBE = 1
         for x, y in itertools.combinations(self.generate_symbols(), 2):
-            self.assertLessEqual(x.maybe_equals(y), 1)
+            self.assertLessEqual(x.maybe_equals(y), MAYBE)
             self.assertFalse(x.equals(y))
 
     def test_iter_symbols(self):
@@ -115,7 +117,7 @@ class SymbolTestsMixin(abc.ABC):
                     states.append(sym.state())
                 else:
                     states.append(None)
-            
+
             with model.states.to_file() as f:
                 new = Model.from_file(f)
 
