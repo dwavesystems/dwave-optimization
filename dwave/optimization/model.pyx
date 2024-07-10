@@ -12,14 +12,14 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Nonlinear models are especially suited for use with decision variables that 
-represent a common logic, such as subsets of choices or permutations of ordering. 
-For example, in a 
-`traveling salesperson problem <https://en.wikipedia.org/wiki/Travelling_salesman_problem>`_ 
-permutations of the variables representing cities can signify the order of the 
-route being optimized and in a 
-`knapsack problem <https://en.wikipedia.org/wiki/Knapsack_problem>`_ the 
-variables representing items can be divided into subsets of packed and not 
+"""Nonlinear models are especially suited for use with decision variables that
+represent a common logic, such as subsets of choices or permutations of ordering.
+For example, in a
+`traveling salesperson problem <https://en.wikipedia.org/wiki/Travelling_salesman_problem>`_
+permutations of the variables representing cities can signify the order of the
+route being optimized and in a
+`knapsack problem <https://en.wikipedia.org/wiki/Knapsack_problem>`_ the
+variables representing items can be divided into subsets of packed and not
 packed.
 """
 
@@ -60,20 +60,20 @@ def locked(model):
 
 
 cdef class Model:
-    """Nonlinear model. 
-    
-    The nonlinear model represents a general optimization problem with an 
-    :term:`objective function` and/or constraints over variables of various 
+    """Nonlinear model.
+
+    The nonlinear model represents a general optimization problem with an
+    :term:`objective function` and/or constraints over variables of various
     types.
-    
-    The :class:`.Model` class can contain this model and its methods provide 
+
+    The :class:`.Model` class can contain this model and its methods provide
     convenient utilities for working with representations of a problem.
-    
+
     Examples:
-        This example creates a model for a 
+        This example creates a model for a
         :class:`flow-shop-scheduling <dwave.optimization.generators.flow_shop_scheduling>`
-        problem with two jobs on three machines. 
-    
+        problem with two jobs on three machines.
+
         >>> from dwave.optimization.generators import flow_shop_scheduling
         ...
         >>> processing_times = [[10, 5, 7], [20, 10, 15]]
@@ -86,14 +86,14 @@ cdef class Model:
 
     def add_constraint(self, ArraySymbol value):
         """Add a constraint to the model.
-        
+
         Args:
-            value: Value that must evaluate to True for the state 
-                of the model to be feasible. 
-                
+            value: Value that must evaluate to True for the state
+                of the model to be feasible.
+
         Examples:
             This example adds a single constraint to a model.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer()
@@ -107,16 +107,16 @@ cdef class Model:
 
     def binary(self, shape=None):
         r"""Create a binary symbol as a decision variable.
-        
+
         Args:
             shape: Shape of the binary array to create.
-            
+
         Returns:
             A binary symbol.
-            
+
         Examples:
             This example creates a :math:`1 \times 20`-sized binary symbol.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> x = model.binary((1,20))
@@ -129,16 +129,16 @@ cdef class Model:
 
         Args:
             array_like: An |array-like|_ representing a constant. Can be a scalar
-                or a NumPy array. If the array's ``dtype`` is ``np.double``, the 
+                or a NumPy array. If the array's ``dtype`` is ``np.double``, the
                 array is not copied.
-                
+
         Returns:
-            A constant symbol. 
-            
+            A constant symbol.
+
         Examples:
             This example creates a :math:`1 \times 4`-sized constant symbol
-            with the specified values. 
-            
+            with the specified values.
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> time_limits = model.constant([10, 15, 5, 8.5])
@@ -148,29 +148,29 @@ cdef class Model:
 
     def decision_state_size(self):
         r"""An estimated size, in bytes, of the model's decision states.
-        
+
         Examples:
-            This example checks the size of a model with one 
+            This example checks the size of a model with one
             :math:`10 \times 10`-sized integer symbol.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> visit_site = model.integer((10, 10))     
-            >>> model.decision_state_size()         
+            >>> visit_site = model.integer((10, 10))
+            >>> model.decision_state_size()
             800
         """
         return sum(sym.state_size() for sym in self.iter_decisions())
 
     def disjoint_bit_sets(self, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets):
-        """Create a disjoint-sets symbol as a decision variable. 
-        
-        Divides a set of the elements of ``range(primary_set_size)`` into 
-        ``num_disjoint_sets`` ordered partitions, stored as bit sets (arrays 
+        """Create a disjoint-sets symbol as a decision variable.
+
+        Divides a set of the elements of ``range(primary_set_size)`` into
+        ``num_disjoint_sets`` ordered partitions, stored as bit sets (arrays
         of length ``primary_set_size``, with ones at the indices of elements
-        currently in the set, and zeros elsewhere). The ordering of a set is 
+        currently in the set, and zeros elsewhere). The ordering of a set is
         not semantically meaningful.
 
-        Also creates from the symbol ``num_disjoint_sets`` extra successors 
+        Also creates from the symbol ``num_disjoint_sets`` extra successors
         that output the disjoint sets as arrays.
 
         Args:
@@ -179,13 +179,13 @@ cdef class Model:
             num_disjoint_sets: Number of disjoint sets. Must be positive.
 
         Returns:
-            A tuple where the first element is the disjoint-sets symbol and 
+            A tuple where the first element is the disjoint-sets symbol and
             the second is a set of its newly added successors.
-            
+
         Examples:
-            This example creates a symbol of 10 elements that is divided 
-            into 4 sets. 
-            
+            This example creates a symbol of 10 elements that is divided
+            into 4 sets.
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> parts_set, parts_subsets = model.disjoint_bit_sets(10, 4)
@@ -197,27 +197,27 @@ cdef class Model:
         return main, sets
 
     def disjoint_lists(self, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists):
-        """Create a disjoint-lists symbol as a decision variable. 
-        
-        Divides a set of the elements of ``range(primary_set_size)`` into 
+        """Create a disjoint-lists symbol as a decision variable.
+
+        Divides a set of the elements of ``range(primary_set_size)`` into
         ``num_disjoint_lists`` ordered partitions.
 
         Also creates ``num_disjoint_lists`` extra successors from the
         symbol that output the disjoint lists as arrays.
 
         Args:
-            primary_set_size: Number of elements in the primary set to 
+            primary_set_size: Number of elements in the primary set to
                 be partitioned into disjoint lists.
             num_disjoint_lists: Number of disjoint lists.
 
         Returns:
-            A tuple where the first element is the disjoint-lists symbol 
+            A tuple where the first element is the disjoint-lists symbol
             and the second is a list of its newly added successor nodes.
-            
+
         Examples:
-            This example creates a symbol of 10 elements that is divided 
-            into 4 lists. 
-            
+            This example creates a symbol of 10 elements that is divided
+            into 4 lists.
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> destinations, routes = model.disjoint_lists(10, 4)
@@ -337,23 +337,23 @@ cdef class Model:
 
     def integer(self, shape=None, lower_bound=None, upper_bound=None):
         r"""Create an integer symbol as a decision variable.
-        
+
         Args:
             shape: Shape of the integer array to create.
-    
-            lower_bound: Lower bound for the symbol, which is the 
-                smallest allowed integer value. If None, the default 
+
+            lower_bound: Lower bound for the symbol, which is the
+                smallest allowed integer value. If None, the default
                 value is used.
-            upper_bound: Upper bound for the symbol, which is the 
-                largest allowed integer value. If None, the default 
+            upper_bound: Upper bound for the symbol, which is the
+                largest allowed integer value. If None, the default
                 value is used.
-                
+
         Returns:
-            An integer symbol. 
-            
+            An integer symbol.
+
         Examples:
             This example creates a :math:`20 \times 20`-sized integer symbol.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer((20,20), lower_bound=-100, upper_bound=100)
@@ -384,8 +384,8 @@ cdef class Model:
 
         Args:
             file:
-                File pointer to an existing writeable, seekable 
-                file-like object encoding a model. Strings are 
+                File pointer to an existing writeable, seekable
+                file-like object encoding a model. Strings are
                 interpreted as a file name.
             max_num_states:
                 Maximum number of states to serialize along with the model.
@@ -394,7 +394,7 @@ cdef class Model:
             only_decision:
                 If ``True``, only decision variables are serialized.
                 If ``False``, all symbols are serialized.
-                
+
         See also:
             :meth:`.from_file`, :meth:`.to_file`
 
@@ -505,7 +505,7 @@ cdef class Model:
         """Lock status of the model.
 
         No new symbols can be added to a locked model.
-        
+
         See also:
             :meth:`.lock`, :meth:`.unlock`
         """
@@ -513,10 +513,10 @@ cdef class Model:
 
     def iter_constraints(self):
         """Iterate over all constraints in the model.
-        
+
         Examples:
             This example adds a single constraint to a model and iterates over it.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer()
@@ -529,10 +529,10 @@ cdef class Model:
 
     def iter_decisions(self):
         """Iterate over all decision variables in the model.
-        
+
         Examples:
             This example adds a single decision symbol to a model and iterates over it.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer()
@@ -556,10 +556,10 @@ cdef class Model:
 
     def iter_symbols(self):
         """Iterate over all symbols in the model.
-        
+
         Examples:
             This example iterates over a model's symbols.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer(1, lower_bound=10)
@@ -574,13 +574,13 @@ cdef class Model:
 
         Args:
             n: Values in the list are permutations of ``range(n)``.
-            
+
         Returns:
-            A list symbol. 
-            
+            A list symbol.
+
         Examples:
             This example creates a list symbol of 200 elements.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> routes = model.list(200)
@@ -589,21 +589,21 @@ cdef class Model:
         return ListVariable(self, n)
 
     def lock(self):
-        """Lock the model. 
-        
+        """Lock the model.
+
         No new symbols can be added to a locked model.
 
         Returns:
             A context manager. If the context is subsequently exited then the
             :meth:`.unlock` will be called.
-        
+
         See also:
             :meth:`.is_locked`, :meth:`.unlock`
-            
+
         Examples:
             This example checks the status of a model after locking it and
             subsequently unlocking it.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer(20, upper_bound=100)
@@ -634,20 +634,20 @@ cdef class Model:
 
     def minimize(self, ArraySymbol value):
         """Set the objective value to minimize.
-        
+
         Optimization problems have an objective and/or constraints. The objective
-        expresses one or more aspects of the problem that should be minimized 
+        expresses one or more aspects of the problem that should be minimized
         (equivalent to maximization when multiplied by a minus sign). For example,
         an optimized itinerary might minimize the value of distance traveled or
         cost of transportation or travel time.
-        
+
         Args:
             value: Value for which to minimize the cost function.
-            
+
         Examples:
-            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`, 
-            within bounds. 
-            
+            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
+            within bounds.
+
             >>> from dwave.optimization import Model
             >>> model = Model()
             >>> i = model.integer(lower_bound=-5, upper_bound=5)
@@ -666,11 +666,11 @@ cdef class Model:
 
     cpdef Py_ssize_t num_constraints(self) noexcept:
         """Number of constraints in the model.
-        
+
         Examples:
-            This example checks the number of constraints in the model after 
+            This example checks the number of constraints in the model after
             adding a couple of constraints.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer()
@@ -683,15 +683,15 @@ cdef class Model:
         return self._graph.num_constraints()
 
     cpdef Py_ssize_t num_decisions(self) noexcept:
-        """Number of independent decision nodes in the model. 
-        
-        An array-of-integers symbol, for example, counts as a single 
+        """Number of independent decision nodes in the model.
+
+        An array-of-integers symbol, for example, counts as a single
         decision node.
-        
+
         Examples:
-            This example checks the number of decisions in a model after 
+            This example checks the number of decisions in a model after
             adding a single (size 20) decision symbol.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> c = model.constant([1, 5, 8.4])
@@ -724,15 +724,15 @@ cdef class Model:
 
     cpdef Py_ssize_t num_nodes(self) noexcept:
         """Number of nodes in the directed acyclic graph for the model.
-        
+
         See also:
             :meth:`.num_symbols`
-        
+
         Examples:
-            This example add a single (size 20) decision symbol and 
-            a single (size 3) constant symbol checks the number of 
+            This example add a single (size 20) decision symbol and
+            a single (size 3) constant symbol checks the number of
             nodes in the model.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> c = model.constant([1, 5, 8.4])
@@ -743,19 +743,19 @@ cdef class Model:
         return self._graph.num_nodes()
 
     def num_symbols(self):
-        """Number of symbols tracked by the model. 
-        
-        Equivalent to the number of nodes in the directed acyclic 
+        """Number of symbols tracked by the model.
+
+        Equivalent to the number of nodes in the directed acyclic
         graph for the model.
-        
+
         See also:
             :meth:`.num_nodes`
-        
+
         Examples:
-            This example add a single (size 20) decision symbol and 
-            a single (size 3) constant symbol checks the number of 
+            This example add a single (size 20) decision symbol and
+            a single (size 3) constant symbol checks the number of
             symbols in the model.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> c = model.constant([1, 5, 8.4])
@@ -767,26 +767,26 @@ cdef class Model:
 
     def quadratic_model(self, ArraySymbol x, quadratic, linear=None):
         """Create a quadratic model from an array and a quadratic model.
-        
+
         Args:
             x: An array.
-            
+
             quadratic: Quadratic values for the quadratic model.
-            
+
             linear: Linear values for the quadratic model.
-        
+
         Returns:
-            A quadratic model. 
-            
+            A quadratic model.
+
         Examples:
             This example creates a quadratic model.
-        
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> x = model.binary(3)
             >>> Q = {(0, 0): 0, (0, 1): 1, (0, 2): 2, (1, 1): 1, (1, 2): 3, (2, 2): 2}
             >>> qm = model.quadratic_model(x, Q)
-            
+
         """
         from dwave.optimization.symbols import QuadraticModel
         return QuadraticModel(x, quadratic, linear)
@@ -802,11 +802,11 @@ cdef class Model:
 
         Returns:
             A set symbol.
-            
+
         Examples:
             This example creates a set symbol of up to 4 elements
             with values between 0 to 99.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> destinations = model.set(100, max_size=4)
@@ -817,23 +817,23 @@ cdef class Model:
     def state_size(self):
         """An estimate of the size, in bytes, of all states in the model.
 
-        Iterates over the model's states and totals the sizes of all. 
-        
+        Iterates over the model's states and totals the sizes of all.
+
         Examples:
-            This example estimates the size of a model's states. 
-            
+            This example estimates the size of a model's states.
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> c = model.constant([1, 5, 8.4])
             >>> i = model.integer(20, upper_bound=100)
-            >>> model.state_size()     
+            >>> model.state_size()
             184
         """
         return sum(sym.state_size() for sym in self.iter_symbols())
 
     def to_file(self, **kwargs):
         """Serialize the model to a new file-like object.
-        
+
         See also:
             :meth:`.into_file`, :meth:`.from_file`
         """
@@ -844,16 +844,16 @@ cdef class Model:
 
     def to_networkx(self):
         """Convert the model to a NetworkX graph.
-        
+
         Note:
-            Currently requires the installation of a GNU compiler.  
-        
+            Currently requires the installation of a GNU compiler.
+
         Returns:
             A :obj:`NetworkX <networkx:networkx.Graph>` graph.
-            
+
         Examples:
-            This example converts a model to a graph. 
-            
+            This example converts a model to a graph.
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> c = model.constant(8)
@@ -897,9 +897,9 @@ cdef class Model:
 
     def unlock(self):
         """Release a lock, decrementing the lock count.
-        
+
         Symbols can be added to unlocked models only.
-        
+
         See also:
             :meth:`.is_locked`, :meth:`.lock`
         """
@@ -920,18 +920,18 @@ cdef class Model:
 
 cdef class States:
     r"""States of a symbol in a model.
-    
-    States represent assignments of values to a symbol's elements. For 
-    example, an :meth:`~Model.integer` symbol of size :math:`1 \times 5` 
-    might have state ``[3, 8, 0, 12, 8]``, representing one assignment 
-    of values to the symbol.
-    
-    Examples:
-        This example creates a :class:`~dwave.optimization.generators.knapsack` 
-        model and manipulates its states to test that it behaves as expected. 
 
-        First, create a model. 
-    
+    States represent assignments of values to a symbol's elements. For
+    example, an :meth:`~Model.integer` symbol of size :math:`1 \times 5`
+    might have state ``[3, 8, 0, 12, 8]``, representing one assignment
+    of values to the symbol.
+
+    Examples:
+        This example creates a :class:`~dwave.optimization.generators.knapsack`
+        model and manipulates its states to test that it behaves as expected.
+
+        First, create a model.
+
         >>> from dwave.optimization import Model
         ...
         >>> model = Model()
@@ -943,18 +943,18 @@ cdef class States:
         >>> items = model.set(4)
         >>> # add the capacity constraint
         >>> model.add_constraint(weights[items].sum() <= capacity)
-        >>> # Set the objective 
+        >>> # Set the objective
         >>> model.minimize(values[items].sum())
 
-        Lock the model to prevent changes to directed acyclic graph. At any 
-        time, you can verify the locked state, which is demonstrated here. 
-        
+        Lock the model to prevent changes to directed acyclic graph. At any
+        time, you can verify the locked state, which is demonstrated here.
+
         >>> with model.lock():
         ...     model.is_locked()
-        True 
+        True
 
-        Set a couple of states on the decision variable and verify that the 
-        model generates the expected values for the objective. 
+        Set a couple of states on the decision variable and verify that the
+        model generates the expected values for the objective.
 
         >>> model.states.resize(2)
         >>> items.set_state(0, [0, 1])
@@ -978,15 +978,15 @@ cdef class States:
 
     cdef void attach_states(self, vector[cppState] states) noexcept:
         """Attach the given states.
-        
-        Note: 
+
+        Note:
             Currently replaces any current states with the given states.
 
             This method does not check whether the states are locked
             or that the states are valid.
-        
+
         Args:
-            states: States to be attached.  
+            states: States to be attached.
         """
         self._future = None
         self._result_hook = None
@@ -996,10 +996,10 @@ cdef class States:
         """Clear any saved states.
 
         Clears any memory allocated to the states.
-        
+
         Examples:
             This example clears a state set on an integer decision symbol.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer(2)
@@ -1012,11 +1012,11 @@ cdef class States:
         self.detach_states()
 
     cdef vector[cppState] detach_states(self):
-        """Move the current C++ states into a returned vector. 
-        
+        """Move the current C++ states into a returned vector.
+
         Leaves the model's states empty.
-        
-        Note: 
+
+        Note:
             This method does not check whether the states are locked.
 
         Returns:
@@ -1041,7 +1041,7 @@ cdef class States:
                 If ``False``, the states are appended.
             check_header:
                 Set to ``False`` to skip file-header check.
-                
+
         Returns:
             A model.
         """
@@ -1064,14 +1064,14 @@ cdef class States:
 
     def from_future(self, future, result_hook):
         """Populate the states from the result of a future computation.
-        
-        A :doc:`Future <oceandocs:docs_cloud/reference/computation>` object is 
-        returned by the solver to which your problem model is submitted. This 
-        enables asynchronous problem submission. 
-        
+
+        A :doc:`Future <oceandocs:docs_cloud/reference/computation>` object is
+        returned by the solver to which your problem model is submitted. This
+        enables asynchronous problem submission.
+
         Args:
             future: ``Future`` object.
-            
+
             result_hook: Method executed to retrieve the Future.
         """
         self.resize(0)  # always clears self first
@@ -1096,8 +1096,8 @@ cdef class States:
 
         Args:
             file:
-                File pointer to an existing writeable, seekable file-like 
-                object encoding a model. Strings are interpreted as a file 
+                File pointer to an existing writeable, seekable file-like
+                object encoding a model. Strings are interpreted as a file
                 name.
 
         TODO: describe the format
@@ -1116,21 +1116,21 @@ cdef class States:
     def resize(self, Py_ssize_t n):
         """Resize the number of states.
 
-        If ``n`` is smaller than the current :meth:`.size()`, 
-        states are reduced to the first ``n`` states by removing 
-        those beyond. If ``n`` is greater than the current 
-        :meth:`.size()`, new uninitialized states are added 
+        If ``n`` is smaller than the current :meth:`.size()`,
+        states are reduced to the first ``n`` states by removing
+        those beyond. If ``n`` is greater than the current
+        :meth:`.size()`, new uninitialized states are added
         as needed to reach a size of ``n``.
 
         Resizing to 0 is not  guaranteed to clear the memory allocated to
         states.
-        
+
         Args:
-            n: Required number of states. 
-            
+            n: Required number of states.
+
         Examples:
             This example adds three uninitialized states to a model.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer(2)
@@ -1145,13 +1145,13 @@ cdef class States:
 
     cpdef resolve(self):
         """Block until states are retrieved from any pending future computations.
-        
-        A :doc:`Future <oceandocs:docs_cloud/reference/computation>` object is 
-        returned by the solver to which your problem model is submitted. This 
-        enables asynchronous problem submission. 
+
+        A :doc:`Future <oceandocs:docs_cloud/reference/computation>` object is
+        returned by the solver to which your problem model is submitted. This
+        enables asynchronous problem submission.
         """
         if self._future is not None:
-            # The existance of _future means that anything we do to the 
+            # The existance of _future means that anything we do to the
             # state will block. So we remove it before calling the hook.
             future = self._future
             self._future = None
@@ -1162,11 +1162,11 @@ cdef class States:
 
     cpdef Py_ssize_t size(self) except -1:
         """Number of model states.
-        
+
         Examples:
             This example adds three uninitialized states to a model and
             verifies the number of model states.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> model.states.resize(3)
@@ -1187,7 +1187,7 @@ cdef class Symbol:
 
     Each symbol corresponds to a node in the directed acyclic graph representing
     the problem.
-    """ 
+    """
     def __init__(self, *args, **kwargs):
         # disallow direct construction of symbols, they should be constructed
         # via their subclasses.
@@ -1200,11 +1200,11 @@ cdef class Symbol:
         self.expired_ptr = node_ptr.expired_ptr()
 
     def equals(self, other):
-        """Compare whether two nodes are identical. 
-        
+        """Compare whether two nodes are identical.
+
         Args:
-            other: A node for comparison. 
-        
+            other: A node for comparison.
+
         Equal nodes represent the same quantity in the model.
 
         Note that comparing nodes across models is expensive.
@@ -1265,10 +1265,10 @@ cdef class Symbol:
 
     def has_state(self, Py_ssize_t index = 0):
         """Return the initialization status of the indexed state.
-        
+
         Args:
             index: Index of the queried state.
-            
+
         Returns:
             True if the state is initialized.
         """
@@ -1314,12 +1314,12 @@ cdef class Symbol:
 
     def iter_predecessors(self):
         """Iterate over a node's predecessors in the model.
-        
+
         Examples:
-            This example constructs a :math:`b = \sum a` model, where :math:`a` 
-            is a multiplication of two symbols, and iterates over the 
+            This example constructs a :math:`b = \sum a` model, where :math:`a`
+            is a multiplication of two symbols, and iterates over the
             predecessor's of :math:`b` (which is just :math:`a`).
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer((2, 2), upper_bound=20)
@@ -1337,16 +1337,16 @@ cdef class Symbol:
 
     def iter_successors(self):
         """Iterate over a node's successors in the model.
-        
+
         Examples:
             This example constructs iterates over the successor nodes
             of a :class:`~dwave.optimization.symbols.DisjointLists`
             symbol.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> lsymbol, lsymbol_lists = model.disjoint_lists(
-            ...     primary_set_size=5, 
+            ...     primary_set_size=5,
             ...     num_disjoint_lists=2)
             >>> lsymbol_lists[0].equals(next(lsymbol.iter_successors()))
             True
@@ -1359,13 +1359,13 @@ cdef class Symbol:
 
     def maybe_equals(self, other):
         """Compare to another node.
-        
+
         Args:
             other: Another node in the model's directed acyclic graph.
-            
+
         Returns: integer
             Supported return values are:
-            
+
             *   ``0``---Not equal.
             *   ``1``---Might be equal.
             *   ``2``---Are equal.
@@ -1404,14 +1404,14 @@ cdef class Symbol:
 
     def reset_state(self, Py_ssize_t index):
         """Reset the state of a node and any successor symbols.
-        
+
         Args:
             index: Index of the state to reset.
-            
+
         Examples:
             This example sets two states on a symbol with two successor symbols
-            and resets just one state. 
-            
+            and resets just one state.
+
             >>> from dwave.optimization import Model
             >>> model = Model()
             >>> lsymbol, lsymbol_lists = model.disjoint_lists(primary_set_size=5, num_disjoint_lists=2)
@@ -1448,10 +1448,10 @@ cdef class Symbol:
 
     def shares_memory(self, other):
         """Determine if two symbols share memory.
-        
+
         Args:
             other: Another symbol.
-            
+
         Returns:
             True if the two symbols share memory.
         """
@@ -1476,14 +1476,14 @@ cdef class Symbol:
 
     def state_size(self):
         """Return an estimated size, in bytes, of the node's state.
-        
+
         .. note::
 
-            For most symbols, which are arrays, this method is 
+            For most symbols, which are arrays, this method is
             subclassed by the :class:`~dwave.optimization.model.ArraySymbol
             class's :meth:`~dwave.optimization.model.ArraySymbol.state_size`
             method.
-        
+
         Returns:
             Always returns zero (nodes do not have a state).
         """
@@ -1494,10 +1494,10 @@ cdef class Symbol:
         """Topological index of the node.
 
         Return ``None`` if the model is not topologically sorted.
-        
+
         Examples:
             This example prints the indices of a two-symbol model.
-            
+
             >>> from dwave.optimization import Model
             >>> model = Model()
             >>> i = model.integer(100, lower_bound=20)
@@ -1542,7 +1542,7 @@ def _split_indices(indices):
             # natively handled by AdvancedIndexingNode.
             basic_indices.append(slice(None))
             advanced_indices.append(index)
-            
+
         else:
             # this should be checked by the calling function, but just in case
             raise RuntimeError("unexpected index type")
@@ -1643,7 +1643,7 @@ cdef class ArraySymbol(Symbol):
 
     def all(self):
         """Create an :class:`~dwave.optimization.symbols.All` symbol.
-        
+
         The new symbol returns True when all elements evaluate to True.
         """
         from dwave.optimization.symbols import All  # avoid circular import
@@ -1651,7 +1651,7 @@ cdef class ArraySymbol(Symbol):
 
     def max(self):
         """Create a :class:`~dwave.optimization.symbols.Max` symbol.
-        
+
         The new symbol returns the maximum value in its elements.
         """
         from dwave.optimization.symbols import Max  # avoid circular import
@@ -1659,18 +1659,18 @@ cdef class ArraySymbol(Symbol):
 
     def maybe_equals(self, other):
         """Compare to another symbol.
-        
+
         Args:
             other: Another symbol in the model.
-            
+
         Returns:
             True if the two symbols might be equal.
-            
+
         Examples:
-            This example compares 
+            This example compares
             :class:`~dwave.optimization.symbols.IntegerVariable` symbols
             of different sizes.
-            
+
             >>> from dwave.optimization import Model
             >>> model = Model()
             >>> i = model.integer(3, lower_bound=0, upper_bound=20)
@@ -1700,7 +1700,7 @@ cdef class ArraySymbol(Symbol):
 
     def min(self):
         """Create a :class:`~dwave.optimization.symbols.Min` symbol.
-        
+
         The new symbol returns the minimum value in its elements.
         """
         from dwave.optimization.symbols import Min  # avoid circular import
@@ -1712,7 +1712,7 @@ cdef class ArraySymbol(Symbol):
 
     def prod(self):
         """Create a :class:`~dwave.optimization.symbols.Prod` symbol.
-        
+
         The new symbol returns the product of its elements.
         """
         from dwave.optimization.symbols import Prod  # avoid circular import
@@ -1720,16 +1720,16 @@ cdef class ArraySymbol(Symbol):
 
     def reshape(self, *shape):
         """Create a :class:`~dwave.optimization.symbols.Reshape` symbol.
-        
+
         Args:
             shape: Shape of the created symbol.
-        
-        The new symbol reshapes without changing the antecedent symbol's 
+
+        The new symbol reshapes without changing the antecedent symbol's
         data.
-        
+
         Examples:
             This example reshapes a column vector into a row vector.
-            
+
             >>> from dwave.optimization import Model
             >>> model = Model()
             >>> j = model.integer(3, lower_bound=-10, upper_bound=10)
@@ -1747,10 +1747,10 @@ cdef class ArraySymbol(Symbol):
 
     def shape(self):
         """Return the shape of the symbol.
-        
+
         Examples:
             This example returns the shape of a newly instantiated symbol.
-            
+
             >>> from dwave.optimization import Model
             >>> model = Model()
             >>> x = model.binary(20)
@@ -1767,11 +1767,11 @@ cdef class ArraySymbol(Symbol):
         r"""Return the number of elements in the symbol.
 
         ``-1`` indicates a variable number of elements.
-        
+
         Examples:
             This example checks the size of a :math:`2 \times 3`
             binary symbol.
-            
+
             >>> from dwave.optimization import Model
             >>> model = Model()
             >>> x = model.binary((2, 3))
@@ -1785,16 +1785,16 @@ cdef class ArraySymbol(Symbol):
 
         Args:
             index: Index of the state.
-            
+
             copy: Currently only True is supported.
 
         Returns:
             State as a :class:`numpy.ndarray`.
 
         Examples:
-            This example prints a node two states: initialized 
-            and uninitialized. 
-            
+            This example prints a node two states: initialized
+            and uninitialized.
+
             >>> from dwave.optimization import Model
             >>> model = Model()
             >>> x = model.binary((2, 3))
@@ -1855,10 +1855,10 @@ cdef class ArraySymbol(Symbol):
 
     def state_size(self):
         """Return an estimated byte-size of the state.
-        
+
         Examples:
             This example returns the size of an integer symbol.
-            
+
             >>> from dwave.optimization import Model
             >>> model = Model()
             >>> i = model.integer(2, lower_bound=0, upper_bound=20)
@@ -1885,14 +1885,14 @@ cdef class ArraySymbol(Symbol):
 
     def strides(self):
         """Return the stride length, in bytes, for traversing a symbol.
-        
+
         Returns:
-            Tuple of the number of bytes to step in each dimension when 
+            Tuple of the number of bytes to step in each dimension when
             traversing a symbol.
-        
+
         Examples:
             This example returns the size of an integer symbol.
-            
+
             >>> from dwave.optimization import Model
             >>> model = Model()
             >>> i = model.integer((2, 3), upper_bound=20)
@@ -1904,7 +1904,7 @@ cdef class ArraySymbol(Symbol):
 
     def sum(self):
         """Create a :class:`~dwave.optimization.symbols.Sum` symbol.
-        
+
         The new symbol returns the sum of its elements.
         """
         from dwave.optimization.symbols import Sum  # avoid circular import
