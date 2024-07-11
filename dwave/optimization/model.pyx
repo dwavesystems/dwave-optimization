@@ -1675,6 +1675,7 @@ cdef class ArraySymbol(Symbol):
         return Max(self)
 
     def maybe_equals(self, other):
+        # note: docstring inherited from Symbol.maybe_equal()
         cdef Py_ssize_t maybe = super().maybe_equals(other)
         cdef Py_ssize_t NOT = 0
         cdef Py_ssize_t MAYBE = 1
