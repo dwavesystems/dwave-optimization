@@ -1358,7 +1358,9 @@ cdef class Symbol:
             inc(it)
 
     def maybe_equals(self, other):
-        """Compare to another node. This method exists because a complete equality test can be expensive.
+        """Compare to another node.
+        
+        This method exists because a complete equality test can be expensive.
 
         Args:
             other: Another node in the model's directed acyclic graph.
