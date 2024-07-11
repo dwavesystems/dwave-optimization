@@ -1524,6 +1524,69 @@ std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
                                     ndim_);
 }
 
+// LenNode ********************************************************************
+
+struct LenNodeData : NodeStateData {
+    explicit LenNodeData(std::integral auto value) : values(0, value, value) {}
+
+    double const* buff() const { return &values.value; }
+    void commit() { values.old = values.value; }
+    std::span<const Update> diff() const {
+        return std::span<const Update>(&values, values.old != values.value);
+    }
+    void revert() { values.value = values.old; }
+    void update(std::integral auto value) { values.value = value; }
+
+    Update values;
+};
+
+LenNode::LenNode(ArrayNode* node_ptr) : array_ptr_(node_ptr) {
+    this->add_predecessor(node_ptr);
+}
+
+double const* LenNode::buff(const State& state) const {
+    return data_ptr<LenNodeData>(state)->buff();
+}
+
+void LenNode::commit(State& state) const { return data_ptr<LenNodeData>(state)->commit(); }
+
+std::span<const Update> LenNode::diff(const State& state) const {
+    return data_ptr<LenNodeData>(state)->diff();
+}
+
+void LenNode::initialize_state(State& state) const {
+    int index = this->topological_index();
+    assert(index >= 0 && "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > index && "unexpected state length");
+    assert(state[index] == nullptr && "already initialized state");
+
+    state[index] = std::make_unique<LenNodeData>(array_ptr_->size(state));
+}
+
+double LenNode::max() const {
+    // exactly the size of fixed-length predecessors
+    if (!array_ptr_->dynamic()) return array_ptr_->size();
+
+    // Ask the predecessor for its size, though in some cases it doesn't know
+    // so fall back on max of ssize_t
+    return array_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max());
+}
+
+double LenNode::min() const {
+    // exactly the size of fixed-length predecessors
+    if (!array_ptr_->dynamic()) return array_ptr_->size();
+
+    // Ask the predecessor for its size, though in some cases it doesn't know
+    // so fall back on 0
+    return array_ptr_->sizeinfo().min.value_or(0);
+}
+
+void LenNode::propagate(State& state) const {
+    return data_ptr<LenNodeData>(state)->update(array_ptr_->size(state));
+}
+
+void LenNode::revert(State& state) const { return data_ptr<LenNodeData>(state)->revert(); }
+
 // PermutationNode ************************************************************
 
 PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr)

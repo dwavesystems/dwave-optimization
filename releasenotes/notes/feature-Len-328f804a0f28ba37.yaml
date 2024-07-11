@@ -1,0 +1,3 @@
+---
+features:
+  - Add ``LenNode`` C++ class. See `#48 <https://github.com/dwavesystems/dwave-optimization/issues/48>`_.
