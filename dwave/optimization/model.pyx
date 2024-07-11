@@ -40,6 +40,7 @@ import numpy as np
 from cpython cimport Py_buffer
 from cython.operator cimport dereference as deref, preincrement as inc
 from cython.operator cimport typeid
+from libc.stdint cimport uintptr_t
 from libcpp cimport bool
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
@@ -1192,6 +1193,20 @@ cdef class Symbol:
         # disallow direct construction of symbols, they should be constructed
         # via their subclasses.
         raise ValueError("Symbols cannot be constructed directly")
+
+    def __repr__(self):
+        """Return a representation of the symbol.
+
+        The representation refers to the id of the underlying node, rather than
+        the id of the Python symbol.
+        """
+        cls = type(self)
+        # We refer to the node_ptr, which is not necessarily the address of the
+        # C++ node, as it sublasses Node.
+        # But this is unique to each node, and functions as an id rather than
+        # as a pointer, so that's OK.
+        # Otherwise we aim to match Python's default __repr__.
+        return f"<{cls.__module__}.{cls.__qualname__} at {<uintptr_t>self.node_ptr:#x}>"
 
     cdef void initialize_node(self, Model model, cppNode* node_ptr) noexcept:
         self.model = model

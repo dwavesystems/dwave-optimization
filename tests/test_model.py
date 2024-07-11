@@ -424,3 +424,14 @@ class TestSymbol(unittest.TestCase):
         from dwave.optimization.model import Symbol
         with self.assertRaisesRegex(ValueError, "Symbols cannot be constructed directly"):
             Symbol()
+
+    def test_repr(self):
+        model = Model()
+        c0 = model.constant(5)
+        c1, = model.iter_symbols()
+        c2 = model.constant(5)
+
+        # the specific form is an implementation detail, but different symbols
+        # representing the same underlying node should have the same repr
+        self.assertEqual(repr(c0), repr(c1))
+        self.assertNotEqual(repr(c0), repr(c2))

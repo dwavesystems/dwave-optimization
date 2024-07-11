@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Make ``repr()`` of symbols unique to the underlying node, rather than to the Python symbol.
+    See `#52 <https://github.com/dwavesystems/dwave-optimization/issues/52>_.
