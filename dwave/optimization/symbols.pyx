@@ -200,14 +200,14 @@ cdef bool _empty_slice(object slice_) noexcept:
 
 cdef class Absolute(ArraySymbol):
     """Absolute value element-wise on a symbol.
-    
+
     Examples:
-        This example adds the absolute value of an integer decision 
+        This example adds the absolute value of an integer decision
         variable to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> i = model.integer(1, lower_bound=-50, upper_bound=50) 
+        >>> i = model.integer(1, lower_bound=-50, upper_bound=50)
         >>> i_abs = abs(i)
         >>> type(i_abs)
         <class 'dwave.optimization.symbols.Absolute'>
@@ -237,13 +237,13 @@ _register(Absolute, typeid(cppAbsoluteNode))
 
 cdef class Add(ArraySymbol):
     """Addition element-wise of two symbols.
-    
+
     Examples:
         This example adds two integer symbols.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> i = model.integer(10, lower_bound=-50, upper_bound=50) 
+        >>> i = model.integer(10, lower_bound=-50, upper_bound=50)
         >>> j = model.integer(10, lower_bound=0, upper_bound=10)
         >>> k = i + j
         >>> type(k)
@@ -277,13 +277,13 @@ _register(Add, typeid(cppAddNode))
 
 cdef class All(ArraySymbol):
     """Tests whether all elements evaluate to True.
-    
+
     Examples:
         This example checks all elements of a binary array.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> x = model.binary((20, 30)) 
+        >>> x = model.binary((20, 30))
         >>> all_x = x.all()
         >>> type(all_x)
         <class 'dwave.optimization.symbols.All'>
@@ -312,10 +312,10 @@ _register(All, typeid(cppAllNode))
 
 cdef class And(ArraySymbol):
     """Boolean AND element-wise between two symbols.
-    
+
     Examples:
         This example creates an AND operation between binary arrays.
-        
+
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.mathematical import logical_and
         ...
@@ -325,7 +325,7 @@ cdef class And(ArraySymbol):
         >>> z = logical_and(x, y)
         >>> type(z)
         <class 'dwave.optimization.symbols.And'>
-    """ 
+    """
     def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
@@ -378,10 +378,10 @@ _register(_ArrayValidation, typeid(cppArrayValidationNode))
 
 cdef class AdvancedIndexing(ArraySymbol):
     """Advanced indexing.
-    
+
     Examples:
         This example uses advanced indexing to set a symbol's values.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> prices = model.constant([i for i in range(20)])
@@ -509,10 +509,10 @@ _register(AdvancedIndexing, typeid(cppAdvancedIndexingNode))
 
 cdef class BasicIndexing(ArraySymbol):
     """Basic indexing.
-    
+
     Examples:
         This example uses basic indexing to set a symbol's values.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> prices = model.constant([i for i in range(20)])
@@ -614,10 +614,10 @@ _register(BasicIndexing, typeid(cppBasicIndexingNode))
 
 cdef class BinaryVariable(ArraySymbol):
     """Binary decision-variable symbol.
-    
+
     Examples:
         This example adds a binary variable to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> x = model.binary((20, 30))
@@ -703,17 +703,17 @@ cdef class BinaryVariable(ArraySymbol):
 
         The given state must be binary array with the same shape
         as the symbol.
-        
+
         Args:
             index:
                 Index of the state to set
             state:
                 Assignment of values for the state.
-                
+
         Examples:
-            This example sets two states for a :math:`2 \times 3`-sized 
+            This example sets two states for a :math:`2 \times 3`-sized
             binary symbol.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> x = model.binary((2, 3))
@@ -748,10 +748,10 @@ _register(BinaryVariable, typeid(cppBinaryNode))
 
 cdef class Constant(ArraySymbol):
     """Constant symbol.
-    
+
     Examples:
         This example adds a constant symbol to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> a = model.constant(20)
@@ -809,7 +809,7 @@ cdef class Constant(ArraySymbol):
     @classmethod
     def _from_zipfile(cls, zf, directory, Model model, predecessors):
         """Construct a constant symbol from a compressed file.
-        
+
         Args:
             zf:
                 File pointer to a compressed file encoding
@@ -868,7 +868,7 @@ cdef class Constant(ArraySymbol):
 
     def state(self, Py_ssize_t index=0, *, bool copy = True):
         """Return the state of the constant symbol.
-        
+
         Args:
             index:
                 Index of the state.
@@ -890,10 +890,10 @@ _register(Constant, typeid(cppConstantNode))
 
 cdef class DisjointBitSets(Symbol):
     """Disjoint-sets decision-variable symbol.
-    
+
     Examples:
         This example adds a disjoint-sets symbol to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> s = model.disjoint_bit_sets(primary_set_size=100, num_disjoint_sets=5)
@@ -924,10 +924,10 @@ cdef class DisjointBitSets(Symbol):
     @classmethod
     def _from_zipfile(cls, zf, directory, Model model, predecessors):
         """Construct a disjoint-sets symbol from a compressed file.
-        
+
         Args:
             zf:
-                File pointer to a compressed file encoding a 
+                File pointer to a compressed file encoding a
                 disjoint-sets symbol. Strings are interpreted as a
                 file name.
             directory:
@@ -960,7 +960,7 @@ cdef class DisjointBitSets(Symbol):
         Args:
             zf:
                 File pointer to a compressed file to store the
-                disjoint-sets symbol. Strings are interpreted as a 
+                disjoint-sets symbol. Strings are interpreted as a
                 file name.
             directory:
                 Directory where the file is located.
@@ -983,10 +983,10 @@ cdef class DisjointBitSets(Symbol):
     def set_state(self, Py_ssize_t index, state):
         r"""Set the state of the disjoint-sets symbol.
 
-        The given state must be a partition of ``range(primary_set_size)`` 
-        into :meth:`.num_disjoint_sets` partitions, encoded as a 2D 
+        The given state must be a partition of ``range(primary_set_size)``
+        into :meth:`.num_disjoint_sets` partitions, encoded as a 2D
         :math:`num_disjoint_sets \times primary_set_size` Boolean array.
-               
+
         Args:
             index:
                 Index of the state to set
@@ -1042,10 +1042,10 @@ _register(DisjointBitSets, typeid(cppDisjointBitSetsNode))
 
 cdef class DisjointBitSet(ArraySymbol):
     """Disjoint-sets successor symbol.
-    
+
     Examples:
         This example adds a disjoint-sets symbol to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> s = model.disjoint_bit_sets(primary_set_size=100, num_disjoint_sets=5)
@@ -1089,10 +1089,10 @@ cdef class DisjointBitSet(ArraySymbol):
     @classmethod
     def _from_zipfile(cls, zf, directory, Model model, predecessors):
         """Construct a disjoint-set symbol from a compressed file.
-        
+
         Args:
             zf:
-                File pointer to a compressed file encoding a 
+                File pointer to a compressed file encoding a
                 disjoint-set symbol. Strings are interpreted as a
                 file name.
             directory:
@@ -1121,7 +1121,7 @@ cdef class DisjointBitSet(ArraySymbol):
         Args:
             zf:
                 File pointer to a compressed file to store the
-                disjoint-set symbol. Strings are interpreted as a 
+                disjoint-set symbol. Strings are interpreted as a
                 file name.
             directory:
                 Directory where the file is located.
@@ -1148,10 +1148,10 @@ _register(DisjointBitSet, typeid(cppDisjointBitSetNode))
 
 cdef class DisjointLists(Symbol):
     """Disjoint-lists decision-variable symbol.
-    
+
     Examples:
         This example adds a disjoint-lists symbol to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> l = model.disjoint_lists(primary_set_size=10, num_disjoint_lists=2)
@@ -1181,10 +1181,10 @@ cdef class DisjointLists(Symbol):
     @classmethod
     def _from_zipfile(cls, zf, directory, Model model, predecessors):
         """Construct a disjoint-lists symbol from a compressed file.
-        
+
         Args:
             zf:
-                File pointer to a compressed file encoding a 
+                File pointer to a compressed file encoding a
                 disjoint-lists symbol. Strings are interpreted as a
                 file name.
             directory:
@@ -1217,7 +1217,7 @@ cdef class DisjointLists(Symbol):
         Args:
             zf:
                 File pointer to a compressed file to store the
-                disjoint-lists symbol. Strings are interpreted as a 
+                disjoint-lists symbol. Strings are interpreted as a
                 file name.
             directory:
                 Directory where the file is located.
@@ -1240,9 +1240,9 @@ cdef class DisjointLists(Symbol):
     def set_state(self, Py_ssize_t index, state):
         r"""Set the state of the disjoint-lists symbol.
 
-        The given state must be a partition of ``range(primary_set_size)`` 
+        The given state must be a partition of ``range(primary_set_size)``
         into :meth:`.num_disjoint_lists` partitions as a list of lists.
-               
+
         Args:
             index:
                 Index of the state to set
@@ -1297,10 +1297,10 @@ _register(DisjointLists, typeid(cppDisjointListsNode))
 
 cdef class DisjointList(ArraySymbol):
     """Disjoint-lists successor symbol.
-    
+
     Examples:
         This example adds a disjoint-lists symbol to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> l = model.disjoint_lists(primary_set_size=10, num_disjoint_lists=2)
@@ -1344,10 +1344,10 @@ cdef class DisjointList(ArraySymbol):
     @classmethod
     def _from_zipfile(cls, zf, directory, Model model, predecessors):
         """Construct a disjoint-list symbol from a compressed file.
-        
+
         Args:
             zf:
-                File pointer to a compressed file encoding a 
+                File pointer to a compressed file encoding a
                 disjoint-list symbol. Strings are interpreted as a
                 file name.
             directory:
@@ -1376,7 +1376,7 @@ cdef class DisjointList(ArraySymbol):
         Args:
             zf:
                 File pointer to a compressed file to store the
-                disjoint-list symbol. Strings are interpreted as a 
+                disjoint-list symbol. Strings are interpreted as a
                 file name.
             directory:
                 Directory where the file is located.
@@ -1403,10 +1403,10 @@ _register(DisjointList, typeid(cppDisjointListNode))
 
 cdef class Equal(ArraySymbol):
     """Equality comparison element-wise between two symbols.
-    
+
     Examples:
         This example creates an equality operation between integer symbols.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> i = model.integer(25, upper_bound=100)
@@ -1443,10 +1443,10 @@ _register(Equal, typeid(cppEqualNode))
 
 cdef class IntegerVariable(ArraySymbol):
     """Integer decision-variable symbol.
-    
+
     Examples:
         This example adds an integer symbol to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> i = model.integer(25, upper_bound=100)
@@ -1547,10 +1547,10 @@ _register(IntegerVariable, typeid(cppIntegerNode))
 
 cdef class LessEqual(ArraySymbol):
     """Smaller-or-equal comparison element-wise between two symbols.
-    
+
     Examples:
         This example creates an inequality operation between integer symbols.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> i = model.integer(25, upper_bound=100)
@@ -1587,10 +1587,10 @@ _register(LessEqual, typeid(cppLessEqualNode))
 
 cdef class ListVariable(ArraySymbol):
     """List decision-variable symbol.
-    
+
     Examples:
         This example adds a list symbol to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> l = model.list(10)
@@ -1672,14 +1672,14 @@ _register(ListVariable, typeid(cppListNode))
 
 cdef class Max(ArraySymbol):
     """Maximum value in the elements of a symbol.
-    
+
     Examples:
-        This example adds the maximum value of an integer decision 
+        This example adds the maximum value of an integer decision
         variable to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
         >>> i_max = i.max()
         >>> type(i_max)
         <class 'dwave.optimization.symbols.Max'>
@@ -1710,16 +1710,16 @@ _register(Max, typeid(cppMaxNode))
 
 cdef class Maximum(ArraySymbol):
     """Maximum values in an element-wise comparison of two symbols.
-    
+
     Examples:
-        This example sets a symbol's values to the maximum values of two 
+        This example sets a symbol's values to the maximum values of two
         integer decision variables.
-        
+
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.mathematical import maximum
         ...
         >>> model = Model()
-        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
         >>> j = model.integer(100, lower_bound=-20, upper_bound=150)
         >>> k = maximum(i, j)
         >>> type(k)
@@ -1754,14 +1754,14 @@ _register(Maximum, typeid(cppMaximumNode))
 
 cdef class Min(ArraySymbol):
     """Minimum value in the elements of a symbol.
-    
+
     Examples:
-        This example adds the minimum value of an integer decision 
+        This example adds the minimum value of an integer decision
         variable to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
         >>> i_min = i.min()
         >>> type(i_min)
         <class 'dwave.optimization.symbols.Min'>
@@ -1792,16 +1792,16 @@ _register(Min, typeid(cppMinNode))
 
 cdef class Minimum(ArraySymbol):
     """Minimum values in an element-wise comparison of two symbols.
-    
+
     Examples:
-        This example sets a symbol's values to the minimum values of two 
+        This example sets a symbol's values to the minimum values of two
         integer decision variables.
-        
+
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.mathematical import minimum
         ...
         >>> model = Model()
-        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
         >>> j = model.integer(100, lower_bound=-20, upper_bound=150)
         >>> k = minimum(i, j)
         >>> type(k)
@@ -1836,13 +1836,13 @@ _register(Minimum, typeid(cppMinimumNode))
 
 cdef class Multiply(ArraySymbol):
     """Multiplication element-wise between two symbols.
-    
+
     Examples:
         This example multiplies two integer symbols.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> i = model.integer(10, lower_bound=-50, upper_bound=50) 
+        >>> i = model.integer(10, lower_bound=-50, upper_bound=50)
         >>> j = model.integer(10, lower_bound=0, upper_bound=10)
         >>> k = i*j
         >>> type(k)
@@ -1876,10 +1876,10 @@ _register(Multiply, typeid(cppMultiplyNode))
 
 cdef class NaryAdd(ArraySymbol):
     """Addition element-wise of `N` symbols.
-    
+
     Examples:
         This example add three integer symbols.
-        
+
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.mathematical import add
         ...
@@ -1927,11 +1927,11 @@ _register(NaryAdd, typeid(cppNaryAddNode))
 
 cdef class NaryMaximum(ArraySymbol):
     """Maximum values in an element-wise comparison of `N` symbols.
-    
+
     Examples:
-        This example sets a symbol's values to the maximum values of  
+        This example sets a symbol's values to the maximum values of
         three integer decision variables.
-        
+
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.mathematical import maximum
         ...
@@ -1979,11 +1979,11 @@ _register(NaryMaximum, typeid(cppNaryMaximumNode))
 
 cdef class NaryMinimum(ArraySymbol):
     """Minimum values in an element-wise comparison of `N` symbols.
-    
+
     Examples:
-        This example sets a symbol's values to the minimum values of  
+        This example sets a symbol's values to the minimum values of
         three integer decision variables.
-        
+
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.mathematical import minimum
         ...
@@ -2031,10 +2031,10 @@ _register(NaryMinimum, typeid(cppNaryMinimumNode))
 
 cdef class NaryMultiply(ArraySymbol):
     """Multiplication element-wise between `N` symbols.
-    
+
     Examples:
         This example multiplies three integer decision variables.
-        
+
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.mathematical import multiply
         ...
@@ -2082,10 +2082,10 @@ _register(NaryMultiply, typeid(cppNaryMultiplyNode))
 
 cdef class Negative(ArraySymbol):
     """Numerical negative element-wise on a symbol.
-    
+
     Examples:
         This example add the negative of an integer array.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> i = model.integer(100, upper_bound=50)
@@ -2118,10 +2118,10 @@ _register(Negative, typeid(cppNegativeNode))
 
 cdef class Or(ArraySymbol):
     """Boolean OR element-wise between two symbols.
-    
+
     Examples:
         This example creates an OR operation between binary arrays.
-        
+
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.mathematical import logical_or
         ...
@@ -2131,7 +2131,7 @@ cdef class Or(ArraySymbol):
         >>> z = logical_or(x, y)
         >>> type(z)
         <class 'dwave.optimization.symbols.Or'>
-    """ 
+    """
     def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
@@ -2160,10 +2160,10 @@ _register(Or, typeid(cppOrNode))
 
 cdef class Permutation(ArraySymbol):
     """Permutation of the elements of a symbol.
-    
+
     Examples:
         This example creates a permutation of a constant symbol.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> C = model.constant([[1, 2, 3], [2, 3, 1], [0, 1, 0]])
@@ -2202,14 +2202,14 @@ _register(Permutation, typeid(cppPermutationNode))
 
 cdef class Prod(ArraySymbol):
     """Product of the elements of a symbol.
-    
+
     Examples:
-        This example adds the product of an integer symbol's 
+        This example adds the product of an integer symbol's
         elements to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
         >>> i_prod = i.prod()
         >>> type(i_prod)
         <class 'dwave.optimization.symbols.Prod'>
@@ -2241,13 +2241,13 @@ _register(Prod, typeid(cppProdNode))
 
 cdef class QuadraticModel(ArraySymbol):
     """Quadratic model.
-    
+
     Examples:
         This example adds a quadratic model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> x = model.binary(3) 
+        >>> x = model.binary(3)
         >>> Q = {(0, 0): 0, (0, 1): 1, (0, 2): 2, (1, 1): 1, (1, 2): 3, (2, 2): 2}
         >>> qm = model.quadratic_model(x, Q)
         >>> type(qm)
@@ -2473,13 +2473,13 @@ _register(QuadraticModel, typeid(cppQuadraticModelNode))
 
 cdef class Reshape(ArraySymbol):
     """Reshaped symbol.
-    
+
     Examples:
         This example adds a reshaped binary symbol.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> x = model.binary((2, 3)) 
+        >>> x = model.binary((2, 3))
         >>> x_t = x.reshape((3, 2))
         >>> type(x_t)
         <class 'dwave.optimization.symbols.Reshape'>
@@ -2526,7 +2526,7 @@ _register(Reshape, typeid(cppReshapeNode))
 
 cdef class SetVariable(ArraySymbol):
     """Set decision-variable symbol.
-    
+
     A set variable's possible states are the subsets of ``range(n)``.
 
     Args:
@@ -2534,10 +2534,10 @@ cdef class SetVariable(ArraySymbol):
         n: The possible states of the set variable are the subsets of ``range(n)``.
         min_size: The minimum set size.
         max_size: The maximum set size.
-        
+
     Examples:
         This example adds a set symbol to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
         >>> s = model.set(10)
@@ -2625,14 +2625,14 @@ _register(SetVariable, typeid(cppSetNode))
 
 cdef class Square(ArraySymbol):
     """Squares element-wise of a symbol.
-    
+
     Examples:
-        This example adds the squares of an integer decision 
+        This example adds the squares of an integer decision
         variable to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> i = model.integer(10, lower_bound=-5, upper_bound=5) 
+        >>> i = model.integer(10, lower_bound=-5, upper_bound=5)
         >>> ii = i**2
         >>> type(ii)
         <class 'dwave.optimization.symbols.Square'>
@@ -2663,13 +2663,13 @@ _register(Square, typeid(cppSquareNode))
 
 cdef class Subtract(ArraySymbol):
     """Subtraction element-wise of two symbols.
-    
+
     Examples:
         This example subtracts two integer symbols.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> i = model.integer(10, lower_bound=-50, upper_bound=50) 
+        >>> i = model.integer(10, lower_bound=-50, upper_bound=50)
         >>> j = model.integer(10, lower_bound=0, upper_bound=10)
         >>> k = i - j
         >>> type(k)
@@ -2703,14 +2703,14 @@ _register(Subtract, typeid(cppSubtractNode))
 
 cdef class Sum(ArraySymbol):
     """Sum of the elements of a symbol.
-    
+
     Examples:
-        This example adds the sum of an integer symbol's 
+        This example adds the sum of an integer symbol's
         elements to a model.
-        
+
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> i = model.integer(100, lower_bound=-50, upper_bound=50) 
+        >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
         >>> i_sum = i.sum()
         >>> type(i_sum)
         <class 'dwave.optimization.symbols.Sum'>
