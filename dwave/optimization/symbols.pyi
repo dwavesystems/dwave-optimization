@@ -92,6 +92,10 @@ class IntegerVariable(ArraySymbol):
     def upper_bound(self) -> float: ...
 
 
+class Len(ArraySymbol):
+    ...
+
+
 class LessEqual(ArraySymbol):
     ...
 

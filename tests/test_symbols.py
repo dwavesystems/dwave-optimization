@@ -1068,6 +1068,43 @@ class TestIntegerVariable(utils.SymbolTests):
             np.testing.assert_array_equal(x.state(), [0, 0, 0, -1, 0])
 
 
+class TestLen(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+
+        a = model.constant(5).len()
+        b = model.constant([0, 1, 2]).len()
+        c = model.set(5).len()
+
+        with model.lock():
+            yield a
+            yield b
+            yield c
+
+    def test_dynamic(self):
+        model = Model()
+        model.states.resize(2)
+
+        set_ = model.set(5)
+        length = set_.len()
+
+        set_.set_state(0, [])
+        set_.set_state(1, [0, 2, 3])
+
+        with model.lock():
+            self.assertEqual(length.state(0), 0)
+            self.assertEqual(length.state(1), 3)
+
+    def test_scalar(self):
+        model = Model()
+        model.states.resize(1)
+
+        length = model.constant(1).len()
+
+        with model.lock():
+            self.assertEqual(length.state(), 1)
+
+
 class TestLessEqual(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

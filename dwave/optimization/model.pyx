@@ -1781,6 +1781,18 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import All  # avoid circular import
         return All(self)
 
+    def len(self):
+        """Create an :class:`~dwave.optimization.symbols.Len` symbol.
+        
+        The new symbol's state is the length of its predecessor.
+
+        See also:
+            :meth:`.size()` for the size of the underlying array.
+
+        """
+        from dwave.optimization.symbols import Len  # avoid circular import
+        return Len(self)
+
     def max(self):
         """Create a :class:`~dwave.optimization.symbols.Max` symbol.
 
@@ -1888,6 +1900,10 @@ cdef class ArraySymbol(Symbol):
             >>> x = model.binary((2, 3))
             >>> x.size()
             6
+
+        See also:
+            :meth:`.len()` for a method that return a symbol representing
+            the length.
         """
         return self.array_ptr.size()
 
