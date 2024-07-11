@@ -1359,6 +1359,8 @@ cdef class Symbol:
 
     def maybe_equals(self, other):
         """Compare to another node.
+        
+        This method exists because a complete equality test can be expensive.
 
         Args:
             other: Another node in the model's directed acyclic graph.
@@ -1366,9 +1368,24 @@ cdef class Symbol:
         Returns: integer
             Supported return values are:
 
-            *   ``0``---Not equal.
-            *   ``1``---Might be equal.
-            *   ``2``---Are equal.
+            *   ``0``---Not equal (with certainty)
+            *   ``1``---Might be equal (no guarantees); a complete equality test is necessary
+            *   ``2``---Are equal (with certainty)
+
+        Examples:
+            This example compares
+            :class:`~dwave.optimization.symbols.IntegerVariable` symbols
+            of different sizes.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(3, lower_bound=0, upper_bound=20)
+            >>> j = model.integer(3, lower_bound=-10, upper_bound=10)
+            >>> k = model.integer(5, upper_bound=55)
+            >>> i.maybe_equals(j)
+            1
+            >>> i.maybe_equals(k)
+            0
         """
         cdef Py_ssize_t NOT = 0
         cdef Py_ssize_t MAYBE = 1
@@ -1658,35 +1675,14 @@ cdef class ArraySymbol(Symbol):
         return Max(self)
 
     def maybe_equals(self, other):
-        """Compare to another symbol.
-
-        Args:
-            other: Another symbol in the model.
-
-        Returns:
-            True if the two symbols might be equal.
-
-        Examples:
-            This example compares
-            :class:`~dwave.optimization.symbols.IntegerVariable` symbols
-            of different sizes.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(3, lower_bound=0, upper_bound=20)
-            >>> j = model.integer(3, lower_bound=-10, upper_bound=10)
-            >>> k = model.integer(5, upper_bound=55)
-            >>> i.maybe_equals(j)
-            1
-            >>> i.maybe_equals(k)
-            0
-        """
+        # note: docstring inherited from Symbol.maybe_equal()
         cdef Py_ssize_t maybe = super().maybe_equals(other)
-        if maybe != 1:
-            return True if maybe else False
-
         cdef Py_ssize_t NOT = 0
         cdef Py_ssize_t MAYBE = 1
+        cdef Py_ssize_t DEFINITELY = 2
+
+        if maybe != 1:
+            return DEFINITELY if maybe else NOT
 
         if not isinstance(other, ArraySymbol):
             return NOT
