@@ -846,53 +846,72 @@ cdef class Model:
     def to_networkx(self):
         """Convert the model to a NetworkX graph.
 
-        Note:
-            Currently requires the installation of a GNU compiler.
-
         Returns:
-            A :obj:`NetworkX <networkx:networkx.Graph>` graph.
+            A :obj:`NetworkX <networkx:networkx.MultiDiGraph>` graph.
 
         Examples:
             This example converts a model to a graph.
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> c = model.constant(8)
-            >>> i = model.integer((20, 30))
-            >>> g = model.to_networkx()   # doctest: +SKIP
-        """
-        # Todo: adapt to use iter_symbols()
-        # This whole method will need a re-write, it currently only works with gcc
-        # but it is useful for development
+            >>> one = model.constant(1)
+            >>> two = model.constant(2)
+            >>> i = model.integer()
+            >>> model.minimize(two * i - one)
+            >>> G = model.to_networkx()
 
-        import re
+            One advantage of converting to NetworkX is the wide availability
+            of drawing tools. See NetworkX's
+            `drawing <https://networkx.org/documentation/stable/reference/drawing.html>`_
+            documentation.
+
+            This example uses a `DAGVIZ <https://wimyedema.github.io/dagviz/>`_ to
+            draw the NetworkX graph created in the example above.
+
+            >>> import dagviz                      # doctest: +SKIP
+            >>> r = dagviz.render_svg(G)           # doctest: +SKIP
+            >>> with open("model.svg", "w") as f:  # doctest: +SKIP
+            ...     f.write(r)
+
+            This creates the following image:
+
+            .. figure:: /_images/to_networkx_example.svg
+               :width: 500 px
+               :name: to-networkx-example
+               :alt: Image of NetworkX Directed Graph
+
+        """
         import networkx
 
-        G = networkx.DiGraph()
+        G = networkx.MultiDiGraph()
 
-        cdef cppNode* ptr
-        for i in range(self._graph.num_nodes()):
-            ptr = self._graph.nodes()[i].get()
+        # Add the symbols, in order if we happen to be topologically sorted
+        G.add_nodes_from(repr(symbol) for symbol in self.iter_symbols())
 
-            # this regex is compiler specific! Don't do this for the general case
-            match = re.search("\d+([a-zA-z]+Node)", str(typeid(deref(ptr)).name()))
-            if not match:
-                raise ValueError
+        # Sanity check. If several nodes map to the same symbol repr we'll see
+        # too few nodes in the graph
+        if len(G) != self.num_symbols():
+            raise RuntimeError("symbol repr() is not unique to the underlying node")
 
-            u = (match[1], <long>(ptr))
+        # Now add the edges
+        for symbol in self.iter_symbols():
+            for successor in symbol.iter_successors():
+                G.add_edge(repr(symbol), repr(successor))
 
-            G.add_node(u)
+        # Sanity check again. If the repr of symbols isn't unique to the underlying
+        # node then we'll see too many nodes in the graph here
+        if len(G) != self.num_symbols():
+            raise RuntimeError("symbol repr() is not unique to the underlying node")
 
-            for j in range(ptr.predecessors().size()):
-                pptr = ptr.predecessors()[j]
+        # Add the objective if it's present. We call it "minimize" to be
+        # consistent with the minimize() function
+        if self.objective is not None:
+            G.add_edge(repr(self.objective), "minimize")
 
-                match = re.search("\d+([a-zA-z]+Node)", str(typeid(deref(pptr)).name()))
-                if not match:
-                    raise ValueError
-
-                v = (match[1], <long>(pptr))
-
-                G.add_edge(v, u)
+        # Likewise if we have constraints, add a special node for them
+        if self.num_constraints():
+            for symbol in self.iter_constraints():
+                G.add_edge(repr(symbol), "constraint(s)")
 
         return G
 

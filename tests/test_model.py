@@ -260,6 +260,76 @@ class TestModel(unittest.TestCase):
         model.constant(np.arange(25).reshape(5, 5))
         self.assertEqual(model.state_size(), 25 * 8)
 
+    def test_to_networkx(self):
+        try:
+            import networkx as nx
+        except ImportError:
+            return self.skipTest("NetworkX is not installed")
+
+        model = Model()
+        a = model.binary()
+        b = model.binary()
+        ab = a * b
+
+        G = model.to_networkx()
+
+        self.assertEqual(len(G.nodes), 3)
+        self.assertEqual(len(G.edges), 2)
+
+        # the repr as labels is an implementation detail and subject to change
+        self.assertIn(repr(a), G.nodes)
+        self.assertIn(repr(b), G.nodes)
+        self.assertIn(repr(ab), G.nodes)
+        self.assertIn((repr(a), repr(ab)), G.edges)
+        self.assertIn((repr(b), repr(ab)), G.edges)
+
+        # graph created is deterministic
+        self.assertTrue(nx.utils.graphs_equal(G, model.to_networkx()))
+
+    def test_to_networkx_multigraph(self):
+        try:
+            import networkx as nx
+        except ImportError:
+            return self.skipTest("NetworkX is not installed")
+
+        model = Model()
+        a = model.binary()
+        aa = a * a  # two edges to the same node
+
+        G = model.to_networkx()
+
+        # the repr as labels is an implementation detail and subject to change
+        self.assertEqual(len(G.nodes), 2)
+        self.assertEqual(len(G.edges), 2)
+        self.assertIn(repr(a), G.nodes)
+        self.assertIn(repr(aa), G.nodes)
+        self.assertIn((repr(a), repr(aa)), G.edges)
+
+        # graph created is deterministic
+        self.assertTrue(nx.utils.graphs_equal(G, model.to_networkx()))
+
+    def test_to_networkx_objective_and_constraints(self):
+        try:
+            import networkx as nx
+        except ImportError:
+            return self.skipTest("NetworkX is not installed")
+
+        model = Model()
+        a = model.binary()
+        b = model.binary()
+        model.minimize(a * b)
+
+        G = model.to_networkx()
+        self.assertEqual(len(G.nodes), 4)  # 3 symbols + "minimize"
+        self.assertEqual(len(G.edges), 3)
+        self.assertIn("minimize", G.nodes)
+
+        model.add_constraint(a <= b)
+        G = model.to_networkx()
+        self.assertEqual(len(G.nodes), 6)
+        self.assertEqual(len(G.edges), 6)
+        self.assertIn("constraint(s)", G.nodes)
+
 
 class TestStates(unittest.TestCase):
     def test_clear(self):
