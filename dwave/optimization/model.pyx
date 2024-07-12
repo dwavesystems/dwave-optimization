@@ -865,7 +865,7 @@ cdef class Model:
             `drawing <https://networkx.org/documentation/stable/reference/drawing.html>`_
             documentation.
 
-            This example uses a `DAGVIZ <https://wimyedema.github.io/dagviz/>`_ to
+            This example uses `DAGVIZ <https://wimyedema.github.io/dagviz/>`_ to
             draw the NetworkX graph created in the example above.
 
             >>> import dagviz                      # doctest: +SKIP
@@ -877,7 +877,7 @@ cdef class Model:
 
             .. figure:: /_images/to_networkx_example.svg
                :width: 500 px
-               :name: to-networkx-example
+               :name: dwave-optimization-to-networkx-example
                :alt: Image of NetworkX Directed Graph
 
         """
@@ -909,9 +909,8 @@ cdef class Model:
             G.add_edge(repr(self.objective), "minimize")
 
         # Likewise if we have constraints, add a special node for them
-        if self.num_constraints():
-            for symbol in self.iter_constraints():
-                G.add_edge(repr(symbol), "constraint(s)")
+        for symbol in self.iter_constraints():
+            G.add_edge(repr(symbol), "constraint(s)")
 
         return G
 
@@ -1216,8 +1215,8 @@ cdef class Symbol:
     def __repr__(self):
         """Return a representation of the symbol.
 
-        The representation refers to the id of the underlying node, rather than
-        the id of the Python symbol.
+        The representation refers to the identity of the underlying node, rather than
+        the identity of the Python symbol.
         """
         cls = type(self)
         # We refer to the node_ptr, which is not necessarily the address of the
