@@ -10,6 +10,9 @@ and mathematical operations.
 See :ref:`Symbols <intro_optimization_symbols>` for an introduction to
 working with symbols.
 
+Base Classes
+============
+
 .. currentmodule:: dwave.optimization.model
 
 .. _symbols_base_symbols:
@@ -62,8 +65,8 @@ Model Symbols
 =============
 
 Each operation, decision, constant, mathematical function, and
-flow control is modeled using a symbol. The following is the list
-of symbols available for modelling.
+flow control is modeled using a symbol. The following symbols
+are available for modelling.
 
 In general, symbols should be created using the methods inherited from
 :class:`Symbol` and :class:`ArraySymbol`, rather than by the constructors
