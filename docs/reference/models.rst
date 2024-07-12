@@ -19,6 +19,15 @@ Model Class
 
 .. autoclass:: Model
 
+Model Attributes 
+----------------
+
+.. autosummary::
+    :toctree: generated/
+
+    ~Model.objective
+    ~Model.states
+
 Model Primitives  
 ----------------
 
