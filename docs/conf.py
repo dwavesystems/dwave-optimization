@@ -5,14 +5,6 @@
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-#
-import os
-import subprocess
-import sys
-
-config_directory = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, os.path.dirname(config_directory))
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
