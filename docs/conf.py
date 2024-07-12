@@ -85,31 +85,15 @@ import dwave.optimization
 
 """
 
-# -- Breath ---------------------------------------------------------------
-
-# breathe_default_project = "dwave.optimization"
-# breathe_projects = dict(
-#   optimization=os.path.join(config_directory, 'build-cpp', 'xml'),
-#   )
-
-# see https://breathe.readthedocs.io/en/latest/readthedocs.html
-# if os.environ.get('READTHEDOCS', False):
-#     subprocess.call('make cpp', shell=True, cwd=config_directory)
-
 # -- Options for HTML output ----------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-import sphinx_rtd_theme
-html_theme = 'sphinx_rtd_theme'
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+html_theme = "pydata_sphinx_theme"
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
-# html_theme_options = {}
+html_theme_options = {
+    "collapse_navigation": True,
+    "show_prev_next": False,
+}
+html_sidebars = {"**": ["search-field", "sidebar-nav-bs"]}  # remove ads
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
