@@ -858,7 +858,7 @@ cdef class Model:
             >>> two = model.constant(2)
             >>> i = model.integer()
             >>> model.minimize(two * i - one)
-            >>> G = model.to_networkx()
+            >>> G = model.to_networkx()  # doctest: +SKIP
 
             One advantage of converting to NetworkX is the wide availability
             of drawing tools. See NetworkX's

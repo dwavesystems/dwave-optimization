@@ -220,6 +220,36 @@ jobs:
           command: |
             FLAGS=-Werror make -C tests/cpp/
 
+  docs:
+    docker:
+      - image: cimg/python:3.10  # As of July 2024, RTD uses 3.10
+
+    steps:
+      - checkout
+      - attach_workspace:
+          at: dist
+      - run:
+          name: install package and docs dependencies
+          command: |
+            python -m venv env
+            . env/bin/activate
+            pip install dist/*optimization*cp310*.whl -r docs/requirements.txt
+
+      - run:
+          name: build docs
+          command: |
+            . env/bin/activate
+            make -C docs html
+
+      - store_artifacts:
+          path: docs/build/html
+
+      - run:
+          name: doctest
+          command: |
+            . env/bin/activate
+            make -C docs doctest
+
   deploy:
     docker:
       - image: cimg/python:3.9
@@ -282,6 +312,9 @@ workflows:
             - python-linux
       - cpp-linux
       - cpp-macOS
+      - docs:
+          requires:
+            - python-linux
       - deploy:
           filters:
             tags:

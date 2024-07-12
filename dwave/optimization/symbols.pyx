@@ -1890,7 +1890,7 @@ cdef class NaryAdd(ArraySymbol):
         >>> i = model.integer((10, 10), lower_bound=-50, upper_bound=50)
         >>> j = model.integer((10, 10), lower_bound=-20, upper_bound=150)
         >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
-        >>> l = add([i, j, k])
+        >>> l = add(i, j, k)
         >>> type(l)
         <class 'dwave.optimization.symbols.NaryAdd'>
     """
@@ -1942,7 +1942,7 @@ cdef class NaryMaximum(ArraySymbol):
         >>> i = model.integer((10, 10), lower_bound=-50, upper_bound=50)
         >>> j = model.integer((10, 10), lower_bound=-20, upper_bound=150)
         >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
-        >>> l = maximum([i, j, k])
+        >>> l = maximum(i, j, k)
         >>> type(l)
         <class 'dwave.optimization.symbols.NaryMaximum'>
     """
@@ -1994,7 +1994,7 @@ cdef class NaryMinimum(ArraySymbol):
         >>> i = model.integer((10, 10), lower_bound=-50, upper_bound=50)
         >>> j = model.integer((10, 10), lower_bound=-20, upper_bound=150)
         >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
-        >>> l = minimum([i, j, k])
+        >>> l = minimum(i, j, k)
         >>> type(l)
         <class 'dwave.optimization.symbols.NaryMinimum'>
     """
@@ -2045,7 +2045,7 @@ cdef class NaryMultiply(ArraySymbol):
         >>> i = model.integer((10, 10), lower_bound=-50, upper_bound=50)
         >>> j = model.integer((10, 10), lower_bound=-20, upper_bound=150)
         >>> k = model.integer((10, 10), lower_bound=0, upper_bound=100)
-        >>> l = multiply([i, j, k])
+        >>> l = multiply(i, j, k)
         >>> type(l)
         <class 'dwave.optimization.symbols.NaryMultiply'>
     """

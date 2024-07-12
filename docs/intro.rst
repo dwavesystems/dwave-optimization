@@ -164,8 +164,7 @@ for symbols of a model without using labels.
 >>> with model.lock():
 ...     for symbol in model.iter_decisions():
 ...         symbol.set_state(0, [2])
-...     model.objective.state(0) == -4
-True
+...     assert model.objective.state(0) == -4
 
 This process of iterating through a model to select symbols of various types 
 (decision variables, constraints, etc) is helpful when model construction is 
@@ -539,7 +538,7 @@ The two tabs below provide the two formulations.
 	>>> indx = []
 	>>> for i in range(distances.shape()[0]):
 	...     indx.append((itinerary_loc[i,:] * indx_int).sum())
-	>>> model.minimize(add([cost[i]*distances[indx[i], indx[i+1]] for 
+	>>> model.minimize(add(*[cost[i]*distances[indx[i], indx[i+1]] for 
 	...     i in range(distances.shape()[0]-1)]))
 	
 	Add explicit one-hot constraints: summing the columns of the 

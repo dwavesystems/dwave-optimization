@@ -14,7 +14,6 @@ Documentation
 
 .. only:: html
 
-  :Release: |version|
   :Date: |today|
 
 .. sdk-start-marker

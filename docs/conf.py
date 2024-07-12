@@ -5,14 +5,6 @@
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-#
-import os
-import subprocess
-import sys
-
-config_directory = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, os.path.dirname(config_directory))
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -56,7 +48,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 add_module_names = False
 # List of patterns, relative to source directory, that match files and
@@ -85,31 +77,15 @@ import dwave.optimization
 
 """
 
-# -- Breath ---------------------------------------------------------------
-
-# breathe_default_project = "dwave.optimization"
-# breathe_projects = dict(
-#   optimization=os.path.join(config_directory, 'build-cpp', 'xml'),
-#   )
-
-# see https://breathe.readthedocs.io/en/latest/readthedocs.html
-# if os.environ.get('READTHEDOCS', False):
-#     subprocess.call('make cpp', shell=True, cwd=config_directory)
-
 # -- Options for HTML output ----------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-import sphinx_rtd_theme
-html_theme = 'sphinx_rtd_theme'
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+html_theme = "pydata_sphinx_theme"
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
-# html_theme_options = {}
+html_theme_options = {
+    "collapse_navigation": True,
+    "show_prev_next": False,
+}
+html_sidebars = {"**": ["search-field", "sidebar-nav-bs"]}  # remove ads
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
