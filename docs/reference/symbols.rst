@@ -7,59 +7,34 @@ Symbols
 Symbols are a model's decision variables, intermediate variables, constants, 
 and mathematical operations.
 
-.. _symbols_model_symbols:
+See :ref:`Symbols <intro_optimization_symbols>` for an introduction to
+working with symbols.
 
-Model Symbols
-=============
+Base Classes
+============
 
-Some of the methods for these symbols (e.g., file operations) are 
-intended mostly for package developers. 
+.. currentmodule:: dwave.optimization.model
 
-.. currentmodule:: dwave.optimization.symbols
+.. _symbols_base_symbols:
+
+.. autoclass:: Symbol
+
+The following :class:`~dwave.optimization.model.Symbol` methods
+are inherited by the :class:`~dwave.optimization.model.ArraySymbol`
+class and :ref:`model symbols <symbols_model_symbols>`.
 
 .. autosummary::
     :toctree: generated/
 
-    ~Absolute
-    ~Add
-    ~All
-    ~And
-    ~AdvancedIndexing
-    ~BasicIndexing
-    ~BinaryVariable
-    ~Constant
-    ~DisjointBitSets
-    ~DisjointBitSet
-    ~DisjointLists
-    ~DisjointList
-    ~Equal
-    ~IntegerVariable
-    ~LessEqual
-    ~ListVariable
-    ~Max
-    ~Maximum
-    ~Min
-    ~Minimum
-    ~Multiply
-    ~NaryAdd
-    ~NaryMaximum
-    ~NaryMinimum
-    ~NaryMultiply
-    ~Negative
-    ~Or
-    ~Permutation
-    ~Prod
-    ~QuadraticModel
-    ~Reshape
-    ~Subtract
-    ~SetVariable
-    ~Square
-    ~Sum
-     
-Inherited Methods
-=================
-   
-.. currentmodule:: dwave.optimization.model
+    ~Symbol.equals
+    ~Symbol.has_state
+    ~Symbol.iter_predecessors
+    ~Symbol.iter_successors
+    ~Symbol.maybe_equals
+    ~Symbol.reset_state
+    ~Symbol.shares_memory
+    ~Symbol.state_size
+    ~Symbol.topological_index
 
 .. autoclass:: ArraySymbol
 
@@ -84,21 +59,19 @@ are inherited by the :ref:`model symbols <symbols_model_symbols>`.
     ~ArraySymbol.state_size
     ~ArraySymbol.strides
 
-.. autoclass:: Symbol
+.. _symbols_model_symbols:
 
-The following :class:`~dwave.optimization.model.Symbol` methods
-are inherited by the :class:`~dwave.optimization.model.ArraySymbol`
-class and :ref:`model symbols <symbols_model_symbols>`.
+Model Symbols
+=============
 
-.. autosummary::
-    :toctree: generated/
+Each operation, decision, constant, mathematical function, and
+flow control is modeled using a symbol. The following symbols
+are available for modelling.
 
-    ~Symbol.equals
-    ~Symbol.has_state
-    ~Symbol.iter_predecessors
-    ~Symbol.iter_successors
-    ~Symbol.maybe_equals
-    ~Symbol.reset_state
-    ~Symbol.shares_memory
-    ~Symbol.state_size
-    ~Symbol.topological_index
+In general, symbols should be created using the methods inherited from
+:class:`Symbol` and :class:`ArraySymbol`, rather than by the constructors
+of the following classes.
+
+.. automodule:: dwave.optimization.symbols
+    :members:
+    :show-inheritance:
