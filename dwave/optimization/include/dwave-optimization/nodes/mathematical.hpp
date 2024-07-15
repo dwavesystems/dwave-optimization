@@ -91,9 +91,10 @@ template <class BinaryOp>
 class NaryOpNode : public Node, public ArrayOutputMixin<Array> {
  public:
     // Need at least one node to start with to determine the shape
-    NaryOpNode(Node* node_ptr);
+    explicit NaryOpNode(Node* node_ptr);
 
-    NaryOpNode(std::vector<Node*>& node_ptrs);
+    explicit NaryOpNode(std::span<Node*> node_ptrs);
+    explicit NaryOpNode(std::span<Array*> array_ptrs);
 
     void add_node(Node* node_ptr);
 
@@ -110,13 +111,6 @@ class NaryOpNode : public Node, public ArrayOutputMixin<Array> {
 
  private:
     using op = BinaryOp;
-
-    static Node*& verify_node_list_(std::vector<Node*>& node_ptrs) {
-        if (!node_ptrs.size()) {
-            throw std::invalid_argument("Must supply at least one predecessor");
-        }
-        return node_ptrs[0];
-    }
 };
 
 using NaryAddNode = NaryOpNode<std::plus<double>>;

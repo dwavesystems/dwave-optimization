@@ -269,18 +269,42 @@ NaryOpNode<BinaryOp>::NaryOpNode(Node* node_ptr)
     add_node(node_ptr);
 }
 
+// Enforce that the given span is nonempty and return the first element
+template <class T>
+Array* nonempty(std::span<T> node_ptrs) {
+    if (node_ptrs.empty()) {
+        throw std::invalid_argument("Must supply at least one predecessor");
+    }
+    Array* array_ptr = dynamic_cast<Array*>(node_ptrs[0]);
+    if (!array_ptr) {
+        throw std::invalid_argument("node must be an Array");
+    }
+    return array_ptr;
+}
+
 template <class BinaryOp>
-NaryOpNode<BinaryOp>::NaryOpNode(std::vector<Node*>& node_ptrs)
-        : Node(),
-          ArrayOutputMixin(dynamic_cast<const Array*>(verify_node_list_(node_ptrs))->shape()) {
-    for (const auto& node_ptr : node_ptrs) {
-        add_node(node_ptr);
+NaryOpNode<BinaryOp>::NaryOpNode(std::span<Node*> node_ptrs)
+        : Node(), ArrayOutputMixin(nonempty(node_ptrs)->shape()) {
+    for (Node* ptr : node_ptrs) {
+        add_node(ptr);
+    }
+}
+
+template <class BinaryOp>
+NaryOpNode<BinaryOp>::NaryOpNode(std::span<Array*> array_ptrs)
+        : Node(), ArrayOutputMixin(nonempty(array_ptrs)->shape()) {
+    for (Array* ptr : array_ptrs) {
+        add_node(dynamic_cast<Node*>(ptr));
     }
 }
 
 template <class BinaryOp>
 void NaryOpNode<BinaryOp>::add_node(Node* node_ptr) {
     Array* array_ptr = dynamic_cast<Array*>(node_ptr);
+
+    if (!array_ptr) {
+        throw std::invalid_argument("node must also be an Array");
+    }
 
     if (array_ptr->dynamic()) {
         throw std::invalid_argument("arrays must not be dynamic");
