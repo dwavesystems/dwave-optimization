@@ -133,6 +133,10 @@ class utils:
             op_array = self.op(lhs_array, rhs_array)
             op_symbol = self.symbol_op(lhs_symbol, rhs_symbol)
 
+            model.states.resize(1)
+            with model.lock():
+                np.testing.assert_array_equal(op_array, op_symbol.state())
+
     class NaryOpTests(SymbolTests):
         @abc.abstractmethod
         def op(self, *xs):
