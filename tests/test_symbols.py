@@ -25,225 +25,224 @@ import dwave.optimization.symbols
 from dwave.optimization import Model, logical_or, logical_and
 
 
-class SymbolTestsMixin(abc.ABC):
-    @abc.abstractmethod
-    def generate_symbols(self):
-        """Yield symbol(s) for testing.
+class utils:
+    """We want to add subclasses of unittest.TestCase that implement universal
+    tests for different symbols. But they get executed as tests if they
+    are in the main namspace. So we nest them in this "namespace".
+    """
+    class SymbolTests(abc.ABC, unittest.TestCase):
+        @abc.abstractmethod
+        def generate_symbols(self):
+            """Yield symbol(s) for testing.
 
-        The model must be topologically sorted before returning.
-        The symbols must all be unique from eachother.
-        """
+            The model must be topologically sorted before returning.
+            The symbols must all be unique from eachother.
+            """
 
-    @abc.abstractmethod
-    def assertEqual(self, *args, **kwargs): ...
+        def test_equality(self):
+            DEFINITELY = 2
+            for x in self.generate_symbols():
+                self.assertEqual(DEFINITELY, x.maybe_equals(x))
+                self.assertTrue(x.equals(x))
 
-    @abc.abstractmethod
-    def assertFalse(self, *args, **kwargs): ...
+            for x, y in zip(self.generate_symbols(), self.generate_symbols()):
+                self.assertTrue(DEFINITELY, x.maybe_equals(y))
+                self.assertTrue(x.equals(y))
 
-    @abc.abstractmethod
-    def assertGreaterEqual(self, *args, **kwargs): ...
+        def test_inequality(self):
+            MAYBE = 1
+            for x, y in itertools.combinations(self.generate_symbols(), 2):
+                self.assertLessEqual(x.maybe_equals(y), MAYBE)
+                self.assertFalse(x.equals(y))
 
-    @abc.abstractmethod
-    def assertIn(self, *args, **kwargs): ...
+        def test_iter_symbols(self):
+            for x in self.generate_symbols():
+                model = x.model
+                index = x.topological_index()
 
-    @abc.abstractmethod
-    def assertIs(self, *args, **kwargs): ...
+                # Get the symbol back
+                y, = itertools.islice(model.iter_symbols(), index, index+1)
 
-    @abc.abstractmethod
-    def assertLessEqual(self, *args, **kwargs): ...
+                self.assertTrue(x.shares_memory(y))
+                self.assertIs(type(x), type(y))
+                self.assertTrue(x.equals(y))
 
-    @abc.abstractmethod
-    def assertTrue(self, *args, **kwargs): ...
+        def test_namespace(self):
+            x = next(self.generate_symbols())
+            self.assertIn(type(x).__name__, dwave.optimization.symbols.__all__)
 
-    def test_equality(self):
-        DEFINITELY = 2
-        for x in self.generate_symbols():
-            self.assertEqual(DEFINITELY, x.maybe_equals(x))
-            self.assertTrue(x.equals(x))
+        def test_serialization(self):
+            for x in self.generate_symbols():
+                model = x.model
+                index = x.topological_index()
 
-        for x, y in zip(self.generate_symbols(), self.generate_symbols()):
-            self.assertTrue(DEFINITELY, x.maybe_equals(y))
-            self.assertTrue(x.equals(y))
+                with model.to_file() as f:
+                    new = Model.from_file(f)
 
-    def test_inequality(self):
-        MAYBE = 1
-        for x, y in itertools.combinations(self.generate_symbols(), 2):
-            self.assertLessEqual(x.maybe_equals(y), MAYBE)
-            self.assertFalse(x.equals(y))
+                # Get the symbol back
+                y, = itertools.islice(new.iter_symbols(), index, index+1)
 
-    def test_iter_symbols(self):
-        for x in self.generate_symbols():
-            model = x.model
-            index = x.topological_index()
+                self.assertFalse(x.shares_memory(y))
+                self.assertIs(type(x), type(y))
+                self.assertTrue(x.equals(y))
 
-            # Get the symbol back
-            y, = itertools.islice(model.iter_symbols(), index, index+1)
+        def test_state_serialization(self):
+            for x in self.generate_symbols():
+                model = x.model
 
-            self.assertTrue(x.shares_memory(y))
-            self.assertIs(type(x), type(y))
-            self.assertTrue(x.equals(y))
+                # without some way to randomly initialize states this is really just
+                # smoke test
+                model.states.resize(1)
 
-    def test_namespace(self):
-        x = next(self.generate_symbols())
-        self.assertIn(type(x).__name__, dwave.optimization.symbols.__all__)
+                # get the states before serialization
+                states = []
+                for sym in model.iter_symbols():
+                    if hasattr(sym, "state"):
+                        states.append(sym.state())
+                    else:
+                        states.append(None)
 
-    def test_serialization(self):
-        for x in self.generate_symbols():
-            model = x.model
-            index = x.topological_index()
+                with model.states.to_file() as f:
+                    new = Model.from_file(f)
 
-            with model.to_file() as f:
-                new = Model.from_file(f)
+                for i, sym in enumerate(model.iter_symbols()):
+                    if hasattr(sym, "state"):
+                        np.testing.assert_equal(sym.state(), states[i])
 
-            # Get the symbol back
-            y, = itertools.islice(new.iter_symbols(), index, index+1)
+        def test_state_size_smoke(self):
+            for x in self.generate_symbols():
+                self.assertGreaterEqual(x.state_size(), 0)
 
-            self.assertFalse(x.shares_memory(y))
-            self.assertIs(type(x), type(y))
-            self.assertTrue(x.equals(y))
+    class BinaryOpTests(SymbolTests):
+        @abc.abstractmethod
+        def op(self, lhs, rhs):
+            pass
 
-    def test_state_serialization(self):
-        for x in self.generate_symbols():
-            model = x.model
+        def symbol_op(self, lhs, rhs):
+            # if the op is different for symbols, allow the override
+            return self.op(lhs, rhs)
 
-            # without some way to randomly initialize states this is really just
-            # smoke test
+        def test_numpy_equivalence(self):
+            lhs_array = np.arange(10)
+            rhs_array = np.arange(1, 11)
+
+            model = Model()
+            lhs_symbol = model.constant(lhs_array)
+            rhs_symbol = model.constant(rhs_array)
+
+            op_array = self.op(lhs_array, rhs_array)
+            op_symbol = self.symbol_op(lhs_symbol, rhs_symbol)
+
+    class NaryOpTests(SymbolTests):
+        @abc.abstractmethod
+        def op(self, *xs):
+            pass
+
+        @abc.abstractmethod
+        def node_op(self, *xs):
+            pass
+
+        @abc.abstractmethod
+        def node_class(self):
+            pass
+
+        def generate_symbols(self):
+            model = Model()
+            a, b, c = model.constant(-5), model.constant(7), model.constant(0)
+            op_abc = self.node_op(a, b, c)
+            model.lock()
+            yield op_abc
+
+        def test_scalar_input(self):
+            model = Model()
+            a, b, c = model.constant(-5), model.constant(7), model.constant(0)
+            op_abc = self.node_op(a, b, c)
+            self.assertEqual(model.num_symbols(), 4)
+
+            # Make sure we got the right type of node
+            self.assertIsInstance(op_abc, self.node_class())
+
+            # Should be a scalar
+            self.assertEqual(op_abc.shape(), ())
+            self.assertEqual(op_abc.size(), 1)
+
+            model.lock()
+            model.states.resize(1)
+            self.assertEqual(op_abc.state(0), self.op(-5, 7, 0))
+
+        def test_1d_input(self):
+            model = Model()
+            x, y, z = [model.integer(10, -5, 5) for _ in range(3)]
+            op_xyz = self.node_op(x, y, z)
+
+            # Make sure we got the right type of node
+            self.assertIsInstance(op_xyz, self.node_class())
+
+            # Make sure the shape is correct
+            self.assertEqual(op_xyz.shape(), (10,))
+            self.assertEqual(op_xyz.size(), 10)
+
+            model.lock()
+
             model.states.resize(1)
 
-            # get the states before serialization
-            states = []
-            for sym in model.iter_symbols():
-                if hasattr(sym, "state"):
-                    states.append(sym.state())
-                else:
-                    states.append(None)
+            data_x = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4]
+            x.set_state(0, data_x)
+            data_y = [5, 4, 3, 2, 1, 0, -1, -2, -3, -4]
+            y.set_state(0, data_y)
+            data_z = [5, -5, 4, -4, 3, -3, 2, -2, 1, 0]
+            z.set_state(0, data_z)
 
-            with model.states.to_file() as f:
-                new = Model.from_file(f)
+            np.testing.assert_equal(
+                op_xyz.state(0),
+                [self.op(*vs) for vs in zip(data_x, data_y, data_z)]
+            )
 
-            for i, sym in enumerate(model.iter_symbols()):
-                if hasattr(sym, "state"):
-                    np.testing.assert_equal(sym.state(), states[i])
+    class UnaryOpTests(SymbolTests):
+        @abc.abstractmethod
+        def op(self, x):
+            pass
 
-    def test_state_size_smoke(self):
-        for x in self.generate_symbols():
-            self.assertGreaterEqual(x.state_size(), 0)
+        def generate_symbols(self):
+            model = Model()
+            a = model.constant(-5)
+            op_a = self.op(a)
+            model.lock()
+            yield op_a
 
+        def test_scalar_input(self):
+            model = Model()
+            a = model.constant(-5)
+            op_a = self.op(a)
+            self.assertEqual(model.num_symbols(), 2)
 
-class UnaryOpTestsMixin(abc.ABC):
-    @abc.abstractmethod
-    def op(self, x):
-        pass
+            # Should be a scalar
+            self.assertEqual(op_a.shape(), ())
+            self.assertEqual(op_a.size(), 1)
 
-    @abc.abstractmethod
-    def assertEqual(self, *args, **kwargs): ...
+            model.lock()
+            model.states.resize(1)
+            self.assertEqual(op_a.state(0), self.op(-5))
 
-    def generate_symbols(self):
-        model = Model()
-        a = model.constant(-5)
-        op_a = self.op(a)
-        model.lock()
-        yield op_a
+        def test_1d_input(self):
+            model = Model()
+            x = model.integer(10, -5, 5)
+            op_x = self.op(x)
+            model.lock()
 
-    def test_scalar_input(self):
-        model = Model()
-        a = model.constant(-5)
-        op_a = self.op(a)
-        self.assertEqual(model.num_symbols(), 2)
+            model.states.resize(1)
+            data = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4]
+            x.set_state(0, data)
 
-        # Should be a scalar
-        self.assertEqual(op_a.shape(), ())
-        self.assertEqual(op_a.size(), 1)
-
-        model.lock()
-        model.states.resize(1)
-        self.assertEqual(op_a.state(0), self.op(-5))
-
-    def test_1d_input(self):
-        model = Model()
-        x = model.integer(10, -5, 5)
-        op_x = self.op(x)
-        model.lock()
-
-        model.states.resize(1)
-        data = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4]
-        x.set_state(0, data)
-
-        np.testing.assert_equal(op_x.state(0), [self.op(v) for v in data])
+            np.testing.assert_equal(op_x.state(0), [self.op(v) for v in data])
 
 
-class NaryOpTestsMixin(SymbolTestsMixin):
-    @abc.abstractmethod
-    def op(self, *xs):
-        pass
-
-    @abc.abstractmethod
-    def node_op(self, *xs):
-        pass
-
-    @abc.abstractmethod
-    def node_class(self):
-        pass
-
-    def generate_symbols(self):
-        model = Model()
-        a, b, c = model.constant(-5), model.constant(7), model.constant(0)
-        op_abc = self.node_op(a, b, c)
-        model.lock()
-        yield op_abc
-
-    def test_scalar_input(self):
-        model = Model()
-        a, b, c = model.constant(-5), model.constant(7), model.constant(0)
-        op_abc = self.node_op(a, b, c)
-        self.assertEqual(model.num_symbols(), 4)
-
-        # Make sure we got the right type of node
-        self.assertIsInstance(op_abc, self.node_class())
-
-        # Should be a scalar
-        self.assertEqual(op_abc.shape(), ())
-        self.assertEqual(op_abc.size(), 1)
-
-        model.lock()
-        model.states.resize(1)
-        self.assertEqual(op_abc.state(0), self.op(-5, 7, 0))
-
-    def test_1d_input(self):
-        model = Model()
-        x, y, z = [model.integer(10, -5, 5) for _ in range(3)]
-        op_xyz = self.node_op(x, y, z)
-
-        # Make sure we got the right type of node
-        self.assertIsInstance(op_xyz, self.node_class())
-
-        # Make sure the shape is correct
-        self.assertEqual(op_xyz.shape(), (10,))
-        self.assertEqual(op_xyz.size(), 10)
-
-        model.lock()
-
-        model.states.resize(1)
-
-        data_x = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4]
-        x.set_state(0, data_x)
-        data_y = [5, 4, 3, 2, 1, 0, -1, -2, -3, -4]
-        y.set_state(0, data_y)
-        data_z = [5, -5, 4, -4, 3, -3, 2, -2, 1, 0]
-        z.set_state(0, data_z)
-
-        np.testing.assert_equal(
-            op_xyz.state(0),
-            [self.op(*vs) for vs in zip(data_x, data_y, data_z)]
-        )
-
-
-class TestAbs(unittest.TestCase, UnaryOpTestsMixin, SymbolTestsMixin):
+class TestAbs(utils.UnaryOpTests):
     def op(self, x):
         return abs(x)
 
 
-class TestAdd(unittest.TestCase, SymbolTestsMixin):
+class TestAdd(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(5)
@@ -289,7 +288,7 @@ class TestAdd(unittest.TestCase, SymbolTestsMixin):
             a + b
 
 
-class TestAll(unittest.TestCase, SymbolTestsMixin):
+class TestAll(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         nodes = [
@@ -343,7 +342,29 @@ class TestAll(unittest.TestCase, SymbolTestsMixin):
                 model.unlock()
 
 
-class TestAnd(unittest.TestCase):
+class TestAnd(utils.BinaryOpTests):
+    def generate_symbols(self):
+        model = Model()
+        a = model.constant(1)
+        b = model.constant(1)
+        c = model.constant(0)
+        d = model.constant(0)
+        ab = logical_and(a, b)
+        ac = logical_and(a, c)
+        cd = logical_and(c, d)
+        cb = logical_and(c, b)
+        self.assertEqual(model.num_symbols(), 8)
+
+        model.lock()
+
+        yield from (ab, ac, cd, cb)
+
+    def op(self, lhs, rhs):
+        return np.logical_and(lhs, rhs)
+
+    def symbol_op(self, lhs, rhs):
+        return logical_and(lhs, rhs)
+
     def test_scalar_and(self):
         model = Model()
         a = model.constant(1)
@@ -369,7 +390,7 @@ class TestAnd(unittest.TestCase):
             x = a.logical_and(b)
 
 
-class TestArrayValidation(unittest.TestCase, SymbolTestsMixin):
+class TestArrayValidation(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         x = model.binary(10)
@@ -381,7 +402,7 @@ class TestArrayValidation(unittest.TestCase, SymbolTestsMixin):
         pass
 
 
-class TestBasicIndexing(unittest.TestCase, SymbolTestsMixin):
+class TestBasicIndexing(utils.SymbolTests):
     def generate_symbols(self):
         symbols = []
 
@@ -461,7 +482,7 @@ class TestBasicIndexing(unittest.TestCase, SymbolTestsMixin):
         self.assertEqual(model.set(10)[::2].state_size(), 5 * 8)
 
 
-class TestBinaryVariable(unittest.TestCase, SymbolTestsMixin):
+class TestBinaryVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         x = model.binary(10)
@@ -559,7 +580,7 @@ class TestBinaryVariable(unittest.TestCase, SymbolTestsMixin):
                 x.set_state(0, [0, 1, 2])
 
 
-class TestConstant(unittest.TestCase, SymbolTestsMixin):
+class TestConstant(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(25, dtype=np.double).reshape((5, 5)))
@@ -591,7 +612,7 @@ class TestConstant(unittest.TestCase, SymbolTestsMixin):
         np.testing.assert_array_equal(c, 5)
 
 
-class TestDisjointBitSetsVariable(unittest.TestCase, SymbolTestsMixin):
+class TestDisjointBitSetsVariable(utils.SymbolTests):
     def test_inequality(self):
         # TODO re-enable this once equality has been fixed
         pass
@@ -707,7 +728,7 @@ class TestDisjointBitSetsVariable(unittest.TestCase, SymbolTestsMixin):
         np.testing.assert_array_equal(ys[2].state(), [0, 0, 0, 0, 1])
 
 
-class TestDisjointListsVariable(unittest.TestCase, SymbolTestsMixin):
+class TestDisjointListsVariable(utils.SymbolTests):
     def test_inequality(self):
         # TODO re-enable this once equality has been fixed
         pass
@@ -823,7 +844,7 @@ class TestDisjointListsVariable(unittest.TestCase, SymbolTestsMixin):
             self.assertEqual(s.state_size(), 10 * 8)
 
 
-class TestIntegerVariable(unittest.TestCase, SymbolTestsMixin):
+class TestIntegerVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         x = model.integer(10)
@@ -967,7 +988,7 @@ class TestIntegerVariable(unittest.TestCase, SymbolTestsMixin):
             np.testing.assert_array_equal(x.state(), [0, 0, 0, -1, 0])
 
 
-class TestLessEqual(unittest.TestCase, SymbolTestsMixin):
+class TestLessEqual(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(5)
@@ -1019,7 +1040,7 @@ class TestLessEqual(unittest.TestCase, SymbolTestsMixin):
             a <= b
 
 
-class TestListVariable(unittest.TestCase, SymbolTestsMixin):
+class TestListVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         x = model.list(10)
@@ -1103,7 +1124,7 @@ class TestListVariable(unittest.TestCase, SymbolTestsMixin):
                 x.set_state(0, [0, 1, 2])
 
 
-class TestMax(unittest.TestCase, SymbolTestsMixin):
+class TestMax(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
@@ -1133,7 +1154,7 @@ class TestMax(unittest.TestCase, SymbolTestsMixin):
         self.assertEqual(b.state(0), 9)
 
 
-class TestMaximum(unittest.TestCase, SymbolTestsMixin):
+class TestMaximum(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
@@ -1166,7 +1187,7 @@ class TestMaximum(unittest.TestCase, SymbolTestsMixin):
         np.testing.assert_array_equal(m.state(0), np.arange(5, 10))
 
 
-class TestMin(unittest.TestCase, SymbolTestsMixin):
+class TestMin(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
@@ -1196,7 +1217,7 @@ class TestMin(unittest.TestCase, SymbolTestsMixin):
         self.assertEqual(b.state(0), 5)
 
 
-class TestMinimum(unittest.TestCase, SymbolTestsMixin):
+class TestMinimum(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
@@ -1229,7 +1250,7 @@ class TestMinimum(unittest.TestCase, SymbolTestsMixin):
         np.testing.assert_array_equal(m.state(0), x.state(0))
 
 
-class TestMultiply(unittest.TestCase, SymbolTestsMixin):
+class TestMultiply(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(5)
@@ -1266,7 +1287,7 @@ class TestMultiply(unittest.TestCase, SymbolTestsMixin):
             a * b
 
 
-class TestNaryAdd(unittest.TestCase, NaryOpTestsMixin):
+class TestNaryAdd(utils.NaryOpTests):
     def op(self, *xs):
         return sum(xs)
 
@@ -1277,7 +1298,7 @@ class TestNaryAdd(unittest.TestCase, NaryOpTestsMixin):
         return dwave.optimization.symbols.NaryAdd
 
 
-class TestNaryMaximum(unittest.TestCase, NaryOpTestsMixin):
+class TestNaryMaximum(utils.NaryOpTests):
     def op(self, *xs):
         return max(xs)
 
@@ -1288,7 +1309,7 @@ class TestNaryMaximum(unittest.TestCase, NaryOpTestsMixin):
         return dwave.optimization.symbols.NaryMaximum
 
 
-class TestNaryMinimum(unittest.TestCase, NaryOpTestsMixin):
+class TestNaryMinimum(utils.NaryOpTests):
     def op(self, *xs):
         return min(xs)
 
@@ -1299,7 +1320,7 @@ class TestNaryMinimum(unittest.TestCase, NaryOpTestsMixin):
         return dwave.optimization.symbols.NaryMinimum
 
 
-class TestNaryMultiply(unittest.TestCase, NaryOpTestsMixin):
+class TestNaryMultiply(utils.NaryOpTests):
     def op(self, *xs):
         return math.prod(xs)
 
@@ -1310,12 +1331,31 @@ class TestNaryMultiply(unittest.TestCase, NaryOpTestsMixin):
         return dwave.optimization.symbols.NaryMultiply
 
 
-class TestNegate(unittest.TestCase, UnaryOpTestsMixin, SymbolTestsMixin):
+class TestNegate(utils.UnaryOpTests):
     def op(self, x):
         return -x
 
 
-class TestOr(unittest.TestCase):
+class TestOr(utils.BinaryOpTests):
+    def generate_symbols(self):
+        model = Model()
+        a = model.constant(1)
+        b = model.constant(1)
+        c = model.constant(0)
+        d = model.constant(0)
+        ab = logical_or(a, b)
+        ac = logical_or(a, c)
+        cd = logical_or(c, d)
+        cb = logical_or(c, b)
+        with model.lock():
+            yield from (ab, ac, cd, cb)
+
+    def op(self, lhs, rhs):
+        return np.logical_or(lhs, rhs)
+
+    def symbol_op(self, lhs, rhs):
+        return logical_or(lhs, rhs)
+
     def test_scalar_or(self):
         model = Model()
         a = model.constant(1)
@@ -1355,7 +1395,7 @@ class TestOr(unittest.TestCase):
         np.testing.assert_array_equal(ac.state(0), [ 1, 0, 1, 0 ])
 
 
-class TestPermutation(unittest.TestCase, SymbolTestsMixin):
+class TestPermutation(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(25).reshape((5, 5)))
@@ -1381,7 +1421,7 @@ class TestPermutation(unittest.TestCase, SymbolTestsMixin):
         self.assertNotIsInstance(b[:, x][x, :], Permutation)
 
 
-class TestProd(unittest.TestCase, SymbolTestsMixin):
+class TestProd(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
@@ -1415,7 +1455,7 @@ class TestProd(unittest.TestCase, SymbolTestsMixin):
         self.assertEqual(b.state(0), 5*6*7*8*9)
 
 
-class TestQuadraticModel(unittest.TestCase, SymbolTestsMixin):
+class TestQuadraticModel(utils.SymbolTests):
     def generate_symbols(self):
         num_variables = 5
         model = Model()
@@ -1504,7 +1544,7 @@ class TestQuadraticModel(unittest.TestCase, SymbolTestsMixin):
         self.assertEqual(model.num_nodes(), 2)
 
 
-class TestReshape(unittest.TestCase, SymbolTestsMixin):
+class TestReshape(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(12))
@@ -1513,12 +1553,12 @@ class TestReshape(unittest.TestCase, SymbolTestsMixin):
         yield from syms
 
 
-class TestSquare(unittest.TestCase, UnaryOpTestsMixin, SymbolTestsMixin):
+class TestSquare(utils.UnaryOpTests):
     def op(self, x):
         return x ** 2
 
 
-class TestSetVariable(unittest.TestCase, SymbolTestsMixin):
+class TestSetVariable(utils.SymbolTests):
     def generate_symbols(self) -> typing.Iterator[dwave.optimization.symbols.SetVariable]:
         # Typical
         model = Model()
@@ -1616,7 +1656,20 @@ class TestSetVariable(unittest.TestCase, SymbolTestsMixin):
         self.assertEqual(model.set(10, max_size=5).state_size(), 5 * 8)
 
 
-class TestSubtract(unittest.TestCase):
+class TestSubtract(utils.BinaryOpTests):
+    def generate_symbols(self):
+        model = Model()
+        a = model.constant(5)
+        b = model.constant(7)
+        x = a - b
+        y = b - a
+        with model.lock():
+            yield x
+            yield y
+
+    def op(self, lhs, rhs):
+        return lhs - rhs
+
     def test_scalar_subtract(self):
         model = Model()
         a = model.constant(5)
@@ -1642,7 +1695,8 @@ class TestSubtract(unittest.TestCase):
         with self.assertRaises(ValueError):
             a - b
 
-class TestSum(unittest.TestCase, SymbolTestsMixin):
+
+class TestSum(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
