@@ -1618,13 +1618,21 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Absolute  # avoid circular import
         return Absolute(self)
 
-    def __add__(self, ArraySymbol rhs):
-        from dwave.optimization.symbols import Add  # avoid circular import
-        return Add(self, rhs)
+    def __add__(self, rhs):
+        if isinstance(rhs, ArraySymbol):
+            from dwave.optimization.symbols import Add  # avoid circular import
+            return Add(self, rhs)
 
-    def __eq__(self, ArraySymbol rhs):
-        from dwave.optimization.symbols import Equal # avoid circular import
-        return Equal(self, rhs)
+        return NotImplemented
+
+    def __eq__(self, rhs):
+        if isinstance(rhs, ArraySymbol):
+            # We could consider returning a Constant(True) is the case that self is rhs
+
+            from dwave.optimization.symbols import Equal # avoid circular import
+            return Equal(self, rhs)
+
+        return NotImplemented
 
     def __getitem__(self, index):
         import dwave.optimization.symbols  # avoid circular import
@@ -1669,27 +1677,42 @@ cdef class ArraySymbol(Symbol):
         else:
             return self[(index,)]
 
-    def __le__(self, ArraySymbol rhs):
-        from dwave.optimization.symbols import LessEqual # avoid circular import
-        return LessEqual(self, rhs)
+    def __le__(self, rhs):
+        if isinstance(rhs, ArraySymbol):
+            from dwave.optimization.symbols import LessEqual # avoid circular import
+            return LessEqual(self, rhs)
 
-    def __mul__(self, ArraySymbol rhs):
-        from dwave.optimization.symbols import Multiply  # avoid circular import
-        return Multiply(self, rhs)
+        return NotImplemented
+
+    def __mul__(self, rhs):
+        if isinstance(rhs, ArraySymbol):
+            from dwave.optimization.symbols import Multiply  # avoid circular import
+            return Multiply(self, rhs)
+
+        return NotImplemented
 
     def __neg__(self):
         from dwave.optimization.symbols import Negative  # avoid circular import
         return Negative(self)
 
-    def __pow__(self, Py_ssize_t exponent):
+    def __pow__(self, rhs):
+        cdef Py_ssize_t exponent
+        try:
+            exponent = rhs
+        except TypeError:
+            return NotImplemented
+
         if exponent == 2:
             from dwave.optimization.symbols import Square  # avoid circular import
             return Square(self)
-        raise NotImplementedError("only squaring is currently supported")
+        raise ValueError("only squaring is currently supported")
 
-    def __sub__(self, ArraySymbol rhs):
-        from dwave.optimization.symbols import Subtract  # avoid circular import
-        return Subtract(self, rhs)
+    def __sub__(self, rhs):
+        if isinstance(rhs, ArraySymbol):
+            from dwave.optimization.symbols import Subtract  # avoid circular import
+            return Subtract(self, rhs)
+
+        return NotImplemented
 
     def all(self):
         """Create an :class:`~dwave.optimization.symbols.All` symbol.

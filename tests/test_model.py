@@ -14,6 +14,7 @@
 
 import concurrent.futures
 import io
+import operator
 import os.path
 import tempfile
 import threading
@@ -30,6 +31,37 @@ class TestArraySymbol(unittest.TestCase):
         from dwave.optimization.model import ArraySymbol
         with self.assertRaisesRegex(ValueError, "ArraySymbols cannot be constructed directly"):
             ArraySymbol()
+
+    def test_operator_types(self):
+        # For each, test that we get the right class from the operator and that
+        # incorrect types returns NotImplemented
+        # The actual correctness of the resulting symbol is tested elsewhere
+
+        model = Model()
+        x = model.binary()
+        y = model.binary()
+
+        class UnknownType():
+            pass
+
+        operators = [
+            (operator.add, "__add__", dwave.optimization.symbols.Add),
+            (operator.eq, "__eq__", dwave.optimization.symbols.Equal),
+            (operator.le, "__le__", dwave.optimization.symbols.LessEqual),
+            (operator.mul, "__mul__", dwave.optimization.symbols.Multiply),
+            (operator.sub, "__sub__", dwave.optimization.symbols.Subtract),
+        ]
+
+        for op, method, cls in operators:
+            with self.subTest(method):
+                self.assertIsInstance(op(x, y), cls)
+                self.assertIs(getattr(x, method)(UnknownType()), NotImplemented)
+
+        # The operators that don't fit as neatly into the above
+
+        with self.subTest("__pow__"):
+            self.assertIsInstance(x ** 2, dwave.optimization.symbols.Square)
+            self.assertIs(x.__pow__(UnknownType()), NotImplemented)
 
     class IndexTester:
         def __init__(self, array):
