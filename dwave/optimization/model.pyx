@@ -1677,6 +1677,24 @@ cdef class ArraySymbol(Symbol):
         else:
             return self[(index,)]
 
+    def __iadd__(self, rhs):
+        # If the user is doing +=, we make the assumption that they will want to
+        # do it again, so we jump to NaryAdd
+        if isinstance(rhs, ArraySymbol):
+            from dwave.optimization.symbols import NaryAdd # avoid circular import
+            return NaryAdd(self, rhs)
+
+        return NotImplemented
+
+    def __imul__(self, rhs):
+        # If the user is doing *=, we make the assumption that they will want to
+        # do it again, so we jump to NaryMultiply
+        if isinstance(rhs, ArraySymbol):
+            from dwave.optimization.symbols import NaryMultiply # avoid circular import
+            return NaryMultiply(self, rhs)
+
+        return NotImplemented
+
     def __le__(self, rhs):
         if isinstance(rhs, ArraySymbol):
             from dwave.optimization.symbols import LessEqual # avoid circular import

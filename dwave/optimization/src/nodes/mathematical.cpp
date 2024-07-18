@@ -302,6 +302,11 @@ template <class BinaryOp>
 void NaryOpNode<BinaryOp>::add_node(Node* node_ptr) {
     Array* array_ptr = dynamic_cast<Array*>(node_ptr);
 
+    if (this->topological_index() >= 0 && node_ptr->topological_index() >= 0 &&
+        this->topological_index() < node_ptr->topological_index()) {
+        throw std::logic_error("this operation would invalidate the topological ordering");
+    }
+
     if (!array_ptr) {
         throw std::invalid_argument("node must also be an Array");
     }

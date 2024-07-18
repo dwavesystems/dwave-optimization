@@ -47,6 +47,8 @@ class TestArraySymbol(unittest.TestCase):
         operators = [
             (operator.add, "__add__", dwave.optimization.symbols.Add),
             (operator.eq, "__eq__", dwave.optimization.symbols.Equal),
+            (operator.iadd, "__iadd__", dwave.optimization.symbols.NaryAdd),
+            (operator.imul, "__imul__", dwave.optimization.symbols.NaryMultiply),
             (operator.le, "__le__", dwave.optimization.symbols.LessEqual),
             (operator.mul, "__mul__", dwave.optimization.symbols.Multiply),
             (operator.sub, "__sub__", dwave.optimization.symbols.Subtract),
