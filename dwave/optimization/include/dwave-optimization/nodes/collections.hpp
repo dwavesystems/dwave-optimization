@@ -57,7 +57,7 @@ class CollectionNode : public Node, public ArrayOutputMixin<Array>, public Decis
     void commit(State&) const override;
     void revert(State&) const override;
 
-    void update[[noreturn]](State&, int) const override {
+    void update [[noreturn]] (State&, int) const override {
         throw std::logic_error("update() called on a decisison variable");
     }
 
@@ -128,7 +128,7 @@ class DisjointBitSetsNode : public Node, public Decision {
     void commit(State&) const override;
     void revert(State&) const override;
 
-    void update[[noreturn]](State&, int) const override {
+    void update [[noreturn]] (State&, int) const override {
         throw std::logic_error("update() called on a decisison variable");
     }
 
@@ -211,7 +211,7 @@ class DisjointListsNode : public Node, public Decision {
     void commit(State&) const override;
     void revert(State&) const override;
 
-    void update[[noreturn]](State&, int) const override {
+    void update [[noreturn]] (State&, int) const override {
         throw std::logic_error("update() called on a decisison variable");
     }
 
@@ -221,6 +221,8 @@ class DisjointListsNode : public Node, public Decision {
 
     // Disjoint-list-specific methods ********************************************
     ssize_t get_disjoint_list_size(State& state, ssize_t list_index) const;
+
+    void rotate_in_list(State& state, ssize_t list_index, ssize_t dest_idx, ssize_t src_idx) const;
 
     void swap_in_list(State& state, ssize_t disjoint_list, ssize_t element_i,
                       ssize_t element_j) const;
