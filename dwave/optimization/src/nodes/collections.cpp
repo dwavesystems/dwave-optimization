@@ -210,7 +210,7 @@ ssize_t CollectionNode::size(const State& state) const {
 }
 
 SizeInfo CollectionNode::sizeinfo() const {
-    if (!dynamic())  return SizeInfo(size());
+    if (!dynamic()) return SizeInfo(size());
     return SizeInfo(this, min_size_, max_size_);
 }
 
@@ -234,7 +234,8 @@ struct DisjointBitSetsNodeData : NodeStateData {
         }
     }
 
-    DisjointBitSetsNodeData(ssize_t primary_set_size, ssize_t num_disjoint_sets, const std::vector<std::vector<double>>& contents)
+    DisjointBitSetsNodeData(ssize_t primary_set_size, ssize_t num_disjoint_sets,
+                            const std::vector<std::vector<double>>& contents)
             : primary_set_size(primary_set_size), num_disjoint_sets(num_disjoint_sets) {
         if (static_cast<ssize_t>(contents.size()) != num_disjoint_sets) {
             throw std::invalid_argument("must provide correct number of sets");
@@ -247,7 +248,8 @@ struct DisjointBitSetsNodeData : NodeStateData {
 
         for (ssize_t set_index = 0; set_index < num_disjoint_sets; ++set_index) {
             if (static_cast<ssize_t>(contents[set_index].size()) != primary_set_size) {
-                throw std::invalid_argument("provided vector for set must have size equal to the number of elements");
+                throw std::invalid_argument(
+                        "provided vector for set must have size equal to the number of elements");
             }
             for (ssize_t el_index = 0; el_index < primary_set_size; ++el_index) {
                 if (!(contents[set_index][el_index] == 0 || contents[set_index][el_index] == 1)) {
@@ -259,7 +261,8 @@ struct DisjointBitSetsNodeData : NodeStateData {
         }
 
         if (num_elements != primary_set_size) {
-            throw std::invalid_argument("disjoint set elements must be in exactly one bit-set once");
+            throw std::invalid_argument(
+                    "disjoint set elements must be in exactly one bit-set once");
         }
     }
 
@@ -303,9 +306,7 @@ struct DisjointBitSetsNodeData : NodeStateData {
         }
     }
 
-    double const* get_data(ssize_t set_index) {
-        return &data[set_index * primary_set_size];
-    }
+    double const* get_data(ssize_t set_index) { return &data[set_index * primary_set_size]; }
 
     ssize_t primary_set_size;
     ssize_t num_disjoint_sets;
@@ -315,10 +316,8 @@ struct DisjointBitSetsNodeData : NodeStateData {
 
 DisjointBitSetsNode::DisjointBitSetsNode(ssize_t primary_set_size, ssize_t num_disjoint_sets)
         : primary_set_size_(primary_set_size), num_disjoint_sets_(num_disjoint_sets) {
-    if (primary_set_size < 0)
-        throw std::invalid_argument("primary_set_size must be non-negative");
-    if (num_disjoint_sets < 1)
-        throw std::invalid_argument("num_disjoint_sets must be positive");
+    if (primary_set_size < 0) throw std::invalid_argument("primary_set_size must be non-negative");
+    if (num_disjoint_sets < 1) throw std::invalid_argument("num_disjoint_sets must be positive");
 }
 
 void DisjointBitSetsNode::initialize_state(State& state) const {
@@ -326,9 +325,11 @@ void DisjointBitSetsNode::initialize_state(State& state) const {
     state[index] = std::make_unique<DisjointBitSetsNodeData>(primary_set_size_, num_disjoint_sets_);
 }
 
-void DisjointBitSetsNode::initialize_state(State& state, const std::vector<std::vector<double>>& contents) const {
+void DisjointBitSetsNode::initialize_state(State& state,
+                                           const std::vector<std::vector<double>>& contents) const {
     int index = this->topological_index();
-    state[index] = std::make_unique<DisjointBitSetsNodeData>(primary_set_size_, num_disjoint_sets_, contents);
+    state[index] = std::make_unique<DisjointBitSetsNodeData>(primary_set_size_, num_disjoint_sets_,
+                                                             contents);
 }
 
 void DisjointBitSetsNode::commit(State& state) const {
@@ -346,8 +347,10 @@ void DisjointBitSetsNode::default_move(State& state, RngAdaptor& rng) const {
     swap_between_sets(state, dist_sets(rng), dist_sets(rng), dist_el(rng));
 }
 
-void DisjointBitSetsNode::swap_between_sets(State& state, ssize_t from_disjoint_set, ssize_t to_disjoint_set, ssize_t element) const {
-    data_ptr<DisjointBitSetsNodeData>(state)->swap_between_sets(from_disjoint_set, to_disjoint_set, element);
+void DisjointBitSetsNode::swap_between_sets(State& state, ssize_t from_disjoint_set,
+                                            ssize_t to_disjoint_set, ssize_t element) const {
+    data_ptr<DisjointBitSetsNodeData>(state)->swap_between_sets(from_disjoint_set, to_disjoint_set,
+                                                                element);
 }
 
 ssize_t DisjointBitSetsNode::get_containing_set_index(State& state, ssize_t element) const {
@@ -435,6 +438,28 @@ struct DisjointListStateData : NodeStateData {
             if (updates.size() > 0) {
                 previous_list_sizes[list_index] = lists[list_index].size();
                 updates.clear();
+            }
+        }
+    }
+
+    void rotate_in_list(ssize_t list_index, ssize_t dest_idx, ssize_t src_idx) {
+        // We want the rotate function to be called only on the visible part of the list.
+        auto& list = lists[list_index];
+        assert(src_idx >= 0 && static_cast<std::size_t>(src_idx) < list.size());
+        assert(dest_idx >= 0 && static_cast<std::size_t>(dest_idx) < list.size());
+
+        // Elements move from left to right.
+        if (src_idx > dest_idx) {
+            auto prev = list[src_idx];
+            for (ssize_t i = dest_idx; i <= src_idx; i++) {
+                std::swap(list[i], prev);
+                all_list_updates[list_index].emplace_back(i, prev, list[i]);
+            }
+        } else if (src_idx < dest_idx) {
+            auto prev = list[src_idx];
+            for (ssize_t i = dest_idx; i >= src_idx; i--) {
+                std::swap(list[i], prev);
+                all_list_updates[list_index].emplace_back(i, prev, list[i]);
             }
         }
     }
@@ -549,7 +574,13 @@ ssize_t DisjointListsNode::get_disjoint_list_size(State& state, ssize_t list_ind
     auto data = data_ptr<DisjointListStateData>(state);
     auto size = data->lists[list_index].size();
     return size;
-    }
+}
+
+void DisjointListsNode::rotate_in_list(State& state, ssize_t list_index, ssize_t src_idx,
+                                       ssize_t dest_idx) const {
+    if (src_idx == dest_idx) return;
+    data_ptr<DisjointListStateData>(state)->rotate_in_list(list_index, src_idx, dest_idx);
+}
 
 void DisjointListsNode::swap_in_list(State& state, ssize_t list_index, ssize_t element_i,
                                      ssize_t element_j) const {

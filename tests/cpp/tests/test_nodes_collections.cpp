@@ -88,10 +88,10 @@ TEST_CASE("DisjointBitSetsNode") {
                 }
 
                 AND_WHEN("We then mutate the node and propagate") {
-                    ptr->swap_between_sets(state, 0, 1, 2);    // {0 1 3 4} {2} {}
-                    ptr->swap_between_sets(state, 0, 2, 4);    // {0 1 3} {2} {4}
-                    ptr->swap_between_sets(state, 0, 1, 0);    // {1 3} {0 2} {4}
-                    ptr->swap_between_sets(state, 1, 2, 2);    // {1 3} {0} {2 4}
+                    ptr->swap_between_sets(state, 0, 1, 2);  // {0 1 3 4} {2} {}
+                    ptr->swap_between_sets(state, 0, 2, 4);  // {0 1 3} {2} {4}
+                    ptr->swap_between_sets(state, 0, 1, 0);  // {1 3} {0 2} {4}
+                    ptr->swap_between_sets(state, 1, 2, 2);  // {1 3} {0} {2 4}
 
                     ptr->propagate(state);
 
@@ -117,9 +117,12 @@ TEST_CASE("DisjointBitSetsNode") {
                         ptr->commit(state);
 
                         THEN("The changes persist") {
-                            CHECK(std::ranges::equal(sets[0]->view(state), std::vector{0, 1, 0, 1, 0}));
-                            CHECK(std::ranges::equal(sets[1]->view(state), std::vector{1, 0, 0, 0, 0}));
-                            CHECK(std::ranges::equal(sets[2]->view(state), std::vector{0, 0, 1, 0, 1}));
+                            CHECK(std::ranges::equal(sets[0]->view(state),
+                                                     std::vector{0, 1, 0, 1, 0}));
+                            CHECK(std::ranges::equal(sets[1]->view(state),
+                                                     std::vector{1, 0, 0, 0, 0}));
+                            CHECK(std::ranges::equal(sets[2]->view(state),
+                                                     std::vector{0, 0, 1, 0, 1}));
                         }
                     }
 
@@ -127,11 +130,14 @@ TEST_CASE("DisjointBitSetsNode") {
                         ptr->revert(state);
 
                         THEN("The changes are undone") {
-                            CHECK(std::ranges::equal(sets[0]->view(state), std::vector{1, 1, 1, 1, 1}));
+                            CHECK(std::ranges::equal(sets[0]->view(state),
+                                                     std::vector{1, 1, 1, 1, 1}));
                             CHECK(sets[0]->diff(state).size() == 0);
-                            CHECK(std::ranges::equal(sets[1]->view(state), std::vector{0, 0, 0, 0, 0}));
+                            CHECK(std::ranges::equal(sets[1]->view(state),
+                                                     std::vector{0, 0, 0, 0, 0}));
                             CHECK(sets[1]->diff(state).size() == 0);
-                            CHECK(std::ranges::equal(sets[2]->view(state), std::vector{0, 0, 0, 0, 0}));
+                            CHECK(std::ranges::equal(sets[2]->view(state),
+                                                     std::vector{0, 0, 0, 0, 0}));
                             CHECK(sets[2]->diff(state).size() == 0);
                         }
                     }
@@ -181,9 +187,12 @@ TEST_CASE("DisjointBitSetsNode") {
                 auto state = graph.empty_state();
 
                 THEN("We get an error when trying to initialize invalid partitions") {
-                    CHECK_THROWS(ptr->initialize_state(state, {{0, 0, 0, 0, 2}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}));
-                    CHECK_THROWS(ptr->initialize_state(state, {{0, 0, 0, 0, 0}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}));
-                    CHECK_THROWS(ptr->initialize_state(state, {{0, 0, 0, 1, 1}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}));
+                    CHECK_THROWS(ptr->initialize_state(
+                            state, {{0, 0, 0, 0, 2}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}));
+                    CHECK_THROWS(ptr->initialize_state(
+                            state, {{0, 0, 0, 0, 0}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}));
+                    CHECK_THROWS(ptr->initialize_state(
+                            state, {{0, 0, 0, 1, 1}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}));
                 }
             }
         }
@@ -252,22 +261,23 @@ TEST_CASE("DisjointListsNode") {
 
                 AND_WHEN("We then mutate the node and propagate") {
                     ptr->swap_in_list(state, 0, 1, 3);    // [0 3 2 1 4] [] []
-                    ptr->pop_to_list(state, 0, 1, 2, 0);  // [0 2 1 4] [] [3]
-                    ptr->pop_to_list(state, 0, 2, 2, 1);  // [0 2 4] [] [3 1]
-                    ptr->swap_in_list(state, 2, 1, 0);    // [0 2 4] [] [1 3]
-
+                    ptr->rotate_in_list(state, 0, 4, 1);  // [0 2 1 4 3] [] []
+                    ptr->rotate_in_list(state, 0, 4, 1);  // [0 1 4 3 2] [] []
+                    ptr->pop_to_list(state, 0, 1, 2, 0);  // [0 4 3 2] [] [1]
+                    ptr->pop_to_list(state, 0, 2, 2, 1);  // [0 4 2] [] [1 3]
+                    ptr->swap_in_list(state, 2, 1, 0);    // [0 4 2] [] [3 1]
                     ptr->propagate(state);
 
                     THEN("The node's state reflects the relevant changes") {
-                        CHECK(std::ranges::equal(lists[0]->view(state), std::vector{0, 2, 4}));
+                        CHECK(std::ranges::equal(lists[0]->view(state), std::vector{0, 4, 2}));
                         CHECK(lists[1]->shape(state)[0] == 0);
-                        CHECK(std::ranges::equal(lists[2]->view(state), std::vector{1, 3}));
+                        CHECK(std::ranges::equal(lists[2]->view(state), std::vector{3, 1}));
                     }
 
                     THEN("The successor nodes' diffs have the changes") {
-                        verify_array_diff({0, 1, 2, 3, 4}, {0, 2, 4}, lists[0]->diff(state));
+                        verify_array_diff({0, 1, 2, 3, 4}, {0, 4, 2}, lists[0]->diff(state));
                         CHECK(lists[1]->diff(state).size() == 0);
-                        verify_array_diff({}, {1, 3}, lists[2]->diff(state));
+                        verify_array_diff({}, {3, 1}, lists[2]->diff(state));
                     }
 
                     THEN("The successor nodes' size_diffs are correct") {
@@ -280,9 +290,9 @@ TEST_CASE("DisjointListsNode") {
                         ptr->commit(state);
 
                         THEN("The changes persist") {
-                            CHECK(std::ranges::equal(lists[0]->view(state), std::vector{0, 2, 4}));
+                            CHECK(std::ranges::equal(lists[0]->view(state), std::vector{0, 4, 2}));
                             CHECK(lists[1]->shape(state)[0] == 0);
-                            CHECK(std::ranges::equal(lists[2]->view(state), std::vector{1, 3}));
+                            CHECK(std::ranges::equal(lists[2]->view(state), std::vector{3, 1}));
                         }
                     }
 
