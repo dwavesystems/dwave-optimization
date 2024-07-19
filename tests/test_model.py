@@ -32,6 +32,16 @@ class TestArraySymbol(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ArraySymbols cannot be constructed directly"):
             ArraySymbol()
 
+    def test_bool(self):
+        from dwave.optimization.model import ArraySymbol
+
+        # bypass the init, this should be done very carefully as it can lead to
+        # segfaults dependig on what methods are accessed!
+        symbol = ArraySymbol.__new__(ArraySymbol)
+
+        with self.assertRaises(ValueError):
+            bool(symbol)
+
     def test_operator_types(self):
         # For each, test that we get the right class from the operator and that
         # incorrect types returns NotImplemented

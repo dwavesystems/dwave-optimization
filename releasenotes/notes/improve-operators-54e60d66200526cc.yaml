@@ -12,3 +12,5 @@ features:
     In-place multiplication with a ``NaryMultiply`` symbol will no longer create a new symbol. 
 fixes:
   - Return ``NotImplemented`` from ``ArraySymbol`` operator methods for unknown types.
+upgrade:
+  - Raise a ``ValueError`` when calling ``bool()`` on an ``ArraySymbol``.

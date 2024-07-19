@@ -86,7 +86,9 @@ class TestNurseScheduling(unittest.TestCase):
                 [shifts[day][shift] for day in range(num_days)]
             )
             minutes_worked = total_shifts_worked * minutes_per_shift[shift]
-            total_minutes_worked = total_minutes_worked + minutes_worked if total_minutes_worked else minutes_worked
+            total_minutes_worked = (total_minutes_worked + minutes_worked
+                                    if total_minutes_worked is not None
+                                    else minutes_worked)
 
         min_minutes = model.constant(min_minutes_per_week)
         max_minutes = model.constant(max_minutes_per_week)

@@ -1625,6 +1625,11 @@ cdef class ArraySymbol(Symbol):
 
         return NotImplemented
 
+    def __bool__(self):
+        # In the future we might want to return a Bool symbol, but __bool__ is so
+        # fundamental that I am hesitant to do even that.
+        raise ValueError("the truth value of an array symbol is ambiguous")
+
     def __eq__(self, rhs):
         if isinstance(rhs, ArraySymbol):
             # We could consider returning a Constant(True) is the case that self is rhs
