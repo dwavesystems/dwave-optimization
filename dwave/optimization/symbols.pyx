@@ -1923,6 +1923,13 @@ cdef class NaryAdd(ArraySymbol):
         x.initialize_array(ptr)
         return x
 
+    def __iadd__(self, rhs):
+        if isinstance(rhs, ArraySymbol):
+            self.ptr.add_node((<ArraySymbol>rhs).node_ptr)
+            return self
+
+        return super().__iadd__(rhs)
+
     cdef cppNaryAddNode* ptr
 
 _register(NaryAdd, typeid(cppNaryAddNode))
@@ -2077,6 +2084,13 @@ cdef class NaryMultiply(ArraySymbol):
         x.initialize_node(symbol.model, ptr)
         x.initialize_array(ptr)
         return x
+
+    def __imul__(self, rhs):
+        if isinstance(rhs, ArraySymbol):
+            self.ptr.add_node((<ArraySymbol>rhs).node_ptr)
+            return self
+
+        return super().__imul__(rhs)
 
     cdef cppNaryMultiplyNode* ptr
 

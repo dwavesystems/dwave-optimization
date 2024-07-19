@@ -111,16 +111,16 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
         pass
 
     cdef cppclass NaryAddNode(Node, Array):
-        pass
+        void add_node(Node*) except+
 
     cdef cppclass NaryMaximumNode(Node, Array):
-        pass
+        void add_node(Node*) except+
 
     cdef cppclass NaryMinimumNode(Node, Array):
-        pass
+        void add_node(Node*) except+
 
     cdef cppclass NaryMultiplyNode(Node, Array):
-        pass
+        void add_node(Node*) except+
 
     cdef cppclass NegativeNode(Node, Array):
         pass

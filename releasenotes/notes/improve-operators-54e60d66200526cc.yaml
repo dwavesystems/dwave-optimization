@@ -1,0 +1,16 @@
+---
+features:
+  - |
+    Implement ``ArraySymbol.__iadd__()`` and ``ArraySymbol.__imul__()``.
+    The ``+=`` operator will now return a ``NaryAdd`` symbol.
+    The ``*=`` operator will now return a ``NaryMultiply`` symbol.
+  - |
+    Implement ``NaryAdd.__iadd__()``.
+    In-place addition with a ``NaryAdd`` symbol will no longer create a new symbol.
+  - |
+    Implement ``NaryAdd.__imul__()``.
+    In-place multiplication with a ``NaryMultiply`` symbol will no longer create a new symbol. 
+fixes:
+  - Return ``NotImplemented`` from ``ArraySymbol`` operator methods for unknown types.
+upgrade:
+  - Raise a ``ValueError`` when calling ``bool()`` on an ``ArraySymbol``.

@@ -1301,6 +1301,35 @@ class TestNaryAdd(utils.NaryOpTests):
     def node_class(self):
         return dwave.optimization.symbols.NaryAdd
 
+    def test_iadd(self):
+        model = Model()
+        x: dwave.optimization.model.ArraySymbol = model.binary()  # typing is for mypy
+        a = model.constant(5)
+        b = model.constant(4)
+
+        x += a  # type promotion to a NaryAdd
+        self.assertIsInstance(x, dwave.optimization.symbols.NaryAdd)
+
+        y = x
+        x += b
+        self.assertIs(x, y)  # subsequent should be in-place
+
+    def test_mismatched_shape(self):
+        model = Model()
+        x: dwave.optimization.model.ArraySymbol = model.binary()  # typing is for mypy
+        a = model.constant(0)
+
+        b = model.constant([0, 1])
+
+        with self.assertRaises(ValueError):
+            x += b  # before promotion
+
+        x += a  # get a NaryAdd
+        self.assertIsInstance(x, dwave.optimization.symbols.NaryAdd)
+
+        with self.assertRaises(ValueError):
+            x += b  # after promotion
+
 
 class TestNaryMaximum(utils.NaryOpTests):
     def op(self, *xs):
@@ -1333,6 +1362,35 @@ class TestNaryMultiply(utils.NaryOpTests):
 
     def node_class(self):
         return dwave.optimization.symbols.NaryMultiply
+
+    def test_imul(self):
+        model = Model()
+        x: dwave.optimization.model.ArraySymbol = model.binary()  # typing is for mypy
+        a = model.constant(5)
+        b = model.constant(4)
+
+        x *= a  # type promotion to a NaryAdd
+        self.assertIsInstance(x, dwave.optimization.symbols.NaryMultiply)
+
+        y = x
+        x *= b
+        self.assertIs(x, y)  # subsequent should be in-place
+
+    def test_mismatched_shape(self):
+        model = Model()
+        x: dwave.optimization.model.ArraySymbol = model.binary()  # typing is for mypy
+        a = model.constant(0)
+
+        b = model.constant([0, 1])
+
+        with self.assertRaises(ValueError):
+            x *= b  # before promotion
+
+        x *= a  # get a NaryMultiply
+        self.assertIsInstance(x, dwave.optimization.symbols.NaryMultiply)
+
+        with self.assertRaises(ValueError):
+            x *= b  # after promotion
 
 
 class TestNegate(utils.UnaryOpTests):
