@@ -26,7 +26,8 @@ Examples of problems suited to such solution methods are resource routing,
 scheduling, allocation, and job-shop scheduling.  
 
 Successful implementation, as for any solver, requires following some 
-`best practices <intro_optimization_usage>`_ in formulating your model.  
+:ref:`best practices <intro_optimization_usage_guidelines>` in formulating 
+your model.  
 
 .. _intro_optimization_symbols: 
 
