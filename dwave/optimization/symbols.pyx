@@ -20,11 +20,13 @@ import collections.abc
 import json
 import numbers
 
+cimport cpython.object
 import cython
 import numpy as np
 
 from cpython.ref cimport PyObject
 from cython.operator cimport dereference as deref, typeid
+from libc.math cimport modf
 from libcpp cimport bool
 from libcpp.cast cimport dynamic_cast
 from libcpp.optional cimport nullopt, optional
@@ -781,6 +783,12 @@ cdef class Constant(ArraySymbol):
         # Have the parent model hold a reference to the array, so it's kept alive
         model._data_sources.append(array)
 
+    def __bool__(self):
+        if not self._is_scalar():
+            raise ValueError("the truth value of a constant with more than one element is ambiguous")
+
+        return <bool>deref(self.ptr.buff())
+
     def __getbuffer__(self, Py_buffer *buffer, int flags):
         buffer.buf = <void*>(self.ptr.buff())
         buffer.format = <char*>(self.ptr.format().c_str())
@@ -793,6 +801,54 @@ cdef class Constant(ArraySymbol):
         buffer.shape = <Py_ssize_t*>(self.ptr.shape().data())
         buffer.strides = <Py_ssize_t*>(self.ptr.strides().data())
         buffer.suboffsets = NULL
+
+    def __index__(self):
+        if not self._is_integer():
+            # Follow NumPy's error message
+            # https://github.com/numpy/numpy/blob/66e1e3/numpy/_core/src/multiarray/number.c#L833
+            raise TypeError("only integer scalar constants can be converted to a scalar index")
+
+        return <Py_ssize_t>deref(self.ptr.buff())
+
+    def __richcmp__(self, rhs, int op):
+        # __richcmp__ is a special Cython method
+
+        # If rhs is another Symbol, defer to ArraySymbol to handle the
+        # operation. Which may or may not actually be implemented.
+        # Otherwise, defer to NumPy.
+        # We could also check if rhs is another Constant and handle that differently,
+        # but that might lead to confusing behavior so we treat other Constants the
+        # same as any other symbol.
+        lhs = super() if isinstance(rhs, ArraySymbol) else np.asarray(self)
+
+        if op == cpython.object.Py_EQ:
+            return lhs.__eq__(rhs)
+        elif op == cpython.object.Py_GE:
+            return lhs.__ge__(rhs)
+        elif op == cpython.object.Py_GT:
+            return lhs.__gt__(rhs)
+        elif op == cpython.object.Py_LE:
+            return lhs.__le__(rhs)
+        elif op == cpython.object.Py_LT:
+            return lhs.__lt__(rhs)
+        elif op == cpython.object.Py_NE:
+            return lhs.__ne__(rhs)
+        else:
+            return NotImplemented  # this should never happen, but just in case
+
+    cdef bool _is_integer(self) noexcept:
+        """Return True if the constant encodes a single integer."""
+        if not self._is_scalar():
+            return False
+
+        # https://stackoverflow.com/q/1521607 for the integer test
+        cdef double dummy
+        return modf(deref(self.ptr.buff()), &dummy) == <double>0.0
+
+    cdef bool _is_scalar(self) noexcept:
+        """Return True if the constant encodes a single value."""
+        # The size check is redundant, but worth checking in order to avoid segfaults
+        return self.ptr.size() == 1 and self.ptr.ndim() == 0
 
     @staticmethod
     def _from_symbol(Symbol symbol):

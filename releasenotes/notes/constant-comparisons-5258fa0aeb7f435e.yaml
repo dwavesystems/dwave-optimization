@@ -1,0 +1,6 @@
+---
+features:
+  - Add support for ``<,>,==,!=,<=,>=`` operators between ``Constant`` and array-like objects.
+  - |
+    Add support for ``bool(constant)``, ``int(constant)``, and ``not constant`` when
+    ``constant`` is an instance of ``Constant`` encoding a single scalar value.

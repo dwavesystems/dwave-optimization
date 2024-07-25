@@ -15,6 +15,7 @@
 import abc
 import itertools
 import math
+import operator
 import typing
 import unittest
 
@@ -595,6 +596,60 @@ class TestConstant(utils.SymbolTests):
         yield A
         yield B
 
+    def test_truthy(self):
+        model = Model()
+
+        self.assertTrue(model.constant(1))
+        self.assertFalse(model.constant(0))
+        self.assertTrue(model.constant(1.1))
+        self.assertFalse(model.constant(0.0))
+
+        self.assertTrue(not model.constant(0))
+        self.assertFalse(not model.constant(1))
+
+        # these are all ambiguous
+        with self.assertRaises(ValueError):
+            bool(model.constant([]))
+        with self.assertRaises(ValueError):
+            bool(model.constant([0, 1]))
+        with self.assertRaises(ValueError):
+            bool(model.constant([0]))
+
+        # the type is correct
+        self.assertIsInstance(model.constant(123.4).__bool__(), bool)
+
+    def test_comparisons(self):
+        model = Model()
+
+        # zero = model.constant(0)
+        one = model.constant(1)
+        onetwo = model.constant([1, 2])
+
+        operators = [
+            operator.eq,
+            operator.ge,
+            operator.gt,
+            operator.le,
+            operator.lt,
+            operator.ne
+        ]
+
+        for op in operators:
+            with self.subTest(op):
+                self.assertEqual(op(one, 1), op(1, 1))
+                self.assertEqual(op(1, one), op(1, 1))
+
+                self.assertEqual(op(one, 2), op(1, 2))
+                self.assertEqual(op(2, one), op(2, 1))
+
+                self.assertEqual(op(one, 0), op(1, 0))
+                self.assertEqual(op(0, one), op(0, 1))
+
+                np.testing.assert_array_equal(op(onetwo, [1, 2]), op(np.asarray([1, 2]), [1, 2]))
+                np.testing.assert_array_equal(op(onetwo, [1, 0]), op(np.asarray([1, 2]), [1, 0]))
+                np.testing.assert_array_equal(op([1, 2], onetwo), op(np.asarray([1, 2]), [1, 2]))
+                np.testing.assert_array_equal(op([1, 0], onetwo), op(np.asarray([1, 0]), [1, 2]))
+
     def test_copy(self):
         model = Model()
 
@@ -603,6 +658,21 @@ class TestConstant(utils.SymbolTests):
 
         np.testing.assert_array_equal(A, arr)
         self.assertTrue(np.shares_memory(A, arr))
+
+    def test_index(self):
+        model = Model()
+
+        self.assertEqual(list(range(model.constant(0))), [])
+        self.assertEqual(list(range(model.constant(4))), [0, 1, 2, 3])
+
+        with self.assertRaises(TypeError):
+            range(model.constant([0]))  # not a scalar
+
+        self.assertEqual(int(model.constant(0)), 0)
+        self.assertEqual(int(model.constant(1)), 1)
+
+        with self.assertRaises(TypeError):
+            int(model.constant([0]))  # not a scalar
 
     def test_noncontiguous(self):
         model = Model()
