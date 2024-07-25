@@ -77,6 +77,10 @@ import dwave.optimization
 
 """
 
+autodoc_type_aliases = {
+    'numpy.typing.ArrayLike': 'numpy.typing.ArrayLike',
+}
+
 # -- Options for HTML output ----------------------------------------------
 
 html_theme = "pydata_sphinx_theme"
@@ -102,8 +106,9 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
                        'numpy': ('https://numpy.org/doc/stable/', None),
                        'networkx': ('https://networkx.org/documentation/stable/', None),
                        'oceandocs': ('https://docs.ocean.dwavesys.com/en/stable/', None),
-                       'sysdocs_gettingstarted': ('https://docs.dwavesys.com/docs/latest/', None)}
-                       
+                       'sysdocs_gettingstarted': ('https://docs.dwavesys.com/docs/latest/', None),
+                       }
+
 rst_epilog = """
 .. |array-like| replace:: array-like
 .. _array-like: https://numpy.org/devdocs/glossary.html#term-array_like
