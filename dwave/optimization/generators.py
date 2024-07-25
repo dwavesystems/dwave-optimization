@@ -12,6 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Model generators for optimization problems."""
+
+from __future__ import annotations
+
 import typing
 
 import numpy as np
@@ -25,6 +29,7 @@ __all__ = [
     "flow_shop_scheduling",
     "job_shop_scheduling",
     "knapsack",
+    "quadratic_assignment",
     "traveling_salesperson",
     ]
 
