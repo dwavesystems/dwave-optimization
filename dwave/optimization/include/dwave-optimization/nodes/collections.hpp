@@ -26,7 +26,7 @@ namespace dwave::optimization {
 /// public constructors.
 /// Subclasses must implement an overload of Node::initialize_state() and
 /// Decision::default_move()
-class CollectionNode : public Node, public ArrayOutputMixin<Array>, public Decision {
+class CollectionNode : public ArrayOutputMixin<ArrayNode>, public Decision {
  public:
     CollectionNode() = delete;
 
@@ -39,7 +39,7 @@ class CollectionNode : public Node, public ArrayOutputMixin<Array>, public Decis
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
 
-    constexpr bool integral() const override { return true; }
+    bool integral() const override { return true; }
 
     double min() const noexcept override { return 0; }
     double max() const noexcept override { return max_value_ - 1; }
@@ -81,8 +81,7 @@ class CollectionNode : public Node, public ArrayOutputMixin<Array>, public Decis
 
  protected:
     CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size)
-            : Node(),
-              ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),
+            : ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),
               Decision(),
               max_value_(max_value),
               min_size_(min_size),
@@ -153,11 +152,10 @@ class DisjointBitSetsNode : public Node, public Decision {
 };
 
 // Successor node for the output of `DisjointBitSetsNode`
-class DisjointBitSetNode : public Node, public ArrayOutputMixin<Array> {
+class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
  public:
     explicit DisjointBitSetNode(DisjointBitSetsNode* disjoint_bit_sets_node)
-            : Node(),
-              ArrayOutputMixin(disjoint_bit_sets_node->primary_set_size()),
+            : ArrayOutputMixin(disjoint_bit_sets_node->primary_set_size()),
               disjoint_bit_sets_node(disjoint_bit_sets_node),
               set_index_(disjoint_bit_sets_node->successors().size()),
               primary_set_size_(disjoint_bit_sets_node->primary_set_size()) {
@@ -172,7 +170,7 @@ class DisjointBitSetNode : public Node, public ArrayOutputMixin<Array> {
     double const* buff(const State&) const override;
     std::span<const Update> diff(const State& state) const override;
 
-    constexpr bool integral() const override { return true; };
+    bool integral() const override { return true; };
 
     double min() const noexcept override { return 0; };
     double max() const noexcept override { return 1; };
@@ -239,7 +237,7 @@ class DisjointListsNode : public Node, public Decision {
 };
 
 // Successor node for the output of `DisjointListsNode`
-class DisjointListNode : public Node, public ArrayOutputMixin<Array> {
+class DisjointListNode : public ArrayOutputMixin<ArrayNode> {
  public:
     explicit DisjointListNode(DisjointListsNode* disjoint_list_node);
 
@@ -248,7 +246,7 @@ class DisjointListNode : public Node, public ArrayOutputMixin<Array> {
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
 
-    constexpr bool integral() const override { return true; }
+    bool integral() const override { return true; }
 
     double min() const noexcept override { return 0; }
     double max() const noexcept override { return primary_set_size_ - 1; }

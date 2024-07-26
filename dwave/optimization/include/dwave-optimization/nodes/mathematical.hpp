@@ -48,7 +48,7 @@ struct square {
 }  // namespace functional
 
 template <class BinaryOp>
-class BinaryOpNode : public Node, public ArrayOutputMixin<Array> {
+class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // We need at least two nodes, and they must be the same shape
     BinaryOpNode(Node* a_ptr, Node* b_ptr);
@@ -88,7 +88,7 @@ using OrNode = BinaryOpNode<std::logical_or<double>>;
 using SubtractNode = BinaryOpNode<std::minus<double>>;
 
 template <class BinaryOp>
-class NaryOpNode : public Node, public ArrayOutputMixin<Array> {
+class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // Need at least one node to start with to determine the shape
     explicit NaryOpNode(Node* node_ptr);
@@ -119,26 +119,24 @@ using NaryMinimumNode = NaryOpNode<functional::min<double>>;
 using NaryMultiplyNode = NaryOpNode<std::multiplies<double>>;
 
 template <class BinaryOp>
-class ReduceNode : public Node, public ScalarOutputMixin<Array> {
+class ReduceNode : public ScalarOutputMixin<ArrayNode> {
  public:
-    template <ArrayNode T>
-    ReduceNode(T* array_ptr, double init) : init(init), array_ptr_(array_ptr) {
-        add_predecessor(array_ptr);
-    }
-
-    ReduceNode(Node* node_ptr, double init)
-            : init(init), array_ptr_(dynamic_cast<Array*>(node_ptr)) {
+    ReduceNode(ArrayNode* node_ptr, double init)
+            : init(init), array_ptr_(node_ptr) {
         if (!array_ptr_) {
             throw std::invalid_argument("node_ptr must be an Array");
         }
         add_predecessor(node_ptr);
     }
+    ReduceNode(Node* node_ptr, double init)
+            : ReduceNode(dynamic_cast<ArrayNode*>(node_ptr), init) {}
 
     // Some operations have known default values so we can create them regardless of
     // whether or not the array is dynamic.
     // Others will raise an error for non-dynamic arrays.
-    template <class T>
-    explicit ReduceNode(T* array_ptr);
+    explicit ReduceNode(ArrayNode* array_ptr);
+
+    explicit ReduceNode(Node* node_ptr) : ReduceNode(dynamic_cast<ArrayNode*>(node_ptr)) {}
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
@@ -165,35 +163,6 @@ class ReduceNode : public Node, public ScalarOutputMixin<Array> {
     const Array* const array_ptr_;
 };
 
-template <>
-template <class T>
-ReduceNode<std::logical_and<double>>::ReduceNode(T* array_ptr) : ReduceNode(array_ptr, 1) {}
-
-template <>
-template <class T>
-ReduceNode<std::multiplies<double>>::ReduceNode(T* array_ptr) : ReduceNode(array_ptr, 1) {}
-
-template <>
-template <class T>
-ReduceNode<std::plus<double>>::ReduceNode(T* array_ptr) : ReduceNode(array_ptr, 0) {}
-
-template <class BinaryOp>
-template <class T>
-ReduceNode<BinaryOp>::ReduceNode(T* array_ptr)
-        : init(), array_ptr_(dynamic_cast<Array*>(array_ptr)) {
-    if (array_ptr_->dynamic()) {
-        throw std::invalid_argument(
-                "cannot do a reduction on a dynamic array with an operation that has no identity "
-                "without supplying an initial value");
-    } else if (array_ptr_->size() < 1) {
-        throw std::invalid_argument(
-                "cannot do a reduction on an empty array with an operation that has no identity "
-                "without supplying an initial value");
-    }
-
-    add_predecessor(array_ptr);
-}
-
 // We follow NumPy naming convention rather than C++ to distinguish between
 // binary operations and reduce operations.
 // https://numpy.org/doc/stable/reference/routines.math.html
@@ -204,20 +173,16 @@ using ProdNode = ReduceNode<std::multiplies<double>>;
 using SumNode = ReduceNode<std::plus<double>>;
 
 template <class UnaryOp>
-class UnaryOpNode : public Node, public ArrayOutputMixin<Array> {
+class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    template <ArrayNode T>
-    UnaryOpNode(T* array_ptr) : ArrayOutputMixin(array_ptr->shape()), array_ptr_(array_ptr) {
-        add_predecessor(array_ptr);
-    }
-
-    UnaryOpNode(Node* node_ptr) : ArrayOutputMixin(dynamic_cast<Array*>(node_ptr)->shape()),
-                                  array_ptr_(dynamic_cast<Array*>(node_ptr)) {
+    explicit UnaryOpNode(ArrayNode* node_ptr)
+            : ArrayOutputMixin(node_ptr->shape()), array_ptr_(node_ptr) {
         if (!array_ptr_) {
             throw std::invalid_argument("node_ptr must be an Array");
         }
         add_predecessor(node_ptr);
     }
+    explicit UnaryOpNode(Node* node_ptr) : UnaryOpNode(dynamic_cast<ArrayNode*>(node_ptr)) {}
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;

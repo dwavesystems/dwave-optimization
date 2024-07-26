@@ -1537,8 +1537,7 @@ std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
 // PermutationNode ************************************************************
 
 PermutationNode::PermutationNode(Node* array_ptr, Node* order_ptr)
-        : Node(),
-          ArrayOutputMixin(dynamic_cast<const Array*>(array_ptr)->shape()),
+        : ArrayOutputMixin(dynamic_cast<const Array*>(array_ptr)->shape()),
           array_ptr_(dynamic_cast<const Array*>(array_ptr)),
           order_ptr_(dynamic_cast<const Array*>(order_ptr)) {
     std::span<const ssize_t> array_shape = array_ptr_->shape();

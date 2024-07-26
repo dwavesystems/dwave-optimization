@@ -631,8 +631,7 @@ void DisjointListsNode::default_move(State& state, RngAdaptor& rng) const {
 }
 
 DisjointListNode::DisjointListNode(DisjointListsNode* disjoint_list_node)
-        : Node(),
-          ArrayOutputMixin(Array::DYNAMIC_SIZE),
+        : ArrayOutputMixin(Array::DYNAMIC_SIZE),
           disjoint_list_node_ptr(disjoint_list_node),
           list_index_(disjoint_list_node->successors().size()),
           primary_set_size_(disjoint_list_node->primary_set_size()) {

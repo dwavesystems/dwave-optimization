@@ -50,7 +50,7 @@ class ArrayValidationNode : public Node {
 #endif
 };
 
-class DynamicArrayTestingNode : public Node, public Decision, public ArrayOutputMixin<Array> {
+class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decision {
  public:
     DynamicArrayTestingNode(std::initializer_list<ssize_t> shape);
 

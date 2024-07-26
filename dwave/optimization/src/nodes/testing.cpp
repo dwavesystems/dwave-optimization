@@ -227,7 +227,7 @@ class DynamicArrayTestingNodeData : public dwave::optimization::NodeStateData {
 };
 
 DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape)
-        : Node(), ArrayOutputMixin(shape), shape_(shape) {
+        : ArrayOutputMixin(shape), shape_(shape) {
     if (shape.size() == 0 || *shape.begin() != -1) {
         throw std::invalid_argument(
                 "DynamicArrayTestingNode is meant to be used as a dynamic array");

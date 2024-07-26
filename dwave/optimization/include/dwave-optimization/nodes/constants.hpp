@@ -25,7 +25,7 @@
 namespace dwave::optimization {
 
 /// A contiguous block of numbers.
-class ConstantNode : public Node, public ArrayOutputMixin<Array> {
+class ConstantNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // Default constructor - defaults to an empty 1d array.
     ConstantNode() noexcept : ConstantNode({0}) {}
@@ -72,18 +72,18 @@ class ConstantNode : public Node, public ArrayOutputMixin<Array> {
     // Overloads needed by the Array ABC **************************************
 
     // There are never any updates to propagate
-    constexpr std::span<const Update> diff(const State& state) const noexcept override {
+    std::span<const Update> diff(const State& state) const noexcept override {
         return {};
     }
 
     // Overloads required by the Node ABC *************************************
 
     // This node never needs to update its successors
-    constexpr void propagate(State&) const noexcept override {}
+    void propagate(State&) const noexcept override {}
 
     // Never any changes to revert or commit
-    constexpr void commit(State&) const noexcept override {}
-    constexpr void revert(State&) const noexcept override {}
+    void commit(State&) const noexcept override {}
+    void revert(State&) const noexcept override {}
 
  private:
     // Allocate the memory to hold shape worth of doubles, but don't populate it

@@ -41,8 +41,7 @@ struct BinaryOpNodeData : public NodeStateData {
 
 template <class BinaryOp>
 BinaryOpNode<BinaryOp>::BinaryOpNode(Node* a_ptr, Node* b_ptr)
-        : Node(),
-          ArrayOutputMixin(broadcast_shape(dynamic_cast<const Array*>(a_ptr)->shape(),
+        : ArrayOutputMixin(broadcast_shape(dynamic_cast<const Array*>(a_ptr)->shape(),
                                            dynamic_cast<const Array*>(b_ptr)->shape())),
           lhs_ptr_(dynamic_cast<const Array*>(a_ptr)),
           rhs_ptr_(dynamic_cast<const Array*>(b_ptr)) {
@@ -265,7 +264,7 @@ struct NaryOpNodeData : public NodeStateData {
 
 template <class BinaryOp>
 NaryOpNode<BinaryOp>::NaryOpNode(Node* node_ptr)
-        : Node(), ArrayOutputMixin(dynamic_cast<const Array*>(node_ptr)->shape()) {
+        : ArrayOutputMixin(dynamic_cast<const Array*>(node_ptr)->shape()) {
     add_node(node_ptr);
 }
 
@@ -284,7 +283,7 @@ Array* nonempty(std::span<T> node_ptrs) {
 
 template <class BinaryOp>
 NaryOpNode<BinaryOp>::NaryOpNode(std::span<Node*> node_ptrs)
-        : Node(), ArrayOutputMixin(nonempty(node_ptrs)->shape()) {
+        : ArrayOutputMixin(nonempty(node_ptrs)->shape()) {
     for (Node* ptr : node_ptrs) {
         add_node(ptr);
     }
@@ -292,7 +291,7 @@ NaryOpNode<BinaryOp>::NaryOpNode(std::span<Node*> node_ptrs)
 
 template <class BinaryOp>
 NaryOpNode<BinaryOp>::NaryOpNode(std::span<Array*> array_ptrs)
-        : Node(), ArrayOutputMixin(nonempty(array_ptrs)->shape()) {
+        : ArrayOutputMixin(nonempty(array_ptrs)->shape()) {
     for (Array* ptr : array_ptrs) {
         add_node(dynamic_cast<Node*>(ptr));
     }
@@ -554,6 +553,31 @@ struct ReduceNodeData : NodeStateData {
     // op-specific storage.
     ExtraData<BinaryOp> extra;
 };
+
+template <>
+ReduceNode<std::logical_and<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 1) {}
+
+template <>
+ReduceNode<std::multiplies<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 1) {}
+
+template <>
+ReduceNode<std::plus<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 0) {}
+
+template <class BinaryOp>
+ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr)
+        : init(), array_ptr_(array_ptr) {
+    if (array_ptr_->dynamic()) {
+        throw std::invalid_argument(
+                "cannot do a reduction on a dynamic array with an operation that has no identity "
+                "without supplying an initial value");
+    } else if (array_ptr_->size() < 1) {
+        throw std::invalid_argument(
+                "cannot do a reduction on an empty array with an operation that has no identity "
+                "without supplying an initial value");
+    }
+
+    add_predecessor(array_ptr);
+}
 
 template <class BinaryOp>
 void ReduceNode<BinaryOp>::commit(State& state) const {

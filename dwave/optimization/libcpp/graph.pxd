@@ -41,7 +41,6 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         void topological_sort()
         bool topologically_sorted() const
 
-
     cdef cppclass Node:
         struct SuccessorView:
             Node* ptr
@@ -49,3 +48,6 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         const vector[Node*]& predecessors() const
         const vector[SuccessorView]& successors() const
         Py_ssize_t topological_index()
+
+    cdef cppclass ArrayNode(Node, Array):
+        pass

@@ -25,13 +25,13 @@
 #include <utility>
 #include <vector>
 
+#include "dwave-optimization/array.hpp"
 #include "dwave-optimization/state.hpp"
 #include "dwave-optimization/utils.hpp"
 #include "dwave-optimization/vartypes.hpp"
 
 namespace dwave::optimization {
 
-class Array;
 class Node;
 
 // We don't want this interface to be opinionated about what type of rng we're using.
@@ -293,8 +293,11 @@ NodeType* Graph::emplace_node(Args&&... args) {
     }
 
     // Construct via make_unique so we can allow the constructor to throw
-    nodes_.emplace_back(std::make_unique<NodeType>(std::forward<Args&&>(args)...));
-    NodeType* ptr = static_cast<NodeType*>(nodes_.back().get());
+    auto uptr = std::make_unique<NodeType>(std::forward<Args&&>(args)...);
+    NodeType* ptr = uptr.get();
+
+    // Pass ownership of the lifespan to nodes_
+    nodes_.emplace_back(std::move(uptr));
 
     // Decisions get their topological index assigned immediately, in the order of insertion
     if constexpr (std::is_base_of_v<Decision, NodeType>) {
@@ -304,10 +307,6 @@ NodeType* Graph::emplace_node(Args&&... args) {
     return ptr;  // return the observing pointer
 }
 
-// Useful concepts
-// todo: consider moving to another header file
-
-template <typename T>
-concept ArrayNode = std::is_base_of<Array, T>::value && std::is_base_of<Node, T>::value;
+class ArrayNode: public Array, public virtual Node {};
 
 }  // namespace dwave::optimization

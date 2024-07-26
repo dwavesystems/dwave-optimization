@@ -19,7 +19,7 @@ from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp cimport span, variant
 from dwave.optimization.libcpp.array cimport Array, ArrayPtr, Slice
-from dwave.optimization.libcpp.graph cimport Node
+from dwave.optimization.libcpp.graph cimport ArrayNode, Node
 from dwave.optimization.libcpp.state cimport State
 
 
@@ -29,7 +29,7 @@ cdef extern from "dwave-optimization/nodes/collections.hpp" namespace "dwave::op
         Py_ssize_t primary_set_size() const
         Py_ssize_t num_disjoint_sets() const
 
-    cdef cppclass DisjointBitSetNode(Node, Array):
+    cdef cppclass DisjointBitSetNode(ArrayNode):
         Py_ssize_t set_index()
 
     cdef cppclass DisjointListsNode(Node):
@@ -37,14 +37,14 @@ cdef extern from "dwave-optimization/nodes/collections.hpp" namespace "dwave::op
         Py_ssize_t num_disjoint_lists() const
         Py_ssize_t primary_set_size() const
 
-    cdef cppclass DisjointListNode(Node, Array):
+    cdef cppclass DisjointListNode(ArrayNode):
         Py_ssize_t list_index()
 
-    cdef cppclass ListNode(Node, Array):
+    cdef cppclass ListNode(ArrayNode):
         ListNode(Py_ssize_t) except+
         void initialize_state(State&, vector[double]) except+
 
-    cdef cppclass SetNode(Node, Array):
+    cdef cppclass SetNode(ArrayNode):
         SetNode(Py_ssize_t, Py_ssize_t, Py_ssize_t) except+
         void initialize_state(State&, vector[double]) except+
 
@@ -55,99 +55,99 @@ cdef extern from "dwave-optimization/nodes/constants.hpp" namespace "dwave::opti
 
 
 cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass AdvancedIndexingNode(Node, Array):
+    cdef cppclass AdvancedIndexingNode(ArrayNode):
         ctypedef variant[ArrayPtr, Slice] array_or_slice
 
         AdvancedIndexingNode(Node*, vector[array_or_slice]) except +
 
         span[const array_or_slice] indices()
 
-    cdef cppclass BasicIndexingNode(Node, Array):
+    cdef cppclass BasicIndexingNode(ArrayNode):
         ctypedef variant[Slice, Py_ssize_t] slice_or_int
 
         BasicIndexingNode(Node*, vector[slice_or_int]) except +
 
         vector[slice_or_int] infer_indices() except +
 
-    cdef cppclass PermutationNode(Node, Array):
+    cdef cppclass PermutationNode(ArrayNode):
         pass
 
-    cdef cppclass ReshapeNode(Node, Array):
+    cdef cppclass ReshapeNode(ArrayNode):
         pass
 
 
 cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass AbsoluteNode(Node, Array):
+    cdef cppclass AbsoluteNode(ArrayNode):
         pass
 
-    cdef cppclass AddNode(Node, Array):
+    cdef cppclass AddNode(ArrayNode):
         pass
 
-    cdef cppclass AllNode(Node, Array):
+    cdef cppclass AllNode(ArrayNode):
         pass
 
-    cdef cppclass AndNode(Node, Array):
+    cdef cppclass AndNode(ArrayNode):
         pass
 
-    cdef cppclass EqualNode(Node, Array):
+    cdef cppclass EqualNode(ArrayNode):
         pass
 
-    cdef cppclass LessEqualNode(Node, Array):
+    cdef cppclass LessEqualNode(ArrayNode):
         pass
 
-    cdef cppclass MaximumNode(Node, Array):
+    cdef cppclass MaximumNode(ArrayNode):
         pass
 
-    cdef cppclass MaxNode(Node, Array):
+    cdef cppclass MaxNode(ArrayNode):
         pass
 
-    cdef cppclass MinimumNode(Node, Array):
+    cdef cppclass MinimumNode(ArrayNode):
         pass
 
-    cdef cppclass MinNode(Node, Array):
+    cdef cppclass MinNode(ArrayNode):
         pass
 
-    cdef cppclass MultiplyNode(Node, Array):
+    cdef cppclass MultiplyNode(ArrayNode):
         pass
 
-    cdef cppclass NaryAddNode(Node, Array):
+    cdef cppclass NaryAddNode(ArrayNode):
         void add_node(Node*) except+
 
-    cdef cppclass NaryMaximumNode(Node, Array):
+    cdef cppclass NaryMaximumNode(ArrayNode):
         void add_node(Node*) except+
 
-    cdef cppclass NaryMinimumNode(Node, Array):
+    cdef cppclass NaryMinimumNode(ArrayNode):
         void add_node(Node*) except+
 
-    cdef cppclass NaryMultiplyNode(Node, Array):
+    cdef cppclass NaryMultiplyNode(ArrayNode):
         void add_node(Node*) except+
 
-    cdef cppclass NegativeNode(Node, Array):
+    cdef cppclass NegativeNode(ArrayNode):
         pass
 
-    cdef cppclass OrNode(Node, Array):
+    cdef cppclass OrNode(ArrayNode):
         pass
 
-    cdef cppclass ProdNode(Node, Array):
+    cdef cppclass ProdNode(ArrayNode):
         pass
 
-    cdef cppclass SquareNode(Node, Array):
+    cdef cppclass SquareNode(ArrayNode):
         pass
 
-    cdef cppclass SubtractNode(Node, Array):
+    cdef cppclass SubtractNode(ArrayNode):
         pass
 
-    cdef cppclass SumNode(Node, Array):
+    cdef cppclass SumNode(ArrayNode):
         pass
 
 
 cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass IntegerNode(Node, Array):
+    cdef cppclass IntegerNode(ArrayNode):
         void initialize_state(State&, vector[double]) except+
         double lower_bound()
         double upper_bound()
 
-    cdef cppclass BinaryNode(Node, Array):
+    cdef cppclass BinaryNode(ArrayNode):
         void initialize_state(State&, vector[double]) except+
 
 
@@ -163,7 +163,7 @@ cdef extern from "dwave-optimization/nodes/quadratic_model.hpp" namespace "dwave
         double get_quadratic(int u, int v) const
         void get_quadratic(int* row, int* col, double* quad) const
 
-    cdef cppclass QuadraticModelNode(Node, Array):
+    cdef cppclass QuadraticModelNode(ArrayNode):
         QuadraticModel* get_quadratic_model()
 
 
