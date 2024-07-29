@@ -26,7 +26,7 @@ namespace dwave::optimization {
 /// public constructors.
 /// Subclasses must implement an overload of Node::initialize_state() and
 /// Decision::default_move()
-class CollectionNode : public ArrayOutputMixin<ArrayNode>, public Decision {
+class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
     CollectionNode() = delete;
 
@@ -82,7 +82,6 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public Decision {
  protected:
     CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size)
             : ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),
-              Decision(),
               max_value_(max_value),
               min_size_(min_size),
               max_size_(max_size) {
@@ -111,7 +110,7 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public Decision {
 // After adding this node to the DAG, you must add `num_disjoint_sets` more
 // successor nodes of type `DisjointBitSetNode`, which is a special node meant to
 // output its respective disjoint set as an array.
-class DisjointBitSetsNode : public Node, public Decision {
+class DisjointBitSetsNode : public DecisionNode {
  public:
     // `primary_set_size` is the size of the primary set that the node will partition,
     // i.e. the set `range(primary_set_size)`.
@@ -193,7 +192,7 @@ class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
 // ordering. After adding this node to the DAG, you must add `num_disjoint_lists` more
 // successor nodes of type `DisjointListNode`, which is a special node meant to
 // output its respective disjoint list as an array.
-class DisjointListsNode : public Node, public Decision {
+class DisjointListsNode : public DecisionNode {
  public:
     // `primary_set_size` is the size of the primary set that the node will partition,
     // i.e. the set `range(primary_set_size)`.

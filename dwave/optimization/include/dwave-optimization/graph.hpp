@@ -308,5 +308,6 @@ NodeType* Graph::emplace_node(Args&&... args) {
 }
 
 class ArrayNode: public Array, public virtual Node {};
+class DecisionNode: public Decision, public virtual Node {};
 
 }  // namespace dwave::optimization

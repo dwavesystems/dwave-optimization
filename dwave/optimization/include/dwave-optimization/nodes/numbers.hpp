@@ -27,7 +27,7 @@
 namespace dwave::optimization {
 
 /// A contiguous block of numbers.
-class NumberNode : public ArrayOutputMixin<ArrayNode>, public Decision {
+class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
     NumberNode() = delete;
 
