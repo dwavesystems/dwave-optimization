@@ -117,14 +117,18 @@ class Graph {
     // the sources.
     static std::vector<const Node*> descendants(State& state, std::vector<const Node*> sources);
 
-    // Call the propagate method for each node that changes.
+    // Call the propagate method on each node in changed. Note this does not call propagate on
+    // the descendents of changed.
     void propagate(State& state, std::span<const Node*> changed) const;
+    void propagate(State& state, std::vector<const Node*>&& changed) const;
 
     // Commit the changes on each changed node.
     void commit(State& state, std::span<const Node*> changed) const;
+    void commit(State& state, std::vector<const Node*>&& changed) const;
 
     // Revert the changes on each changed node.
     void revert(State& state, std::span<const Node*> changed) const;
+    void revert(State& state, std::vector<const Node*>&& changed) const;
 
     // The number of decision nodes.
     ssize_t num_decisions() const noexcept { return decisions_.size(); }

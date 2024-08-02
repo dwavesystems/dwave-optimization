@@ -56,6 +56,11 @@ void ArrayValidationNode::initialize_state(State& state) const {
     assert(array_ptr->diff(state).size() == 0);
     assert(array_ptr->size_diff(state) == 0);
     assert(array_ptr->view(state).size() == static_cast<ssize_t>(array_ptr->size(state)));
+
+    // check that the size/shape are consistent
+    assert(array_ptr->size(state) == std::reduce(array_ptr->shape(state).begin(),
+                                                 array_ptr->shape(state).end(), 1,
+                                                 std::multiplies<ssize_t>()));
 }
 
 void ArrayValidationNode::propagate(State& state) const {

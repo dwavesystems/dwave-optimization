@@ -241,6 +241,10 @@ void Graph::propagate(State& state, std::span<const Node*> queue_to_update) cons
     }
 }
 
+void Graph::propagate(State& state, std::vector<const Node*>&& changed) const {
+    return propagate(state, std::span(changed));
+}
+
 void Graph::commit(State& state, std::span<const Node*> changed) const {
     std::for_each(
             // std::execution::par_unseq,  // todo: test performance. Might help!
@@ -255,6 +259,10 @@ void Graph::commit(State& state, std::span<const Node*> changed) const {
     })());
 }
 
+void Graph::commit(State& state, std::vector<const Node*>&& changed) const {
+    commit(state, std::span(changed));
+}
+
 void Graph::revert(State& state, std::span<const Node*> changed) const {
     std::for_each(
             // std::execution::par_unseq,  // todo: test performance. Might help!
@@ -267,6 +275,10 @@ void Graph::revert(State& state, std::span<const Node*> changed) const {
         }
         return true;
     })());
+}
+
+void Graph::revert(State& state, std::vector<const Node*>&& changed) const {
+    revert(state, std::span(changed));
 }
 
 // Note: we pass the vector of changed nodes by value as we expect it to be rather small. Revisit if
