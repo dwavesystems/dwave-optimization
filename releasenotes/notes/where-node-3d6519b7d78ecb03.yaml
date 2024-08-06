@@ -5,3 +5,4 @@ features:
   - Add C++ ``void Graph::revert(State& state, std::vector<const Node*>&& changed) const`` overload.
   - Add predecessor shape test when initializing the state of C++ ``ArrayValidationNode``.
   - Add C++ ``WhereNode``. See `#66 <https://github.com/dwavesystems/dwave-optimization/issues/66>`_.
+  - Add Python ``Where`` symbol and ``where`` function. See `#66 <https://github.com/dwavesystems/dwave-optimization/issues/66>`_.
