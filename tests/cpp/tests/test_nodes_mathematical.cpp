@@ -404,32 +404,7 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
     }
 
     GIVEN("A vector<Node*> of constants") {
-        auto nodes = std::vector<Node*>{
-                graph.emplace_node<ConstantNode>(5), graph.emplace_node<ConstantNode>(6),
-                graph.emplace_node<ConstantNode>(7), graph.emplace_node<ConstantNode>(8)};
-
-        WHEN("We construct a NaryOpNode from it") {
-            auto p_ptr = graph.emplace_node<NaryOpNode<TestType>>(nodes);
-
-            THEN("The shape is also a scalar") {
-                CHECK(p_ptr->ndim() == 0);
-                CHECK(p_ptr->size() == 1);
-            }
-
-            WHEN("We make a state") {
-                auto state = graph.initialize_state();
-
-                THEN("The product has the value and shape we expect") {
-                    CHECK(p_ptr->size(state) == 1);
-                    CHECK(p_ptr->shape(state).size() == 0);
-                    CHECK(p_ptr->view(state)[0] == func(5, func(6, func(7, 8))));
-                }
-            }
-        }
-    }
-
-    GIVEN("A vector<Array*> of constants") {
-        auto nodes = std::vector<Array*>{
+        auto nodes = std::vector<ArrayNode*>{
                 graph.emplace_node<ConstantNode>(5), graph.emplace_node<ConstantNode>(6),
                 graph.emplace_node<ConstantNode>(7), graph.emplace_node<ConstantNode>(8)};
 

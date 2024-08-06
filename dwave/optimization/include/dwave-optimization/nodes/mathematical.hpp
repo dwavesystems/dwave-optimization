@@ -51,7 +51,7 @@ template <class BinaryOp>
 class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // We need at least two nodes, and they must be the same shape
-    BinaryOpNode(Node* a_ptr, Node* b_ptr);
+    BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr);
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
@@ -91,12 +91,10 @@ template <class BinaryOp>
 class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // Need at least one node to start with to determine the shape
-    explicit NaryOpNode(Node* node_ptr);
+    explicit NaryOpNode(ArrayNode* node_ptr);
+    explicit NaryOpNode(std::span<ArrayNode*> node_ptrs);
 
-    explicit NaryOpNode(std::span<Node*> node_ptrs);
-    explicit NaryOpNode(std::span<Array*> array_ptrs);
-
-    void add_node(Node* node_ptr);
+    void add_node(ArrayNode* node_ptr);
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
@@ -121,22 +119,12 @@ using NaryMultiplyNode = NaryOpNode<std::multiplies<double>>;
 template <class BinaryOp>
 class ReduceNode : public ScalarOutputMixin<ArrayNode> {
  public:
-    ReduceNode(ArrayNode* node_ptr, double init)
-            : init(init), array_ptr_(node_ptr) {
-        if (!array_ptr_) {
-            throw std::invalid_argument("node_ptr must be an Array");
-        }
-        add_predecessor(node_ptr);
-    }
-    ReduceNode(Node* node_ptr, double init)
-            : ReduceNode(dynamic_cast<ArrayNode*>(node_ptr), init) {}
+    ReduceNode(ArrayNode* node_ptr, double init);
 
     // Some operations have known default values so we can create them regardless of
     // whether or not the array is dynamic.
     // Others will raise an error for non-dynamic arrays.
-    explicit ReduceNode(ArrayNode* array_ptr);
-
-    explicit ReduceNode(Node* node_ptr) : ReduceNode(dynamic_cast<ArrayNode*>(node_ptr)) {}
+    explicit ReduceNode(ArrayNode* node_ptr);
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
@@ -175,14 +163,7 @@ using SumNode = ReduceNode<std::plus<double>>;
 template <class UnaryOp>
 class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    explicit UnaryOpNode(ArrayNode* node_ptr)
-            : ArrayOutputMixin(node_ptr->shape()), array_ptr_(node_ptr) {
-        if (!array_ptr_) {
-            throw std::invalid_argument("node_ptr must be an Array");
-        }
-        add_predecessor(node_ptr);
-    }
-    explicit UnaryOpNode(Node* node_ptr) : UnaryOpNode(dynamic_cast<ArrayNode*>(node_ptr)) {}
+    explicit UnaryOpNode(ArrayNode* node_ptr);
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;

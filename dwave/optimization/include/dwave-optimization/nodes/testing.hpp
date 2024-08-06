@@ -23,16 +23,7 @@ namespace dwave::optimization {
 
 class ArrayValidationNode : public Node {
  public:
-    explicit ArrayValidationNode(Node* node_ptr)
-            : node_ptr(node_ptr), array_ptr(dynamic_cast<Array*>(node_ptr)) {
-        if (array_ptr == nullptr) {
-            throw std::invalid_argument("ArrayValidationNode requires an array input");
-        }
-
-        assert(array_ptr->ndim() == static_cast<ssize_t>(array_ptr->shape().size()));
-
-        add_predecessor(node_ptr);
-    }
+    explicit ArrayValidationNode(ArrayNode* node_ptr);
 
     // Node overloads
     void commit(State& state) const override;
@@ -41,8 +32,8 @@ class ArrayValidationNode : public Node {
     void revert(State& state) const override;
 
  private:
-    const Node* node_ptr;
-    const Array* array_ptr;
+    const ArrayNode* array_ptr;
+
 #ifdef NDEBUG
     static constexpr bool do_logging = false;
 #else

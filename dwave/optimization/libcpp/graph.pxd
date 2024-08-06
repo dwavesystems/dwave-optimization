@@ -27,7 +27,7 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         T* emplace_node[T](...) except +ValueError
         void initialize_state(State&) except+
         span[const unique_ptr[Node]] nodes() const
-        span[Array*] constraints() const
+        span[ArrayNode*] constraints() const
         Py_ssize_t num_nodes()
         Py_ssize_t num_decisions()
         Py_ssize_t num_constraints()
@@ -36,8 +36,8 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         @staticmethod
         void recursive_reset(State&, Node*) except+
         void reset_topological_sort()
-        void set_objective(Array*) except+
-        void add_constraint(Array*) except+
+        void set_objective(ArrayNode*) except+
+        void add_constraint(ArrayNode*) except+
         void topological_sort()
         bool topologically_sorted() const
 

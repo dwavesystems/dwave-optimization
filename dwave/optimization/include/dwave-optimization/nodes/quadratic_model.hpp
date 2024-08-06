@@ -76,7 +76,7 @@ class QuadraticModel {
 
 class QuadraticModelNode : public ScalarOutputMixin<ArrayNode> {
  public:
-    QuadraticModelNode(Node* state_node_ptr, QuadraticModel&& quadratic_model);
+    QuadraticModelNode(ArrayNode* state_node_ptr, QuadraticModel&& quadratic_model);
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;

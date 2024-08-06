@@ -18,9 +18,12 @@
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp cimport span, variant
-from dwave.optimization.libcpp.array cimport Array, ArrayPtr, Slice
+from dwave.optimization.libcpp.array cimport Array, Slice
 from dwave.optimization.libcpp.graph cimport ArrayNode, Node
 from dwave.optimization.libcpp.state cimport State
+
+
+ctypedef ArrayNode* ArrayNodePtr  # Cython gets confused when templating pointers
 
 
 cdef extern from "dwave-optimization/nodes/collections.hpp" namespace "dwave::optimization" nogil:
@@ -50,22 +53,18 @@ cdef extern from "dwave-optimization/nodes/collections.hpp" namespace "dwave::op
 
 
 cdef extern from "dwave-optimization/nodes/constants.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass ConstantNode(Array, Node):
+    cdef cppclass ConstantNode(ArrayNode):
         const double* buff() const
 
 
 cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass AdvancedIndexingNode(ArrayNode):
-        ctypedef variant[ArrayPtr, Slice] array_or_slice
-
-        AdvancedIndexingNode(Node*, vector[array_or_slice]) except +
+        ctypedef variant[ArrayNodePtr, Slice] array_or_slice
 
         span[const array_or_slice] indices()
 
     cdef cppclass BasicIndexingNode(ArrayNode):
         ctypedef variant[Slice, Py_ssize_t] slice_or_int
-
-        BasicIndexingNode(Node*, vector[slice_or_int]) except +
 
         vector[slice_or_int] infer_indices() except +
 
@@ -111,16 +110,16 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
         pass
 
     cdef cppclass NaryAddNode(ArrayNode):
-        void add_node(Node*) except+
+        void add_node(ArrayNode*) except+
 
     cdef cppclass NaryMaximumNode(ArrayNode):
-        void add_node(Node*) except+
+        void add_node(ArrayNode*) except+
 
     cdef cppclass NaryMinimumNode(ArrayNode):
-        void add_node(Node*) except+
+        void add_node(ArrayNode*) except+
 
     cdef cppclass NaryMultiplyNode(ArrayNode):
-        void add_node(Node*) except+
+        void add_node(ArrayNode*) except+
 
     cdef cppclass NegativeNode(ArrayNode):
         pass

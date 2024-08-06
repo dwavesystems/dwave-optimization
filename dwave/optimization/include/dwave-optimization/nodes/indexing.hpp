@@ -43,10 +43,10 @@ namespace dwave::optimization {
 class AdvancedIndexingNode : public ArrayNode {
  public:
     // Indices are some combination of arrays and slices
-    using array_or_slice = std::variant<Array*, Slice>;
+    using array_or_slice = std::variant<ArrayNode*, Slice>;
 
     // Runtime constructor that can be used from Cython/Python
-    AdvancedIndexingNode(Node* node_ptr, std::vector<array_or_slice> indices);
+    AdvancedIndexingNode(ArrayNode* node_ptr, std::vector<array_or_slice> indices);
 
     // Templated constructor to be used from C++
     // Just calls the runtime constructor for simplicity, but we could implement
@@ -79,7 +79,7 @@ class AdvancedIndexingNode : public ArrayNode {
 
  private:
     struct IndexParser_;
-    AdvancedIndexingNode(Array* array_ptr, IndexParser_&& parser);
+    AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser);
 
     // Convert the indices from a parameter pack to a vector of arrays.
     // This allows us to use the runtime constructor from the templated constructor.
@@ -147,14 +147,14 @@ class BasicIndexingNode : public ArrayNode {
     using slice_or_int = std::variant<Slice, ssize_t>;
 
     // Runtime constructor that can be used from Cython/Python
-    BasicIndexingNode(Node* array_ptr, std::vector<slice_or_int> indices);
+    BasicIndexingNode(ArrayNode* array_ptr, std::vector<slice_or_int> indices);
 
     // Templated constructor to be used from C++
     // Just calls the runtime constructor for simplicity, but we could implement
     // a faster version by using more compile-time information
     template <std::convertible_to<slice_or_int>... Indices>
     explicit BasicIndexingNode(ArrayNode* array_ptr, Indices... indices)
-            : BasicIndexingNode(static_cast<Node*>(array_ptr), make_indices(indices...)) {}
+            : BasicIndexingNode(array_ptr, make_indices(indices...)) {}
 
     // Overloads needed by the Array ABC **************************************
 
@@ -203,7 +203,7 @@ class BasicIndexingNode : public ArrayNode {
  private:
     // Private constructor using an intermediate object
     struct IndexParser_;
-    BasicIndexingNode(Array* array_ptr, IndexParser_&& parser);
+    BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser);
 
     // Convert the indices from a parameter pack to a vector of variants.
     // This allows us to use the runtime constructor from the templated constructor.
@@ -251,7 +251,7 @@ class BasicIndexingNode : public ArrayNode {
 class PermutationNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // We use this style rather than a template to support Cython later
-    PermutationNode(Node* array_ptr, Node* order_ptr);
+    PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr);
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
@@ -269,10 +269,10 @@ class PermutationNode : public ArrayOutputMixin<ArrayNode> {
     const Array* order_ptr_;
 };
 
-class ReshapeNode : public Node, public ArrayOutputMixin<Array> {
+class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    ReshapeNode(Node* node_ptr, std::initializer_list<ssize_t> shape);
-    ReshapeNode(Node* node_ptr, std::span<const ssize_t> shape);
+    ReshapeNode(ArrayNode* node_ptr, std::span<const ssize_t> shape);
+    ReshapeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape);
 
     double const* buff(const State& state) const override;
     void commit(State& state) const override;

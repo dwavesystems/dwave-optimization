@@ -59,5 +59,3 @@ cdef extern from "dwave-optimization/array.hpp" namespace "dwave::optimization" 
         Py_ssize_t start
         Py_ssize_t stop
         Py_ssize_t step
-
-ctypedef Array* ArrayPtr  # Cython gets confused when templating pointers

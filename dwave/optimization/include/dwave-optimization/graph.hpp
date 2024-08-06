@@ -32,7 +32,9 @@
 
 namespace dwave::optimization {
 
+class ArrayNode;
 class Node;
+class DecisionNode;
 
 // We don't want this interface to be opinionated about what type of rng we're using.
 // So we create this class to do type erasure on RNGs.
@@ -125,7 +127,7 @@ class Graph {
     void revert(State& state, std::span<const Node*> changed) const;
 
     // The number of decision nodes.
-    ssize_t num_decisions() const noexcept { return num_decisions_; }
+    ssize_t num_decisions() const noexcept { return decisions_.size(); }
 
     // The number of nodes in the model.
     ssize_t num_nodes() const noexcept { return nodes_.size(); }
@@ -133,31 +135,31 @@ class Graph {
     // The number of constraints in the model.
     ssize_t num_constraints() const noexcept { return constraints_.size(); }
 
-    // Specifying the objective node. Must be an array output
-    void set_objective(Array* objective_ptr);
-    // void reset_objective();
+    // Specify the objective node. Must be an array with a single element.
+    // To unset the objective provide nullptr.
+    void set_objective(ArrayNode* objective_ptr);
 
-    void add_constraint(Array* constraint_ptr);
-    std::span<Array*> constraints() { return constraints_; }
-    std::span<Array const * const> constraints() const { return constraints_; }
+    // Add a constraint node.
+    void add_constraint(ArrayNode* constraint_ptr);
+    std::span<ArrayNode* const> constraints() noexcept { return constraints_; }
+    std::span<const ArrayNode* const> constraints() const noexcept { return constraints_; }
 
     double energy(const State& state) const;
     bool feasible(const State& state) const;
 
-    // Return a vector to the decisions. Note this is a copy, not a view!
-    // The graph must be topologically sorted
-    std::vector<const Decision*> decisions() const;
+    // Retrieve all of the decisions in the model
+    std::span<DecisionNode* const> decisions() noexcept { return decisions_; }
+    std::span<const DecisionNode* const> decisions() const noexcept { return decisions_; }
 
  private:
     static void visit_(Node* n_ptr, int* count_ptr);
 
     std::vector<std::unique_ptr<Node>> nodes_;
 
-    // The number of decision variables in the model
-    ssize_t num_decisions_ = 0;
-
-    Array* objective_ptr_ = nullptr;
-    std::vector<Array*> constraints_;
+    // The nodes with important semantic meanings to the model
+    ArrayNode* objective_ptr_ = nullptr;
+    std::vector<ArrayNode*> constraints_;
+    std::vector<DecisionNode*> decisions_;
 
     // Track whether the model is currently topologically sorted
     bool topologically_sorted_ = false;
@@ -301,7 +303,9 @@ NodeType* Graph::emplace_node(Args&&... args) {
 
     // Decisions get their topological index assigned immediately, in the order of insertion
     if constexpr (std::is_base_of_v<Decision, NodeType>) {
-        ptr->topological_index_ = num_decisions_++;
+        static_assert(std::is_base_of_v<DecisionNode, NodeType>);
+        ptr->topological_index_ = decisions_.size();
+        decisions_.emplace_back(ptr);
     }
 
     return ptr;  // return the observing pointer
