@@ -45,6 +45,7 @@ from libcpp cimport bool
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
+from dwave.optimization.libcpp.array cimport Array as cppArray
 from dwave.optimization.symbols cimport symbol_from_ptr
 
 
@@ -1611,8 +1612,9 @@ cdef class ArraySymbol(Symbol):
         # via their subclasses.
         raise ValueError("ArraySymbols cannot be constructed directly")
 
-    cdef void initialize_array(self, cppArray* array_ptr) noexcept:
+    cdef void initialize_arraynode(self, Model model, cppArrayNode* array_ptr) noexcept:
         self.array_ptr = array_ptr
+        self.initialize_node(model, array_ptr)
 
     def __abs__(self):
         from dwave.optimization.symbols import Absolute  # avoid circular import

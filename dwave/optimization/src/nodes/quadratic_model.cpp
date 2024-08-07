@@ -262,9 +262,9 @@ void QuadraticModel::shrink_to_fit() {
     square_biases_.shrink_to_fit();
 }
 
-QuadraticModelNode::QuadraticModelNode(Node* state_node_ptr, QuadraticModel&& quadratic_model)
+QuadraticModelNode::QuadraticModelNode(ArrayNode* state_node_ptr, QuadraticModel&& quadratic_model)
         : quadratic_model_(quadratic_model) {
-    if (!std::ranges::equal(dynamic_cast<const Array*>(state_node_ptr)->shape(),
+    if (!std::ranges::equal(state_node_ptr->shape(),
                             std::vector<ssize_t>{quadratic_model_.num_variables()})) {
         throw std::invalid_argument(
                 "node array must be one dimensional of length same as QuadraticModelNode.shape[0]");

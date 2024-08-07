@@ -204,9 +204,9 @@ TEST_CASE("Capacitated Multi-Vehicle Routing Problem", "[CVRP]") {
 
         auto capacity = model.emplace_node<dwave::optimization::ConstantNode>(capacity_val);
 
-        std::vector<dwave::optimization::Node*> sum_d_partition;
-        std::vector<dwave::optimization::Node*> depot_sums_a;
-        std::vector<dwave::optimization::Node*> depot_sums_b;
+        std::vector<dwave::optimization::ArrayNode*> sum_d_partition;
+        std::vector<dwave::optimization::ArrayNode*> depot_sums_a;
+        std::vector<dwave::optimization::ArrayNode*> depot_sums_b;
 
         for (size_t i = 0; i < num_vehicles; i++) {
             auto first_cust = model.emplace_node<dwave::optimization::BasicIndexingNode>(

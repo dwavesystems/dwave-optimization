@@ -30,22 +30,6 @@ namespace dwave::optimization {
 Graph::Graph() = default;
 Graph::~Graph() = default;
 
-// This returns a copy rather than a view. We could make a custom range view
-// object if we're worried about that cost, but I think it's only called once
-// per solve?
-std::vector<const Decision*> Graph::decisions() const {
-    assert(topologically_sorted() && "graph must be topologically sorted");
-
-    std::vector<const Decision*> decisions;
-    decisions.reserve(num_decisions_);
-
-    for (ssize_t i = 0; i < num_decisions_; ++i) {
-        decisions.emplace_back(dynamic_cast<Decision*>(nodes_[i].get()));
-    }
-
-    return decisions;
-}
-
 void Graph::topological_sort() {
     if (topologically_sorted_) return;
 
@@ -99,7 +83,7 @@ void Graph::reset_topological_sort() {
     // The decisions must have a consistent topological index, so we don't reset them
     std::for_each(
             // std::execution::par_unseq,  // todo: performance testing. Probably won't help
-            nodes_.begin() + num_decisions_, nodes_.end(), [](const std::unique_ptr<Node>& n_ptr) {
+            nodes_.begin() + num_decisions(), nodes_.end(), [](const std::unique_ptr<Node>& n_ptr) {
                 assert(dynamic_cast<Decision*>(n_ptr.get()) == nullptr);  // not a decision
                 n_ptr->topological_index_ = -1;
             });
@@ -183,14 +167,15 @@ State Graph::empty_state() {
     return static_cast<const Graph*>(this)->empty_state();
 }
 
-void Graph::set_objective(Array* node_ptr) {
-    if (node_ptr->size() != 1) {
+void Graph::set_objective(ArrayNode* objective_ptr) {
+    // nullptr is an unset objective, so we allow it.
+    if (objective_ptr != nullptr && objective_ptr->size() != 1) {
         throw std::invalid_argument("objective must have a single output");
     }
-    this->objective_ptr_ = node_ptr;
+    this->objective_ptr_ = objective_ptr;
 }
 
-void Graph::add_constraint(Array* constraint_ptr) {
+void Graph::add_constraint(ArrayNode* constraint_ptr) {
     if (!constraint_ptr->logical()) {
         throw std::invalid_argument("constraint must have a logical output");
     }

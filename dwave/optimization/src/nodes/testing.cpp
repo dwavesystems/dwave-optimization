@@ -18,8 +18,8 @@ namespace dwave::optimization {
 
 class ArrayValidationNodeData : public dwave::optimization::NodeStateData {
  public:
-    ArrayValidationNodeData(Array::View data)
-            : old_data(data.begin(), data.end()), current_data(data.begin(), data.end()){};
+    explicit ArrayValidationNodeData(Array::View data)
+            : old_data(data.begin(), data.end()), current_data(data.begin(), data.end()) {}
 
     std::vector<double> old_data;
     std::vector<double> current_data;
@@ -34,6 +34,11 @@ void check_shape(const std::span<const ssize_t>& dynamic_shape,
         size *= dynamic_shape[axis];
     }
     assert(size == expected_size);
+}
+
+ArrayValidationNode::ArrayValidationNode(ArrayNode* node_ptr) : array_ptr(node_ptr) {
+    assert(array_ptr->ndim() == static_cast<ssize_t>(array_ptr->shape().size()));
+    add_predecessor(node_ptr);
 }
 
 void ArrayValidationNode::commit(State& state) const {
@@ -55,8 +60,8 @@ void ArrayValidationNode::initialize_state(State& state) const {
 
 void ArrayValidationNode::propagate(State& state) const {
     auto node_data = data_ptr<ArrayValidationNodeData>(state);
-    std::string node_id = typeid(*node_ptr).name() + std::string{"["} +
-                          std::to_string(node_ptr->topological_index()) + std::string{"]"};
+    std::string node_id = typeid(*array_ptr).name() + std::string{"["} +
+                          std::to_string(array_ptr->topological_index()) + std::string{"]"};
 
     auto& current_data = node_data->current_data;
     bool incorrect = false;
@@ -227,7 +232,7 @@ class DynamicArrayTestingNodeData : public dwave::optimization::NodeStateData {
 };
 
 DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape)
-        : Node(), ArrayOutputMixin(shape), shape_(shape) {
+        : ArrayOutputMixin(shape), shape_(shape) {
     if (shape.size() == 0 || *shape.begin() != -1) {
         throw std::invalid_argument(
                 "DynamicArrayTestingNode is meant to be used as a dynamic array");

@@ -40,12 +40,10 @@ struct BinaryOpNodeData : public NodeStateData {
 };
 
 template <class BinaryOp>
-BinaryOpNode<BinaryOp>::BinaryOpNode(Node* a_ptr, Node* b_ptr)
-        : Node(),
-          ArrayOutputMixin(broadcast_shape(dynamic_cast<const Array*>(a_ptr)->shape(),
-                                           dynamic_cast<const Array*>(b_ptr)->shape())),
-          lhs_ptr_(dynamic_cast<const Array*>(a_ptr)),
-          rhs_ptr_(dynamic_cast<const Array*>(b_ptr)) {
+BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
+        : ArrayOutputMixin(broadcast_shape(a_ptr->shape(), b_ptr->shape())),
+          lhs_ptr_(a_ptr),
+          rhs_ptr_(b_ptr) {
     // todo: add dynamic support
     if (lhs_ptr_->dynamic() || rhs_ptr_->dynamic()) {
         throw std::invalid_argument("arrays must not be dynamic");
@@ -264,58 +262,38 @@ struct NaryOpNodeData : public NodeStateData {
 };
 
 template <class BinaryOp>
-NaryOpNode<BinaryOp>::NaryOpNode(Node* node_ptr)
-        : Node(), ArrayOutputMixin(dynamic_cast<const Array*>(node_ptr)->shape()) {
+NaryOpNode<BinaryOp>::NaryOpNode(ArrayNode* node_ptr) : ArrayOutputMixin(node_ptr->shape()) {
     add_node(node_ptr);
 }
 
 // Enforce that the given span is nonempty and return the first element
-template <class T>
-Array* nonempty(std::span<T> node_ptrs) {
+ArrayNode* nonempty(std::span<ArrayNode*> node_ptrs) {
     if (node_ptrs.empty()) {
         throw std::invalid_argument("Must supply at least one predecessor");
     }
-    Array* array_ptr = dynamic_cast<Array*>(node_ptrs[0]);
-    if (!array_ptr) {
-        throw std::invalid_argument("node must be an Array");
-    }
-    return array_ptr;
+    return node_ptrs[0];
 }
 
 template <class BinaryOp>
-NaryOpNode<BinaryOp>::NaryOpNode(std::span<Node*> node_ptrs)
-        : Node(), ArrayOutputMixin(nonempty(node_ptrs)->shape()) {
-    for (Node* ptr : node_ptrs) {
+NaryOpNode<BinaryOp>::NaryOpNode(std::span<ArrayNode*> node_ptrs)
+        : ArrayOutputMixin(nonempty(node_ptrs)->shape()) {
+    for (ArrayNode* ptr : node_ptrs) {
         add_node(ptr);
     }
 }
 
 template <class BinaryOp>
-NaryOpNode<BinaryOp>::NaryOpNode(std::span<Array*> array_ptrs)
-        : Node(), ArrayOutputMixin(nonempty(array_ptrs)->shape()) {
-    for (Array* ptr : array_ptrs) {
-        add_node(dynamic_cast<Node*>(ptr));
-    }
-}
-
-template <class BinaryOp>
-void NaryOpNode<BinaryOp>::add_node(Node* node_ptr) {
-    Array* array_ptr = dynamic_cast<Array*>(node_ptr);
-
+void NaryOpNode<BinaryOp>::add_node(ArrayNode* node_ptr) {
     if (this->topological_index() >= 0 && node_ptr->topological_index() >= 0 &&
         this->topological_index() < node_ptr->topological_index()) {
         throw std::logic_error("this operation would invalidate the topological ordering");
     }
 
-    if (!array_ptr) {
-        throw std::invalid_argument("node must also be an Array");
-    }
-
-    if (array_ptr->dynamic()) {
+    if (node_ptr->dynamic()) {
         throw std::invalid_argument("arrays must not be dynamic");
     }
 
-    if (!std::ranges::equal(this->shape(), array_ptr->shape())) {
+    if (!std::ranges::equal(this->shape(), node_ptr->shape())) {
         throw std::invalid_argument("arrays must all be the same shape");
     }
 
@@ -554,6 +532,37 @@ struct ReduceNodeData : NodeStateData {
     // op-specific storage.
     ExtraData<BinaryOp> extra;
 };
+
+template <class BinaryOp>
+ReduceNode<BinaryOp>::ReduceNode(ArrayNode* node_ptr, double init)
+        : init(init), array_ptr_(node_ptr) {
+    add_predecessor(node_ptr);
+}
+
+template <>
+ReduceNode<std::logical_and<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 1) {}
+
+template <>
+ReduceNode<std::multiplies<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 1) {}
+
+template <>
+ReduceNode<std::plus<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 0) {}
+
+template <class BinaryOp>
+ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr)
+        : init(), array_ptr_(array_ptr) {
+    if (array_ptr_->dynamic()) {
+        throw std::invalid_argument(
+                "cannot do a reduction on a dynamic array with an operation that has no identity "
+                "without supplying an initial value");
+    } else if (array_ptr_->size() < 1) {
+        throw std::invalid_argument(
+                "cannot do a reduction on an empty array with an operation that has no identity "
+                "without supplying an initial value");
+    }
+
+    add_predecessor(array_ptr);
+}
 
 template <class BinaryOp>
 void ReduceNode<BinaryOp>::commit(State& state) const {
@@ -869,6 +878,12 @@ struct UnaryOpNodeStateData : public NodeStateData {
     std::vector<double> data;
     std::vector<Update> diff;
 };
+
+template <class UnaryOp>
+UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
+        : ArrayOutputMixin(node_ptr->shape()), array_ptr_(node_ptr) {
+    add_predecessor(node_ptr);
+}
 
 template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::commit(State& state) const {

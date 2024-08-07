@@ -1,0 +1,43 @@
+---
+features:
+  - |
+    Implement ``ArrayNode`` and ``DecisionNode`` C++ classes.
+    These classes are useful when creating nodes that require their predecessor(s)
+    to be both arrays and node.
+    See `#75 <https://github.com/dwavesystems/dwave-optimization/issues/75>`_.
+  - |
+    Update C++ nodes that previously inherited from both ``Array`` and ``Node`` to inherit
+    from ``ArrayNode``.
+  - |
+    Update C++ nodes that previously inherited from both ``Decision`` and ``Node`` to inherit
+    from ``DecisionNode``.
+  - |
+    Add ``ArraySymbol.initialize_arraynode()`` Cython method.
+  - |
+    Update C++ ``Graph`` to hold a vector of ``DecisionNode*`` for easy access. This will
+    increase the memory usage for graphs with many decisions, but provide faster access.
+upgrade:
+  - |
+    Require and/or return ``ArrayNode*`` in many places that previously
+    required and/or returned an ``Array*``.
+
+    The following ``Graph`` methods now require an ``ArrayNode*`` argument:
+    ``Graph.set_objective()``, ``Graph.add_constraint()``, ``Graph.constraints()``,
+    ``Graph.decisions()``.
+
+    The following nodes now require a ``ArrayNode*`` as argument(s) to their
+    constructor:
+    ``AdvancedIndexingNode``,
+    ``ArrayValidationNode``,
+    ``BasicIndexingNode``,
+    ``BinaryOpNode``,
+    ``NaryOpNode``,
+    ``PermutationNode``,
+    ``QuadraticModelNode``.
+    ``ReduceNode``,
+    ``ReshapeNode``,
+    and ``UnaryOpNode``.
+
+    Python code is not affected.
+  - Remove ``ArraySymbol.initialize_array()`` Cython method. Python code is not affected.
+  - Require ``ArrayNode*`` as an argument to the ``symbol_from_ptr()`` Cython function.

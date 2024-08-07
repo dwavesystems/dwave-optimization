@@ -245,13 +245,13 @@ struct AdvancedIndexingNode::IndexParser_ {
             const array_or_slice& index = indices_[idx];
             this->ndim += std::holds_alternative<Slice>(index);
 
-            if (std::holds_alternative<Array*>(index)) {
-                auto a_ndim = std::get<Array*>(index)->ndim();
+            if (std::holds_alternative<ArrayNode*>(index)) {
+                ssize_t a_ndim = std::get<ArrayNode*>(index)->ndim();
                 if (!encountered_array) {
                     indexing_arrays_ndim = a_ndim;
-                    first_array = std::get<Array*>(index);
+                    first_array = std::get<ArrayNode*>(index);
                     first_array_index = idx;
-                } else if (!array_shape_equal(first_array, std::get<Array*>(index))) {
+                } else if (!array_shape_equal(first_array, std::get<ArrayNode*>(index))) {
                     throw std::invalid_argument(
                             "shape mismatch: indexing arrays could not be broadcast together");
                 } else if (a_ndim != indexing_arrays_ndim) {
@@ -286,7 +286,7 @@ struct AdvancedIndexingNode::IndexParser_ {
 
         assert(first_array != nullptr);
 
-        if (!bullet1mode && std::holds_alternative<Array*>(indices_[0])) {
+        if (!bullet1mode && std::holds_alternative<ArrayNode*>(indices_[0])) {
             // Technically either mode can handle this case (all array indices grouped at
             // the start) but we will use bullet1mode to allow these arrays to be dynamic
             bullet1mode = true;
@@ -335,7 +335,7 @@ struct AdvancedIndexingNode::IndexParser_ {
 
                         this->shape[slice_idx++] = array_ptr->shape()[idx];
                     } else if (!hit_first_array) {
-                        assert(std::holds_alternative<Array*>(indices_[idx]));
+                        assert(std::holds_alternative<ArrayNode*>(indices_[idx]));
                         hit_first_array = true;
 
                         // Fill in the intermediate shape which is the same as the shape of the
@@ -346,8 +346,8 @@ struct AdvancedIndexingNode::IndexParser_ {
                         }
                     }
 
-                    if (std::holds_alternative<Array*>(indices_[idx]) &&
-                        std::get<Array*>(indices_[idx])->dynamic()) {
+                    if (std::holds_alternative<ArrayNode*>(indices_[idx]) &&
+                        std::get<ArrayNode*>(indices_[idx])->dynamic()) {
                         throw std::invalid_argument(
                                 "Indexing arrays cannot be dynamic when using in-place combined "
                                 "indexing");
@@ -377,11 +377,11 @@ struct AdvancedIndexingNode::IndexParser_ {
     std::unique_ptr<ssize_t[]> simple_array_strides = nullptr;
 };
 
-AdvancedIndexingNode::AdvancedIndexingNode(Node* array_ptr, std::vector<array_or_slice> indices)
-        : AdvancedIndexingNode(dynamic_cast<Array*>(array_ptr),
-                               IndexParser_(dynamic_cast<Array*>(array_ptr), std::move(indices))) {}
+AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr,
+                                           std::vector<array_or_slice> indices)
+        : AdvancedIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
 
-AdvancedIndexingNode::AdvancedIndexingNode(Array* array_ptr, IndexParser_&& parser)
+AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser)
         : array_ptr_(array_ptr),
           ndim_(parser.ndim),
           strides_(std::move(parser.strides)),
@@ -394,23 +394,14 @@ AdvancedIndexingNode::AdvancedIndexingNode(Array* array_ptr, IndexParser_&& pars
           first_array_index_(parser.first_array_index),
           subspace_stride_(indexing_arrays_ndim_ > 0 ? parser.subspace_stride : itemsize()) {
     assert(!array_ptr->ndim() || array_item_strides_);
-    // First confirm that we can add everything as a predecessor. array_ptr should have
-    // been checked by IndexParser_.
-    for (const array_or_slice& index : indices_) {
-        if (std::holds_alternative<Array*>(index)) {
-            if (dynamic_cast<Node*>(std::get<Array*>(index)) == nullptr) {
-                throw std::invalid_argument("indexing Arrays must also be Nodes");
-            }
-        }
-    }
 
     // Now actually add them. This way if there is an error thrown we're not
     // causing segfaults
-    add_predecessor(dynamic_cast<Node*>(array_ptr));
+    add_predecessor(array_ptr);
 
     for (const array_or_slice& index : indices_) {
-        if (std::holds_alternative<Array*>(index)) {
-            add_predecessor(dynamic_cast<Node*>(std::get<Array*>(index)));
+        if (std::holds_alternative<ArrayNode*>(index)) {
+            add_predecessor(std::get<ArrayNode*>(index));
         }
     }
 
@@ -532,16 +523,16 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
 
     auto array_strides = array_ptr_->strides();
 
-    const ssize_t size = std::get<Array*>(indices_[first_array_index_])->size(state);
+    const ssize_t size = std::get<ArrayNode*>(indices_[first_array_index_])->size(state);
 
     std::vector<ssize_t> offsets(size);
     for (ssize_t index = 0; index < static_cast<ssize_t>(indices_.size()); ++index) {
-        if (std::holds_alternative<Array*>(indices_[index])) {
+        if (std::holds_alternative<ArrayNode*>(indices_[index])) {
             assert(array_strides[index] % static_cast<ssize_t>(itemsize()) == 0);
             ssize_t stride = array_strides[index] / static_cast<ssize_t>(itemsize());
 
             auto it = offsets.begin();
-            for (auto& index : std::get<Array*>(indices_[index])->view(state)) {
+            for (auto& index : std::get<ArrayNode*>(indices_[index])->view(state)) {
                 *it += index * stride;
                 ++it;
             }
@@ -581,9 +572,9 @@ SizeInfo AdvancedIndexingNode::sizeinfo() const {
     if (!dynamic()) return SizeInfo(size());
     // when we get around to supporting broadcasting this will need to change
     assert(predecessors().size() >= 2);
-    assert(!dynamic_cast<Array*>(predecessors()[0])->dynamic() &&
+    assert(!dynamic_cast<ArrayNode*>(predecessors()[0])->dynamic() &&
            "sizeinfo for dynamic base arrays not supported");
-    return SizeInfo(dynamic_cast<Array*>(predecessors()[1]));
+    return SizeInfo(dynamic_cast<ArrayNode*>(predecessors()[1]));
 }
 
 std::span<const ssize_t> AdvancedIndexingNode::shape(const State& state) const {
@@ -609,7 +600,7 @@ std::pair<ssize_t, ssize_t> get_mapped_index(
     for (ssize_t i = 0; i < static_cast<ssize_t>(indices.size()); ++i) {
         ssize_t item_stride = item_strides[i];
         ssize_t axis_index = (index / item_stride) % shape[i];
-        if (std::holds_alternative<Array*>(indices[i])) {
+        if (std::holds_alternative<ArrayNode*>(indices[i])) {
             offset += axis_index * strides[i] / itemsize;
             // Only increment the mapped axis on the first array indexer
             // NOTE: again this should probably increase by the array indexers ndim
@@ -657,8 +648,8 @@ void AdvancedIndexingNode::propagate(State& state) const {
 
     // Handle all the updates to the indexing arrays, modifying the `offsets`
     for (ssize_t dim = 0; dim < array_ptr_->ndim(); ++dim) {
-        if (!std::holds_alternative<Array*>(indices_[dim])) continue;
-        Array* indexer = std::get<Array*>(indices_[dim]);
+        if (!std::holds_alternative<ArrayNode*>(indices_[dim])) continue;
+        Array* indexer = std::get<ArrayNode*>(indices_[dim]);
 
         ssize_t stride = array_strides[dim] / itemsize();
 
@@ -964,11 +955,10 @@ struct BasicIndexingNode::IndexParser_ {
     std::optional<Slice> axis0_slice;
 };
 
-BasicIndexingNode::BasicIndexingNode(Node* array_ptr, std::vector<slice_or_int> indices)
-        : BasicIndexingNode(dynamic_cast<Array*>(array_ptr),
-                            IndexParser_(dynamic_cast<Array*>(array_ptr), std::move(indices))) {}
+BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, std::vector<slice_or_int> indices)
+        : BasicIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
 
-BasicIndexingNode::BasicIndexingNode(Array* array_ptr, IndexParser_&& parser)
+BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser)
         : array_ptr_(array_ptr),
           ndim_(parser.ndim),
           strides_(std::move(parser.strides)),
@@ -977,7 +967,7 @@ BasicIndexingNode::BasicIndexingNode(Array* array_ptr, IndexParser_&& parser)
           size_(Array::shape_to_size(ndim_, shape_.get())),
           axis0_slice_(parser.axis0_slice),
           contiguous_(Array::is_contiguous(ndim_, shape_.get(), strides_.get())) {
-    add_predecessor(dynamic_cast<Node*>(array_ptr));
+    add_predecessor(array_ptr);
 }
 
 struct BasicIndexingNodeData : NodeStateData {
@@ -1536,11 +1526,10 @@ std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
 
 // PermutationNode ************************************************************
 
-PermutationNode::PermutationNode(Node* array_ptr, Node* order_ptr)
-        : Node(),
-          ArrayOutputMixin(dynamic_cast<const Array*>(array_ptr)->shape()),
-          array_ptr_(dynamic_cast<const Array*>(array_ptr)),
-          order_ptr_(dynamic_cast<const Array*>(order_ptr)) {
+PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr)
+        : ArrayOutputMixin(array_ptr->shape()),
+          array_ptr_(array_ptr),
+          order_ptr_(order_ptr) {
     std::span<const ssize_t> array_shape = array_ptr_->shape();
 
     // For now, we are only going to support permutation on constant nodes
@@ -1695,15 +1684,8 @@ void PermutationNode::revert(State& state) const { data_ptr<IndexingNodeData>(st
 
 // ReshapeNode ****************************************************************
 
-ReshapeNode::ReshapeNode(Node* node_ptr, std::initializer_list<ssize_t> shape)
-        : ReshapeNode(node_ptr, std::span(shape)) {}
-
-ReshapeNode::ReshapeNode(Node* node_ptr, std::span<const ssize_t> shape)
-        : ArrayOutputMixin(shape), array_ptr_(dynamic_cast<const Array*>(node_ptr)) {
-    if (!array_ptr_) {
-        throw std::invalid_argument("array_ptr must be a dwave::optimization::Array*");
-    }
-
+ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::span<const ssize_t> shape)
+        : ArrayOutputMixin(shape), array_ptr_(node_ptr) {
     // Don't (yet) support non-contiguous predecessors.
     // In some cases with non-contiguous predecessors we need to make a copy.
     // See https://github.com/dwavesystems/dwave-optimization/issues/200
@@ -1737,6 +1719,9 @@ ReshapeNode::ReshapeNode(Node* node_ptr, std::span<const ssize_t> shape)
 
     this->add_predecessor(node_ptr);
 }
+
+ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::vector<ssize_t>&& shape)
+        : ReshapeNode(node_ptr, std::span(shape)) {}
 
 double const* ReshapeNode::buff(const State& state) const { return array_ptr_->buff(state); }
 

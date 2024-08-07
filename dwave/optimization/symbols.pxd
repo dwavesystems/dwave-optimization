@@ -18,8 +18,4 @@ from dwave.optimization.model cimport Model
 from dwave.optimization.libcpp.graph cimport Array as cppArray
 from dwave.optimization.libcpp.graph cimport Node as cppNode
 
-ctypedef fused cppArrayOrNode:
-    cppNode
-    cppArray
-
-cdef object symbol_from_ptr(Model model, cppArrayOrNode* ptr)
+cdef object symbol_from_ptr(Model model, cppNode* ptr)
