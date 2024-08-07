@@ -18,7 +18,6 @@ from libcpp cimport bool
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
 
-from dwave.optimization.libcpp.array cimport Array as cppArray
 from dwave.optimization.libcpp.graph cimport ArrayNode as cppArrayNode, Node as cppNode
 from dwave.optimization.libcpp.graph cimport Graph as cppGraph
 from dwave.optimization.libcpp.state cimport State as cppState
@@ -145,7 +144,7 @@ cdef class ArraySymbol(Symbol):
     # Inheriting symbols must call this method from their __init__()
     cdef void initialize_arraynode(self, Model model, cppArrayNode* array_ptr) noexcept
 
-    # Hold Array* pointer. Again this is redundant, because we're also holding
+    # Hold ArrayNode* pointer. Again this is redundant, because we're also holding
     # a pointer to Node* and we can theoretically dynamic cast each time.
     # But again, it's cheap and it simplifies things.
     cdef cppArrayNode* array_ptr

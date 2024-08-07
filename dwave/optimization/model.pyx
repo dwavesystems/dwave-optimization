@@ -45,6 +45,7 @@ from libcpp cimport bool
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
+from dwave.optimization.libcpp.array cimport Array as cppArray
 from dwave.optimization.symbols cimport symbol_from_ptr
 
 
