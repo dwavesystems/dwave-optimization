@@ -207,6 +207,7 @@ class DisjointListsNode : public DecisionNode {
 
     void commit(State&) const override;
     void revert(State&) const override;
+    void propagate(State&) const override;
 
     void update [[noreturn]] (State&, int) const override {
         throw std::logic_error("update() called on a decisison variable");
@@ -226,6 +227,9 @@ class DisjointListsNode : public DecisionNode {
 
     void pop_to_list(State& state, ssize_t from_disjoint_list, ssize_t element_i,
                      ssize_t to_disjoint_list, ssize_t element_j) const;
+
+    void set_state(State& state, ssize_t list_index,
+                   const std::span<const double>& new_values) const;
 
     ssize_t num_disjoint_lists() const { return num_disjoint_lists_; }
     ssize_t primary_set_size() const { return primary_set_size_; }
