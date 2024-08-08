@@ -18,6 +18,7 @@
 #include "catch2/catch.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
+#include "dwave-optimization/nodes/testing.hpp"
 #include "utils.hpp"
 
 namespace dwave::optimization {
@@ -235,6 +236,11 @@ TEST_CASE("DisjointListsNode") {
                 }
             }
 
+            std::vector<ArrayValidationNode*> validation_nodes;
+            for (const auto& list : lists) {
+                validation_nodes.push_back(graph.emplace_node<ArrayValidationNode>(list));
+            }
+
             AND_WHEN("We default-initialize the state") {
                 auto state = graph.initialize_state();
 
@@ -337,6 +343,71 @@ TEST_CASE("DisjointListsNode") {
 
                             CHECK(num_elements == 5);
                             CHECK(set == std::set<double>{0, 1, 2, 3, 4});
+                        }
+                    }
+                }
+
+                SECTION("rotate_sublist_right") {
+                    AND_WHEN("We rotate the entire state 1 right") {
+                        ptr->rotate_sublist_right(state, 0, 0, 4, 1);
+                        THEN("The state is correct") {
+                            CHECK(std::ranges::equal(lists[0]->view(state),
+                                  std::vector{4, 0, 1, 2, 3}));
+                            ptr->propagate(state);
+                            lists[0]->propagate(state);
+                            validation_nodes[0]->propagate(state);
+                        }
+                    }
+                    AND_WHEN("We rotate the entire state 2 right") {
+                        ptr->rotate_sublist_right(state, 0, 0, 4, 2);
+                        THEN("The state is correct") {
+                            CHECK(std::ranges::equal(lists[0]->view(state),
+                                  std::vector{3, 4, 0, 1, 2}));
+                            ptr->propagate(state);
+                            lists[0]->propagate(state);
+                            validation_nodes[0]->propagate(state);
+                        }
+                    }
+                    AND_WHEN("We rotate the entire state 8 right") {
+                        // 8 % 5 = 3
+                        ptr->rotate_sublist_right(state, 0, 0, 4, 8);
+                        THEN("The state is correct") {
+                            CHECK(std::ranges::equal(lists[0]->view(state),
+                                  std::vector{2, 3, 4, 0, 1}));
+                            ptr->propagate(state);
+                            lists[0]->propagate(state);
+                            validation_nodes[0]->propagate(state);
+                        }
+                    }
+                    AND_WHEN("We rotate the entire state -3 right") {
+                        // -3 % 5 = 2
+                        ptr->rotate_sublist_right(state, 0, 0, 4, -3);
+                        THEN("The state is correct") {
+                            CHECK(std::ranges::equal(lists[0]->view(state),
+                                  std::vector{3, 4, 0, 1, 2}));
+                            ptr->propagate(state);
+                            lists[0]->propagate(state);
+                            validation_nodes[0]->propagate(state);
+                        }
+                    }
+                    AND_WHEN("We rotate a portion of the state 1 right") {
+                        ptr->rotate_sublist_right(state, 0, 1, 3, 1);
+                        THEN("The state is correct") {
+                            CHECK(std::ranges::equal(lists[0]->view(state),
+                                  std::vector{0, 3, 1, 2, 4}));
+                            ptr->propagate(state);
+                            lists[0]->propagate(state);
+                            validation_nodes[0]->propagate(state);
+                        }
+                    }
+                    AND_WHEN("We rotate a portion of the state -2 right") {
+                        ptr->rotate_sublist_right(state, 0, 1, 3, -2);
+                        THEN("The state is correct") {
+                            CHECK(std::ranges::equal(lists[0]->view(state),
+                                  std::vector{0, 3, 1, 2, 4}));
+                            ptr->propagate(state);
+                            lists[0]->propagate(state);
+                            validation_nodes[0]->propagate(state);
                         }
                     }
                 }
