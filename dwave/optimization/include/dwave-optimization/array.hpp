@@ -507,6 +507,7 @@ class Array {
 
     static_assert(std::ranges::range<View>);
     static_assert(std::ranges::sized_range<View>);
+    static_assert(std::is_trivially_copyable<View>::value);
 
     // constant used to signal that the size is based on the state
     static constexpr ssize_t DYNAMIC_SIZE = -1;

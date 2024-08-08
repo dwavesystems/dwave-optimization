@@ -27,6 +27,7 @@ from dwave.optimization.symbols import (
     NaryMinimum,
     NaryMultiply,
     Or,
+    Where,
 )
 
 
@@ -37,6 +38,7 @@ __all__ = [
     "maximum",
     "minimum",
     "multiply",
+    "where",
 ]
 
 
@@ -272,3 +274,69 @@ def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         [21. 10.]
     """
     raise RuntimeError("implementated by the op() decorator")
+
+
+def where(condition: ArraySymbol, x: ArraySymbol, y: ArraySymbol) -> Where:
+    """Return elements chosen from x or y depending on condition.
+
+    Args:
+        condition:
+            Where ``True``, yield ``x``, otherwise yield ``y``.
+        x, y:
+            Values from which to choose.
+            If ``x`` and ``y`` are dynamically sized then ``condition``
+            must be a single value.
+
+    Returns:
+        An :class:`~dwave.optimization.model.ArraySymbol`
+        with elements from ``x``where ``condition`` is ``True``,
+        and elements from ``y`` elsewhere.
+
+    Examples:
+
+        This example uses a single binary variable to choose between two arrays.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import where
+        ...
+        >>> model = Model()
+        >>> condition = model.binary()
+        >>> x = model.constant([1., 2., 3.])
+        >>> y = model.constant([4., 5., 6.])
+        >>> a = where(condition, x, y)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     condition.set_state(0, False)
+        ...     print(a.state())
+        [4. 5. 6.]
+
+        This example uses a binary array to to select between two arrays
+
+        >>> model = Model()
+        >>> condition = model.binary(3)
+        >>> x = model.constant([1., 2., 3.])
+        >>> y = model.constant([4., 5., 6.])
+        >>> a = where(condition, x, y)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     condition.set_state(0, [True, True, False])
+        ...     print(a.state())
+        [1. 2. 6.]
+
+        This example uses a single binary variable to choose between two sets
+
+        >>> model = Model()
+        >>> condition = model.binary()
+        >>> x = model.set(10)  # any subset of range(10)
+        >>> y = model.set(10)  # any subset of range(10)
+        >>> a = where(condition, x, y)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     condition.set_state(0, True)
+        ...     x.set_state(0, [0., 2., 3.])
+        ...     y.set_state(0, [1])
+        ...     print(a.state())
+        [0. 2. 3.]
+
+    """
+    return Where(condition, x, y)

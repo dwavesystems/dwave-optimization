@@ -1860,3 +1860,33 @@ class TestSum(utils.SymbolTests):
 
         self.assertEqual(a.state(0), np.arange(5).sum())
         self.assertEqual(b.state(0), np.arange(5, 10).sum())
+
+
+class TestWhere(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        condition = model.binary()
+        x = model.constant([1, 2, 3])
+        y = model.constant([10, 20, 30])
+        where = dwave.optimization.where(condition, x, y)
+        with model.lock():
+            yield where
+
+    def test_dynamic(self):
+        model = Model()
+        condition = model.binary()
+        x = model.set(10)  # any subset of range(10)
+        y = model.set(10)  # any subset of range(10)
+        where = dwave.optimization.where(condition, x, y)
+        with model.lock():
+            model.states.resize(1)
+            condition.set_state(0, True)
+            x.set_state(0, [0., 2., 3.])
+            y.set_state(0, [1])
+            np.testing.assert_array_equal(where.state(), [0, 2, 3])
+            condition.set_state(0, False)
+            np.testing.assert_array_equal(where.state(), [1])
+
+        with self.assertRaises(ValueError):
+            # wrong shape
+            dwave.optimization.where(model.binary(3), x, y)

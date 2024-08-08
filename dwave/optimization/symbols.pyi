@@ -174,3 +174,7 @@ class Subtract(ArraySymbol):
 
 class Sum(ArraySymbol):
     ...
+
+
+class Where(ArraySymbol):
+    ...

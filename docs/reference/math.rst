@@ -17,5 +17,4 @@ Mathematical Functions
    ~maximum
    ~minimum
    ~multiply
-   
-
+   ~where

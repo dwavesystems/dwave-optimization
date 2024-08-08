@@ -81,6 +81,7 @@ from dwave.optimization.libcpp.nodes cimport (
     SubtractNode as cppSubtractNode,
     SquareNode as cppSquareNode,
     SumNode as cppSumNode,
+    WhereNode as cppWhereNode,
     )
 from dwave.optimization.model cimport ArraySymbol, Model, Symbol
 
@@ -123,6 +124,7 @@ __all__ = [
     "SetVariable",
     "Square",
     "Sum",
+    "Where",
     ]
 
 # We would like to be able to do constructions like dynamic_cast[cppConstantNode*](...)
@@ -2735,3 +2737,36 @@ cdef class Sum(ArraySymbol):
     cdef cppSumNode* ptr
 
 _register(Sum, typeid(cppSumNode))
+
+
+cdef class Where(ArraySymbol):
+    """Return elements chosen from x or y depending on condition.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.where`: equivalent function.
+    """
+    def __init__(self, ArraySymbol condition, ArraySymbol x, ArraySymbol y):
+        cdef Model model = condition.model
+
+        if condition.model is not x.model:
+            raise ValueError("condition and x do not share the same underlying model")
+        if condition.model is not y.model:
+            raise ValueError("condition and y do not share the same underlying model")
+
+        self.ptr = model._graph.emplace_node[cppWhereNode](
+            condition.array_ptr, x.array_ptr, y.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppWhereNode* ptr = dynamic_cast_ptr[cppWhereNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Sum")
+        cdef Where sym = Where.__new__(Where)
+        sym.ptr = ptr
+        sym.initialize_arraynode(symbol.model, ptr)
+        return sym
+
+    cdef cppWhereNode* ptr
+
+_register(Where, typeid(cppWhereNode))
