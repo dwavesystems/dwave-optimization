@@ -40,7 +40,6 @@ import numpy as np
 from cpython cimport Py_buffer
 from cython.operator cimport dereference as deref, preincrement as inc
 from cython.operator cimport typeid
-from libc.stdint cimport uintptr_t
 from libcpp cimport bool
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
@@ -1220,12 +1219,7 @@ cdef class Symbol:
         the identity of the Python symbol.
         """
         cls = type(self)
-        # We refer to the node_ptr, which is not necessarily the address of the
-        # C++ node, as it sublasses Node.
-        # But this is unique to each node, and functions as an id rather than
-        # as a pointer, so that's OK.
-        # Otherwise we aim to match Python's default __repr__.
-        return f"<{cls.__module__}.{cls.__qualname__} at {<uintptr_t>self.node_ptr:#x}>"
+        return f"<{cls.__module__}.{cls.__qualname__} at {self.id():#x}>"
 
     cdef void initialize_node(self, Model model, cppNode* node_ptr) noexcept:
         self.model = model
@@ -1242,6 +1236,10 @@ cdef class Symbol:
         Equal nodes represent the same quantity in the model.
 
         Note that comparing nodes across models is expensive.
+
+        See Also:
+            :meth:`.maybe_equals`: an alternative for equality testing
+            that can return false positives but is faster.
         """
         cdef Py_ssize_t maybe = self.maybe_equals(other)
         if maybe != 1:
@@ -1327,6 +1325,41 @@ cdef class Symbol:
         # Check that the state pointer is not null
         # We need to explicitly cast to evoke unique_ptr's operator bool
         return <bool>(self.model.states._states[index][self.node_ptr.topological_index()])
+
+    cpdef uintptr_t id(self) noexcept:
+        """Return the "identity" of the underlying node.
+
+        This identity is unique to the underlying node, rather than the identity
+        of the Python object representing it.
+        Therefore, ``symdol.id()`` is not the same as ``id(symbol)``!
+
+        Examples:
+            >>> from dwave.optimization import Model
+            ...
+            >>> model = Model()
+            >>> a = model.binary()
+            >>> aa, = model.iter_symbols()
+            >>> assert a.id() == aa.id()
+            >>> assert id(a) != id(aa)
+
+            While symbols are not hashable, the ``.id()`` is.
+
+            >>> model = Model()
+            >>> x = model.integer()
+            >>> seen = {x.id()}
+
+        See Also:
+            :meth:`.shares_memory`: ``a.shares_memory(b)`` is equivalent to ``a.id() == b.id()``.
+            
+            :meth:`.equals`: ``a.equals(b)`` will return ``True`` if ``a.id() == b.id()``. Though
+            the inverse is not necessarily true.
+
+        """
+        # We refer to the node_ptr, which is not necessarily the address of the
+        # C++ node, as it subclasses Node.
+        # But this is unique to each node, and functions as an id rather than
+        # as a pointer, so that's OK.
+        return <uintptr_t>self.node_ptr
 
     def _into_zipfile(self, zf, directory):
         """Store node-specific information to a compressed file.
@@ -1420,6 +1453,9 @@ cdef class Symbol:
             1
             >>> i.maybe_equals(k)
             0
+
+        See Also:
+            :meth:`.equals`: a more expensive form of equality testing.
         """
         cdef Py_ssize_t NOT = 0
         cdef Py_ssize_t MAYBE = 1
@@ -1506,14 +1542,12 @@ cdef class Symbol:
         Returns:
             True if the two symbols share memory.
         """
-        if not isinstance(other, Symbol):
+        cdef Symbol other_
+        try:
+            other_ = other
+        except TypeError:
             return False
-        cdef Symbol rhs = other
-        return (
-            <bool>(self.node_ptr)                    # Not pointing to a nullptr
-            and self.node_ptr == rhs.node_ptr        # Shares an underlying node
-            and not <bool>(deref(self.expired_ptr))  # The node is not expired
-            )
+        return not self.expired() and self.id() == other_.id()
 
     def _state_from_zipfile(self, zf, directory, Py_ssize_t state_index):
         # unlike node serialization, by default we raise an error because if
