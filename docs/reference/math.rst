@@ -12,8 +12,10 @@ Mathematical Functions
    :toctree: generated/
 
    ~add
+   ~logical
    ~logical_and
    ~logical_or
+   ~logical_not
    ~maximum
    ~minimum
    ~multiply

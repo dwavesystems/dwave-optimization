@@ -1,10 +1,10 @@
 ---
 features:
   - |
-    Add C++ ``LogicalNode``. ``LogicalNode`` propagates the truth value(s) of its
+    Add C++ ``LogicalNode`` and Python ``Logical`` symbol. ``Logical`` propagates the truth value(s) of its
     predecessor element-wise.
   - |
-    Add C++ ``NotNode``. ``NotNode`` propagates the inverse of the truth value(s)
+    Add C++ ``NotNode`` and Python ``Not`` symbol. ``Not`` propagates the inverse of the truth value(s)
     of its predecessor element-wise.
 fixes:
   - |

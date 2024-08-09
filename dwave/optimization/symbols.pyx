@@ -61,6 +61,7 @@ from dwave.optimization.libcpp.nodes cimport (
     IntegerNode as cppIntegerNode,
     LessEqualNode as cppLessEqualNode,
     ListNode as cppListNode,
+    LogicalNode as cppLogicalNode,
     MaxNode as cppMaxNode,
     MaximumNode as cppMaximumNode,
     MinNode as cppMinNode,
@@ -71,6 +72,7 @@ from dwave.optimization.libcpp.nodes cimport (
     NaryMinimumNode as cppNaryMinimumNode,
     NaryMultiplyNode as cppNaryMultiplyNode,
     NegativeNode as cppNegativeNode,
+    NotNode as cppNotNode,
     OrNode as cppOrNode,
     PermutationNode as cppPermutationNode,
     ProdNode as cppProdNode,
@@ -105,6 +107,7 @@ __all__ = [
     "IntegerVariable",
     "LessEqual",
     "ListVariable",
+    "Logical",
     "Max",
     "Maximum",
     "Min",
@@ -115,6 +118,7 @@ __all__ = [
     "NaryMinimum",
     "NaryMultiply",
     "Negative",
+    "Not",
     "Or",
     "Permutation",
     "Prod",
@@ -1697,6 +1701,33 @@ cdef class ListVariable(ArraySymbol):
 _register(ListVariable, typeid(cppListNode))
 
 
+cdef class Logical(ArraySymbol):
+    """Logical truth value element-wise on a symbol.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.logical`: equivalent function.
+    """
+    def __init__(self, ArraySymbol x):
+        cdef Model model = x.model
+
+        self.ptr = model._graph.emplace_node[cppLogicalNode](x.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppLogicalNode* ptr = dynamic_cast_ptr[cppLogicalNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Logical")
+        cdef Logical x = Logical.__new__(Logical)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppLogicalNode* ptr
+
+_register(Logical, typeid(cppLogicalNode))
+
+
 cdef class Max(ArraySymbol):
     """Maximum value in the elements of a symbol.
 
@@ -2135,6 +2166,33 @@ cdef class Negative(ArraySymbol):
     cdef cppNegativeNode* ptr
 
 _register(Negative, typeid(cppNegativeNode))
+
+
+cdef class Not(ArraySymbol):
+    """Logical negation element-wise on a symbol.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.logical_not`: equivalent function.
+    """
+    def __init__(self, ArraySymbol x):
+        cdef Model model = x.model
+
+        self.ptr = model._graph.emplace_node[cppNotNode](x.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppNotNode* ptr = dynamic_cast_ptr[cppNotNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Not")
+        cdef Not x = Not.__new__(Not)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppNotNode* ptr
+
+_register(Not, typeid(cppNotNode))
 
 
 cdef class Or(ArraySymbol):

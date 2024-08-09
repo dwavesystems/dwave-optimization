@@ -19,6 +19,7 @@ from dwave.optimization.model import ArraySymbol
 from dwave.optimization.symbols import (
     Add,
     And,
+    Logical,
     Maximum,
     Minimum,
     Multiply,
@@ -26,6 +27,7 @@ from dwave.optimization.symbols import (
     NaryMaximum,
     NaryMinimum,
     NaryMultiply,
+    Not,
     Or,
     Where,
 )
@@ -33,8 +35,10 @@ from dwave.optimization.symbols import (
 
 __all__ = [
     "add",
-    "logical_or",
+    "logical",
     "logical_and",
+    "logical_not",
+    "logical_or",
     "maximum",
     "minimum",
     "multiply",
@@ -97,6 +101,35 @@ def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add,
     raise RuntimeError("implementated by the op() decorator")
 
 
+def logical(x: ArraySymbol) -> Logical:
+    r"""Return the element-wise truth value on the given symbol.
+
+    Args:
+        x: Input array symbol.
+
+    Returns:
+        A symbol that propagates the element-wise truth value of the given symbol.
+
+    Examples:
+        This example shows the truth values an array symbol.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import logical
+        ...
+        >>> model = Model()
+        >>> x = model.constant([0, 1, -2, .5])
+        >>> logical_x = logical(x)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(logical_x.state())
+        [0. 1. 1. 1.]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Logical`: equivalent symbol.
+    """
+    return Logical(x)
+
+
 def logical_and(x1: ArraySymbol, x2: ArraySymbol) -> And:
     r"""Return an element-wise logical AND on the given symbols.
 
@@ -124,6 +157,35 @@ def logical_and(x1: ArraySymbol, x2: ArraySymbol) -> And:
         [0. 1. 0.]
     """
     return And(x1, x2)
+
+
+def logical_not(x: ArraySymbol) -> Not:
+    r"""Return an element-wise logical NOT on the given symbol.
+
+    Args:
+        x: Input array symbol.
+
+    Returns:
+        A symbol that propagates the element-wise NOT of the given symbol.
+
+    Examples:
+        This example negates an array symbol.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import logical_not
+        ...
+        >>> model = Model()
+        >>> x = model.constant([0, 1, -2, .5])
+        >>> not_x = logical_not(x)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(not_x.state())
+        [1. 0. 0. 0.]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Not`: equivalent symbol.
+    """
+    return Not(x)
 
 
 def logical_or(x1: ArraySymbol, x2: ArraySymbol) -> Or:
