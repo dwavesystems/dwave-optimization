@@ -28,6 +28,7 @@ class and :ref:`model symbols <symbols_model_symbols>`.
 
     ~Symbol.equals
     ~Symbol.has_state
+    ~Symbol.id
     ~Symbol.iter_predecessors
     ~Symbol.iter_successors
     ~Symbol.maybe_equals

@@ -539,6 +539,16 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Symbols cannot be constructed directly"):
             Symbol()
 
+    def test_id(self):
+        model = Model()
+        c0 = model.constant(5)
+        c1, = model.iter_symbols()
+        c2 = model.constant(5)
+
+        self.assertIsInstance(c0.id(), int)
+        self.assertEqual(c0.id(), c1.id())
+        self.assertNotEqual(c0.id(), c2.id())
+
     def test_repr(self):
         model = Model()
         c0 = model.constant(5)

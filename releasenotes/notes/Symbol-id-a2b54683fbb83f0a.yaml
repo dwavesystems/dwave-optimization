@@ -1,0 +1,3 @@
+---
+features:
+  - Add ``Symbol.id()`` method to return the identity of the underlying node.

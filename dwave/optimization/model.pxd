@@ -14,6 +14,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from libc.stdint cimport uintptr_t
 from libcpp cimport bool
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
@@ -114,6 +115,8 @@ cdef class States:
 cdef class Symbol:
     # Inheriting nodes must call this method from their __init__()
     cdef void initialize_node(self, Model model, cppNode* node_ptr) noexcept
+
+    cpdef uintptr_t id(self) noexcept
 
     # Exactly deref(self.expired_ptr)
     cpdef bool expired(self) noexcept
