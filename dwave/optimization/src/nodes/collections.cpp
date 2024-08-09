@@ -464,6 +464,30 @@ struct DisjointListStateData : NodeStateData {
         }
     }
 
+    // Rotate the sublist in the range [start, stop] (stop is inclusive) `num_rotations`
+    // to the "right", i.e. increasing index
+    void rotate_sublist_right(ssize_t list_index, ssize_t start, ssize_t stop,
+                              ssize_t num_rotations) {
+        assert(start >= 0);
+        assert(stop >= start);
+        assert(stop < static_cast<ssize_t>(lists[list_index].size()));
+        if (start == stop) return;
+        ssize_t range = stop - start + 1;
+        ssize_t pos_rotations = ((num_rotations % range) + range) % range;
+        if (pos_rotations == 0) return;
+
+        auto& list = lists[list_index];
+
+        std::vector<double> copy(lists[list_index]);
+
+        for (ssize_t i = start; i <= stop; ++i) {
+            ssize_t matching_idx = i + pos_rotations;
+            if (matching_idx > stop) matching_idx -= range;
+            all_list_updates[list_index].emplace_back(matching_idx, list[matching_idx], copy[i]);
+            list[matching_idx] = copy[i];
+        }
+    }
+
     void swap_in_list(ssize_t list_index, ssize_t element_i, ssize_t element_j) {
         // Swap two items in the same list
         auto& list = lists[list_index];
@@ -580,6 +604,14 @@ void DisjointListsNode::rotate_in_list(State& state, ssize_t list_index, ssize_t
                                        ssize_t dest_idx) const {
     if (src_idx == dest_idx) return;
     data_ptr<DisjointListStateData>(state)->rotate_in_list(list_index, src_idx, dest_idx);
+}
+
+// Rotate the sublist in the range [start, stop] (stop is inclusive) `num_rotations`
+// to the "right", i.e. increasing index
+void DisjointListsNode::rotate_sublist_right(State& state, ssize_t list_index, ssize_t start,
+                                             ssize_t stop, ssize_t num_rotations) const {
+    data_ptr<DisjointListStateData>(state)->rotate_sublist_right(list_index, start, stop,
+                                                                 num_rotations);
 }
 
 void DisjointListsNode::swap_in_list(State& state, ssize_t list_index, ssize_t element_i,

@@ -221,6 +221,9 @@ class DisjointListsNode : public DecisionNode {
 
     void rotate_in_list(State& state, ssize_t list_index, ssize_t dest_idx, ssize_t src_idx) const;
 
+    void rotate_sublist_right(State& state, ssize_t list_index, ssize_t start, ssize_t stop,
+                              ssize_t num_rotations) const;
+
     void swap_in_list(State& state, ssize_t disjoint_list, ssize_t element_i,
                       ssize_t element_j) const;
 
