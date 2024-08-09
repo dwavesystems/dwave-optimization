@@ -309,18 +309,8 @@ _register(All, typeid(cppAllNode))
 cdef class And(ArraySymbol):
     """Boolean AND element-wise between two symbols.
 
-    Examples:
-        This example creates an AND operation between binary arrays.
-
-        >>> from dwave.optimization.model import Model
-        >>> from dwave.optimization.mathematical import logical_and
-        ...
-        >>> model = Model()
-        >>> x = model.binary(200)
-        >>> y = model.binary(200)
-        >>> z = logical_and(x, y)
-        >>> type(z)
-        <class 'dwave.optimization.symbols.And'>
+    See Also:
+        :func:`~dwave.optimization.mathematical.logical_and`: equivalent function.
     """
     def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
@@ -2198,18 +2188,8 @@ _register(Not, typeid(cppNotNode))
 cdef class Or(ArraySymbol):
     """Boolean OR element-wise between two symbols.
 
-    Examples:
-        This example creates an OR operation between binary arrays.
-
-        >>> from dwave.optimization.model import Model
-        >>> from dwave.optimization.mathematical import logical_or
-        ...
-        >>> model = Model()
-        >>> x = model.binary(200)
-        >>> y = model.binary(200)
-        >>> z = logical_or(x, y)
-        >>> type(z)
-        <class 'dwave.optimization.symbols.Or'>
+    See Also:
+        :func:`~dwave.optimization.mathematical.logical_or`: equivalent function.
     """
     def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:

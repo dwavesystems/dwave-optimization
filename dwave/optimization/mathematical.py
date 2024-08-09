@@ -155,6 +155,9 @@ def logical_and(x1: ArraySymbol, x2: ArraySymbol) -> And:
         ...     y.set_state(0, [False, True, False])
         ...     print(z.state(0))
         [0. 1. 0.]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.And`: equivalent symbol.
     """
     return And(x1, x2)
 
@@ -213,6 +216,9 @@ def logical_or(x1: ArraySymbol, x2: ArraySymbol) -> Or:
         ...     y.set_state(0, [False, True, False])
         ...     print(z.state(0))
         [1. 1. 0.]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Or`: equivalent symbol.
     """
     return Or(x1, x2)
 
