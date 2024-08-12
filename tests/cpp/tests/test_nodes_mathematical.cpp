@@ -843,7 +843,8 @@ TEMPLATE_TEST_CASE("ReduceNode - valid default init", "", std::plus<double>) {
     }
 }
 
-TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, std::negate<double>) {
+TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logical<double>,
+                   functional::square<double>, std::negate<double>, std::logical_not<double>) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -956,6 +957,108 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, std::negate<doubl
                     }
                     THEN("The diffs are cleared") { CHECK(p_ptr->diff(state).size() == 0); }
                 }
+            }
+        }
+    }
+}
+
+TEST_CASE("UnaryOpNode") {
+    auto graph = Graph();
+
+    SECTION("AbsoluteNode") {
+        GIVEN("An integer variable with domain [-3, 2]") {
+            auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -3, 2);
+            auto abs_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
+
+            THEN("It has the min/max we expect") {
+                CHECK(abs_ptr->min() == 0);
+                CHECK(abs_ptr->max() == 3);
+            }
+
+            THEN("abs(i) is integral") { CHECK(abs_ptr->integral()); }
+        }
+
+        GIVEN("An integer variable with domain [-2, 4]") {
+            auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -2, 4);
+            auto abs_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
+
+            THEN("It has the min/max we expect") {
+                CHECK(abs_ptr->min() == 0);
+                CHECK(abs_ptr->max() == 4);
+            }
+
+            THEN("abs(i) is integral") { CHECK(abs_ptr->integral()); }
+        }
+    }
+
+    SECTION("LogicalNode") {
+        GIVEN("A constant of mixed doubles and a negation of it") {
+            auto c_ptr =
+                    graph.emplace_node<ConstantNode>(std::vector{-2., -1., 0., 1., 2., -.5, .5});
+            auto logical_ptr = graph.emplace_node<LogicalNode>(c_ptr);
+
+            THEN("NotNode is logical") {
+                CHECK(logical_ptr->integral());
+                CHECK(logical_ptr->max() == 1);
+                CHECK(logical_ptr->min() == 0);
+                CHECK(logical_ptr->logical());
+            }
+
+            THEN("The negation has the state we expect") {
+                auto state = graph.initialize_state();
+                CHECK(std::ranges::equal(logical_ptr->view(state),
+                                         std::vector{true, true, false, true, true, true, true}));
+            }
+        }
+    }
+
+    SECTION("NegativeNode") {
+        GIVEN("An integer array and an asymmetric domain") {
+            auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{5}, -3, 8);
+            auto ni_ptr = graph.emplace_node<NegativeNode>(i_ptr);
+
+            THEN("Negative has the min/max we expect") {
+                CHECK(i_ptr->min() == -3);
+                CHECK(i_ptr->max() == 8);
+                CHECK(ni_ptr->min() == -8);
+                CHECK(ni_ptr->max() == 3);
+            }
+
+            THEN("Negative is also integral") { CHECK(ni_ptr->integral()); }
+        }
+    }
+
+    SECTION("NotNode") {
+        GIVEN("A constant of mixed doubles and a negation of it") {
+            auto c_ptr =
+                    graph.emplace_node<ConstantNode>(std::vector{-2., -1., 0., 1., 2., -.5, .5});
+            auto nc_ptr = graph.emplace_node<NotNode>(c_ptr);
+
+            THEN("NotNode is logical") {
+                CHECK(nc_ptr->integral());
+                CHECK(nc_ptr->max() == 1);
+                CHECK(nc_ptr->min() == 0);
+                CHECK(nc_ptr->logical());
+            }
+
+            THEN("The negation has the state we expect") {
+                auto state = graph.initialize_state();
+                CHECK(std::ranges::equal(nc_ptr->view(state), std::vector{false, false, true, false,
+                                                                          false, false, false}));
+            }
+        }
+    }
+
+    SECTION("SquareNode") {
+        GIVEN("An integer with max domain") {
+            auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
+            auto square_ptr = graph.emplace_node<SquareNode>(i_ptr);
+
+            THEN("The min/max are expected") {
+                CHECK(square_ptr->min() == 0);
+                // we might consider capping this differently for integer types in the future
+                CHECK(square_ptr->max() ==
+                      static_cast<std::size_t>(2000000000) * static_cast<std::size_t>(2000000000));
             }
         }
     }

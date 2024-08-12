@@ -918,6 +918,113 @@ void UnaryOpNode<UnaryOp>::initialize_state(State& state) const {
     }
 }
 
+template <>
+bool UnaryOpNode<functional::abs<double>>::integral() const {
+    return array_ptr_->integral();
+}
+template <>
+bool UnaryOpNode<std::negate<double>>::integral() const {
+    return array_ptr_->integral();
+}
+template <>
+bool UnaryOpNode<functional::square<double>>::integral() const {
+    return array_ptr_->integral();
+}
+template <class UnaryOp>
+bool UnaryOpNode<UnaryOp>::integral() const {
+    using result_type = typename std::invoke_result<UnaryOp, double&>::type;
+
+    if constexpr (std::is_integral<result_type>::value) {
+        return true;
+    }
+
+    return Array::integral();
+}
+
+template <>
+double UnaryOpNode<functional::abs<double>>::max() const {
+    const double max = array_ptr_->max();
+    const double min = array_ptr_->min();
+    assert(min <= max && "min > max");
+
+    if (min >= 0 && max >= 0) {
+        return max;
+    } else if (min >= 0) {
+        assert(false && "min > max");
+        unreachable();
+    } else if (max >= 0) {
+        return std::max<double>(max, -min);
+    } else {
+        return -min;
+    }
+}
+template <>
+double UnaryOpNode<std::negate<double>>::max() const {
+    return -(array_ptr_->min());
+}
+template <>
+double UnaryOpNode<functional::square<double>>::max() const {
+    const double max = array_ptr_->max();
+    if (std::abs(max) >= std::sqrt(Array::max())) {
+        // We could consider raising an error here but for now let's be
+        // permissive.
+        return Array::max();
+    }
+    return max * max;
+}
+template <class UnaryOp>
+double UnaryOpNode<UnaryOp>::max() const {
+    using result_type = typename std::invoke_result<UnaryOp, double&>::type;
+
+    if constexpr (std::is_same<result_type, bool>::value) {
+        return true;
+    }
+
+    return Array::max();
+}
+
+template <>
+double UnaryOpNode<functional::abs<double>>::min() const {
+    const double max = array_ptr_->max();
+    const double min = array_ptr_->min();
+    assert(min <= max && "min > max");
+
+    if (min >= 0 && max >= 0) {
+        return min;
+    } else if (min >= 0) {
+        assert(false && "min > max");
+        unreachable();
+    } else if (max >= 0) {
+        return 0;
+    } else {
+        return -max;
+    }
+}
+template <>
+double UnaryOpNode<std::negate<double>>::min() const {
+    return -(array_ptr_->max());
+}
+template <>
+double UnaryOpNode<functional::square<double>>::min() const {
+    const double min = array_ptr_->min();
+    if (std::abs(min) >= std::sqrt(Array::max())) {
+        // We could consider raising an error here but for now let's be
+        // permissive.
+        return Array::max();
+    }
+    return min * min;
+}
+template <class UnaryOp>
+double UnaryOpNode<UnaryOp>::min() const {
+    using result_type = typename std::invoke_result<UnaryOp, double&>::type;
+
+    if constexpr (std::is_same<result_type, bool>::value) {
+        return false;
+    }
+
+    return Array::min();
+}
+
 template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::propagate(State& state) const {
     auto func = op();
@@ -947,7 +1054,9 @@ void UnaryOpNode<UnaryOp>::revert(State& state) const {
 }
 
 template class UnaryOpNode<functional::abs<double>>;
-template class UnaryOpNode<std::negate<double>>;
+template class UnaryOpNode<functional::logical<double>>;
 template class UnaryOpNode<functional::square<double>>;
+template class UnaryOpNode<std::negate<double>>;
+template class UnaryOpNode<std::logical_not<double>>;
 
 }  // namespace dwave::optimization

@@ -61,6 +61,7 @@ from dwave.optimization.libcpp.nodes cimport (
     IntegerNode as cppIntegerNode,
     LessEqualNode as cppLessEqualNode,
     ListNode as cppListNode,
+    LogicalNode as cppLogicalNode,
     MaxNode as cppMaxNode,
     MaximumNode as cppMaximumNode,
     MinNode as cppMinNode,
@@ -71,6 +72,7 @@ from dwave.optimization.libcpp.nodes cimport (
     NaryMinimumNode as cppNaryMinimumNode,
     NaryMultiplyNode as cppNaryMultiplyNode,
     NegativeNode as cppNegativeNode,
+    NotNode as cppNotNode,
     OrNode as cppOrNode,
     PermutationNode as cppPermutationNode,
     ProdNode as cppProdNode,
@@ -105,6 +107,7 @@ __all__ = [
     "IntegerVariable",
     "LessEqual",
     "ListVariable",
+    "Logical",
     "Max",
     "Maximum",
     "Min",
@@ -115,6 +118,7 @@ __all__ = [
     "NaryMinimum",
     "NaryMultiply",
     "Negative",
+    "Not",
     "Or",
     "Permutation",
     "Prod",
@@ -305,18 +309,8 @@ _register(All, typeid(cppAllNode))
 cdef class And(ArraySymbol):
     """Boolean AND element-wise between two symbols.
 
-    Examples:
-        This example creates an AND operation between binary arrays.
-
-        >>> from dwave.optimization.model import Model
-        >>> from dwave.optimization.mathematical import logical_and
-        ...
-        >>> model = Model()
-        >>> x = model.binary(200)
-        >>> y = model.binary(200)
-        >>> z = logical_and(x, y)
-        >>> type(z)
-        <class 'dwave.optimization.symbols.And'>
+    See Also:
+        :func:`~dwave.optimization.mathematical.logical_and`: equivalent function.
     """
     def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
@@ -1697,6 +1691,33 @@ cdef class ListVariable(ArraySymbol):
 _register(ListVariable, typeid(cppListNode))
 
 
+cdef class Logical(ArraySymbol):
+    """Logical truth value element-wise on a symbol.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.logical`: equivalent function.
+    """
+    def __init__(self, ArraySymbol x):
+        cdef Model model = x.model
+
+        self.ptr = model._graph.emplace_node[cppLogicalNode](x.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppLogicalNode* ptr = dynamic_cast_ptr[cppLogicalNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Logical")
+        cdef Logical x = Logical.__new__(Logical)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppLogicalNode* ptr
+
+_register(Logical, typeid(cppLogicalNode))
+
+
 cdef class Max(ArraySymbol):
     """Maximum value in the elements of a symbol.
 
@@ -2137,21 +2158,38 @@ cdef class Negative(ArraySymbol):
 _register(Negative, typeid(cppNegativeNode))
 
 
+cdef class Not(ArraySymbol):
+    """Logical negation element-wise on a symbol.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.logical_not`: equivalent function.
+    """
+    def __init__(self, ArraySymbol x):
+        cdef Model model = x.model
+
+        self.ptr = model._graph.emplace_node[cppNotNode](x.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppNotNode* ptr = dynamic_cast_ptr[cppNotNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Not")
+        cdef Not x = Not.__new__(Not)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppNotNode* ptr
+
+_register(Not, typeid(cppNotNode))
+
+
 cdef class Or(ArraySymbol):
     """Boolean OR element-wise between two symbols.
 
-    Examples:
-        This example creates an OR operation between binary arrays.
-
-        >>> from dwave.optimization.model import Model
-        >>> from dwave.optimization.mathematical import logical_or
-        ...
-        >>> model = Model()
-        >>> x = model.binary(200)
-        >>> y = model.binary(200)
-        >>> z = logical_or(x, y)
-        >>> type(z)
-        <class 'dwave.optimization.symbols.Or'>
+    See Also:
+        :func:`~dwave.optimization.mathematical.logical_or`: equivalent function.
     """
     def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:

@@ -23,7 +23,7 @@ import numpy as np
 
 import dwave.optimization
 import dwave.optimization.symbols
-from dwave.optimization import Model, logical_or, logical_and
+from dwave.optimization import Model, logical, logical_and, logical_or, logical_not
 
 
 class utils:
@@ -208,31 +208,37 @@ class utils:
         def op(self, x):
             pass
 
+        def symbol_op(self, x):
+            # if the op is different for symbols, allow the override
+            return self.op(x)
+
         def generate_symbols(self):
             model = Model()
             a = model.constant(-5)
-            op_a = self.op(a)
+            op_a = self.symbol_op(a)
             model.lock()
             yield op_a
 
         def test_scalar_input(self):
-            model = Model()
-            a = model.constant(-5)
-            op_a = self.op(a)
-            self.assertEqual(model.num_symbols(), 2)
+            for scalar in [-5, -.5, 0, 1, 1.5]:
+                with self.subTest(f"a = {scalar}"):
+                    model = Model()
+                    a = model.constant(scalar)
+                    op_a = self.symbol_op(a)
+                    self.assertEqual(model.num_symbols(), 2)
 
-            # Should be a scalar
-            self.assertEqual(op_a.shape(), ())
-            self.assertEqual(op_a.size(), 1)
+                    # Should be a scalar
+                    self.assertEqual(op_a.shape(), ())
+                    self.assertEqual(op_a.size(), 1)
 
-            model.lock()
-            model.states.resize(1)
-            self.assertEqual(op_a.state(0), self.op(-5))
+                    model.lock()
+                    model.states.resize(1)
+                    self.assertEqual(op_a.state(0), self.op(scalar))
 
         def test_1d_input(self):
             model = Model()
             x = model.integer(10, -5, 5)
-            op_x = self.op(x)
+            op_x = self.symbol_op(x)
             model.lock()
 
             model.states.resize(1)
@@ -1198,6 +1204,14 @@ class TestListVariable(utils.SymbolTests):
                 x.set_state(0, [0, 1, 2])
 
 
+class TestLogical(utils.UnaryOpTests):
+    def op(self, x):
+        return x != 0
+
+    def symbol_op(self, x):
+        return logical(x)
+
+
 class TestMax(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
@@ -1466,6 +1480,14 @@ class TestNaryMultiply(utils.NaryOpTests):
 class TestNegate(utils.UnaryOpTests):
     def op(self, x):
         return -x
+
+
+class TestNot(utils.UnaryOpTests):
+    def op(self, x):
+        return np.logical_not(x)
+
+    def symbol_op(self, x):
+        return logical_not(x)
 
 
 class TestOr(utils.BinaryOpTests):

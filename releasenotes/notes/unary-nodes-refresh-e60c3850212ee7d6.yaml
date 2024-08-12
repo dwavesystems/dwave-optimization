@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    Add C++ ``LogicalNode`` and Python ``Logical`` symbol. ``Logical`` propagates the truth value(s) of its
+    predecessor element-wise.
+  - |
+    Add C++ ``NotNode`` and Python ``Not`` symbol. ``Not`` propagates the inverse of the truth value(s)
+    of its predecessor element-wise.
+fixes:
+  - |
+    Implement C++ ``UnaryOpNode::max()``, ``UnaryOpNode::min()``, and ``UnaryOpNode::logical()``.
+    Therefore ``AbsoluteNode``, ``NegativeNode``, and ``SquareNode`` will now correctly
+    propagate their minimum and maximum value
+    and will now correctly report if they represent integer or boolean values.

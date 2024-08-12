@@ -31,6 +31,11 @@ struct abs {
 };
 
 template <class T>
+struct logical {
+    constexpr bool operator()(const T& x) const { return x; }
+};
+
+template <class T>
 struct max {
     constexpr T operator()(const T& x, const T& y) const { return std::max(x, y); }
 };
@@ -167,6 +172,9 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
+    bool integral() const override;
+    double max() const override;
+    double min() const override;
 
     void commit(State& state) const override;
     void revert(State& state) const override;
@@ -183,7 +191,9 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
 };
 
 using AbsoluteNode = UnaryOpNode<functional::abs<double>>;
+using LogicalNode = UnaryOpNode<functional::logical<double>>;
 using NegativeNode = UnaryOpNode<std::negate<double>>;
+using NotNode = UnaryOpNode<std::logical_not<double>>;
 using SquareNode = UnaryOpNode<functional::square<double>>;
 
 }  // namespace dwave::optimization

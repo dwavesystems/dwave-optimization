@@ -100,6 +100,10 @@ class ListVariable(ArraySymbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
 
 
+class Logical(ArraySymbol):
+    ...
+
+
 class Max(ArraySymbol):
     ...
 
@@ -137,6 +141,10 @@ class NaryMultiply(ArraySymbol):
 
 
 class Negative(ArraySymbol):
+    ...
+
+
+class Not(ArraySymbol):
     ...
 
 
