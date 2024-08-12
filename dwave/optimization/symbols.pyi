@@ -92,10 +92,6 @@ class IntegerVariable(ArraySymbol):
     def upper_bound(self) -> float: ...
 
 
-class Len(ArraySymbol):
-    ...
-
-
 class LessEqual(ArraySymbol):
     ...
 
@@ -174,6 +170,10 @@ class Reshape(ArraySymbol):
 
 class SetVariable(ArraySymbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
+
+
+class Size(ArraySymbol):
+    ...
 
 
 class Square(ArraySymbol):

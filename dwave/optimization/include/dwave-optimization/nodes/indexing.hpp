@@ -248,35 +248,6 @@ class BasicIndexingNode : public ArrayNode {
     const bool contiguous_;
 };
 
-class LenNode : public ScalarOutputMixin<ArrayNode> {
- public:
-    explicit LenNode(ArrayNode* node_ptr);
-
-    double const* buff(const State& state) const override;
-
-    void commit(State& state) const override;
-
-    std::span<const Update> diff(const State&) const override;
-
-    void initialize_state(State& state) const override;
-
-    // LenNode's value is always a non-negative integer.
-    bool integral() const override { return true; }
-
-    double max() const override;
-
-    double min() const override;
-
-    void propagate(State& state) const override;
-
-    void revert(State& state) const override;
-
- private:
-    // we could dynamically cast each time, but it's easier to just keep separate
-    // pointer to the "array" part of the predecessor
-    const Array* array_ptr_;
-};
-
 class PermutationNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // We use this style rather than a template to support Cython later
@@ -306,6 +277,35 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     double const* buff(const State& state) const override;
     void commit(State& state) const override;
     std::span<const Update> diff(const State& state) const override;
+    void revert(State& state) const override;
+
+ private:
+    // we could dynamically cast each time, but it's easier to just keep separate
+    // pointer to the "array" part of the predecessor
+    const Array* array_ptr_;
+};
+
+class SizeNode : public ScalarOutputMixin<ArrayNode> {
+ public:
+    explicit SizeNode(ArrayNode* node_ptr);
+
+    double const* buff(const State& state) const override;
+
+    void commit(State& state) const override;
+
+    std::span<const Update> diff(const State&) const override;
+
+    void initialize_state(State& state) const override;
+
+    // SizeNode's value is always a non-negative integer.
+    bool integral() const override { return true; }
+
+    double max() const override;
+
+    double min() const override;
+
+    void propagate(State& state) const override;
+
     void revert(State& state) const override;
 
  private:

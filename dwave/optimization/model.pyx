@@ -1781,18 +1781,6 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import All  # avoid circular import
         return All(self)
 
-    def len(self):
-        """Create an :class:`~dwave.optimization.symbols.Len` symbol.
-        
-        The new symbol's state is the length of its predecessor.
-
-        See also:
-            :meth:`.size()` for the size of the underlying array.
-
-        """
-        from dwave.optimization.symbols import Len  # avoid circular import
-        return Len(self)
-
     def max(self):
         """Create a :class:`~dwave.optimization.symbols.Max` symbol.
 
@@ -1889,7 +1877,8 @@ cdef class ArraySymbol(Symbol):
     def size(self):
         r"""Return the number of elements in the symbol.
 
-        ``-1`` indicates a variable number of elements.
+        If the symbol has a fixed size, returns that size as an integer.
+        Otherwise, returns a :class:`~dwave.optimization.symbols.Size` symbol.
 
         Examples:
             This example checks the size of a :math:`2 \times 3`
@@ -1901,10 +1890,11 @@ cdef class ArraySymbol(Symbol):
             >>> x.size()
             6
 
-        See also:
-            :meth:`.len()` for a method that return a symbol representing
-            the length.
         """
+        if self.array_ptr.dynamic():
+            from dwave.optimization.symbols import Size
+            return Size(self)
+
         return self.array_ptr.size()
 
     def state(self, Py_ssize_t index = 0, *, bool copy = True):

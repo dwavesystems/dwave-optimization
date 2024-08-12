@@ -73,13 +73,13 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
 
         vector[slice_or_int] infer_indices() except +
 
-    cdef cppclass LenNode(ArrayNode):
-        pass
-
     cdef cppclass PermutationNode(ArrayNode):
         pass
 
     cdef cppclass ReshapeNode(ArrayNode):
+        pass
+
+    cdef cppclass SizeNode(ArrayNode):
         pass
 
 

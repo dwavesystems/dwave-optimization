@@ -59,7 +59,6 @@ from dwave.optimization.libcpp.nodes cimport (
     DisjointListsNode as cppDisjointListsNode,
     EqualNode as cppEqualNode,
     IntegerNode as cppIntegerNode,
-    LenNode as cppLenNode,
     LessEqualNode as cppLessEqualNode,
     ListNode as cppListNode,
     LogicalNode as cppLogicalNode,
@@ -81,6 +80,7 @@ from dwave.optimization.libcpp.nodes cimport (
     QuadraticModelNode as cppQuadraticModelNode,
     ReshapeNode as cppReshapeNode,
     SetNode as cppSetNode,
+    SizeNode as cppSizeNode,
     SubtractNode as cppSubtractNode,
     SquareNode as cppSquareNode,
     SumNode as cppSumNode,
@@ -106,7 +106,6 @@ __all__ = [
     "DisjointList",
     "Equal",
     "IntegerVariable",
-    "Len",
     "LessEqual",
     "ListVariable",
     "Logical",
@@ -128,6 +127,7 @@ __all__ = [
     "Reshape",
     "Subtract",
     "SetVariable",
+    "Size",
     "Square",
     "Sum",
     "Where",
@@ -1572,30 +1572,6 @@ cdef class IntegerVariable(ArraySymbol):
 _register(IntegerVariable, typeid(cppIntegerNode))
 
 
-cdef class Len(ArraySymbol):
-    def __init__(self, ArraySymbol array):
-        cdef Model model = array.model
-
-        self.ptr = model._graph.emplace_node[cppLenNode](array.array_ptr)
-        self.initialize_arraynode(array.model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppLenNode* ptr = dynamic_cast_ptr[cppLenNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Len")
-
-        cdef Len x = Len.__new__(Len)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    # An observing pointer to the C++ LenNode
-    cdef cppLenNode* ptr
-
-_register(Len, typeid(cppLenNode))
-
-
 cdef class LessEqual(ArraySymbol):
     """Smaller-or-equal comparison element-wise between two symbols.
 
@@ -2693,6 +2669,30 @@ cdef class SetVariable(ArraySymbol):
     cdef cppSetNode* ptr
 
 _register(SetVariable, typeid(cppSetNode))
+
+
+cdef class Size(ArraySymbol):
+    def __init__(self, ArraySymbol array):
+        cdef Model model = array.model
+
+        self.ptr = model._graph.emplace_node[cppSizeNode](array.array_ptr)
+        self.initialize_arraynode(array.model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppSizeNode* ptr = dynamic_cast_ptr[cppSizeNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Size")
+
+        cdef Size x = Size.__new__(Size)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    # An observing pointer to the C++ SizeNode
+    cdef cppSizeNode* ptr
+
+_register(Size, typeid(cppSizeNode))
 
 
 cdef class Square(ArraySymbol):
