@@ -162,7 +162,7 @@ jobs:
             rm -r env
             python -m venv env
             . env/bin/activate
-            pip install dist/dwave-optimization*.tar.gz
+            pip install dist/dwave*optimization*.tar.gz
       - run: &run-tests
           name: test with installed package
           command: |
