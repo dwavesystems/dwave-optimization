@@ -80,10 +80,9 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
 template <std::ranges::range R>
 void NumberNode::initialize_state(State& state, R&& number_data) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
+    assert(this->topological_index() >= 0 && "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > this->topological_index() && "unexpected state length");
+    assert(state[this->topological_index()] == nullptr && "already initialized state");
 
     if (number_data.size() != static_cast<size_t>(this->size())) {
         throw std::invalid_argument("Size of data provided does not match node size");

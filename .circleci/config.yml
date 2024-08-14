@@ -89,13 +89,13 @@ jobs:
           name: build with -Werror
           command: |
             . env/bin/activate
-            CFLAGS="-Werror" python setup.py build_ext --inplace
+            CPPFLAGS="-Werror" python setup.py build_ext --inplace
 
       - run:
           name: build with -Werror and -UNDEBUG
           command: |
             . env/bin/activate
-            CFLAGS="-UNDEBUG -Werror" python setup.py build_ext --inplace --force
+            CPPFLAGS="-UNDEBUG -Werror" python setup.py build_ext --inplace --force
 
       - run:
           name: run tests
@@ -162,7 +162,7 @@ jobs:
             rm -r env
             python -m venv env
             . env/bin/activate
-            pip install dist/dwave-optimization*.tar.gz
+            pip install dist/dwave*optimization*.tar.gz
       - run: &run-tests
           name: test with installed package
           command: |

@@ -27,13 +27,15 @@ class ArrayValidationNodeData : public dwave::optimization::NodeStateData {
 
 void check_shape(const std::span<const ssize_t>& dynamic_shape,
                  const std::span<const ssize_t> shape, ssize_t expected_size) {
-    ssize_t size = 1;
     assert(shape.size() == dynamic_shape.size());
-    for (ssize_t axis = 0; axis < static_cast<ssize_t>(shape.size()); ++axis) {
-        if (axis >= 1) assert(shape[axis] == dynamic_shape[axis]);
-        size *= dynamic_shape[axis];
-    }
-    assert(size == expected_size);
+    assert(([&dynamic_shape, &shape, &expected_size]() -> bool {
+        ssize_t size = 1;
+        for (ssize_t axis = 0; axis < static_cast<ssize_t>(shape.size()); ++axis) {
+            if (axis >= 1 && shape[axis] != dynamic_shape[axis]) return false;
+            size *= dynamic_shape[axis];
+        }
+        return size == expected_size;
+    })());
 }
 
 ArrayValidationNode::ArrayValidationNode(ArrayNode* node_ptr) : array_ptr(node_ptr) {
