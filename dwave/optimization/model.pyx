@@ -1766,11 +1766,21 @@ cdef class ArraySymbol(Symbol):
             return Square(self)
         # check if exponent is an integer greater than 2
         elif (isinstance(exponent, int) and exponent > 2) or (isinstance(exponent, float) and exponent.is_integer() and exponent > 2):
+            from dwave.optimization.symbols import Square  # avoid circular import
             from dwave.optimization.symbols import Multiply  # avoid circular import
-            total = [self]
-            for i in range(exponent - 1):
-                total.append(Multiply(total[-1], self))
-            return total[-1]
+            nodes = [self]
+            nodes_exponents = [1]
+            while nodes_exponents[-1] < exponent:
+                if nodes_exponents[-1] * 2 <= exponent:
+                    nodes.append(Square(nodes[-1]))
+                    nodes_exponents.append(nodes_exponents[-1] * 2)
+                else:
+                    indexer = 2
+                    while nodes_exponents[-1] + nodes_exponents[-indexer] > exponent:
+                        indexer += 1
+                    nodes.append(Multiply(nodes[-indexer], nodes[-1]))
+                    nodes_exponents.append(nodes_exponents[-indexer] + nodes_exponents[-1])
+            return nodes[-1]
         raise ValueError("only integers exponents of 2 or greater are supported")
 
     def __sub__(self, rhs):
