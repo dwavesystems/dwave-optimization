@@ -1764,7 +1764,12 @@ cdef class ArraySymbol(Symbol):
         if exponent == 2:
             from dwave.optimization.symbols import Square  # avoid circular import
             return Square(self)
-        raise ValueError("only squaring is currently supported")
+        else:
+            from dwave.optimization.symbols import Multiply  # avoid circular import
+            total = [self]
+            for i in range(exponent - 1):
+                total.append(Multiply(total[-1], self))
+            return total[-1]
 
     def __sub__(self, rhs):
         if isinstance(rhs, ArraySymbol):
