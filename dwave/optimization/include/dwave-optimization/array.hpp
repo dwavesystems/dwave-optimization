@@ -75,7 +75,7 @@ struct Slice {
     constexpr Slice(std::optional<ssize_t> start, std::optional<ssize_t> stop,
                     std::optional<ssize_t> step = std::nullopt) {
         constexpr ssize_t MAX = std::numeric_limits<ssize_t>::max();
-        constexpr ssize_t MIN = std::numeric_limits<ssize_t>::min();
+        constexpr ssize_t MIN = std::numeric_limits<ssize_t>::lowest();
 
         this->step = step.value_or(1);
 
@@ -575,7 +575,7 @@ class Array {
     // The maximum and minimum values that elements in the array may take.
     // Defaults to the min and max values of the underlying data type.
     // todo: consider making state-dependent overloads that report the current min/max
-    virtual double min() const { return std::numeric_limits<double>::min(); }
+    virtual double min() const { return std::numeric_limits<double>::lowest(); }
     virtual double max() const { return std::numeric_limits<double>::max(); }
 
     // Whether the values in the array can be interpreted as integers. This is not
