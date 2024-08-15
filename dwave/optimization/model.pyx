@@ -1769,7 +1769,7 @@ cdef class ArraySymbol(Symbol):
             for symbol in expanded:
                 out *= symbol  # multiply it by the remainder
             return out
-        raise ValueError("only integers exponents of 2 or greater are supported")
+        raise ValueError("only integers exponents of 1 or greater are supported")
 
     def __sub__(self, rhs):
         if isinstance(rhs, ArraySymbol):
