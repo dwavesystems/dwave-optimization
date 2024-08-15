@@ -1737,7 +1737,6 @@ class TestSetVariable(utils.SymbolTests):
 
         s = model.set(10)
         self.assertEqual(s.shape(), (-1,))
-        self.assertEqual(s.size(), -1)
         self.assertEqual(s.strides(), (np.dtype(np.double).itemsize,))
 
         t = model.set(5, 5)  # this is exactly range(5)
@@ -1808,6 +1807,43 @@ class TestSetVariable(utils.SymbolTests):
         self.assertEqual(model.set(10).state_size(), 10 * 8)
         self.assertEqual(model.set(10, min_size=5).state_size(), 10 * 8)
         self.assertEqual(model.set(10, max_size=5).state_size(), 5 * 8)
+
+
+class TestSize(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+
+        a = dwave.optimization.symbols.Size(model.constant(5))
+        b = dwave.optimization.symbols.Size(model.constant([0, 1, 2]))
+        c = model.set(5).size()
+
+        with model.lock():
+            yield a
+            yield b
+            yield c
+
+    def test_dynamic(self):
+        model = Model()
+        model.states.resize(2)
+
+        set_ = model.set(5)
+        length = set_.size()
+
+        set_.set_state(0, [])
+        set_.set_state(1, [0, 2, 3])
+
+        with model.lock():
+            self.assertEqual(length.state(0), 0)
+            self.assertEqual(length.state(1), 3)
+
+    def test_scalar(self):
+        model = Model()
+        model.states.resize(1)
+
+        length = dwave.optimization.symbols.Size(model.constant(1))
+
+        with model.lock():
+            self.assertEqual(length.state(), 1)
 
 
 class TestSubtract(utils.BinaryOpTests):

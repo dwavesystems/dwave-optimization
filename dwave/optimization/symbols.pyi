@@ -172,6 +172,10 @@ class SetVariable(ArraySymbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
 
 
+class Size(ArraySymbol):
+    ...
+
+
 class Square(ArraySymbol):
     ...
 
