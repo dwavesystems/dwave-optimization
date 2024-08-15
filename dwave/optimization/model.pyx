@@ -1761,11 +1761,8 @@ cdef class ArraySymbol(Symbol):
         except TypeError:
             return NotImplemented
 
-        if exponent == 2:
-            from dwave.optimization.symbols import Square  # avoid circular import
-            return Square(self)
-        # check if exponent is an integer greater than 2
-        elif (isinstance(exponent, int) and exponent > 2) or (isinstance(exponent, float) and exponent.is_integer() and exponent > 2):
+        # check if exponent is an integer greater than 0
+        if isinstance(exponent, numbers.Real) and exponent > 0 and int(exponent) == exponent:
             from dwave.optimization.symbols import Square  # avoid circular import
             from dwave.optimization.symbols import Multiply  # avoid circular import
             nodes = [self]
