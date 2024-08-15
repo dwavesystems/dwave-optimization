@@ -1770,7 +1770,7 @@ cdef class ArraySymbol(Symbol):
             out = next(expanded)  # get the first one
             # multiply self by itself exponent times
             for symbol in expanded:
-                out = out.__imul__(symbol)
+                out *= symbol
             return out
         raise ValueError("only integer exponents of 1 or greater are supported")
 
