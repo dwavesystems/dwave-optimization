@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Fix ``Array::min()``. Previously it incorrectly reported the smallest
+    number expressible by a ``double``, rather than the lowest.
+    See `#85 <https://github.com/dwavesystems/dwave-optimization/issues/85>`_.
