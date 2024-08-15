@@ -1763,11 +1763,11 @@ cdef class ArraySymbol(Symbol):
 
         # check if exponent is an integer greater than 0
         if isinstance(exponent, numbers.Real) and exponent > 0 and int(exponent) == exponent:
-            expanded = itertools.repeat(self, int(exponent)) # iterator that returns self, exponent number of times
+            expanded = itertools.repeat(self, int(exponent))
             out = next(expanded)  # get the first one
-            # multiply self by itself exponent times (using the *= operator)
+            # multiply self by itself exponent times
             for symbol in expanded:
-                out = out.__imul__(symbol)  # multiply it by the remainder
+                out = out.__imul__(symbol)
             return out
         raise ValueError("only integers exponents of 1 or greater are supported")
 
