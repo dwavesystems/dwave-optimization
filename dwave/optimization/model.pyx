@@ -1772,7 +1772,7 @@ cdef class ArraySymbol(Symbol):
             for symbol in expanded:
                 out = out.__imul__(symbol)
             return out
-        raise ValueError("only integers exponents of 1 or greater are supported")
+        raise ValueError("only integer exponents of 1 or greater are supported")
 
     def __sub__(self, rhs):
         if isinstance(rhs, ArraySymbol):
