@@ -1761,7 +1761,6 @@ cdef class ArraySymbol(Symbol):
         except TypeError:
             return NotImplemented
 
-
         if exponent == 2:
             from dwave.optimization.symbols import Square  # avoid circular import
             return Square(self)
