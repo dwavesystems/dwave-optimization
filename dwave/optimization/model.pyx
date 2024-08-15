@@ -1885,7 +1885,8 @@ cdef class ArraySymbol(Symbol):
     def size(self):
         r"""Return the number of elements in the symbol.
 
-        ``-1`` indicates a variable number of elements.
+        If the symbol has a fixed size, returns that size as an integer.
+        Otherwise, returns a :class:`~dwave.optimization.symbols.Size` symbol.
 
         Examples:
             This example checks the size of a :math:`2 \times 3`
@@ -1896,7 +1897,12 @@ cdef class ArraySymbol(Symbol):
             >>> x = model.binary((2, 3))
             >>> x.size()
             6
+
         """
+        if self.array_ptr.dynamic():
+            from dwave.optimization.symbols import Size
+            return Size(self)
+
         return self.array_ptr.size()
 
     def state(self, Py_ssize_t index = 0, *, bool copy = True):

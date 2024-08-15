@@ -79,6 +79,9 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
     cdef cppclass ReshapeNode(ArrayNode):
         pass
 
+    cdef cppclass SizeNode(ArrayNode):
+        pass
+
 
 cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass AbsoluteNode(ArrayNode):

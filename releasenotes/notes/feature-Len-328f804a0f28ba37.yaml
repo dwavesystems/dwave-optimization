@@ -1,0 +1,4 @@
+---
+features:
+  - Add ``SizeNode`` C++ class. ``SizeNode`` reports the size of its predecessor. See `#48 <https://github.com/dwavesystems/dwave-optimization/issues/48>`_.
+  - Add ``Size`` Python class. ``Size`` reports the size of its predecessor. See `#48 <https://github.com/dwavesystems/dwave-optimization/issues/48>`_.

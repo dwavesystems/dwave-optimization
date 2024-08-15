@@ -2520,4 +2520,132 @@ TEST_CASE("ReshapeNode") {
     }
 }
 
+TEST_CASE("SizeNode") {
+    GIVEN("A 0d node") {
+        auto C = ConstantNode(5);
+
+        WHEN("We create a node accessing the length") {
+            auto len = SizeNode(&C);
+
+            THEN("The SizeNode is a scalar output") {
+                CHECK(len.size() == 1);
+                CHECK(len.ndim() == 0);
+                CHECK(!len.dynamic());
+            }
+
+            THEN("The output is a integer and we already know the min/max") {
+                CHECK(len.integral());
+                CHECK(len.min() == C.size());
+                CHECK(len.max() == C.size());
+            }
+        }
+    }
+
+    GIVEN("A 1D node with a fixed size") {
+        auto C = ConstantNode(std::vector{0, 1, 2});
+
+        WHEN("We create a node accessing the length") {
+            auto len = SizeNode(&C);
+
+            THEN("The SizeNode is a scalar output") {
+                CHECK(len.size() == 1);
+                CHECK(len.ndim() == 0);
+                CHECK(!len.dynamic());
+            }
+
+            THEN("The output is a integer and we already know the min/max") {
+                CHECK(len.integral());
+                CHECK(len.min() == C.size());
+                CHECK(len.max() == C.size());
+            }
+        }
+    }
+
+    GIVEN("A dynamic node") {
+        auto S = SetNode(5, 2, 4);
+
+        WHEN("We create a node accessing the length") {
+            auto len = SizeNode(&S);
+
+            THEN("The SizeNode is a scalar output") {
+                CHECK(len.size() == 1);
+                CHECK(len.ndim() == 0);
+                CHECK(!len.dynamic());
+            }
+
+            THEN("The output is a integer and we already know the min/max") {
+                CHECK(len.integral());
+                CHECK(len.min() == 2);
+                CHECK(len.max() == 4);
+            }
+        }
+
+        AND_WHEN("We create a node indirectly accessing the length") {
+            auto T = BasicIndexingNode(&S, Slice(0, -1));  // also dynamic, but indirect
+            auto len = SizeNode(&T);
+
+            THEN("The SizeNode is a scalar output") {
+                CHECK(len.size() == 1);
+                CHECK(len.ndim() == 0);
+                CHECK(!len.dynamic());
+            }
+
+            THEN("The output is a integer and we already know the min/max") {
+                CHECK(len.integral());
+
+                // these should always be true
+                CHECK(len.min() >= 0);
+                CHECK(len.max() <= std::numeric_limits<ssize_t>::max());
+
+                // these are an implementation detail and could change in the future
+                CHECK(len.min() == 0);
+                CHECK(len.max() == std::numeric_limits<ssize_t>::max());
+            }
+        }
+    }
+
+    GIVEN("A graph with a SetNode and a corresponding SizeNode, and a state") {
+        auto graph = Graph();
+
+        auto s_ptr = graph.emplace_node<SetNode>(5);
+        auto len_ptr = graph.emplace_node<SizeNode>(s_ptr);
+
+        auto state = graph.empty_state();
+        s_ptr->initialize_state(state, {});  // default to empty
+        graph.initialize_state(state);
+
+        THEN("The state of the SizeNode is the same as the size of the SetNode") {
+            CHECK(*(len_ptr->buff(state)) == s_ptr->size(state));
+        }
+
+        WHEN("We update the set and propagate") {
+            s_ptr->grow(state);
+            s_ptr->propagate(state);
+            len_ptr->propagate(state);
+
+            THEN("The state of the SizeNode is the same as the size of the SetNode") {
+                CHECK(*(len_ptr->buff(state)) == s_ptr->size(state));
+            }
+
+            AND_WHEN("We commit") {
+                s_ptr->commit(state);
+                len_ptr->commit(state);
+
+                THEN("The state of the SizeNode is the same as the size of the SetNode") {
+                    CHECK(*(len_ptr->buff(state)) == s_ptr->size(state));
+                }
+            }
+
+            AND_WHEN("We revert") {
+                s_ptr->revert(state);
+                len_ptr->revert(state);
+
+                THEN("The state of the SizeNode is the same as the size of the SetNode") {
+                    CHECK(*(len_ptr->buff(state)) == s_ptr->size(state));
+                }
+            }
+        }
+    }
+}
+
 }  // namespace dwave::optimization

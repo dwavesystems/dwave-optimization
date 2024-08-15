@@ -404,6 +404,9 @@ TEST_CASE("Dynamically Sized 2d Array") {
 
             // for contiguous view is the same as span(buff(), size())
             CHECK(std::ranges::equal(std::span(arr.buff(state), arr.size(state)), arr.view(state)));
+
+            CHECK(arr.min() < 0);
+            CHECK(arr.max() > 0);
         }
 
         AND_WHEN("We adjust the state") {
