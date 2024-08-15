@@ -282,7 +282,7 @@ workflows:
             tags:
               only: &version-string /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
       - python-linux-aarch64: *build-linux
-      - python-linux-debug
+      # - python-linux-debug
       - python-macOS:
           matrix:
             parameters:
@@ -294,8 +294,8 @@ workflows:
             parameters:
               python-version: *python-versions
           filters: *tags
-      - python-sdist:
-          filters: *tags
+      # - python-sdist:
+      #     filters: *tags
       - python-dependencies:
           name: python-dependencies-oldest
           python-version: "3.8"
@@ -315,15 +315,15 @@ workflows:
       - docs:
           requires:
             - python-linux
-      - deploy:
-          filters:
-            tags:
-              only: *version-string
-            branches:
-              ignore: /.*/
-          requires:
-            - python-linux
-            - python-linux-aarch64
-            - python-macOS
-            - python-windows
-            - python-sdist
+      # - deploy:
+      #     filters:
+      #       tags:
+      #         only: *version-string
+      #       branches:
+      #         ignore: /.*/
+      #     requires:
+      #       - python-linux
+      #       - python-linux-aarch64
+      #       - python-macOS
+      #       - python-windows
+      #       - python-sdist
