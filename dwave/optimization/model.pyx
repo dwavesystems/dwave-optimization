@@ -1764,7 +1764,15 @@ cdef class ArraySymbol(Symbol):
         if exponent == 2:
             from dwave.optimization.symbols import Square  # avoid circular import
             return Square(self)
-        raise ValueError("only squaring is currently supported")
+        # check if exponent is an integer greater than 0
+        elif isinstance(exponent, numbers.Real) and exponent > 0 and int(exponent) == exponent:
+            expanded = itertools.repeat(self, int(exponent))
+            out = next(expanded)  # get the first one
+            # multiply self by itself exponent times
+            for symbol in expanded:
+                out *= symbol
+            return out
+        raise ValueError("only integer exponents of 1 or greater are supported")
 
     def __sub__(self, rhs):
         if isinstance(rhs, ArraySymbol):

@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    Add support for exponentiation of ``ArraySymbol`` for positive integer exponents other than 2.
