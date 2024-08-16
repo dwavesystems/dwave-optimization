@@ -77,7 +77,6 @@ class TestArraySymbol(unittest.TestCase):
             self.assertIsInstance(x ** 2, dwave.optimization.symbols.Square)
             self.assertIsInstance(x ** 3, dwave.optimization.symbols.NaryMultiply)
             self.assertIsInstance(x ** 4, dwave.optimization.symbols.NaryMultiply)
-            self.assertIsInstance(x ** 4, dwave.optimization.symbols.NaryMultiply)
             self.assertIsInstance(x ** 5, dwave.optimization.symbols.NaryMultiply)
             self.assertIs(x.__pow__(UnknownType()), NotImplemented)
 
