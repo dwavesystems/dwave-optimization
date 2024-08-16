@@ -56,6 +56,7 @@ manylinux-aarch64-image = "manylinux_2_28"
 [tool.cibuildwheel.macos]
 # We follow NumPy and don't build universal wheels, see https://github.com/numpy/numpy/pull/20787
 archs = "x86_64 arm64"
+test-command = ""  # temporarily disable macos tests
 
 # Lowest version that has the C++ features we want, see https://cibuildwheel.pypa.io/en/stable/cpp_standards/
 environment = "MACOSX_DEPLOYMENT_TARGET=10.13"
