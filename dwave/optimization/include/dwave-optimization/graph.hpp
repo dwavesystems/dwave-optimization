@@ -143,6 +143,10 @@ class Graph {
     // To unset the objective provide nullptr.
     void set_objective(ArrayNode* objective_ptr);
 
+    // Will return nullptr if there is no objective set.
+    ArrayNode* objective() noexcept { return objective_ptr_; }
+    const ArrayNode* objective() const noexcept { return objective_ptr_; }
+
     // Add a constraint node.
     void add_constraint(ArrayNode* constraint_ptr);
     std::span<ArrayNode* const> constraints() noexcept { return constraints_; }
