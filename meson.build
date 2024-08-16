@@ -37,13 +37,18 @@ libdwave_optimization = library(
     install_dir: py.get_install_dir(pure: false) / 'dwave/optimization/'
 )
 
+why_does_this_help = declare_dependency(
+    link_with: libdwave_optimization,
+)
+
 py.extension_module(
     'model',
     'dwave/optimization/model.pyx',
     subdir: 'dwave/optimization/',
     override_options : ['cython_language=cpp'],
-    dependencies : py.dependency(),
-    link_with: [libdwave_optimization],
+    #dependencies : py.dependency(),
+    #link_with: [libdwave_optimization],
+    dependencies: [why_does_this_help],
     include_directories: dwave_optimization_include,
     install: true,
 )
@@ -53,8 +58,9 @@ py.extension_module(
     'dwave/optimization/symbols.pyx',
     subdir: 'dwave/optimization/',
     override_options : ['cython_language=cpp'],
-    dependencies : py.dependency(),
-    link_with: [libdwave_optimization],
+    #dependencies : py.dependency(),
+    #link_with: [libdwave_optimization],
+    dependencies: [why_does_this_help],
     include_directories: dwave_optimization_include,
     install: true,
 )
