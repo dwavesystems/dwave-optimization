@@ -4,8 +4,12 @@ project(
     version: '0.2.0',
     default_options: [
         'cpp_std=c++20',
+        'buildtype=release',
+        'b_ndebug=if-release',  # add -DNDEBUG when building for "release", which we do by default
+        'pkgconfig.relocatable=true',
     ],
 )
+add_project_arguments(['-g1'], language: ['cpp'])
 
 py = import('python').find_installation(
     pure: false,
