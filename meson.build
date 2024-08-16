@@ -46,6 +46,7 @@ py.extension_module(
     include_directories: dwave_optimization_include,
     install: true,
     install_rpath: '$ORIGIN',
+    gnu_symbol_visibility: '',
 )
 
 py.extension_module(
@@ -57,6 +58,7 @@ py.extension_module(
     include_directories: dwave_optimization_include,
     install: true,
     install_rpath: '$ORIGIN',
+    gnu_symbol_visibility: '',
 )
 
 install_subdir('dwave', install_dir: py.get_install_dir(pure: false))
