@@ -72,7 +72,11 @@ class TestArraySymbol(unittest.TestCase):
         # The operators that don't fit as neatly into the above
 
         with self.subTest("__pow__"):
+            self.assertEqual(x ** 1, x)
             self.assertIsInstance(x ** 2, dwave.optimization.symbols.Square)
+            self.assertIsInstance(x ** 3, dwave.optimization.model.ArraySymbol)
+            self.assertIsInstance(x ** 4, dwave.optimization.model.ArraySymbol)
+            self.assertIsInstance(x ** 5, dwave.optimization.model.ArraySymbol)
             self.assertIs(x.__pow__(UnknownType()), NotImplemented)
 
     class IndexTester:
