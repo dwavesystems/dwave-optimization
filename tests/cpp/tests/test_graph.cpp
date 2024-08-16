@@ -174,4 +174,25 @@ TEST_CASE("Topological Sort", "[topological_sort]") {
     // test edge cases.
 }
 
+TEST_CASE("Graph::objective()") {
+    GIVEN("A graph") {
+        auto graph = Graph();
+
+        THEN("The objective defaults to nullptr") {
+            CHECK(graph.objective() == nullptr);
+            CHECK(static_cast<const Graph&>(graph).objective() == nullptr);
+        }
+
+        WHEN("We add an objective") {
+            ArrayNode* x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{});
+            graph.set_objective(x_ptr);
+
+            THEN("The objective is set") {
+                CHECK(graph.objective() == x_ptr);
+                CHECK(static_cast<const Graph&>(graph).objective() == x_ptr);
+            }
+        }
+    }
+}
+
 }  // namespace dwave::optimization
