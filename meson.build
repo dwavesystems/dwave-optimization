@@ -16,43 +16,30 @@ py = import('python').find_installation(
 )
 
 dwave_optimization_include = include_directories('dwave/optimization/include/')
+dwave_optimization_src = [
+            'dwave/optimization/src/nodes/collections.cpp',
+            'dwave/optimization/src/nodes/flow.cpp',
+            'dwave/optimization/src/nodes/indexing.cpp',
+            'dwave/optimization/src/nodes/mathematical.cpp',
+            'dwave/optimization/src/nodes/numbers.cpp',
+            'dwave/optimization/src/nodes/quadratic_model.cpp',
+            'dwave/optimization/src/nodes/testing.cpp',
+            'dwave/optimization/src/array.cpp',
+            'dwave/optimization/src/graph.cpp',
+            'dwave/optimization/src/utils.cpp',
+            'dwave/optimization/src/vartypes.cpp',
+        ]
 
 if host_machine.system() == 'windows'
     libdwave_optimization = static_library(
         'dwave-optimization',
-        sources: [
-            'dwave/optimization/src/nodes/collections.cpp',
-            'dwave/optimization/src/nodes/flow.cpp',
-            'dwave/optimization/src/nodes/indexing.cpp',
-            'dwave/optimization/src/nodes/mathematical.cpp',
-            'dwave/optimization/src/nodes/numbers.cpp',
-            'dwave/optimization/src/nodes/quadratic_model.cpp',
-            'dwave/optimization/src/nodes/testing.cpp',
-            'dwave/optimization/src/array.cpp',
-            'dwave/optimization/src/graph.cpp',
-            'dwave/optimization/src/utils.cpp',
-            'dwave/optimization/src/vartypes.cpp',
-        ],
+        sources: dwave_optimization_src,
         include_directories: dwave_optimization_include,
-        install: true,
-        install_dir: py.get_install_dir(pure: false) / 'dwave/optimization/',
     )
 else
     libdwave_optimization = shared_library(
         'dwave-optimization',
-        sources: [
-            'dwave/optimization/src/nodes/collections.cpp',
-            'dwave/optimization/src/nodes/flow.cpp',
-            'dwave/optimization/src/nodes/indexing.cpp',
-            'dwave/optimization/src/nodes/mathematical.cpp',
-            'dwave/optimization/src/nodes/numbers.cpp',
-            'dwave/optimization/src/nodes/quadratic_model.cpp',
-            'dwave/optimization/src/nodes/testing.cpp',
-            'dwave/optimization/src/array.cpp',
-            'dwave/optimization/src/graph.cpp',
-            'dwave/optimization/src/utils.cpp',
-            'dwave/optimization/src/vartypes.cpp',
-        ],
+        sources: dwave_optimization_src,
         include_directories: dwave_optimization_include,
         install: true,
         install_dir: py.get_install_dir(pure: false) / 'dwave/optimization/',
