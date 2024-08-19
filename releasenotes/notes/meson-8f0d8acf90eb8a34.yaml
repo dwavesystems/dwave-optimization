@@ -1,0 +1,7 @@
+---
+other:
+  - |
+    Switch to using `Meson <https://mesonbuild.com/>`_ as the build system.
+    When installing from source with ``pip`` or ``pypa/build``, Meson will
+    be used to install the package. Previously ``setuptools`` and ``setuptools_dso``
+    were used.
