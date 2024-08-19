@@ -1,7 +1,7 @@
 [build-system]
 requires = [
     "cython~=3.0",
-    "meson-python",
+    "meson-python~=0.16",
 ]
 build-backend = 'mesonpy'
 
@@ -46,10 +46,10 @@ Documentation = "https://docs.ocean.dwavesys.com"
 build-verbosity = "1"
 skip = "pp* *musllinux*"
 before-test = "pip install -r {project}/tests/requirements.txt"
-test-command = "python -m unittest discover {project}/tests/ -f"
+test-command = "python -m unittest discover {project}/tests/"
 
 [tool.cibuildwheel.config-settings]
-compile-args = "-v"
+compile-args = ["-v"]
 
 [tool.cibuildwheel.linux]
 archs = "x86_64 aarch64"
@@ -59,7 +59,6 @@ manylinux-aarch64-image = "manylinux_2_28"
 [tool.cibuildwheel.macos]
 # We follow NumPy and don't build universal wheels, see https://github.com/numpy/numpy/pull/20787
 archs = "x86_64 arm64"
-repair-wheel-command = ""  # temporarily disable wheel repair
 
 # Lowest version that has the C++ features we want, see https://cibuildwheel.pypa.io/en/stable/cpp_standards/
 environment = "MACOSX_DEPLOYMENT_TARGET=10.13"

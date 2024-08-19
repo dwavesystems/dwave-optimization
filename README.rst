@@ -66,6 +66,15 @@ Installation from `PyPI <https://pypi.org/project/dwave-optimization>`_:
 
     pip install dwave-optimization
 
+During package development, it is often convenient to use an editable install.
+See `meson-python's editible installs 
+<https://meson-python.readthedocs.io/en/latest/how-to-guides/editable-installs.html>`_
+for more details.
+
+.. code-block:: bash
+
+    pip install --no-build-isolation --config-settings=editable-verbose=true --editable .
+
 .. installation-end-marker
 
 License
