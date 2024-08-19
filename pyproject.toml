@@ -48,6 +48,9 @@ skip = "pp* *musllinux*"
 before-test = "pip install -r {project}/tests/requirements.txt"
 test-command = "python -m unittest discover {project}/tests/ -f"
 
+[tool.cibuildwheel.config-settings]
+compile-args = "-v"
+
 [tool.cibuildwheel.linux]
 archs = "x86_64 aarch64"
 manylinux-x86_64-image = "manylinux_2_28"

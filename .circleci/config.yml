@@ -118,7 +118,6 @@ jobs:
       <<: *global-environment
       CIBW_PROJECT_REQUIRES_PYTHON: ~=<< parameters.python-version>>
       CIBW_ARCHS_MACOS: << parameters.cibw-arch >>
-      CIBW_CONFIG_SETTINGS: compile-args=-v
 
     steps:
       - checkout
