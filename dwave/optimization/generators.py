@@ -199,10 +199,9 @@ def bin_packing(weights: numpy.typing.ArrayLike,
 
     # Minimize the number of bins that are non-empty
     constant_one = model.constant(1)
-    count_helper = model.constant(np.ones(num_items))
     obj_val = model.constant(0)
     for i in range(max_bins):
-        obj_val += ((bins[i]*count_helper).sum() >= constant_one)
+        obj_val += (bins[i].sum() >= constant_one)
 
     model.minimize(obj_val)
 
