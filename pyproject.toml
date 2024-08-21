@@ -77,9 +77,3 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
-
-[tool.setuptools]
-packages = ["dwave", "dwave.optimization"]
-
-[tool.setuptools.dynamic]
-version = {attr = "dwave.optimization.__version__"}
