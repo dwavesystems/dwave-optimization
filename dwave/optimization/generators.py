@@ -147,7 +147,7 @@ def _from_constrained_quadratic_model(cqm) -> Model:
     return model
 
 def bin_packing(weights: numpy.typing.ArrayLike,
-                bin_capacity: float
+                capacity: float
                 ) -> Model:
     r"""Generate a model encoding a bin packing problem.
 
@@ -161,7 +161,7 @@ def bin_packing(weights: numpy.typing.ArrayLike,
             A 1D |array-like|_ (row vector or Python list) of weights per item.
             Weights can be any non-negative number.
 
-        bin_capacity:
+        capacity:
             Maximum capacity of each bin. Must be a positive number.
 
     Returns:
@@ -173,10 +173,10 @@ def bin_packing(weights: numpy.typing.ArrayLike,
     if weights.shape[0] == 0:
         raise ValueError("the number of items must be positive")
 
-    if bin_capacity <= 0:
-        raise ValueError("`bin_capacity` must be a positive number")
+    if capacity <= 0:
+        raise ValueError("`capacity` must be a positive number")
 
-    if any(weight > bin_capacity for weight in weights):
+    if any(weight > capacity for weight in weights):
         raise ValueError("each weight in `weights` must be smaller than bin_capacity")
 
     num_items = weights.shape[0]
@@ -186,7 +186,7 @@ def bin_packing(weights: numpy.typing.ArrayLike,
 
     # Add constants
     weights = model.constant(weights)
-    bin_capacity = model.constant(bin_capacity)
+    capacity = model.constant(capacity)
 
     # Create disjoint bit sets to represent bins
     max_bins = num_items
@@ -195,7 +195,7 @@ def bin_packing(weights: numpy.typing.ArrayLike,
     # Ensure that the weight for each bin does not exceed capacity
     for i in range(max_bins):
         bin_array = bins[i]
-        model.add_constraint((bin_array*weights).sum() <= bin_capacity)
+        model.add_constraint((bin_array*weights).sum() <= capacity)
 
     # Minimize the number of bins that are non-empty
     constant_one = model.constant(1)
