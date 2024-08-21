@@ -25,6 +25,7 @@ from dwave.optimization.mathematical import add, maximum
 from dwave.optimization.model import Model
 
 __all__ = [
+    "bin_packing",
     "capacitated_vehicle_routing",
     "flow_shop_scheduling",
     "job_shop_scheduling",
@@ -143,6 +144,68 @@ def _from_constrained_quadratic_model(cqm) -> Model:
         else:
             raise RuntimeError("unexpected sense")
 
+    return model
+
+def bin_packing(weights: numpy.typing.ArrayLike,
+                capacity: float
+                ) -> Model:
+    r"""Generate a model encoding a bin packing problem.
+
+    The bin packing problem,
+    `BPP <https://en.wikipedia.org/wiki/Bin_packing_problem>`_,
+    seeks to find the smallest number of bins that will fit
+    a set of weighted items given that each bin has a weight capacity.
+
+    Args:
+        weights:
+            A 1D |array-like|_ (row vector or Python list) of weights per item.
+            Weights can be any non-negative number.
+
+        capacity:
+            Maximum capacity of each bin. Must be a positive number.
+
+    Returns:
+        A model encoding the BPP problem.
+    """
+
+    weights = _require("weights", weights, dtype=float, nonnegative=True, ndim=1)
+
+    if weights.shape[0] == 0:
+        raise ValueError("the number of items must be positive")
+
+    if capacity <= 0:
+        raise ValueError("`capacity` must be a positive number")
+
+    if any(weight > capacity for weight in weights):
+        raise ValueError("each weight in `weights` must be smaller than bin_capacity")
+
+    num_items = weights.shape[0]
+
+    # Construct model
+    model = Model()
+
+    # Add constants
+    weights = model.constant(weights)
+    capacity = model.constant(capacity)
+
+    # Create disjoint bit sets to represent bins
+    max_bins = num_items
+    main, bins = model.disjoint_bit_sets(num_items, max_bins)
+
+    # Ensure that the weight for each bin does not exceed capacity
+    for i in range(max_bins):
+        bin_array = bins[i]
+        model.add_constraint((bin_array*weights).sum() <= capacity)
+
+    # Minimize the number of bins that are non-empty
+    constant_one = model.constant(1)
+    obj_val = model.constant(0)
+    for i in range(max_bins):
+        obj_val += (bins[i].sum() >= constant_one)
+
+    model.minimize(obj_val)
+
+    model.lock()
     return model
 
 

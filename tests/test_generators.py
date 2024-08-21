@@ -41,6 +41,59 @@ class Test_require(unittest.TestCase):
             _require("a", [0], ndim=0)
 
 
+class TestBinPacking(unittest.TestCase):
+    def test_input_validations(self):
+        # Non-positive bin capacity
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.bin_packing([1,2,3], 0)
+
+        # Zero-length weights array
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.bin_packing([], 1)
+
+        # Negative value in weights array
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.bin_packing([1,-2,3], 5)
+
+        # Item weight greater than bin capacity
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.bin_packing([1,1,3], 2)
+
+    def test_basics(self):
+        weights = [30, 20, 10, 20]
+        bin_capacity = 40
+
+        model = dwave.optimization.generators.bin_packing(weights, bin_capacity)
+
+        self.assertEqual(model.num_decisions(), 1)
+        self.assertEqual(model.num_constraints(), 4)
+        self.assertEqual(model.is_locked(), True)
+
+        items = next(model.iter_decisions())
+        capacity_constraint = next(model.iter_constraints())
+        model.states.resize(2)
+        items.set_state(0, [[1,0,1,0],[0,1,0,1],[0,0,0,0],[0,0,0,0]])
+        items.set_state(1, [[1,1,1,1],[0,0,0,0],[0,0,0,0],[0,0,0,0]])
+        self.assertEqual(model.objective.state(0), 2.)
+        self.assertEqual(capacity_constraint.state(0), 1.)
+        self.assertEqual(model.objective.state(1), 1.)
+        self.assertEqual(capacity_constraint.state(1), 0.)
+
+    def test_serialization(self):
+        weights = [30, 20, 10, 20]
+        bin_capacity = 40
+
+        model = dwave.optimization.generators.bin_packing(weights, bin_capacity)
+
+        with model.to_file() as f:
+            copy = dwave.optimization.Model.from_file(f)
+
+        # a few smoke test checks
+        self.assertEqual(model.num_symbols(), copy.num_symbols())
+        self.assertEqual(model.state_size(), copy.state_size())
+
+
+
 class TestCapacitatedVehicleRouting(unittest.TestCase):
     def test_input_validations(self):
         x = [1, 2, 3]
