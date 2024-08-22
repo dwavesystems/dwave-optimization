@@ -5,6 +5,7 @@ oldest-supported-numpy; python_version >= '3.10'
 # Build requirements
 cython~=3.0
 meson-python~=0.16
+ninja~=1.11
 
 # Other requirements, see also tests/requirements.txt and docs/requirements.txt
 reno==4.1.0  # for changelog
