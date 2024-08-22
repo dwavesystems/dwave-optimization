@@ -73,6 +73,7 @@ for more details.
 
 .. code-block:: bash
 
+    pip install -r requirements.txt
     pip install --no-build-isolation --config-settings=editable-verbose=true --editable .
 
 .. installation-end-marker
