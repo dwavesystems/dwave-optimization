@@ -38,9 +38,9 @@ file = "README.rst"
 content-type = "text/x-rst"
 
 [project.urls]
-Homepage = "https://github.com/dwavesystems/dwave-optimization"
-Download = "https://github.com/dwavesystems/dwave-optimization/releases"
+Changelog = "https://github.com/dwavesystems/dwave-optimization/releases"
 Documentation = "https://docs.ocean.dwavesys.com"
+"Source Code" = "https://github.com/dwavesystems/dwave-optimization"
 
 [tool.cibuildwheel]
 build-verbosity = "1"
