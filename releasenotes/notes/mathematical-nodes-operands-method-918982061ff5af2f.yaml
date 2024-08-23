@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add ``::operands()`` method to C++ ``BinaryOpNode``, ``NaryOpNode``,
+    ``ReduceNode``, and ``UnaryOpNode``. This method allows access to
+    the ``Array*`` of the node's predecessors without a dynamic cast.

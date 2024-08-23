@@ -35,6 +35,10 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<do
 
         auto p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
 
+        THEN("a and b are the operands") {
+            CHECK(std::ranges::equal(p_ptr->operands(), std::vector<Array*>{a_ptr, b_ptr}));
+        }
+
         THEN("The shape is also a scalar") {
             CHECK(p_ptr->ndim() == 0);
             CHECK(p_ptr->size() == 1);
@@ -65,6 +69,10 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<do
             CHECK(p_ptr->size() == 4);
         }
 
+        THEN("a and b are the operands") {
+            CHECK(std::ranges::equal(p_ptr->operands(), std::vector<Array*>{a_ptr, b_ptr}));
+        }
+
         WHEN("We make a state") {
             auto state = graph.initialize_state();
 
@@ -90,6 +98,10 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<do
         THEN("The shape is also a 1D array") {
             CHECK(p_ptr->ndim() == 1);
             CHECK(p_ptr->size() == 4);
+        }
+
+        THEN("a and b are the operands") {
+            CHECK(std::ranges::equal(p_ptr->operands(), std::vector<Array*>{a_ptr, b_ptr}));
         }
 
         WHEN("We make a state") {
@@ -130,6 +142,10 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<do
         THEN("The shape is also a 1D array") {
             CHECK(p_ptr->ndim() == 1);
             CHECK(p_ptr->size() == 4);
+        }
+
+        THEN("a and b are the operands") {
+            CHECK(std::ranges::equal(p_ptr->operands(), std::vector<Array*>{a_ptr, b_ptr}));
         }
 
         WHEN("We make a state") {
@@ -317,6 +333,11 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
             CHECK(p_ptr->size() == 1);
         }
 
+        THEN("The operands are all available via operands()") {
+            CHECK(std::ranges::equal(p_ptr->operands(),
+                                     std::vector<Array*>{a_ptr, b_ptr, c_ptr, d_ptr}));
+        }
+
         WHEN("We make a state") {
             auto state = graph.initialize_state();
 
@@ -341,6 +362,10 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
         THEN("The shape is also a 1D array") {
             CHECK(p_ptr->ndim() == 1);
             CHECK(p_ptr->size() == 4);
+        }
+
+        THEN("The operands are all available via operands()") {
+            CHECK(std::ranges::equal(p_ptr->operands(), std::vector<Array*>{a_ptr, b_ptr}));
         }
 
         WHEN("We make a state") {
@@ -368,6 +393,10 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
         THEN("The shape is also a 1D array") {
             CHECK(p_ptr->ndim() == 1);
             CHECK(p_ptr->size() == 4);
+        }
+
+        THEN("The operands are all available via operands()") {
+            CHECK(std::ranges::equal(p_ptr->operands(), std::vector<Array*>{a_ptr, b_ptr, c_ptr}));
         }
 
         WHEN("We make a state") {
@@ -594,6 +623,11 @@ TEMPLATE_TEST_CASE("ReduceNode", "",
             CHECK(r_ptr->size() == 1);
         }
 
+        THEN("The constant is the operand") {
+            CHECK(r_ptr->operands().size() == r_ptr->predecessors().size());
+            CHECK(static_cast<const Array*>(a_ptr) == r_ptr->operands()[0]);
+        }
+
         WHEN("We make a state") {
             auto state = graph.initialize_state();
 
@@ -619,6 +653,11 @@ TEMPLATE_TEST_CASE("ReduceNode", "",
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
             CHECK(r_ptr->size() == 1);
+        }
+
+        THEN("The constant is the operand") {
+            CHECK(r_ptr->operands().size() == r_ptr->predecessors().size());
+            CHECK(static_cast<const Array*>(a_ptr) == r_ptr->operands()[0]);
         }
 
         WHEN("We make a state") {
@@ -649,6 +688,11 @@ TEMPLATE_TEST_CASE("ReduceNode", "",
             CHECK(r_ptr->size() == 1);
         }
 
+        THEN("The constant is the operand") {
+            CHECK(r_ptr->operands().size() == r_ptr->predecessors().size());
+            CHECK(static_cast<const Array*>(a_ptr) == r_ptr->operands()[0]);
+        }
+
         WHEN("We make a state") {
             auto state = graph.initialize_state();
 
@@ -669,6 +713,11 @@ TEMPLATE_TEST_CASE("ReduceNode", "",
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
             CHECK(r_ptr->size() == 1);
+        }
+
+        THEN("The set is the operand") {
+            CHECK(r_ptr->operands().size() == r_ptr->predecessors().size());
+            CHECK(static_cast<const Array*>(a_ptr) == r_ptr->operands()[0]);
         }
 
         WHEN("We create an empty set state") {
@@ -859,6 +908,11 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
             CHECK(p_ptr->size() == 1);
         }
 
+        THEN("The constant is the operand") {
+            CHECK(p_ptr->operands().size() == p_ptr->predecessors().size());
+            CHECK(static_cast<const Array*>(a_ptr) == p_ptr->operands()[0]);
+        }
+
         WHEN("We make a state") {
             auto state = graph.initialize_state();
 
@@ -875,6 +929,11 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
                                                      100);  // Scalar output
 
         auto p_ptr = graph.emplace_node<UnaryOpNode<TestType>>(a_ptr);
+
+        THEN("The integer is the operand") {
+            CHECK(p_ptr->operands().size() == p_ptr->predecessors().size());
+            CHECK(static_cast<const Array*>(a_ptr) == p_ptr->operands()[0]);
+        }
 
         WHEN("We make a state") {
             auto state = graph.empty_state();
@@ -920,6 +979,11 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
                                                      100);  // Scalar output
 
         auto p_ptr = graph.emplace_node<UnaryOpNode<TestType>>(a_ptr);
+
+        THEN("The integers node is the operand") {
+            CHECK(p_ptr->operands().size() == p_ptr->predecessors().size());
+            CHECK(static_cast<const Array*>(a_ptr) == p_ptr->operands()[0]);
+        }
 
         WHEN("We make a state") {
             auto state = graph.empty_state();
