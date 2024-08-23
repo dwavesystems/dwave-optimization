@@ -42,15 +42,17 @@ struct BinaryOpNodeData : public NodeStateData {
 template <class BinaryOp>
 BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
         : ArrayOutputMixin(broadcast_shape(a_ptr->shape(), b_ptr->shape())),
-          lhs_ptr_(a_ptr),
-          rhs_ptr_(b_ptr) {
+          operands_({a_ptr, b_ptr}) {
+    const Array* lhs_ptr = operands_[0];
+    const Array* rhs_ptr = operands_[1];
+
     // todo: add dynamic support
-    if (lhs_ptr_->dynamic() || rhs_ptr_->dynamic()) {
+    if (lhs_ptr->dynamic() || rhs_ptr->dynamic()) {
         throw std::invalid_argument("arrays must not be dynamic");
     }
 
     // todo: broadcasting
-    if (!std::ranges::equal(lhs_ptr_->shape(), rhs_ptr_->shape())) {
+    if (!std::ranges::equal(lhs_ptr->shape(), rhs_ptr->shape())) {
         throw std::invalid_argument("arrays must have the same shape");
     }
 
@@ -80,15 +82,18 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
     assert(static_cast<int>(state.size()) > index && "unexpected state length");
     assert(state[index] == nullptr && "already initialized state");
 
+    auto lhs_ptr = operands_[0];
+    auto rhs_ptr = operands_[1];
+
     auto func = op();
     std::vector<double> values;
 
-    if (std::ranges::equal(lhs_ptr_->shape(state), rhs_ptr_->shape(state))) {
+    if (std::ranges::equal(lhs_ptr->shape(state), rhs_ptr->shape(state))) {
         // This is the easy case - all we need to do is iterate over both as flat arrays
-        values.reserve(lhs_ptr_->size(state));
+        values.reserve(lhs_ptr->size(state));
 
-        auto it = lhs_ptr_->begin(state);
-        for (const double& val : rhs_ptr_->view(state)) {
+        auto it = lhs_ptr->begin(state);
+        for (const double& val : rhs_ptr->view(state)) {
             values.emplace_back(func(*it, val));  // order is important
             ++it;
         }
@@ -139,46 +144,49 @@ template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::propagate(State& state) const {
     auto ptr = data_ptr<BinaryOpNodeData>(state);
 
+    const Array* lhs_ptr = operands_[0];
+    const Array* rhs_ptr = operands_[1];
+
     auto func = op();
     auto& values = ptr->values;
     auto& changes = ptr->changes;
 
-    if (std::ranges::equal(lhs_ptr_->shape(state), rhs_ptr_->shape(state))) {
+    if (std::ranges::equal(lhs_ptr->shape(state), rhs_ptr->shape(state))) {
         // The easy case, just go through both predecessors making updates.
-        if (lhs_ptr_->diff(state).size() && rhs_ptr_->diff(state).size()) {
+        if (lhs_ptr->diff(state).size() && rhs_ptr->diff(state).size()) {
             // Both modified
-            auto lit = lhs_ptr_->begin(state);
-            auto rit = rhs_ptr_->begin(state);
+            auto lit = lhs_ptr->begin(state);
+            auto rit = rhs_ptr->begin(state);
 
             // go through both diffs, we may touch some of the indices twice
             // in which case we do a redundant recalculation, but we don't
             // save the diff
-            for (const auto& [index, _, __] : lhs_ptr_->diff(state)) {
+            for (const auto& [index, _, __] : lhs_ptr->diff(state)) {
                 double old = values[index];
                 values[index] = func(*(lit + index), *(rit + index));
                 if (values[index] != old) {
                     changes.emplace_back(index, old, values[index]);
                 }
             }
-            for (const auto& [index, _, __] : rhs_ptr_->diff(state)) {
+            for (const auto& [index, _, __] : rhs_ptr->diff(state)) {
                 double old = values[index];
                 values[index] = func(*(lit + index), *(rit + index));
                 if (values[index] != old) {
                     changes.emplace_back(index, old, values[index]);
                 }
             }
-        } else if (lhs_ptr_->diff(state).size()) {
+        } else if (lhs_ptr->diff(state).size()) {
             // LHS modified, but not RHS
-            auto rit = rhs_ptr_->begin(state);
-            for (const auto& [index, _, value] : lhs_ptr_->diff(state)) {
+            auto rit = rhs_ptr->begin(state);
+            for (const auto& [index, _, value] : lhs_ptr->diff(state)) {
                 double old = values[index];
                 values[index] = func(value, *(rit + index));
                 changes.emplace_back(index, old, values[index]);
             }
-        } else if (rhs_ptr_->diff(state).size()) {
+        } else if (rhs_ptr->diff(state).size()) {
             // RHS modified, but not LHS
-            auto lit = lhs_ptr_->begin(state);
-            for (const auto& [index, _, value] : rhs_ptr_->diff(state)) {
+            auto lit = lhs_ptr->begin(state);
+            for (const auto& [index, _, value] : rhs_ptr->diff(state)) {
                 double old = values[index];
                 values[index] = func(*(lit + index), value);
                 changes.emplace_back(index, old, values[index]);
@@ -298,6 +306,7 @@ void NaryOpNode<BinaryOp>::add_node(ArrayNode* node_ptr) {
     }
 
     this->add_predecessor(node_ptr);
+    operands_.emplace_back(node_ptr);
 }
 
 template <class BinaryOp>
@@ -366,12 +375,12 @@ void NaryOpNode<BinaryOp>::initialize_state(State& state) const {
     values.reserve(size());
 
     std::vector<ArrayIterator> iterators;
-    for (const auto& node_ptr : predecessors()) {
-        iterators.push_back(dynamic_cast<Array*>(node_ptr)->begin(state));
+    for (const Array* array_ptr : operands_) {
+        iterators.push_back(array_ptr->begin(state));
     }
 
     auto& first_it = iterators[0];
-    auto first_end = dynamic_cast<Array*>(predecessors()[0])->end(state);
+    const auto& first_end = operands_[0]->end(state);
 
     while (first_it != first_end) {
         // get the value from the first node
@@ -402,8 +411,7 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
 
     if constexpr (!InverseOp<op>().exists()) {
         // have to recompute from all predecessors on any changed index
-        for (const auto& pred : predecessors()) {
-            const auto input = dynamic_cast<Array*>(pred);
+        for (const Array* input : operands_) {
             if (input->diff(state).size()) {
                 for (const auto& [index, _, __] : input->diff(state)) {
                     recompute_indices.push_back(index);
@@ -413,8 +421,7 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
 
     } else {
         auto inv_func = InverseOp<op>();
-        for (const auto& pred : predecessors()) {
-            const auto input = dynamic_cast<Array*>(pred);
+        for (const Array* input : operands_) {
             if (input->diff(state).size()) {
                 for (const auto& [index, old_val, new_val] : input->diff(state)) {
                     double new_reduced_val = values[index];
@@ -437,8 +444,7 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
     // now fully recompute any needed indices
     if (recompute_indices.size()) {
         iterators.clear();
-        for (const auto& pred : predecessors()) {
-            const auto node_ptr = dynamic_cast<Array*>(pred);
+        for (const Array* node_ptr : operands_) {
             iterators.push_back(node_ptr->begin(state));
         }
 

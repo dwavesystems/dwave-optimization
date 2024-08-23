@@ -15,8 +15,10 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <functional>
 #include <optional>
+#include <vector>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
@@ -69,14 +71,19 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     void initialize_state(State& state) const override;
     void propagate(State& state) const override;
 
+    // The predecessors of the operation, as Array*.
+    std::span<const Array* const> operands() const {
+        assert(predecessors().size() == operands_.size());
+        return operands_;
+    }
+
  private:
     using op = BinaryOp;
 
     // There are redundant, because we could dynamic_cast each time from
     // predecessors(), but that gets tedious as well as having a very minor
     // performance hit. So we go ahead and hold dedicated pointers here.
-    const Array* const lhs_ptr_;
-    const Array* const rhs_ptr_;
+    std::array<const Array* const, 2> operands_;
 };
 
 // We follow NumPy naming convention rather than C++ to distinguish between
@@ -112,8 +119,16 @@ class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
     void initialize_state(State& state) const override;
     void propagate(State& state) const override;
 
+    // The predecessors of the operation, as Array*.
+    std::span<const Array* const> operands() const {
+        assert(predecessors().size() == operands_.size());
+        return operands_;
+    }
+
  private:
     using op = BinaryOp;
+
+    std::vector<const Array*> operands_;
 };
 
 using NaryAddNode = NaryOpNode<std::plus<double>>;
@@ -141,6 +156,12 @@ class ReduceNode : public ScalarOutputMixin<ArrayNode> {
     void revert(State& state) const override;
     void initialize_state(State& state) const override;
     void propagate(State& state) const override;
+
+    // The predecessor of the reduction, as an Array*.
+    std::span<const Array* const> operands() const {
+        assert(predecessors().size() == 1);
+        return std::span<const Array* const, 1>(&array_ptr_, 1);
+    }
 
     const std::optional<double> init;
 
@@ -180,6 +201,12 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     void revert(State& state) const override;
     void initialize_state(State& state) const override;
     void propagate(State& state) const override;
+
+    // The predecessor of the operation, as an Array*.
+    std::span<const Array* const> operands() const {
+        assert(predecessors().size() == 1);
+        return std::span<const Array* const, 1>(&array_ptr_, 1);
+    }
 
  private:
     using op = UnaryOp;
