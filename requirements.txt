@@ -1,9 +1,11 @@
-cython==3.0.9
+# Install requirements
 numpy==1.21.6; python_version < '3.10'  # support numpy.typing
 oldest-supported-numpy; python_version >= '3.10'
-setuptools==71.1.0  # temporarily fix before switching off setuptools_sdo
 
-# On windows we don't distribute a dynamic library
-setuptools_dso==2.10; platform_system != 'Windows'
+# Build requirements
+cython~=3.0
+meson-python~=0.16
+ninja~=1.11
 
+# Other requirements, see also tests/requirements.txt and docs/requirements.txt
 reno==4.1.0  # for changelog

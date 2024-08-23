@@ -82,25 +82,27 @@ jobs:
           command: |
             python -m venv env
             . env/bin/activate
-            pip install -r requirements.txt
-            pip install -r tests/requirements.txt
+            pip install build pip --upgrade
 
       - run:
           name: build with -Werror
           command: |
             . env/bin/activate
-            CPPFLAGS="-Werror" python setup.py build_ext --inplace
+            CPPFLAGS="-Werror" python -m build  -Ccompile-args="-v"
 
       - run:
-          name: build with -Werror and -UNDEBUG
+          name: build and install with -Werror and -UNDEBUG
           command: |
             . env/bin/activate
-            CPPFLAGS="-UNDEBUG -Werror" python setup.py build_ext --inplace --force
+            CPPFLAGS="-UNDEBUG -Werror" python -m build  -Ccompile-args="-v"
+            pip install dist/dwave*optimization*.whl --force
 
-      - run:
-          name: run tests
+      - run: &run-tests
+          name: test with installed package
           command: |
             . env/bin/activate
+            cd tests/
+            pip install -r requirements.txt
             python -m unittest
 
   python-macOS:
@@ -152,8 +154,8 @@ jobs:
           command: |
             python -m venv env
             . env/bin/activate
-            pip install -r requirements.txt
-            python setup.py sdist -d ./dist
+            pip install build pip --upgrade
+            python -m build --sdist
       - store_artifacts: *store-artifacts
       - persist_to_workspace: *persist-to-workspace
       - run:
@@ -163,13 +165,7 @@ jobs:
             python -m venv env
             . env/bin/activate
             pip install dist/dwave*optimization*.tar.gz
-      - run: &run-tests
-          name: test with installed package
-          command: |
-            . env/bin/activate
-            cd tests/
-            pip install -r requirements.txt
-            python -m unittest
+      - run: *run-tests
 
   python-dependencies:
     parameters:

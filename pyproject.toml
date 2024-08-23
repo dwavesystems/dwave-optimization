@@ -1,17 +1,55 @@
 [build-system]
 requires = [
-    "cython==3.0.8",
-    "setuptools==71.1.0",
-    "setuptools_dso==2.10;platform_system != 'Windows'",  # On Windows we don't distribute a dynamic library
-    "wheel>=0.30.0",
+    "cython~=3.0",
+    "meson-python~=0.16",
 ]
-build-backend = "setuptools.build_meta"
+build-backend = 'mesonpy'
+
+[project]
+name = "dwave-optimization"
+dynamic = ["version"]
+authors = [
+    {name = "D-Wave Inc.", email = "tools@dwavesys.com"},
+]
+description = "Enables the formulation of nonlinear models for industrial optimization problems."
+license = {file = "LICENSE"}
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.20.0",  # numpy.typing support
+]
+
+[project.readme]
+file = "README.rst"
+content-type = "text/x-rst"
+
+[project.urls]
+Changelog = "https://github.com/dwavesystems/dwave-optimization/releases"
+Documentation = "https://docs.ocean.dwavesys.com"
+"Source Code" = "https://github.com/dwavesystems/dwave-optimization"
 
 [tool.cibuildwheel]
 build-verbosity = "1"
 skip = "pp* *musllinux*"
 before-test = "pip install -r {project}/tests/requirements.txt"
 test-command = "python -m unittest discover {project}/tests/"
+
+[tool.cibuildwheel.config-settings]
+compile-args = ["-v"]
 
 [tool.cibuildwheel.linux]
 archs = "x86_64 aarch64"
