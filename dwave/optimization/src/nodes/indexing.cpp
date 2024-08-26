@@ -18,6 +18,7 @@
 #include <ranges>
 #include <unordered_set>
 
+#include "_state.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/state.hpp"
 #include "dwave-optimization/utils.hpp"
@@ -1735,18 +1736,10 @@ void ReshapeNode::revert(State& state) const {}  // stateless node
 
 // SizeNode *******************************************************************
 
-struct SizeNodeData : NodeStateData {
-    explicit SizeNodeData(std::integral auto value) : values(0, value, value) {}
-
-    double const* buff() const { return &values.value; }
-    void commit() { values.old = values.value; }
-    std::span<const Update> diff() const {
-        return std::span<const Update>(&values, values.old != values.value);
-    }
-    void revert() { values.value = values.old; }
-    void update(std::integral auto value) { values.value = value; }
-
-    Update values;
+class SizeNodeData : public ScalarNodeStateData {
+ public:
+    explicit SizeNodeData(std::integral auto value) : ScalarNodeStateData(value) {}
+    void set(std::integral auto value) { ScalarNodeStateData::set(value); }
 };
 
 SizeNode::SizeNode(ArrayNode* node_ptr) : array_ptr_(node_ptr) { this->add_predecessor(node_ptr); }
@@ -1789,7 +1782,7 @@ double SizeNode::min() const {
 }
 
 void SizeNode::propagate(State& state) const {
-    return data_ptr<SizeNodeData>(state)->update(array_ptr_->size(state));
+    return data_ptr<SizeNodeData>(state)->set(array_ptr_->size(state));
 }
 
 void SizeNode::revert(State& state) const { return data_ptr<SizeNodeData>(state)->revert(); }

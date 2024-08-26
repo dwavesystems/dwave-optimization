@@ -20,6 +20,8 @@
 #include <span>
 #include <vector>
 
+#include "_state.hpp"
+
 namespace dwave::optimization {
 
 // todo: consider promoting this function to some public namespace.
@@ -40,32 +42,18 @@ std::span<const ssize_t> same_shape(const Array* node_ptr,
     return node_ptr->shape();
 }
 
-struct WhereNodeData : NodeStateData {
-    WhereNodeData() = default;
-
+struct WhereNodeData : ArrayNodeStateData {
     // Initialize the state with the values given
     explicit WhereNodeData(const Array::View values) noexcept
-            : buffer(values.begin(), values.end()), old_size(buffer.size()) {}
+            : ArrayNodeStateData(std::vector<double>(values.begin(), values.end())) {}
 
-    explicit WhereNodeData(const Array::View condition, const Array::View x, const Array::View y)
-            : old_size(condition.size()) {
-        // these should have been checked in the WhereNode constructor
-        assert(condition.size() == x.size());
-        assert(condition.size() == y.size());
-
-        buffer.reserve(condition.size());
-
-        // zip would be very nice here...
-        for (auto cit = condition.begin(), xit = x.begin(), yit = y.begin(), end = condition.end();
-             cit != end; ++cit, ++xit, ++yit) {
-            buffer.emplace_back((*cit) ? *xit : *yit);
-        }
-    }
+    explicit WhereNodeData(std::vector<double>&& values) noexcept
+            : ArrayNodeStateData(std::move(values)) {}
 
     // Update the buffer according to the given diff. Changes are made uncritically
     // so redundant changes are maintained.
     void apply_diff(std::span<const Update> updates) {
-        diff.assign(updates.begin(), updates.end());
+        this->updates.assign(updates.begin(), updates.end());
 
         for (const Update& update : updates) {
             if (update.placed()) {
@@ -133,32 +121,15 @@ struct WhereNodeData : NodeStateData {
 
             if (old == value) continue;  // nothing to update
 
-            diff.emplace_back(index, old, value);
+            updates.emplace_back(index, old, value);
             old = value;
         }
-    }
-
-    void commit() {
-        diff.clear();
-        old_size = buffer.size();
-    }
-
-    void revert() {
-        // the reversal is not needed, but it is a bit more future- proof and has
-        // no performance hit
-        for (const auto& [index, old, _] : diff | std::views::reverse) {
-            buffer[index] = old;
-        }
-        buffer.resize(old_size);
-
-        // having used the diff to un-update the buffer, we can now clear it
-        diff.clear();
     }
 
     // Overwrite the current buffer with the given values, tracking the changes
     // in the diff.
     void rewrite_buffer(const Array::View values) {
-        assert(diff.empty() && "nodes should only be propagated once");
+        assert(updates.empty() && "nodes should only be propagated once");
 
         const ssize_t overlap_length = std::min<ssize_t>(buffer.size(), values.size());
 
@@ -168,7 +139,7 @@ struct WhereNodeData : NodeStateData {
             auto vit = values.begin();
             for (ssize_t index = 0; index < overlap_length; ++index, ++bit, ++vit) {
                 if (*bit == *vit) continue;  // no change
-                diff.emplace_back(index, *bit, *vit);
+                updates.emplace_back(index, *bit, *vit);
                 *bit = *vit;
             }
         }
@@ -176,7 +147,7 @@ struct WhereNodeData : NodeStateData {
         // next walk backwards through the excess buffer, if there is any, removing as we go
         {
             for (ssize_t index = buffer.size() - 1; index >= overlap_length; --index) {
-                diff.emplace_back(Update::removal(index, buffer[index]));
+                updates.emplace_back(Update::removal(index, buffer[index]));
             }
             buffer.resize(overlap_length);
         }
@@ -188,24 +159,11 @@ struct WhereNodeData : NodeStateData {
             buffer.reserve(values.size());
             for (ssize_t index = buffer.size(), stop = values.size(); index < stop;
                  ++index, ++vit) {
-                diff.emplace_back(Update::placement(index, *vit));
+                updates.emplace_back(Update::placement(index, *vit));
                 buffer.emplace_back(*vit);
             }
         }
     }
-
-    ssize_t size_diff() const { return buffer.size() - old_size; }
-
-    // You may be tempted to try to avoid keeping a buffer in the case that
-    // `condition` is a single value and x/y are both contiguous. But calculating
-    // the diffs in that case gets very complicated.
-    // So we go with the easier solution of keeping the buffer always.
-
-    std::vector<double> buffer;
-    std::vector<Update> diff;
-
-    // track the size of the buffer before the propagation began
-    ssize_t old_size = 0;
 };
 
 WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_ptr)
@@ -232,13 +190,13 @@ WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_pt
 }
 
 double const* WhereNode::buff(const State& state) const {
-    return data_ptr<WhereNodeData>(state)->buffer.data();
+    return data_ptr<WhereNodeData>(state)->buff();
 }
 
 void WhereNode::commit(State& state) const { data_ptr<WhereNodeData>(state)->commit(); }
 
 std::span<const Update> WhereNode::diff(const State& state) const {
-    return data_ptr<WhereNodeData>(state)->diff;
+    return data_ptr<WhereNodeData>(state)->diff();
 }
 
 void WhereNode::initialize_state(State& state) const {
@@ -249,8 +207,20 @@ void WhereNode::initialize_state(State& state) const {
 
     if (condition_ptr_->size() != 1) {
         // `condition` has the same shape as x/y and isn't a single value
-        state[index] = std::make_unique<WhereNodeData>(condition_ptr_->view(state),
-                                                       x_ptr_->view(state), y_ptr_->view(state));
+        const Array::View condition = condition_ptr_->view(state);
+        const Array::View x = x_ptr_->view(state);
+        const Array::View y = y_ptr_->view(state);
+
+        std::vector<double> values;
+        values.reserve(condition.size());
+
+        // zip would be very nice here...
+        for (auto cit = condition.begin(), xit = x.begin(), yit = y.begin(), end = condition.end();
+             cit != end; ++cit, ++xit, ++yit) {
+            values.emplace_back((*cit) ? *xit : *yit);
+        }
+
+        state[index] = std::make_unique<WhereNodeData>(std::move(values));
     } else if (condition_ptr_->buff(state)[0]) {
         // `condition` is a single value and is currently selecting x
         // so our state is just a copy of x's

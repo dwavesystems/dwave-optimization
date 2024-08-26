@@ -16,28 +16,12 @@
 
 #include <ranges>
 
+#include "_state.hpp"
 #include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
 
 // BinaryOpNode ************************************************************
-
-struct BinaryOpNodeData : public NodeStateData {
-    explicit BinaryOpNodeData(std::vector<double> values) : values(std::move(values)) {}
-
-    void commit() { changes.clear(); }
-
-    void revert() {
-        for (const auto& [index, old, _] : changes | std::views::reverse) {
-            values[index] = old;
-        }
-        changes.clear();
-    }
-
-    std::vector<double> values;
-
-    std::vector<Update> changes;
-};
 
 template <class BinaryOp>
 BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
@@ -62,17 +46,17 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
 
 template <class BinaryOp>
 double const* BinaryOpNode<BinaryOp>::buff(const State& state) const {
-    return data_ptr<BinaryOpNodeData>(state)->values.data();
+    return data_ptr<ArrayNodeStateData>(state)->buff();
 }
 
 template <class BinaryOp>
 std::span<const Update> BinaryOpNode<BinaryOp>::diff(const State& state) const {
-    return data_ptr<BinaryOpNodeData>(state)->changes;
+    return data_ptr<ArrayNodeStateData>(state)->diff();
 }
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::commit(State& state) const {
-    data_ptr<BinaryOpNodeData>(state)->commit();
+    data_ptr<ArrayNodeStateData>(state)->commit();
 }
 
 template <class BinaryOp>
@@ -104,7 +88,7 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
         unreachable();
     }
 
-    state[index] = std::make_unique<BinaryOpNodeData>(values);
+    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
 }
 
 template <class BinaryOp>
@@ -142,14 +126,14 @@ double BinaryOpNode<BinaryOp>::min() const {
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::propagate(State& state) const {
-    auto ptr = data_ptr<BinaryOpNodeData>(state);
+    auto ptr = data_ptr<ArrayNodeStateData>(state);
 
     const Array* lhs_ptr = operands_[0];
     const Array* rhs_ptr = operands_[1];
 
     auto func = op();
-    auto& values = ptr->values;
-    auto& changes = ptr->changes;
+    auto& values = ptr->buffer;
+    auto& changes = ptr->updates;
 
     if (std::ranges::equal(lhs_ptr->shape(state), rhs_ptr->shape(state))) {
         // The easy case, just go through both predecessors making updates.
@@ -201,7 +185,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::revert(State& state) const {
-    data_ptr<BinaryOpNodeData>(state)->revert();
+    data_ptr<ArrayNodeStateData>(state)->revert();
 }
 
 // Uncommented are the tested specializations
@@ -225,45 +209,31 @@ template class BinaryOpNode<functional::min<double>>;
 
 template <class BinaryOp>
 struct InverseOp {
-    static bool constexpr exists() { return false; };
+    static bool constexpr exists() { return false; }
 
-    double op(const double& x, const double& y) {
+    double op [[noreturn]] (const double& x, const double& y) {
         assert(false && "op has no inverse");
         throw std::logic_error("op has no inverse");
-        // return std::nan;
-    };
+    }
 };
 
 template <>
 struct InverseOp<std::plus<double>> {
-    static bool constexpr exists() { return true; };
+    static bool constexpr exists() { return true; }
 
-    double op(const double& x, const double& y) { return x - y; };
+    double op(const double& x, const double& y) { return x - y; }
 };
 
 template <>
 struct InverseOp<std::multiplies<double>> {
-    static bool constexpr exists() { return true; };
+    static bool constexpr exists() { return true; }
 
-    double op(const double& x, const double& y) { return x / y; };
+    double op(const double& x, const double& y) { return x / y; }
 };
 
-struct NaryOpNodeData : public NodeStateData {
+struct NaryOpNodeData : public ArrayNodeStateData {
     explicit NaryOpNodeData(std::vector<double> values, std::vector<ArrayIterator> iterators)
-            : values(std::move(values)), iterators(std::move(iterators)) {}
-
-    void commit() { changes.clear(); }
-
-    void revert() {
-        for (const auto& [index, old, _] : changes | std::views::reverse) {
-            values[index] = old;
-        }
-        changes.clear();
-    }
-
-    std::vector<double> values;
-
-    std::vector<Update> changes;
+            : ArrayNodeStateData(std::move(values)), iterators(std::move(iterators)) {}
 
     // used to avoid reallocating memory for predecessor iterators every propagation
     std::vector<ArrayIterator> iterators;
@@ -311,12 +281,12 @@ void NaryOpNode<BinaryOp>::add_node(ArrayNode* node_ptr) {
 
 template <class BinaryOp>
 double const* NaryOpNode<BinaryOp>::buff(const State& state) const {
-    return data_ptr<NaryOpNodeData>(state)->values.data();
+    return data_ptr<NaryOpNodeData>(state)->buff();
 }
 
 template <class BinaryOp>
 std::span<const Update> NaryOpNode<BinaryOp>::diff(const State& state) const {
-    return data_ptr<NaryOpNodeData>(state)->changes;
+    return data_ptr<NaryOpNodeData>(state)->diff();
 }
 
 template <class BinaryOp>
@@ -403,8 +373,8 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
     auto node_data = data_ptr<NaryOpNodeData>(state);
 
     auto func = op();
-    auto& values = node_data->values;
-    auto& changes = node_data->changes;
+    auto& values = node_data->buffer;
+    auto& changes = node_data->updates;
     auto& iterators = node_data->iterators;
 
     std::vector<ssize_t> recompute_indices;
@@ -880,11 +850,6 @@ template class ReduceNode<std::plus<double>>;
 
 // UnaryOpNode *****************************************************************
 
-struct UnaryOpNodeStateData : public NodeStateData {
-    std::vector<double> data;
-    std::vector<Update> diff;
-};
-
 template <class UnaryOp>
 UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
         : ArrayOutputMixin(node_ptr->shape()), array_ptr_(node_ptr) {
@@ -893,18 +858,17 @@ UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
 
 template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::commit(State& state) const {
-    auto node_data = data_ptr<UnaryOpNodeStateData>(state);
-    node_data->diff.clear();
+    data_ptr<ArrayNodeStateData>(state)->commit();
 }
 
 template <class UnaryOp>
 double const* UnaryOpNode<UnaryOp>::buff(const State& state) const {
-    return data_ptr<UnaryOpNodeStateData>(state)->data.data();
+    return data_ptr<ArrayNodeStateData>(state)->buff();
 }
 
 template <class UnaryOp>
 std::span<const Update> UnaryOpNode<UnaryOp>::diff(const State& state) const {
-    return data_ptr<UnaryOpNodeStateData>(state)->diff;
+    return data_ptr<ArrayNodeStateData>(state)->diff();
 }
 
 template <class UnaryOp>
@@ -914,14 +878,14 @@ void UnaryOpNode<UnaryOp>::initialize_state(State& state) const {
     assert(static_cast<int>(state.size()) > index && "unexpected state length");
     assert(state[index] == nullptr && "already initialized state");
 
-    state[index] = std::make_unique<UnaryOpNodeStateData>();
-
     auto func = op();
-    auto node_data = data_ptr<UnaryOpNodeStateData>(state);
-    node_data->data.reserve(array_ptr_->size(state));
+    std::vector<double> values;
+    values.reserve(array_ptr_->size(state));
     for (const double& val : array_ptr_->view(state)) {
-        node_data->data.push_back(func(val));
+        values.emplace_back(func(val));
     }
+
+    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
 }
 
 template <>
@@ -1034,29 +998,23 @@ double UnaryOpNode<UnaryOp>::min() const {
 template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::propagate(State& state) const {
     auto func = op();
-    auto node_data = data_ptr<UnaryOpNodeStateData>(state);
+    auto node_data = data_ptr<ArrayNodeStateData>(state);
 
     for (const auto& update : array_ptr_->diff(state)) {
         double new_val = func(update.value);
-        double& current_val = node_data->data[update.index];
+        double& current_val = node_data->buffer[update.index];
         if (new_val != current_val) {
-            node_data->diff.emplace_back(update.index, current_val, new_val);
+            node_data->updates.emplace_back(update.index, current_val, new_val);
             current_val = new_val;
         }
     }
 
-    if (node_data->diff.size()) Node::propagate(state);
+    if (node_data->updates.size()) Node::propagate(state);
 }
 
 template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::revert(State& state) const {
-    auto node_data = data_ptr<UnaryOpNodeStateData>(state);
-
-    for (const auto& update : node_data->diff) {
-        node_data->data[update.index] = update.old;
-    }
-
-    node_data->diff.clear();
+    data_ptr<ArrayNodeStateData>(state)->revert();
 }
 
 template class UnaryOpNode<functional::abs<double>>;
