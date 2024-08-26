@@ -14,56 +14,27 @@
 
 #include "dwave-optimization/nodes/numbers.hpp"
 
+#include "_state.hpp"
+
 namespace dwave::optimization {
 
-// Base classes to be used as interfaces.
-
-struct NumberNodeData : NodeStateData {
-    explicit NumberNodeData(std::vector<double>&& number_data) : elements(number_data) {}
-
-    void commit() { previous.clear(); }
-
-    void revert() {
-        for (const Update& update : previous | std::views::reverse) {
-            elements[update.index] = update.old;
-        }
-        previous.clear();
-    }
-
-    bool exchange(ssize_t i, ssize_t j) {
-        assert(i >= 0 && static_cast<std::size_t>(i) < elements.size());
-        assert(j >= 0 && static_cast<std::size_t>(j) < elements.size());
-
-        if (elements[i] == elements[j]) {
-            return false;
-        } else {
-            std::swap(elements[i], elements[j]);
-            previous.emplace_back(i, elements[j], elements[i]);
-            previous.emplace_back(j, elements[i], elements[j]);
-            return true;
-        }
-    }
-
-    double get_value(ssize_t i) const {
-        assert(i >= 0 && static_cast<std::size_t>(i) < elements.size());
-        return elements[i];
-    }
-
-    std::vector<double> elements;
-    std::vector<Update> previous;
-};
+// Base class to be used as interfaces.
 
 double const* NumberNode::buff(const State& state) const noexcept {
-    return data_ptr<NumberNodeData>(state)->elements.data();
+    return data_ptr<ArrayNodeStateData>(state)->buff();
 }
 
 std::span<const Update> NumberNode::diff(const State& state) const noexcept {
-    return data_ptr<NumberNodeData>(state)->previous;
+    return data_ptr<ArrayNodeStateData>(state)->diff();
 }
 
-void NumberNode::commit(State& state) const noexcept { data_ptr<NumberNodeData>(state)->commit(); }
+void NumberNode::commit(State& state) const noexcept {
+    data_ptr<ArrayNodeStateData>(state)->commit();
+}
 
-void NumberNode::revert(State& state) const noexcept { data_ptr<NumberNodeData>(state)->revert(); }
+void NumberNode::revert(State& state) const noexcept {
+    data_ptr<ArrayNodeStateData>(state)->revert();
+}
 
 double NumberNode::lower_bound() const { return lower_bound_; }
 double NumberNode::min() const { return lower_bound_; }
@@ -109,11 +80,11 @@ void NumberNode::initialize_state(State& state, RngAdaptor& rng) const {
 
 // Specializations for the linear case
 bool NumberNode::exchange(State& state, ssize_t i, ssize_t j) const {
-    return data_ptr<NumberNodeData>(state)->exchange(i, j);
+    return data_ptr<ArrayNodeStateData>(state)->exchange(i, j);
 }
 
 double NumberNode::get_value(State& state, ssize_t i) const {
-    return data_ptr<NumberNodeData>(state)->get_value(i);
+    return data_ptr<ArrayNodeStateData>(state)->get(i);
 }
 
 ssize_t NumberNode::linear_index(ssize_t x, ssize_t y) const {
@@ -126,26 +97,6 @@ ssize_t NumberNode::linear_index(ssize_t x, ssize_t y) const {
 
 // Integer Node
 
-struct IntegerNodeData : NumberNodeData {
-    explicit IntegerNodeData(std::vector<double>&& integer_data)
-            : NumberNodeData(std::move(integer_data)) {}
-
-    bool set_value(ssize_t i, double value) {
-        assert(i >= 0 && static_cast<std::size_t>(i) < elements.size());
-        if (elements[i] == value) {
-            return false;
-        } else {
-            std::swap(elements[i], value);
-            previous.emplace_back(i, value, elements[i]);
-            return true;
-        }
-    }
-
-    std::unique_ptr<NodeStateData> copy() const override {
-        return std::make_unique<IntegerNodeData>(*this);
-    }
-};
-
 bool IntegerNode::integral() const { return true; }
 
 bool IntegerNode::is_valid(double value) const {
@@ -157,17 +108,19 @@ double IntegerNode::generate_value(RngAdaptor& rng) const {
     return value_dist(rng);
 }
 
-double IntegerNode::default_value() const { return (lower_bound() <= 0 && upper_bound() >= 0) ? 0 : lower_bound(); }
+double IntegerNode::default_value() const {
+    return (lower_bound() <= 0 && upper_bound() >= 0) ? 0 : lower_bound();
+}
 
 std::unique_ptr<NodeStateData> IntegerNode::new_data_ptr(std::vector<double>&& number_data) const {
-    return make_unique<IntegerNodeData>(std::move(number_data));
+    return make_unique<ArrayNodeStateData>(std::move(number_data));
 }
 
 bool IntegerNode::set_value(State& state, ssize_t i, int value) const {
     if (!is_valid(value)) {
         throw std::invalid_argument("Invalid integer value provided");
     }
-    return data_ptr<IntegerNodeData>(state)->set_value(i, value);
+    return data_ptr<ArrayNodeStateData>(state)->set(i, value);
 }
 
 void IntegerNode::default_move(State& state, RngAdaptor& rng) const {
@@ -178,58 +131,25 @@ void IntegerNode::default_move(State& state, RngAdaptor& rng) const {
 
 // Binary Node
 
-struct BinaryNodeData : NumberNodeData {
-    explicit BinaryNodeData(std::vector<double>&& binary_data)
-            : NumberNodeData(std::move(binary_data)) {}
-
-    void flip(ssize_t i) {
-        assert(i >= 0 && static_cast<std::size_t>(i) < elements.size());
-        double flipped_element = elements[i] ? 0 : 1;
-        std::swap(elements[i], flipped_element);
-        previous.emplace_back(i, flipped_element, elements[i]);
-    }
-
-    bool set(ssize_t i) {
-        assert(i >= 0 && static_cast<std::size_t>(i) < elements.size());
-        if (elements[i]) {
-            return false;
-        } else {
-            elements[i] = 1;
-            previous.emplace_back(i, 0, 1);
-            return true;
-        }
-    }
-
-    bool unset(ssize_t i) {
-        assert(i >= 0 && static_cast<std::size_t>(i) < elements.size());
-        if (!elements[i]) {
-            return false;
-        } else {
-            elements[i] = 0;
-            previous.emplace_back(i, 1, 0);
-            return true;
-        }
-    }
-
-    std::unique_ptr<NodeStateData> copy() const override {
-        return std::make_unique<BinaryNodeData>(*this);
-    }
-};
-
 std::unique_ptr<NodeStateData> BinaryNode::new_data_ptr(std::vector<double>&& number_data) const {
-    return make_unique<BinaryNodeData>(std::move(number_data));
+    return make_unique<ArrayNodeStateData>(std::move(number_data));
 }
 
 void BinaryNode::flip(State& state, ssize_t i) const {
-    return data_ptr<BinaryNodeData>(state)->flip(i);
+    auto ptr = data_ptr<ArrayNodeStateData>(state);
+    if (ptr->get(i)) {
+        ptr->set(i, 0);
+    } else {
+        ptr->set(i, 1);
+    }
 }
 
 bool BinaryNode::set(State& state, ssize_t i) const {
-    return data_ptr<BinaryNodeData>(state)->set(i);
+    return data_ptr<ArrayNodeStateData>(state)->set(i, 1);
 }
 
 bool BinaryNode::unset(State& state, ssize_t i) const {
-    return data_ptr<BinaryNodeData>(state)->unset(i);
+    return data_ptr<ArrayNodeStateData>(state)->set(i, 0);
 }
 
 void BinaryNode::default_move(State& state, RngAdaptor& rng) const {
