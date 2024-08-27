@@ -30,14 +30,15 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
     const Array* lhs_ptr = operands_[0];
     const Array* rhs_ptr = operands_[1];
 
-    // todo: add dynamic support
-    if (lhs_ptr->dynamic() || rhs_ptr->dynamic()) {
-        throw std::invalid_argument("arrays must not be dynamic");
-    }
-
-    // todo: broadcasting
-    if (!std::ranges::equal(lhs_ptr->shape(), rhs_ptr->shape())) {
-        throw std::invalid_argument("arrays must have the same shape");
+    // We support limited broadcasting - one side must be a scalar.
+    // If one size is a scalar, we also support dynamic arrays.
+    // Otherwise both arrays must be the same shape and not be dynamic
+    if (lhs_ptr->size() == 1 || rhs_ptr->size() == 1) {
+        // this is allowed
+    } else if (lhs_ptr->dynamic() || rhs_ptr->dynamic()) {
+        throw std::invalid_argument("cannot perform a binary op on two dynamic arrays");
+    } else if (!std::ranges::equal(lhs_ptr->shape(), rhs_ptr->shape())) {
+        throw std::invalid_argument("arrays must have the same shape or one must be a scalar");
     }
 
     this->add_predecessor(a_ptr);
@@ -80,6 +81,24 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
         for (const double& val : rhs_ptr->view(state)) {
             values.emplace_back(func(*it, val));  // order is important
             ++it;
+        }
+
+    } else if (lhs_ptr->size() == 1) {
+        values.reserve(rhs_ptr->size(state));
+
+        const double& lhs = lhs_ptr->view(state).front();
+
+        for (const double& val : rhs_ptr->view(state)) {
+            values.emplace_back(func(lhs, val));
+        }
+
+    } else if (rhs_ptr->size() == 1) {
+        values.reserve(lhs_ptr->size(state));
+
+        const double& rhs = rhs_ptr->view(state).front();
+
+        for (const double& val : lhs_ptr->view(state)) {
+            values.emplace_back(func(val, rhs));
         }
 
     } else {
@@ -176,16 +195,90 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
                 changes.emplace_back(index, old, values[index]);
             }
         }
+    } else if (lhs_ptr->size() == 1) {
+        // lhs is a single value being broadcast to the rhs array.
+
+        // Create a unary version of our binary op.
+        const double& lhs = lhs_ptr->view(state).front();
+        auto unary_func = std::bind(func, lhs, std::placeholders::_1);
+
+        if (lhs_ptr->diff(state).size()) {
+            // The lhs has changed, so in this case we're probably changing
+            // everything, so just overwrite the state entirely.
+            auto rhs_view = rhs_ptr->view(state);
+            ptr->assign(rhs_view | std::views::transform(unary_func));
+        } else {
+            // The lhs did not change, so go through the changes on the rhs and apply them
+            auto update_func = [&unary_func](Update update) {
+                if (!update.removed()) update.value = unary_func(update.value);
+                return update;
+            };
+            ptr->update(rhs_ptr->diff(state) | std::views::transform(update_func));
+        }
+    } else if (rhs_ptr->size() == 1) {
+        // rhs is a single value being broadcast to the lhs array
+
+        // create a unary version of our binary op
+        const double& rhs = rhs_ptr->view(state).front();
+        auto unary_func = std::bind(func, std::placeholders::_1, rhs);
+
+        if (rhs_ptr->diff(state).size()) {
+            // The rhs has changed, so in this case we're probably changing
+            // everything, so just overwrite the state entirely.
+            auto lhs_view = lhs_ptr->view(state);
+            ptr->assign(lhs_view | std::views::transform(unary_func));
+        } else {
+            // The rhs did not change, so go through the changes on the lhs and apply them
+            auto update_func = [&unary_func](Update update) {
+                if (!update.removed()) update.value = unary_func(update.value);
+                return update;
+            };
+            ptr->update(lhs_ptr->diff(state) | std::views::transform(update_func));
+        }
     } else {
         // this case is complicated we need to "stretch" dimensions into eachother
         assert(false && "not yet implemented");
         unreachable();
     }
+
+    if (ptr->updates.size()) Node::propagate(state);
 }
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::revert(State& state) const {
     data_ptr<ArrayNodeStateData>(state)->revert();
+}
+
+template <class BinaryOp>
+std::span<const ssize_t> BinaryOpNode<BinaryOp>::shape(const State& state) const {
+    if (!this->dynamic()) return this->shape();
+
+    const ssize_t lhs_size = operands_[0]->size(state);
+
+    // we don't (yet) support other cases
+    assert(lhs_size == 1 || operands_[1]->size(state) == 1);
+
+    return (lhs_size == 1) ? operands_[1]->shape(state) : operands_[0]->shape(state);
+}
+
+template <class BinaryOp>
+ssize_t BinaryOpNode<BinaryOp>::size(const State& state) const {
+    if (ssize_t size = this->size(); size >= 0) {
+        return size;
+    }
+
+    const ssize_t lhs_size = operands_[0]->size(state);
+    const ssize_t rhs_size = operands_[1]->size(state);
+
+    // we don't (yet) support other cases
+    assert(lhs_size == 1 || rhs_size == 1);
+
+    return (lhs_size == 1) ? rhs_size : lhs_size;
+}
+
+template <class BinaryOp>
+ssize_t BinaryOpNode<BinaryOp>::size_diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->size_diff();
 }
 
 // Uncommented are the tested specializations

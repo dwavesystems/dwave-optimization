@@ -138,6 +138,36 @@ class utils:
             with model.lock():
                 np.testing.assert_array_equal(op_array, op_symbol.state())
 
+        def test_scalar_broadcasting(self):
+            lhs_array = 5
+            rhs_array = np.asarray([-10, 100, 16])
+
+            model = Model()
+            lhs_symbol = model.constant(lhs_array)
+            rhs_symbol = model.constant(rhs_array)
+
+            op_array = self.op(lhs_array, rhs_array)
+            op_symbol = self.symbol_op(lhs_symbol, rhs_symbol)
+
+            model.states.resize(1)
+            with model.lock():
+                np.testing.assert_array_equal(op_array, op_symbol.state())
+
+        def test_size1_broadcasting(self):
+            lhs_array = np.asarray([5])
+            rhs_array = np.asarray([-10, 100, 16])
+
+            model = Model()
+            lhs_symbol = model.constant(lhs_array)
+            rhs_symbol = model.constant(rhs_array)
+
+            op_array = self.op(lhs_array, rhs_array)
+            op_symbol = self.symbol_op(lhs_symbol, rhs_symbol)
+
+            model.states.resize(1)
+            with model.lock():
+                np.testing.assert_array_equal(op_array, op_symbol.state())
+
     class NaryOpTests(SymbolTests):
         @abc.abstractmethod
         def op(self, *xs):
@@ -253,7 +283,7 @@ class TestAbs(utils.UnaryOpTests):
         return abs(x)
 
 
-class TestAdd(utils.SymbolTests):
+class TestAdd(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(5)
@@ -264,12 +294,15 @@ class TestAdd(utils.SymbolTests):
         yield ab
         yield ba
 
+    def op(self, lhs, rhs):
+        return lhs + rhs
+
     def test_broadcasting(self):
         # todo: allow array broadcasting, for now just test that it raises
         # an error
         model = Model()
-        a = model.integer(1)
-        b = model.integer(5)
+        a = model.integer(5)
+        b = model.integer((5, 5))
         with self.assertRaises(ValueError):
             a + b
 
@@ -288,6 +321,21 @@ class TestAdd(utils.SymbolTests):
         model.lock()
         model.states.resize(1)
         self.assertEqual(x.state(0), 12)
+
+    def test_scalar_broadcasting(self):
+        # todo: allow array broadcasting, for now just test that it raises
+        # an error
+        model = Model()
+        a = model.integer(1)
+        b = model.integer(5)
+        x = a + b
+
+        model.lock()
+        model.states.resize(1)
+
+        a.set_state(0, 3)
+        b.set_state(0, [4, 0, 3, 100, 17])
+        np.testing.assert_array_equal(x.state(), [7, 3, 6, 103, 20])
 
     def test_unlike_shapes(self):
         model = Model()
