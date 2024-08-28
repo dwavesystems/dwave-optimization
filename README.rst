@@ -89,5 +89,5 @@ Contributing
 Ocean's `contributing guide <https://docs.ocean.dwavesys.com/en/stable/contributing.html>`_
 has guidelines for contributing to Ocean packages.
 
-`dwave-optimization`` includes some formatting customization in the
+``dwave-optimization`` includes some formatting customization in the
 `.clang-format <.clang-format>`_ and `setup.cfg <setup.cfg>`_ files.
