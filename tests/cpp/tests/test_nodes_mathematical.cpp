@@ -18,6 +18,7 @@
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
+#include "dwave-optimization/nodes/testing.hpp"
 
 namespace dwave::optimization {
 
@@ -34,6 +35,8 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<do
         auto b_ptr = graph.emplace_node<ConstantNode>(6);
 
         auto p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(p_ptr);
 
         THEN("a and b are the operands") {
             CHECK(std::ranges::equal(p_ptr->operands(), std::vector<Array*>{a_ptr, b_ptr}));
@@ -63,6 +66,8 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<do
         auto b_ptr = graph.emplace_node<ConstantNode>(values_b);
 
         auto p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(p_ptr);
 
         THEN("The shape is also a 1D array") {
             CHECK(p_ptr->ndim() == 1);
@@ -94,6 +99,8 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<do
         auto b_ptr = graph.emplace_node<ListNode>(4);
 
         auto p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(p_ptr);
 
         THEN("The shape is also a 1D array") {
             CHECK(p_ptr->ndim() == 1);
@@ -139,6 +146,8 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<do
 
         auto p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
 
+        graph.emplace_node<ArrayValidationNode>(p_ptr);
+
         THEN("The shape is also a 1D array") {
             CHECK(p_ptr->ndim() == 1);
             CHECK(p_ptr->size() == 4);
@@ -183,7 +192,7 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<do
     }
 }
 
-TEST_CASE("LessEqualNode") {
+TEST_CASE("BinaryOpNode") {
     auto graph = Graph();
 
     GIVEN("A less equal node operating on two continuous arrays") {
@@ -197,10 +206,153 @@ TEST_CASE("LessEqualNode") {
             CHECK(le_ptr->max() == 1);
         }
     }
-}
 
-TEST_CASE("MaxNode and MinNode") {
-    auto graph = Graph();
+    GIVEN("x = Integer(), y = List(5), le = x <= y, ge = y <= x") {
+        auto x_ptr = graph.emplace_node<IntegerNode>();
+        auto y_ptr = graph.emplace_node<ListNode>(5);
+        auto le_ptr = graph.emplace_node<LessEqualNode>(x_ptr, y_ptr);
+        auto ge_ptr = graph.emplace_node<LessEqualNode>(y_ptr, x_ptr);
+
+        THEN("We have the shape we expect") {
+            CHECK(std::ranges::equal(le_ptr->shape(), std::vector{5}));
+            CHECK(std::ranges::equal(ge_ptr->shape(), std::vector{5}));
+        }
+
+        // let's also toss an ArrayValidationNode on there to do most of the
+        // testing for us
+        graph.emplace_node<ArrayValidationNode>(le_ptr);
+        graph.emplace_node<ArrayValidationNode>(ge_ptr);
+
+        WHEN("We initialize x = 3, y = [0, 1, 2, 3, 4]") {
+            auto state = graph.empty_state();
+            x_ptr->initialize_state(state, {3});
+            y_ptr->initialize_state(state, {0, 1, 2, 3, 4});
+            graph.initialize_state(state);
+
+            THEN("le == x <= y == [false, false, false, true, true]") {
+                CHECK(std::ranges::equal(le_ptr->view(state), std::vector{0, 0, 0, 1, 1}));
+            }
+
+            THEN("ge == y <= x == [true, true, true, true, false]") {
+                CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{1, 1, 1, 1, 0}));
+            }
+
+            AND_WHEN("We then set x = 2") {
+                x_ptr->set_value(state, 0, 2);
+                graph.propagate(state, graph.descendants(state, {x_ptr}));
+
+                THEN("le == x <= y == [false, false, true, true, true]") {
+                    CHECK(std::ranges::equal(le_ptr->view(state), std::vector{0, 0, 1, 1, 1}));
+                }
+
+                THEN("ge == y <= x == [true, true, true, false, false]") {
+                    CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{1, 1, 1, 0, 0}));
+                }
+
+                AND_WHEN("We commit") {
+                    graph.commit(state, graph.descendants(state, {x_ptr}));
+
+                    THEN("le == x <= y == [false, false, true, true, true]") {
+                        CHECK(std::ranges::equal(le_ptr->view(state), std::vector{0, 0, 1, 1, 1}));
+                    }
+
+                    THEN("ge == y <= x == [true, true, true, false, false]") {
+                        CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{1, 1, 1, 0, 0}));
+                    }
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state, graph.descendants(state, {x_ptr}));
+
+                    THEN("le == x <= y == [false, false, false, true, true]") {
+                        CHECK(std::ranges::equal(le_ptr->view(state), std::vector{0, 0, 0, 1, 1}));
+                    }
+
+                    THEN("ge == y <= x == [true, true, true, true, false]") {
+                        CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{1, 1, 1, 1, 0}));
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("x = Integer(), y = List(5, 2, 4), le = x <= y, ge = y <= x") {
+        auto x_ptr = graph.emplace_node<IntegerNode>();
+        auto y_ptr = graph.emplace_node<ListNode>(5, 2, 4);
+        auto le_ptr = graph.emplace_node<LessEqualNode>(x_ptr, y_ptr);
+        auto ge_ptr = graph.emplace_node<LessEqualNode>(y_ptr, x_ptr);
+
+        THEN("We have the shape we expect") {
+            CHECK(std::ranges::equal(le_ptr->shape(), std::vector{-1}));
+            CHECK(std::ranges::equal(ge_ptr->shape(), std::vector{-1}));
+        }
+
+        // let's also toss an ArrayValidationNode on there to do most of the
+        // testing for us
+        graph.emplace_node<ArrayValidationNode>(le_ptr);
+        graph.emplace_node<ArrayValidationNode>(ge_ptr);
+
+        auto state = graph.initialize_state();
+
+        WHEN("We initialize x = 3, y = [4, 0, 3]") {
+            auto state = graph.empty_state();
+            x_ptr->initialize_state(state, {3});
+            y_ptr->initialize_state(state, {4, 0, 3});
+            graph.initialize_state(state);
+
+            THEN("le == x <= y == [true, false, true]") {
+                CHECK(std::ranges::equal(le_ptr->view(state), std::vector{1, 0, 1}));
+            }
+
+            THEN("ge == y <= x == [false, true, true]") {
+                CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{0, 1, 1}));
+            }
+
+            AND_WHEN("We mutate y to [4, 3, 0, 1]") {
+                y_ptr->shrink(state);
+                y_ptr->exchange(state, 1, 2);
+                y_ptr->grow(state);
+                y_ptr->grow(state);
+                graph.propagate(state, graph.descendants(state, {y_ptr}));
+
+                // the 1 is actually an implementation detail but let's make that
+                // assumption for the purpose of these tests
+                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{4, 3, 0, 1}));
+
+                THEN("le == x <= y == [true, true, false, false]") {
+                    CHECK(std::ranges::equal(le_ptr->view(state), std::vector{1, 1, 0, 0}));
+                }
+
+                THEN("ge == y <= x == [false, true, true, true]") {
+                    CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{0, 1, 1, 1}));
+                }
+
+                AND_WHEN("We commit") {
+                    graph.commit(state, graph.descendants(state, {y_ptr}));
+
+                    THEN("le == x <= y == [true, true, false, false]") {
+                        CHECK(std::ranges::equal(le_ptr->view(state), std::vector{1, 1, 0, 0}));
+                    }
+
+                    THEN("ge == y <= x == [false, true, true, true]") {
+                        CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{0, 1, 1, 1}));
+                    }
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state, graph.descendants(state, {y_ptr}));
+
+                    THEN("le == x <= y == [true, false, true]") {
+                        CHECK(std::ranges::equal(le_ptr->view(state), std::vector{1, 0, 1}));
+                    }
+
+                    THEN("ge == y <= x == [false, true, true]") {
+                        CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{0, 1, 1}));
+                    }
+                }
+            }
+        }
+    }
 
     GIVEN("A list node with a min and max node over it") {
         auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
@@ -209,6 +361,9 @@ TEST_CASE("MaxNode and MinNode") {
         // in the ReduceNode tests
         auto max_ptr = graph.emplace_node<MaxNode>(list_ptr, -1);
         auto min_ptr = graph.emplace_node<MinNode>(list_ptr, 6);
+
+        graph.emplace_node<ArrayValidationNode>(max_ptr);
+        graph.emplace_node<ArrayValidationNode>(min_ptr);
 
         AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
             auto state = graph.empty_state();

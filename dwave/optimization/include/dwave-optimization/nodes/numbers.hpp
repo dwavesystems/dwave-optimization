@@ -106,6 +106,8 @@ class IntegerNode : public NumberNode {
     static constexpr int default_lower_bound = 0;
     static constexpr int default_upper_bound = maximum_upper_bound;
 
+    IntegerNode() : IntegerNode(std::span<ssize_t, 0>{}) {}
+
     explicit IntegerNode(std::span<const ssize_t> shape,
                          std::optional<int> lower_bound = default_lower_bound,
                          std::optional<int> upper_bound = default_upper_bound)

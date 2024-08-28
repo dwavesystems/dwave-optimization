@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <ranges>
 #include <utility>
@@ -32,6 +33,46 @@ class ArrayNodeStateData : public NodeStateData {
  public:
     explicit ArrayNodeStateData(std::vector<double>&& values) noexcept
             : buffer(std::move(values)), previous_size_(buffer.size()) {}
+
+    // Assign new values to the state, tracking the changes from the previous state to the new
+    // one. Including resizes.
+    bool assign(std::ranges::sized_range auto&& values) {
+        // dev note: we could implement a version of this that doesn't need sized_range.
+        const ssize_t overlap_length = std::min<ssize_t>(buffer.size(), std::ranges::size(values));
+
+        auto vit = std::ranges::begin(values);
+
+        // first walk through the overlap, updating the buffer and the diff accordingly
+        {
+            auto bit = buffer.begin();
+            for (ssize_t index = 0; index < overlap_length; ++index, ++bit, ++vit) {
+                if (*bit == *vit) continue;  // no change
+                updates.emplace_back(index, *bit, *vit);
+                *bit = *vit;
+            }
+        }
+
+        // next walk backwards through the excess buffer, if there is any, removing as we go
+        {
+            for (ssize_t index = buffer.size() - 1; index >= overlap_length; --index) {
+                updates.emplace_back(Update::removal(index, buffer[index]));
+            }
+            buffer.resize(overlap_length);
+        }
+
+        // finally walk forward through the excess values, if there are any, adding them to the
+        // buffer
+        {
+            buffer.reserve(std::ranges::size(values));
+            for (ssize_t index = buffer.size(), stop = std::ranges::size(values); index < stop;
+                 ++index, ++vit) {
+                updates.emplace_back(Update::placement(index, *vit));
+                buffer.emplace_back(*vit);
+            }
+        }
+
+        return !updates.empty();
+    }
 
     const double* buff() const noexcept { return buffer.data(); }
 
@@ -92,6 +133,30 @@ class ArrayNodeStateData : public NodeStateData {
 
     ssize_t size_diff() const noexcept {
         return static_cast<ssize_t>(buffer.size()) - previous_size_;
+    }
+
+    // Update the state according to the given updates. Includes resizing.
+    // Note that the old value of each update is ignored, and the buffer is
+    // used as the source of truth.
+    bool update(std::ranges::input_range auto&& updates) {
+        for (const Update& update : updates) {
+            const auto& [index, _, new_] = update;
+            if (update.removed()) {
+                assert(static_cast<std::size_t>(index) + 1 == buffer.size());
+                this->updates.emplace_back(Update::removal(index, buffer[index]));
+                buffer.pop_back();
+            } else if (update.placed()) {
+                assert(static_cast<std::size_t>(index) == buffer.size());
+                this->updates.emplace_back(Update::placement(index, new_));
+                buffer.emplace_back(new_);
+            } else {
+                assert(0 <= index && static_cast<std::size_t>(index) < buffer.size());
+                this->updates.emplace_back(index, buffer[index], new_);
+                buffer[index] = new_;
+            }
+        }
+
+        return !this->updates.empty();
     }
 
     // Changes made directly to the buffer/update must be reflected in both!

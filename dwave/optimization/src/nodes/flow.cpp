@@ -50,26 +50,6 @@ struct WhereNodeData : ArrayNodeStateData {
     explicit WhereNodeData(std::vector<double>&& values) noexcept
             : ArrayNodeStateData(std::move(values)) {}
 
-    // Update the buffer according to the given diff. Changes are made uncritically
-    // so redundant changes are maintained.
-    void apply_diff(std::span<const Update> updates) {
-        this->updates.assign(updates.begin(), updates.end());
-
-        for (const Update& update : updates) {
-            if (update.placed()) {
-                assert(update.index == static_cast<ssize_t>(buffer.size()));
-                buffer.emplace_back(update.value);
-            } else if (update.removed()) {
-                assert(update.index == static_cast<ssize_t>(buffer.size()) - 1);
-                assert(buffer.at(update.index) == update.old);
-                buffer.pop_back();
-            } else {
-                assert(buffer.at(update.index) == update.old);
-                buffer[update.index] = update.value;
-            }
-        }
-    }
-
     // Update the buffer according to the given diffs
     void apply_diffs(const Array::View condition, std::span<const Update> condition_diff,
                      const Array::View x, std::span<const Update> x_diff, const Array::View y,
@@ -123,45 +103,6 @@ struct WhereNodeData : ArrayNodeStateData {
 
             updates.emplace_back(index, old, value);
             old = value;
-        }
-    }
-
-    // Overwrite the current buffer with the given values, tracking the changes
-    // in the diff.
-    void rewrite_buffer(const Array::View values) {
-        assert(updates.empty() && "nodes should only be propagated once");
-
-        const ssize_t overlap_length = std::min<ssize_t>(buffer.size(), values.size());
-
-        // first walk through the overlap, updating the buffer and the diff accordingly
-        {
-            auto bit = buffer.begin();
-            auto vit = values.begin();
-            for (ssize_t index = 0; index < overlap_length; ++index, ++bit, ++vit) {
-                if (*bit == *vit) continue;  // no change
-                updates.emplace_back(index, *bit, *vit);
-                *bit = *vit;
-            }
-        }
-
-        // next walk backwards through the excess buffer, if there is any, removing as we go
-        {
-            for (ssize_t index = buffer.size() - 1; index >= overlap_length; --index) {
-                updates.emplace_back(Update::removal(index, buffer[index]));
-            }
-            buffer.resize(overlap_length);
-        }
-
-        // finally walk forward through the excess values, if there are any, adding them to the
-        // buffer
-        {
-            auto vit = values.begin() + buffer.size();
-            buffer.reserve(values.size());
-            for (ssize_t index = buffer.size(), stop = values.size(); index < stop;
-                 ++index, ++vit) {
-                updates.emplace_back(Update::placement(index, *vit));
-                buffer.emplace_back(*vit);
-            }
         }
     }
 };
@@ -264,10 +205,10 @@ void WhereNode::propagate(State& state) const {
 
         if (condition_ptr_->buff(state)[0]) {
             // we're now pointing to x
-            node_data->rewrite_buffer(x_ptr_->view(state));
+            node_data->assign(x_ptr_->view(state));
         } else {
             // we're now pointing to y
-            node_data->rewrite_buffer(y_ptr_->view(state));
+            node_data->assign(y_ptr_->view(state));
         }
 
     } else {
@@ -276,10 +217,10 @@ void WhereNode::propagate(State& state) const {
 
         if (condition_ptr_->buff(state)[0]) {
             // we're pointing to x, so update ourselves according to x
-            node_data->apply_diff(x_ptr_->diff(state));
+            node_data->update(x_ptr_->diff(state));
         } else {
             // we're pointing to y, so update ourselves according to y
-            node_data->apply_diff(y_ptr_->diff(state));
+            node_data->update(y_ptr_->diff(state));
         }
     }
 }

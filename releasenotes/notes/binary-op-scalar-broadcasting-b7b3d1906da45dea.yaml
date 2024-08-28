@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Support binary operations between symbols representing a scalar and other
+    array symbols.
