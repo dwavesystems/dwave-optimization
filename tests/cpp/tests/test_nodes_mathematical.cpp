@@ -39,7 +39,10 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<do
         graph.emplace_node<ArrayValidationNode>(p_ptr);
 
         THEN("a and b are the operands") {
-            CHECK(std::ranges::equal(p_ptr->operands(), std::vector<Array*>{a_ptr, b_ptr}));
+            REQUIRE(std::ranges::equal(p_ptr->operands(), std::vector<Array*>{a_ptr, b_ptr}));
+
+            // we can cast to a non-const ptr if we're not const
+            CHECK(static_cast<Array*>(p_ptr->operands()[0]) == static_cast<Array*>(a_ptr));
         }
 
         THEN("The shape is also a scalar") {
@@ -489,8 +492,11 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
         }
 
         THEN("The operands are all available via operands()") {
-            CHECK(std::ranges::equal(p_ptr->operands(),
+            REQUIRE(std::ranges::equal(p_ptr->operands(),
                                      std::vector<Array*>{a_ptr, b_ptr, c_ptr, d_ptr}));
+
+            // we can cast to a non-const ptr if we're not const
+            CHECK(static_cast<Array*>(p_ptr->operands()[0]) == static_cast<Array*>(a_ptr));
         }
 
         WHEN("We make a state") {
@@ -779,8 +785,8 @@ TEMPLATE_TEST_CASE("ReduceNode", "",
         }
 
         THEN("The constant is the operand") {
-            CHECK(r_ptr->operands().size() == r_ptr->predecessors().size());
-            CHECK(static_cast<const Array*>(a_ptr) == r_ptr->operands()[0]);
+            REQUIRE(r_ptr->operands().size() == r_ptr->predecessors().size());
+            CHECK(static_cast<Array*>(a_ptr) == r_ptr->operands()[0]);
         }
 
         WHEN("We make a state") {
@@ -1064,8 +1070,8 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
         }
 
         THEN("The constant is the operand") {
-            CHECK(p_ptr->operands().size() == p_ptr->predecessors().size());
-            CHECK(static_cast<const Array*>(a_ptr) == p_ptr->operands()[0]);
+            REQUIRE(p_ptr->operands().size() == p_ptr->predecessors().size());
+            CHECK(static_cast<Array*>(a_ptr) == p_ptr->operands()[0]);
         }
 
         WHEN("We make a state") {

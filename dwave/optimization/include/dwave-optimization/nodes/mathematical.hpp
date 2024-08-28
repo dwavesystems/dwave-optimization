@@ -80,6 +80,10 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     void propagate(State& state) const override;
 
     // The predecessors of the operation, as Array*.
+    std::span<Array* const> operands() {
+        assert(predecessors().size() == operands_.size());
+        return operands_;
+    }
     std::span<const Array* const> operands() const {
         assert(predecessors().size() == operands_.size());
         return operands_;
@@ -89,9 +93,8 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     using op = BinaryOp;
 
     // There are redundant, because we could dynamic_cast each time from
-    // predecessors(), but that gets tedious as well as having a very minor
-    // performance hit. So we go ahead and hold dedicated pointers here.
-    std::array<const Array* const, 2> operands_;
+    // predecessors(), but this is more performant
+    std::array<Array* const, 2> operands_;
 };
 
 // We follow NumPy naming convention rather than C++ to distinguish between
@@ -128,6 +131,10 @@ class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
     void propagate(State& state) const override;
 
     // The predecessors of the operation, as Array*.
+    std::span<Array* const> operands() {
+        assert(predecessors().size() == operands_.size());
+        return operands_;
+    }
     std::span<const Array* const> operands() const {
         assert(predecessors().size() == operands_.size());
         return operands_;
@@ -136,7 +143,7 @@ class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
  private:
     using op = BinaryOp;
 
-    std::vector<const Array*> operands_;
+    std::vector<Array*> operands_;
 };
 
 using NaryAddNode = NaryOpNode<std::plus<double>>;
@@ -166,6 +173,10 @@ class ReduceNode : public ScalarOutputMixin<ArrayNode> {
     void propagate(State& state) const override;
 
     // The predecessor of the reduction, as an Array*.
+    std::span<Array* const> operands() {
+        assert(predecessors().size() == 1);
+        return std::span<Array* const, 1>(&array_ptr_, 1);
+    }
     std::span<const Array* const> operands() const {
         assert(predecessors().size() == 1);
         return std::span<const Array* const, 1>(&array_ptr_, 1);
@@ -179,10 +190,9 @@ class ReduceNode : public ScalarOutputMixin<ArrayNode> {
     // Calculate the output value based on the state of the predecessor
     double reduce(const State& state) const;
 
-    // This is redundant, because we could dynamic_cast each time from
-    // predecessors(), but that gets tedious as well as having a very minor
-    // performance hit. So we go ahead and hold a dedicated pointer here.
-    const Array* const array_ptr_;
+    // There are redundant, because we could dynamic_cast each time from
+    // predecessors(), but this is more performant
+    Array* const array_ptr_;
 };
 
 // We follow NumPy naming convention rather than C++ to distinguish between
@@ -211,6 +221,10 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     void propagate(State& state) const override;
 
     // The predecessor of the operation, as an Array*.
+    std::span<Array* const> operands() {
+        assert(predecessors().size() == 1);
+        return std::span<Array* const, 1>(&array_ptr_, 1);
+    }
     std::span<const Array* const> operands() const {
         assert(predecessors().size() == 1);
         return std::span<const Array* const, 1>(&array_ptr_, 1);
@@ -219,10 +233,9 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
  private:
     using op = UnaryOp;
 
-    // This is redundant, because we could dynamic_cast each time from
-    // predecessors(), but that gets tedious as well as having a very minor
-    // performance hit. So we go ahead and hold a dedicated pointer here.
-    const Array* const array_ptr_;
+    // There are redundant, because we could dynamic_cast each time from
+    // predecessors(), but this is more performant
+    Array* const array_ptr_;
 };
 
 using AbsoluteNode = UnaryOpNode<functional::abs<double>>;
