@@ -527,15 +527,19 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
     const ssize_t size = std::get<ArrayNode*>(indices_[first_array_index_])->size(state);
 
     std::vector<ssize_t> offsets(size);
-    for (ssize_t index = 0; index < static_cast<ssize_t>(indices_.size()); ++index) {
-        if (std::holds_alternative<ArrayNode*>(indices_[index])) {
-            assert(array_strides[index] % static_cast<ssize_t>(itemsize()) == 0);
-            ssize_t stride = array_strides[index] / static_cast<ssize_t>(itemsize());
+    if (size) {
+        for (ssize_t index = 0; index < static_cast<ssize_t>(indices_.size()); ++index) {
+            if (std::holds_alternative<ArrayNode*>(indices_[index])) {
+                assert(array_strides[index] % static_cast<ssize_t>(itemsize()) == 0);
 
-            auto it = offsets.begin();
-            for (auto& index : std::get<ArrayNode*>(indices_[index])->view(state)) {
-                *it += index * stride;
-                ++it;
+                assert(index < static_cast<ssize_t>(array_strides.size()));
+                ssize_t stride = array_strides[index] / static_cast<ssize_t>(itemsize());
+
+                auto it = offsets.begin();
+                for (auto& index : std::get<ArrayNode*>(indices_[index])->view(state)) {
+                    *it += index * stride;
+                    ++it;
+                }
             }
         }
     }

@@ -104,7 +104,7 @@ bool IntegerNode::is_valid(double value) const {
 }
 
 double IntegerNode::generate_value(RngAdaptor& rng) const {
-    std::uniform_int_distribution<std::size_t> value_dist(lower_bound_, upper_bound_);
+    std::uniform_int_distribution<ssize_t> value_dist(lower_bound_, upper_bound_);
     return value_dist(rng);
 }
 

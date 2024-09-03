@@ -267,7 +267,7 @@ void DynamicArrayTestingNode::initialize_state(State& state, std::span<const dou
 }
 
 double const* DynamicArrayTestingNode::buff(const State& state) const noexcept {
-    return &(data_ptr<DynamicArrayTestingNodeData>(state)->current_data[0]);
+    return data_ptr<DynamicArrayTestingNodeData>(state)->current_data.data();
 }
 
 std::span<const Update> DynamicArrayTestingNode::diff(const State& state) const {
