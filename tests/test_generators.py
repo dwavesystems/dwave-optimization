@@ -45,7 +45,7 @@ class TestBinPacking(unittest.TestCase):
     def test_input_validations(self):
         # Non-positive bin capacity
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.bin_packing([1,2,3], 0)
+            dwave.optimization.generators.bin_packing([1, 2, 3], 0)
 
         # Zero-length weights array
         with self.assertRaises(ValueError):
@@ -53,11 +53,11 @@ class TestBinPacking(unittest.TestCase):
 
         # Negative value in weights array
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.bin_packing([1,-2,3], 5)
+            dwave.optimization.generators.bin_packing([1, -2, 3], 5)
 
         # Item weight greater than bin capacity
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.bin_packing([1,1,3], 2)
+            dwave.optimization.generators.bin_packing([1, 1, 3], 2)
 
     def test_basics(self):
         weights = [30, 20, 10, 20]
@@ -72,8 +72,8 @@ class TestBinPacking(unittest.TestCase):
         items = next(model.iter_decisions())
         capacity_constraint = next(model.iter_constraints())
         model.states.resize(2)
-        items.set_state(0, [[1,0,1,0],[0,1,0,1],[0,0,0,0],[0,0,0,0]])
-        items.set_state(1, [[1,1,1,1],[0,0,0,0],[0,0,0,0],[0,0,0,0]])
+        items.set_state(0, [[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0]])
+        items.set_state(1, [[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
         self.assertEqual(model.objective.state(0), 2.)
         self.assertEqual(capacity_constraint.state(0), 1.)
         self.assertEqual(model.objective.state(1), 1.)
@@ -91,7 +91,6 @@ class TestBinPacking(unittest.TestCase):
         # a few smoke test checks
         self.assertEqual(model.num_symbols(), copy.num_symbols())
         self.assertEqual(model.state_size(), copy.state_size())
-
 
 
 class TestCapacitatedVehicleRouting(unittest.TestCase):
@@ -237,7 +236,7 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 demand=demand,
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
-                distances=[[1, 6, 3], [2, 2, 8], [4, 6, 7]],)
+                distances=[[1, 6, 3], [2, 2, 8], [4, 6, 7]], )
 
     def test_basics(self):
         num_vehicles = 2
@@ -306,7 +305,6 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
         self.assertEqual(model.objective.state(0), 10)
 
     def test_cvrplib_P_n19_k2(self):
-
         # http://vrp.atd-lab.inf.puc-rio.br/media/com_vrp/instances/P/P-n19-k2.vrp
         model = dwave.optimization.generators.capacitated_vehicle_routing(
             locations_x=[30, 37, 49, 52, 31, 52, 42, 52, 57, 62, 42, 27, 43, 58, 37, 61, 62, 63, 45],
@@ -317,8 +315,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
 
         model.states.resize(1)
         route = next(model.iter_decisions())
-        route.set_state(0, [[i-1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]],
-                           [i-1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]]])
+        route.set_state(0, [[i - 1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]],
+                            [i - 1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]]])
         self.assertGreater(model.objective.state(0), 212)
         self.assertLess(model.objective.state(0), 213)
 
@@ -327,7 +325,7 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
         model = dwave.optimization.generators.capacitated_vehicle_routing(
             locations_x=[30, 37, 49, 52, 31, 52, 42, 52, 57, 62, 42, 27, 43, 58, 37, 61, 62, 63, 45],
             locations_y=[40, 52, 43, 64, 62, 33, 41, 41, 58, 42, 57, 68, 67, 27, 69, 33, 63, 69, 35],
-            demand=[0, 19, 30, 16, 23, 11, 31, 15, 28, 14, 8, 7, 14, 19, 11, 26, 17, 6, 15], 
+            demand=[0, 19, 30, 16, 23, 11, 31, 15, 28, 14, 8, 7, 14, 19, 11, 26, 17, 6, 15],
             number_of_vehicles=2,
             vehicle_capacity=160)
 
@@ -351,14 +349,236 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
 
         routes, = model.iter_decisions()
 
-        routes.set_state(0, [[i-1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]],
-                             [i-1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]]])
+        routes.set_state(0, [[i - 1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]],
+                             [i - 1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]]])
 
         # just smoke test
         with model.states.to_file() as f:
             model.states.from_file(f)
         self.assertGreater(model.objective.state(0), 212)
         self.assertLess(model.objective.state(0), 213)
+
+
+class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
+    def test_input_validations(self):
+        time_distances = [[1, 2, 3], [1, 2, 3], [1, 2, 3]]
+        demand = [5, 5, 7]
+        demand0 = [0, 5, 12]
+        num_vehicles = 2
+        capacity = 10
+        time_window_open = [0, 0]
+        time_window_close = [100, 100]
+        service_time = [1, 1]
+
+        # Zero-length arrays
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+                demand=[],
+                number_of_vehicles=num_vehicles,
+                vehicle_capacity=capacity,
+                time_distances=time_distances,
+                time_window_open=time_window_open,
+                time_window_close=time_window_close,
+                service_time=service_time
+            )
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+                demand=demand0,
+                number_of_vehicles=num_vehicles,
+                vehicle_capacity=capacity,
+                time_distances=[],
+                time_window_open=time_window_open,
+                time_window_close=time_window_close,
+                service_time=service_time)
+
+        # Negative-value arrays
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+                demand=demand0,
+                number_of_vehicles=num_vehicles,
+                vehicle_capacity=capacity,
+                time_distances=[[1, 2, 3], [1, 2, 3], [1, 2, -3]],
+                time_window_open=time_window_open,
+                time_window_close=time_window_close,
+                service_time=service_time)
+
+        # Unequal-length arrays
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+                demand=demand0,
+                number_of_vehicles=num_vehicles,
+                vehicle_capacity=capacity,
+                time_distances=[[1, 2, 3], [1, 2], [1, 2, 3]],
+                time_window_open=time_window_open,
+                time_window_close=time_window_close,
+                service_time=service_time)
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+                demand=demand0,
+                number_of_vehicles=num_vehicles,
+                vehicle_capacity=capacity,
+                time_distances=[[1, 6], [2, 8]],
+                time_window_open=time_window_open,
+                time_window_close=time_window_close,
+                service_time=service_time)
+
+        # Not enough vehicles
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+                demand=demand0,
+                number_of_vehicles=0,
+                vehicle_capacity=capacity,
+                time_distances=time_distances,
+                time_window_open=time_window_open,
+                time_window_close=time_window_close,
+                service_time=service_time)
+
+        # No capacity per vehicle
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+                demand=demand0,
+                number_of_vehicles=num_vehicles,
+                vehicle_capacity=0,
+                time_distances=time_distances,
+                time_window_open=time_window_open,
+                time_window_close=time_window_close,
+                service_time=service_time)
+
+        # Not enough total capacity for total demand
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+                demand=[30, 30, 31],
+                number_of_vehicles=3,
+                vehicle_capacity=30,
+                time_distances=time_distances,
+                time_window_open=time_window_open,
+                time_window_close=time_window_close,
+                service_time=service_time)
+
+        # Non-zero depot demand
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+                demand=demand,
+                number_of_vehicles=num_vehicles,
+                vehicle_capacity=capacity,
+                time_distances=time_distances,
+                time_window_open=time_window_open,
+                time_window_close=time_window_close,
+                service_time=service_time)
+
+        # Demand vector has zero for depot and customer
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+                demand=[0, 44.6, 0],
+                number_of_vehicles=num_vehicles,
+                vehicle_capacity=capacity,
+                time_distances=time_distances,
+                time_window_open=time_window_open,
+                time_window_close=time_window_close,
+                service_time=service_time)
+
+        # Demand vector has zero for customer
+        with self.assertRaises(ValueError):
+            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+                demand=[22, 44.6, 0],
+                number_of_vehicles=num_vehicles,
+                vehicle_capacity=capacity,
+                time_distances=time_distances,
+                time_window_open=time_window_open,
+                time_window_close=time_window_close,
+                service_time=service_time)
+
+    def test_basics(self):
+        num_vehicles = 2
+
+        model = dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            demand=[0, 5, 5],
+            number_of_vehicles=num_vehicles,
+            vehicle_capacity=10,
+            time_distances=[[1, 6, 3], [2, 2, 8], [4, 6, 7]],
+            time_window_open=[0, 0, 0],
+            time_window_close=[20, 20, 20],
+            service_time=[0, 0, 0])
+
+        self.assertEqual(model.num_decisions(), 1)
+        self.assertEqual(model.num_constraints(), 12)
+        self.assertEqual(model.num_nodes(), 177)
+        self.assertEqual(model.num_edges(), 286)
+        self.assertEqual(model.is_locked(), True)
+
+        model.states.resize(1)
+        route = next(model.iter_decisions())
+        self.assertEqual(route.num_disjoint_lists(), 2)
+        route.set_state(0, [[0], [1]])
+        self.assertEqual(model.objective.state(0), 18)
+
+        # Test asymmetric distances
+        model = dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            demand=[0, 10, 10],
+            number_of_vehicles=num_vehicles,
+            vehicle_capacity=10,
+            time_distances=[[0, 1, 3], [2, 0, np.sqrt(17)], [4, np.sqrt(13), 0]],
+            time_window_open=[0, 0, 0],
+            time_window_close=[0, 100, 100],
+            service_time=[0, 0, 0]
+        )
+
+        model.states.resize(1)
+        route = next(model.iter_decisions())
+        self.assertEqual(route.num_disjoint_lists(), 2)
+        route.set_state(0, [[0], [1]])
+        self.assertEqual(model.objective.state(0), 8)
+
+    def test_serialization(self):
+        model = dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            time_distances=[[0, 14, 19, 32],
+                            [14, 0, 15, 19],
+                            [19, 15, 0, 21],
+                            [32, 19, 21, 0]],
+            demand=[0, 19, 30, 16],
+            number_of_vehicles=2,
+            vehicle_capacity=40,
+            time_window_open=[0, 0, 0, 0],
+            time_window_close=[0, 100, 100, 100],
+            service_time=[0, 0, 0, 0]
+        )
+
+        with model.to_file() as f:
+            copy = dwave.optimization.Model.from_file(f)
+
+        # a few smoke test checks
+        self.assertEqual(model.num_symbols(), copy.num_symbols())
+        self.assertEqual(model.state_size(), copy.state_size())
+
+    def test_state_serialization(self):
+        model = dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            time_distances=[[0, 14, 19, 32],
+                            [14, 0, 15, 19],
+                            [19, 15, 0, 21],
+                            [32, 19, 21, 0]],
+            demand=[0, 19, 30, 16],
+            number_of_vehicles=2,
+            vehicle_capacity=40,
+            time_window_open=[0, 0, 0, 0],
+            time_window_close=[0, 100, 100, 100],
+            service_time=[0, 2, 2, 2]
+        )
+
+        model.states.resize(1)
+
+        routes, = model.iter_decisions()
+
+        routes.set_state(0, [[i-1 for i in [1, 2]],
+                             [i-1 for i in [3]]])
+
+        # just smoke test
+        with model.states.to_file() as f:
+            model.states.from_file(f)
+        print(model.objective.state(0))
+        self.assertGreater(model.objective.state(0), 110)
+        self.assertLess(model.objective.state(0), 115)
 
 
 @unittest.skipUnless(dimod_found, "No dimod installed")
