@@ -9,7 +9,7 @@ commands:
     parameters:
       cibw-version:
         type: string
-        default: 2.17.0
+        default: 2.21.0
     steps:
       - run:
           name: run cibuildwheel
@@ -107,7 +107,7 @@ jobs:
 
   python-macOS:
     macos:
-      xcode: 15.3.0
+      xcode: 16.1.0
     resource_class: macos.m1.medium.gen1
 
     parameters:
@@ -272,7 +272,7 @@ workflows:
           matrix:
             parameters:
               # versions are built with ~= so the patch version doesn't matter
-              python-version: &python-versions [3.8.0, 3.9.0, 3.10.0, 3.11.0, 3.12.0]
+              python-version: &python-versions [3.8.0, 3.9.0, 3.10.0, 3.11.0, 3.12.0, 3.13.0]
           filters: &tags
             # also run on tags so the deploy pipeline works
             tags:
@@ -301,7 +301,7 @@ workflows:
             - python-linux
       - python-dependencies:
           name: python-dependencies-latest
-          python-version: "3.12"
+          python-version: "3.12"  # should be updated to 3.13 once there is a non-rc image
           dependency-versions: numpy
           only-binary: numpy
           requires:
