@@ -14,8 +14,10 @@ tests_all = executable(
         'tests/test_utils.cpp',
         'test_main.cpp',
     ],
-    dependencies: libdwave_optimization,
-    include_directories: '../../extern/catch2/single_include/',
+    dependencies: [
+        subproject('catch2').get_variable('catch2_dep'),
+        libdwave_optimization,
+    ],
 )
 
 test('tests-all', tests_all, verbose: true)
