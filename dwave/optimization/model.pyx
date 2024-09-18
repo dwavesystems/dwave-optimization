@@ -1690,8 +1690,8 @@ cdef class ArraySymbol(Symbol):
                 # https://numpy.org/doc/stable/user/basics.indexing.html#basic-indexing
                 return dwave.optimization.symbols.BasicIndexing(self, *index)
 
-            elif all(isinstance(idx, ArraySymbol)
-                     or idx.start is None and idx.stop is None and idx.step is None
+            elif all(isinstance(idx, ArraySymbol) or
+                     (isinstance(idx, slice) and idx.start is None and idx.stop is None and idx.step is None)
                      for idx in index):
                 # Advanced indexing
                 # https://numpy.org/doc/stable/user/basics.indexing.html#advanced-indexing
@@ -1706,8 +1706,8 @@ cdef class ArraySymbol(Symbol):
                 # order may be more efficient in some cases, but for now let's do the simple thing
 
                 basic_indices, advanced_indices = _split_indices(index)
-                basic = dwave.optimization.symbols(self, *basic_indices)
-                return dwave.optimization.symbols(basic, *advanced_indices)
+                basic = dwave.optimization.symbols.BasicIndexing(self, *basic_indices)
+                return dwave.optimization.symbols.AdvancedIndexing(basic, *advanced_indices)
 
             else:
                 # todo: consider supporting NumPy arrays directly

@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fix combined indexing. Previously indexing an array symbol by a mixture of
+    arrays, integers, and non-empty slices would always result in an error.
