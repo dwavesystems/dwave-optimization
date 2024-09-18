@@ -74,3 +74,4 @@ docs/reference/generated/
 # meson-managed subprojects
 subprojects/
 !subprojects/*.wrap
+!subprojects/README.rst
