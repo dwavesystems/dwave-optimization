@@ -605,23 +605,19 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
 
     # Ensure that for each job, its tasks do not overlap
     for j in range(num_jobs):
-        ends = end_times[j, :][machines[j, :-1]]
-        starts = start_times[j, :][machines[j, :]][1:]
+        ends = end_times[j, machines[j, :-1]]
+        starts = start_times[j, machines[j, 1:]]
+
         model.add_constraint((ends <= starts).all())
 
     # Ensure for each machine, its tasks do not overlap
     for m in range(num_machines):
         order = orders[m]
 
-        ends = end_times[:, m]
-        starts = start_times[:, m]
+        ends = end_times[order[:-1], m]
+        starts = start_times[order[1:], m]
 
-        # todo: with combined indexing we wouldn't need this loop
-        for t in range(num_jobs - 1):
-            end = ends[order[t]]  # end of the t'th job on machine m
-            start = starts[order[t+1]]  # start of the (t+1)th job on machine m
-
-            model.add_constraint(end <= start)
+        model.add_constraint((ends <= starts).all())
 
     model.lock()
     return model
