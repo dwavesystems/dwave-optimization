@@ -5,14 +5,6 @@ orbs:
   macos: circleci/macos@2.4.1
 
 commands:
-  get-catch2:
-    steps:
-      - run:
-          name: get catch2 by initializing the git submodules
-          command: |
-            git submodule init
-            git submodule update
-
   run-cibuildwheel:
     parameters:
       cibw-version:
@@ -84,7 +76,6 @@ jobs:
 
     steps:
       - checkout
-      - get-catch2
       - run:
           name: install dependencies
           command: |
@@ -219,7 +210,6 @@ jobs:
             python -m venv env
             . env/bin/activate
             pip install -r requirements.txt
-      - get-catch2
       - run:
           name: run c++ tests with meson
           command: |
