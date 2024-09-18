@@ -76,7 +76,6 @@ jobs:
 
     steps:
       - checkout
-
       - run:
           name: install dependencies
           command: |
@@ -88,13 +87,18 @@ jobs:
           name: build with -Werror
           command: |
             . env/bin/activate
-            CPPFLAGS="-Werror" python -m build  -Ccompile-args="-v"
+            python -m build \
+              -Ccompile-args="-v" \
+              -Csetup-args="-Dwerror=true"
 
       - run:
-          name: build and install with -Werror and -UNDEBUG
+          name: build and install with -Werror and without -NDEBUG
           command: |
             . env/bin/activate
-            CPPFLAGS="-UNDEBUG -Werror" python -m build  -Ccompile-args="-v"
+            python -m build \
+              -Ccompile-args="-v" \
+              -Csetup-args="-Dbuildtype=debug" \
+              -Csetup-args="-Dwerror=true"
             pip install dist/dwave*optimization*.whl --force
 
       - run: &run-tests
@@ -164,6 +168,7 @@ jobs:
             rm -r env
             python -m venv env
             . env/bin/activate
+            pip install pip --upgrade
             pip install dist/dwave*optimization*.tar.gz
       - run: *run-tests
 
@@ -197,24 +202,27 @@ jobs:
     docker:
       - image: cimg/python:3.9
 
-    steps:
+    steps: &unix-cpp-tests
       - checkout
       - run:
-          name: run cpp tests
+          name: create venv and install build dependencies
           command: |
-            FLAGS=-Werror make -C tests/cpp/
+            python -m venv env
+            . env/bin/activate
+            pip install -r requirements.txt
+      - run:
+          name: run c++ tests with meson
+          command: |
+            . env/bin/activate
+            meson setup _build -Dbuildtype=debug -Dwerror=true
+            meson test -C _build
 
   cpp-macOS:
     macos:
       xcode: 15.3.0
     resource_class: macos.m1.medium.gen1
 
-    steps:
-      - checkout
-      - run:
-          name: run cpp tests
-          command: |
-            FLAGS=-Werror make -C tests/cpp/
+    steps: *unix-cpp-tests
 
   docs:
     docker:

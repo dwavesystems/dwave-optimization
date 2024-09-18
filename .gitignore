@@ -70,3 +70,8 @@ dwave/optimization/*.html
 # Sphinx documentation
 docs/_build/
 docs/reference/generated/
+
+# meson-managed subprojects
+subprojects/
+!subprojects/*.wrap
+!subprojects/README.rst
