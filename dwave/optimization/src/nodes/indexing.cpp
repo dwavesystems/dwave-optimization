@@ -367,8 +367,8 @@ struct AdvancedIndexingNode::IndexParser_ {
             if (indexing_arrays_ndim == 0) {
                 subspace_stride = ndim > 0 ? strides[0] * shape[0] : array_ptr->itemsize();
             } else {
-                subspace_stride =
-                        bullet1mode ? strides[indexing_arrays_ndim - 1] : strides[first_array_index];
+                subspace_stride = bullet1mode ? strides[indexing_arrays_ndim - 1]
+                                              : strides[first_array_index];
             }
         }
     }
@@ -1543,9 +1543,7 @@ std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
 // PermutationNode ************************************************************
 
 PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr)
-        : ArrayOutputMixin(array_ptr->shape()),
-          array_ptr_(array_ptr),
-          order_ptr_(order_ptr) {
+        : ArrayOutputMixin(array_ptr->shape()), array_ptr_(array_ptr), order_ptr_(order_ptr) {
     std::span<const ssize_t> array_shape = array_ptr_->shape();
 
     // For now, we are only going to support permutation on constant nodes
