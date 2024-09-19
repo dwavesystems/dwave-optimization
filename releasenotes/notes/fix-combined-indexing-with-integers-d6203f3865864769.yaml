@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Fix combined indexing. Previously indexing an array symbol by a mixture of
+    arrays, integers, and non-empty slices would always result in an error.
+features:
+  - | 
+    Reduce the number of symbols in the model returned by ``job_shop_scheduling()`` generator.

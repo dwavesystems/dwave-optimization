@@ -42,6 +42,40 @@ class TestArraySymbol(unittest.TestCase):
         with self.assertRaises(ValueError):
             bool(symbol)
 
+    def test_combined_indexing_with_integers(self):
+        model = Model()
+        a = model.constant(np.arange(27).reshape(3, 3, 3))
+        x = model.list(3)
+
+        y = a[x, x, 2]
+
+        model.lock()
+        self.assertEqual(model.num_symbols(), 4)  # an intermediate node was created
+
+        model.states.resize(1)
+
+        xarr = np.asarray(x.state(), dtype=int)
+        aarr = np.asarray(a)
+
+        np.testing.assert_array_equal(y.state(), aarr[xarr, xarr, 2])
+
+    def test_combined_indexing_with_slices(self):
+        model = Model()
+        a = model.constant(np.arange(27).reshape(3, 3, 3))
+        x = model.list(3)
+
+        y = a[x, x, 1:3]
+
+        model.lock()
+        self.assertEqual(model.num_symbols(), 4)  # an intermediate node was created
+
+        model.states.resize(1)
+
+        xarr = np.asarray(x.state(), dtype=int)
+        aarr = np.asarray(a)
+
+        np.testing.assert_array_equal(y.state(), aarr[xarr, xarr, 1:3])
+
     def test_operator_types(self):
         # For each, test that we get the right class from the operator and that
         # incorrect types returns NotImplemented

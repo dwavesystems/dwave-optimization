@@ -9,7 +9,7 @@ commands:
     parameters:
       cibw-version:
         type: string
-        default: 2.17.0
+        default: 2.21.0
     steps:
       - run:
           name: run cibuildwheel
@@ -76,7 +76,6 @@ jobs:
 
     steps:
       - checkout
-
       - run:
           name: install dependencies
           command: |
@@ -88,13 +87,18 @@ jobs:
           name: build with -Werror
           command: |
             . env/bin/activate
-            CPPFLAGS="-Werror" python -m build  -Ccompile-args="-v"
+            python -m build \
+              -Ccompile-args="-v" \
+              -Csetup-args="-Dwerror=true"
 
       - run:
-          name: build and install with -Werror and -UNDEBUG
+          name: build and install with -Werror and without -NDEBUG
           command: |
             . env/bin/activate
-            CPPFLAGS="-UNDEBUG -Werror" python -m build  -Ccompile-args="-v"
+            python -m build \
+              -Ccompile-args="-v" \
+              -Csetup-args="-Dbuildtype=debug" \
+              -Csetup-args="-Dwerror=true"
             pip install dist/dwave*optimization*.whl --force
 
       - run: &run-tests
@@ -107,7 +111,7 @@ jobs:
 
   python-macOS:
     macos:
-      xcode: 15.3.0
+      xcode: 16.1.0
     resource_class: macos.m1.medium.gen1
 
     parameters:
@@ -164,6 +168,7 @@ jobs:
             rm -r env
             python -m venv env
             . env/bin/activate
+            pip install pip --upgrade
             pip install dist/dwave*optimization*.tar.gz
       - run: *run-tests
 
@@ -197,24 +202,27 @@ jobs:
     docker:
       - image: cimg/python:3.9
 
-    steps:
+    steps: &unix-cpp-tests
       - checkout
       - run:
-          name: run cpp tests
+          name: create venv and install build dependencies
           command: |
-            FLAGS=-Werror make -C tests/cpp/
+            python -m venv env
+            . env/bin/activate
+            pip install -r requirements.txt
+      - run:
+          name: run c++ tests with meson
+          command: |
+            . env/bin/activate
+            meson setup _build -Dbuildtype=debug -Dwerror=true
+            meson test -C _build
 
   cpp-macOS:
     macos:
       xcode: 15.3.0
     resource_class: macos.m1.medium.gen1
 
-    steps:
-      - checkout
-      - run:
-          name: run cpp tests
-          command: |
-            FLAGS=-Werror make -C tests/cpp/
+    steps: *unix-cpp-tests
 
   docs:
     docker:
@@ -272,7 +280,7 @@ workflows:
           matrix:
             parameters:
               # versions are built with ~= so the patch version doesn't matter
-              python-version: &python-versions [3.8.0, 3.9.0, 3.10.0, 3.11.0, 3.12.0]
+              python-version: &python-versions [3.8.0, 3.9.0, 3.10.0, 3.11.0, 3.12.0, 3.13.0]
           filters: &tags
             # also run on tags so the deploy pipeline works
             tags:
@@ -301,7 +309,7 @@ workflows:
             - python-linux
       - python-dependencies:
           name: python-dependencies-latest
-          python-version: "3.12"
+          python-version: "3.12"  # should be updated to 3.13 once there is a non-rc image
           dependency-versions: numpy
           only-binary: numpy
           requires:
