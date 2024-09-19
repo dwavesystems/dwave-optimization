@@ -1370,6 +1370,157 @@ TEST_CASE("AdvancedIndexingNode") {
                                                                   j_ptr));
         }
     }
+
+    GIVEN("A static-sized 4d 2x3x5x4 matrix with 3 non-constant indexing scalars") {
+        std::vector<double> values(2 * 3 * 5 * 4);
+        std::iota(values.begin(), values.end(), 0);
+        auto arr_ptr = graph.emplace_node<ConstantNode>(values,
+                                                        std::initializer_list<ssize_t>{2, 3, 5, 4});
+
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{});
+        auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{});
+        auto k_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{});
+
+        WHEN("We access the matrix by (i, j, :, :)") {
+            auto adv =
+                    graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, Slice(), Slice());
+
+            THEN("We get the shape we expect") {
+                CHECK(!adv->dynamic());
+                CHECK(std::ranges::equal(adv->shape(), std::vector{5, 4}));
+            }
+
+            AND_WHEN("We create a state") {
+                auto state = graph.empty_state();
+                i_ptr->initialize_state(state, {1});
+                j_ptr->initialize_state(state, {1});
+                graph.initialize_state(state);
+
+                std::vector<double> expected_initial_state({
+                        80, 81, 82, 83,
+                        84, 85, 86, 87,
+                        88, 89, 90, 91,
+                        92, 93, 94, 95,
+                        96, 97, 98, 99
+                    });
+
+                THEN("The state starts with the expected values") {
+                    CHECK(std::ranges::equal(adv->view(state), expected_initial_state));
+                }
+
+                AND_WHEN("We mutate i and j") {
+                    i_ptr->set_value(state, 0, 0);
+                    j_ptr->set_value(state, 0, 2);
+
+                    i_ptr->propagate(state);
+                    j_ptr->propagate(state);
+                    adv->propagate(state);
+
+                    THEN("The state has the expected values and the diff is correct") {
+                        CHECK(adv->size(state) == 20);
+
+                        std::vector<double> new_state({
+                                                 40, 41, 42, 43,
+                                                 44, 45, 46, 47,
+                                                 48, 49, 50, 51,
+                                                 52, 53, 54, 55,
+                                                 56, 57, 58, 59
+                                                 });
+                        CHECK(std::ranges::equal(adv->view(state), new_state));
+                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
+                    }
+                }
+            }
+        }
+
+        WHEN("We access the matrix by (:, i, j, :)") {
+            auto adv =
+                    graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr, Slice());
+
+            THEN("We get the shape we expect") {
+                CHECK(!adv->dynamic());
+                CHECK(std::ranges::equal(adv->shape(), std::vector{2, 4}));
+            }
+
+            AND_WHEN("We create a state") {
+                auto state = graph.empty_state();
+                i_ptr->initialize_state(state, {1});
+                j_ptr->initialize_state(state, {1});
+                graph.initialize_state(state);
+
+                std::vector<double> expected_initial_state({
+                        24, 25, 26, 27,
+                        84, 85, 86, 87
+                    });
+
+                THEN("The state starts with the expected values") {
+                    CHECK(std::ranges::equal(adv->view(state), expected_initial_state));
+                }
+
+                AND_WHEN("We mutate i and j") {
+                    i_ptr->set_value(state, 0, 0);
+                    j_ptr->set_value(state, 0, 2);
+
+                    i_ptr->propagate(state);
+                    j_ptr->propagate(state);
+                    adv->propagate(state);
+
+                    THEN("The state has the expected values and the diff is correct") {
+                        CHECK(adv->size(state) == 8);
+
+                        std::vector<double> new_state({
+                                                 8, 9, 10, 11,
+                                                 68, 69, 70, 71
+                                                 });
+                        CHECK(std::ranges::equal(adv->view(state), new_state));
+                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
+                    }
+                }
+            }
+        }
+
+        WHEN("We access the matrix by (i, j, :, k)") {
+            auto adv =
+                    graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, Slice(), k_ptr);
+
+            THEN("We get the shape we expect") {
+                CHECK(!adv->dynamic());
+                CHECK(std::ranges::equal(adv->shape(), std::vector{5}));
+            }
+
+            AND_WHEN("We create a state") {
+                auto state = graph.empty_state();
+                i_ptr->initialize_state(state, {1});
+                j_ptr->initialize_state(state, {1});
+                k_ptr->initialize_state(state, {3});
+                graph.initialize_state(state);
+
+                std::vector<double> expected_initial_state({83, 87, 91, 95, 99});
+
+                THEN("The state starts with the expected values") {
+                    CHECK(std::ranges::equal(adv->view(state), expected_initial_state));
+                }
+
+                AND_WHEN("We mutate i and j") {
+                    i_ptr->set_value(state, 0, 0);
+                    j_ptr->set_value(state, 0, 2);
+                    k_ptr->set_value(state, 0, 1);
+
+                    i_ptr->propagate(state);
+                    j_ptr->propagate(state);
+                    adv->propagate(state);
+
+                    THEN("The state has the expected values and the diff is correct") {
+                        CHECK(adv->size(state) == 5);
+
+                        std::vector<double> new_state({41, 45, 49, 53, 57});
+                        CHECK(std::ranges::equal(adv->view(state), new_state));
+                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
+                    }
+                }
+            }
+        }
+    }
 }
 
 TEST_CASE("BasicIndexingNode") {
