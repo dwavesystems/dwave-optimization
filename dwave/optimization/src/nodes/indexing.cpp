@@ -212,7 +212,7 @@ struct AdvancedIndexingNodeData : NodeStateData {
 };
 
 struct AdvancedIndexingNode::IndexParser_ {
-    IndexParser_(Array* array_ptr, std::vector<array_or_slice>&& indices, ssize_t item_size)
+    IndexParser_(Array* array_ptr, std::vector<array_or_slice>&& indices)
             : indices_(std::move(indices)) {
         // This may happen if the dynamic_cast to Array from Node fails in the
         // AdvancedIndexingNode constructor
@@ -241,7 +241,7 @@ struct AdvancedIndexingNode::IndexParser_ {
         Array* first_array = nullptr;
 
         this->ndim = 0;
-        this->subspace_stride = item_size;
+        this->subspace_stride = array_ptr->itemsize();
 
         for (size_t idx = 0; idx < indices_.size(); ++idx) {
             const array_or_slice& index = indices_[idx];
@@ -302,7 +302,7 @@ struct AdvancedIndexingNode::IndexParser_ {
 
         simple_array_strides = shape_to_strides(array_ptr->ndim(), array_ptr->shape().data());
         for (ssize_t i = 0; i < array_ptr->ndim(); ++i) {
-            simple_array_strides[i] /= item_size;
+            simple_array_strides[i] /= array_ptr->itemsize();
         }
 
         if (this->ndim > 0) {
@@ -365,7 +365,7 @@ struct AdvancedIndexingNode::IndexParser_ {
 
             strides = shape_to_strides(this->ndim, shape.get());
             if (indexing_arrays_ndim == 0) {
-                subspace_stride = ndim > 0 ? strides[0] * shape[0] : item_size;
+                subspace_stride = ndim > 0 ? strides[0] * shape[0] : array_ptr->itemsize();
             } else {
                 subspace_stride =
                         bullet1mode ? strides[indexing_arrays_ndim - 1] : strides[first_array_index];
@@ -390,7 +390,7 @@ struct AdvancedIndexingNode::IndexParser_ {
 
 AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr,
                                            std::vector<array_or_slice> indices)
-        : AdvancedIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices), itemsize())) {}
+        : AdvancedIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
 
 AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser)
         : array_ptr_(array_ptr),
