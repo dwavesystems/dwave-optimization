@@ -15,9 +15,15 @@
 #include "dwave-optimization/nodes/constants.hpp"
 
 #include <cmath>
+#include <mutex>
 #include <ranges>
 
 namespace dwave::optimization {
+
+// We're a bit memory-sensitive. So rather than saving a mutex on each instance
+// of the class, we just make a global one on the assumption that there will
+// only ever be one cache miss per node.
+std::mutex buffer_stats_mutex;
 
 bool is_integer(const double& value) {
     static double dummy = 0;
@@ -43,8 +49,14 @@ bool ConstantNode::integral() const {
     // not bother caching.
     if (values.size() == 1) return is_integer(values[0]);
 
-    // Construct the cache if it's not already there
-    if (!buffer_stats_) buffer_stats_.emplace(values);
+    // Construct the cache if it's not already there.
+    // This only ever happens once, so we do one check outside the mutex for
+    // speed, and then another within is to make sure someone else hasn't
+    // already constructed it. Subsequent reads are safe
+    if (!buffer_stats_) {
+        std::lock_guard<std::mutex> guard(buffer_stats_mutex);
+        if (!buffer_stats_) buffer_stats_.emplace(values);
+    }
 
     // Return the cached value
     return buffer_stats_->integral;
@@ -63,8 +75,14 @@ double ConstantNode::max() const {
     // not bother caching.
     if (values.size() == 1) return values[0];
 
-    // Construct the cache if it's not already there
-    if (!buffer_stats_) buffer_stats_.emplace(values);
+    // Construct the cache if it's not already there.
+    // This only ever happens once, so we do one check outside the mutex for
+    // speed, and then another within is to make sure someone else hasn't
+    // already constructed it. Subsequent reads are safe
+    if (!buffer_stats_) {
+        std::lock_guard<std::mutex> guard(buffer_stats_mutex);
+        if (!buffer_stats_) buffer_stats_.emplace(values);
+    }
 
     // Return the cached value
     return buffer_stats_->max;
@@ -83,8 +101,14 @@ double ConstantNode::min() const {
     // not bother caching.
     if (values.size() == 1) return values[0];
 
-    // Construct the cache if it's not already there
-    if (!buffer_stats_) buffer_stats_.emplace(values);
+    // Construct the cache if it's not already there.
+    // This only ever happens once, so we do one check outside the mutex for
+    // speed, and then another within is to make sure someone else hasn't
+    // already constructed it. Subsequent reads are safe
+    if (!buffer_stats_) {
+        std::lock_guard<std::mutex> guard(buffer_stats_mutex);
+        if (!buffer_stats_) buffer_stats_.emplace(values);
+    }
 
     // Return the cached value
     return buffer_stats_->min;
