@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Fully support scalar (0-dimensional) indices for advanced indexing
+    operations, e.g. ``A[i, :, j, :]`` where ``i`` and ``j`` are nodes with
+    scalar output. Previously, this would work only if the final output of the
+    indexing operation was also scalar.
+fixes:
+  - |
+    Fix the case of using scalar indices in an advanced indexing operation
+    where the indices were not grouped, e.g. ``A[:, i, :, j]``, which was
+    technically unsupported but no errors were raised. This could also lead
+    to segfaults during state initialization or propagation.
