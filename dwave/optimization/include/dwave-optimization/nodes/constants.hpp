@@ -76,6 +76,20 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
         return {};
     }
 
+    // Whether the values in the array can be interpreted as integers.
+    // Returns ``true`` for an empty array. This has the slightly odd effect of
+    // making empty arrays logical, because we also return 0 for min/max.
+    // Note that this is an O(size) function call, whereas for most other nodes it
+    // is O(1).
+    bool integral() const override;
+
+    // The maximum and minimum values of elements in the array.
+    // Returns ``0.0`` for an empty array.
+    // Note that this is an O(size) function call, whereas for most other nodes it
+    // is O(1).
+    double max() const override;
+    double min() const override;
+
     // Overloads required by the Node ABC *************************************
 
     // This node never needs to update its successors

@@ -1,0 +1,3 @@
+---
+features:
+  - Add ``ConstantNode::integral()``, ``ConstantNode::max()``, and ``ConstantNode::min()`` overloads.

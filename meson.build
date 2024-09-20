@@ -26,6 +26,7 @@ py = import('python').find_installation(pure: false)
 dwave_optimization_include = include_directories('dwave/optimization/include/')
 dwave_optimization_src = [
     'dwave/optimization/src/nodes/collections.cpp',
+    'dwave/optimization/src/nodes/constants.cpp',
     'dwave/optimization/src/nodes/flow.cpp',
     'dwave/optimization/src/nodes/indexing.cpp',
     'dwave/optimization/src/nodes/mathematical.cpp',
