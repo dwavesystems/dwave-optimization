@@ -16,7 +16,9 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <span>
+#include <tuple>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
@@ -116,6 +118,17 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     // The beginning of the array data. The ConstantNode is unusual because it
     // holds its values on the object itself rather than in a State.
     double* buffer_ptr_;
+
+    // Information about the values in the buffer
+    struct BufferStats {
+        BufferStats() = delete;
+        explicit BufferStats(std::span<const double> buffer);
+
+        bool integral;
+        double min;
+        double max;
+    };
+    mutable std::optional<BufferStats> buffer_stats_;
 };
 
 }  // namespace dwave::optimization

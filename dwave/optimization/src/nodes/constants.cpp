@@ -19,6 +19,18 @@
 
 namespace dwave::optimization {
 
+bool is_integer(const double& value) {
+    static double dummy = 0;
+    return std::modf(value, &dummy) == 0.0;
+}
+
+ConstantNode::BufferStats::BufferStats(std::span<const double> buffer)
+        : integral(std::ranges::all_of(buffer, is_integer)),
+          min(std::ranges::min(buffer)),
+          max(std::ranges::max(buffer)) {
+    assert(!buffer.empty() && "buffer cannot be empty");
+}
+
 bool ConstantNode::integral() const {
     auto values = this->data();  // all of the values in the array
 
@@ -27,13 +39,15 @@ bool ConstantNode::integral() const {
     // and none (as of Sept 2024) that require *not* integral.
     if (values.empty()) return true;
 
-    double dummy = 0;
-    auto is_integer = [&dummy](const double& val) { return std::modf(val, &dummy) == 0.0; };
+    // If we're a scalar (or a size-1 array) we can just calculate it in O(1) so let's
+    // not bother caching.
+    if (values.size() == 1) return is_integer(values[0]);
 
-    // We could cache this information, but there is nothing stopping the user
-    // from modifying the underlying data, so for safety let's just do the
-    // O(n) thing each time for now.
-    return std::ranges::all_of(values, is_integer);
+    // Construct the cache if it's not already there
+    if (!buffer_stats_) buffer_stats_.emplace(values);
+
+    // Return the cached value
+    return buffer_stats_->integral;
 }
 
 double ConstantNode::max() const {
@@ -45,10 +59,15 @@ double ConstantNode::max() const {
     // So 0 seems like a reasonable default.
     if (values.empty()) return 0.0;
 
-    // We could cache this information, but there is nothing stopping the user
-    // from modifying the underlying data, so for safety let's just do the
-    // O(n) thing each time for now.
-    return std::ranges::max(values);
+    // If we're a scalar (or a size-1 array) we can just calculate it in O(1) so let's
+    // not bother caching.
+    if (values.size() == 1) return values[0];
+
+    // Construct the cache if it's not already there
+    if (!buffer_stats_) buffer_stats_.emplace(values);
+
+    // Return the cached value
+    return buffer_stats_->max;
 }
 
 double ConstantNode::min() const {
@@ -60,10 +79,15 @@ double ConstantNode::min() const {
     // So 0 seems like a reasonable default.
     if (values.empty()) return 0.0;
 
-    // We could cache this information, but there is nothing stopping the user
-    // from modifying the underlying data, so for safety let's just do the
-    // O(n) thing each time for now.
-    return std::ranges::min(values);
+    // If we're a scalar (or a size-1 array) we can just calculate it in O(1) so let's
+    // not bother caching.
+    if (values.size() == 1) return values[0];
+
+    // Construct the cache if it's not already there
+    if (!buffer_stats_) buffer_stats_.emplace(values);
+
+    // Return the cached value
+    return buffer_stats_->min;
 }
 
 }  // namespace dwave::optimization
