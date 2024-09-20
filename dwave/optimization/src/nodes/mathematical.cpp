@@ -758,10 +758,10 @@ void PartialReduceNode<BinaryOp>::initialize_state(State& state) const {
     assert(static_cast<int>(state.size()) > index && "unexpected state length");
     assert(state[index] == nullptr && "already initialized state");
 
-    std::vector<double> values;
-    values.reserve(size(state));
+    std::vector<double> values(size(state));
 
     for (ssize_t i = 0; i < size(state); ++i) {
+        assert(i < static_cast<ssize_t>(values.size()));
         values[i] = reduce(state, i);
     }
 
@@ -865,6 +865,7 @@ double PartialReduceNode<std::plus<double>>::reduce(const State& state, ssize_t 
     for (ssize_t i = begin; i < array_ptr_->shape()[this->axis_]; ++i) {
         ssize_t p_index =
                 start_idx + i * this->parent_strides_c_[this->axis_] / array_ptr_->itemsize();
+        assert(p_index < static_cast<ssize_t>(array_ptr_->size(state)));
         double other = array_ptr_->view(state)[p_index];
         val = func(val, other);
     }
