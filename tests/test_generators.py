@@ -372,7 +372,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         # Zero-length arrays
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
                 demand=[],
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
@@ -383,7 +383,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
             )
 
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
                 demand=demand0,
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
@@ -394,7 +394,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         # Negative-value arrays
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
                 demand=demand0,
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
@@ -405,7 +405,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         # Unequal-length arrays
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
                 demand=demand0,
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
@@ -415,7 +415,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                 service_time=service_time)
 
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
                 demand=demand0,
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
@@ -426,7 +426,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         # Not enough vehicles
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
                 demand=demand0,
                 number_of_vehicles=0,
                 vehicle_capacity=capacity,
@@ -437,7 +437,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         # No capacity per vehicle
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
                 demand=demand0,
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=0,
@@ -448,7 +448,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         # Not enough total capacity for total demand
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
                 demand=[30, 30, 31],
                 number_of_vehicles=3,
                 vehicle_capacity=30,
@@ -459,7 +459,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         # Non-zero depot demand
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
                 demand=demand,
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
@@ -470,7 +470,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         # Demand vector has zero for depot and customer
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
                 demand=[0, 44.6, 0],
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
@@ -481,7 +481,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         # Demand vector has zero for customer
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
                 demand=[22, 44.6, 0],
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
@@ -493,7 +493,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
     def test_basics(self):
         num_vehicles = 2
 
-        model = dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+        model = dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
             demand=[0, 5, 5],
             number_of_vehicles=num_vehicles,
             vehicle_capacity=10,
@@ -515,7 +515,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
         self.assertEqual(model.objective.state(0), 18)
 
         # Test asymmetric distances
-        model = dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+        model = dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
             demand=[0, 10, 10],
             number_of_vehicles=num_vehicles,
             vehicle_capacity=10,
@@ -532,7 +532,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
         self.assertEqual(model.objective.state(0), 8)
 
     def test_serialization(self):
-        model = dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+        model = dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
             time_distances=[[0, 14, 19, 32],
                             [14, 0, 15, 19],
                             [19, 15, 0, 21],
@@ -553,7 +553,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
         self.assertEqual(model.state_size(), copy.state_size())
 
     def test_state_serialization(self):
-        model = dwave.optimization.generators.capacitated_vehicle_routing_time_window(
+        model = dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
             time_distances=[[0, 14, 19, 32],
                             [14, 0, 15, 19],
                             [19, 15, 0, 21],

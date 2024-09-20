@@ -27,7 +27,7 @@ from dwave.optimization.model import Model
 __all__ = [
     "bin_packing",
     "capacitated_vehicle_routing",
-    "capacitated_vehicle_routing_time_window",
+    "capacitated_vehicle_routing_with_time_windows",
     "flow_shop_scheduling",
     "job_shop_scheduling",
     "knapsack",
@@ -409,14 +409,14 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     return model
 
 
-def capacitated_vehicle_routing_time_window(demand: numpy.typing.ArrayLike,
-                                            number_of_vehicles: int,
-                                            vehicle_capacity: float,
-                                            time_distances: typing.Optional[numpy.typing.ArrayLike] = None,
-                                            time_window_open: typing.Optional[numpy.typing.ArrayLike] = None,
-                                            time_window_close: typing.Optional[numpy.typing.ArrayLike] = None,
-                                            service_time: typing.Optional[numpy.typing.ArrayLike] = None,
-                                            ) -> Model:
+def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike,
+                                                  number_of_vehicles: int,
+                                                  vehicle_capacity: float,
+                                                  time_distances: typing.Optional[numpy.typing.ArrayLike] = None,
+                                                  time_window_open: typing.Optional[numpy.typing.ArrayLike] = None,
+                                                  time_window_close: typing.Optional[numpy.typing.ArrayLike] = None,
+                                                  service_time: typing.Optional[numpy.typing.ArrayLike] = None,
+                                                  ) -> Model:
     r"""Generate a model encoding a capacitated vehicle routing problem with time windows.
 
     The capacitated vehicle routing problem with time windows,
