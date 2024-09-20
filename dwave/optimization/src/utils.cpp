@@ -14,6 +14,8 @@
 
 #include "dwave-optimization/utils.hpp"
 
+#include <cmath>
+
 #include "dwave-optimization/array.hpp"
 
 namespace dwave::optimization {
@@ -73,6 +75,11 @@ void deduplicate_diff(std::vector<Update>& diff) {
     // the value passed to resize doesn't matter (just to avoid implementing a
     // construct_at method for Update)
     diff.resize(new_index + 1, Update::placement(-666, 666));
+}
+
+bool is_integer(const double& value) {
+    static double dummy = 0;
+    return std::modf(value, &dummy) == 0.0;
 }
 
 };  // namespace dwave::optimization

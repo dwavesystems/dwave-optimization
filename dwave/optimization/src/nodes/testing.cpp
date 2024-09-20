@@ -14,6 +14,10 @@
 
 #include "dwave-optimization/nodes/testing.hpp"
 
+#include <ranges>
+
+#include "dwave-optimization/utils.hpp"
+
 namespace dwave::optimization {
 
 class ArrayValidationNodeData : public dwave::optimization::NodeStateData {
@@ -63,6 +67,13 @@ void ArrayValidationNode::initialize_state(State& state) const {
     assert(array_ptr->size(state) == std::reduce(array_ptr->shape(state).begin(),
                                                  array_ptr->shape(state).end(), 1,
                                                  std::multiplies<ssize_t>()));
+
+    // check that all values are within min/max
+    if (array_ptr->size(state)) {
+        assert(std::ranges::min(array_ptr->view(state)) >= array_ptr->min());
+        assert(std::ranges::max(array_ptr->view(state)) <= array_ptr->max());
+        assert(!array_ptr->integral() || std::ranges::all_of(array_ptr->view(state), is_integer));
+    }
 }
 
 void ArrayValidationNode::propagate(State& state) const {
@@ -163,6 +174,13 @@ void ArrayValidationNode::propagate(State& state) const {
     check_shape(array_ptr->shape(state), array_ptr->shape(), node_data->current_data.size());
 
     current_data = expected;
+
+    // check that all values are within min/max
+    if (array_ptr->size(state)) {
+        assert(std::ranges::min(array_ptr->view(state)) >= array_ptr->min());
+        assert(std::ranges::max(array_ptr->view(state)) <= array_ptr->max());
+        assert(!array_ptr->integral() || std::ranges::all_of(array_ptr->view(state), is_integer));
+    }
 }
 
 void ArrayValidationNode::revert(State& state) const {

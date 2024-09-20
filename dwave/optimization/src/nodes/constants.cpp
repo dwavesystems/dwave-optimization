@@ -14,9 +14,10 @@
 
 #include "dwave-optimization/nodes/constants.hpp"
 
-#include <cmath>
 #include <mutex>
 #include <ranges>
+
+#include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
 
@@ -24,11 +25,6 @@ namespace dwave::optimization {
 // of the class, we just make a global one on the assumption that there will
 // only ever be one cache miss per node.
 std::mutex buffer_stats_mutex;
-
-bool is_integer(const double& value) {
-    static double dummy = 0;
-    return std::modf(value, &dummy) == 0.0;
-}
 
 ConstantNode::BufferStats::BufferStats(std::span<const double> buffer)
         : integral(std::ranges::all_of(buffer, is_integer)),

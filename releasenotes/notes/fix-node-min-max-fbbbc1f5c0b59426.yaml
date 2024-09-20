@@ -1,3 +1,4 @@
 ---
 features:
   - Add ``ConstantNode::integral()``, ``ConstantNode::max()``, and ``ConstantNode::min()`` overloads.
+  - Add C++ ``is_integer()`` function.

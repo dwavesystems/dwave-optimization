@@ -18,7 +18,6 @@
 #include <memory>
 #include <optional>
 #include <span>
-#include <tuple>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
