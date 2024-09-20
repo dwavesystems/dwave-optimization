@@ -236,7 +236,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
             must be the location of the depot. Elements other than the first
             must be positive numbers.
         number_of_vehicles:
-            Number of available vehicles, as an integer.
+            Number of available vehicles, as a positive integer.
         vehicle_capacity:
             Maximum capacity for any vehicle. The total delivered demand by any
             vehicle on any route must not exceed this value.
@@ -299,13 +299,13 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 
         distances_array = _require("distances", distances, ndim=2, nonnegative=True, square=True)
 
-        if len(distances_array) < 2:
-            raise ValueError("Length of `distances` must be at least 2."
-                             f" Got length {len(distances_array)}.")
+        if distances_array.shape[0] < 2:
+            raise ValueError("Number of rows in `distances` must be at least 2."
+                             f" Got {distances_array.shape[0]} rows.")
 
-        if len(distances_array) != len(demand):
-            raise ValueError("Lengths of `distances` and `demand` must be equal."
-                             f" Got lengths {len(distances_array)} and"
+        if distances_array.shape[0] != len(demand):
+            raise ValueError("Number of rows in `distances` and length of `demand` must be equal."
+                             f" Got {distances_array.shape[0]} and"
                              f" {len(demand)}, respectively.")
 
         if demand[0] != 0:
@@ -432,7 +432,7 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
             Customer demand, as an |array-like|_. The first element is the depot and must
             be zero.
         number_of_vehicles:
-            Number of available vehicles, as an integer.
+            Number of available vehicles, as a positive integer.
         vehicle_capacity:
             Maximum capacity for any vehicle. The total delivered demand by any
             vehicle on any route must not exceed this value.
@@ -483,28 +483,28 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
     time_window_close = _require("time_window_close", time_window_close, dtype=float, ndim=1, nonnegative=True)
     service_time = _require("service_time", service_time, dtype=float, ndim=1, nonnegative=True)
 
-    if len(time_distances_array) < 2:
-        raise ValueError("Length of `time_distances` must be at least 2."
-                         f" Got length {len(time_distances_array)}.")
+    if time_distances_array.shape[0] < 2:
+        raise ValueError("Number of rows in `time_distances` must be at least 2."
+                         f" Got {time_distances_array.shape[0]} rows.")
 
-    if len(time_distances_array) != len(demand):
-        raise ValueError("Lengths of `time_distances` and `demand` must be equal."
-                         f" Got lengths {len(time_distances_array)} and"
+    if time_distances_array.shape[0] != len(demand):
+        raise ValueError("Number of rows in `time_distances` and length of `demand` must be equal."
+                         f" Got {time_distances_array.shape[0]} and"
                          f" {len(demand)}, respectively.")
 
-    if len(time_distances_array) != len(time_window_open):
-        raise ValueError("Lengths of `time_window_open` and `demand` must be equal."
-                         f" Got lengths {len(time_distances_array)} and"
+    if time_distances_array.shape[0] != len(time_window_open):
+        raise ValueError("Number of rows in `time_distances` and length of `time_window_open` must be equal."
+                         f" Got {time_distances_array.shape[0]} and"
                          f" {len(time_window_open)}, respectively.")
 
-    if len(time_distances_array) != len(time_window_close):
-        raise ValueError("Lengths of `time_window_close` and `demand` must be equal."
-                         f" Got lengths {len(time_distances_array)} and"
+    if time_distances_array.shape[0] != len(time_window_close):
+        raise ValueError("Number of rows in `time_distances` and length of `time_window_close` must be equal."
+                         f" Got {time_distances_array.shape[0]} and"
                          f" {len(time_window_close)}, respectively.")
 
-    if len(time_distances_array) != len(service_time):
-        raise ValueError("Lengths of `service_time` and `demand` must be equal."
-                         f" Got lengths {len(time_distances_array)} and"
+    if time_distances_array.shape[0] != len(service_time):
+        raise ValueError("Number of rows in `time_distances` and length of `service_time` must be equal."
+                         f" Got  {time_distances_array.shape[0]} and"
                          f" {len(service_time)}, respectively.")
 
     if demand[0] != 0:
