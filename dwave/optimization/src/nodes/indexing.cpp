@@ -224,7 +224,7 @@ struct AdvancedIndexingNode::IndexParser_ {
         assert(array_ptr->ndim() >= 0);  // Should always be true
         if (static_cast<std::size_t>(array_ptr->ndim()) < indices_.size()) {
             // NumPy handles this case, we could as well
-            throw std::invalid_argument(std::string("too many indices for array: array is ") +
+            throw std::invalid_argument(std::string("too few indices for array: array is ") +
                                         std::to_string(array_ptr->ndim()) + "-dimensional, but " +
                                         std::to_string(indices_.size()) + " were indexed");
         }
@@ -241,6 +241,7 @@ struct AdvancedIndexingNode::IndexParser_ {
         Array* first_array = nullptr;
 
         this->ndim = 0;
+        this->subspace_stride = array_ptr->itemsize();
 
         for (size_t idx = 0; idx < indices_.size(); ++idx) {
             const array_or_slice& index = indices_[idx];
@@ -293,9 +294,15 @@ struct AdvancedIndexingNode::IndexParser_ {
             bullet1mode = true;
         }
 
+        if (indexing_arrays_ndim == 0) {
+            // Again, technically this could be the bullet 2 case, the output is the same
+            // for both but bullet1mode can handle this more easily.
+            bullet1mode = true;
+        }
+
         simple_array_strides = shape_to_strides(array_ptr->ndim(), array_ptr->shape().data());
         for (ssize_t i = 0; i < array_ptr->ndim(); ++i) {
-            simple_array_strides[i] /= 8;
+            simple_array_strides[i] /= array_ptr->itemsize();
         }
 
         if (this->ndim > 0) {
@@ -357,9 +364,12 @@ struct AdvancedIndexingNode::IndexParser_ {
             }
 
             strides = shape_to_strides(this->ndim, shape.get());
-            assert(indexing_arrays_ndim >= 1);
-            subspace_stride =
-                    bullet1mode ? strides[indexing_arrays_ndim - 1] : strides[first_array_index];
+            if (indexing_arrays_ndim == 0) {
+                subspace_stride = ndim > 0 ? strides[0] * shape[0] : array_ptr->itemsize();
+            } else {
+                subspace_stride = bullet1mode ? strides[indexing_arrays_ndim - 1]
+                                              : strides[first_array_index];
+            }
         }
     }
 
@@ -372,7 +382,7 @@ struct AdvancedIndexingNode::IndexParser_ {
     ssize_t ndim = 0;
     ssize_t indexing_arrays_ndim = -1;
     ssize_t first_array_index;
-    ssize_t subspace_stride = 1;
+    ssize_t subspace_stride;
     std::unique_ptr<ssize_t[]> strides = nullptr;
     std::unique_ptr<ssize_t[]> shape = nullptr;
     std::unique_ptr<ssize_t[]> simple_array_strides = nullptr;
@@ -393,7 +403,7 @@ AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& 
           indexing_arrays_ndim_(parser.indexing_arrays_ndim),
           bullet1mode_(parser.bullet1mode),
           first_array_index_(parser.first_array_index),
-          subspace_stride_(indexing_arrays_ndim_ > 0 ? parser.subspace_stride : itemsize()) {
+          subspace_stride_(parser.subspace_stride) {
     assert(!array_ptr->ndim() || array_item_strides_);
 
     // Now actually add them. This way if there is an error thrown we're not
@@ -473,11 +483,12 @@ void AdvancedIndexingNode::fill_subspace_recurse(const std::span<const ssize_t>&
             assert(data_index == static_cast<ssize_t>(data.size()));
             data.push_back(new_val);
         } else if constexpr (removal) {
+            assert(data_index == static_cast<ssize_t>(data.size() - 1));
             if constexpr (fill_diff)
                 diff->emplace_back(Update::removal(data_index, data[data_index]));
-            assert(data_index == static_cast<ssize_t>(data.size()) - 1);
             data.pop_back();
         } else {
+            assert(data_index < static_cast<ssize_t>(data.size()));
             if constexpr (fill_diff) diff->emplace_back(data_index, data[data_index], new_val);
             data[data_index] = new_val;
         }
@@ -536,8 +547,8 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
                 ssize_t stride = array_strides[index] / static_cast<ssize_t>(itemsize());
 
                 auto it = offsets.begin();
-                for (auto& index : std::get<ArrayNode*>(indices_[index])->view(state)) {
-                    *it += index * stride;
+                for (auto& index_val : std::get<ArrayNode*>(indices_[index])->view(state)) {
+                    *it += index_val * stride;
                     ++it;
                 }
             }
@@ -1532,9 +1543,7 @@ std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
 // PermutationNode ************************************************************
 
 PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr)
-        : ArrayOutputMixin(array_ptr->shape()),
-          array_ptr_(array_ptr),
-          order_ptr_(order_ptr) {
+        : ArrayOutputMixin(array_ptr->shape()), array_ptr_(array_ptr), order_ptr_(order_ptr) {
     std::span<const ssize_t> array_shape = array_ptr_->shape();
 
     // For now, we are only going to support permutation on constant nodes
