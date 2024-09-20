@@ -38,8 +38,7 @@ bool SizeInfo::operator==(const SizeInfo& other) const {
     if (this->array_ptr != other.array_ptr) return false;
 
     return (this->multiplier == other.multiplier && this->offset == other.offset &&
-            this->min.value_or(0) == other.min.value_or(0) &&
-            this->max == other.max);
+            this->min.value_or(0) == other.min.value_or(0) && this->max == other.max);
 }
 
 SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
@@ -192,9 +191,7 @@ bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr) {
 
     return false;
 }
-bool array_shape_equal(const Array& lhs, const Array& rhs) {
-    return array_shape_equal(&lhs, &rhs);
-}
+bool array_shape_equal(const Array& lhs, const Array& rhs) { return array_shape_equal(&lhs, &rhs); }
 
 // We follow NumPy's broadcasting rules
 // See https://numpy.org/doc/stable/user/basics.broadcasting.html
@@ -244,6 +241,65 @@ std::vector<ssize_t> broadcast_shape(const std::span<const ssize_t> lhs,
 std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
                                      std::initializer_list<ssize_t> rhs) {
     return broadcast_shape(std::span(lhs), std::span(rhs));
+}
+
+std::vector<ssize_t> partial_reduce_shape(const std::span<const ssize_t> input_shape,
+                                          const ssize_t axis) {
+    std::vector<ssize_t> shape;
+    shape.assign(input_shape.begin(), input_shape.end());
+    shape.erase(shape.begin() + axis);
+    return shape;
+}
+std::vector<ssize_t> partial_reduce_shape(std::initializer_list<ssize_t> input_shape,
+                                          const ssize_t axis) {
+    return partial_reduce_shape(std::span(input_shape), axis);
+}
+
+std::vector<ssize_t> as_contiguous_strides(const std::span<const ssize_t> shape) {
+    ssize_t ndim = static_cast<ssize_t>(shape.size());
+
+    assert(ndim >= 0);
+    std::vector<ssize_t> strides(ndim);
+    // otherwise strides are a function of the shape
+    strides[ndim - 1] = sizeof(double);
+    for (auto i = ndim - 2; i >= 0; --i) {
+        strides[i] = strides[i + 1] * shape[i + 1];
+    }
+    return strides;
+}
+
+std::vector<ssize_t> as_contiguous_strides(std::initializer_list<ssize_t> shape) {
+    return as_contiguous_strides(std::span(shape));
+}
+
+std::vector<ssize_t> unravel_index(const std::span<const ssize_t> strides, ssize_t index) {
+    ssize_t ndim = static_cast<ssize_t>(strides.size());
+    std::vector<ssize_t> indices;
+    indices.reserve(ndim);
+
+    for (auto stride : strides) {
+        indices.push_back(index / (stride / sizeof(double)));
+        index = index % (stride / sizeof(double));
+    }
+    return indices;
+}
+
+ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
+                          const std::span<const ssize_t> indices) {
+    ssize_t ndim = static_cast<ssize_t>(strides.size());
+    ssize_t flat_index = 0;
+
+    for (ssize_t i = 0; i < ndim; ++i) {
+        auto stride = strides[i];
+        auto index = indices[i];
+        flat_index += index * stride / sizeof(double);
+    }
+    return flat_index;
+}
+
+ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
+                          std::initializer_list<ssize_t> indices) {
+    return ravel_multi_index(strides, std::span(indices));
 }
 
 }  // namespace dwave::optimization

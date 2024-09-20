@@ -23,6 +23,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <utility>
@@ -736,6 +737,27 @@ std::vector<ssize_t> broadcast_shape(const std::span<const ssize_t> lhs,
                                      const std::span<const ssize_t> rhs);
 std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
                                      std::initializer_list<ssize_t> rhs);
+
+/// For "partial reduction", get the shape of the resulting shape of the array when preforming a
+/// reduction over an axis
+std::vector<ssize_t> partial_reduce_shape(const std::span<const ssize_t> array_shape,
+                                          const ssize_t axis);
+std::vector<ssize_t> partial_reduce_shape(std::initializer_list<ssize_t> input_shape,
+                                          const ssize_t axis);
+
+/// Gets the strides of a n-dimensional array assuming contiguous memory
+std::vector<ssize_t> as_contiguous_strides(const std::span<const ssize_t> shape);
+std::vector<ssize_t> as_contiguous_strides(std::initializer_list<ssize_t> shape);
+
+/// Convert a flat index to multi-index
+std::vector<ssize_t> unravel_index(const std::span<const ssize_t> strides, ssize_t index);
+
+/// Convert multi index to flat index
+ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
+                          const std::span<const ssize_t> indices);
+
+ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
+                          std::initializer_list<ssize_t> indices);
 
 // Represent a shape (or strides) as a string in NumPy-style format.
 std::string shape_to_string(const std::span<const ssize_t> shape);

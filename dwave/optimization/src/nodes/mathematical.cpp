@@ -663,6 +663,271 @@ template class NaryOpNode<functional::min<double>>;
 template class NaryOpNode<std::multiplies<double>>;
 template class NaryOpNode<std::plus<double>>;
 
+// PartialReduceNode *****************************************************************
+template <class BinaryOp>
+struct ExtraArrayData {
+    void commit() {}
+    void revert() {}
+};
+
+template <class BinaryOp>
+struct PartialReduceNodeData : ArrayNodeStateData {
+    template <class... Ts>
+    explicit PartialReduceNodeData(std::vector<double>&& values, Ts... extra_args)
+            : ArrayNodeStateData(std::move(values)), extra(extra_args...) {}
+
+    void commit() {
+        ArrayNodeStateData::commit();
+        extra.commit();
+    }
+
+    void revert() {
+        ArrayNodeStateData::revert();
+        extra.revert();
+    }
+
+    // op-specific storage.
+    ExtraArrayData<BinaryOp> extra;
+};
+
+template <class BinaryOp>
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, ssize_t axis, double init)
+        : ArrayOutputMixin(partial_reduce_shape(node_ptr->shape(), axis)),
+          init(init),
+          array_ptr_(node_ptr),
+          axis_(axis),
+          parent_strides_c_(as_contiguous_strides(array_ptr_->shape())) {
+    if (array_ptr_->dynamic()) {
+        throw std::invalid_argument("cannot do a partial reduction on a dynamic array");
+    } else if (array_ptr_->size() < 1) {
+        throw std::invalid_argument("cannot do a partial reduction on an empty array");
+    }
+
+    /// TODO: support negative axis
+    if (axis_ < 0 || axis_ >= array_ptr_->ndim()) {
+        throw std::invalid_argument("Axis should be an integer between 0 and n_dim - 1");
+    }
+
+    add_predecessor(node_ptr);
+}
+
+template <>
+PartialReduceNode<std::plus<double>>::PartialReduceNode(ArrayNode* array_ptr, ssize_t axis)
+        : PartialReduceNode(array_ptr, axis, 0) {}
+
+template <class BinaryOp>
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, ssize_t axis)
+        : init(), array_ptr_(array_ptr), axis_(axis) {
+    if (array_ptr_->dynamic()) {
+        throw std::invalid_argument(
+                "cannot do a reduction on a dynamic array with an operation that has no identity "
+                "without supplying an initial value");
+    } else if (array_ptr_->size() < 1) {
+        throw std::invalid_argument(
+                "cannot do a reduction on an empty array with an operation that has no identity "
+                "without supplying an initial value");
+    }
+
+    /// TODO: support negative axis
+    if (axis_ < 0 || axis_ >= array_ptr_->ndim()) {
+        throw std::invalid_argument("Axis should be an integer between 0 and n_dim - 1");
+    }
+
+    add_predecessor(array_ptr);
+}
+
+template <class BinaryOp>
+void PartialReduceNode<BinaryOp>::commit(State& state) const {
+    data_ptr<PartialReduceNodeData<op>>(state)->commit();
+}
+
+template <class BinaryOp>
+double const* PartialReduceNode<BinaryOp>::buff(const State& state) const {
+    return data_ptr<PartialReduceNodeData<op>>(state)->buff();
+}
+
+template <class BinaryOp>
+std::span<const Update> PartialReduceNode<BinaryOp>::diff(const State& state) const {
+    return data_ptr<PartialReduceNodeData<op>>(state)->diff();
+}
+
+template <class BinaryOp>
+void PartialReduceNode<BinaryOp>::initialize_state(State& state) const {
+    int index = topological_index();
+    assert(index >= 0 && "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > index && "unexpected state length");
+    assert(state[index] == nullptr && "already initialized state");
+
+    std::vector<double> values;
+    values.reserve(size(state));
+
+    for (ssize_t i = 0; i < size(state); ++i) {
+        values[i] = reduce(state, i);
+    }
+
+    state[index] = std::make_unique<PartialReduceNodeData<op>>(std::move(values));
+}
+
+template <class BinaryOp>
+bool PartialReduceNode<BinaryOp>::integral() const {
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+
+    if constexpr (std::is_integral<result_type>::value) {
+        return true;
+    }
+    // there are other cases we could/should consider
+    return Array::integral();
+}
+
+template <class BinaryOp>
+double PartialReduceNode<BinaryOp>::max() const {
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+
+    if constexpr (std::is_same<result_type, bool>::value) {
+        return true;
+    }
+    // there are other cases we could/should handle here.
+    return Array::max();
+}
+
+template <class BinaryOp>
+double PartialReduceNode<BinaryOp>::min() const {
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+
+    if constexpr (std::is_same<result_type, bool>::value) {
+        return false;
+    }
+    // there are other cases we could/should handle here.
+    return Array::min();
+}
+
+template <>
+void PartialReduceNode<std::plus<double>>::propagate(State& state) const {
+    auto ptr = data_ptr<PartialReduceNodeData<op>>(state);
+
+    auto& values = ptr->buffer;
+    auto& changes = ptr->updates;
+
+    for (const auto& [p_index, old, value] : array_ptr_->diff(state)) {
+        auto index = _map_parent_index(state, p_index);
+        auto previous = values[index];
+        values[index] += (value - old);
+        changes.emplace_back(index, previous, values[index]);
+    }
+
+    if (ptr->updates.size()) Node::propagate(state);
+}
+
+template <>
+double PartialReduceNode<std::plus<double>>::reduce(const State& state, ssize_t index) const {
+    /// We wish to fill `index` of the partial reduction, given the state of the parent. We proceed
+    /// as follows.
+    /// 1. We unravel the index. This will give us e.g. the indices i, k for
+    ///     R_ik = sum_j P_ijk
+    /// 2. Then we know we have to iterate through the parent starting from j=0 to its full
+    /// dimension. To do so, we first find the starting index in the parent.
+    /// 3. We then iterate through the parent using the strides over the axis we are reducing.
+    assert(index >= 0 && index < this->size(state));
+
+    // 1. Unravel the index we are trying to fill
+    std::vector<ssize_t> indices = unravel_index(this->strides(), index);
+    assert(static_cast<ssize_t>(indices.size()) == this->ndim());
+
+    // 2. Find the respective starting index in the parent
+    ssize_t start_idx = 0;
+    for (ssize_t ax = 0; ax < this->ndim(); ++ax) {
+        if (ax >= this->axis_) {
+            start_idx += indices[ax] * parent_strides_c_[ax + 1] / array_ptr_->itemsize();
+        } else {
+            start_idx += indices[ax] * parent_strides_c_[ax] / array_ptr_->itemsize();
+        }
+    }
+
+    ssize_t begin = 0;
+
+    // get the initial value
+    double init;
+    if (this->init.has_value()) {
+        init = this->init.value();
+    } else {
+        // if there is no init, we use the first value in the array as the init
+        // we should only be here if the array is not dynamic and if it has at
+        // least one entry
+        assert(!array_ptr_->dynamic());
+        assert(array_ptr_->size(state) >= 1);
+        init = array_ptr_->view(state)[start_idx + begin];
+        ++begin;
+    }
+
+    /// 3. Iterate through the parent on the correct axis.
+    double val = init;
+    auto func = op();
+    for (ssize_t i = begin; i < array_ptr_->shape()[this->axis_]; ++i) {
+        ssize_t p_index =
+                start_idx + i * this->parent_strides_c_[this->axis_] / array_ptr_->itemsize();
+        double other = array_ptr_->view(state)[p_index];
+        val = func(val, other);
+    }
+
+    return val;
+}
+
+template <class BinaryOp>
+void PartialReduceNode<BinaryOp>::revert(State& state) const {
+    data_ptr<PartialReduceNodeData<op>>(state)->revert();
+}
+
+template <class BinaryOp>
+std::span<const ssize_t> PartialReduceNode<BinaryOp>::shape(const State& state) const {
+    return this->shape();
+}
+
+template <class BinaryOp>
+ssize_t PartialReduceNode<BinaryOp>::size(const State& state) const {
+    return this->size();
+}
+
+template <class BinaryOp>
+ssize_t PartialReduceNode<BinaryOp>::size_diff(const State& state) const {
+    return data_ptr<PartialReduceNodeData<op>>(state)->size_diff();
+}
+
+template <class BinaryOp>
+ssize_t PartialReduceNode<BinaryOp>::_map_parent_index(const State& state,
+                                                       ssize_t parent_flat_index) const {
+    assert(this->axis_ >= 0 && this->axis_ < array_ptr_->size(state));
+    assert(parent_flat_index >= 0 && parent_flat_index < array_ptr_->size(state));
+
+    ssize_t index = 0;  // the linear index corresponding to the parent index being updated
+    ssize_t current_parent_axis = 0;  // current parent axis visited
+    ssize_t current_axis = 0;         // current axis
+
+    for (auto stride : parent_strides_c_) {
+        // calculate parent index on the current axis (not the linear one)
+        ssize_t this_axis_index = parent_flat_index / (stride / array_ptr_->itemsize());
+
+        // update the index now
+        parent_flat_index = parent_flat_index % (stride / array_ptr_->itemsize());
+
+        if (current_parent_axis == this->axis_) {
+            current_parent_axis++;
+            continue;
+        }
+
+        // now do the calculation of the linear index of reduction
+        index += this_axis_index * (this->strides()[current_axis] / this->itemsize());
+
+        // increase the axis visited
+        current_axis++;
+        current_parent_axis++;
+    }
+
+    return index;
+}
+
+// Uncommented are the tested specializations
+template class PartialReduceNode<std::plus<double>>;
+
 // ReduceNode *****************************************************************
 
 // Create a storage class for op-specific values.
@@ -750,8 +1015,7 @@ template <>
 ReduceNode<std::plus<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 0) {}
 
 template <class BinaryOp>
-ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr)
-        : init(), array_ptr_(array_ptr) {
+ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr) : init(), array_ptr_(array_ptr) {
     if (array_ptr_->dynamic()) {
         throw std::invalid_argument(
                 "cannot do a reduction on a dynamic array with an operation that has no identity "

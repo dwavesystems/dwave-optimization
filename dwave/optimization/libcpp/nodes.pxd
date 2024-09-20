@@ -141,6 +141,9 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
     cdef cppclass OrNode(ArrayNode):
         pass
 
+    cdef cppclass PartialSumNode(ArrayNode):
+        Py_ssize_t axis() const
+
     cdef cppclass ProdNode(ArrayNode):
         pass
 

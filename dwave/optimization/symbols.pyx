@@ -74,6 +74,7 @@ from dwave.optimization.libcpp.nodes cimport (
     NegativeNode as cppNegativeNode,
     NotNode as cppNotNode,
     OrNode as cppOrNode,
+    PartialSumNode as cppPartialSumNode,
     PermutationNode as cppPermutationNode,
     ProdNode as cppProdNode,
     QuadraticModel as cppQuadraticModel,
@@ -121,6 +122,7 @@ __all__ = [
     "Negative",
     "Not",
     "Or",
+    "PartialSum",
     "Permutation",
     "Prod",
     "QuadraticModel",
@@ -2215,6 +2217,52 @@ cdef class Or(ArraySymbol):
     cdef cppOrNode* ptr
 
 _register(Or, typeid(cppOrNode))
+
+
+cdef class PartialSum(ArraySymbol):
+    """Sum of the elements of a symbol along an axis.
+
+    Examples:
+        This example adds the sum of a binary symbol
+        along an axis to a model.
+
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> x = model.binary((10, 5))
+        >>> x_sum_0 = x.sum(axis=0)
+        >>> type(x_sum_0)
+        <class 'dwave.optimization.symbols.PartialSum'>
+    """
+    def __init__(self, ArraySymbol array, int axis):
+        cdef Model model = array.model
+        self.ptr = model._graph.emplace_node[cppPartialSumNode](array.array_ptr, axis)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppPartialSumNode* ptr = dynamic_cast_ptr[cppPartialSumNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Partial Sum")
+        cdef PartialSum ps = PartialSum.__new__(PartialSum)
+        ps.ptr = ptr
+        ps.initialize_arraynode(symbol.model, ptr)
+        return ps
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+        if len(predecessors) != 1:
+            raise ValueError("PartialSum must have exactly one predecessor")
+
+        with zf.open(directory + "axis.json", "r") as f:
+            return PartialSum(*predecessors, json.load(f))
+
+    def _into_zipfile(self, zf, directory):
+        encoder = json.JSONEncoder(separators=(',', ':'))
+        zf.writestr(directory + "axis.json", encoder.encode(self.ptr.axis()))
+
+    cdef cppPartialSumNode* ptr
+
+_register(PartialSum, typeid(cppPartialSumNode))
 
 
 cdef class Permutation(ArraySymbol):

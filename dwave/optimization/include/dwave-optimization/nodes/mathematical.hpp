@@ -155,6 +155,73 @@ using NaryMaximumNode = NaryOpNode<functional::max<double>>;
 using NaryMinimumNode = NaryOpNode<functional::min<double>>;
 using NaryMultiplyNode = NaryOpNode<std::multiplies<double>>;
 
+/// TODO: support multiple axes
+template <class BinaryOp>
+class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
+ public:
+    // Runtime constructor
+    PartialReduceNode(ArrayNode* array_ptr, ssize_t axis, double init);
+
+    // Some operations have known default values so we can create them regardless of
+    // whether or not the array is dynamic.
+    // Others will raise an error for non-dynamic arrays.
+    explicit PartialReduceNode(ArrayNode* node_ptr, ssize_t axis);
+
+    double const* buff(const State& state) const override;
+    std::span<const Update> diff(const State& state) const override;
+    bool integral() const override;
+    double max() const override;
+    double min() const override;
+
+    using ArrayOutputMixin::shape;
+    std::span<const ssize_t> shape(const State& state) const override;
+
+    using ArrayOutputMixin::size;
+    ssize_t size(const State& state) const override;
+
+    ssize_t size_diff(const State& state) const override;
+
+    void commit(State& state) const override;
+    void revert(State& state) const override;
+    void initialize_state(State& state) const override;
+    void propagate(State& state) const override;
+
+    // The predecessor of the reduction, as an Array*.
+    std::span<Array* const> operands() {
+        assert(predecessors().size() == 1);
+        return std::span<Array* const, 1>(&array_ptr_, 1);
+    }
+    std::span<const Array* const> operands() const {
+        assert(predecessors().size() == 1);
+        return std::span<const Array* const, 1>(&array_ptr_, 1);
+    }
+
+    const std::optional<double> init;
+
+    ssize_t axis() const { return axis_; }
+
+ private:
+    using op = BinaryOp;
+
+    // Calculate the output value based on the state of the predecessor
+    double reduce(const State& state, ssize_t index) const;
+
+    // There are redundant, because we could dynamic_cast each time from
+    // predecessors(), but this is more performant
+    Array* const array_ptr_;
+
+    // The axis along which to do the
+    const ssize_t axis_;
+
+    /// Convert linear index to indices for each dimension
+    std::vector<ssize_t> parent_strides_c_;
+
+    /// Map the parent index to the affected array index (linear)
+    ssize_t _map_parent_index(const State& state, ssize_t parent_flat_index) const;
+};
+
+using PartialSumNode = PartialReduceNode<std::plus<double>>;
+
 template <class BinaryOp>
 class ReduceNode : public ScalarOutputMixin<ArrayNode> {
  public:
