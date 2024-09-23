@@ -54,6 +54,12 @@ TEST_CASE("AdvancedIndexingNode") {
                                          std::vector<Node*>{arr_ptr, i_ptr, j_ptr}));
             }
 
+            THEN("We see the min/max/integral we expect") {
+                CHECK(out_ptr->min() == 0);
+                CHECK(out_ptr->max() == 8);
+                CHECK(out_ptr->integral());
+            }
+
             AND_WHEN("We create a state") {
                 auto state = graph.initialize_state();
 
@@ -81,6 +87,12 @@ TEST_CASE("AdvancedIndexingNode") {
             CHECK(B_ptr->ndim() == 1);
 
             CHECK(array_shape_equal(B_ptr, s_ptr));
+        }
+
+        THEN("We see the min/max/integral we expect") {
+            CHECK(B_ptr->min() == 0);
+            CHECK(B_ptr->max() == 4);
+            CHECK(B_ptr->integral());
         }
 
         WHEN("We default-initialize the state") {
@@ -250,6 +262,12 @@ TEST_CASE("AdvancedIndexingNode") {
 
             CHECK(array_shape_equal(B_ptr, i_ptr));
             CHECK(array_shape_equal(B_ptr, j_ptr));
+        }
+
+        THEN("We see the min/max/integral we expect") {
+            CHECK(B_ptr->min() == 0);
+            CHECK(B_ptr->max() == 8);
+            CHECK(B_ptr->integral());
         }
 
         WHEN("We default-initialize the state") {
@@ -1944,6 +1962,12 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(ptr->size() == 1);
                 CHECK(std::ranges::equal(ptr->shape(), std::vector<ssize_t>()));
                 CHECK(std::ranges::equal(ptr->strides(), std::vector<ssize_t>()));
+            }
+
+            THEN("We get the min/max/integral we expect") {
+                CHECK(ptr->min() == 1);
+                CHECK(ptr->max() == 8);
+                CHECK(ptr->integral());
             }
 
             AND_WHEN("We create and then read the state") {

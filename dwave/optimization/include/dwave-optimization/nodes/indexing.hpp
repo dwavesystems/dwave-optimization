@@ -68,6 +68,11 @@ class AdvancedIndexingNode : public ArrayNode {
     std::span<const ssize_t> strides() const override { return std::span(strides_.get(), ndim_); }
     bool contiguous() const override { return true; }
 
+    // Information about the values are all inherited from the array
+    bool integral() const override { return array_ptr_->integral(); }
+    double min() const override { return array_ptr_->min(); }
+    double max() const override { return array_ptr_->max(); }
+
     // Node overloads
     void commit(State& state) const override;
     void initialize_state(State& state) const override;
