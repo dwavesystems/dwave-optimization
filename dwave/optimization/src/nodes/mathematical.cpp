@@ -117,8 +117,22 @@ bool BinaryOpNode<BinaryOp>::integral() const {
     if constexpr (std::is_integral<result_type>::value) {
         return true;
     }
-    // there are other cases we could/should consider
-    return Array::integral();
+
+    // The mathematical operations require a bit more fiddling.
+
+    auto lhs_ptr = operands_[0];
+    auto rhs_ptr = operands_[1];
+
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
+                  std::is_same<BinaryOp, functional::min<double>>::value ||
+                  std::is_same<BinaryOp, std::minus<double>>::value ||
+                  std::is_same<BinaryOp, std::multiplies<double>>::value ||
+                  std::is_same<BinaryOp, std::plus<double>>::value) {
+        return lhs_ptr->integral() && rhs_ptr->integral();
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
 }
 
 template <class BinaryOp>
@@ -128,8 +142,34 @@ double BinaryOpNode<BinaryOp>::max() const {
     if constexpr (std::is_same<result_type, bool>::value) {
         return true;
     }
-    // there are other cases we could/should handle here.
-    return Array::max();
+
+    // The mathematical operations require a bit more fiddling.
+
+    auto lhs_ptr = operands_[0];
+    auto rhs_ptr = operands_[1];
+
+    // these can result in inf. If we update propagation/initialization to handle
+    // that case we should update these as well.
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
+                  std::is_same<BinaryOp, functional::min<double>>::value ||
+                  std::is_same<BinaryOp, std::plus<double>>::value) {
+        return BinaryOp()(lhs_ptr->max(), rhs_ptr->max());
+    }
+    if constexpr (std::is_same<BinaryOp, std::minus<double>>::value) {
+        return lhs_ptr->max() - rhs_ptr->min();
+    }
+    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
+        double lhs_low = lhs_ptr->min();
+        double lhs_high = lhs_ptr->max();
+        double rhs_low = rhs_ptr->min();
+        double rhs_high = rhs_ptr->max();
+
+        return std::max(
+                {lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low, lhs_high * rhs_high});
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
 }
 
 template <class BinaryOp>
@@ -139,8 +179,34 @@ double BinaryOpNode<BinaryOp>::min() const {
     if constexpr (std::is_same<result_type, bool>::value) {
         return false;
     }
-    // there are other cases we could/should handle here.
-    return Array::min();
+
+    // The mathematical operations require a bit more fiddling.
+
+    auto lhs_ptr = operands_[0];
+    auto rhs_ptr = operands_[1];
+
+    // these can result in inf. If we update propagation/initialization to handle
+    // that case we should update these as well.
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
+                  std::is_same<BinaryOp, functional::min<double>>::value ||
+                  std::is_same<BinaryOp, std::plus<double>>::value) {
+        return BinaryOp()(lhs_ptr->min(), rhs_ptr->min());
+    }
+    if constexpr (std::is_same<BinaryOp, std::minus<double>>::value) {
+        return lhs_ptr->min() - rhs_ptr->max();
+    }
+    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
+        double lhs_low = lhs_ptr->min();
+        double lhs_high = lhs_ptr->max();
+        double rhs_low = rhs_ptr->min();
+        double rhs_high = rhs_ptr->max();
+
+        return std::min(
+                {lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low, lhs_high * rhs_high});
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
 }
 
 template <class BinaryOp>
@@ -389,8 +455,14 @@ bool NaryOpNode<BinaryOp>::integral() const {
     if constexpr (std::is_integral<result_type>::value) {
         return true;
     }
-    // there are other cases we could/should consider
-    return Array::integral();
+
+    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value ||
+                  std::is_same<BinaryOp, std::plus<double>>::value) {
+        return std::ranges::all_of(operands_, [](const Array* ptr) { return ptr->integral(); });
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
 }
 
 template <class BinaryOp>
@@ -400,8 +472,38 @@ double NaryOpNode<BinaryOp>::max() const {
     if constexpr (std::is_same<result_type, bool>::value) {
         return true;
     }
-    // there are other cases we could/should handle here.
-    return Array::max();
+
+    // these can result in inf. If we update propagation/initialization to handle
+    // that case we should update these as well.
+    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
+        return std::accumulate(operands_.begin(), operands_.end(), 0.0,
+                               [](double lhs, const Array* rhs) { return lhs + rhs->max(); });
+    }
+    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
+        // we need to be a bit careful with our signs
+        assert(operands_.size() > 0);
+
+        double lhs_low = operands_[0]->min();
+        double lhs_high = operands_[0]->max();
+
+        for (const Array* rhs_ptr : operands_ | std::views::drop(1)) {
+            double rhs_low = rhs_ptr->min();
+            double rhs_high = rhs_ptr->max();
+
+            double tmp = std::min({lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low,
+                                   lhs_high * rhs_high});
+
+            lhs_high = std::max({lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low,
+                                 lhs_high * rhs_high});
+
+            lhs_low = tmp;
+        }
+
+        return lhs_high;
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
 }
 
 template <class BinaryOp>
@@ -411,8 +513,38 @@ double NaryOpNode<BinaryOp>::min() const {
     if constexpr (std::is_same<result_type, bool>::value) {
         return false;
     }
-    // there are other cases we could/should handle here.
-    return Array::min();
+
+    // these can result in inf. If we update propagation/initialization to handle
+    // that case we should update these as well.
+    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
+        return std::accumulate(operands_.begin(), operands_.end(), 0.0,
+                               [](double lhs, const Array* rhs) { return lhs + rhs->min(); });
+    }
+    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
+        // we need to be a bit careful with our signs
+        assert(operands_.size() > 0);
+
+        double lhs_low = operands_[0]->min();
+        double lhs_high = operands_[0]->max();
+
+        for (const Array* rhs_ptr : operands_ | std::views::drop(1)) {
+            double rhs_low = rhs_ptr->min();
+            double rhs_high = rhs_ptr->max();
+
+            double tmp = std::min({lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low,
+                                   lhs_high * rhs_high});
+
+            lhs_high = std::max({lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low,
+                                 lhs_high * rhs_high});
+
+            lhs_low = tmp;
+        }
+
+        return lhs_low;
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
 }
 
 template <class BinaryOp>
@@ -714,8 +846,18 @@ bool ReduceNode<BinaryOp>::integral() const {
     if constexpr (std::is_integral<result_type>::value) {
         return true;
     }
-    // there are other cases we could/should consider
-    return Array::integral();
+
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
+                  std::is_same<BinaryOp, functional::min<double>>::value ||
+                  std::is_same<BinaryOp, std::multiplies<double>>::value ||
+                  std::is_same<BinaryOp, std::plus<double>>::value) {
+        // the actual value of init doesn't matter, all of the above have no default
+        // or an integer default init
+        return array_ptr_->integral() && is_integer(init.value_or(0));
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
 }
 
 template <class BinaryOp>
@@ -725,8 +867,55 @@ double ReduceNode<BinaryOp>::max() const {
     if constexpr (std::is_same<result_type, bool>::value) {
         return true;
     }
-    // there are other cases we could/should handle here.
-    return Array::max();
+
+    // These can results in inf. If we fix that in initialization/propagation we
+    // should also fix it here.
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value) {
+        if (init.has_value()) return std::max(init.value(), array_ptr_->max());
+        return array_ptr_->max();
+    }
+    if constexpr (std::is_same<BinaryOp, functional::min<double>>::value) {
+        if (init.has_value()) return std::min(init.value(), array_ptr_->max());
+        return array_ptr_->max();
+    }
+    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
+        // this is complicated...
+
+        // the dynamic case. For now let's just fall back to Array's default
+        // implementation because this gets even more complicated
+        if (array_ptr_->dynamic()) return Array::max();
+
+        const double init = this->init.value_or(1);
+
+        // the empty case, so we're always just init
+        if (array_ptr_->size() == 0) return init;
+
+        const double low = array_ptr_->min();
+        const double high = array_ptr_->max();
+
+        // exactly one element, handle the sign of init
+        if (array_ptr_->size() == 1) return std::max(init * low, init * high);
+
+        const ssize_t size = array_ptr_->size();
+
+        // more than one element
+        return std::max({
+            init * std::pow(low, size),
+            init * std::pow(high, size),
+            init * low * std::pow(high, size - 1),
+            init * high * std::pow(low, size - 1),
+        });
+    }
+    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
+        // the dynamic case. For now let's just fall back to Array's default
+        // implementation because this gets even more complicated
+        if (array_ptr_->dynamic()) return Array::max();
+
+        return this->init.value_or(0) + array_ptr_->size() * array_ptr_->max();
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
 }
 
 template <class BinaryOp>
@@ -736,8 +925,55 @@ double ReduceNode<BinaryOp>::min() const {
     if constexpr (std::is_same<result_type, bool>::value) {
         return false;
     }
-    // there are other cases we could/should handle here.
-    return Array::min();
+
+    // These can results in inf. If we fix that in initialization/propagation we
+    // should also fix it here.
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value) {
+        if (init.has_value()) return std::max(init.value(), array_ptr_->min());
+        return array_ptr_->min();
+    }
+    if constexpr (std::is_same<BinaryOp, functional::min<double>>::value) {
+        if (init.has_value()) return std::min(init.value(), array_ptr_->min());
+        return array_ptr_->min();
+    }
+    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
+        // this is complicated...
+
+        // the dynamic case. For now let's just fall back to Array's default
+        // implementation because this gets even more complicated
+        if (array_ptr_->dynamic()) return Array::min();
+
+        const double init = this->init.value_or(1);
+
+        // the empty case, so we're always just init
+        if (array_ptr_->size() == 0) return init;
+
+        const double low = array_ptr_->min();
+        const double high = array_ptr_->max();
+
+        // exactly one element, handle the sign of init
+        if (array_ptr_->size() == 1) return std::min(init * low, init * high);
+
+        const ssize_t size = array_ptr_->size();
+
+        // more than one element
+        return std::min({
+            init * std::pow(low, size),
+            init * std::pow(high, size),
+            init * low * std::pow(high, size - 1),
+            init * high * std::pow(low, size - 1),
+        });
+    }
+    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
+        // the dynamic case. For now let's just fall back to Array's default
+        // implementation because this gets even more complicated
+        if (array_ptr_->dynamic()) return Array::min();
+
+        return this->init.value_or(0) + array_ptr_->size() * array_ptr_->min();
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
 }
 
 template <>
