@@ -1582,7 +1582,7 @@ TEST_CASE("UnaryOpNode - SquareNode") {
     }
 }
 
-TEST_CASE("PartialReduceNode - sum", "") {
+TEST_CASE("PartialReduceNode - PartialSumNode", "") {
     auto graph = Graph();
     GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes ") {
         std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
