@@ -893,7 +893,7 @@ TEST_CASE("AdvancedIndexingNode") {
     GIVEN("A dynamic 4d Nx3x5x4 matrix with 3 dynamic indexing arrays") {
         auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
                 std::initializer_list<ssize_t>{-1, 3, 5, 4},  //
-                0, 180, true,  // takes values in [0, 180] and will always be integers
+                -180, 180, true,  // takes values in [-180, 180] and will always be integers
                 120, 1200);  // will always have at least two rows in the first dimension, up to 20
 
         auto i_range_ptr =
@@ -941,13 +941,19 @@ TEST_CASE("AdvancedIndexingNode") {
                     arr_ptr->grow(state, values);
                     dyn_ptr->grow(state);
 
+                    // Change should be visible
+                    arr_ptr->set(state, 20, -1);
+
+                    // Not present in the ranges indexed
+                    arr_ptr->set(state, 41, -2);
+
                     graph.propagate(state, graph.descendants(state, {arr_ptr, dyn_ptr}));
 
                     AND_WHEN("We commit") {
                         graph.commit(state, graph.descendants(state, {arr_ptr, dyn_ptr}));
 
                         THEN("The output is as expected") {
-                            CHECK(std::ranges::equal(adv_ptr->view(state), std::vector{0, 20, 40}));
+                            CHECK(std::ranges::equal(adv_ptr->view(state), std::vector{0, -1, 40}));
                             // ArrayValidationNode checks most of the consistency etc
                         }
                     }
@@ -993,6 +999,13 @@ TEST_CASE("AdvancedIndexingNode") {
                     arr_ptr->grow(state, values);
                     dyn_ptr->grow(state);
 
+                    // These changes should be visible
+                    arr_ptr->set(state, 21, -1);
+                    arr_ptr->set(state, 42, -2);
+
+                    // Not present in the ranges indexed
+                    arr_ptr->set(state, 8, -4);
+
                     graph.propagate(state, graph.descendants(state, {arr_ptr, dyn_ptr}));
 
                     AND_WHEN("We commit") {
@@ -1001,7 +1014,7 @@ TEST_CASE("AdvancedIndexingNode") {
                         THEN("The output is as expected") {
                             CHECK(std::ranges::equal(
                                     adv_ptr->view(state),
-                                    std::vector{0, 1, 2, 3, 20, 21, 22, 23, 40, 41, 42, 43}));
+                                    std::vector{0, 1, 2, 3, 20, -1, 22, 23, 40, 41, -2, 43}));
                             // ArrayValidationNode checks most of the consistency etc
                         }
                     }
