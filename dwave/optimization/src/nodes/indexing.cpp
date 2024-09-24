@@ -248,21 +248,46 @@ struct AdvancedIndexingNode::IndexParser_ {
             this->ndim += std::holds_alternative<Slice>(index);
 
             if (std::holds_alternative<ArrayNode*>(index)) {
-                ssize_t a_ndim = std::get<ArrayNode*>(index)->ndim();
+                ArrayNode* indexing_array_ptr = std::get<ArrayNode*>(index);
+
+                // Test whether we can index with the given array. This is probably a bit
+                // over-strict and may need to be loosened over time.
+                if (!indexing_array_ptr->integral()) {
+                    throw std::invalid_argument("cannot index an array with a non-integral array");
+                }
+                if (indexing_array_ptr->min() < 0) {
+                    throw std::invalid_argument("indexing array cannot allow negative values");
+                }
+                if (idx == 0 && array_ptr->shape()[0] < 0) {
+                    // 100 is a magic number
+                    auto sizeinfo = array_ptr->sizeinfo().substitute(100);
+                    if (!sizeinfo.min.has_value()) {
+                        throw std::invalid_argument("indexed array has unknown minimum size");
+                    }
+
+                    // from the min size of the dynamic array, get the min size of the first axis
+                    ssize_t min_axis_size = (sizeinfo.min.value() * array_ptr->itemsize()) /
+                                            array_ptr->strides()[0];
+
+                    if (indexing_array_ptr->max() >= min_axis_size) {
+                        throw std::invalid_argument("indexing array may take values out of bounds");
+                    }
+                } else if (indexing_array_ptr->max() >= array_ptr->shape()[idx]) {
+                    throw std::invalid_argument("indexing array may take values out of bounds");
+                }
+
+                ssize_t a_ndim = indexing_array_ptr->ndim();
                 if (!encountered_array) {
                     indexing_arrays_ndim = a_ndim;
-                    first_array = std::get<ArrayNode*>(index);
+                    first_array = indexing_array_ptr;
                     first_array_index = idx;
-                } else if (!array_shape_equal(first_array, std::get<ArrayNode*>(index))) {
+                } else if (!array_shape_equal(first_array, indexing_array_ptr)) {
                     throw std::invalid_argument(
                             "shape mismatch: indexing arrays could not be broadcast together");
                 } else if (a_ndim != indexing_arrays_ndim) {
                     throw std::invalid_argument(
                             "dimension mismatch: indexing arrays could not be broadcast together");
                 }
-
-                // todo: check the max value
-                // todo: check integral
 
                 encountered_array = true;
                 if (encountered_slice_after_array) {

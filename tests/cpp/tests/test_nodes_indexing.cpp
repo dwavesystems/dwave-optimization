@@ -340,8 +340,8 @@ TEST_CASE("AdvancedIndexingNode") {
         std::vector<double> values{0, 1, 2, 3, 4, 5, 6, 7, 8};
         auto A_ptr = graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{3, 3});
 
-        auto dyn_ptr =
-                graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 2});
+        auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+                std::initializer_list<ssize_t>{-1, 2}, 0, 2, true);
 
         auto i_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
         auto j_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 1);
@@ -727,8 +727,8 @@ TEST_CASE("AdvancedIndexingNode") {
         std::iota(values.begin(), values.end(), 0);
         auto arr_ptr = graph.emplace_node<ConstantNode>(values,
                                                         std::initializer_list<ssize_t>{2, 3, 5, 4});
-        auto dyn_ptr =
-                graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 3});
+        auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+                std::initializer_list<ssize_t>{-1, 3}, 0, 1, true);
 
         auto i_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
         auto j_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 1);
@@ -892,79 +892,72 @@ TEST_CASE("AdvancedIndexingNode") {
 
     GIVEN("A dynamic 4d Nx3x5x4 matrix with 3 dynamic indexing arrays") {
         auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 3, 5, 4});
-        auto dyn_ptr =
-                graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 3});
+                std::initializer_list<ssize_t>{-1, 3, 5, 4},  //
+                0, 180, true,  // takes values in [0, 180] and will always be integers
+                120, 1200);  // will always have at least two rows in the first dimension, up to 20
 
-        auto i_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
-        auto j_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 1);
-        auto k_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 2);
+        auto i_range_ptr =
+                graph.emplace_node<ConstantNode>(std::vector{0, 1});  // will index axis 1
+        auto j_range_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3, 4});  // axis 3
+        auto k_range_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});     // axis 4
+
+        auto dyn_ptr = graph.emplace_node<ListNode>(2, 0, 2);  // subsets of range(2)
+
+        auto i_ptr = graph.emplace_node<AdvancedIndexingNode>(i_range_ptr, dyn_ptr);
+        auto j_ptr = graph.emplace_node<AdvancedIndexingNode>(j_range_ptr, dyn_ptr);
+        auto k_ptr = graph.emplace_node<AdvancedIndexingNode>(k_range_ptr, dyn_ptr);
+
+        // toss a few validation nodes on for safey
+        graph.emplace_node<ArrayValidationNode>(i_ptr);
+        graph.emplace_node<ArrayValidationNode>(j_ptr);
+        graph.emplace_node<ArrayValidationNode>(k_ptr);
 
         WHEN("We access the matrix by (i, :, j, k)") {
-            auto adv =
+            auto adv_ptr =
                     graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr, k_ptr);
 
+            graph.emplace_node<ArrayValidationNode>(adv_ptr);
+
             THEN("We get the shape we expect") {
-                CHECK(adv->dynamic());
-                CHECK(std::ranges::equal(adv->shape(), std::vector{-1, 3}));
+                CHECK(adv_ptr->dynamic());
+                CHECK(std::ranges::equal(adv_ptr->shape(), std::vector{-1, 3}));
             }
 
             AND_WHEN("We create a state") {
-                auto state = graph.initialize_state();
+                auto state = graph.empty_state();
 
-                THEN("The state starts empty") {
-                    CHECK(std::ranges::equal(adv->view(state), std::vector<double>{}));
-                }
+                // as promised, but 120 values into the array initially
+                std::vector<double> values(2 * 3 * 5 * 4);
+                std::iota(values.begin(), values.end(), 0);
+                arr_ptr->initialize_state(state, values);
+
+                // dyn array starts empty
+                dyn_ptr->initialize_state(state, std::vector<double>{});
+
+                graph.initialize_state(state);
 
                 AND_WHEN("We mutate the main array, grow the indexing nodes and propagate") {
-                    std::vector<double> values(2 * 3 * 5 * 4);
-                    std::iota(values.begin(), values.end(), 0);
+                    // double the size of the array
                     arr_ptr->grow(state, values);
-                    // i_ptr -> {0, 1}
-                    // j_ptr -> {1, 2}
-                    // k_ptr -> {3, 3}
-                    dyn_ptr->grow(state, {0, 1, 3, 1, 2, 3});
+                    dyn_ptr->grow(state);
 
-                    arr_ptr->propagate(state);
-                    dyn_ptr->propagate(state);
-                    i_ptr->propagate(state);
-                    j_ptr->propagate(state);
-                    k_ptr->propagate(state);
-                    adv->propagate(state);
+                    graph.propagate(state, graph.descendants(state, {arr_ptr, dyn_ptr}));
 
-                    THEN("The state has the expected values and the diff is correct") {
-                        CHECK(adv->size(state) == 6);
-                        CHECK(std::ranges::equal(adv->view(state),
-                                                 std::vector{7, 27, 47, 71, 91, 111}));
-                        verify_array_diff({}, {7, 27, 47, 71, 91, 111}, adv->diff(state));
+                    AND_WHEN("We commit") {
+                        graph.commit(state, graph.descendants(state, {arr_ptr, dyn_ptr}));
+
+                        THEN("The output is as expected") {
+                            CHECK(std::ranges::equal(adv_ptr->view(state), std::vector{0, 20, 40}));
+                            // ArrayValidationNode checks most of the consistency etc
+                        }
                     }
 
-                    AND_WHEN("We mutate the main array again") {
-                        arr_ptr->commit(state);
-                        dyn_ptr->commit(state);
-                        i_ptr->commit(state);
-                        j_ptr->commit(state);
-                        k_ptr->commit(state);
-                        adv->commit(state);
+                    AND_WHEN("We revert") {
+                        graph.revert(state, graph.descendants(state, {arr_ptr, dyn_ptr}));
 
-                        arr_ptr->set(state, 47, -1);
-                        arr_ptr->set(state, 91, -2);
-                        arr_ptr->set(state, 7, -3);
-                        arr_ptr->set(state, 8, -4);
-
-                        arr_ptr->propagate(state);
-                        dyn_ptr->propagate(state);
-                        i_ptr->propagate(state);
-                        j_ptr->propagate(state);
-                        k_ptr->propagate(state);
-                        adv->propagate(state);
-
-                        THEN("The state has the expected values and the diff is correct") {
-                            CHECK(adv->size(state) == 6);
-                            CHECK(std::ranges::equal(adv->view(state),
-                                                     std::vector{-3, 27, -1, 71, -2, 111}));
-                            verify_array_diff({7, 27, 47, 71, 91, 111}, {-3, 27, -1, 71, -2, 111},
-                                              adv->diff(state));
+                        THEN("The output is as expected") {
+                            CHECK(std::ranges::equal(adv_ptr->view(state), std::vector<double>{}));
+                            // ArrayValidationNode checks most of the consistency etc
                         }
                     }
                 }
@@ -972,80 +965,53 @@ TEST_CASE("AdvancedIndexingNode") {
         }
 
         WHEN("We access the matrix by (i, :, j, ;)") {
-            auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr,
-                                                                Slice());
-            auto val = graph.emplace_node<ArrayValidationNode>(adv);
+            auto adv_ptr = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr,
+                                                                    Slice());
+
+            graph.emplace_node<ArrayValidationNode>(adv_ptr);
 
             THEN("We get the shape we expect") {
-                CHECK(adv->dynamic());
-                CHECK(std::ranges::equal(adv->shape(), std::vector{-1, 3, 4}));
+                CHECK(adv_ptr->dynamic());
+                CHECK(std::ranges::equal(adv_ptr->shape(), std::vector{-1, 3, 4}));
             }
 
             AND_WHEN("We create a state") {
-                auto state = graph.initialize_state();
+                auto state = graph.empty_state();
 
-                THEN("The state starts empty") {
-                    CHECK(std::ranges::equal(adv->view(state), std::vector<double>{}));
-                }
+                // as promised, but 120 values into the array initially
+                std::vector<double> values(2 * 3 * 5 * 4);
+                std::iota(values.begin(), values.end(), 0);
+                arr_ptr->initialize_state(state, values);
+
+                // dyn array starts empty
+                dyn_ptr->initialize_state(state, std::vector<double>{});
+
+                graph.initialize_state(state);
 
                 AND_WHEN("We mutate the main array, grow the indexing nodes and propagate") {
-                    std::vector<double> values(2 * 3 * 5 * 4);
-                    std::iota(values.begin(), values.end(), 0);
+                    // double the size of the array
                     arr_ptr->grow(state, values);
-                    // i_ptr -> {0, 1}
-                    // j_ptr -> {1, 2}
-                    dyn_ptr->grow(state, {0, 1, 3, 1, 2, 3});
+                    dyn_ptr->grow(state);
 
-                    std::vector<double> expected({4,  5,  6,  7,  24,  25,  26,  27,
-                                                  44, 45, 46, 47, 68,  69,  70,  71,
-                                                  88, 89, 90, 91, 108, 109, 110, 111});
+                    graph.propagate(state, graph.descendants(state, {arr_ptr, dyn_ptr}));
 
-                    arr_ptr->propagate(state);
-                    dyn_ptr->propagate(state);
-                    i_ptr->propagate(state);
-                    j_ptr->propagate(state);
-                    adv->propagate(state);
-                    val->propagate(state);
+                    AND_WHEN("We commit") {
+                        graph.commit(state, graph.descendants(state, {arr_ptr, dyn_ptr}));
 
-                    THEN("The state has the expected values and the diff is correct") {
-                        CHECK(adv->size(state) == 24);
-                        CHECK(std::ranges::equal(adv->view(state), expected));
-                        verify_array_diff({}, expected, adv->diff(state));
+                        THEN("The output is as expected") {
+                            CHECK(std::ranges::equal(
+                                    adv_ptr->view(state),
+                                    std::vector{0, 1, 2, 3, 20, 21, 22, 23, 40, 41, 42, 43}));
+                            // ArrayValidationNode checks most of the consistency etc
+                        }
                     }
 
-                    AND_WHEN("We mutate the main array again") {
-                        arr_ptr->commit(state);
-                        dyn_ptr->commit(state);
-                        i_ptr->commit(state);
-                        j_ptr->commit(state);
-                        adv->commit(state);
-                        val->commit(state);
+                    AND_WHEN("We revert") {
+                        graph.revert(state, graph.descendants(state, {arr_ptr, dyn_ptr}));
 
-                        std::vector<double> new_expected = expected;
-
-                        arr_ptr->set(state, 47, -1);
-                        new_expected[11] = -1;
-
-                        arr_ptr->set(state, 91, -2);
-                        new_expected[19] = -2;
-
-                        arr_ptr->set(state, 7, -3);
-                        new_expected[3] = -3;
-
-                        // Not present in the ranges indexed
-                        arr_ptr->set(state, 8, -4);
-
-                        arr_ptr->propagate(state);
-                        dyn_ptr->propagate(state);
-                        i_ptr->propagate(state);
-                        j_ptr->propagate(state);
-                        adv->propagate(state);
-                        val->propagate(state);
-
-                        THEN("The state has the expected values and the diff is correct") {
-                            CHECK(adv->size(state) == 24);
-                            CHECK(std::ranges::equal(adv->view(state), new_expected));
-                            verify_array_diff(expected, new_expected, adv->diff(state));
+                        THEN("The output is as expected") {
+                            CHECK(std::ranges::equal(adv_ptr->view(state), std::vector<double>{}));
+                            // ArrayValidationNode checks most of the consistency etc
                         }
                     }
                 }
@@ -1065,8 +1031,8 @@ TEST_CASE("AdvancedIndexingNode") {
 
     GIVEN("A non-constant and non-dynamic 1d array and a dynamic indexing array") {
         auto arr_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{10});
-        auto i_ptr =
-                graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1});
+        auto i_ptr = graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1},
+                                                                 0, 8, true);
 
         WHEN("We access the array by i") {
             auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr);
@@ -1145,9 +1111,9 @@ TEST_CASE("AdvancedIndexingNode") {
         auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
                 std::initializer_list<ssize_t>{-1, 3, 5, 4});
 
-        auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3});
-        auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3});
-        auto k_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3});
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3}, 0, 2);
+        auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3}, 0, 4);
+        auto k_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3}, 0, 3);
 
         WHEN("We access the matrix by (:, i, j, k)") {
             auto adv =
@@ -1395,9 +1361,9 @@ TEST_CASE("AdvancedIndexingNode") {
         auto arr_ptr = graph.emplace_node<ConstantNode>(values,
                                                         std::initializer_list<ssize_t>{2, 3, 5, 4});
 
-        auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{});
-        auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{});
-        auto k_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{});
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 1);
+        auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 2);
+        auto k_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 3);
 
         WHEN("We access the matrix by (i, j, :, :)") {
             auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, Slice(),

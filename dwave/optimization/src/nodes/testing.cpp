@@ -257,10 +257,25 @@ class DynamicArrayTestingNodeData : public dwave::optimization::NodeStateData {
     std::vector<ssize_t> old_shape;
 };
 
+DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape)
+        : DynamicArrayTestingNode(shape, std::nullopt, std::nullopt, false) {}
+
 DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape,
                                                  std::optional<double> min,
                                                  std::optional<double> max, bool integral)
-        : ArrayOutputMixin(shape), shape_(shape), min_(min), max_(max), integral_(integral) {
+        : DynamicArrayTestingNode(shape, min, max, integral, std::nullopt, std::nullopt) {}
+
+DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape,
+                                                 std::optional<double> min,
+                                                 std::optional<double> max, bool integral,
+                                                 std::optional<ssize_t> min_size,
+                                                 std::optional<ssize_t> max_size)
+        : ArrayOutputMixin(shape),
+          shape_(shape),
+          min_(min),
+          max_(max),
+          integral_(integral),
+          sizeinfo_(SizeInfo(this, min_size, max_size)) {
     if (shape.size() == 0 || *shape.begin() != -1) {
         throw std::invalid_argument(
                 "DynamicArrayTestingNode is meant to be used as a dynamic array");
@@ -314,6 +329,8 @@ double DynamicArrayTestingNode::max() const { return max_.value_or(Array::max())
 double DynamicArrayTestingNode::min() const { return min_.value_or(Array::min()); }
 
 bool DynamicArrayTestingNode::integral() const { return integral_; }
+
+SizeInfo DynamicArrayTestingNode::sizeinfo() const { return sizeinfo_.value_or(SizeInfo(this)); }
 
 void DynamicArrayTestingNode::commit(State& state) const {
     data_ptr<DynamicArrayTestingNodeData>(state)->commit();

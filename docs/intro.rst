@@ -536,11 +536,13 @@ The two tabs below provide the two formulations.
 	Add the objective. Here, the :code:`indx_int` constant converts 
 	the binary one-hot variables to an index of the distance matrix. 
 
-	>>> indx = []
-	>>> for i in range(distances.shape()[0]):
-	...     indx.append((itinerary_loc[i,:] * indx_int).sum())
-	>>> model.minimize(add(*[cost[i]*distances[indx[i], indx[i+1]] for 
-	...     i in range(distances.shape()[0]-1)]))
+	>>> model.minimize(add(*(
+        ... (itinerary_loc[u, pos] * itinerary_loc[v, (pos + 1) % 4] * distances[u, v] +
+        ... itinerary_loc[v, pos] * itinerary_loc[u, (pos + 1) % 4] * distances[v, u]) *
+        ... cost[pos]
+        ... for u in range(4)
+        ... for v in range(u+1, 4)
+        ... for pos in range(3))))
 	
 	Add explicit one-hot constraints: summing the columns of the 
 	decision variable must give ones because each destination is
@@ -564,7 +566,7 @@ The two tabs below provide the two formulations.
         ...         [0, 1, 0, 0],
         ...         [1, 0, 0, 0]])
 	...     print(int(model.objective.state(0)))
-	14 
-	
+	14
+
 The directed acyclic graph for the implicitly constrained model has few nodes 
 and the model is more efficient.
