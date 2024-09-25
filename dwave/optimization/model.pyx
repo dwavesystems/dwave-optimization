@@ -2088,15 +2088,15 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Sum  # avoid circular import
 
         if axis is not None:
-            if not isinstance(axis, int):
+            if not isinstance(axis, numbers.Integral):
                 raise ValueError("axis of the sum should be an int")
 
             if not (0 <= axis < self.ndim()):
-                raise ValueError("axis should be 0 <= axis < self.ndim()")
+                raise TypeError("axis of the sum should be an int")
 
             return PartialSum(self, axis)
-        else:
-            return Sum(self)
+
+        return Sum(self)
 
 
 cdef class StateView:
