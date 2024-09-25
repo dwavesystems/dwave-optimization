@@ -730,7 +730,7 @@ PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, ssize_t axi
 
     /// TODO: support negative axis
     if (axis_ < 0 || axis_ >= array_ptr_->ndim()) {
-        throw std::invalid_argument("Axis should be an integer between 0 and n_dim - 1");
+        throw std::invalid_argument("Axis should be an integer between 0 and ndim - 1");
     }
 
     add_predecessor(array_ptr);
