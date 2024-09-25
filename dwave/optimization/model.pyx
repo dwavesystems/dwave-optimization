@@ -108,16 +108,13 @@ cdef class Model:
                 for a model state:
 
             >>> constraint_sym = model.add_constraint(i <= c)
+            >>> model.lock()
             >>> model.states.resize(1)
-            >>> # Set feasible state
-            >>> i.set_state(0, 1)
-            >>> with model.lock():
-            ...     print(constraint_sym.state(0))
+            >>> i.set_state(0, 1) # Feasible state
+            >>> print(constraint_sym.state(0))
             1.0 # Constraint is satisfied
-            >>> # Set infeasible state
-            >>> i.set_state(0, 6)
-            >>> with model.lock():
-            ...     print(constraint_sym.state(0))
+            >>> i.set_state(0, 6) # Infeasible state
+            >>> print(constraint_sym.state(0))
             0.0 # Constraint is not satisfied
         """
         if value is None:
