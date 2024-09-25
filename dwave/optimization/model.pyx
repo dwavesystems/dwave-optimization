@@ -92,6 +92,9 @@ cdef class Model:
             value: Value that must evaluate to True for the state
                 of the model to be feasible.
 
+        Returns:
+            The constraint symbol.
+
         Examples:
             This example adds a single constraint to a model.
 
@@ -100,11 +103,28 @@ cdef class Model:
             >>> i = model.integer()
             >>> c = model.constant(5)
             >>> model.add_constraint(i <= c)
+
+            The returned constraint symbol can be assigned and evaluated
+                for a model state:
+
+            >>> constraint_sym = model.add_constraint(i <= c)
+            >>> model.states.resize(1)
+            >>> # Set feasible state
+            >>> i.set_state(0, 1)
+            >>> with model.lock():
+            ...     print(constraint_sym.state(0))
+            1.0 # Constraint is satisfied
+            >>> # Set infeasible state
+            >>> i.set_state(0, 6)
+            >>> with model.lock():
+            ...     print(constraint_sym.state(0))
+            0.0 # Constraint is not satisfied
         """
         if value is None:
             raise ValueError("value cannot be None")
         # TODO: shall we accept array valued constraints?
         self._graph.add_constraint(value.array_ptr)
+        return value
 
     def binary(self, shape=None):
         r"""Create a binary symbol as a decision variable.
