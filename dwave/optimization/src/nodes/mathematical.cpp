@@ -760,7 +760,7 @@ void PartialReduceNode<BinaryOp>::initialize_state(State& state) const {
 
     std::vector<double> values(size(state));
 
-    for (ssize_t i = 0; i < size(state); ++i) {
+    for (ssize_t i = 0, stop = size(state); i < stop; ++i) {
         assert(i < static_cast<ssize_t>(values.size()));
         values[i] = reduce(state, i);
     }
