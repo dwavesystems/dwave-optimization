@@ -665,32 +665,6 @@ template class NaryOpNode<std::plus<double>>;
 
 // PartialReduceNode *****************************************************************
 template <class BinaryOp>
-struct ExtraArrayData {
-    void commit() {}
-    void revert() {}
-};
-
-template <class BinaryOp>
-struct PartialReduceNodeData : ArrayNodeStateData {
-    template <class... Ts>
-    explicit PartialReduceNodeData(std::vector<double>&& values, Ts... extra_args)
-            : ArrayNodeStateData(std::move(values)), extra(extra_args...) {}
-
-    void commit() {
-        ArrayNodeStateData::commit();
-        extra.commit();
-    }
-
-    void revert() {
-        ArrayNodeStateData::revert();
-        extra.revert();
-    }
-
-    // op-specific storage.
-    ExtraArrayData<BinaryOp> extra;
-};
-
-template <class BinaryOp>
 PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, ssize_t axis, double init)
         : ArrayOutputMixin(partial_reduce_shape(node_ptr->shape(), axis)),
           init(init),
@@ -738,17 +712,17 @@ PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, ssize_t axi
 
 template <class BinaryOp>
 double const* PartialReduceNode<BinaryOp>::buff(const State& state) const {
-    return data_ptr<PartialReduceNodeData<op>>(state)->buff();
+    return data_ptr<ArrayNodeStateData>(state)->buff();
 }
 
 template <class BinaryOp>
 void PartialReduceNode<BinaryOp>::commit(State& state) const {
-    data_ptr<PartialReduceNodeData<op>>(state)->commit();
+    data_ptr<ArrayNodeStateData>(state)->commit();
 }
 
 template <class BinaryOp>
 std::span<const Update> PartialReduceNode<BinaryOp>::diff(const State& state) const {
-    return data_ptr<PartialReduceNodeData<op>>(state)->diff();
+    return data_ptr<ArrayNodeStateData>(state)->diff();
 }
 
 template <class BinaryOp>
@@ -765,7 +739,7 @@ void PartialReduceNode<BinaryOp>::initialize_state(State& state) const {
         values[i] = reduce(state, i);
     }
 
-    state[index] = std::make_unique<PartialReduceNodeData<op>>(std::move(values));
+    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
 }
 
 template <class BinaryOp>
@@ -852,7 +826,7 @@ double PartialReduceNode<BinaryOp>::min() const {
 
 template <>
 void PartialReduceNode<std::plus<double>>::propagate(State& state) const {
-    auto ptr = data_ptr<PartialReduceNodeData<op>>(state);
+    auto ptr = data_ptr<ArrayNodeStateData>(state);
 
     auto& values = ptr->buffer;
     auto& changes = ptr->updates;
@@ -924,7 +898,7 @@ double PartialReduceNode<std::plus<double>>::reduce(const State& state, ssize_t 
 
 template <class BinaryOp>
 void PartialReduceNode<BinaryOp>::revert(State& state) const {
-    data_ptr<PartialReduceNodeData<op>>(state)->revert();
+    data_ptr<ArrayNodeStateData>(state)->revert();
 }
 
 template <class BinaryOp>
@@ -939,7 +913,7 @@ ssize_t PartialReduceNode<BinaryOp>::size(const State& state) const {
 
 template <class BinaryOp>
 ssize_t PartialReduceNode<BinaryOp>::size_diff(const State& state) const {
-    return data_ptr<PartialReduceNodeData<op>>(state)->size_diff();
+    return data_ptr<ArrayNodeStateData>(state)->size_diff();
 }
 
 // Uncommented are the tested specializations
