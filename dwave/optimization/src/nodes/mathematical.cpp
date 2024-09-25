@@ -816,7 +816,7 @@ void PartialReduceNode<std::plus<double>>::propagate(State& state) const {
     auto& changes = ptr->updates;
 
     for (const auto& [p_index, old, value] : array_ptr_->diff(state)) {
-        const ssize_t index = _map_parent_index(state, p_index);x);
+        const ssize_t index = _map_parent_index(state, p_index);
         const double previous = values[index];
         values[index] += (value - old);
         changes.emplace_back(index, previous, values[index]);
