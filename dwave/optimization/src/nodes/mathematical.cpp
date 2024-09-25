@@ -775,8 +775,15 @@ bool PartialReduceNode<BinaryOp>::integral() const {
     if constexpr (std::is_integral<result_type>::value) {
         return true;
     }
-    // there are other cases we could/should consider
-    return Array::integral();
+
+    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
+        // the actual value of init doesn't matter, all of the above have no default
+        // or an integer default init
+        return array_ptr_->integral() && is_integer(init.value_or(0));
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
 }
 
 template <class BinaryOp>
