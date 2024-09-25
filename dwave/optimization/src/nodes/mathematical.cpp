@@ -782,7 +782,7 @@ bool PartialReduceNode<BinaryOp>::integral() const {
         return array_ptr_->integral() && is_integer(init.value_or(0));
     }
 
-    assert(false && "not implemeted yet");
+    assert(false && "not implemented yet");
     unreachable();
 }
 
@@ -826,8 +826,13 @@ double PartialReduceNode<BinaryOp>::max() const {
     if constexpr (std::is_same<result_type, bool>::value) {
         return true;
     }
-    // there are other cases we could/should handle here.
-    return Array::max();
+
+    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
+        return this->init.value_or(0) + array_ptr_->shape()[this->axis_] * array_ptr_->max();
+    }
+
+    assert(false && "not implemented yet");
+    unreachable();
 }
 
 template <class BinaryOp>
@@ -837,8 +842,12 @@ double PartialReduceNode<BinaryOp>::min() const {
     if constexpr (std::is_same<result_type, bool>::value) {
         return false;
     }
-    // there are other cases we could/should handle here.
-    return Array::min();
+    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
+        return this->init.value_or(0) + array_ptr_->shape()[this->axis_] * array_ptr_->min();
+    }
+
+    assert(false && "not implemented yet");
+    unreachable();
 }
 
 template <>
