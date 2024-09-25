@@ -787,6 +787,39 @@ bool PartialReduceNode<BinaryOp>::integral() const {
 }
 
 template <class BinaryOp>
+ssize_t PartialReduceNode<BinaryOp>::map_parent_index(const State& state,
+                                                      ssize_t parent_flat_index) const {
+    assert(this->axis_ >= 0 && this->axis_ < array_ptr_->size(state));
+    assert(parent_flat_index >= 0 && parent_flat_index < array_ptr_->size(state));
+
+    ssize_t index = 0;  // the linear index corresponding to the parent index being updated
+    ssize_t current_parent_axis = 0;  // current parent axis visited
+    ssize_t current_axis = 0;         // current axis
+
+    for (auto stride : parent_strides_c_) {
+        // calculate parent index on the current axis (not the linear one)
+        ssize_t this_axis_index = parent_flat_index / (stride / array_ptr_->itemsize());
+
+        // update the index now
+        parent_flat_index = parent_flat_index % (stride / array_ptr_->itemsize());
+
+        if (current_parent_axis == this->axis_) {
+            current_parent_axis++;
+            continue;
+        }
+
+        // now do the calculation of the linear index of reduction
+        index += this_axis_index * (this->strides()[current_axis] / this->itemsize());
+
+        // increase the axis visited
+        current_axis++;
+        current_parent_axis++;
+    }
+
+    return index;
+}
+
+template <class BinaryOp>
 double PartialReduceNode<BinaryOp>::max() const {
     using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
 
@@ -816,7 +849,7 @@ void PartialReduceNode<std::plus<double>>::propagate(State& state) const {
     auto& changes = ptr->updates;
 
     for (const auto& [p_index, old, value] : array_ptr_->diff(state)) {
-        const ssize_t index = _map_parent_index(state, p_index);
+        const ssize_t index = map_parent_index(state, p_index);
         const double previous = values[index];
         values[index] += (value - old);
         changes.emplace_back(index, previous, values[index]);
@@ -898,39 +931,6 @@ ssize_t PartialReduceNode<BinaryOp>::size(const State& state) const {
 template <class BinaryOp>
 ssize_t PartialReduceNode<BinaryOp>::size_diff(const State& state) const {
     return data_ptr<PartialReduceNodeData<op>>(state)->size_diff();
-}
-
-template <class BinaryOp>
-ssize_t PartialReduceNode<BinaryOp>::_map_parent_index(const State& state,
-                                                       ssize_t parent_flat_index) const {
-    assert(this->axis_ >= 0 && this->axis_ < array_ptr_->size(state));
-    assert(parent_flat_index >= 0 && parent_flat_index < array_ptr_->size(state));
-
-    ssize_t index = 0;  // the linear index corresponding to the parent index being updated
-    ssize_t current_parent_axis = 0;  // current parent axis visited
-    ssize_t current_axis = 0;         // current axis
-
-    for (auto stride : parent_strides_c_) {
-        // calculate parent index on the current axis (not the linear one)
-        ssize_t this_axis_index = parent_flat_index / (stride / array_ptr_->itemsize());
-
-        // update the index now
-        parent_flat_index = parent_flat_index % (stride / array_ptr_->itemsize());
-
-        if (current_parent_axis == this->axis_) {
-            current_parent_axis++;
-            continue;
-        }
-
-        // now do the calculation of the linear index of reduction
-        index += this_axis_index * (this->strides()[current_axis] / this->itemsize());
-
-        // increase the axis visited
-        current_axis++;
-        current_parent_axis++;
-    }
-
-    return index;
 }
 
 // Uncommented are the tested specializations

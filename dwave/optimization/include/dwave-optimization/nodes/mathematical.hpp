@@ -203,9 +203,6 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
  private:
     using op = BinaryOp;
 
-    // Calculate the output value based on the state of the predecessor
-    double reduce(const State& state, ssize_t index) const;
-
     // There are redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
     Array* const array_ptr_;
@@ -213,11 +210,15 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
     // The axis along which to do the
     const ssize_t axis_;
 
+    /// Map the parent index to the affected array index (linear)
+    ssize_t map_parent_index(const State& state, ssize_t parent_flat_index) const;
+
     /// Convert linear index to indices for each dimension
     std::vector<ssize_t> parent_strides_c_;
 
-    /// Map the parent index to the affected array index (linear)
-    ssize_t _map_parent_index(const State& state, ssize_t parent_flat_index) const;
+    // Calculate the output value based on the state of the predecessor
+    double reduce(const State& state, ssize_t index) const;
+
 };
 
 using PartialSumNode = PartialReduceNode<std::plus<double>>;
