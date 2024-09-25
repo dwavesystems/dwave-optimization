@@ -358,6 +358,92 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
     }
 }
 
+TEST_CASE("BinaryOpNode - MultiplyNode") {
+    auto graph = Graph();
+
+    GIVEN("x = IntegerNode(-5, 5), a = 3, y = x * a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(3);
+
+        auto y_ptr = graph.emplace_node<MultiplyNode>(x_ptr, a_ptr);
+
+        THEN("y's max/min/integral are as expected") {
+            CHECK(y_ptr->max() == 15);
+            CHECK(y_ptr->min() == -15);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(-5, 5), a = -3, y = x * a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(-3);
+
+        auto y_ptr = graph.emplace_node<MultiplyNode>(x_ptr, a_ptr);
+
+        THEN("y's max/min/integral are as expected") {
+            CHECK(y_ptr->max() == 15);
+            CHECK(y_ptr->min() == -15);
+            CHECK(y_ptr->integral());
+        }
+    }
+}
+
+TEST_CASE("BinaryOpNode - SubtractNode") {
+    auto graph = Graph();
+
+    GIVEN("x = IntegerNode(-5, 5), a = 3, y = x - a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(3);
+
+        auto y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
+
+        THEN("y's max/min/integral are as expected") {
+            CHECK(y_ptr->max() == 2);
+            CHECK(y_ptr->min() == -8);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(-5, 5), a = -3, y = x - a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(-3);
+
+        auto y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
+
+        THEN("y's max/min/integral are as expected") {
+            CHECK(y_ptr->max() == 8);
+            CHECK(y_ptr->min() == -2);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(-5, 5), a = 3.5, y = x - a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(3.5);
+
+        auto y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
+
+        THEN("y's max/min/integral are as expected") {
+            CHECK(y_ptr->max() == 1.5);
+            CHECK(y_ptr->min() == -8.5);
+            CHECK(!y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(-5, 5), y = IntegerNode(-3, 4), z = x - y") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto y_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -3, 4);
+
+        auto z_ptr = graph.emplace_node<SubtractNode>(x_ptr, y_ptr);
+
+        THEN("z's max/min/integral are as expected") {
+            CHECK(z_ptr->max() == 8);
+            CHECK(z_ptr->min() == -9);
+            CHECK(z_ptr->integral());
+        }
+    }
+}
+
 TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<double>,
                    std::plus<double>, std::multiplies<double>) {
     auto graph = Graph();
@@ -504,6 +590,56 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
                     CHECK(p_ptr->view(state)[0] == func(5, func(6, func(7, 8))));
                 }
             }
+        }
+    }
+}
+
+TEST_CASE("NaryOpNode - ProdNode") {
+    auto graph = Graph();
+
+    GIVEN("a = Integer(-5, 5), b = IntegerNode(2, 4), c = IntegerNode(-7, -3), x = a * b * c") {
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 2, 4);
+        auto c_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -7, -3);
+
+        auto x_ptr = graph.emplace_node<NaryMultiplyNode>(a_ptr, b_ptr, c_ptr);
+
+        THEN("x's max/min/integral are as expected") {
+            CHECK(x_ptr->max() == 140);
+            CHECK(x_ptr->min() == -140);
+            CHECK(x_ptr->integral());
+        }
+    }
+}
+
+TEST_CASE("NaryOpNode - SumNode") {
+    auto graph = Graph();
+
+    GIVEN("a = Integer(-5, 5), b = IntegerNode(2, 4), c = IntegerNode(-7, -3), x = a + b + c") {
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 2, 4);
+        auto c_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -7, -3);
+
+        auto x_ptr = graph.emplace_node<NaryAddNode>(a_ptr, b_ptr, c_ptr);
+
+        THEN("x's max/min/integral are as expected") {
+            CHECK(x_ptr->max() == 5 + 4 - 3);
+            CHECK(x_ptr->min() == -5 + 2 + -7);
+            CHECK(x_ptr->integral());
+        }
+    }
+
+    GIVEN("a = Integer(-5, 5), b = IntegerNode(2, 4), c = .5, x = a + b + c") {
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 2, 4);
+        auto c_ptr = graph.emplace_node<ConstantNode>(.5);
+
+        auto x_ptr = graph.emplace_node<NaryAddNode>(a_ptr, b_ptr, c_ptr);
+
+        THEN("x's max/min/integral are as expected") {
+            CHECK(x_ptr->max() == 5 + 4 + .5);
+            CHECK(x_ptr->min() == -5 + 2 + .5);
+            CHECK(!x_ptr->integral());
         }
     }
 }
@@ -795,8 +931,82 @@ TEST_CASE("ReduceNode - MaxNode/MinNode") {
     }
 }
 
+TEST_CASE("ReduceNode - MaxNode") {
+    auto graph = Graph();
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.max()") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<MaxNode>(x_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5);
+            CHECK(y_ptr->max() == 2);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.max(init=-.5)") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<MaxNode>(x_ptr, -.5);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -.5);
+            CHECK(y_ptr->max() == 2);
+            CHECK(!y_ptr->integral());
+        }
+    }
+}
+
+TEST_CASE("ReduceNode - MinNode") {
+    auto graph = Graph();
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.min()") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<MinNode>(x_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5);
+            CHECK(y_ptr->max() == 2);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.min(init=-.5)") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<MinNode>(x_ptr, -.5);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5);
+            CHECK(y_ptr->max() == -.5);
+            CHECK(!y_ptr->integral());
+        }
+    }
+}
+
 TEST_CASE("ReduceNode - ProdNode") {
     auto graph = Graph();
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.prod()") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<ProdNode>(x_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5 * -5 * -5);
+            CHECK(y_ptr->max() == -5 * -5 * 2);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.prod(init=-.5)") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<ProdNode>(x_ptr, -.5);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5 * -5 * 2 * -.5);
+            CHECK(y_ptr->max() == -5 * -5 * -5 * -.5);
+            CHECK(!y_ptr->integral());
+        }
+    }
 
     GIVEN("Given a list node with a prod over it") {
         auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
@@ -943,6 +1153,28 @@ TEST_CASE("ReduceNode - ProdNode") {
 
 TEST_CASE("ReduceNode - SumNode") {
     auto graph = Graph();
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.sum()") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<SumNode>(x_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5 + -5 + -5);
+            CHECK(y_ptr->max() == 2 + 2 + 2);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.sum(init=-.5)") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<SumNode>(x_ptr, -.5);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5 + -5 + -5 + -.5);
+            CHECK(y_ptr->max() == 2 + 2 + 2 + -.5);
+            CHECK(!y_ptr->integral());
+        }
+    }
 
     GIVEN("A set reduced") {
         auto a_ptr = graph.emplace_node<SetNode>(4);

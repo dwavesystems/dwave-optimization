@@ -31,6 +31,12 @@ TEST_CASE("ConstantNode") {
             CHECK(std::ranges::equal(ptr->shape(), std::vector{0}));
             CHECK(std::ranges::equal(ptr->strides(), std::vector{sizeof(double)}));
         }
+
+        THEN("min/max/integral are all well-defined") {
+            CHECK(ptr->integral());
+            CHECK(ptr->max() == 0);
+            CHECK(ptr->min() == 0);
+        }
     }
 
     GIVEN("A constant node copied from a vector") {
@@ -43,6 +49,12 @@ TEST_CASE("ConstantNode") {
             CHECK(std::ranges::equal(ptr->data(), values));
             CHECK(std::ranges::equal(ptr->shape(), std::vector{4}));
             CHECK(std::ranges::equal(ptr->strides(), std::vector{sizeof(double)}));
+        }
+
+        THEN("min/max/integral all match the vector") {
+            CHECK(ptr->integral());
+            CHECK(ptr->max() == 40);
+            CHECK(ptr->min() == 10);
         }
 
         WHEN("We mutate the original vector") {
@@ -85,6 +97,12 @@ TEST_CASE("ConstantNode") {
             CHECK(std::ranges::equal(ptr->data(), std::vector{6.5}));
             CHECK(std::ranges::equal(ptr->shape(), std::vector<int>{}));
             CHECK(std::ranges::equal(ptr->strides(), std::vector<int>{}));
+        }
+
+        THEN("min/max/integral all match the value") {
+            CHECK(!ptr->integral());
+            CHECK(ptr->max() == 6.5);
+            CHECK(ptr->min() == 6.5);
         }
     }
 

@@ -14,6 +14,11 @@
 
 #include "dwave-optimization/nodes/testing.hpp"
 
+#include <iostream>
+#include <ranges>
+
+#include "dwave-optimization/utils.hpp"
+
 namespace dwave::optimization {
 
 class ArrayValidationNodeData : public dwave::optimization::NodeStateData {
@@ -63,6 +68,13 @@ void ArrayValidationNode::initialize_state(State& state) const {
     assert(array_ptr->size(state) == std::reduce(array_ptr->shape(state).begin(),
                                                  array_ptr->shape(state).end(), 1,
                                                  std::multiplies<ssize_t>()));
+
+    // check that all values are within min/max
+    if (array_ptr->size(state)) {
+        assert(std::ranges::min(array_ptr->view(state)) >= array_ptr->min());
+        assert(std::ranges::max(array_ptr->view(state)) <= array_ptr->max());
+        assert(!array_ptr->integral() || std::ranges::all_of(array_ptr->view(state), is_integer));
+    }
 }
 
 void ArrayValidationNode::propagate(State& state) const {
@@ -163,6 +175,13 @@ void ArrayValidationNode::propagate(State& state) const {
     check_shape(array_ptr->shape(state), array_ptr->shape(), node_data->current_data.size());
 
     current_data = expected;
+
+    // check that all values are within min/max
+    if (array_ptr->size(state)) {
+        assert(std::ranges::min(array_ptr->view(state)) >= array_ptr->min());
+        assert(std::ranges::max(array_ptr->view(state)) <= array_ptr->max());
+        assert(!array_ptr->integral() || std::ranges::all_of(array_ptr->view(state), is_integer));
+    }
 }
 
 void ArrayValidationNode::revert(State& state) const {
@@ -177,7 +196,7 @@ void ArrayValidationNode::revert(State& state) const {
 
 class DynamicArrayTestingNodeData : public dwave::optimization::NodeStateData {
  public:
-    DynamicArrayTestingNodeData() {}
+    DynamicArrayTestingNodeData() = default;
 
     explicit DynamicArrayTestingNodeData(const std::span<const ssize_t> shape)
             : current_shape(shape.begin(), shape.end()), old_shape(shape.begin(), shape.end()) {
@@ -239,7 +258,24 @@ class DynamicArrayTestingNodeData : public dwave::optimization::NodeStateData {
 };
 
 DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape)
-        : ArrayOutputMixin(shape), shape_(shape) {
+        : DynamicArrayTestingNode(shape, std::nullopt, std::nullopt, false) {}
+
+DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape,
+                                                 std::optional<double> min,
+                                                 std::optional<double> max, bool integral)
+        : DynamicArrayTestingNode(shape, min, max, integral, std::nullopt, std::nullopt) {}
+
+DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape,
+                                                 std::optional<double> min,
+                                                 std::optional<double> max, bool integral,
+                                                 std::optional<ssize_t> min_size,
+                                                 std::optional<ssize_t> max_size)
+        : ArrayOutputMixin(shape),
+          shape_(shape),
+          min_(min),
+          max_(max),
+          integral_(integral),
+          sizeinfo_(SizeInfo(this, min_size, max_size)) {
     if (shape.size() == 0 || *shape.begin() != -1) {
         throw std::invalid_argument(
                 "DynamicArrayTestingNode is meant to be used as a dynamic array");
@@ -287,6 +323,14 @@ ssize_t DynamicArrayTestingNode::size_diff(const State& state) const {
 
     return node_data->current_data.size() - node_data->old_data.size();
 }
+
+double DynamicArrayTestingNode::max() const { return max_.value_or(Array::max()); }
+
+double DynamicArrayTestingNode::min() const { return min_.value_or(Array::min()); }
+
+bool DynamicArrayTestingNode::integral() const { return integral_; }
+
+SizeInfo DynamicArrayTestingNode::sizeinfo() const { return sizeinfo_.value_or(SizeInfo(this)); }
 
 void DynamicArrayTestingNode::commit(State& state) const {
     data_ptr<DynamicArrayTestingNodeData>(state)->commit();

@@ -1,0 +1,6 @@
+---
+features:
+  - Add ``Array::integral()``, ``Array::max()``, and ``Array::min()`` overloads for all existing C++ nodes.
+  - Add C++ ``is_integer()`` function.
+fixes:
+  - Update ``AdvancedIndexingNode`` to check the indices of its indexing arrays to prevent out-of-bounds access.
