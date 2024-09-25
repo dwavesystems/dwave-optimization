@@ -891,7 +891,7 @@ double PartialReduceNode<BinaryOp>::reduce(const State& state, ssize_t index) co
         ++begin;
     }
 
-    /// 3. Iterate through the parent on the correct axis.
+    /// 4. Iterate through the parent on the correct axis.
     return std::reduce(begin, end, init, BinaryOp());
 }
 
