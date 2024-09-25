@@ -96,8 +96,7 @@ TEST_CASE("ArrayIterator") {
         }
 
         WHEN("We create a mask over the array and create a masked iterator") {
-            auto mask =
-                    std::vector<double>{true, false, false, true, false, false, false, true, false};
+            auto mask = std::vector<double>{true, false, false, true, false, false, false, true, false};
 
             auto it = ArrayIterator(values.data(), mask.data(), 6);
 

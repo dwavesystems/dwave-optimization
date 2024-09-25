@@ -1023,7 +1023,8 @@ template <>
 ReduceNode<std::plus<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 0) {}
 
 template <class BinaryOp>
-ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr) : init(), array_ptr_(array_ptr) {
+ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr)
+        : init(), array_ptr_(array_ptr) {
     if (array_ptr_->dynamic()) {
         throw std::invalid_argument(
                 "cannot do a reduction on a dynamic array with an operation that has no identity "
