@@ -254,7 +254,8 @@ cdef class Model:
         Returns:
             Feasibility of the state.
         """
-        cdef int num_states = self.state_size()
+        cdef Py_ssize_t num_states = self.states.size()
+
         if not -num_states <= index < num_states:
             raise ValueError(f"index out of range: {index}")
         elif index < 0:  # allow negative indexing
