@@ -167,24 +167,16 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
     // Others will raise an error for non-dynamic arrays.
     explicit PartialReduceNode(ArrayNode* node_ptr, ssize_t axis);
 
+    ssize_t axis() const { return axis_; }
     double const* buff(const State& state) const override;
+
+    void commit(State& state) const override;
     std::span<const Update> diff(const State& state) const override;
+    void initialize_state(State& state) const override;
+
     bool integral() const override;
     double max() const override;
     double min() const override;
-
-    using ArrayOutputMixin::shape;
-    std::span<const ssize_t> shape(const State& state) const override;
-
-    using ArrayOutputMixin::size;
-    ssize_t size(const State& state) const override;
-
-    ssize_t size_diff(const State& state) const override;
-
-    void commit(State& state) const override;
-    void revert(State& state) const override;
-    void initialize_state(State& state) const override;
-    void propagate(State& state) const override;
 
     // The predecessor of the reduction, as an Array*.
     std::span<Array* const> operands() {
@@ -196,9 +188,17 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
         return std::span<const Array* const, 1>(&array_ptr_, 1);
     }
 
-    const std::optional<double> init;
+    void propagate(State& state) const override;
+    void revert(State& state) const override;
 
-    ssize_t axis() const { return axis_; }
+    using ArrayOutputMixin::shape;
+    std::span<const ssize_t> shape(const State& state) const override;
+
+    using ArrayOutputMixin::size;
+    ssize_t size(const State& state) const override;
+    ssize_t size_diff(const State& state) const override;
+
+    const std::optional<double> init;
 
  private:
     using op = BinaryOp;

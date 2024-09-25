@@ -737,13 +737,13 @@ PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, ssize_t axi
 }
 
 template <class BinaryOp>
-void PartialReduceNode<BinaryOp>::commit(State& state) const {
-    data_ptr<PartialReduceNodeData<op>>(state)->commit();
+double const* PartialReduceNode<BinaryOp>::buff(const State& state) const {
+    return data_ptr<PartialReduceNodeData<op>>(state)->buff();
 }
 
 template <class BinaryOp>
-double const* PartialReduceNode<BinaryOp>::buff(const State& state) const {
-    return data_ptr<PartialReduceNodeData<op>>(state)->buff();
+void PartialReduceNode<BinaryOp>::commit(State& state) const {
+    data_ptr<PartialReduceNodeData<op>>(state)->commit();
 }
 
 template <class BinaryOp>
