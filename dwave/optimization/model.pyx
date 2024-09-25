@@ -102,20 +102,20 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant(5)
-            >>> model.add_constraint(i <= c)
+            >>> constraint_sym = model.add_constraint(i <= c)
 
             The returned constraint symbol can be assigned and evaluated
                 for a model state:
 
-            >>> constraint_sym = model.add_constraint(i <= c)
-            >>> model.lock()
-            >>> model.states.resize(1)
-            >>> i.set_state(0, 1) # Feasible state
-            >>> print(constraint_sym.state(0))
-            1.0 # Constraint is satisfied
-            >>> i.set_state(0, 6) # Infeasible state
-            >>> print(constraint_sym.state(0))
-            0.0 # Constraint is not satisfied
+            >>> with model.lock():
+            ...     model.states.resize(1)
+            ...     i.set_state(0, 1) # Feasible state
+            ...     print(constraint_sym.state(0))
+            1.0
+            >>> with model.lock():
+            ...     i.set_state(0, 6) # Infeasible state
+            ...     print(constraint_sym.state(0))
+            0.0
         """
         if value is None:
             raise ValueError("value cannot be None")
@@ -539,7 +539,7 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant(5)
-            >>> model.add_constraint(i <= c)
+            >>> _ = model.add_constraint(i <= c)
             >>> constraints = next(model.iter_constraints())
         """
         for i in range(self._graph.num_constraints()):
@@ -555,7 +555,7 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant(5)
-            >>> model.add_constraint(i <= c)
+            >>> _ = model.add_constraint(i <= c)
             >>> decisions = next(model.iter_decisions())
         """
         cdef Py_ssize_t num_decisions = self.num_decisions()
@@ -693,8 +693,8 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant([5, -14])
-            >>> model.add_constraint(i <= c[0])
-            >>> model.add_constraint(c[1] <= i)
+            >>> _ = model.add_constraint(i <= c[0])
+            >>> _ = model.add_constraint(c[1] <= i)
             >>> model.num_constraints()
             2
         """
@@ -978,7 +978,7 @@ cdef class States:
         >>> # Add the decision variable
         >>> items = model.set(4)
         >>> # add the capacity constraint
-        >>> model.add_constraint(weights[items].sum() <= capacity)
+        >>> _ = model.add_constraint(weights[items].sum() <= capacity)
         >>> # Set the objective
         >>> model.minimize(values[items].sum())
 

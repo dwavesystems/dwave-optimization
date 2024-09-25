@@ -363,7 +363,7 @@ The two tabs below provide the two formulations.
         capacity.
 
         >>> total_weight = items * weight 
-        >>> model.add_constraint(total_weight.sum() <= capacity)
+        >>> _ = model.add_constraint(total_weight.sum() <= capacity)
 
         Add the objective (transport as much valuable merchandise as possible):
 
@@ -407,7 +407,7 @@ The two tabs below provide the two formulations.
         Add the constraint on the total weight:
 
         >>> total_weight = item0*weight0 + item1*weight1 + item2*weight2 + item3*weight3
-        >>> model.add_constraint(total_weight <= capacity)
+        >>> _ = model.add_constraint(total_weight <= capacity)
 
         Add the objective to maximize the transported value:
 
@@ -551,10 +551,10 @@ The two tabs below provide the two formulations.
         visits one destination.
 
         >>> for i in range(distances.shape()[0]):
-        ...     model.add_constraint(itinerary_loc[i, :].sum() <= one)
-        ...     model.add_constraint(one <= itinerary_loc[i,:].sum())
-        ...     model.add_constraint(itinerary_loc[:, i].sum() <= one)
-        ...     model.add_constraint(one <= itinerary_loc[:, i].sum())
+        ...     _ = model.add_constraint(itinerary_loc[i, :].sum() <= one)
+        ...     _ = model.add_constraint(one <= itinerary_loc[i,:].sum())
+        ...     _ = model.add_constraint(itinerary_loc[:, i].sum() <= one)
+        ...     _ = model.add_constraint(one <= itinerary_loc[:, i].sum())
 
         You can see the objective cost for the least costly route 
         as follows:
