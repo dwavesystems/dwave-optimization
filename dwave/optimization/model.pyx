@@ -2089,10 +2089,10 @@ cdef class ArraySymbol(Symbol):
 
         if axis is not None:
             if not isinstance(axis, numbers.Integral):
-                raise ValueError("axis of the sum should be an int")
+                raise TypeError("axis of the sum should be an int")
 
             if not (0 <= axis < self.ndim()):
-                raise TypeError("axis of the sum should be an int")
+                raise ValueError("axis should be 0 <= axis < self.ndim()")
 
             return PartialSum(self, axis)
 
