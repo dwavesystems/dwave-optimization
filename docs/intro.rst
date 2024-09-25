@@ -347,8 +347,8 @@ The two tabs below provide the two formulations.
 
         The model in this tab is formulated using compact matrix operations. 
 
-	Instantiate a nonlinear model and add the constant symbols. 
-	
+        Instantiate a nonlinear model and add the constant symbols. 
+
         >>> model = Model()
         >>> weight = model.constant([30, 10, 40, 20])
         >>> value = model.constant([10, 20, 30, 40])
@@ -439,7 +439,7 @@ routes.
 .. figure:: _images/best_worst_routes.png
     :name: bestWorstRoutes
     :alt: Plot of two routes between four points, the green one, (3, 2, 1, 0) is 
-    	the least costly while the red one, (2, 1, 3, 0), is the most costly.  
+          the least costly while the red one, (2, 1, 3, 0), is the most costly.  
     :align: center
     :scale: 80%
 
@@ -489,25 +489,25 @@ The two tabs below provide the two formulations.
         The model in this tab is formulated using the implicitly 
         constrained :class:`~dwave.optimization.symbols.List` symbol. 
  
- 	>>> model = Model()
- 	>>> # Add the constants
-	>>> cost = model.constant(cost_per_day)
-	>>> distances = model.constant(distance_matrix)
-	>>> # Add the decision symbol
-	>>> route = model.list(4)
-	>>> # Optimize the objective
-	>>> model.minimize((cost * distances[route[:-1],route[1:]]).sum())
-	
-	You can see the objective values for the least and most costly routes 
-	as permutations of the :math:`[0, 1, 2, 3]` list as follows:
-	
-	>>> with model.lock():
-	...     model.states.resize(2)
-	...     route.set_state(0, [3, 2, 1, 0])
-	...     route.set_state(1, [2, 1, 3, 0])
-	...     print(int(model.objective.state(0)), int(model.objective.state(1)))
-	14 36
-	
+        >>> model = Model()
+        >>> # Add the constants
+        >>> cost = model.constant(cost_per_day)
+        >>> distances = model.constant(distance_matrix)
+        >>> # Add the decision symbol
+        >>> route = model.list(4)
+        >>> # Optimize the objective
+        >>> model.minimize((cost * distances[route[:-1],route[1:]]).sum())
+
+        You can see the objective values for the least and most costly routes 
+        as permutations of the :math:`[0, 1, 2, 3]` list as follows:
+
+        >>> with model.lock():
+        ...     model.states.resize(2)
+        ...     route.set_state(0, [3, 2, 1, 0])
+        ...     route.set_state(1, [2, 1, 3, 0])
+        ...     print(int(model.objective.state(0)), int(model.objective.state(1)))
+        14 36
+
     .. tab-item:: Explicit Constraints  
 
         The model in this tab is formulated using explicit constraints on the
@@ -517,56 +517,57 @@ The two tabs below provide the two formulations.
         ...
         >>> model = Model()
         >>> # Add the problem constants
-	>>> cost = model.constant(cost_per_day)
-	>>> distances = model.constant(distance_matrix)
-	
-	Define constants that are used to formulate the explicit constraints.
-	
-	>>> one = model.constant(1)
-	>>> indx_int = model.constant([0, 1, 2, 3])
-	
-	Add the decision symbol: for each of the itinerary's four legs, each 
-	of the four destinations is represented by a binary variable. If leg 
-	1 should be to destination 2, for example, the value of row 1 is
-	:math:`False, False, True, False`. This is a representation known as 
-	`one-hot encoding <https://en.wikipedia.org/wiki/One-hot>`_. 
-	
-	>>> itinerary_loc = model.binary((4, 4))
-	
-	Add the objective. Here, the :code:`indx_int` constant converts 
-	the binary one-hot variables to an index of the distance matrix. 
+        >>> cost = model.constant(cost_per_day)
+        >>> distances = model.constant(distance_matrix)
 
-	>>> model.minimize(add(*(
-        ... (itinerary_loc[u, pos] * itinerary_loc[v, (pos + 1) % 4] * distances[u, v] +
-        ... itinerary_loc[v, pos] * itinerary_loc[u, (pos + 1) % 4] * distances[v, u]) *
-        ... cost[pos]
-        ... for u in range(4)
-        ... for v in range(u+1, 4)
-        ... for pos in range(3))))
-	
-	Add explicit one-hot constraints: summing the columns of the 
-	decision variable must give ones because each destination is
-	visited once; summing rows must give ones because each leg
-	visits one destination.
-	
-	>>> for i in range(distances.shape()[0]):
-	...     model.add_constraint(itinerary_loc[i, :].sum() <= one)
-	...     model.add_constraint(one <= itinerary_loc[i,:].sum())
-	...     model.add_constraint(itinerary_loc[:, i].sum() <= one)
-	...     model.add_constraint(one <= itinerary_loc[:, i].sum())
-	
-	You can see the objective cost for the least costly route 
-	as follows:
-	
-	>>> with model.lock():
-	...     model.states.resize(2)
-	...     itinerary_loc.set_state(0, [ 
+        Define constants that are used to formulate the explicit constraints.
+
+        >>> one = model.constant(1)
+        >>> indx_int = model.constant([0, 1, 2, 3])
+
+        Add the decision symbol: for each of the itinerary's four legs, each 
+        of the four destinations is represented by a binary variable. If leg 
+        1 should be to destination 2, for example, the value of row 1 is
+        :math:`False, False, True, False`. This is a representation known as 
+        `one-hot encoding <https://en.wikipedia.org/wiki/One-hot>`_. 
+
+        >>> itinerary_loc = model.binary((4, 4))
+
+        Add the objective. Here, the :code:`indx_int` constant converts 
+        the binary one-hot variables to an index of the distance matrix. 
+
+        >>> model.minimize(add(*(
+        ...     (itinerary_loc[u, pos] * itinerary_loc[v, (pos + 1) % 4] * distances[u, v] +
+        ...     itinerary_loc[v, pos] * itinerary_loc[u, (pos + 1) % 4] * distances[v, u]) *
+        ...     cost[pos]
+        ...     for u in range(4)
+        ...     for v in range(u+1, 4)
+        ...     for pos in range(3)
+        ... )))
+
+        Add explicit one-hot constraints: summing the columns of the 
+        decision variable must give ones because each destination is
+        visited once; summing rows must give ones because each leg
+        visits one destination.
+
+        >>> for i in range(distances.shape()[0]):
+        ...     model.add_constraint(itinerary_loc[i, :].sum() <= one)
+        ...     model.add_constraint(one <= itinerary_loc[i,:].sum())
+        ...     model.add_constraint(itinerary_loc[:, i].sum() <= one)
+        ...     model.add_constraint(one <= itinerary_loc[:, i].sum())
+
+        You can see the objective cost for the least costly route 
+        as follows:
+
+        >>> with model.lock():
+        ...     model.states.resize(2)
+        ...     itinerary_loc.set_state(0, [ 
         ...         [0, 0, 0, 1], 
         ...         [0, 0, 1, 0], 
         ...         [0, 1, 0, 0],
         ...         [1, 0, 0, 0]])
-	...     print(int(model.objective.state(0)))
-	14
+        ...     print(int(model.objective.state(0)))
+        14
 
 The directed acyclic graph for the implicitly constrained model has few nodes 
 and the model is more efficient.
