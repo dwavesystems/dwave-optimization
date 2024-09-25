@@ -841,15 +841,16 @@ void PartialReduceNode<std::plus<double>>::propagate(State& state) const {
     if (ptr->updates.size()) Node::propagate(state);
 }
 
-template <>
-double PartialReduceNode<std::plus<double>>::reduce(const State& state, ssize_t index) const {
+template <class BinaryOp>
+double PartialReduceNode<BinaryOp>::reduce(const State& state, ssize_t index) const {
     /// We wish to fill `index` of the partial reduction, given the state of the parent. We proceed
     /// as follows.
     /// 1. We unravel the index. This will give us e.g. the indices i, k for
     ///     R_ik = sum_j P_ijk
     /// 2. Then we know we have to iterate through the parent starting from j=0 to its full
     /// dimension. To do so, we first find the starting index in the parent.
-    /// 3. We then iterate through the parent using the strides over the axis we are reducing.
+    /// 3. We then create an iterator through the parent array along the axis.
+    /// 4. We use the above iterators to perform the reduction.
     assert(index >= 0 && index < this->size(state));
 
     // 1. Unravel the index we are trying to fill
@@ -860,15 +861,22 @@ double PartialReduceNode<std::plus<double>>::reduce(const State& state, ssize_t 
     ssize_t start_idx = 0;
     for (ssize_t ax = 0; ax < this->ndim(); ++ax) {
         if (ax >= this->axis_) {
-            start_idx += indices[ax] * parent_strides_c_[ax + 1] / array_ptr_->itemsize();
+            start_idx += indices[ax] * array_ptr_->strides()[ax + 1] / array_ptr_->itemsize();
         } else {
-            start_idx += indices[ax] * parent_strides_c_[ax] / array_ptr_->itemsize();
+            start_idx += indices[ax] * array_ptr_->strides()[ax] / array_ptr_->itemsize();
         }
     }
+    assert(start_idx >= 0 && index < this->size(state));
 
-    ssize_t begin = 0;
+    // 3. We create an iterator that starts from index just found and iterates through the axis we
+    // are reducing over
+    ArrayIterator begin =
+            ArrayIterator(array_ptr_->buff(state) + start_idx, 1, &array_ptr_->shape()[this->axis_],
+                          &array_ptr_->strides()[this->axis_]);
 
-    // get the initial value
+    ArrayIterator end = begin + array_ptr_->shape(state)[this->axis_];
+
+    // Get the initial value
     double init;
     if (this->init.has_value()) {
         init = this->init.value();
@@ -878,22 +886,13 @@ double PartialReduceNode<std::plus<double>>::reduce(const State& state, ssize_t 
         // least one entry
         assert(!array_ptr_->dynamic());
         assert(array_ptr_->size(state) >= 1);
-        init = array_ptr_->view(state)[start_idx + begin];
+        init = *begin;
+        ;
         ++begin;
     }
 
     /// 3. Iterate through the parent on the correct axis.
-    double val = init;
-    auto func = op();
-    for (ssize_t i = begin; i < array_ptr_->shape()[this->axis_]; ++i) {
-        ssize_t p_index =
-                start_idx + i * this->parent_strides_c_[this->axis_] / array_ptr_->itemsize();
-        assert(p_index < static_cast<ssize_t>(array_ptr_->size(state)));
-        double other = array_ptr_->view(state)[p_index];
-        val = func(val, other);
-    }
-
-    return val;
+    return std::reduce(begin, end, init, BinaryOp());
 }
 
 template <class BinaryOp>
