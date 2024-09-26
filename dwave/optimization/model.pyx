@@ -245,6 +245,23 @@ cdef class Model:
         lists = [DisjointList(main, i) for i in range(num_disjoint_lists)]
         return main, lists
 
+    def feasible(self, int index = 0):
+        """Check the feasibility of the state at the input index.
+
+        Args:
+            index: index of the state to check for feasibility.
+
+        Returns:
+            Feasibility of the state.
+        """
+        cdef int num_states = self.state_size()
+        if not -num_states <= index < num_states:
+            raise ValueError(f"index out of range: {index}")
+        elif index < 0:  # allow negative indexing
+            index += num_states
+
+        return self._graph.feasible(self.states._states[index])
+
     @classmethod
     def from_file(cls, file, *,
                   check_header = True,
