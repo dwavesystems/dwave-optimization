@@ -179,23 +179,27 @@ class TestModel(unittest.TestCase):
                                     "more than one element is ambiguous"):
             model.add_constraint(x)
 
-        model.add_constraint(x.all())
+        c_direct = model.add_constraint(x.all())
 
         model.states.resize(1)
         model.lock()
 
-        c, = model.iter_constraints()
+        c_iter, = model.iter_constraints()
 
-        self.assertEqual(x.state(0).all(), c.state(0))
-
-        x.set_state(0, [0, 0, 0, 0, 0])
-        self.assertEqual(x.state(0).all(), c.state(0))
+        self.assertEqual(x.state(0).all(), c_iter.state(0))
+        self.assertEqual(x.state(0).all(), c_direct.state(0))
 
         x.set_state(0, [0, 0, 0, 0, 0])
-        self.assertFalse(c.state(0))
+        self.assertEqual(x.state(0).all(), c_iter.state(0))
+        self.assertEqual(x.state(0).all(), c_direct.state(0))
+
+        x.set_state(0, [0, 0, 0, 0, 0])
+        self.assertFalse(c_iter.state(0))
+        self.assertFalse(c_direct.state(0))
 
         x.set_state(0, [1, 1, 1, 1, 1])
-        self.assertTrue(c.state(0))
+        self.assertTrue(c_iter.state(0))
+        self.assertTrue(c_direct.state(0))
 
     def test_lock(self):
         model = Model()

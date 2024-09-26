@@ -92,6 +92,9 @@ cdef class Model:
             value: Value that must evaluate to True for the state
                 of the model to be feasible.
 
+        Returns:
+            The constraint symbol.
+
         Examples:
             This example adds a single constraint to a model.
 
@@ -99,12 +102,26 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant(5)
-            >>> model.add_constraint(i <= c)
+            >>> constraint_sym = model.add_constraint(i <= c)
+
+            The returned constraint symbol can be assigned and evaluated
+            for a model state:
+
+            >>> with model.lock():
+            ...     model.states.resize(1)
+            ...     i.set_state(0, 1) # Feasible state
+            ...     print(constraint_sym.state(0))
+            1.0
+            >>> with model.lock():
+            ...     i.set_state(0, 6) # Infeasible state
+            ...     print(constraint_sym.state(0))
+            0.0
         """
         if value is None:
             raise ValueError("value cannot be None")
         # TODO: shall we accept array valued constraints?
         self._graph.add_constraint(value.array_ptr)
+        return value
 
     def binary(self, shape=None):
         r"""Create a binary symbol as a decision variable.
@@ -522,7 +539,8 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant(5)
-            >>> model.add_constraint(i <= c)
+            >>> model.add_constraint(i <= c) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
             >>> constraints = next(model.iter_constraints())
         """
         for i in range(self._graph.num_constraints()):
@@ -538,7 +556,8 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant(5)
-            >>> model.add_constraint(i <= c)
+            >>> model.add_constraint(i <= c) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
             >>> decisions = next(model.iter_decisions())
         """
         cdef Py_ssize_t num_decisions = self.num_decisions()
@@ -676,8 +695,10 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant([5, -14])
-            >>> model.add_constraint(i <= c[0])
-            >>> model.add_constraint(c[1] <= i)
+            >>> model.add_constraint(i <= c[0]) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
+            >>> model.add_constraint(c[1] <= i) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
             >>> model.num_constraints()
             2
         """
@@ -961,7 +982,8 @@ cdef class States:
         >>> # Add the decision variable
         >>> items = model.set(4)
         >>> # add the capacity constraint
-        >>> model.add_constraint(weights[items].sum() <= capacity)
+        >>> model.add_constraint(weights[items].sum() <= capacity) # doctest: +ELLIPSIS
+        <dwave.optimization.symbols.LessEqual at ...>
         >>> # Set the objective
         >>> model.minimize(values[items].sum())
 
