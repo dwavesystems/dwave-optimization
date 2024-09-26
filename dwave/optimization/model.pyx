@@ -105,7 +105,7 @@ cdef class Model:
             >>> constraint_sym = model.add_constraint(i <= c)
 
             The returned constraint symbol can be assigned and evaluated
-                for a model state:
+            for a model state:
 
             >>> with model.lock():
             ...     model.states.resize(1)
