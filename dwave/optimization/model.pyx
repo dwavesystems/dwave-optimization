@@ -539,7 +539,8 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant(5)
-            >>> _ = model.add_constraint(i <= c)
+            >>> model.add_constraint(i <= c) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
             >>> constraints = next(model.iter_constraints())
         """
         for i in range(self._graph.num_constraints()):
@@ -555,7 +556,8 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant(5)
-            >>> _ = model.add_constraint(i <= c)
+            >>> model.add_constraint(i <= c) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
             >>> decisions = next(model.iter_decisions())
         """
         cdef Py_ssize_t num_decisions = self.num_decisions()
@@ -693,8 +695,10 @@ cdef class Model:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant([5, -14])
-            >>> _ = model.add_constraint(i <= c[0])
-            >>> _ = model.add_constraint(c[1] <= i)
+            >>> model.add_constraint(i <= c[0]) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
+            >>> model.add_constraint(c[1] <= i) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
             >>> model.num_constraints()
             2
         """
@@ -978,7 +982,8 @@ cdef class States:
         >>> # Add the decision variable
         >>> items = model.set(4)
         >>> # add the capacity constraint
-        >>> _ = model.add_constraint(weights[items].sum() <= capacity)
+        >>> model.add_constraint(weights[items].sum() <= capacity) # doctest: +ELLIPSIS
+        <dwave.optimization.symbols.LessEqual at ...>
         >>> # Set the objective
         >>> model.minimize(values[items].sum())
 
