@@ -527,35 +527,9 @@ TEST_CASE("Test resulting_shape()") {
         CHECK_THROWS_WITH(broadcast_shape({2, 1}, {8, 4, 3}),
                           "operands could not be broadcast together with shapes (2,1) (8,4,3)");
     }
-
-    SECTION("Reduce (2, 3, 4), axis=0") {
-        CHECK(std::ranges::equal(partial_reduce_shape({2, 3, 4}, 0), std::vector{3, 4}));
-    }
-
-    SECTION("Reduce (2, 3, 4), axis=1") {
-        CHECK(std::ranges::equal(partial_reduce_shape({2, 3, 4}, 1), std::vector{2, 4}));
-    }
-
-    SECTION("Reduce (2, 3, 4), axis=2") {
-        CHECK(std::ranges::equal(partial_reduce_shape({2, 3, 4}, 2), std::vector{2, 3}));
-    }
 }
 
 TEST_CASE("Ravelling-unravelling indices") {
-    SECTION("Shape (10, 3, 6)") {
-        auto strides = as_contiguous_strides({10, 3, 6});
-        ssize_t index = 15;
-        ssize_t last_element_flat = 10 * 3 * 6 - 1;
-        std::vector<ssize_t> last_element_multi{9, 2, 5};
-
-        CHECK(std::ranges::equal(strides, std::vector{144, 48, 8}));
-        CHECK(ravel_multi_index(strides, unravel_index(strides, index)) == index);
-        CHECK(ravel_multi_index(strides, last_element_multi) == last_element_flat);
-
-        // Check one element within the range
-        CHECK(std::ranges::equal(unravel_index(strides, ravel_multi_index(strides, {3, 1, 2})), std::vector{3, 1, 2}));
-    }
-
     SECTION("On constant array of shape (3, 4, 5)") {
         auto state = State();
         class Array3d : public ArrayOutputMixin<Array> {
@@ -579,7 +553,6 @@ TEST_CASE("Ravelling-unravelling indices") {
             std::vector<ssize_t> shape_ = {3, 4, 5};
         };
         auto arr = Array3d();
-        CHECK(std::ranges::equal(arr.strides(), as_contiguous_strides(arr.shape())));
         auto last_element_flat = arr.size() - 1;
         CHECK(ravel_multi_index(arr.strides(), {2, 3, 4}) == last_element_flat);
         CHECK(ravel_multi_index(arr.strides(), unravel_index(arr.strides(), last_element_flat)) == last_element_flat);

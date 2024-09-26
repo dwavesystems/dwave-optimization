@@ -246,35 +246,6 @@ std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
     return broadcast_shape(std::span(lhs), std::span(rhs));
 }
 
-std::vector<ssize_t> partial_reduce_shape(const std::span<const ssize_t> input_shape,
-                                          const ssize_t axis) {
-    std::vector<ssize_t> shape;
-    shape.assign(input_shape.begin(), input_shape.end());
-    shape.erase(shape.begin() + axis);
-    return shape;
-}
-std::vector<ssize_t> partial_reduce_shape(std::initializer_list<ssize_t> input_shape,
-                                          const ssize_t axis) {
-    return partial_reduce_shape(std::span(input_shape), axis);
-}
-
-std::vector<ssize_t> as_contiguous_strides(const std::span<const ssize_t> shape) {
-    ssize_t ndim = static_cast<ssize_t>(shape.size());
-
-    assert(ndim >= 0);
-    std::vector<ssize_t> strides(ndim);
-    // otherwise strides are a function of the shape
-    strides[ndim - 1] = sizeof(double);
-    for (auto i = ndim - 2; i >= 0; --i) {
-        strides[i] = strides[i + 1] * shape[i + 1];
-    }
-    return strides;
-}
-
-std::vector<ssize_t> as_contiguous_strides(std::initializer_list<ssize_t> shape) {
-    return as_contiguous_strides(std::span(shape));
-}
-
 std::vector<ssize_t> unravel_index(const std::span<const ssize_t> strides, ssize_t index) {
     ssize_t ndim = static_cast<ssize_t>(strides.size());
     std::vector<ssize_t> indices;

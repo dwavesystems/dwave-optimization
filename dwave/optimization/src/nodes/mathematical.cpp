@@ -664,6 +664,27 @@ template class NaryOpNode<std::multiplies<double>>;
 template class NaryOpNode<std::plus<double>>;
 
 // PartialReduceNode *****************************************************************
+std::vector<ssize_t> partial_reduce_shape(const std::span<const ssize_t> input_shape,
+                                          const ssize_t axis) {
+    std::vector<ssize_t> shape;
+    shape.assign(input_shape.begin(), input_shape.end());
+    shape.erase(shape.begin() + axis);
+    return shape;
+}
+
+std::vector<ssize_t> as_contiguous_strides(const std::span<const ssize_t> shape) {
+    ssize_t ndim = static_cast<ssize_t>(shape.size());
+
+    assert(ndim >= 0);
+    std::vector<ssize_t> strides(ndim);
+    // otherwise strides are a function of the shape
+    strides[ndim - 1] = sizeof(double);
+    for (auto i = ndim - 2; i >= 0; --i) {
+        strides[i] = strides[i + 1] * shape[i + 1];
+    }
+    return strides;
+}
+
 /// TODO: support multiple axes
 template <class BinaryOp>
 PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, std::span<const ssize_t> axes,
