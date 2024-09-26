@@ -643,11 +643,13 @@ std::pair<ssize_t, ssize_t> get_mapped_index(
         ssize_t axis_index = (index / item_stride) % shape[i];
         if (std::holds_alternative<ArrayNode*>(indices[i])) {
             offset += axis_index * strides[i] / itemsize;
-            // Only increment the mapped axis on the first array indexer
-            // NOTE: again this should probably increase by the array indexers ndim
-            mapped_axis += !hit_first_array;
+            // Only increase the mapped axis on the first array indexer. We just skip
+            // over all the axes due to the indexer arrays by increasing mapped_axis
+            // by their dimension.
+            mapped_axis += hit_first_array ? 0 : std::get<ArrayNode*>(indices[i])->ndim();
             hit_first_array = true;
         } else {
+            assert(mapped_axis < static_cast<ssize_t>(mapped_item_strides.size()));
             subspace_index += axis_index * mapped_item_strides[mapped_axis++] / itemsize;
         }
     }
