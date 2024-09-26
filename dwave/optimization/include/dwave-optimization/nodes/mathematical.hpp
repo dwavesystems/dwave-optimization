@@ -160,14 +160,18 @@ template <class BinaryOp>
 class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // Runtime constructor
+    PartialReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes, double init);
+    PartialReduceNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> axes, double init);
     PartialReduceNode(ArrayNode* array_ptr, ssize_t axis, double init);
 
     // Some operations have known default values so we can create them regardless of
     // whether or not the array is dynamic.
     // Others will raise an error for non-dynamic arrays.
-    explicit PartialReduceNode(ArrayNode* node_ptr, ssize_t axis);
+    explicit PartialReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes);
+    explicit PartialReduceNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> axes);
+    explicit PartialReduceNode(ArrayNode* array_ptr, ssize_t axis);
 
-    ssize_t axis() const { return axis_; }
+    std::span<const ssize_t> axes() const;
     double const* buff(const State& state) const override;
 
     void commit(State& state) const override;
@@ -208,7 +212,15 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
     Array* const array_ptr_;
 
     // The axis along which to do the
-    const ssize_t axis_;
+    std::unique_ptr<ssize_t[]> axes_ = nullptr;
+
+    template <class Range>
+    static std::unique_ptr<ssize_t[]> make_axes(Range&& axes) noexcept {
+        if (axes.size() == 0) return nullptr;
+        auto ptr = std::make_unique<ssize_t[]>(axes.size());
+        std::copy(axes.begin(), axes.end(), ptr.get());
+        return ptr;
+    }
 
     /// Map the parent index to the affected array index (linear)
     ssize_t map_parent_index(const State& state, ssize_t parent_flat_index) const;

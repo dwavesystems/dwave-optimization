@@ -2238,6 +2238,10 @@ cdef class PartialSum(ArraySymbol):
         self.ptr = model._graph.emplace_node[cppPartialSumNode](array.array_ptr, axis)
         self.initialize_arraynode(model, self.ptr)
 
+    def axes(self):
+        axes = self.ptr.axes()
+        return tuple(axes[i] for i in range(axes.size()))
+
     @staticmethod
     def _from_symbol(Symbol symbol):
         cdef cppPartialSumNode* ptr = dynamic_cast_ptr[cppPartialSumNode](symbol.node_ptr)
@@ -2253,12 +2257,12 @@ cdef class PartialSum(ArraySymbol):
         if len(predecessors) != 1:
             raise ValueError("PartialSum must have exactly one predecessor")
 
-        with zf.open(directory + "axis.json", "r") as f:
-            return PartialSum(*predecessors, json.load(f))
+        with zf.open(directory + "axes.json", "r") as f:
+            return PartialSum(*predecessors, json.load(f)[0])
 
     def _into_zipfile(self, zf, directory):
         encoder = json.JSONEncoder(separators=(',', ':'))
-        zf.writestr(directory + "axis.json", encoder.encode(self.ptr.axis()))
+        zf.writestr(directory + "axes.json", encoder.encode(self.axes()))
 
     cdef cppPartialSumNode* ptr
 

@@ -664,12 +664,14 @@ template class NaryOpNode<std::multiplies<double>>;
 template class NaryOpNode<std::plus<double>>;
 
 // PartialReduceNode *****************************************************************
+/// TODO: support multiple axes
 template <class BinaryOp>
-PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, ssize_t axis, double init)
-        : ArrayOutputMixin(partial_reduce_shape(node_ptr->shape(), axis)),
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, std::span<const ssize_t> axes,
+                                               double init)
+        : ArrayOutputMixin(partial_reduce_shape(node_ptr->shape(), axes[0])),
           init(init),
           array_ptr_(node_ptr),
-          axis_(axis),
+          axes_(make_axes(axes)),
           parent_strides_c_(as_contiguous_strides(array_ptr_->shape())) {
     if (array_ptr_->dynamic()) {
         throw std::invalid_argument("cannot do a partial reduction on a dynamic array");
@@ -677,21 +679,37 @@ PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, ssize_t axis
         throw std::invalid_argument("cannot do a partial reduction on an empty array");
     }
 
-    /// TODO: support negative axis
-    if (axis_ < 0 || axis_ >= array_ptr_->ndim()) {
-        throw std::invalid_argument("Axis should be an integer between 0 and n_dim - 1");
+    // Validate axes
+    /// TODO: support negative axes
+    assert(this->ndim() == array_ptr_->ndim() - 1);
+    ssize_t axis = axes_[0];
+    if (axis < 0 || axis >= array_ptr_->ndim()) {
+        throw std::invalid_argument("Axes should be integers between 0 and n_dim - 1");
     }
 
     add_predecessor(node_ptr);
 }
 
+template <class BinaryOp>
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr,
+                                               std::initializer_list<ssize_t> axes, double init)
+        : PartialReduceNode(node_ptr, std::span(axes), init) {}
+
+template <class BinaryOp>
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, const ssize_t axis, double init)
+        : PartialReduceNode(node_ptr, {axis}, init) {}
+
 template <>
-PartialReduceNode<std::plus<double>>::PartialReduceNode(ArrayNode* array_ptr, ssize_t axis)
+PartialReduceNode<std::plus<double>>::PartialReduceNode(ArrayNode* array_ptr, const ssize_t axis)
         : PartialReduceNode(array_ptr, axis, 0) {}
 
 template <class BinaryOp>
-PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, ssize_t axis)
-        : init(), array_ptr_(array_ptr), axis_(axis) {
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes)
+        : ArrayOutputMixin(partial_reduce_shape(array_ptr->shape(), axes[0])),
+          init(),
+          array_ptr_(array_ptr),
+          axes_(make_axes(axes)),
+          parent_strides_c_(as_contiguous_strides(array_ptr_->shape())) {
     if (array_ptr_->dynamic()) {
         throw std::invalid_argument(
                 "cannot do a reduction on a dynamic array with an operation that has no identity "
@@ -703,11 +721,28 @@ PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, ssize_t axi
     }
 
     /// TODO: support negative axis
-    if (axis_ < 0 || axis_ >= array_ptr_->ndim()) {
+    ssize_t axis = axes_[0];
+    if (axis < 0 || axis >= array_ptr_->ndim()) {
         throw std::invalid_argument("Axis should be an integer between 0 and ndim - 1");
     }
 
     add_predecessor(array_ptr);
+}
+
+template <class BinaryOp>
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr,
+                                               std::initializer_list<ssize_t> axes)
+        : PartialReduceNode(array_ptr, std::span(axes)) {}
+
+template <class BinaryOp>
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, const ssize_t axis)
+        : PartialReduceNode(array_ptr, {axis}) {}
+
+template <class BinaryOp>
+std::span<const ssize_t> PartialReduceNode<BinaryOp>::axes() const {
+
+    // TODO: support multiple axes
+    return std::span(axes_.get(), 1);
 }
 
 template <class BinaryOp>
@@ -763,7 +798,8 @@ bool PartialReduceNode<BinaryOp>::integral() const {
 template <class BinaryOp>
 ssize_t PartialReduceNode<BinaryOp>::map_parent_index(const State& state,
                                                       ssize_t parent_flat_index) const {
-    assert(this->axis_ >= 0 && this->axis_ < array_ptr_->size(state));
+    ssize_t axis = this->axes_[0];
+    assert(axis >= 0 && axis < array_ptr_->size(state));
     assert(parent_flat_index >= 0 && parent_flat_index < array_ptr_->size(state));
 
     ssize_t index = 0;  // the linear index corresponding to the parent index being updated
@@ -777,7 +813,7 @@ ssize_t PartialReduceNode<BinaryOp>::map_parent_index(const State& state,
         // update the index now
         parent_flat_index = parent_flat_index % (stride / array_ptr_->itemsize());
 
-        if (current_parent_axis == this->axis_) {
+        if (current_parent_axis == axis) {
             current_parent_axis++;
             continue;
         }
@@ -801,8 +837,9 @@ double PartialReduceNode<BinaryOp>::max() const {
         return true;
     }
 
+    ssize_t axis = axes_[0];
     if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
-        return this->init.value_or(0) + array_ptr_->shape()[this->axis_] * array_ptr_->max();
+        return this->init.value_or(0) + array_ptr_->shape()[axis] * array_ptr_->max();
     }
 
     assert(false && "not implemented yet");
@@ -816,8 +853,10 @@ double PartialReduceNode<BinaryOp>::min() const {
     if constexpr (std::is_same<result_type, bool>::value) {
         return false;
     }
+
+    ssize_t axis = axes_[0];
     if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
-        return this->init.value_or(0) + array_ptr_->shape()[this->axis_] * array_ptr_->min();
+        return this->init.value_or(0) + array_ptr_->shape()[axis] * array_ptr_->min();
     }
 
     assert(false && "not implemented yet");
@@ -858,9 +897,10 @@ double PartialReduceNode<BinaryOp>::reduce(const State& state, ssize_t index) co
     assert(static_cast<ssize_t>(indices.size()) == this->ndim());
 
     // 2. Find the respective starting index in the parent
+    ssize_t axis = axes_[0];
     ssize_t start_idx = 0;
     for (ssize_t ax = 0; ax < this->ndim(); ++ax) {
-        if (ax >= this->axis_) {
+        if (ax >= axis) {
             start_idx += indices[ax] * array_ptr_->strides()[ax + 1] / array_ptr_->itemsize();
         } else {
             start_idx += indices[ax] * array_ptr_->strides()[ax] / array_ptr_->itemsize();
@@ -871,10 +911,10 @@ double PartialReduceNode<BinaryOp>::reduce(const State& state, ssize_t index) co
     // 3. We create an iterator that starts from index just found and iterates through the axis we
     // are reducing over
     ArrayIterator begin =
-            ArrayIterator(array_ptr_->buff(state) + start_idx, 1, &array_ptr_->shape()[this->axis_],
-                          &array_ptr_->strides()[this->axis_]);
+            ArrayIterator(array_ptr_->buff(state) + start_idx, 1, &array_ptr_->shape()[axis],
+                          &array_ptr_->strides()[axis]);
 
-    ArrayIterator end = begin + array_ptr_->shape(state)[this->axis_];
+    ArrayIterator end = begin + array_ptr_->shape(state)[axis];
 
     // Get the initial value
     double init;

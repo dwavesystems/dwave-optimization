@@ -142,7 +142,7 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
         pass
 
     cdef cppclass PartialSumNode(ArrayNode):
-        Py_ssize_t axis() const
+        span[const Py_ssize_t] axes() const
 
     cdef cppclass ProdNode(ArrayNode):
         pass
