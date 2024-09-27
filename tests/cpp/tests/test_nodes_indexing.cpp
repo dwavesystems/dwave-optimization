@@ -1368,11 +1368,9 @@ TEST_CASE("AdvancedIndexingNode") {
         }
     }
 
-    GIVEN("A static-sized 4d 2x3x5x4 matrix with 3 non-constant indexing scalars") {
-        std::vector<double> values(2 * 3 * 5 * 4);
-        std::iota(values.begin(), values.end(), 0);
-        auto arr_ptr = graph.emplace_node<ConstantNode>(values,
-                                                        std::initializer_list<ssize_t>{2, 3, 5, 4});
+    GIVEN("A static-sized 4d 2x3x5x4 matrix with 3 non-constant scalar indices") {
+        auto arr_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 5, 4},
+                                                       -1000, 1000);
 
         auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 1);
         auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 2);
@@ -1388,7 +1386,11 @@ TEST_CASE("AdvancedIndexingNode") {
             }
 
             AND_WHEN("We create a state") {
+                std::vector<double> values(2 * 3 * 5 * 4);
+                std::iota(values.begin(), values.end(), 0);
+
                 auto state = graph.empty_state();
+                arr_ptr->initialize_state(state, values);
                 i_ptr->initialize_state(state, {1});
                 j_ptr->initialize_state(state, {1});
                 graph.initialize_state(state);
@@ -1418,6 +1420,26 @@ TEST_CASE("AdvancedIndexingNode") {
                         verify_array_diff(expected_initial_state, new_state, adv->diff(state));
                     }
                 }
+
+                AND_WHEN("We mutate the main array") {
+                    arr_ptr->set_value(state, 80, 80);
+                    arr_ptr->set_value(state, 81, -81);
+
+                    arr_ptr->set_value(state, 79, 79);
+                    arr_ptr->set_value(state, 78, -78);
+
+                    arr_ptr->propagate(state);
+                    adv->propagate(state);
+
+                    THEN("The state has the expected values and the diff is correct") {
+                        CHECK(adv->size(state) == 20);
+
+                        std::vector<double> new_state({80, -81, 82, 83, 84, 85, 86, 87, 88, 89,
+                                                       90, 91,  92, 93, 94, 95, 96, 97, 98, 99});
+                        CHECK(std::ranges::equal(adv->view(state), new_state));
+                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
+                    }
+                }
             }
         }
 
@@ -1431,7 +1453,11 @@ TEST_CASE("AdvancedIndexingNode") {
             }
 
             AND_WHEN("We create a state") {
+                std::vector<double> values(2 * 3 * 5 * 4);
+                std::iota(values.begin(), values.end(), 0);
+
                 auto state = graph.empty_state();
+                arr_ptr->initialize_state(state, values);
                 i_ptr->initialize_state(state, {1});
                 j_ptr->initialize_state(state, {1});
                 graph.initialize_state(state);
@@ -1458,6 +1484,25 @@ TEST_CASE("AdvancedIndexingNode") {
                         verify_array_diff(expected_initial_state, new_state, adv->diff(state));
                     }
                 }
+
+                AND_WHEN("We mutate the main array") {
+                    arr_ptr->set_value(state, 24, 24);
+                    arr_ptr->set_value(state, 25, -25);
+
+                    arr_ptr->set_value(state, 23, 23);
+                    arr_ptr->set_value(state, 22, -22);
+
+                    arr_ptr->propagate(state);
+                    adv->propagate(state);
+
+                    THEN("The state has the expected values and the diff is correct") {
+                        CHECK(adv->size(state) == 8);
+
+                        std::vector<double> new_state({24, -25, 26, 27, 84, 85, 86, 87});
+                        CHECK(std::ranges::equal(adv->view(state), new_state));
+                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
+                    }
+                }
             }
         }
 
@@ -1471,7 +1516,11 @@ TEST_CASE("AdvancedIndexingNode") {
             }
 
             AND_WHEN("We create a state") {
+                std::vector<double> values(2 * 3 * 5 * 4);
+                std::iota(values.begin(), values.end(), 0);
+
                 auto state = graph.empty_state();
+                arr_ptr->initialize_state(state, values);
                 i_ptr->initialize_state(state, {1});
                 j_ptr->initialize_state(state, {1});
                 k_ptr->initialize_state(state, {3});
@@ -1496,6 +1545,25 @@ TEST_CASE("AdvancedIndexingNode") {
                         CHECK(adv->size(state) == 5);
 
                         std::vector<double> new_state({41, 45, 49, 53, 57});
+                        CHECK(std::ranges::equal(adv->view(state), new_state));
+                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
+                    }
+                }
+
+                AND_WHEN("We mutate the main array") {
+                    arr_ptr->set_value(state, 83, 83);
+                    arr_ptr->set_value(state, 87, -87);
+
+                    arr_ptr->set_value(state, 82, 82);
+                    arr_ptr->set_value(state, 81, -81);
+
+                    arr_ptr->propagate(state);
+                    adv->propagate(state);
+
+                    THEN("The state has the expected values and the diff is correct") {
+                        CHECK(adv->size(state) == 5);
+
+                        std::vector<double> new_state({83, -87, 91, 95, 99});
                         CHECK(std::ranges::equal(adv->view(state), new_state));
                         verify_array_diff(expected_initial_state, new_state, adv->diff(state));
                     }
