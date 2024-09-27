@@ -347,6 +347,22 @@ class TestAdd(utils.BinaryOpTests):
             a + b
 
 
+class TestAdvancedIndexing(unittest.TestCase):
+    def test_higher_dimenional_indexers_not_allowed(self):
+        model = Model()
+        constant = model.constant(np.arange(10))
+
+        i0 = model.integer(lower_bound=0, upper_bound=9)
+        self.assertTrue(constant[i0].shape() == tuple())
+
+        i1 = model.integer(3, lower_bound=0, upper_bound=9)
+        self.assertTrue(constant[i1].shape() == (3,))
+
+        i2 = model.integer((2, 3), lower_bound=0, upper_bound=9)
+        with self.assertRaises(ValueError):
+            constant[i2]
+
+
 class TestAll(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
