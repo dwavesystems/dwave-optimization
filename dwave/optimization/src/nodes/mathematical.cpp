@@ -907,11 +907,40 @@ double ReduceNode<BinaryOp>::max() const {
         });
     }
     if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
-        // the dynamic case. For now let's just fall back to Array's default
-        // implementation because this gets even more complicated
-        if (array_ptr_->dynamic()) return Array::max();
+        const double high = array_ptr_->max();
+        const double init = this->init.value_or(0);
 
-        return this->init.value_or(0) + array_ptr_->size() * array_ptr_->max();
+        // if high is 0, then it doesn't matter how many times we add it
+        if (high == 0) return init;
+
+        // if the array has a fixed size, then just multiply the largest value
+        // by that size
+        if (const ssize_t size = array_ptr_->size(); size >= 0) {
+            return init + size * high;
+        }
+
+        // our predecessor array is dynamic. So there are a few more cases
+        // we need to check
+
+        // 100 is a magic number. It's how far back in the predecessor
+        // chain to check to get good bounds on the size for the given array.
+        // This will exit early if it converges.
+        const SizeInfo sizeinfo = array_ptr_->sizeinfo().substitute(100);
+
+        if (high > 0) {
+            // if high is positive, then we're interested in the maxmum size
+            // of the array
+
+            // if the array is arbitrarily large, then just fall back to the
+            // default max.
+            if (!sizeinfo.max.has_value()) return Array::max();
+
+            return init + sizeinfo.max.value() * high;
+        } else {
+            // if high is negative, then we're interested in the minimum size
+            // of the array
+            return init + sizeinfo.min.value_or(0) * high;
+        }
     }
 
     assert(false && "not implemeted yet");
@@ -965,11 +994,40 @@ double ReduceNode<BinaryOp>::min() const {
         });
     }
     if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
-        // the dynamic case. For now let's just fall back to Array's default
-        // implementation because this gets even more complicated
-        if (array_ptr_->dynamic()) return Array::min();
+        const double low = array_ptr_->min();
+        const double init = this->init.value_or(0);
 
-        return this->init.value_or(0) + array_ptr_->size() * array_ptr_->min();
+        // if low is 0, then it doesn't matter how many times we add it
+        if (low == 0) return init;
+
+        // if the array has a fixed size, then just multiply the smallest value
+        // by that size
+        if (const ssize_t size = array_ptr_->size(); size >= 0) {
+            return init + size * low;
+        }
+
+        // our predecessor array is dynamic. So there are a few more cases
+        // we need to check
+
+        // 100 is a magic number. It's how far back in the predecessor
+        // chain to check to get good bounds on the size for the given array.
+        // This will exit early if it converges.
+        const SizeInfo sizeinfo = array_ptr_->sizeinfo().substitute(100);
+
+        if (low < 0) {
+            // if low is negative, then we're interested in the maximum size
+            // of the array
+
+            // if the array is arbitrarily large, then just fall back to the
+            // default min.
+            if (!sizeinfo.max.has_value()) return Array::min();
+
+            return init + sizeinfo.max.value() * low;
+        } else {
+            // if low is positive, then we're interested in the minimum size
+            // of the array
+            return init + sizeinfo.min.value_or(0) * low;
+        }
     }
 
     assert(false && "not implemeted yet");
