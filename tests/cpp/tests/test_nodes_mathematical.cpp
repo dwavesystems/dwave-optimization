@@ -16,6 +16,7 @@
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
+#include "dwave-optimization/nodes/indexing.hpp"
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
@@ -1173,6 +1174,71 @@ TEST_CASE("ReduceNode - SumNode") {
             CHECK(y_ptr->min() == -5 + -5 + -5 + -.5);
             CHECK(y_ptr->max() == 2 + 2 + 2 + -.5);
             CHECK(!y_ptr->integral());
+        }
+    }
+
+    GIVEN("a = [0, 3, 2], x = SetNode(3), y = a[x].sum()") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 3, 2});
+        auto x_ptr = graph.emplace_node<SetNode>(3);
+        auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
+        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == 0);
+            CHECK(y_ptr->max() == 9);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("a = [1, 3, 2], x = SetNode(3), y = a[x].sum()") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 3, 2});
+        auto x_ptr = graph.emplace_node<SetNode>(3);
+        auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
+        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == 0);  // can be 0 because x can be empty
+            CHECK(y_ptr->max() == 9);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("a = [2, 3, 2], x = SetNode(3, 2, 3), y = a[x].sum()") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{2, 3, 2});
+        auto x_ptr = graph.emplace_node<SetNode>(3, 2, 3);
+        auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
+        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == 4);  // Set has at least 2 elements
+            CHECK(y_ptr->max() == 9);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("a = [1, -3, 2], x = SetNode(3), y = a[x].sum()") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, -3, 2});
+        auto x_ptr = graph.emplace_node<SetNode>(3);
+        auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
+        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -9);  // set has at most 3 elements
+            CHECK(y_ptr->max() == 6);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("a = [-1, -3, -2], x = SetNode(3), y = a[x].sum()") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, -3, -2});
+        auto x_ptr = graph.emplace_node<SetNode>(3);
+        auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
+        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -9);
+            CHECK(y_ptr->max() == 0);
+            CHECK(y_ptr->integral());
         }
     }
 
