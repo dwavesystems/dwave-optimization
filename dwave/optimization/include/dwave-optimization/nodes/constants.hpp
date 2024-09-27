@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -76,6 +77,20 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
         return {};
     }
 
+    // Whether the values in the array can be interpreted as integers.
+    // Returns ``true`` for an empty array. This has the slightly odd effect of
+    // making empty arrays logical, because we also return 0 for min/max.
+    // Note that this is an O(size) function call, whereas for most other nodes it
+    // is O(1).
+    bool integral() const override;
+
+    // The maximum and minimum values of elements in the array.
+    // Returns ``0.0`` for an empty array.
+    // Note that this is an O(size) function call, whereas for most other nodes it
+    // is O(1).
+    double max() const override;
+    double min() const override;
+
     // Overloads required by the Node ABC *************************************
 
     // This node never needs to update its successors
@@ -102,6 +117,17 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     // The beginning of the array data. The ConstantNode is unusual because it
     // holds its values on the object itself rather than in a State.
     double* buffer_ptr_;
+
+    // Information about the values in the buffer
+    struct BufferStats {
+        BufferStats() = delete;
+        explicit BufferStats(std::span<const double> buffer);
+
+        bool integral;
+        double min;
+        double max;
+    };
+    mutable std::optional<BufferStats> buffer_stats_;
 };
 
 }  // namespace dwave::optimization

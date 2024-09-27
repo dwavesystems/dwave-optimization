@@ -195,7 +195,7 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<do
     }
 }
 
-TEST_CASE("BinaryOpNode") {
+TEST_CASE("BinaryOpNode - LessEqualNode") {
     auto graph = Graph();
 
     GIVEN("A less equal node operating on two continuous arrays") {
@@ -356,115 +356,90 @@ TEST_CASE("BinaryOpNode") {
             }
         }
     }
+}
 
-    GIVEN("A list node with a min and max node over it") {
-        auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
+TEST_CASE("BinaryOpNode - MultiplyNode") {
+    auto graph = Graph();
 
-        // chose init values out of range - we test that init works correctly
-        // in the ReduceNode tests
-        auto max_ptr = graph.emplace_node<MaxNode>(list_ptr, -1);
-        auto min_ptr = graph.emplace_node<MinNode>(list_ptr, 6);
+    GIVEN("x = IntegerNode(-5, 5), a = 3, y = x * a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(3);
 
-        graph.emplace_node<ArrayValidationNode>(max_ptr);
-        graph.emplace_node<ArrayValidationNode>(min_ptr);
+        auto y_ptr = graph.emplace_node<MultiplyNode>(x_ptr, a_ptr);
 
-        AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
-            auto state = graph.empty_state();
-            list_ptr->initialize_state(state, {1, 2, 3, 0, 4});
-            list_ptr->shrink(state);
-            list_ptr->shrink(state);
-            list_ptr->commit(state);
-            graph.initialize_state(state);
+        THEN("y's max/min/integral are as expected") {
+            CHECK(y_ptr->max() == 15);
+            CHECK(y_ptr->min() == -15);
+            CHECK(y_ptr->integral());
+        }
+    }
 
-            THEN("The min and max are as expected") {
-                CHECK(max_ptr->view(state)[0] == 3);
-                CHECK(min_ptr->view(state)[0] == 1);
-            }
+    GIVEN("x = IntegerNode(-5, 5), a = -3, y = x * a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(-3);
 
-            WHEN("We grow once to [ 1 2 3 0 | 4 ]") {
-                list_ptr->grow(state);
-                list_ptr->propagate(state);
-                max_ptr->propagate(state);
-                min_ptr->propagate(state);
+        auto y_ptr = graph.emplace_node<MultiplyNode>(x_ptr, a_ptr);
 
-                THEN("The min and max are as expected") {
-                    CHECK(max_ptr->view(state)[0] == 3);
-                    CHECK(min_ptr->view(state)[0] == 0);
-                }
-            }
+        THEN("y's max/min/integral are as expected") {
+            CHECK(y_ptr->max() == 15);
+            CHECK(y_ptr->min() == -15);
+            CHECK(y_ptr->integral());
+        }
+    }
+}
 
-            WHEN("We swap and then grow once to [ 1 2 3 4 | 0 ]") {
-                list_ptr->exchange(state, 3, 4);
-                list_ptr->grow(state);
-                list_ptr->propagate(state);
-                max_ptr->propagate(state);
-                min_ptr->propagate(state);
+TEST_CASE("BinaryOpNode - SubtractNode") {
+    auto graph = Graph();
 
-                THEN("The min and max are as expected") {
-                    CHECK(max_ptr->view(state)[0] == 4);
-                    CHECK(min_ptr->view(state)[0] == 1);
-                }
-            }
+    GIVEN("x = IntegerNode(-5, 5), a = 3, y = x - a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(3);
 
-            WHEN("We shrink once to [ 1 2 | 3 0 4 ]") {
-                list_ptr->shrink(state);
-                list_ptr->propagate(state);
-                max_ptr->propagate(state);
-                min_ptr->propagate(state);
+        auto y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
 
-                THEN("The min and max are as expected") {
-                    CHECK(max_ptr->view(state)[0] == 2);
-                    CHECK(min_ptr->view(state)[0] == 1);
-                }
-            }
+        THEN("y's max/min/integral are as expected") {
+            CHECK(y_ptr->max() == 2);
+            CHECK(y_ptr->min() == -8);
+            CHECK(y_ptr->integral());
+        }
+    }
 
-            WHEN("We swap out the min value for something smaller [ 0 2 3 | 1 4 ]") {
-                list_ptr->exchange(state, 0, 3);
-                list_ptr->propagate(state);
-                max_ptr->propagate(state);
-                min_ptr->propagate(state);
+    GIVEN("x = IntegerNode(-5, 5), a = -3, y = x - a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(-3);
 
-                THEN("The min and max are as expected") {
-                    CHECK(max_ptr->view(state)[0] == 3);
-                    CHECK(min_ptr->view(state)[0] == 0);
-                }
-            }
+        auto y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
 
-            WHEN("We swap out the min value for something larger [ 4 2 3 | 0 1 ]") {
-                list_ptr->exchange(state, 0, 4);
-                list_ptr->propagate(state);
-                max_ptr->propagate(state);
-                min_ptr->propagate(state);
+        THEN("y's max/min/integral are as expected") {
+            CHECK(y_ptr->max() == 8);
+            CHECK(y_ptr->min() == -2);
+            CHECK(y_ptr->integral());
+        }
+    }
 
-                THEN("The min and max are as expected") {
-                    CHECK(max_ptr->view(state)[0] == 4);
-                    CHECK(min_ptr->view(state)[0] == 2);
-                }
-            }
+    GIVEN("x = IntegerNode(-5, 5), a = 3.5, y = x - a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(3.5);
 
-            WHEN("We swap out the max value for something larger [ 1 2 4 | 0 3 ]") {
-                list_ptr->exchange(state, 2, 4);
-                list_ptr->propagate(state);
-                max_ptr->propagate(state);
-                min_ptr->propagate(state);
+        auto y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
 
-                THEN("The min and max are as expected") {
-                    CHECK(max_ptr->view(state)[0] == 4);
-                    CHECK(min_ptr->view(state)[0] == 1);
-                }
-            }
+        THEN("y's max/min/integral are as expected") {
+            CHECK(y_ptr->max() == 1.5);
+            CHECK(y_ptr->min() == -8.5);
+            CHECK(!y_ptr->integral());
+        }
+    }
 
-            WHEN("We swap out the max value for something smaller [ 1 2 0 | 3 4 ]") {
-                list_ptr->exchange(state, 2, 3);
-                list_ptr->propagate(state);
-                max_ptr->propagate(state);
-                min_ptr->propagate(state);
+    GIVEN("x = IntegerNode(-5, 5), y = IntegerNode(-3, 4), z = x - y") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto y_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -3, 4);
 
-                THEN("The min and max are as expected") {
-                    CHECK(max_ptr->view(state)[0] == 2);
-                    CHECK(min_ptr->view(state)[0] == 0);
-                }
-            }
+        auto z_ptr = graph.emplace_node<SubtractNode>(x_ptr, y_ptr);
+
+        THEN("z's max/min/integral are as expected") {
+            CHECK(z_ptr->max() == 8);
+            CHECK(z_ptr->min() == -9);
+            CHECK(z_ptr->integral());
         }
     }
 }
@@ -493,7 +468,7 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
 
         THEN("The operands are all available via operands()") {
             REQUIRE(std::ranges::equal(p_ptr->operands(),
-                                     std::vector<Array*>{a_ptr, b_ptr, c_ptr, d_ptr}));
+                                       std::vector<Array*>{a_ptr, b_ptr, c_ptr, d_ptr}));
 
             // we can cast to a non-const ptr if we're not const
             CHECK(static_cast<Array*>(p_ptr->operands()[0]) == static_cast<Array*>(a_ptr));
@@ -619,158 +594,58 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
     }
 }
 
-TEST_CASE("ProdNode") {
+TEST_CASE("NaryOpNode - ProdNode") {
     auto graph = Graph();
 
-    GIVEN("Given a list node with a prod over it") {
-        auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
-        auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr);
+    GIVEN("a = Integer(-5, 5), b = IntegerNode(2, 4), c = IntegerNode(-7, -3), x = a * b * c") {
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 2, 4);
+        auto c_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -7, -3);
 
-        AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
-            auto state = graph.empty_state();
-            list_ptr->initialize_state(state, {1, 2, 3, 0, 4});
-            list_ptr->shrink(state);
-            list_ptr->shrink(state);
-            list_ptr->commit(state);
-            graph.initialize_state(state);
+        auto x_ptr = graph.emplace_node<NaryMultiplyNode>(a_ptr, b_ptr, c_ptr);
 
-            THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
-
-            WHEN("We add a 0 by growing once [ 1 2 3 0 | 4 ]") {
-                list_ptr->grow(state);
-                list_ptr->propagate(state);
-                prod_ptr->propagate(state);
-
-                THEN("prod([ 1 2 3 0 ]) == 0") { CHECK(prod_ptr->view(state)[0] == 0); }
-
-                list_ptr->commit(state);
-                prod_ptr->commit(state);
-
-                AND_WHEN("We then shrink again to [ 1 2 3 ]") {
-                    list_ptr->shrink(state);
-                    list_ptr->propagate(state);
-                    prod_ptr->propagate(state);
-
-                    THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
-                }
-            }
-
-            WHEN("We add a 4 by swapping then growing once [ 1 2 3 4 | 0 ]") {
-                list_ptr->exchange(state, 3, 4);
-                list_ptr->grow(state);
-                list_ptr->propagate(state);
-                prod_ptr->propagate(state);
-
-                THEN("prod([ 1 2 3 0 ]) == 24") { CHECK(prod_ptr->view(state)[0] == 24); }
-
-                list_ptr->commit(state);
-                prod_ptr->commit(state);
-
-                AND_WHEN("We then shrink again to [ 1 2 3 ]") {
-                    list_ptr->shrink(state);
-                    list_ptr->propagate(state);
-                    prod_ptr->propagate(state);
-
-                    THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
-                }
-            }
-
-            WHEN("We add a 0 by swapping [ 1 0 3 | 2 4 ]") {
-                list_ptr->exchange(state, 1, 3);
-                list_ptr->propagate(state);
-                prod_ptr->propagate(state);
-
-                THEN("prod([ 1 0 3 ]) == 0") { CHECK(prod_ptr->view(state)[0] == 0); }
-
-                AND_WHEN("We then revert") {
-                    list_ptr->revert(state);
-                    prod_ptr->revert(state);
-
-                    THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
-
-                    AND_WHEN("we do an null propagation") {
-                        list_ptr->propagate(state);
-                        prod_ptr->propagate(state);
-
-                        THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
-                    }
-                }
-
-                list_ptr->commit(state);
-                prod_ptr->commit(state);
-
-                AND_WHEN("We then swap back to [ 1 2 3 | 0 4 ]") {
-                    list_ptr->exchange(state, 1, 3);
-                    list_ptr->propagate(state);
-                    prod_ptr->propagate(state);
-
-                    THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
-                }
-            }
-
-            WHEN("We swap some values [ 3 2 1 | 0 4 ]") {
-                list_ptr->exchange(state, 0, 2);
-                list_ptr->propagate(state);
-                prod_ptr->propagate(state);
-
-                THEN("prod([ 3 2 1 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
-
-                list_ptr->commit(state);
-                prod_ptr->commit(state);
-
-                AND_WHEN("We then swap back to [ 1 2 3 | 0 4 ]") {
-                    list_ptr->exchange(state, 0, 2);
-                    list_ptr->propagate(state);
-                    prod_ptr->propagate(state);
-
-                    THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
-                }
-            }
-        }
-    }
-
-    GIVEN("Given a list node with a prod over it with an initial value of 0") {
-        auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
-        auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr, 0);
-
-        AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
-            auto state = graph.empty_state();
-            list_ptr->initialize_state(state, {1, 2, 3, 0, 4});
-            list_ptr->shrink(state);
-            list_ptr->shrink(state);
-            list_ptr->commit(state);
-            graph.initialize_state(state);
-
-            THEN("prod([ 1 2 3 ], init=0) == 0") { CHECK(prod_ptr->view(state)[0] == 0); }
-
-            WHEN("We add a 0 by growing once [ 1 2 3 0 | 4 ]") {
-                list_ptr->grow(state);
-                list_ptr->propagate(state);
-                prod_ptr->propagate(state);
-
-                THEN("prod([ 1 2 3 0 ], init=0) == 0") { CHECK(prod_ptr->view(state)[0] == 0); }
-
-                list_ptr->commit(state);
-                prod_ptr->commit(state);
-
-                AND_WHEN("We then shrink again to [ 1 2 3 ]") {
-                    list_ptr->shrink(state);
-                    list_ptr->propagate(state);
-                    prod_ptr->propagate(state);
-
-                    THEN("prod([ 1 2 3 ], init=0) == 0") { CHECK(prod_ptr->view(state)[0] == 0); }
-                }
-            }
+        THEN("x's max/min/integral are as expected") {
+            CHECK(x_ptr->max() == 140);
+            CHECK(x_ptr->min() == -140);
+            CHECK(x_ptr->integral());
         }
     }
 }
 
-TEMPLATE_TEST_CASE("ReduceNode", "",
-                   functional::max<double>,
-                   functional::min<double>,
-                   std::logical_and<double>,
-                   std::multiplies<double>,
-                   std::plus<double>) {
+TEST_CASE("NaryOpNode - SumNode") {
+    auto graph = Graph();
+
+    GIVEN("a = Integer(-5, 5), b = IntegerNode(2, 4), c = IntegerNode(-7, -3), x = a + b + c") {
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 2, 4);
+        auto c_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -7, -3);
+
+        auto x_ptr = graph.emplace_node<NaryAddNode>(a_ptr, b_ptr, c_ptr);
+
+        THEN("x's max/min/integral are as expected") {
+            CHECK(x_ptr->max() == 5 + 4 - 3);
+            CHECK(x_ptr->min() == -5 + 2 + -7);
+            CHECK(x_ptr->integral());
+        }
+    }
+
+    GIVEN("a = Integer(-5, 5), b = IntegerNode(2, 4), c = .5, x = a + b + c") {
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 2, 4);
+        auto c_ptr = graph.emplace_node<ConstantNode>(.5);
+
+        auto x_ptr = graph.emplace_node<NaryAddNode>(a_ptr, b_ptr, c_ptr);
+
+        THEN("x's max/min/integral are as expected") {
+            CHECK(x_ptr->max() == 5 + 4 + .5);
+            CHECK(x_ptr->min() == -5 + 2 + .5);
+            CHECK(!x_ptr->integral());
+        }
+    }
+}
+
+TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<double>,
+                   std::logical_and<double>, std::multiplies<double>, std::plus<double>) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -931,28 +806,379 @@ TEMPLATE_TEST_CASE("ReduceNode", "",
     }
 }
 
-TEMPLATE_TEST_CASE("ReduceNode - no default init", "", functional::max<double>,
-                   functional::min<double>) {
+TEST_CASE("ReduceNode - MaxNode/MinNode") {
     auto graph = Graph();
+
+    GIVEN("A list node with a min and max node over it") {
+        auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
+
+        // chose init values out of range - we test that init works correctly
+        // in the ReduceNode tests
+        auto max_ptr = graph.emplace_node<MaxNode>(list_ptr, -1);
+        auto min_ptr = graph.emplace_node<MinNode>(list_ptr, 6);
+
+        graph.emplace_node<ArrayValidationNode>(max_ptr);
+        graph.emplace_node<ArrayValidationNode>(min_ptr);
+
+        AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
+            auto state = graph.empty_state();
+            list_ptr->initialize_state(state, {1, 2, 3, 0, 4});
+            list_ptr->shrink(state);
+            list_ptr->shrink(state);
+            list_ptr->commit(state);
+            graph.initialize_state(state);
+
+            THEN("The min and max are as expected") {
+                CHECK(max_ptr->view(state)[0] == 3);
+                CHECK(min_ptr->view(state)[0] == 1);
+            }
+
+            WHEN("We grow once to [ 1 2 3 0 | 4 ]") {
+                list_ptr->grow(state);
+                list_ptr->propagate(state);
+                max_ptr->propagate(state);
+                min_ptr->propagate(state);
+
+                THEN("The min and max are as expected") {
+                    CHECK(max_ptr->view(state)[0] == 3);
+                    CHECK(min_ptr->view(state)[0] == 0);
+                }
+            }
+
+            WHEN("We swap and then grow once to [ 1 2 3 4 | 0 ]") {
+                list_ptr->exchange(state, 3, 4);
+                list_ptr->grow(state);
+                list_ptr->propagate(state);
+                max_ptr->propagate(state);
+                min_ptr->propagate(state);
+
+                THEN("The min and max are as expected") {
+                    CHECK(max_ptr->view(state)[0] == 4);
+                    CHECK(min_ptr->view(state)[0] == 1);
+                }
+            }
+
+            WHEN("We shrink once to [ 1 2 | 3 0 4 ]") {
+                list_ptr->shrink(state);
+                list_ptr->propagate(state);
+                max_ptr->propagate(state);
+                min_ptr->propagate(state);
+
+                THEN("The min and max are as expected") {
+                    CHECK(max_ptr->view(state)[0] == 2);
+                    CHECK(min_ptr->view(state)[0] == 1);
+                }
+            }
+
+            WHEN("We swap out the min value for something smaller [ 0 2 3 | 1 4 ]") {
+                list_ptr->exchange(state, 0, 3);
+                list_ptr->propagate(state);
+                max_ptr->propagate(state);
+                min_ptr->propagate(state);
+
+                THEN("The min and max are as expected") {
+                    CHECK(max_ptr->view(state)[0] == 3);
+                    CHECK(min_ptr->view(state)[0] == 0);
+                }
+            }
+
+            WHEN("We swap out the min value for something larger [ 4 2 3 | 0 1 ]") {
+                list_ptr->exchange(state, 0, 4);
+                list_ptr->propagate(state);
+                max_ptr->propagate(state);
+                min_ptr->propagate(state);
+
+                THEN("The min and max are as expected") {
+                    CHECK(max_ptr->view(state)[0] == 4);
+                    CHECK(min_ptr->view(state)[0] == 2);
+                }
+            }
+
+            WHEN("We swap out the max value for something larger [ 1 2 4 | 0 3 ]") {
+                list_ptr->exchange(state, 2, 4);
+                list_ptr->propagate(state);
+                max_ptr->propagate(state);
+                min_ptr->propagate(state);
+
+                THEN("The min and max are as expected") {
+                    CHECK(max_ptr->view(state)[0] == 4);
+                    CHECK(min_ptr->view(state)[0] == 1);
+                }
+            }
+
+            WHEN("We swap out the max value for something smaller [ 1 2 0 | 3 4 ]") {
+                list_ptr->exchange(state, 2, 3);
+                list_ptr->propagate(state);
+                max_ptr->propagate(state);
+                min_ptr->propagate(state);
+
+                THEN("The min and max are as expected") {
+                    CHECK(max_ptr->view(state)[0] == 2);
+                    CHECK(min_ptr->view(state)[0] == 0);
+                }
+            }
+        }
+    }
 
     GIVEN("A dynamic node") {
         auto a_ptr = graph.emplace_node<SetNode>(4);
 
         THEN("We cannot construct a reduce node without an initial value") {
-            CHECK_THROWS(graph.emplace_node<ReduceNode<TestType>>(a_ptr));
+            CHECK_THROWS(graph.emplace_node<MaxNode>(a_ptr));
+            CHECK_THROWS(graph.emplace_node<MinNode>(a_ptr));
             CHECK(a_ptr->successors().size() == 0);  // no side effects
         }
     }
 }
 
-TEMPLATE_TEST_CASE("ReduceNode - valid default init", "", std::plus<double>) {
+TEST_CASE("ReduceNode - MaxNode") {
     auto graph = Graph();
 
-    auto func = TestType();
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.max()") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<MaxNode>(x_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5);
+            CHECK(y_ptr->max() == 2);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.max(init=-.5)") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<MaxNode>(x_ptr, -.5);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -.5);
+            CHECK(y_ptr->max() == 2);
+            CHECK(!y_ptr->integral());
+        }
+    }
+}
+
+TEST_CASE("ReduceNode - MinNode") {
+    auto graph = Graph();
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.min()") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<MinNode>(x_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5);
+            CHECK(y_ptr->max() == 2);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.min(init=-.5)") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<MinNode>(x_ptr, -.5);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5);
+            CHECK(y_ptr->max() == -.5);
+            CHECK(!y_ptr->integral());
+        }
+    }
+}
+
+TEST_CASE("ReduceNode - ProdNode") {
+    auto graph = Graph();
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.prod()") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<ProdNode>(x_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5 * -5 * -5);
+            CHECK(y_ptr->max() == -5 * -5 * 2);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.prod(init=-.5)") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<ProdNode>(x_ptr, -.5);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5 * -5 * 2 * -.5);
+            CHECK(y_ptr->max() == -5 * -5 * -5 * -.5);
+            CHECK(!y_ptr->integral());
+        }
+    }
+
+    GIVEN("Given a list node with a prod over it") {
+        auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
+        auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr);
+
+        AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
+            auto state = graph.empty_state();
+            list_ptr->initialize_state(state, {1, 2, 3, 0, 4});
+            list_ptr->shrink(state);
+            list_ptr->shrink(state);
+            list_ptr->commit(state);
+            graph.initialize_state(state);
+
+            THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
+
+            WHEN("We add a 0 by growing once [ 1 2 3 0 | 4 ]") {
+                list_ptr->grow(state);
+                list_ptr->propagate(state);
+                prod_ptr->propagate(state);
+
+                THEN("prod([ 1 2 3 0 ]) == 0") { CHECK(prod_ptr->view(state)[0] == 0); }
+
+                list_ptr->commit(state);
+                prod_ptr->commit(state);
+
+                AND_WHEN("We then shrink again to [ 1 2 3 ]") {
+                    list_ptr->shrink(state);
+                    list_ptr->propagate(state);
+                    prod_ptr->propagate(state);
+
+                    THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
+                }
+            }
+
+            WHEN("We add a 4 by swapping then growing once [ 1 2 3 4 | 0 ]") {
+                list_ptr->exchange(state, 3, 4);
+                list_ptr->grow(state);
+                list_ptr->propagate(state);
+                prod_ptr->propagate(state);
+
+                THEN("prod([ 1 2 3 0 ]) == 24") { CHECK(prod_ptr->view(state)[0] == 24); }
+
+                list_ptr->commit(state);
+                prod_ptr->commit(state);
+
+                AND_WHEN("We then shrink again to [ 1 2 3 ]") {
+                    list_ptr->shrink(state);
+                    list_ptr->propagate(state);
+                    prod_ptr->propagate(state);
+
+                    THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
+                }
+            }
+
+            WHEN("We add a 0 by swapping [ 1 0 3 | 2 4 ]") {
+                list_ptr->exchange(state, 1, 3);
+                list_ptr->propagate(state);
+                prod_ptr->propagate(state);
+
+                THEN("prod([ 1 0 3 ]) == 0") { CHECK(prod_ptr->view(state)[0] == 0); }
+
+                AND_WHEN("We then revert") {
+                    list_ptr->revert(state);
+                    prod_ptr->revert(state);
+
+                    THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
+
+                    AND_WHEN("we do an null propagation") {
+                        list_ptr->propagate(state);
+                        prod_ptr->propagate(state);
+
+                        THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
+                    }
+                }
+
+                list_ptr->commit(state);
+                prod_ptr->commit(state);
+
+                AND_WHEN("We then swap back to [ 1 2 3 | 0 4 ]") {
+                    list_ptr->exchange(state, 1, 3);
+                    list_ptr->propagate(state);
+                    prod_ptr->propagate(state);
+
+                    THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
+                }
+            }
+
+            WHEN("We swap some values [ 3 2 1 | 0 4 ]") {
+                list_ptr->exchange(state, 0, 2);
+                list_ptr->propagate(state);
+                prod_ptr->propagate(state);
+
+                THEN("prod([ 3 2 1 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
+
+                list_ptr->commit(state);
+                prod_ptr->commit(state);
+
+                AND_WHEN("We then swap back to [ 1 2 3 | 0 4 ]") {
+                    list_ptr->exchange(state, 0, 2);
+                    list_ptr->propagate(state);
+                    prod_ptr->propagate(state);
+
+                    THEN("prod([ 1 2 3 ]) == 6") { CHECK(prod_ptr->view(state)[0] == 6); }
+                }
+            }
+        }
+    }
+
+    GIVEN("Given a list node with a prod over it with an initial value of 0") {
+        auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
+        auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr, 0);
+
+        AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
+            auto state = graph.empty_state();
+            list_ptr->initialize_state(state, {1, 2, 3, 0, 4});
+            list_ptr->shrink(state);
+            list_ptr->shrink(state);
+            list_ptr->commit(state);
+            graph.initialize_state(state);
+
+            THEN("prod([ 1 2 3 ], init=0) == 0") { CHECK(prod_ptr->view(state)[0] == 0); }
+
+            WHEN("We add a 0 by growing once [ 1 2 3 0 | 4 ]") {
+                list_ptr->grow(state);
+                list_ptr->propagate(state);
+                prod_ptr->propagate(state);
+
+                THEN("prod([ 1 2 3 0 ], init=0) == 0") { CHECK(prod_ptr->view(state)[0] == 0); }
+
+                list_ptr->commit(state);
+                prod_ptr->commit(state);
+
+                AND_WHEN("We then shrink again to [ 1 2 3 ]") {
+                    list_ptr->shrink(state);
+                    list_ptr->propagate(state);
+                    prod_ptr->propagate(state);
+
+                    THEN("prod([ 1 2 3 ], init=0) == 0") { CHECK(prod_ptr->view(state)[0] == 0); }
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("ReduceNode - SumNode") {
+    auto graph = Graph();
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.sum()") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<SumNode>(x_ptr);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5 + -5 + -5);
+            CHECK(y_ptr->max() == 2 + 2 + 2);
+            CHECK(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(3, -5, 2), y = x.sum(init=-.5)") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
+        auto y_ptr = graph.emplace_node<SumNode>(x_ptr, -.5);
+
+        THEN("y's min/max/integral are as expected") {
+            CHECK(y_ptr->min() == -5 + -5 + -5 + -.5);
+            CHECK(y_ptr->max() == 2 + 2 + 2 + -.5);
+            CHECK(!y_ptr->integral());
+        }
+    }
 
     GIVEN("A set reduced") {
         auto a_ptr = graph.emplace_node<SetNode>(4);
-        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(a_ptr);
+        auto r_ptr = graph.emplace_node<SumNode>(a_ptr);
 
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
@@ -971,7 +1197,7 @@ TEMPLATE_TEST_CASE("ReduceNode - valid default init", "", std::plus<double>) {
                 // write this in such a way as to not need an init value
                 double lhs = a_ptr->view(state)[0];
                 for (ssize_t i = 1; i < a_ptr->size(state); ++i) {
-                    lhs = func(lhs, a_ptr->view(state)[i]);
+                    lhs = lhs + a_ptr->view(state)[i];
                 }
                 CHECK(r_ptr->view(state)[0] == lhs);
             }
@@ -993,7 +1219,7 @@ TEMPLATE_TEST_CASE("ReduceNode - valid default init", "", std::plus<double>) {
                     // write this in such a way as to not need an init value
                     double lhs = a_ptr->view(state)[0];
                     for (ssize_t i = 1; i < a_ptr->size(state); ++i) {
-                        lhs = func(lhs, a_ptr->view(state)[i]);
+                        lhs = lhs + a_ptr->view(state)[i];
                     }
                     CHECK(r_ptr->view(state)[0] == lhs);
 
@@ -1030,7 +1256,7 @@ TEMPLATE_TEST_CASE("ReduceNode - valid default init", "", std::plus<double>) {
                     // write this in such a way as to not need an init value
                     double lhs = a_ptr->view(state)[0];
                     for (ssize_t i = 1; i < a_ptr->size(state); ++i) {
-                        lhs = func(lhs, a_ptr->view(state)[i]);
+                        lhs = lhs + a_ptr->view(state)[i];
                     }
                     CHECK(r_ptr->view(state)[0] == lhs);
 
@@ -1187,104 +1413,104 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
     }
 }
 
-TEST_CASE("UnaryOpNode") {
+TEST_CASE("UnaryOpNode - AbsoluteNode") {
     auto graph = Graph();
 
-    SECTION("AbsoluteNode") {
-        GIVEN("An integer variable with domain [-3, 2]") {
-            auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -3, 2);
-            auto abs_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
+    GIVEN("An integer variable with domain [-3, 2]") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -3, 2);
+        auto abs_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
 
-            THEN("It has the min/max we expect") {
-                CHECK(abs_ptr->min() == 0);
-                CHECK(abs_ptr->max() == 3);
-            }
-
-            THEN("abs(i) is integral") { CHECK(abs_ptr->integral()); }
+        THEN("It has the min/max we expect") {
+            CHECK(abs_ptr->min() == 0);
+            CHECK(abs_ptr->max() == 3);
         }
 
-        GIVEN("An integer variable with domain [-2, 4]") {
-            auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -2, 4);
-            auto abs_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
-
-            THEN("It has the min/max we expect") {
-                CHECK(abs_ptr->min() == 0);
-                CHECK(abs_ptr->max() == 4);
-            }
-
-            THEN("abs(i) is integral") { CHECK(abs_ptr->integral()); }
-        }
+        THEN("abs(i) is integral") { CHECK(abs_ptr->integral()); }
     }
 
-    SECTION("LogicalNode") {
-        GIVEN("A constant of mixed doubles and a negation of it") {
-            auto c_ptr =
-                    graph.emplace_node<ConstantNode>(std::vector{-2., -1., 0., 1., 2., -.5, .5});
-            auto logical_ptr = graph.emplace_node<LogicalNode>(c_ptr);
+    GIVEN("An integer variable with domain [-2, 4]") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -2, 4);
+        auto abs_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
 
-            THEN("NotNode is logical") {
-                CHECK(logical_ptr->integral());
-                CHECK(logical_ptr->max() == 1);
-                CHECK(logical_ptr->min() == 0);
-                CHECK(logical_ptr->logical());
-            }
+        THEN("It has the min/max we expect") {
+            CHECK(abs_ptr->min() == 0);
+            CHECK(abs_ptr->max() == 4);
+        }
 
-            THEN("The negation has the state we expect") {
-                auto state = graph.initialize_state();
-                CHECK(std::ranges::equal(logical_ptr->view(state),
-                                         std::vector{true, true, false, true, true, true, true}));
-            }
+        THEN("abs(i) is integral") { CHECK(abs_ptr->integral()); }
+    }
+}
+
+TEST_CASE("UnaryOpNode - LogicalNode") {
+    auto graph = Graph();
+    GIVEN("A constant of mixed doubles and a negation of it") {
+        auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{-2., -1., 0., 1., 2., -.5, .5});
+        auto logical_ptr = graph.emplace_node<LogicalNode>(c_ptr);
+
+        THEN("NotNode is logical") {
+            CHECK(logical_ptr->integral());
+            CHECK(logical_ptr->max() == 1);
+            CHECK(logical_ptr->min() == 0);
+            CHECK(logical_ptr->logical());
+        }
+
+        THEN("The negation has the state we expect") {
+            auto state = graph.initialize_state();
+            CHECK(std::ranges::equal(logical_ptr->view(state),
+                                     std::vector{true, true, false, true, true, true, true}));
         }
     }
+}
 
-    SECTION("NegativeNode") {
-        GIVEN("An integer array and an asymmetric domain") {
-            auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{5}, -3, 8);
-            auto ni_ptr = graph.emplace_node<NegativeNode>(i_ptr);
+TEST_CASE("UnaryOpNode - NegativeNode") {
+    auto graph = Graph();
+    GIVEN("An integer array and an asymmetric domain") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{5}, -3, 8);
+        auto ni_ptr = graph.emplace_node<NegativeNode>(i_ptr);
 
-            THEN("Negative has the min/max we expect") {
-                CHECK(i_ptr->min() == -3);
-                CHECK(i_ptr->max() == 8);
-                CHECK(ni_ptr->min() == -8);
-                CHECK(ni_ptr->max() == 3);
-            }
+        THEN("Negative has the min/max we expect") {
+            CHECK(i_ptr->min() == -3);
+            CHECK(i_ptr->max() == 8);
+            CHECK(ni_ptr->min() == -8);
+            CHECK(ni_ptr->max() == 3);
+        }
 
-            THEN("Negative is also integral") { CHECK(ni_ptr->integral()); }
+        THEN("Negative is also integral") { CHECK(ni_ptr->integral()); }
+    }
+}
+
+TEST_CASE("UnaryOpNode - NotNode") {
+    auto graph = Graph();
+    GIVEN("A constant of mixed doubles and a negation of it") {
+        auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{-2., -1., 0., 1., 2., -.5, .5});
+        auto nc_ptr = graph.emplace_node<NotNode>(c_ptr);
+
+        THEN("NotNode is logical") {
+            CHECK(nc_ptr->integral());
+            CHECK(nc_ptr->max() == 1);
+            CHECK(nc_ptr->min() == 0);
+            CHECK(nc_ptr->logical());
+        }
+
+        THEN("The negation has the state we expect") {
+            auto state = graph.initialize_state();
+            CHECK(std::ranges::equal(nc_ptr->view(state),
+                                     std::vector{false, false, true, false, false, false, false}));
         }
     }
+}
 
-    SECTION("NotNode") {
-        GIVEN("A constant of mixed doubles and a negation of it") {
-            auto c_ptr =
-                    graph.emplace_node<ConstantNode>(std::vector{-2., -1., 0., 1., 2., -.5, .5});
-            auto nc_ptr = graph.emplace_node<NotNode>(c_ptr);
+TEST_CASE("UnaryOpNode - SquareNode") {
+    auto graph = Graph();
+    GIVEN("An integer with max domain") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
+        auto square_ptr = graph.emplace_node<SquareNode>(i_ptr);
 
-            THEN("NotNode is logical") {
-                CHECK(nc_ptr->integral());
-                CHECK(nc_ptr->max() == 1);
-                CHECK(nc_ptr->min() == 0);
-                CHECK(nc_ptr->logical());
-            }
-
-            THEN("The negation has the state we expect") {
-                auto state = graph.initialize_state();
-                CHECK(std::ranges::equal(nc_ptr->view(state), std::vector{false, false, true, false,
-                                                                          false, false, false}));
-            }
-        }
-    }
-
-    SECTION("SquareNode") {
-        GIVEN("An integer with max domain") {
-            auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
-            auto square_ptr = graph.emplace_node<SquareNode>(i_ptr);
-
-            THEN("The min/max are expected") {
-                CHECK(square_ptr->min() == 0);
-                // we might consider capping this differently for integer types in the future
-                CHECK(square_ptr->max() ==
-                      static_cast<std::size_t>(2000000000) * static_cast<std::size_t>(2000000000));
-            }
+        THEN("The min/max are expected") {
+            CHECK(square_ptr->min() == 0);
+            // we might consider capping this differently for integer types in the future
+            CHECK(square_ptr->max() ==
+                  static_cast<std::size_t>(2000000000) * static_cast<std::size_t>(2000000000));
         }
     }
 }

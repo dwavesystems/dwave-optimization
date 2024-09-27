@@ -163,4 +163,7 @@ struct Update;
 
 void deduplicate_diff(std::vector<Update>& diff);
 
+// Return whether the given double encodes an integer.
+bool is_integer(const double& value);
+
 }  // namespace dwave::optimization

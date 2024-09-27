@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <iostream>
+#include <optional>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
@@ -44,6 +44,11 @@ class ArrayValidationNode : public Node {
 class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
     DynamicArrayTestingNode(std::initializer_list<ssize_t> shape);
+    DynamicArrayTestingNode(std::initializer_list<ssize_t> shape, std::optional<double> min,
+                            std::optional<double> max, bool integral);
+    DynamicArrayTestingNode(std::initializer_list<ssize_t> shape, std::optional<double> min,
+                            std::optional<double> max, bool integral,
+                            std::optional<ssize_t> min_size, std::optional<ssize_t> max_size);
 
     // Overloads needed by the Array ABC **************************************
 
@@ -58,6 +63,14 @@ class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decis
     std::span<const ssize_t> shape(const State& state) const override;
 
     ssize_t size_diff(const State& state) const override;
+
+    // lie about min/max/integral for now. We lie in such a way as to create
+    // maximum compatibility. In the future we might want to set these values
+    // at construction time.
+    double max() const override;
+    double min() const override;
+    bool integral() const override;
+    SizeInfo sizeinfo() const override;
 
     void initialize_state(State& state) const override;
     void initialize_state(State& state, std::initializer_list<double> values) const;
@@ -84,6 +97,11 @@ class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decis
 
  private:
     const std::span<const ssize_t> shape_;
+
+    std::optional<double> min_;
+    std::optional<double> max_;
+    bool integral_ = false;
+    std::optional<SizeInfo> sizeinfo_;
 };
 
 }  // namespace dwave::optimization
