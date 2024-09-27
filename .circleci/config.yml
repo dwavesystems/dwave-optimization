@@ -97,7 +97,7 @@ jobs:
             . env/bin/activate
             python -m build \
               -Ccompile-args="-v" \
-              -Csetup-args="-Dbuildtype=debug" \
+              -Csetup-args="-Db_ndebug=true" \
               -Csetup-args="-Dwerror=true"
             pip install dist/dwave*optimization*.whl --force
 

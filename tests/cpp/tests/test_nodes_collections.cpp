@@ -15,7 +15,7 @@
 #include <set>
 #include <unordered_set>
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "utils.hpp"

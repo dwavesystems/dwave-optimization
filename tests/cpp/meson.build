@@ -1,3 +1,9 @@
+
+catch2 = subproject(
+    'catch2',
+    default_options: {'tests': false},  # disable Catch2's self-tests
+).get_variable('catch2_with_main_dep')
+
 tests_all = executable(
     'tests-all',
     [
@@ -12,10 +18,9 @@ tests_all = executable(
         'tests/test_nodes_numbers.cpp',
         'tests/test_nodes_quadratic_model.cpp',
         'tests/test_utils.cpp',
-        'test_main.cpp',
     ],
     dependencies: [
-        subproject('catch2').get_variable('catch2_dep'),
+        catch2,
         libdwave_optimization,
     ],
 )
