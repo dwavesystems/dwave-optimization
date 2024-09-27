@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    Using advanced indexing nodes with indexing arrays that have a higher dimension than
+    one (e.g. ``A[:, i, :, j]`` where ``i`` and ``j`` are 2d arrays) has been disabled.
+    Previously, it was possible to construct models that used this functionality, but
+    the behavior of the model during state initialization and propagation may not have
+    been correct.
