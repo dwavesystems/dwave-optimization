@@ -325,6 +325,12 @@ struct AdvancedIndexingNode::IndexParser_ {
             bullet1mode = true;
         }
 
+        if (indexing_arrays_ndim > 1) {
+            throw std::invalid_argument(
+                    "Advanced indexing currently only supports 0- and 1-dimensional indexing "
+                    "arrays");
+        }
+
         simple_array_strides = shape_to_strides(array_ptr->ndim(), array_ptr->shape().data());
         for (ssize_t i = 0; i < array_ptr->ndim(); ++i) {
             simple_array_strides[i] /= array_ptr->itemsize();

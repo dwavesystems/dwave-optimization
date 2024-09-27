@@ -1571,6 +1571,18 @@ TEST_CASE("AdvancedIndexingNode") {
             }
         }
     }
+
+    GIVEN("A static-sized 4d 2x3x5x4 matrix with a 2d indexing array") {
+        auto arr_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 5, 4},
+                                                       -1000, 1000);
+
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3}, 0, 1);
+
+        THEN("We are prevented from doing an indexing operation") {
+            CHECK_THROWS(graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, Slice(),
+                                                                  Slice()));
+        }
+    }
 }
 
 TEST_CASE("BasicIndexingNode") {
