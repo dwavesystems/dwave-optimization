@@ -201,6 +201,31 @@ class TestModel(unittest.TestCase):
         self.assertTrue(c_iter.state(0))
         self.assertTrue(c_direct.state(0))
 
+    def test_feasible(self):
+        model = Model()
+        i = model.integer()
+        c = model.constant(5)
+        model.add_constraint(i <= c)
+
+        # Check expected exception if no states initialize
+        with self.assertRaises(ValueError):
+            model.feasible(0)
+
+        model.states.resize(1)
+        i.set_state(0, 1)
+
+        # Check that True is returned for feasible state
+        self.assertTrue(model.feasible(0))
+
+        # Check expected exception for index out of range with initialized state
+        with self.assertRaises(ValueError):
+            model.feasible(1)
+
+        i.set_state(0, 6)
+
+        # Check that False is returned for infeasible state
+        self.assertFalse(model.feasible(0))
+
     def test_lock(self):
         model = Model()
 
