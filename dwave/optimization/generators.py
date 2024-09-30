@@ -604,8 +604,7 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
 
             else:
                 # index of the previous customer visited
-                previous_idx = (condition * routes[vehicle_idx][client_idx - 1:client_idx].sum()
-                                + (one - condition) * range_helper[-1])
+                previous_idx = where(condition, routes[vehicle_idx][client_idx - 1:client_idx].sum(), range_helper[-1])
 
                 # index of the current customer visited
                 idx = where(condition, routes[vehicle_idx][client_idx:client_idx + 1].sum(), range_helper[-1])

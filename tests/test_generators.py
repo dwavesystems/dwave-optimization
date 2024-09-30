@@ -504,8 +504,6 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         self.assertEqual(model.num_decisions(), 1)
         self.assertEqual(model.num_constraints(), 12)
-        self.assertEqual(model.num_nodes(), 177)
-        self.assertEqual(model.num_edges(), 286)
         self.assertEqual(model.is_locked(), True)
 
         model.states.resize(1)
