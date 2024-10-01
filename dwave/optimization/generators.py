@@ -21,18 +21,19 @@ import typing
 import numpy as np
 import numpy.typing
 
-from dwave.optimization.mathematical import add, maximum
+from dwave.optimization.mathematical import add, maximum, where
 from dwave.optimization.model import Model
 
 __all__ = [
     "bin_packing",
     "capacitated_vehicle_routing",
+    "capacitated_vehicle_routing_with_time_windows",
     "flow_shop_scheduling",
     "job_shop_scheduling",
     "knapsack",
     "quadratic_assignment",
     "traveling_salesperson",
-    ]
+]
 
 
 def _require(argname: str,
@@ -146,6 +147,7 @@ def _from_constrained_quadratic_model(cqm) -> Model:
 
     return model
 
+
 def bin_packing(weights: numpy.typing.ArrayLike,
                 capacity: float
                 ) -> Model:
@@ -195,7 +197,7 @@ def bin_packing(weights: numpy.typing.ArrayLike,
     # Ensure that the weight for each bin does not exceed capacity
     for i in range(max_bins):
         bin_array = bins[i]
-        model.add_constraint((bin_array*weights).sum() <= capacity)
+        model.add_constraint((bin_array * weights).sum() <= capacity)
 
     # Minimize the number of bins that are non-empty
     constant_one = model.constant(1)
@@ -234,7 +236,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
             must be the location of the depot. Elements other than the first
             must be positive numbers.
         number_of_vehicles:
-            Number of available vehicles, as an integer.
+            Number of available vehicles, as a positive integer.
         vehicle_capacity:
             Maximum capacity for any vehicle. The total delivered demand by any
             vehicle on any route must not exceed this value.
@@ -286,9 +288,9 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 
     demand = _require("demand", demand, dtype=float, ndim=1, nonnegative=True)
 
-    if demand.sum() > number_of_vehicles*vehicle_capacity:
+    if demand.sum() > number_of_vehicles * vehicle_capacity:
         raise ValueError(f"Total demand, {demand.sum()}, exceeds the "
-                         f"total capacity, {number_of_vehicles*vehicle_capacity}.")
+                         f"total capacity, {number_of_vehicles * vehicle_capacity}.")
 
     if distances is not None:
 
@@ -297,13 +299,13 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 
         distances_array = _require("distances", distances, ndim=2, nonnegative=True, square=True)
 
-        if len(distances_array) < 2:
-            raise ValueError("Length of `distances` must be at least 2."
-                             f" Got length {len(distances_array)}.")
+        if distances_array.shape[0] < 2:
+            raise ValueError("Number of rows in `distances` must be at least 2."
+                             f" Got {distances_array.shape[0]} rows.")
 
-        if len(distances_array) != len(demand):
-            raise ValueError("Lengths of `distances` and `demand` must be equal."
-                             f" Got lengths {len(distances_array)} and"
+        if distances_array.shape[0] != len(demand):
+            raise ValueError("Number of rows in `distances` and length of `demand` must be equal."
+                             f" Got {distances_array.shape[0]} and"
                              f" {len(demand)}, respectively.")
 
         if demand[0] != 0:
@@ -339,7 +341,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
                 raise ValueError("`depot_x_y` cannot be provided when "
                                  "`demand[0]` is zero.")
 
-            depot_x_y = np.asarray([locations_x[0], locations_y[0]]) 
+            depot_x_y = np.asarray([locations_x[0], locations_y[0]])
 
         else:
 
@@ -404,6 +406,242 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     model.minimize(add(*route_costs))
 
     model.lock()
+    return model
+
+
+def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike,
+                                                  number_of_vehicles: int,
+                                                  vehicle_capacity: float,
+                                                  time_distances: numpy.typing.ArrayLike,
+                                                  time_window_open: numpy.typing.ArrayLike,
+                                                  time_window_close: numpy.typing.ArrayLike,
+                                                  service_time: numpy.typing.ArrayLike
+                                                  ) -> Model:
+    r"""Generate a model encoding a capacitated vehicle routing problem with time windows.
+
+    The capacitated vehicle routing problem with time windows,
+    `CVRPTW <https://en.wikipedia.org/wiki/Vehicle_routing_problem>`_,
+    is to find the shortest possible routes for a fleet of vehicles delivering
+    to multiple customer locations from a central depot. Each customer should
+    be served after time_window_open and before time_window_close. Vehicles have a
+    specified delivery capacity, and on the routes to locations and then back
+    to the depot, no vehicle is allowed to exceed its carrying capacity.
+
+    Args:
+        demand:
+            Customer demand, as an |array-like|_. The first element is the depot and must
+            be zero.
+        number_of_vehicles:
+            Number of available vehicles, as a positive integer.
+        vehicle_capacity:
+            Maximum capacity for any vehicle. The total delivered demand by any
+            vehicle on any route must not exceed this value.
+        time_distances:
+            time_distances between **all** the problem's locations, as an |array-like|_
+            of positive numbers, including both customer sites and the depot.The first
+            row and colum of the distance matrix are customer distances form the depot.
+        time_window_open:
+            The opening time of each customer, as an |array-like|_. The first element is
+            the depot.
+        time_window_close:
+            The closing time of each customer, as an |array-like|_. The first element is
+            the depot.
+        service_time:
+            The time it takes to serve each customer, as an |array-like|_. The first element
+            is the depot and must be zero.
+
+    Returns:
+        A model encoding the CVRPTW problem.
+
+    Notes:
+        The model uses a :class:`~dwave.optimization.model.Model.disjoint_lists`
+        class as the decision variable being optimized, with permutations of its
+        sublist representing various itineraries for each vehicle.
+    """
+
+    time_distances = np.asarray(time_distances)
+    if not isinstance(number_of_vehicles, int):
+        raise ValueError("`number_of_vehicles` must be an integer.")
+
+    if number_of_vehicles < 1:
+        raise ValueError("`number_of_vehicles` must be at least 1."
+                         f" Got {number_of_vehicles}.")
+
+    if vehicle_capacity <= 0:
+        raise ValueError("`vehicle_capacity` must be a positive number."
+                         f" Got {vehicle_capacity}.")
+
+    demand = _require("demand", demand, dtype=float, ndim=1, nonnegative=True)
+
+    if demand.sum() > number_of_vehicles * vehicle_capacity:
+        raise ValueError(f"Total demand, {demand.sum()}, exceeds the "
+                         f"total capacity, {number_of_vehicles * vehicle_capacity}.")
+
+    time_distances_array = _require("time_distances", time_distances, ndim=2, nonnegative=True, square=True)
+
+    time_window_open = _require("time_window_open", time_window_open, dtype=float, ndim=1, nonnegative=True)
+    time_window_close = _require("time_window_close", time_window_close, dtype=float, ndim=1, nonnegative=True)
+    service_time = _require("service_time", service_time, dtype=float, ndim=1, nonnegative=True)
+
+    if time_distances_array.shape[0] < 2:
+        raise ValueError("Number of rows in `time_distances` must be at least 2."
+                         f" Got {time_distances_array.shape[0]} rows.")
+
+    if time_distances_array.shape[0] != len(demand):
+        raise ValueError("Number of rows in `time_distances` and length of `demand` must be equal."
+                         f" Got {time_distances_array.shape[0]} and"
+                         f" {len(demand)}, respectively.")
+
+    if time_distances_array.shape[0] != len(time_window_open):
+        raise ValueError("Number of rows in `time_distances` and length of `time_window_open` must be equal."
+                         f" Got {time_distances_array.shape[0]} and"
+                         f" {len(time_window_open)}, respectively.")
+
+    if time_distances_array.shape[0] != len(time_window_close):
+        raise ValueError("Number of rows in `time_distances` and length of `time_window_close` must be equal."
+                         f" Got {time_distances_array.shape[0]} and"
+                         f" {len(time_window_close)}, respectively.")
+
+    if time_distances_array.shape[0] != len(service_time):
+        raise ValueError("Number of rows in `time_distances` and length of `service_time` must be equal."
+                         f" Got  {time_distances_array.shape[0]} and"
+                         f" {len(service_time)}, respectively.")
+
+    if demand[0] != 0:
+        raise ValueError("`demand[0]` must be zero.")
+
+    customer_demand = demand[1:]
+
+    if (customer_demand == 0).any():
+        raise ValueError("Only the first element of `demand` can be zero."
+                         f" Got zeros for indices {list(np.where(demand == 0)[0])}.")
+
+    num_customers = len(customer_demand)
+
+    # Construct the model
+    model = Model()
+
+    # Add the constants
+    time_distance_ext = np.zeros((num_customers + 1, num_customers + 1))
+    time_distance_ext[:num_customers, :num_customers] = time_distances_array[1:, 1:]
+
+    time_depo_ext = np.zeros(num_customers + 1)
+    time_depo_ext[:num_customers] = time_distances_array[0, 1:]
+
+    t_depo = model.constant(time_depo_ext)
+    t_cust = model.constant(time_distance_ext)
+
+    time_open_ext = np.zeros(num_customers + 1)
+    time_open_ext[:num_customers] = time_window_open[1:]
+    t_open = model.constant(time_open_ext)
+
+    time_close_ext = np.zeros(num_customers + 1)
+    time_close_ext[:num_customers] = time_window_close[1:]
+    time_close_ext[-1] = 1e6
+    t_close = model.constant(time_close_ext)
+
+    service_time_ext = np.zeros(num_customers + 1)
+    service_time_ext[:num_customers] = service_time[1:]
+    t_service = model.constant(service_time_ext)
+
+    demand = model.constant(customer_demand)
+    capacity = model.constant(vehicle_capacity)
+    t_depo_close = model.constant(time_window_close[0])
+
+    one = model.constant(1)
+
+    # Add the decision variable
+    routes_decision, routes = model.disjoint_lists(
+        primary_set_size=num_customers,
+        num_disjoint_lists=number_of_vehicles)
+
+    # Capacity constraint
+    capacity_constraints = [(demand[routes[vehicle_idx]].sum() <= capacity)
+                            for vehicle_idx in range(number_of_vehicles)
+                            ]
+    for c in capacity_constraints:
+        model.add_constraint(c)
+
+    rh = np.arange(num_customers + 1).astype(int)
+    range_helper = model.constant(rh)
+
+    # this is number of clients each vehicle visits
+    num_clients_in_route = {}
+    for i in range(number_of_vehicles):
+        num_clients_in_route[f'route{i}'] = routes[i].size()
+
+    # Constrain the number of locations per route
+    max_loc_per_route_constant = model.constant(3 * int(num_customers / number_of_vehicles))
+    max_loc_per_route_constraints = [(num_clients_in_route[f'route{v}'] <= max_loc_per_route_constant)
+                                     for v in range(number_of_vehicles)]
+    for mlpr in max_loc_per_route_constraints:
+        model.add_constraint(mlpr)
+
+    # here we keep track of the time a vehicle arrives to each client
+    # store them in the class to check the solution
+    time_leaving = []
+    serving_time = []
+    times_back = []
+    time_windows_constraints = []
+
+    for vehicle_idx in range(number_of_vehicles):
+        this_t_leaving = []
+        this_t_windows_c = []
+        this_t_serving_time = []
+
+        for client_idx in range(max_loc_per_route_constant):
+
+            # the condition here allows us to choose whether to choose a used index or to fall back to the last one
+            # that points to a zero in the extended array
+            condition = (num_clients_in_route[f'route{vehicle_idx}'] >= range_helper[client_idx] + one)
+
+            if client_idx == 0:
+                # index of the first customer visited, if length of the route is zero,
+                # points to the last (0) element
+                idx = where(condition, routes[vehicle_idx][:1].sum(), range_helper[-1])
+                this_t_serving_time.append(maximum(t_depo[idx], t_open[idx]))
+                this_t_leaving.append(this_t_serving_time[-1] + t_service[idx])
+
+            else:
+                # index of the previous customer visited
+                previous_idx = where(condition, routes[vehicle_idx][client_idx - 1:client_idx].sum(), range_helper[-1])
+
+                # index of the current customer visited
+                idx = where(condition, routes[vehicle_idx][client_idx:client_idx + 1].sum(), range_helper[-1])
+
+                this_t_serving_time.append(maximum(this_t_leaving[-1] + t_cust[previous_idx, idx], t_open[idx]))
+                this_t_leaving.append(this_t_serving_time[-1] + t_service[idx])
+
+            # adding constraint that there is enough time for servicing the client
+            this_t_windows_c.append(this_t_leaving[-1] <= t_close[idx])
+
+        condition = (num_clients_in_route[f'route{vehicle_idx}'] >= one)
+        last_cust_idx = where(condition, routes[vehicle_idx][-1:].sum(), range_helper[-1])
+
+        times_back.append(this_t_leaving[-1] + t_depo[last_cust_idx])
+        time_leaving.append(this_t_leaving)
+        serving_time.append(this_t_serving_time)
+
+        for ct in this_t_windows_c:
+            model.add_constraint(ct)
+        time_windows_constraints.append(this_t_windows_c)
+
+    times_back_constraints = [(tb <= t_depo_close) for tb in times_back]
+    for c in times_back_constraints:
+        model.add_constraint(c)
+
+    # Add the objective
+    # minimize travelled distance
+    route_costs = []
+    for r in range(number_of_vehicles):
+        route_costs.append(t_depo[routes[r][:1]].sum())
+        route_costs.append(t_depo[routes[r][-1:]].sum())
+        route_costs.append(t_cust[routes[r][1:], routes[r][:-1]].sum())
+
+    model.minimize(add(*route_costs))
+
+    model.lock()
+
     return model
 
 
@@ -740,7 +978,7 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
     # Minimize the sum of distances multiplied by the flows.
     qap_model.minimize(
         (
-            FLOW_MATRIX * DISTANCE_MATRIX[ordered_facilities, :][:, ordered_facilities]
+                FLOW_MATRIX * DISTANCE_MATRIX[ordered_facilities, :][:, ordered_facilities]
         ).sum()
     )
 
