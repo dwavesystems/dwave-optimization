@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add capacitated vehicle routing problem with time windows generator.
+    See `#104 <https://github.com/dwavesystems/dwave-optimization/issues/104>`_.
