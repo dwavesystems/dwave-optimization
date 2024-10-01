@@ -412,10 +412,10 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike,
                                                   number_of_vehicles: int,
                                                   vehicle_capacity: float,
-                                                  time_distances: typing.Optional[numpy.typing.ArrayLike] = None,
-                                                  time_window_open: typing.Optional[numpy.typing.ArrayLike] = None,
-                                                  time_window_close: typing.Optional[numpy.typing.ArrayLike] = None,
-                                                  service_time: typing.Optional[numpy.typing.ArrayLike] = None,
+                                                  time_distances: numpy.typing.ArrayLike,
+                                                  time_window_open: numpy.typing.ArrayLike,
+                                                  time_window_close: numpy.typing.ArrayLike,
+                                                  service_time: numpy.typing.ArrayLike
                                                   ) -> Model:
     r"""Generate a model encoding a capacitated vehicle routing problem with time windows.
 
