@@ -357,7 +357,7 @@ def where(condition: ArraySymbol, x: ArraySymbol, y: ArraySymbol) -> Where:
 
     Returns:
         An :class:`~dwave.optimization.model.ArraySymbol`
-        with elements from ``x``where ``condition`` is ``True``,
+        with elements from ``x`` where ``condition`` is ``True``,
         and elements from ``y`` elsewhere.
 
     Examples:
@@ -378,7 +378,7 @@ def where(condition: ArraySymbol, x: ArraySymbol, y: ArraySymbol) -> Where:
         ...     print(a.state())
         [4. 5. 6.]
 
-        This example uses a binary array to to select between two arrays
+        This example uses a binary array to to select between two arrays.
 
         >>> model = Model()
         >>> condition = model.binary(3)
@@ -391,7 +391,7 @@ def where(condition: ArraySymbol, x: ArraySymbol, y: ArraySymbol) -> Where:
         ...     print(a.state())
         [1. 2. 6.]
 
-        This example uses a single binary variable to choose between two sets
+        This example uses a single binary variable to choose between two sets.
 
         >>> model = Model()
         >>> condition = model.binary()
