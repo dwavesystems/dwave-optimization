@@ -245,6 +245,36 @@ cdef class Model:
         lists = [DisjointList(main, i) for i in range(num_disjoint_lists)]
         return main, lists
 
+    def feasible(self, int index = 0):
+        """Check the feasibility of the state at the input index.
+
+        Args:
+            index: index of the state to check for feasibility.
+
+        Returns:
+            Feasibility of the state.
+
+        Examples:
+            This example demonstrates checking the feasibility of a simple model with
+            feasible and infeasible states.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> b = model.binary()
+            >>> model.add_constraint(b) # doctest: +ELLIPSIS
+            <dwave.optimization.BinaryVariable at ...>
+            >>> model.states.resize(2)
+            >>> b.set_state(0, 1) # Feasible
+            >>> b.set_state(1, 0) # Infeasible
+            >>> with model.lock():
+            ...     model.feasible(0)
+            True
+            >>> with model.lock():
+            ...     model.feasible(1)
+            False
+        """
+        return all(sym.state(index) for sym in self.iter_constraints())
+
     @classmethod
     def from_file(cls, file, *,
                   check_header = True,

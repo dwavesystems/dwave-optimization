@@ -45,6 +45,8 @@ class Model:
         self, primary_set_size: int, num_disjoint_lists: int,
         ) -> typing.Tuple[DisjointLists, typing.Tuple[DisjointList, ...]]: ...
 
+    def feasible(self, index: int = 0) -> bool: ...
+
     @classmethod
     def from_file(
         cls,
