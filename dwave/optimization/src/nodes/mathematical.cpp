@@ -663,6 +663,314 @@ template class NaryOpNode<functional::min<double>>;
 template class NaryOpNode<std::multiplies<double>>;
 template class NaryOpNode<std::plus<double>>;
 
+// PartialReduceNode *****************************************************************
+std::vector<ssize_t> partial_reduce_shape(const std::span<const ssize_t> input_shape,
+                                          const ssize_t axis) {
+    std::vector<ssize_t> shape(input_shape.begin(), input_shape.end());
+    shape.erase(shape.begin() + axis);
+    return shape;
+}
+
+std::vector<ssize_t> as_contiguous_strides(const std::span<const ssize_t> shape) {
+    ssize_t ndim = static_cast<ssize_t>(shape.size());
+
+    assert(ndim > 0);
+    std::vector<ssize_t> strides(ndim);
+    // otherwise strides are a function of the shape
+    strides[ndim - 1] = sizeof(double);
+    for (auto i = ndim - 2; i >= 0; --i) {
+        strides[i] = strides[i + 1] * shape[i + 1];
+    }
+    return strides;
+}
+
+std::span<const ssize_t> nonempty(std::span<const ssize_t> span) {
+    if (span.empty()){
+        throw std::invalid_argument("Input span should not be empty");
+    }
+    return span;
+}
+
+/// TODO: support multiple axes
+template <class BinaryOp>
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, std::span<const ssize_t> axes,
+                                               double init)
+        : ArrayOutputMixin(partial_reduce_shape(node_ptr->shape(), nonempty(axes)[0])),
+          init(init),
+          array_ptr_(node_ptr),
+          axes_(make_axes(axes)),
+          parent_strides_c_(as_contiguous_strides(array_ptr_->shape())) {
+    if (array_ptr_->dynamic()) {
+        throw std::invalid_argument("cannot do a partial reduction on a dynamic array");
+    } else if (array_ptr_->size() < 1) {
+        throw std::invalid_argument("cannot do a partial reduction on an empty array");
+    }
+
+    // Validate axes
+    /// TODO: support negative axes
+    if (axes.size() != 1){
+        throw std::invalid_argument("Partial reduction support only one axis");
+    }
+
+    assert(this->ndim() == array_ptr_->ndim() - 1);
+    ssize_t axis = axes_[0];
+    if (axis < 0 || axis >= array_ptr_->ndim()) {
+        throw std::invalid_argument("Axes should be integers between 0 and n_dim - 1");
+    }
+
+    add_predecessor(node_ptr);
+}
+
+template <class BinaryOp>
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr,
+                                               std::initializer_list<ssize_t> axes, double init)
+        : PartialReduceNode(node_ptr, std::span(axes), init) {}
+
+template <class BinaryOp>
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, const ssize_t axis, double init)
+        : PartialReduceNode(node_ptr, {axis}, init) {}
+
+template <>
+PartialReduceNode<std::plus<double>>::PartialReduceNode(ArrayNode* array_ptr, const ssize_t axis)
+        : PartialReduceNode(array_ptr, axis, 0) {}
+
+template <>
+PartialReduceNode<std::plus<double>>::PartialReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes)
+        : PartialReduceNode(array_ptr, nonempty(axes)[0], 0) {
+    if (axes.size() != 1){
+        throw std::invalid_argument("Partial sum supports only one axis");
+    }
+}
+
+template <class BinaryOp>
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr,
+                                               std::initializer_list<ssize_t> axes)
+        : PartialReduceNode(array_ptr, std::span(axes)) {}
+
+template <class BinaryOp>
+PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, const ssize_t axis)
+        : PartialReduceNode(array_ptr, {axis}) {}
+
+template <class BinaryOp>
+std::span<const ssize_t> PartialReduceNode<BinaryOp>::axes() const {
+
+    // TODO: support multiple axes
+    return std::span(axes_.get(), 1);
+}
+
+template <class BinaryOp>
+double const* PartialReduceNode<BinaryOp>::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+template <class BinaryOp>
+void PartialReduceNode<BinaryOp>::commit(State& state) const {
+    data_ptr<ArrayNodeStateData>(state)->commit();
+}
+
+template <class BinaryOp>
+std::span<const Update> PartialReduceNode<BinaryOp>::diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->diff();
+}
+
+template <class BinaryOp>
+void PartialReduceNode<BinaryOp>::initialize_state(State& state) const {
+    int index = topological_index();
+    assert(index >= 0 && "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > index && "unexpected state length");
+    assert(state[index] == nullptr && "already initialized state");
+
+    std::vector<double> values(size(state));
+
+    for (ssize_t i = 0, stop = size(state); i < stop; ++i) {
+        assert(i < static_cast<ssize_t>(values.size()));
+        values[i] = reduce(state, i);
+    }
+
+    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
+}
+
+template <class BinaryOp>
+bool PartialReduceNode<BinaryOp>::integral() const {
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+
+    if constexpr (std::is_integral<result_type>::value) {
+        return true;
+    }
+
+    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
+        // the actual value of init doesn't matter, all of the above have no default
+        // or an integer default init
+        return array_ptr_->integral() && is_integer(init.value_or(0));
+    }
+
+    assert(false && "not implemented yet");
+    unreachable();
+}
+
+template <class BinaryOp>
+ssize_t PartialReduceNode<BinaryOp>::map_parent_index(const State& state,
+                                                      ssize_t parent_flat_index) const {
+    ssize_t axis = this->axes_[0];
+    assert(axis >= 0 && axis < array_ptr_->size(state));
+    assert(parent_flat_index >= 0 && parent_flat_index < array_ptr_->size(state));
+
+    ssize_t index = 0;  // the linear index corresponding to the parent index being updated
+    ssize_t current_parent_axis = 0;  // current parent axis visited
+    ssize_t current_axis = 0;         // current axis
+
+    for (auto stride : parent_strides_c_) {
+        // calculate parent index on the current axis (not the linear one)
+        ssize_t this_axis_index = parent_flat_index / (stride / array_ptr_->itemsize());
+
+        // update the index now
+        parent_flat_index = parent_flat_index % (stride / array_ptr_->itemsize());
+
+        if (current_parent_axis == axis) {
+            current_parent_axis++;
+            continue;
+        }
+
+        // now do the calculation of the linear index of reduction
+        index += this_axis_index * (this->strides()[current_axis] / this->itemsize());
+
+        // increase the axis visited
+        current_axis++;
+        current_parent_axis++;
+    }
+
+    return index;
+}
+
+template <class BinaryOp>
+double PartialReduceNode<BinaryOp>::max() const {
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+
+    if constexpr (std::is_same<result_type, bool>::value) {
+        return true;
+    }
+
+    ssize_t axis = axes_[0];
+    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
+        return this->init.value_or(0) + array_ptr_->shape()[axis] * array_ptr_->max();
+    }
+
+    assert(false && "not implemented yet");
+    unreachable();
+}
+
+template <class BinaryOp>
+double PartialReduceNode<BinaryOp>::min() const {
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+
+    if constexpr (std::is_same<result_type, bool>::value) {
+        return false;
+    }
+
+    ssize_t axis = axes_[0];
+    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
+        return this->init.value_or(0) + array_ptr_->shape()[axis] * array_ptr_->min();
+    }
+
+    assert(false && "not implemented yet");
+    unreachable();
+}
+
+template <>
+void PartialReduceNode<std::plus<double>>::propagate(State& state) const {
+    auto ptr = data_ptr<ArrayNodeStateData>(state);
+
+    auto& values = ptr->buffer;
+    auto& changes = ptr->updates;
+
+    for (const auto& [p_index, old, value] : array_ptr_->diff(state)) {
+        const ssize_t index = map_parent_index(state, p_index);
+        const double previous = values[index];
+        values[index] += (value - old);
+        changes.emplace_back(index, previous, values[index]);
+    }
+
+    if (ptr->updates.size()) Node::propagate(state);
+}
+
+template <class BinaryOp>
+double PartialReduceNode<BinaryOp>::reduce(const State& state, ssize_t index) const {
+    /// We wish to fill `index` of the partial reduction, given the state of the parent. We proceed
+    /// as follows.
+    /// 1. We unravel the index. This will give us e.g. the indices i, k for
+    ///     R_ik = sum_j P_ijk
+    /// 2. Then we know we have to iterate through the parent starting from j=0 to its full
+    /// dimension. To do so, we first find the starting index in the parent.
+    /// 3. We then create an iterator through the parent array along the axis.
+    /// 4. We use the above iterators to perform the reduction.
+    assert(index >= 0 && index < this->size(state));
+
+    // 1. Unravel the index we are trying to fill
+    std::vector<ssize_t> indices = unravel_index(this->strides(), index);
+    assert(static_cast<ssize_t>(indices.size()) == this->ndim());
+
+    // 2. Find the respective starting index in the parent
+    ssize_t axis = axes_[0];
+    ssize_t start_idx = 0;
+    for (ssize_t ax = 0; ax < this->ndim(); ++ax) {
+        if (ax >= axis) {
+            start_idx += indices[ax] * array_ptr_->strides()[ax + 1] / array_ptr_->itemsize();
+        } else {
+            start_idx += indices[ax] * array_ptr_->strides()[ax] / array_ptr_->itemsize();
+        }
+    }
+    assert(start_idx >= 0 && index < this->size(state));
+
+    // 3. We create an iterator that starts from index just found and iterates through the axis we
+    // are reducing over
+    ArrayIterator begin =
+            ArrayIterator(array_ptr_->buff(state) + start_idx, 1, &array_ptr_->shape()[axis],
+                          &array_ptr_->strides()[axis]);
+
+    ArrayIterator end = begin + array_ptr_->shape(state)[axis];
+
+    // Get the initial value
+    double init;
+    if (this->init.has_value()) {
+        init = this->init.value();
+    } else {
+        // if there is no init, we use the first value in the array as the init
+        // we should only be here if the array is not dynamic and if it has at
+        // least one entry
+        assert(!array_ptr_->dynamic());
+        assert(array_ptr_->size(state) >= 1);
+        init = *begin;
+        ;
+        ++begin;
+    }
+
+    /// 4. Iterate through the parent on the correct axis.
+    return std::reduce(begin, end, init, BinaryOp());
+}
+
+template <class BinaryOp>
+void PartialReduceNode<BinaryOp>::revert(State& state) const {
+    data_ptr<ArrayNodeStateData>(state)->revert();
+}
+
+template <class BinaryOp>
+std::span<const ssize_t> PartialReduceNode<BinaryOp>::shape(const State& state) const {
+    return this->shape();
+}
+
+template <class BinaryOp>
+ssize_t PartialReduceNode<BinaryOp>::size(const State& state) const {
+    return this->size();
+}
+
+template <class BinaryOp>
+ssize_t PartialReduceNode<BinaryOp>::size_diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->size_diff();
+}
+
+// Uncommented are the tested specializations
+template class PartialReduceNode<std::plus<double>>;
+
 // ReduceNode *****************************************************************
 
 // Create a storage class for op-specific values.

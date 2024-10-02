@@ -2079,13 +2079,23 @@ cdef class ArraySymbol(Symbol):
         strides = self.array_ptr.strides()
         return tuple(strides[i] for i in range(strides.size()))
 
-    def sum(self):
+    def sum(self, axis=None):
         """Create a :class:`~dwave.optimization.symbols.Sum` symbol.
 
         The new symbol returns the sum of its elements.
         """
-        from dwave.optimization.symbols import Sum  # avoid circular import
-        return Sum(self)
+        import dwave.optimization.symbols
+
+        if axis is not None:
+            if not isinstance(axis, numbers.Integral):
+                raise TypeError("axis of the sum should be an int")
+
+            if not (0 <= axis < self.ndim()):
+                raise ValueError("axis should be 0 <= axis < self.ndim()")
+
+            return dwave.optimization.symbols.PartialSum(self, axis)
+
+        return dwave.optimization.symbols.Sum(self)
 
 
 cdef class StateView:

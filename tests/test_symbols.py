@@ -1613,6 +1613,42 @@ class TestOr(utils.BinaryOpTests):
         np.testing.assert_array_equal(ac.state(0), [ 1, 0, 1, 0 ])
 
 
+class TestPartialSum(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        A = model.constant(np.arange(8).reshape((2, 2, 2)))
+        B = model.constant(np.arange(25).reshape((5, 5)))
+        a = A.sum(axis=0)
+        b = B.sum(axis=1)
+        model.lock()
+        yield a
+        yield b
+
+    def test_state(self):
+        model = Model()
+
+        A = model.constant(np.arange(8).reshape((2, 2, 2)))
+        B = model.constant(np.arange(25).reshape((5, 5)))
+        a = A.sum(axis=0)
+        b = B.sum(axis=1)
+        model.lock()
+        model.states.resize(1)
+        np.testing.assert_array_equal(a.state(0), np.sum(np.arange(8).reshape((2, 2, 2)), axis=0))
+        np.testing.assert_array_equal(b.state(0), np.sum(np.arange(25).reshape((5, 5)), axis=1))
+
+    def test_indexed(self):
+        model = Model()
+        A = model.constant(np.arange(125).reshape((5, 5, 5)))
+        x = model.list(5)
+        ax = A[:, x, :].sum(axis=1)
+        model.lock()
+        model.states.resize(1)
+        x.set_state(0, [0, 4, 1, 3, 2])
+        np.testing.assert_array_equal(ax.state(0),
+                                      np.sum(np.arange(125).reshape((5, 5, 5))[:, [0, 4, 1, 3, 2], :],
+                                             axis=1))
+
+
 class TestPermutation(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

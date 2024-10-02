@@ -646,6 +646,175 @@ TEST_CASE("NaryOpNode - SumNode") {
     }
 }
 
+TEST_CASE("PartialReduceNode - PartialSumNode") {
+    auto graph = Graph();
+    GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes ") {
+        std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
+        auto ptr =
+                graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 2, 2});
+        auto r_ptr_0 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 0);
+        auto r_ptr_1 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 1);
+        auto r_ptr_2 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 2);
+
+        THEN("The dimensions of the partial reductions are correct") {
+            CHECK(r_ptr_0->ndim() == 2);
+            CHECK(r_ptr_1->ndim() == 2);
+            CHECK(r_ptr_2->ndim() == 2);
+        }
+
+        WHEN("We make a state") {
+            auto state = graph.initialize_state();
+
+            THEN("The partial reduction has the values and shapes we expect") {
+                CHECK(r_ptr_0->ndim() == 2);
+                CHECK(r_ptr_0->size(state) == 4);
+                CHECK(r_ptr_0->shape(state).size() == 2);
+
+                CHECK(r_ptr_1->ndim() == 2);
+                CHECK(r_ptr_1->size(state) == 4);
+                CHECK(r_ptr_1->shape(state).size() == 2);
+
+                CHECK(r_ptr_2->ndim() == 2);
+                CHECK(r_ptr_2->size(state) == 4);
+                CHECK(r_ptr_2->shape(state).size() == 2);
+
+                /// Check with
+                /// A = np.arange(8).reshape((2, 2, 2))
+                /// np.sum(A, axis=0)
+                CHECK(std::ranges::equal(r_ptr_0->view(state), std::vector{4, 6, 8, 10}));
+                /// np.sum(A, axis=1)
+                CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector{2, 4, 10, 12}));
+                /// np.sum(A, axis=2)
+                CHECK(std::ranges::equal(r_ptr_2->view(state), std::vector{1, 5, 9, 13}));
+            }
+        }
+    }
+
+    GIVEN("A 3D binary array with shape (2, 3, 2) and partially reduce over the axes") {
+        auto ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3, 2});
+        auto r_ptr_0 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 0);
+        auto r_ptr_1 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 1);
+        auto r_ptr_2 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 2);
+
+        THEN("The dimensions of the partial reductions are correct") {
+            CHECK(r_ptr_0->ndim() == 2);
+            CHECK(r_ptr_1->ndim() == 2);
+            CHECK(r_ptr_2->ndim() == 2);
+        }
+
+        WHEN("We make a state") {
+            auto state = graph.initialize_state();
+
+            THEN("The partial reduction has the values and shapes we expect") {
+                CHECK(r_ptr_0->ndim() == 2);
+                CHECK(r_ptr_0->size(state) == 6);
+                CHECK(r_ptr_0->shape(state).size() == 2);
+
+                CHECK(r_ptr_1->ndim() == 2);
+                CHECK(r_ptr_1->size(state) == 4);
+                CHECK(r_ptr_1->shape(state).size() == 2);
+
+                CHECK(r_ptr_2->ndim() == 2);
+                CHECK(r_ptr_2->size(state) == 6);
+                CHECK(r_ptr_2->shape(state).size() == 2);
+
+                CHECK(std::ranges::equal(r_ptr_0->view(state), std::vector<double>(6, 0)));
+                CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector<double>(4, 0)));
+                CHECK(std::ranges::equal(r_ptr_2->view(state), std::vector<double>(6, 0)));
+
+                AND_WHEN("We update a variable") {
+                    ptr->flip(state, 4);
+
+                    // manually propagate
+                    ptr->propagate(state);
+                    r_ptr_0->propagate(state);
+                    r_ptr_1->propagate(state);
+                    r_ptr_2->propagate(state);
+
+                    THEN("The partial reductions are updated correctly") {
+                        CHECK(std::ranges::equal(r_ptr_0->view(state),
+                                                 std::vector{0, 0, 0, 0, 1, 0}));
+                        CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector{1, 0, 0, 0}));
+                        CHECK(std::ranges::equal(r_ptr_2->view(state),
+                                                 std::vector{0, 0, 1, 0, 0, 0}));
+                    }
+
+                    AND_WHEN("We commit") {
+                        ptr->commit(state);
+                        r_ptr_0->commit(state);
+                        r_ptr_1->commit(state);
+                        r_ptr_2->commit(state);
+
+                        THEN("The values are maintained") {
+                            CHECK(std::ranges::equal(r_ptr_0->view(state),
+                                                     std::vector{0, 0, 0, 0, 1, 0}));
+                            CHECK(std::ranges::equal(r_ptr_1->view(state),
+                                                     std::vector{1, 0, 0, 0}));
+                            CHECK(std::ranges::equal(r_ptr_2->view(state),
+                                                     std::vector{0, 0, 1, 0, 0, 0}));
+                        }
+                    }
+
+                    AND_WHEN("We revert") {
+                        ptr->revert(state);
+                        r_ptr_0->revert(state);
+                        r_ptr_1->revert(state);
+                        r_ptr_2->revert(state);
+
+                        THEN("The values are reverted") {
+                            CHECK(std::ranges::equal(r_ptr_0->view(state),
+                                                     std::vector<double>(6, 0)));
+                            CHECK(std::ranges::equal(r_ptr_1->view(state),
+                                                     std::vector<double>(4, 0)));
+                            CHECK(std::ranges::equal(r_ptr_2->view(state),
+                                                     std::vector<double>(6, 0)));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("A 3D array, index it by slice, int and slice and we take partial traces") {
+        std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
+        auto array_ptr =
+                graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 2, 2});
+        auto ptr = graph.emplace_node<BasicIndexingNode>(array_ptr, Slice(0, 2), 1, Slice(0, 2));
+
+        // then there are only 2 possible reductions
+        auto r_ptr_0 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 0);
+        auto r_ptr_1 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 1);
+
+        THEN("The dimensions of the partial reductions are correct") {
+            CHECK(ptr->ndim() == 2);
+            CHECK(r_ptr_0->ndim() == 1);
+            CHECK(r_ptr_1->ndim() == 1);
+        }
+
+        WHEN("We make a state") {
+            auto state = graph.initialize_state();
+
+            THEN("The partial reduction has the values and shapes we expect") {
+                CHECK(r_ptr_0->ndim() == 1);
+                CHECK(r_ptr_0->size(state) == 2);
+                CHECK(r_ptr_0->shape(state).size() == 1);
+
+                CHECK(r_ptr_1->ndim() == 1);
+                CHECK(r_ptr_1->size(state) == 2);
+                CHECK(r_ptr_1->shape(state).size() == 1);
+
+                /// Check with
+                /// A = np.arange(8).reshape((2, 2, 2))
+                /// B = A[:, 1, :]
+                /// np.sum(B, axis=0)
+                CHECK(std::ranges::equal(r_ptr_0->view(state), std::vector{8, 10}));
+                /// np.sum(B, axis=1)
+                CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector{5, 13}));
+            }
+        }
+    }
+}
+
 TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<double>,
                    std::logical_and<double>, std::multiplies<double>, std::plus<double>) {
     auto graph = Graph();

@@ -529,4 +529,34 @@ TEST_CASE("Test resulting_shape()") {
     }
 }
 
+TEST_CASE("Ravelling-unravelling indices") {
+    SECTION("On constant array of shape (3, 4, 5)") {
+        auto state = State();
+        class Array3d : public ArrayOutputMixin<Array> {
+         public:
+            Array3d() : ArrayOutputMixin({3, 4, 5}) {}
+
+            double const* buff(const State&) const override { return state_.data(); }
+
+            using ArrayOutputMixin::size;  // for stateless overload
+            ssize_t size(const State&) const noexcept override {
+                return shape_[0] * shape_[1] * shape_[2];
+            }
+
+            std::span<const ssize_t> shape(const State&) const override { return shape_; }
+            using ArrayOutputMixin::shape;  // for the stateless overload
+
+            std::span<const Update> diff(const State&) const override { return {}; }
+
+            // Normally this would be stored in the State, but for testing we just keep it here
+            std::vector<double> state_ = {};
+            std::vector<ssize_t> shape_ = {3, 4, 5};
+        };
+        auto arr = Array3d();
+        auto last_element_flat = arr.size() - 1;
+        CHECK(ravel_multi_index(arr.strides(), {2, 3, 4}) == last_element_flat);
+        CHECK(ravel_multi_index(arr.strides(), unravel_index(arr.strides(), last_element_flat)) == last_element_flat);
+    }
+}
+
 }  // namespace dwave::optimization

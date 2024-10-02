@@ -152,6 +152,10 @@ class Or(ArraySymbol):
     ...
 
 
+class PartialSum(ArraySymbol):
+    ...
+
+
 class Permutation(ArraySymbol):
     ...
 

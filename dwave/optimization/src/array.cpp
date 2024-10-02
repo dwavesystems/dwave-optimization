@@ -246,4 +246,33 @@ std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
     return broadcast_shape(std::span(lhs), std::span(rhs));
 }
 
+std::vector<ssize_t> unravel_index(const std::span<const ssize_t> strides, ssize_t index) {
+    std::vector<ssize_t> indices;
+    indices.reserve(strides.size());
+
+    for (const auto& stride : strides) {
+        indices.push_back(index / (stride / sizeof(double)));
+        index = index % (stride / sizeof(double));
+    }
+    return indices;
+}
+
+ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
+                          const std::span<const ssize_t> indices) {
+    const ssize_t ndim = static_cast<ssize_t>(strides.size());
+    ssize_t flat_index = 0;
+
+    for (ssize_t i = 0; i < ndim; ++i) {
+        auto stride = strides[i];
+        auto index = indices[i];
+        flat_index += index * stride / sizeof(double);
+    }
+    return flat_index;
+}
+
+ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
+                          std::initializer_list<ssize_t> indices) {
+    return ravel_multi_index(strides, std::span(indices));
+}
+
 }  // namespace dwave::optimization
