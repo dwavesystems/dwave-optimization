@@ -40,7 +40,6 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         void add_constraint(ArrayNode*) except+
         void topological_sort()
         bool topologically_sorted() const
-        bool feasible(State&) const
 
     cdef cppclass Node:
         struct SuccessorView:
