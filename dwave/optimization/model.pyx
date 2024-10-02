@@ -261,7 +261,7 @@ cdef class Model:
         elif index < 0:  # allow negative indexing
             index += num_states
 
-        return self._graph.feasible(self.states._states[index])
+        return all(sym.state(index) for sym in self.iter_constraints())
 
     @classmethod
     def from_file(cls, file, *,
