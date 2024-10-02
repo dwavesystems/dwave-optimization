@@ -2084,8 +2084,7 @@ cdef class ArraySymbol(Symbol):
 
         The new symbol returns the sum of its elements.
         """
-        from dwave.optimization.symbols import PartialSum # avoid circular import
-        from dwave.optimization.symbols import Sum  # avoid circular import
+        import dwave.optimization.symbols
 
         if axis is not None:
             if not isinstance(axis, numbers.Integral):
@@ -2094,9 +2093,9 @@ cdef class ArraySymbol(Symbol):
             if not (0 <= axis < self.ndim()):
                 raise ValueError("axis should be 0 <= axis < self.ndim()")
 
-            return PartialSum(self, axis)
+            return dwave.optimization.symbols.PartialSum(self, axis)
 
-        return Sum(self)
+        return dwave.optimization.symbols.Sum(self)
 
 
 cdef class StateView:
