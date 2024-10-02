@@ -253,7 +253,27 @@ cdef class Model:
 
         Returns:
             Feasibility of the state.
+
+        Examples:
+            This example demonstrates checking the feasibility of a simple model with
+            feasible and infeasible states.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> b = model.binary()
+            >>> model.add_constraint(b) # doctest: +ELLIPSIS
+            <dwave.optimization.BinaryVariable at ...>
+            >>> model.states.resize(2)
+            >>> b.set_state(0, 1) # Feasible
+            >>> b.set_state(1, 0) # Infeasible
+            >>> with model.lock():
+            ...     model.feasible(0)
+            True
+            >>> with model.lock():
+            ...     model.feasible(1)
+            False
         """
+
         cdef Py_ssize_t num_states = self.states.size()
 
         if not -num_states <= index < num_states:
