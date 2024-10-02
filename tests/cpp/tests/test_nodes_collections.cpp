@@ -18,6 +18,7 @@
 #include "catch2/catch.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
+#include "dwave-optimization/nodes/testing.hpp"
 #include "utils.hpp"
 
 namespace dwave::optimization {
@@ -235,6 +236,11 @@ TEST_CASE("DisjointListsNode") {
                 }
             }
 
+            std::vector<ArrayValidationNode*> validation_nodes;
+            for (const auto& list : lists) {
+                validation_nodes.push_back(graph.emplace_node<ArrayValidationNode>(list));
+            }
+
             AND_WHEN("We default-initialize the state") {
                 auto state = graph.initialize_state();
 
@@ -337,6 +343,23 @@ TEST_CASE("DisjointListsNode") {
 
                             CHECK(num_elements == 5);
                             CHECK(set == std::set<double>{0, 1, 2, 3, 4});
+                        }
+                    }
+                }
+
+                SECTION("set_state") {
+                    AND_WHEN("Set the full state of the first and third lists") {
+                        ptr->set_state(state, 0, {{0, 3, 1}});
+                        ptr->set_state(state, 2, {{4, 2}});
+
+                        THEN("The state is correct") {
+                            CHECK(std::ranges::equal(lists[0]->view(state), std::vector{0, 3, 1}));
+                            CHECK(std::ranges::equal(lists[2]->view(state), std::vector{4, 2}));
+                            ptr->propagate(state);
+                            lists[0]->propagate(state);
+                            lists[2]->propagate(state);
+                            validation_nodes[0]->propagate(state);
+                            validation_nodes[2]->propagate(state);
                         }
                     }
                 }

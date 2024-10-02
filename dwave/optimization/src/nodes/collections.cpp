@@ -464,6 +464,47 @@ struct DisjointListStateData : NodeStateData {
         }
     }
 
+    // "Manually" set the full state of one of the disjoint lists. This will not check that
+    // the new state is a valid configuration (given the state of the other lists), so it
+    // is up to the caller to ensure the final state of all the lists is correct. Only emits
+    // `Update`s for indices in the final list that actually changed.
+    void set_state(ssize_t list_index, const std::span<const double>& new_values) {
+        auto& list = lists[list_index];
+        auto& diff = all_list_updates[list_index];
+
+        const ssize_t overlap_length = std::min<ssize_t>(list.size(), new_values.size());
+
+        {
+            auto bit = list.begin();
+            auto vit = new_values.begin();
+            for (ssize_t index = 0; index < overlap_length; ++index, ++bit, ++vit) {
+                if (*bit == *vit) continue;  // no change
+                diff.emplace_back(index, *bit, *vit);
+                *bit = *vit;
+            }
+        }
+
+        // next walk backwards through the excess list, if there is any, removing as we go
+        {
+            for (ssize_t index = list.size() - 1; index >= overlap_length; --index) {
+                diff.emplace_back(Update::removal(index, list[index]));
+            }
+            list.resize(overlap_length);
+        }
+
+        // finally walk forward through the excess new_values, if there are any, adding them to the
+        // list
+        {
+            auto vit = new_values.begin() + list.size();
+            list.reserve(new_values.size());
+            for (ssize_t index = list.size(), stop = new_values.size(); index < stop;
+                 ++index, ++vit) {
+                diff.emplace_back(Update::placement(index, *vit));
+                list.emplace_back(*vit);
+            }
+        }
+    }
+
     void swap_in_list(ssize_t list_index, ssize_t element_i, ssize_t element_j) {
         // Swap two items in the same list
         auto& list = lists[list_index];
@@ -570,6 +611,27 @@ void DisjointListsNode::revert(State& state) const {
     data_ptr<DisjointListStateData>(state)->revert();
 }
 
+void DisjointListsNode::propagate(State& state) const {
+#ifndef NDEBUG
+    auto data = data_ptr<DisjointListStateData>(state);
+    std::vector<bool> items(this->primary_set_size());
+    for (auto const& list : data->lists) {
+        for (const auto& item : list) {
+            assert(item >= 0);
+            assert(item < this->primary_set_size());
+            assert(items[item] == false);
+            items[item] = true;
+        }
+    }
+
+    for (const bool& found : items) {
+        assert(found);
+    }
+#endif
+
+    Node::propagate(state);
+}
+
 ssize_t DisjointListsNode::get_disjoint_list_size(State& state, ssize_t list_index) const {
     auto data = data_ptr<DisjointListStateData>(state);
     auto size = data->lists[list_index].size();
@@ -580,6 +642,11 @@ void DisjointListsNode::rotate_in_list(State& state, ssize_t list_index, ssize_t
                                        ssize_t dest_idx) const {
     if (src_idx == dest_idx) return;
     data_ptr<DisjointListStateData>(state)->rotate_in_list(list_index, src_idx, dest_idx);
+}
+
+void DisjointListsNode::set_state(State& state, ssize_t list_index,
+                                  const std::span<const double>& new_values) const {
+    data_ptr<DisjointListStateData>(state)->set_state(list_index, new_values);
 }
 
 void DisjointListsNode::swap_in_list(State& state, ssize_t list_index, ssize_t element_i,

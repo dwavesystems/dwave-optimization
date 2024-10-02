@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add C++ ``DisjointListsNode::set_state()`` method which allows for setting
+    the state of disjoint lists directly.
