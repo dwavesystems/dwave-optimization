@@ -20,13 +20,13 @@ from dwave.optimization.mathematical import *
 __version__ = "0.4.0"
 
 
-def get_include():
+def get_include() -> str:
     """Return the directory with dwave-optimization's header files."""
     import os.path
     return os.path.join(os.path.dirname(__file__), 'include')
 
 
-def get_library_dir():
+def get_library_dir() -> str:
     """Return a list of all of the source files."""
     import os.path
     import platform
@@ -35,7 +35,7 @@ def get_library_dir():
     return os.path.dirname(__file__)
 
 
-def get_library():
+def get_library() -> str:
     """Return the shared library name."""
     import platform
     if platform.system() == "Windows":
