@@ -13,10 +13,10 @@
 #    limitations under the License.
 
 import abc
+import collections.abc
 import itertools
 import math
 import operator
-import typing
 import unittest
 
 import numpy as np
@@ -1777,7 +1777,7 @@ class TestSquare(utils.UnaryOpTests):
 
 
 class TestSetVariable(utils.SymbolTests):
-    def generate_symbols(self) -> typing.Iterator[dwave.optimization.symbols.SetVariable]:
+    def generate_symbols(self) -> collections.abc.Iterator[dwave.optimization.symbols.SetVariable]:
         # Typical
         model = Model()
         s = model.set(10)
