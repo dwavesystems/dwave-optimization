@@ -574,7 +574,6 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
         # just smoke test
         with model.states.to_file() as f:
             model.states.from_file(f)
-        print(model.objective.state(0))
         self.assertGreater(model.objective.state(0), 110)
         self.assertLess(model.objective.state(0), 115)
 
