@@ -106,22 +106,17 @@ class IntegerNode : public NumberNode {
     static constexpr int default_lower_bound = 0;
     static constexpr int default_upper_bound = maximum_upper_bound;
 
-    IntegerNode() : IntegerNode(std::span<ssize_t, 0>{}) {}
+    // Default to a single scalar integer with default bounds
+    IntegerNode();
 
-    explicit IntegerNode(std::span<const ssize_t> shape,
-                         std::optional<int> lower_bound = default_lower_bound,
-                         std::optional<int> upper_bound = default_upper_bound)
-            : NumberNode(shape, lower_bound.value_or(default_lower_bound),
-                         upper_bound.value_or(default_upper_bound)) {
-        if (lower_bound_ < minimum_lower_bound || upper_bound_ > maximum_upper_bound) {
-            throw std::invalid_argument("Range provided for integers exceeds supported range");
-        }
-    }
-
-    explicit IntegerNode(std::initializer_list<ssize_t> shape,
-                         std::optional<int> lower_bound = default_lower_bound,
-                         std::optional<int> upper_bound = default_upper_bound)
-            : IntegerNode(std::span(shape.begin(), shape.end()), lower_bound, upper_bound) {}
+    // Create an integer array with the given bounds. Defaulting to the
+    // specified default bounds.
+    IntegerNode(std::span<const ssize_t> shape,
+                std::optional<int> lower_bound = std::nullopt,   // inclusive
+                std::optional<int> upper_bound = std::nullopt);  // inclusive
+    IntegerNode(std::initializer_list<ssize_t> shape,
+                std::optional<int> lower_bound = std::nullopt,   // inclusive
+                std::optional<int> upper_bound = std::nullopt);  // inclusive
 
     void default_move(State& state, RngAdaptor& rng) const override;
 

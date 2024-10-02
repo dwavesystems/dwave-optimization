@@ -97,6 +97,21 @@ ssize_t NumberNode::linear_index(ssize_t x, ssize_t y) const {
 
 // Integer Node
 
+IntegerNode::IntegerNode() : IntegerNode({}) {}
+
+IntegerNode::IntegerNode(std::span<const ssize_t> shape, std::optional<int> lower_bound,
+                         std::optional<int> upper_bound)
+        : NumberNode(shape, lower_bound.value_or(default_lower_bound),
+                     upper_bound.value_or(default_upper_bound)) {
+    if (lower_bound_ < minimum_lower_bound || upper_bound_ > maximum_upper_bound) {
+        throw std::invalid_argument("range provided for integers exceeds supported range");
+    }
+}
+
+IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, std::optional<int> lower_bound,
+                         std::optional<int> upper_bound)
+        : IntegerNode(std::span(shape), lower_bound, upper_bound) {}
+
 bool IntegerNode::integral() const { return true; }
 
 bool IntegerNode::is_valid(double value) const {
