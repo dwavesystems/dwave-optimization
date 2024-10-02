@@ -247,11 +247,10 @@ std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
 }
 
 std::vector<ssize_t> unravel_index(const std::span<const ssize_t> strides, ssize_t index) {
-    ssize_t ndim = static_cast<ssize_t>(strides.size());
     std::vector<ssize_t> indices;
-    indices.reserve(ndim);
+    indices.reserve(strides.size());
 
-    for (auto stride : strides) {
+    for (const auto& stride : strides) {
         indices.push_back(index / (stride / sizeof(double)));
         index = index % (stride / sizeof(double));
     }
@@ -260,7 +259,7 @@ std::vector<ssize_t> unravel_index(const std::span<const ssize_t> strides, ssize
 
 ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
                           const std::span<const ssize_t> indices) {
-    ssize_t ndim = static_cast<ssize_t>(strides.size());
+    const ssize_t ndim = static_cast<ssize_t>(strides.size());
     ssize_t flat_index = 0;
 
     for (ssize_t i = 0; i < ndim; ++i) {
