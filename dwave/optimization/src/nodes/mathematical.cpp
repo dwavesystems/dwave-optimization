@@ -666,8 +666,7 @@ template class NaryOpNode<std::plus<double>>;
 // PartialReduceNode *****************************************************************
 std::vector<ssize_t> partial_reduce_shape(const std::span<const ssize_t> input_shape,
                                           const ssize_t axis) {
-    std::vector<ssize_t> shape;
-    shape.assign(input_shape.begin(), input_shape.end());
+    std::vector<ssize_t> shape(input_shape.begin(), input_shape.end());
     shape.erase(shape.begin() + axis);
     return shape;
 }
@@ -675,7 +674,7 @@ std::vector<ssize_t> partial_reduce_shape(const std::span<const ssize_t> input_s
 std::vector<ssize_t> as_contiguous_strides(const std::span<const ssize_t> shape) {
     ssize_t ndim = static_cast<ssize_t>(shape.size());
 
-    assert(ndim >= 0);
+    assert(ndim > 0);
     std::vector<ssize_t> strides(ndim);
     // otherwise strides are a function of the shape
     strides[ndim - 1] = sizeof(double);
@@ -685,11 +684,18 @@ std::vector<ssize_t> as_contiguous_strides(const std::span<const ssize_t> shape)
     return strides;
 }
 
+std::span<const ssize_t> nonempty(std::span<const ssize_t> span) {
+    if (span.empty()){
+        throw std::invalid_argument("Input span should not be empty");
+    }
+    return span;
+}
+
 /// TODO: support multiple axes
 template <class BinaryOp>
 PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, std::span<const ssize_t> axes,
                                                double init)
-        : ArrayOutputMixin(partial_reduce_shape(node_ptr->shape(), axes[0])),
+        : ArrayOutputMixin(partial_reduce_shape(node_ptr->shape(), nonempty(axes)[0])),
           init(init),
           array_ptr_(node_ptr),
           axes_(make_axes(axes)),
@@ -702,6 +708,10 @@ PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, std::span<co
 
     // Validate axes
     /// TODO: support negative axes
+    if (axes.size() != 1){
+        throw std::invalid_argument("Partial reduction support only one axis");
+    }
+
     assert(this->ndim() == array_ptr_->ndim() - 1);
     ssize_t axis = axes_[0];
     if (axis < 0 || axis >= array_ptr_->ndim()) {
@@ -724,30 +734,12 @@ template <>
 PartialReduceNode<std::plus<double>>::PartialReduceNode(ArrayNode* array_ptr, const ssize_t axis)
         : PartialReduceNode(array_ptr, axis, 0) {}
 
-template <class BinaryOp>
-PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes)
-        : ArrayOutputMixin(partial_reduce_shape(array_ptr->shape(), axes[0])),
-          init(),
-          array_ptr_(array_ptr),
-          axes_(make_axes(axes)),
-          parent_strides_c_(as_contiguous_strides(array_ptr_->shape())) {
-    if (array_ptr_->dynamic()) {
-        throw std::invalid_argument(
-                "cannot do a reduction on a dynamic array with an operation that has no identity "
-                "without supplying an initial value");
-    } else if (array_ptr_->size() < 1) {
-        throw std::invalid_argument(
-                "cannot do a reduction on an empty array with an operation that has no identity "
-                "without supplying an initial value");
+template <>
+PartialReduceNode<std::plus<double>>::PartialReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes)
+        : PartialReduceNode(array_ptr, nonempty(axes)[0], 0) {
+    if (axes.size() != 1){
+        throw std::invalid_argument("Partial sum supports only one axis");
     }
-
-    /// TODO: support negative axis
-    ssize_t axis = axes_[0];
-    if (axis < 0 || axis >= array_ptr_->ndim()) {
-        throw std::invalid_argument("Axis should be an integer between 0 and ndim - 1");
-    }
-
-    add_predecessor(array_ptr);
 }
 
 template <class BinaryOp>
