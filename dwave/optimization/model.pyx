@@ -273,14 +273,6 @@ cdef class Model:
             ...     model.feasible(1)
             False
         """
-
-        cdef Py_ssize_t num_states = self.states.size()
-
-        if not -num_states <= index < num_states:
-            raise ValueError(f"index out of range: {index}")
-        elif index < 0:  # allow negative indexing
-            index += num_states
-
         return all(sym.state(index) for sym in self.iter_constraints())
 
     @classmethod
