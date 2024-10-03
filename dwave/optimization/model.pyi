@@ -161,7 +161,7 @@ class ArraySymbol(Symbol):
 
     def __getitem__(
         self,
-        index: typing.Union[Symbol, int, slice, tuple[int]],
+        index: typing.Union[Symbol, int, slice, tuple],
         ) -> typing.Union[AdvancedIndexing, BasicIndexing, Permutation]: ...
 
     def __iadd__(self, rhs: ArraySymbol) -> NaryAdd: ...
