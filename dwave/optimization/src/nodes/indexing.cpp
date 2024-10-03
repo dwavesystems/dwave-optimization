@@ -252,11 +252,28 @@ struct AdvancedIndexingNode::IndexParser_ {
 
                 // Test whether we can index with the given array. This is probably a bit
                 // over-strict and may need to be loosened over time.
+
+                // NumPy error message would be something like
+                // IndexError: index -100 is out of bounds for axis 0 with size 4
+                // so we attempt to match that as closely as possible
+
                 if (!indexing_array_ptr->integral()) {
-                    throw std::invalid_argument("cannot index an array with a non-integral array");
+                    throw std::out_of_range(
+                            std::string("index may not contain non-integer values for axis ") +
+                            std::to_string(idx));
                 }
                 if (indexing_array_ptr->min() < 0) {
-                    throw std::invalid_argument("indexing array cannot allow negative values");
+                    // todo: support negative values
+                    auto msg = std::string("index's smallest possible value ") +
+                               std::to_string(static_cast<ssize_t>(indexing_array_ptr->min())) +
+                               std::string(" is out of bounds for axis ") + std::to_string(idx);
+
+                    // if we're not dynamic then add the size information
+                    if (array_ptr->shape()[idx] >= 0) {
+                        msg += std::string(" with size ") + std::to_string(array_ptr->shape()[idx]);
+                    }
+
+                    throw std::out_of_range(msg);
                 }
                 if (idx == 0 && array_ptr->shape()[0] < 0) {
                     // 100 is a magic number
@@ -270,10 +287,18 @@ struct AdvancedIndexingNode::IndexParser_ {
                                             array_ptr->strides()[0];
 
                     if (indexing_array_ptr->max() >= min_axis_size) {
-                        throw std::invalid_argument("indexing array may take values out of bounds");
+                        throw std::out_of_range(
+                                std::string("index's largest possible value ") +
+                                std::to_string(static_cast<ssize_t>(indexing_array_ptr->max())) +
+                                std::string(" is out of bounds for axis ") + std::to_string(idx) +
+                                std::string(" with minimum size ") + std::to_string(min_axis_size));
                     }
                 } else if (indexing_array_ptr->max() >= array_ptr->shape()[idx]) {
-                    throw std::invalid_argument("indexing array may take values out of bounds");
+                    throw std::out_of_range(
+                            std::string("index's largest possible value ") +
+                            std::to_string(static_cast<ssize_t>(indexing_array_ptr->max())) +
+                            std::string(" is out of bounds for axis ") + std::to_string(idx) +
+                            std::string(" with size ") + std::to_string(array_ptr->shape()[idx]));
                 }
 
                 ssize_t a_ndim = indexing_array_ptr->ndim();

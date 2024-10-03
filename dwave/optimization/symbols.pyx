@@ -392,7 +392,7 @@ cdef class AdvancedIndexing(ArraySymbol):
                 cppindices.emplace_back(cppSlice())
             else:
                 array_index = index
-                if array_index.model != model:
+                if array_index.model is not model:
                     raise ValueError("mismatched parent models")
 
                 cppindices.emplace_back(array_index.array_ptr)

@@ -348,6 +348,43 @@ class TestAdd(utils.BinaryOpTests):
 
 
 class TestAdvancedIndexing(unittest.TestCase):
+    def test_out_of_bounds(self):
+        model = Model()
+
+        a = model.constant([0, 1, 2, 3])
+        b = model.constant(1.5)
+        x = model.integer(lower_bound=1, upper_bound=100)
+
+        # Error messages are chosen to be similar to NumPy's
+        with self.assertRaisesRegex(
+                IndexError,
+                "index's smallest possible value -100 is out of bounds for axis 0 with size 4"):
+            a[-x]
+        with self.assertRaisesRegex(
+                IndexError,
+                "index's largest possible value 100 is out of bounds for axis 0 with size 4"):
+            a[x]
+
+        with self.assertRaisesRegex(
+                IndexError,
+                "index may not contain non-integer values for axis 0"):
+            a[b]
+
+        a = model.constant(np.arange(12).reshape(3, 4))
+
+        with self.assertRaisesRegex(
+                IndexError,
+                "index may not contain non-integer values for axis 1"):
+            a[:, b]
+
+        s = model.set(5, min_size=3)
+
+        with self.assertRaisesRegex(
+                IndexError,
+                "index's largest possible value 100 is out of bounds for axis 0 "
+                "with minimum size 3"):
+            s[x]
+
     def test_higher_dimenional_indexers_not_allowed(self):
         model = Model()
         constant = model.constant(np.arange(10))

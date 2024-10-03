@@ -24,7 +24,7 @@ from dwave.optimization.libcpp.state cimport State
 
 cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass Graph:
-        T* emplace_node[T](...) except +ValueError
+        T* emplace_node[T](...) except+
         void initialize_state(State&) except+
         span[const unique_ptr[Node]] nodes() const
         span[ArrayNode*] constraints() const
