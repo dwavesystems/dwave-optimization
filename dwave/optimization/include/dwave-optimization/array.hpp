@@ -319,6 +319,28 @@ class ArrayIterator {
         return tmp;
     }
 
+    ArrayIterator& operator--() {
+        if (shape_ && mask_) {
+            assert(false && "not implemented yet");  // or maybe ever
+            unreachable();
+        } else if (shape_) {
+            ptr_ += shape_->unadvance() / sizeof(value_type);
+        } else if (mask_) {
+            // decrement both the mask ptr and the data ptr
+            --(mask_->ptr);
+            --ptr_;
+        } else {
+            --ptr_;
+        }
+        return *this;
+    }
+
+    ArrayIterator operator--(int) {
+        ArrayIterator tmp = *this;
+        --(*this);
+        return tmp;
+    }
+
     ArrayIterator& operator+=(difference_type rhs) {
         if (shape_ && mask_) {
             assert(false && "not implemented yet");  // or maybe ever
@@ -413,18 +435,39 @@ class ArrayIterator {
             return offset;
         }
 
-        std::ptrdiff_t advance(std::ptrdiff_t n) {
-            if (n < 0) {
-                assert(false && "not implemented yet");
-                unreachable();
+        std::ptrdiff_t unadvance() {
+            std::ptrdiff_t offset = 0;
+
+            ssize_t dim = ndim - 1;
+            for (; dim >= 1; --dim) {
+                offset -= strides[dim];
+
+                if (--loc[dim - 1] >= 0) break;
+
+                assert(loc[dim - 1] == -1);
+
+                offset += strides[dim] * shape[dim];
+                loc[dim - 1] = shape[dim] - 1;
             }
+            if (dim == 0) {
+                offset -= strides[dim];
+            }
+
+            return offset;
+        }
+
+        std::ptrdiff_t advance(std::ptrdiff_t n) {
+            std::ptrdiff_t offset = 0;
 
             // do the dumb thing for now - we can improve the performance of this
             // later
-            std::ptrdiff_t offset = 0;
-            for (std::ptrdiff_t i = 0; i < n; ++i) {
+            for (; n > 0; --n) {
                 offset += advance();
             }
+            for (; n < 0; ++n) {
+                offset += unadvance();
+            }
+
             return offset;
         }
 
@@ -468,6 +511,7 @@ class ArrayIterator {
 };
 
 static_assert(std::forward_iterator<ArrayIterator>);
+static_assert(std::bidirectional_iterator<ArrayIterator>);
 // todo: random access iterator?
 
 // Represents an Array
