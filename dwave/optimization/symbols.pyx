@@ -31,7 +31,6 @@ from libcpp cimport bool
 from libcpp.cast cimport dynamic_cast
 from libcpp.optional cimport nullopt, optional
 from libcpp.typeindex cimport type_index
-from libcpp.typeinfo cimport type_info
 from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
@@ -156,6 +155,9 @@ cdef unordered_map[type_index, PyObject*] _cpp_type_to_python
 
 # Register a mapping between the given Cython class and C++ class.
 cdef void _register(object cls, const type_info& typeinfo):
+    """Register a Python/Cython symbol to allow it to be created from a pointer
+    via `symbol_from_ptr`.
+    """
     _cpp_type_to_python[type_index(typeinfo)] = <PyObject*>(cls)
 
 
