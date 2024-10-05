@@ -74,6 +74,15 @@ TEST_CASE("ArrayIterator") {
                 // this is past-the-end, but a proxy for END
                 CHECK(it + 5 == ArrayIterator(values.data() + 10));
             }
+
+            THEN("We can decrement an advanced iterator") {
+                it += 4;
+                CHECK(*(it--) == 8);
+                CHECK(*(it--) == 6);
+                CHECK(*(it--) == 4);
+                CHECK(*(it--) == 2);
+                CHECK(*(it--) == 0);
+            }
         }
 
         WHEN("We specify a shape and strides for a 1D dynamic array") {
@@ -92,6 +101,14 @@ TEST_CASE("ArrayIterator") {
 
                 CHECK(end - it == 2);   // 2 strides steps
                 CHECK(it - end == -4);  // 4 contiguous steps.
+            }
+
+            THEN("We decrement an advanced iterator") {
+                it += 4;
+                CHECK(*(--it) == 5);
+                CHECK(*(--it) == 4);
+                CHECK(*(--it) == 1);
+                CHECK(*(--it) == 0);
             }
         }
 
