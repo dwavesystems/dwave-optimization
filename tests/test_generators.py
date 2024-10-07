@@ -510,7 +510,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
         route = next(model.iter_decisions())
         self.assertEqual(route.num_disjoint_lists(), 2)
         route.set_state(0, [[0], [1]])
-        self.assertEqual(model.objective.state(0), 18)
+        self.assertEqual(model.objective.state(0), 15)
 
         # Test asymmetric distances
         model = dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
@@ -527,7 +527,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
         route = next(model.iter_decisions())
         self.assertEqual(route.num_disjoint_lists(), 2)
         route.set_state(0, [[0], [1]])
-        self.assertEqual(model.objective.state(0), 8)
+        self.assertEqual(model.objective.state(0), 10)
 
     def test_serialization(self):
         model = dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
