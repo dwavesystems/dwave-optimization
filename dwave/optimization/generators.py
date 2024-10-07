@@ -525,10 +525,20 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
     time_distance_ext = np.zeros((num_customers + 1, num_customers + 1))
     time_distance_ext[:num_customers, :num_customers] = time_distances_array[1:, 1:]
 
-    time_depo_ext = np.zeros(num_customers + 1)
-    time_depo_ext[:num_customers] = time_distances_array[0, 1:]
+    # Time from depot to destination
+    time_from_depo_ext = np.zeros(num_customers + 1)
+    time_from_depo_ext[:num_customers] = time_distances_array[0, 1:]
 
-    t_depo = model.constant(time_depo_ext)
+    # Time from source to depot
+    time_to_depo_ext = np.zeros(num_customers + 1)
+    time_to_depo_ext[:num_customers] = time_distances_array[1:, 0]
+
+    if np.equal(time_from_depo_ext, time_to_depo_ext).all():
+        t_from_depo = t_to_depo = model.constant(time_from_depo_ext)
+    else:
+        t_from_depo = model.constant(time_from_depo_ext)
+        t_to_depo = model.constant(time_to_depo_ext)
+
     t_cust = model.constant(time_distance_ext)
 
     time_open_ext = np.zeros(num_customers + 1)
@@ -599,7 +609,7 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
                 # index of the first customer visited, if length of the route is zero,
                 # points to the last (0) element
                 idx = where(condition, routes[vehicle_idx][:1].sum(), range_helper[-1])
-                this_t_serving_time.append(maximum(t_depo[idx], t_open[idx]))
+                this_t_serving_time.append(maximum(t_from_depo[idx], t_open[idx]))
                 this_t_leaving.append(this_t_serving_time[-1] + t_service[idx])
 
             else:
@@ -618,7 +628,7 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
         condition = (num_clients_in_route[f'route{vehicle_idx}'] >= one)
         last_cust_idx = where(condition, routes[vehicle_idx][-1:].sum(), range_helper[-1])
 
-        times_back.append(this_t_leaving[-1] + t_depo[last_cust_idx])
+        times_back.append(this_t_leaving[-1] + t_to_depo[last_cust_idx])
         time_leaving.append(this_t_leaving)
         serving_time.append(this_t_serving_time)
 
@@ -634,8 +644,8 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
     # minimize travelled distance
     route_costs = []
     for r in range(number_of_vehicles):
-        route_costs.append(t_depo[routes[r][:1]].sum())
-        route_costs.append(t_depo[routes[r][-1:]].sum())
+        route_costs.append(t_from_depo[routes[r][:1]].sum())
+        route_costs.append(t_to_depo[routes[r][-1:]].sum())
         route_costs.append(t_cust[routes[r][1:], routes[r][:-1]].sum())
 
     model.minimize(add(*route_costs))

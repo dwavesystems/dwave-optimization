@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Update the logic in the ``capacitated_vehicle_routing_with_time_windows()`` generator function
+    to correctly account for asymmetric time-distance matrices.
+    
