@@ -533,8 +533,12 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
     time_to_depo_ext = np.zeros(num_customers + 1)
     time_to_depo_ext[:num_customers] = time_distances_array[1:, 0]
 
-    t_from_depo = model.constant(time_from_depo_ext)
-    t_to_depo = model.constant(time_to_depo_ext)
+    if np.equal(time_from_depo_ext, time_to_depo_ext).all():
+        t_from_depo = t_to_depo = model.constant(time_from_depo_ext)
+    else:
+        t_from_depo = model.constant(time_from_depo_ext)
+        t_to_depo = model.constant(time_to_depo_ext)
+
     t_cust = model.constant(time_distance_ext)
 
     time_open_ext = np.zeros(num_customers + 1)
