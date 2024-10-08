@@ -455,7 +455,7 @@ between the four destinations, with values chosen for simple illustration.
 >>> cost_per_day = [1, 2, 4]
 >>> distance_matrix = np.asarray([
 ...     [0, 1, np.sqrt(10), np.sqrt(34)], 
-...     [1, 0, 2, np.sqrt(25)], 
+...     [1, 0, 3, np.sqrt(25)], 
 ...     [np.sqrt(10), 3, 0, 4], 
 ...     [np.sqrt(34), np.sqrt(25), 4, 0]])
 
