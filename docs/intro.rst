@@ -475,7 +475,7 @@ acyclic graphs for these two formulations.
     :align: center
     :scale: 100%
 
-    Comparison between models using explicitly-constrained decision symbol (left) 
+    Comparison between models using implicitly-constrained decision symbol (left) 
     and explicit constrains on a simple binary symbol (right) in formulation. The 
     first formulation has fewer symbols.    
 
