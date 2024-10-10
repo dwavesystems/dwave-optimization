@@ -1024,7 +1024,8 @@ cdef class DisjointBitSets(Symbol):
 
         The given state must be a partition of ``range(primary_set_size)``
         into :meth:`.num_disjoint_sets` partitions, encoded as a 2D
-        :math:`num_disjoint_sets \times primary_set_size` Boolean array.
+        :code:`num_disjoint_sets` :math:`\times` :code:`primary_set_size` 
+        Boolean array.
 
         Args:
             index:
