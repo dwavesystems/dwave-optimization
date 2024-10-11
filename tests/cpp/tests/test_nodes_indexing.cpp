@@ -1050,6 +1050,7 @@ TEST_CASE("AdvancedIndexingNode") {
 
         WHEN("We access the array by i") {
             auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr);
+            auto validate = graph.emplace_node<ArrayValidationNode>(adv);
 
             THEN("We get the shape we expect") {
                 CHECK(adv->dynamic());
@@ -1074,45 +1075,122 @@ TEST_CASE("AdvancedIndexingNode") {
                     arr_ptr->propagate(state);
                     i_ptr->propagate(state);
                     adv->propagate(state);
+                    validate->propagate(state);
 
-                    THEN("The state has the expected values and the diff is correct") {
-                        CHECK(adv->size(state) == 4);
+                    THEN("The state has the expected values") {
                         CHECK(std::ranges::equal(adv->view(state), std::vector{3, 5, 7, 2}));
-                        verify_array_diff({}, {3, 5, 7, 2}, adv->diff(state));
                     }
 
-                    AND_WHEN("We mutate the main array") {
+                    AND_WHEN("We revert the indexing nodes") {
+                        arr_ptr->revert(state);
+                        i_ptr->revert(state);
+                        adv->revert(state);
+                        validate->revert(state);
+
+                        THEN("The state goes back to empty") {
+                            CHECK(std::ranges::equal(adv->view(state), std::vector<double>{}));
+                        }
+                    }
+
+                    AND_WHEN("We commit") {
                         arr_ptr->commit(state);
                         i_ptr->commit(state);
                         adv->commit(state);
+                        validate->commit(state);
 
-                        arr_ptr->set_value(state, 3, 103);
-                        arr_ptr->set_value(state, 8, 108);
-                        arr_ptr->set_value(state, 2, 102);
-                        arr_ptr->set_value(state, 5, 105);
-                        arr_ptr->set_value(state, 9, 109);
-
-                        arr_ptr->propagate(state);
-                        i_ptr->propagate(state);
-                        adv->propagate(state);
-
-                        THEN("The state has the expected values and the diff is correct") {
-                            CHECK(adv->size(state) == 4);
+                        THEN("The final state is correct") {
                             CHECK(std::ranges::equal(adv->view(state),
-                                                     std::vector{103, 105, 7, 102}));
-                            verify_array_diff({3, 5, 7, 2}, {103, 105, 7, 102}, adv->diff(state));
+                                                     std::vector<double>{3, 5, 7, 2}));
                         }
 
-                        AND_WHEN("We revert") {
-                            arr_ptr->revert(state);
-                            i_ptr->revert(state);
-                            adv->revert(state);
+                        AND_WHEN("We mutate and shrink the indexing array") {
+                            i_ptr->set(state, 2, 6);
+                            i_ptr->shrink(state);
 
-                            THEN("The state has the expected values and the diff is empty") {
-                                CHECK(adv->size(state) == 4);
+                            arr_ptr->propagate(state);
+                            i_ptr->propagate(state);
+                            adv->propagate(state);
+                            validate->propagate(state);
+
+                            THEN("The final state is correct") {
                                 CHECK(std::ranges::equal(adv->view(state),
-                                                         std::vector{3, 5, 7, 2}));
-                                CHECK(adv->diff(state).size() == 0);
+                                                         std::vector<double>{3, 5, 6}));
+                            }
+
+                            AND_WHEN("We revert") {
+                                arr_ptr->revert(state);
+                                i_ptr->revert(state);
+                                adv->revert(state);
+                                validate->revert(state);
+
+                                THEN("The state goes back to the previous") {
+                                    CHECK(std::ranges::equal(adv->view(state),
+                                                             std::vector<double>{3, 5, 7, 2}));
+                                }
+                            }
+                        }
+
+                        AND_WHEN("We mutate the main array") {
+                            arr_ptr->set_value(state, 3, 103);
+                            arr_ptr->set_value(state, 8, 108);
+                            arr_ptr->set_value(state, 2, 102);
+                            arr_ptr->set_value(state, 5, 105);
+                            arr_ptr->set_value(state, 9, 109);
+
+                            arr_ptr->propagate(state);
+                            i_ptr->propagate(state);
+                            adv->propagate(state);
+                            validate->propagate(state);
+
+                            THEN("The state has the expected values") {
+                                CHECK(std::ranges::equal(adv->view(state),
+                                                         std::vector{103, 105, 7, 102}));
+                            }
+
+                            AND_WHEN("We revert") {
+                                arr_ptr->revert(state);
+                                i_ptr->revert(state);
+                                adv->revert(state);
+                                validate->revert(state);
+
+                                THEN("The state has the expected values") {
+                                    CHECK(std::ranges::equal(adv->view(state),
+                                                             std::vector{3, 5, 7, 2}));
+                                }
+                            }
+                        }
+
+                        AND_WHEN("We mutate the main array and the indexer") {
+                            arr_ptr->set_value(state, 3, 103);
+                            arr_ptr->set_value(state, 8, 108);
+                            arr_ptr->set_value(state, 2, 102);
+                            arr_ptr->set_value(state, 5, 105);
+                            arr_ptr->set_value(state, 9, 109);
+
+                            i_ptr->set(state, 2, 6);     // [3, 5, 6, 2]
+                            i_ptr->shrink(state);        // [3, 5, 6]
+                            i_ptr->grow(state, {3, 1});  // [3, 5, 6, 3, 1]
+
+                            arr_ptr->propagate(state);
+                            i_ptr->propagate(state);
+                            adv->propagate(state);
+                            validate->propagate(state);
+
+                            THEN("The state has the expected values") {
+                                CHECK(std::ranges::equal(adv->view(state),
+                                                         std::vector{103, 105, 6, 103, 1}));
+                            }
+
+                            AND_WHEN("We revert") {
+                                arr_ptr->revert(state);
+                                i_ptr->revert(state);
+                                adv->revert(state);
+                                validate->revert(state);
+
+                                THEN("The state has the expected values") {
+                                    CHECK(std::ranges::equal(adv->view(state),
+                                                             std::vector{3, 5, 7, 2}));
+                                }
                             }
                         }
                     }

@@ -112,8 +112,8 @@ struct AdvancedIndexingNodeData : NodeStateData {
         for (const auto& update : offsets_diff | std::views::reverse) {
             offsets_[update.index] = update.old;
 
-            if (!update.placed()) delete_from_reverse(update.index, update.value);
-            if (!update.removed()) add_to_reverse(update.index, update.old);
+            if (!update.removed()) delete_from_reverse(update.index, update.value);
+            if (!update.placed()) add_to_reverse(update.index, update.old);
         }
 
         for (auto& [index, old, _] : diff | std::views::reverse) {
@@ -781,9 +781,7 @@ void AdvancedIndexingNode::propagate(State& state) const {
 
     if (bullet1mode_) {
         bool parent_array_changed = array_ptr_->diff(state).size() > 0;
-        // TODO offsets_updated probably should be offset_idxs_updated (as multiple idxs
-        // can point to one offset, so updating it here won't cover all of them)
-        std::unordered_set<ssize_t> offsets_updated;
+        std::unordered_set<ssize_t> offset_idxs_updated;
 
         // Handle the normal updates and placements where the offsets differ
         for (const auto& offset_update : offsets_diff) {
@@ -796,7 +794,7 @@ void AdvancedIndexingNode::propagate(State& state) const {
                 fill_subspace<false, false>(state, offset_update.value, data, offset_update.index,
                                             diff);
             }
-            if (parent_array_changed) offsets_updated.insert(offset_update.value);
+            if (parent_array_changed) offset_idxs_updated.insert(offset_update.index);
         }
 
         // Handle the removals
@@ -816,16 +814,16 @@ void AdvancedIndexingNode::propagate(State& state) const {
             std::pair<ssize_t, ssize_t> mapped_index =
                     get_mapped_index(indices_, array_strides, array_item_strides(),
                                      array_ptr_->shape(state), strides(), itemsize(), update.index);
-            if (!offsets_updated.contains(mapped_index.first)) {
-                const auto* idxs = node_data->get_offset_idxs(mapped_index.first);
-                if (idxs != nullptr) {
-                    for (const auto& idx : *idxs) {
-                        ssize_t item_stride = subspace_stride_ / itemsize();
-                        ssize_t new_index = idx * item_stride + mapped_index.second;
-                        assert(data[new_index] == update.old);
-                        diff.emplace_back(new_index, update.old, update.value);
-                        data[new_index] = update.value;
-                    }
+            // This will return a nullptr if there currently are no mapped offsets
+            const auto* idxs = node_data->get_offset_idxs(mapped_index.first);
+            if (idxs != nullptr) {
+                for (const ssize_t& idx : *idxs) {
+                    if (offset_idxs_updated.contains(idx)) continue;
+                    const ssize_t item_stride = subspace_stride_ / itemsize();
+                    const ssize_t new_index = idx * item_stride + mapped_index.second;
+                    assert(data[new_index] == update.old);
+                    diff.emplace_back(new_index, update.old, update.value);
+                    data[new_index] = update.value;
                 }
             }
         }
