@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Fix two bugs in advanced indexing node propogation in the case of a
+    non-const main array with dynamic indexers, e.g. ``A[x]`` where ``A`` is a
+    1d integer decision variable and ``x`` is a list. The first bug could cause
+    segfaults during propagation, and the second could lead to incorrect output
+    if both arrays were changed during propagation.
