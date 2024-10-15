@@ -87,6 +87,14 @@ class ArrayNodeStateData : public NodeStateData {
 
     std::span<const Update> diff() const noexcept { return updates; }
 
+    // Append a new value to the buffer, tracking the addition in the diff
+    // Return whether a change was made.
+    bool emplace_back(double value) {
+        updates.emplace_back(Update::placement(buffer.size(), value));
+        buffer.emplace_back(value);
+        return true;
+    }
+
     // Exchange the values in the buffer at index i and j and track the update.
     // Return whether a change was made.
     bool exchange(ssize_t i, ssize_t j) {
@@ -109,12 +117,24 @@ class ArrayNodeStateData : public NodeStateData {
         return buffer[i];
     }
 
+    // Pop an item from the buffer
+    // Return whether a change was made.
+    bool pop_back() {
+        assert(buffer.size() >= 1);
+        updates.emplace_back(Update::removal(buffer.size() - 1, buffer.back()));
+        buffer.pop_back();
+        return true;
+    }
+
     void revert() {
-        if (previous_size_ > buffer.size()) buffer.resize(previous_size_);
+        assert(previous_size_ >= 0);
+        buffer.resize(previous_size_);
+        const ssize_t size = buffer.size();
         for (const auto& [index, old, _] : updates | std::views::reverse) {
+            assert(index >= 0);
+            if (index >= size) continue;
             buffer[index] = old;
         }
-        if (previous_size_ < buffer.size()) buffer.resize(previous_size_);
         updates.clear();
     }
 

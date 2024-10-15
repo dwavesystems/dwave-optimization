@@ -1,0 +1,3 @@
+---
+fixes:
+  - Update C++ ``UnaryOpNode`` to correctly handle dynamic predecessors.
