@@ -1547,6 +1547,67 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
         }
     }
 
+    GIVEN("A dynamic array input") {
+        auto a_ptr = graph.emplace_node<ListNode>(5, 0, 5);
+
+        auto p_ptr = graph.emplace_node<UnaryOpNode<TestType>>(a_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(p_ptr);
+
+        THEN("The shape is also dynamic") {
+            CHECK(p_ptr->dynamic());
+            CHECK(p_ptr->ndim() == 1);
+        }
+
+        WHEN("We initialize the input node to be empty") {
+            auto state = graph.empty_state();
+            a_ptr->initialize_state(state, {});
+            graph.initialize_state(state);
+
+            THEN("The output has the value and shape we expect") {
+                CHECK(p_ptr->size(state) == 0);
+                CHECK(std::ranges::equal(p_ptr->view(state), std::vector<double>{}));
+            }
+
+            AND_WHEN("We grow the array and then propagate") {
+                a_ptr->grow(state);
+                a_ptr->grow(state);
+                a_ptr->exchange(state, 0, 1);
+                a_ptr->shrink(state);
+
+                a_ptr->propagate(state);
+                p_ptr->propagate(state);
+
+                THEN("The output is what we expect") {
+                    REQUIRE(p_ptr->size(state) == 1);
+                    double val = func(a_ptr->view(state).front());
+                    CHECK(std::ranges::equal(p_ptr->view(state), std::vector{val}));
+                }
+
+                AND_WHEN("We commit") {
+                    a_ptr->commit(state);
+                    p_ptr->commit(state);
+
+                    THEN("The output is what we expect") {
+                        REQUIRE(p_ptr->size(state) == 1);
+                        double val = func(a_ptr->view(state).front());
+                        CHECK(std::ranges::equal(p_ptr->view(state), std::vector{val}));
+                    }
+                }
+
+                AND_WHEN("We revert") {
+                    a_ptr->revert(state);
+                    p_ptr->revert(state);
+
+                    THEN("The output is what we expect") {
+                        CHECK(p_ptr->size(state) == 0);
+                        CHECK(std::ranges::equal(p_ptr->view(state), std::vector<double>{}));
+                    }
+                }
+            }
+        }
+    }
+
     GIVEN("A 0-d integer decision input") {
         auto a_ptr = graph.emplace_node<IntegerNode>(std::span<const ssize_t>{}, -100,
                                                      100);  // Scalar output

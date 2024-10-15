@@ -298,6 +298,11 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     bool integral() const override;
     double max() const override;
     double min() const override;
+    using ArrayOutputMixin::shape;
+    std::span<const ssize_t> shape(const State& state) const override;
+    using ArrayOutputMixin::size;
+    ssize_t size(const State& state) const override;
+    ssize_t size_diff(const State& state) const override;
 
     void commit(State& state) const override;
     void revert(State& state) const override;

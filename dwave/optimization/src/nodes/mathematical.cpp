@@ -1696,11 +1696,16 @@ void UnaryOpNode<UnaryOp>::propagate(State& state) const {
     auto node_data = data_ptr<ArrayNodeStateData>(state);
 
     for (const auto& update : array_ptr_->diff(state)) {
-        double new_val = func(update.value);
-        double& current_val = node_data->buffer[update.index];
-        if (new_val != current_val) {
-            node_data->updates.emplace_back(update.index, current_val, new_val);
-            current_val = new_val;
+        const auto& [idx, _, value] = update;
+
+        if (update.placed()) {
+            assert(idx == static_cast<ssize_t>(node_data->buffer.size()));
+            node_data->emplace_back(func(value));
+        } else if (update.removed()) {
+            assert(idx == static_cast<ssize_t>(node_data->buffer.size()) - 1);
+            node_data->pop_back();
+        } else {
+            node_data->set(idx, func(value));
         }
     }
 
@@ -1710,6 +1715,21 @@ void UnaryOpNode<UnaryOp>::propagate(State& state) const {
 template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::revert(State& state) const {
     data_ptr<ArrayNodeStateData>(state)->revert();
+}
+
+template <class UnaryOp>
+std::span<const ssize_t> UnaryOpNode<UnaryOp>::shape(const State& state) const {
+    return array_ptr_->shape(state);
+}
+
+template <class UnaryOp>
+ssize_t UnaryOpNode<UnaryOp>::size(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buffer.size();
+}
+
+template <class UnaryOp>
+ssize_t UnaryOpNode<UnaryOp>::size_diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->size_diff();
 }
 
 template class UnaryOpNode<functional::abs<double>>;
