@@ -1,0 +1,4 @@
+---
+fixes:
+  - Implement missing overloads for ``NaryMaximumNode::max()``, ``NaryMaximumNode::min()``, and ``NaryMaximumNode::integral()``.
+  - Implement missing overloads for ``NaryMinimumNode::max()``, ``NaryMinimumNode::min()``, and ``NaryMinimumNode::integral()``.

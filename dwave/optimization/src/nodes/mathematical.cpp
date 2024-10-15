@@ -455,8 +455,9 @@ bool NaryOpNode<BinaryOp>::integral() const {
     if constexpr (std::is_integral<result_type>::value) {
         return true;
     }
-
-    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value ||
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
+                  std::is_same<BinaryOp, functional::min<double>>::value ||
+                  std::is_same<BinaryOp, std::multiplies<double>>::value ||
                   std::is_same<BinaryOp, std::plus<double>>::value) {
         return std::ranges::all_of(operands_, [](const Array* ptr) { return ptr->integral(); });
     }
@@ -478,6 +479,16 @@ double NaryOpNode<BinaryOp>::max() const {
     if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
         return std::accumulate(operands_.begin(), operands_.end(), 0.0,
                                [](double lhs, const Array* rhs) { return lhs + rhs->max(); });
+    }
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
+                  std::is_same<BinaryOp, functional::min<double>>::value) {
+        assert(operands_.size() >= 1);  // checked by constructor
+        auto cmp = op();
+        double lhs = operands_[0]->max();
+        for (const Array* rhs_ptr : operands_ | std::views::drop(1)) {
+            lhs = cmp(lhs, rhs_ptr->max());
+        }
+        return lhs;
     }
     if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
         // we need to be a bit careful with our signs
@@ -519,6 +530,16 @@ double NaryOpNode<BinaryOp>::min() const {
     if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
         return std::accumulate(operands_.begin(), operands_.end(), 0.0,
                                [](double lhs, const Array* rhs) { return lhs + rhs->min(); });
+    }
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
+                  std::is_same<BinaryOp, functional::min<double>>::value) {
+        assert(operands_.size() >= 1);  // checked by constructor
+        auto cmp = op();
+        double lhs = operands_[0]->min();
+        for (const Array* rhs_ptr : operands_ | std::views::drop(1)) {
+            lhs = cmp(lhs, rhs_ptr->min());
+        }
+        return lhs;
     }
     if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
         // we need to be a bit careful with our signs
