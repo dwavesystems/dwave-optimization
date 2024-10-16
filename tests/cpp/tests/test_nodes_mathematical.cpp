@@ -463,9 +463,17 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
         p_ptr->add_node(c_ptr);
         p_ptr->add_node(d_ptr);
 
+        graph.emplace_node<ArrayValidationNode>(p_ptr);
+
         THEN("The shape is also a scalar") {
             CHECK(p_ptr->ndim() == 0);
             CHECK(p_ptr->size() == 1);
+        }
+
+        THEN("min/max/integral are defined") {
+            // these are really just smoke tests
+            CHECK(p_ptr->min() <= p_ptr->max());
+            CHECK(p_ptr->integral() == p_ptr->integral());
         }
 
         THEN("The operands are all available via operands()") {
@@ -497,6 +505,8 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
         auto p_ptr = graph.emplace_node<NaryOpNode<TestType>>(a_ptr);
         p_ptr->add_node(b_ptr);
 
+        graph.emplace_node<ArrayValidationNode>(p_ptr);
+
         THEN("The shape is also a 1D array") {
             CHECK(p_ptr->ndim() == 1);
             CHECK(p_ptr->size() == 4);
@@ -527,6 +537,8 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
         auto p_ptr = graph.emplace_node<NaryOpNode<TestType>>(a_ptr);
         p_ptr->add_node(b_ptr);
         p_ptr->add_node(c_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(p_ptr);
 
         THEN("The shape is also a 1D array") {
             CHECK(p_ptr->ndim() == 1);
@@ -578,6 +590,8 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
         WHEN("We construct a NaryOpNode from it") {
             auto p_ptr = graph.emplace_node<NaryOpNode<TestType>>(nodes);
 
+            graph.emplace_node<ArrayValidationNode>(p_ptr);
+
             THEN("The shape is also a scalar") {
                 CHECK(p_ptr->ndim() == 0);
                 CHECK(p_ptr->size() == 1);
@@ -596,7 +610,43 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
     }
 }
 
-TEST_CASE("NaryOpNode - ProdNode") {
+TEST_CASE("NaryOpNode - NaryMaximumNode") {
+    auto graph = Graph();
+
+    GIVEN("a = Integer(-5, 5), b = IntegerNode(2, 4), c = IntegerNode(-7, -3), x = a * b * c") {
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 2, 4);
+        auto c_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -7, -3);
+
+        auto x_ptr = graph.emplace_node<NaryMaximumNode>(a_ptr, b_ptr, c_ptr);
+
+        THEN("x's max/min/integral are as expected") {
+            CHECK(x_ptr->max() == 5);
+            CHECK(x_ptr->min() == 2);
+            CHECK(x_ptr->integral());
+        }
+    }
+}
+
+TEST_CASE("NaryOpNode - NaryMinimumNode") {
+    auto graph = Graph();
+
+    GIVEN("a = Integer(-5, 5), b = IntegerNode(2, 4), c = IntegerNode(-7, -3), x = a * b * c") {
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 2, 4);
+        auto c_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -7, -3);
+
+        auto x_ptr = graph.emplace_node<NaryMinimumNode>(a_ptr, b_ptr, c_ptr);
+
+        THEN("x's max/min/integral are as expected") {
+            CHECK(x_ptr->max() == -3);
+            CHECK(x_ptr->min() == -7);
+            CHECK(x_ptr->integral());
+        }
+    }
+}
+
+TEST_CASE("NaryOpNode - NaryMultiplyNode") {
     auto graph = Graph();
 
     GIVEN("a = Integer(-5, 5), b = IntegerNode(2, 4), c = IntegerNode(-7, -3), x = a * b * c") {
@@ -614,7 +664,7 @@ TEST_CASE("NaryOpNode - ProdNode") {
     }
 }
 
-TEST_CASE("NaryOpNode - SumNode") {
+TEST_CASE("NaryOpNode - NaryAddNode") {
     auto graph = Graph();
 
     GIVEN("a = Integer(-5, 5), b = IntegerNode(2, 4), c = IntegerNode(-7, -3), x = a + b + c") {
