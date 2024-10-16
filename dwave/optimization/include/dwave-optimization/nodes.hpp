@@ -18,6 +18,7 @@
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/flow.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
+#include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/quadratic_model.hpp"

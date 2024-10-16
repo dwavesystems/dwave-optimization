@@ -14,6 +14,7 @@ tests_all = executable(
         'tests/test_nodes_constants.cpp',
         'tests/test_nodes_flow.cpp',
         'tests/test_nodes_indexing.cpp',
+        'tests/test_nodes_manipulation.cpp',
         'tests/test_nodes_mathematical.cpp',
         'tests/test_nodes_numbers.cpp',
         'tests/test_nodes_quadratic_model.cpp',
