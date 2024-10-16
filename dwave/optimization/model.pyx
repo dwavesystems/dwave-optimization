@@ -1614,6 +1614,11 @@ cdef class Symbol:
     def state_size(self):
         """Return an estimated size, in bytes, of the node's state.
 
+        The state size, set at construction of the symbol, accounts for the
+        largest possible size for symbols such as the successor symbols of a
+        :class:`~dwave.optimization.symbols.DisjointLists` symbol, where each
+        can range from zero to all the elements.
+
         .. note::
 
             For most symbols, which are arrays, this method is
