@@ -76,6 +76,8 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
     cdef cppclass PermutationNode(ArrayNode):
         pass
 
+
+cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ReshapeNode(ArrayNode):
         pass
 

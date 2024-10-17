@@ -29,6 +29,7 @@ dwave_optimization_src = [
     'dwave/optimization/src/nodes/constants.cpp',
     'dwave/optimization/src/nodes/flow.cpp',
     'dwave/optimization/src/nodes/indexing.cpp',
+    'dwave/optimization/src/nodes/manipulation.cpp',
     'dwave/optimization/src/nodes/mathematical.cpp',
     'dwave/optimization/src/nodes/numbers.cpp',
     'dwave/optimization/src/nodes/quadratic_model.cpp',
