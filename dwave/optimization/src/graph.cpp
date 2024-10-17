@@ -21,7 +21,6 @@
 #include <utility>
 
 #include "dwave-optimization/array.hpp"
-#include "dwave-optimization/vartypes.hpp"
 
 namespace dwave::optimization {
 

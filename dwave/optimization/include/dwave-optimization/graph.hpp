@@ -28,7 +28,6 @@
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/state.hpp"
 #include "dwave-optimization/utils.hpp"
-#include "dwave-optimization/vartypes.hpp"
 
 namespace dwave::optimization {
 

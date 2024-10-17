@@ -36,7 +36,6 @@ dwave_optimization_src = [
     'dwave/optimization/src/array.cpp',
     'dwave/optimization/src/graph.cpp',
     'dwave/optimization/src/utils.cpp',
-    'dwave/optimization/src/vartypes.cpp',
 ]
 
 if host_machine.system() == 'windows'
