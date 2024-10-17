@@ -1280,14 +1280,14 @@ cdef class Symbol:
         self.expired_ptr = node_ptr.expired_ptr()
 
     def equals(self, other):
-        """Compare whether two nodes are identical.
+        """Compare whether two symbols are identical.
 
         Args:
-            other: A node for comparison.
+            other: A symbol for comparison.
 
-        Equal nodes represent the same quantity in the model.
+        Equal symbols represent the same quantity in the model.
 
-        Note that comparing nodes across models is expensive.
+        Note that comparing symbols across models is expensive.
 
         See Also:
             :meth:`.maybe_equals`: an alternative for equality testing
@@ -1326,12 +1326,12 @@ cdef class Symbol:
 
     @classmethod
     def _from_zipfile(cls, zf, directory, Model model, predecessors):
-        """Construct a node from a compressed file.
+        """Construct a symbol from a compressed file.
 
         Args:
             zf:
                 File pointer to a compressed file encoding
-                a node. Strings are interpreted as a file name.
+                a symbol. Strings are interpreted as a file name.
             directory:
                 Directory where the file is located.
             model:
@@ -1339,7 +1339,7 @@ cdef class Symbol:
             predecessors:
                 Not currently supported.
         Returns:
-            A node.
+            A symbol.
 
         See also:
             :meth:`._into_zipfile`
@@ -1414,12 +1414,12 @@ cdef class Symbol:
         return <uintptr_t>self.node_ptr
 
     def _into_zipfile(self, zf, directory):
-        """Store node-specific information to a compressed file.
+        """Store symbol-specific information to a compressed file.
 
         Args:
             zf:
                 File pointer to a compressed file to store the
-                node. Strings are interpreted as a file name.
+                symbol. Strings are interpreted as a file name.
             directory:
                 Directory where the file is located.
         Returns:
@@ -1432,7 +1432,7 @@ cdef class Symbol:
         pass
 
     def iter_predecessors(self):
-        """Iterate over a node's predecessors in the model.
+        """Iterate over a symbol's predecessors in the model.
 
         Examples:
             This example constructs a :math:`b = \sum a` model, where :math:`a`
@@ -1455,10 +1455,10 @@ cdef class Symbol:
             inc(it)
 
     def iter_successors(self):
-        """Iterate over a node's successors in the model.
+        """Iterate over a symbol's successors in the model.
 
         Examples:
-            This example constructs iterates over the successor nodes
+            This example constructs iterates over the successor symbols
             of a :class:`~dwave.optimization.symbols.DisjointLists`
             symbol.
 
@@ -1477,12 +1477,12 @@ cdef class Symbol:
             inc(it)
 
     def maybe_equals(self, other):
-        """Compare to another node.
+        """Compare to another symbol.
         
         This method exists because a complete equality test can be expensive.
 
         Args:
-            other: Another node in the model's directed acyclic graph.
+            other: Another symbol in the model's directed acyclic graph.
 
         Returns: integer
             Supported return values are:
@@ -1542,7 +1542,7 @@ cdef class Symbol:
         return MAYBE
 
     def reset_state(self, Py_ssize_t index):
-        """Reset the state of a node and any successor symbols.
+        """Reset the state of a symbol and any successor symbols.
 
         Args:
             index: Index of the state to reset.
@@ -1612,7 +1612,14 @@ cdef class Symbol:
         raise NotImplementedError(f"{type(self).__name__} has not implemented state serialization")
 
     def state_size(self):
-        """Return an estimated size, in bytes, of the node's state.
+        """Return an estimated size, in bytes, of the symbol's state.
+
+        The state size, set at construction of the symbol, accounts for the
+        largest possible size for symbols.
+        
+        The size of an instantiated state can be accessed with ``.state().size``
+        (for example, the size of a symbol ``num_routes`` is given by 
+        ``num_routes.state().size``).
 
         .. note::
 
@@ -1628,7 +1635,7 @@ cdef class Symbol:
         return 0
 
     def topological_index(self):
-        """Topological index of the node.
+        """Topological index of the symbol.
 
         Return ``None`` if the model is not topologically sorted.
 
@@ -1958,7 +1965,7 @@ cdef class ArraySymbol(Symbol):
         return self.array_ptr.size()
 
     def state(self, Py_ssize_t index = 0, *, bool copy = True):
-        """Return the state of the node.
+        """Return the state of the symbol.
 
         Args:
             index: Index of the state.
@@ -1969,7 +1976,7 @@ cdef class ArraySymbol(Symbol):
             State as a :class:`numpy.ndarray`.
 
         Examples:
-            This example prints a node two states: initialized
+            This example prints a symbol's two states: initialized
             and uninitialized.
 
             >>> from dwave.optimization import Model
