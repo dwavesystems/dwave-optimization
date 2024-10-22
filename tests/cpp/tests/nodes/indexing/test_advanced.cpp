@@ -21,7 +21,7 @@
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
-#include "utils.hpp"
+#include "../../utils.hpp"
 
 namespace dwave::optimization {
 
