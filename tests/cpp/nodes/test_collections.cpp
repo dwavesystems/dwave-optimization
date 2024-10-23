@@ -19,7 +19,7 @@
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
-#include "utils.hpp"
+#include "../utils.hpp"
 
 namespace dwave::optimization {
 
