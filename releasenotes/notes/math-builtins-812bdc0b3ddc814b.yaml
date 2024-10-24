@@ -1,0 +1,3 @@
+---
+fixes:
+  - Fix the type information for ``ArraySymbol.__abs__()``.

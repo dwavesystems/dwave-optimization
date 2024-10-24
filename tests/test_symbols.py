@@ -278,9 +278,18 @@ class utils:
             np.testing.assert_equal(op_x.state(0), [self.op(v) for v in data])
 
 
-class TestAbs(utils.UnaryOpTests):
+class TestAbsolute(utils.UnaryOpTests):
     def op(self, x):
         return abs(x)
+
+    def test_abs(self):
+        from dwave.optimization.symbols import Absolute
+
+        model = Model()
+        x = model.integer(5, lower_bound=-5, upper_bound=5)
+        a = abs(x)
+        self.assertIsInstance(a, Absolute)
+        self.assertEqual(model.num_symbols(), 2)
 
 
 class TestAdd(utils.BinaryOpTests):
