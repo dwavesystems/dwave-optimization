@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Changed formulation in ``dwave.optimization.generators.job_shop_scheduling()``. Removed redundant list variables and
+    added disjunctive non-overlapping constraints between each pair of jobs on the machines. 

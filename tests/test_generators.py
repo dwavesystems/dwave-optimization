@@ -645,14 +645,11 @@ class TestJobShopScheduling(unittest.TestCase):
         model = dwave.optimization.generators.job_shop_scheduling(times, machines)
 
         # check that we have the decisions we expect
-        times, order0, order1, order2 = model.iter_decisions()
+        times, = model.iter_decisions()
 
         model.states.resize(1)
 
         times.set_state(0, [[0, 2, 4], [2, 6, 0], [6, 4, 2]])
-        order0.set_state(0, [0, 1, 2])
-        order1.set_state(0, [0, 2, 1])
-        order2.set_state(0, [1, 2, 0])
 
         # objective is exactly the makespan and the model is feasible
         self.assertEqual(model.objective.state(0), 7)
@@ -666,7 +663,7 @@ class TestJobShopScheduling(unittest.TestCase):
         model = dwave.optimization.generators.job_shop_scheduling(times, machines)
 
         # check that we have the decisions we expect
-        times, order0, order1, order2, order3 = model.iter_decisions()
+        times, = model.iter_decisions()
 
         model.states.resize(1)
 
@@ -677,10 +674,6 @@ class TestJobShopScheduling(unittest.TestCase):
             #     a
 
             times.set_state(0, [[0, 1, 3, 4]])
-            order0.set_state(0, [0])
-            order1.set_state(0, [0])
-            order2.set_state(0, [0])
-            order3.set_state(0, [0])
 
             # objective is exactly the makespan and the model is feasible
             self.assertEqual(model.objective.state(0), 5)
@@ -694,10 +687,6 @@ class TestJobShopScheduling(unittest.TestCase):
             #      a
 
             times.set_state(0, [[0, 1, 4, 5]])
-            order0.set_state(0, [0])
-            order1.set_state(0, [0])
-            order2.set_state(0, [0])
-            order3.set_state(0, [0])
 
             self.assertEqual(model.objective.state(0), 6)
             for constraint in model.iter_constraints():
@@ -710,10 +699,6 @@ class TestJobShopScheduling(unittest.TestCase):
             #    a
 
             times.set_state(0, [[0, 1, 2, 3]])
-            order0.set_state(0, [0])
-            order1.set_state(0, [0])
-            order2.set_state(0, [0])
-            order3.set_state(0, [0])
 
             self.assertEqual(model.objective.state(0), 4)
             self.assertFalse(all(c.state(0) for c in model.iter_constraints()))
@@ -729,7 +714,7 @@ class TestJobShopScheduling(unittest.TestCase):
         model = dwave.optimization.generators.job_shop_scheduling(times, machines)
 
         # check that we have the decisions we expect
-        times, order0, order1 = model.iter_decisions()
+        times, = model.iter_decisions()
 
         model.states.resize(1)
 
@@ -740,8 +725,6 @@ class TestJobShopScheduling(unittest.TestCase):
             # bbac
 
             times.set_state(0, [[0, 2], [3, 0], [2, 3]])
-            order0.set_state(0, [0, 2, 1])
-            order1.set_state(0, [1, 0, 2])
 
             # objective is exactly the makespan and the model is feasible
             self.assertEqual(model.objective.state(0), 4)
@@ -753,8 +736,6 @@ class TestJobShopScheduling(unittest.TestCase):
             # bba c
 
             times.set_state(0, [[0, 2], [2, 0], [3, 4]])
-            order0.set_state(0, [0, 1, 2])
-            order1.set_state(0, [1, 0, 2])
 
             self.assertEqual(model.objective.state(0), 5)
             for constraint in model.iter_constraints():
@@ -771,7 +752,7 @@ class TestJobShopScheduling(unittest.TestCase):
         model = dwave.optimization.generators.job_shop_scheduling(times, machines)
 
         # check that we have the decisions we expect
-        times, order0, order1, order2 = model.iter_decisions()
+        times, = model.iter_decisions()
 
         model.states.resize(1)
 
@@ -783,9 +764,6 @@ class TestJobShopScheduling(unittest.TestCase):
             # bbccaaa
 
             times.set_state(0, [[0, 2, 4], [2, 6, 0], [6, 4, 2]])
-            order0.set_state(0, [0, 1, 2])
-            order1.set_state(0, [0, 2, 1])
-            order2.set_state(0, [1, 2, 0])
 
             # objective is exactly the makespan and the model is feasible
             self.assertEqual(model.objective.state(0), 7)
@@ -798,9 +776,6 @@ class TestJobShopScheduling(unittest.TestCase):
             # bbccaaa
 
             times.set_state(0, [[0, 2, 4], [2, 7, 0], [6, 4, 2]])
-            order0.set_state(0, [0, 1, 2])
-            order1.set_state(0, [0, 2, 1])
-            order2.set_state(0, [1, 2, 0])
 
             # objective is exactly the makespan and the model is feasible
             self.assertEqual(model.objective.state(0), 8)
@@ -813,11 +788,8 @@ class TestJobShopScheduling(unittest.TestCase):
             # bbccaaa
 
             times.set_state(0, [[0, 1, 4], [2, 6, 0], [6, 4, 2]])
-            order0.set_state(0, [0, 1, 2])
-            order1.set_state(0, [0, 2, 1])
-            order2.set_state(0, [1, 2, 0])
 
-            # objective is exactly the makespan and the model is feasible
+            # objective is exactly the makespan and the model is infeasible
             self.assertEqual(model.objective.state(0), 7)
             self.assertFalse(all(c.state(0) for c in model.iter_constraints()))
 
@@ -827,25 +799,8 @@ class TestJobShopScheduling(unittest.TestCase):
             # b.c aaa
 
             times.set_state(0, [[0, 2, 4], [2, 6, 0], [6, 4, 1]])
-            order0.set_state(0, [0, 1, 2])
-            order1.set_state(0, [0, 2, 1])
-            order2.set_state(0, [1, 2, 0])
 
-            # objective is exactly the makespan and the model is feasible
-            self.assertEqual(model.objective.state(0), 7)
-            self.assertFalse(all(c.state(0) for c in model.iter_constraints()))
-
-        with self.subTest("infeasible - bad order"):
-            # aabbbbc
-            #   a c b
-            # bbccaaa
-
-            times.set_state(0, [[0, 2, 4], [2, 6, 0], [6, 4, 2]])
-            order0.set_state(0, [0, 1, 2])
-            order1.set_state(0, [2, 0, 1])
-            order2.set_state(0, [1, 2, 0])
-
-            # objective is exactly the makespan and the model is feasible
+            # objective is exactly the makespan and the model is infeasible
             self.assertEqual(model.objective.state(0), 7)
             self.assertFalse(all(c.state(0) for c in model.iter_constraints()))
 
@@ -856,7 +811,7 @@ class TestJobShopScheduling(unittest.TestCase):
         model = dwave.optimization.generators.job_shop_scheduling(times, machines)
 
         # check that we have the decisions we expect
-        times, order0 = model.iter_decisions()
+        times, = model.iter_decisions()
 
         model.states.resize(1)
 
@@ -867,7 +822,6 @@ class TestJobShopScheduling(unittest.TestCase):
             #     d
 
             times.set_state(0, [[0], [1], [3], [4]])
-            order0.set_state(0, [0, 1, 2, 3])
 
             # objective is exactly the makespan and the model is feasible
             self.assertEqual(model.objective.state(0), 5)
