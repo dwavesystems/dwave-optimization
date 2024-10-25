@@ -283,6 +283,7 @@ class ReduceNode : public ScalarOutputMixin<ArrayNode> {
 // binary operations and reduce operations.
 // https://numpy.org/doc/stable/reference/routines.math.html
 using AllNode = ReduceNode<std::logical_and<double>>;
+using AnyNode = ReduceNode<std::logical_or<double>>;
 using MaxNode = ReduceNode<functional::max<double>>;
 using MinNode = ReduceNode<functional::min<double>>;
 using ProdNode = ReduceNode<std::multiplies<double>>;

@@ -193,8 +193,10 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
     }
 }
 
-TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<double>,
-                   std::logical_and<double>, std::multiplies<double>, std::plus<double>) {
+TEMPLATE_TEST_CASE("ReduceNode", "",
+                   functional::max<double>, functional::min<double>,
+                   std::logical_and<double>, std::logical_or<double>,
+                   std::multiplies<double>, std::plus<double>) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -351,6 +353,93 @@ TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<do
                     }
                 }
             }
+        }
+    }
+}
+
+TEST_CASE("ReduceNode - AllNode/AnyNode") {
+    auto graph = Graph();
+
+    GIVEN("x = BinaryNode({5}), y = x.any()") {
+        auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{5});
+        auto y_ptr = graph.emplace_node<AllNode>(x_ptr);
+        auto z_ptr = graph.emplace_node<AnyNode>(x_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+        graph.emplace_node<ArrayValidationNode>(z_ptr);
+
+        THEN("y,z are logical and scalar") {
+            CHECK(y_ptr->logical());
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(z_ptr->logical());
+            CHECK(z_ptr->ndim() == 0);
+        }
+
+        WHEN("x == [0, 0, 0, 0, 0]") {
+            auto state = graph.empty_state();
+            x_ptr->initialize_state(state, {0, 0, 0, 0, 0});
+            graph.initialize_state(state);
+
+            THEN("y is false and z is false") {
+                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{false}));
+                CHECK(std::ranges::equal(z_ptr->view(state), std::vector{false}));
+            }
+
+            AND_WHEN("x is updated to [0, 0, 1, 0, 0]") {
+                x_ptr->set_value(state, 2, 1);
+                graph.propagate(state, {x_ptr, y_ptr, z_ptr});
+
+                THEN("y is false and z is true") {
+                    CHECK(std::ranges::equal(y_ptr->view(state), std::vector{false}));
+                    CHECK(std::ranges::equal(z_ptr->view(state), std::vector{true}));
+                }
+
+                graph.commit(state, {x_ptr, y_ptr, z_ptr});
+
+                AND_WHEN("x is updated to [0, 0, 0, 0, 0]") {
+                    x_ptr->set_value(state, 2, 0);
+                    graph.propagate(state, {x_ptr, y_ptr, z_ptr});
+
+                    THEN("y is false and z is false") {
+                        CHECK(std::ranges::equal(y_ptr->view(state), std::vector{false}));
+                        CHECK(std::ranges::equal(z_ptr->view(state), std::vector{false}));
+                    }
+                }
+            }
+        }
+
+        WHEN("x == [0, 0, 1, 0, 0]") {
+            auto state = graph.empty_state();
+            x_ptr->initialize_state(state, {0, 0, 1, 0, 0});
+            graph.initialize_state(state);
+
+            THEN("y is false and z is true") {
+                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{false}));
+                CHECK(std::ranges::equal(z_ptr->view(state), std::vector{true}));
+            }
+        }
+    }
+
+    GIVEN("x = [], y = x.all(), z = x.any()") {
+        auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{0});
+        auto y_ptr = graph.emplace_node<AllNode>(x_ptr);
+        auto z_ptr = graph.emplace_node<AnyNode>(x_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+        graph.emplace_node<ArrayValidationNode>(z_ptr);
+
+        THEN("y,z are logical and scalar") {
+            CHECK(y_ptr->logical());
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(z_ptr->logical());
+            CHECK(z_ptr->ndim() == 0);
+        }
+
+        auto state = graph.initialize_state();
+
+        THEN("y and not z") {
+            CHECK(std::ranges::equal(y_ptr->view(state), std::vector{true}));
+            CHECK(std::ranges::equal(z_ptr->view(state), std::vector{false}));
         }
     }
 }

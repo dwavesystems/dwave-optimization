@@ -1014,6 +1014,19 @@ struct ExtraData<std::logical_and<double>> {
     ssize_t old_num_zero = num_zero;
 };
 
+template<>
+struct ExtraData<std::logical_or<double>> {
+    explicit ExtraData(ssize_t nnz) : nnz(nnz) {}
+
+    virtual ~ExtraData() = default;
+
+    void commit() { old_nnz = nnz; }
+    void revert() { nnz = old_nnz; }
+
+    ssize_t nnz;
+    ssize_t old_nnz = nnz;
+};
+
 template <>
 struct ExtraData<std::multiplies<double>> {
     ExtraData(double nonzero, ssize_t num_zero) : nonzero(nonzero), num_zero(num_zero) {}
@@ -1073,6 +1086,9 @@ template <>
 ReduceNode<std::logical_and<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 1) {}
 
 template <>
+ReduceNode<std::logical_or<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 0) {}
+
+template <>
 ReduceNode<std::multiplies<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 1) {}
 
 template <>
@@ -1129,13 +1145,25 @@ void ReduceNode<std::logical_and<double>>::initialize_state(State& state) const 
 
     ssize_t num_zero = init.value_or(1) ? 0 : 1;
     for (const double& value : array_ptr_->view(state)) {
-        if (value == 0) num_zero += 1;
+        num_zero += !value;
     }
 
-    double value = num_zero == 0;
+    state[index] = std::make_unique<ReduceNodeData<op>>(!num_zero, num_zero);
+}
 
-    // and then create the state
-    state[index] = std::make_unique<ReduceNodeData<op>>(value, num_zero);
+template <>
+void ReduceNode<std::logical_or<double>>::initialize_state(State& state) const {
+    int index = topological_index();
+    assert(index >= 0 && "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > index && "unexpected state length");
+    assert(state[index] == nullptr && "already initialized state");
+
+    ssize_t nnz = init.value_or(1) ? 1 : 0;
+    for (const double& value : array_ptr_->view(state)) {
+        nnz += static_cast<bool>(value);
+    }
+
+    state[index] = std::make_unique<ReduceNodeData<op>>(nnz > 0, nnz);
 }
 
 template <>
@@ -1371,30 +1399,63 @@ void ReduceNode<std::logical_and<double>>::propagate(State& state) const {
 
     // count the change in the num_zero
     for (const Update& update : array_ptr_->diff(state)) {
-        if (update.placed() && update.value == 0) {
-            // added a zero
-            num_zero += 1;
-        } else if (update.placed()) {
-            assert(update.value != 0);
-        } else if (update.removed() && update.old == 0) {
-            // removed a 0
-            num_zero -= 1;
+        const auto& [_, old, value] = update;
+
+        if (update.placed()) {
+            // added a value to the array
+            num_zero += !value;
         } else if (update.removed()) {
-            assert(update.old != 0);
-        } else if (update.old == 0 && update.value == 0) {
-            // changed a 0 to a 0, nothing to do
-        } else if (update.old == 0) {
-            // changed a 0 to something else
+            // removed a value from the array
+            num_zero -= !old;
+        } else if (!old && value) {
+            // changed a 0 to a truthy value
             num_zero -= 1;
-        } else if (update.value == 0) {
-            // changed something else to a 0
+        } else if (old && !value) {
+            // changed a truthy value to a 0
             num_zero += 1;
         } else {
-            // something else to something else so no change
+            // otherwise we don't care because the net number of 0s hasn't changed
+            assert(static_cast<bool>(old) == static_cast<bool>(value));
         }
     }
 
-    ptr->values.value = num_zero > 0 ? 0 : 1;
+    assert(num_zero >= 0);  // should never go negative
+
+    ptr->values.value = num_zero < 1;
+    if (ptr->values.value != ptr->values.old) Node::propagate(state);
+}
+
+template <>
+void ReduceNode<std::logical_or<double>>::propagate(State& state) const {
+    auto ptr = data_ptr<ReduceNodeData<op>>(state);
+
+    ssize_t& nnz = ptr->extra.nnz;
+
+    // count the change in the nnz
+    for (const Update& update : array_ptr_->diff(state)) {
+        const auto& [_, old, value] = update;
+
+        if (update.placed()) {
+            // added a value to the array
+            nnz += static_cast<bool>(value);
+        } else if (update.removed()) {
+            // removed a value from the array
+            nnz -= static_cast<bool>(old);
+        } else if (!old && value) {
+            // changed a 0 to a truthy value
+            nnz += 1;
+        } else if (old && !value) {
+            // changed a truthy value to a 0
+            nnz -= 1;
+        } else {
+            // otherwise we don't care because the net number of 0s hasn't changed
+            assert(static_cast<bool>(old) == static_cast<bool>(value));
+        }
+    }
+
+    assert(nnz >= 0);  // should never go negative
+
+    ptr->values.value = nnz > 0;
     if (ptr->values.value != ptr->values.old) Node::propagate(state);
 }
 
@@ -1561,6 +1622,7 @@ void ReduceNode<BinaryOp>::revert(State& state) const {
 template class ReduceNode<functional::max<double>>;
 template class ReduceNode<functional::min<double>>;
 template class ReduceNode<std::logical_and<double>>;
+template class ReduceNode<std::logical_or<double>>;
 template class ReduceNode<std::multiplies<double>>;
 template class ReduceNode<std::plus<double>>;
 

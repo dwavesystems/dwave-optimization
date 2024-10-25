@@ -1,0 +1,4 @@
+---
+features:
+  - Add C++ ``AnyNode``. See `#148 <https://github.com/dwavesystems/dwave-optimization/issues/148>`_.
+  - Add ``Any`` symbol and ``ArraySymbol.any()`` method. See `#148 <https://github.com/dwavesystems/dwave-optimization/issues/148>`_.

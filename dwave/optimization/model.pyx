@@ -1848,6 +1848,14 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import All  # avoid circular import
         return All(self)
 
+    def any(self):
+        """Create an :class:`~dwave.optimization.symbols.Any` symbol.
+
+        The new symbol returns True when any elements evaluate to True.
+        """
+        from dwave.optimization.symbols import Any  # avoid circular import
+        return Any(self)
+
     def max(self):
         """Create a :class:`~dwave.optimization.symbols.Max` symbol.
 
