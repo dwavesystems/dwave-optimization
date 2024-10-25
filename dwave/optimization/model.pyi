@@ -70,6 +70,7 @@ class Model:
         *,
         max_num_states: int = 0,
         only_decision: bool = False,
+        compress: bool = False,
         ): ...
 
     def is_locked(self) -> bool: ...
@@ -102,6 +103,7 @@ class Model:
         *,
         max_num_states: int = 0,
         only_decision: bool = False,
+        compress: bool = False,
         ) -> typing.BinaryIO: ...
 
     # networkx might not be installed, so we just say we return an object.
@@ -129,12 +131,13 @@ class States:
     def into_file(
         self,
         file: typing.Union[typing.BinaryIO, collections.abc.ByteString, str],
+        compress: bool = False,
         ): ...
 
     def resize(self, n: int): ...
     def resolve(self): ...
     def size(self) -> int: ...
-    def to_file(self) -> typing.BinaryIO: ...
+    def to_file(self, *, compress: bool = False) -> typing.BinaryIO: ...
 
 
 class Symbol:

@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add ``compress`` keyword argument to ``Model.into_file()``, ``Model.to_file()``,
+    ``States.into_file()``, and ``States.to_file()``.

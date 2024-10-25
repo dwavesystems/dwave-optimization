@@ -319,6 +319,23 @@ class TestModel(unittest.TestCase):
         for n0, n1 in zip(model.iter_symbols(), new.iter_symbols()):
             self.assertIs(type(n0), type(n1))
 
+    def test_serialization_compress(self):
+        model = Model()
+        model.constant(np.arange(50))
+
+        # it's smallish integers so should compress well
+        with model.to_file(compress=True) as f_compressed, model.to_file() as f:
+            self.assertLess(len(f_compressed.read()), len(f.read()))
+
+        # round trip
+        with model.to_file(compress=True) as f:
+            new = Model.from_file(f)
+
+        self.assertEqual(new.num_symbols(), 1)
+        x, = model.iter_symbols()
+        self.assertIsInstance(x, dwave.optimization.symbols.Constant)
+        np.testing.assert_array_equal(x, np.arange(50))
+
     def test_serialization_max_num_states(self):
         model = Model()
         model.states.resize(4)
@@ -600,6 +617,30 @@ class TestStates(unittest.TestCase):
         #     with model.states.to_file() as f:
         #         with self.assertRaises(ValueError):
         #             new.states.from_file(f)
+
+    def test_serialization_compress(self):
+        model = Model()
+        x = model.integer(50)
+
+        model.states.resize(2)
+
+        x.set_state(0, np.arange(50))
+        x.set_state(1, np.ones(50))
+
+        # it's smallish integers so should compress well
+        with model.states.to_file(compress=True) as f_compressed, model.states.to_file() as f:
+            self.assertLess(len(f_compressed.read()), len(f.read()))
+
+        # Get another model with the same shape. This won't work in general
+        # unless you're very careful to always insert nodes in the same order
+        new = Model()
+        y = new.integer(50)
+
+        with model.states.to_file(compress=True) as f:
+            new.states.from_file(f)
+
+        np.testing.assert_array_equal(y.state(0), np.arange(50))
+        np.testing.assert_array_equal(y.state(1), np.ones(50))
 
 
 class TestSymbol(unittest.TestCase):

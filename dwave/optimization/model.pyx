@@ -427,6 +427,7 @@ cdef class Model:
     def into_file(self, file, *,
                   Py_ssize_t max_num_states = 0,
                   bool only_decision = False,
+                  bool compress = False,
                   ):
         """Serialize the model into an existing file.
 
@@ -442,6 +443,13 @@ cdef class Model:
             only_decision:
                 If ``True``, only decision variables are serialized.
                 If ``False``, all symbols are serialized.
+            compress:
+                If ``True``, the data will be compressed with
+                :py:const:`zipfile.ZIP_DEFLATED`.
+
+        .. versionadded:: 0.4.1
+           The ``compress`` keyword argument compresses the file using
+           :py:const:`zipfile.ZIP_DEFLATED`.
 
         See also:
             :meth:`.from_file`, :meth:`.to_file`
@@ -451,7 +459,12 @@ cdef class Model:
         if not self.is_locked():
             # lock for the duration of the method
             with self.lock():
-                return self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
+                return self.into_file(
+                    file,
+                    max_num_states=max_num_states,
+                    only_decision=only_decision,
+                    compress=compress,
+                    )
 
         if isinstance(file, str):
             with open(file, "wb") as f:
@@ -459,6 +472,7 @@ cdef class Model:
                     f,
                     max_num_states=max_num_states,
                     only_decision=only_decision,
+                    compress=compress,
                     )
 
         version = (0, 1)
@@ -493,8 +507,14 @@ cdef class Model:
         file.write(header_data)
         file.write(padding)
 
+        # determine the level of compression. We err on the side of availability
+        # and use ZIP_DEFLATED when compressing.
+        # ZipFile defaults to ZIP_STORED, so our default of compress = False just
+        # uses the default
+        compression = zipfile.ZIP_DEFLATED if compress else zipfile.ZIP_STORED
+
         # The rest of it is a zipfile
-        with zipfile.ZipFile(file, mode="w") as zf:
+        with zipfile.ZipFile(file, mode="w", compression=compression) as zf:
             zf.writestr("info.json", encoder.encode(model_info))
             zf.writestr("version.txt", ".".join(map(str, version)))
 
@@ -1162,7 +1182,9 @@ cdef class States:
             self._states[i].resize(model.num_nodes())
             model._graph.initialize_state(self._states[i])
 
-    def into_file(self, file):
+    def into_file(self, file, *,
+                  bool compress = False,
+                  ):
         """Serialize the states into an existing  file.
 
         Args:
@@ -1170,11 +1192,23 @@ cdef class States:
                 File pointer to an existing writeable, seekable file-like
                 object encoding a model. Strings are interpreted as a file
                 name.
+            compress:
+                If ``True``, the data will be compressed with
+                :py:const:`zipfile.ZIP_DEFLATED`.
+
+        .. versionadded:: 0.4.1
+           The ``compress`` keyword argument compresses the file using
+           :py:const:`zipfile.ZIP_DEFLATED`.
 
         TODO: describe the format
         """
         self.resolve()
-        return self._model().into_file(file, only_decision=True, max_num_states=self.size())
+        return self._model().into_file(
+            file,
+            only_decision=True,
+            max_num_states=self.size(),
+            compress=compress,
+            )
 
 
     cdef Model _model(self):
@@ -1247,10 +1281,20 @@ cdef class States:
         self.resolve()
         return self._states.size()
 
-    def to_file(self):
-        """Serialize the states to a new file-like object."""
+    def to_file(self, *,
+                bool compress = False,
+                ):
+        """Serialize the states to a new file-like object.
+
+        See also:
+            :meth:`.into_file`, :meth:`.from_file`
+        """
         self.resolve()
-        return self._model().to_file(only_decision=True, max_num_states=self.size())
+        return self._model().to_file(
+            only_decision=True,
+            max_num_states=self.size(),
+            compress=compress,
+            )
 
 
 cdef class Symbol:
