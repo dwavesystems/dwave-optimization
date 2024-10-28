@@ -1,0 +1,6 @@
+---
+
+features:
+  - |
+    Add C++ ``XorNode`` and Python ``Xor`` symbol. ``Xor`` propagates the logical exclusive-or of its
+    two predecessors element-wise.
