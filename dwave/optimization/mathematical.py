@@ -253,6 +253,8 @@ def logical_xor(x1: ArraySymbol, x2: ArraySymbol) -> Xor:
 
     See Also:
         :class:`~dwave.optimization.symbols.Xor`: equivalent symbol.
+
+    .. versionadded:: 0.4.1
     """
     return Xor(x1, x2)
 
