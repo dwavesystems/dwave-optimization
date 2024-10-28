@@ -2941,6 +2941,8 @@ cdef class Xor(ArraySymbol):
 
     See Also:
         :func:`~dwave.optimization.mathematical.logical_xor`: equivalent function.
+
+        .. versionadded:: 0.4.1
     """
     def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
         if lhs.model is not rhs.model:
