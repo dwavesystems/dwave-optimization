@@ -38,6 +38,11 @@ struct logical {
 };
 
 template <class T>
+struct logical_xor {
+    constexpr bool operator()(const T& x, const T& y) const { return static_cast<bool>(x)^static_cast<bool>(y); }
+};
+
+template <class T>
 struct max {
     constexpr T operator()(const T& x, const T& y) const { return std::max(x, y); }
 };
@@ -109,6 +114,7 @@ using MaximumNode = BinaryOpNode<functional::max<double>>;
 using MinimumNode = BinaryOpNode<functional::min<double>>;
 using OrNode = BinaryOpNode<std::logical_or<double>>;
 using SubtractNode = BinaryOpNode<std::minus<double>>;
+using XorNode = BinaryOpNode<functional::logical_xor<double>>;
 
 template <class BinaryOp>
 class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
