@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import itertools
 import typing
 
 import numpy as np
@@ -863,7 +862,13 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
 
     # Ensure for each machine, its tasks do not overlap
     # Collect all the pairs of jobs in two indices arrays
-    u_idx, v_idx = zip(*itertools.combinations(range(num_jobs), 2))
+    u_idx = []
+    v_idx = []
+    for i in range(num_jobs - 1):
+        for j in range(i + 1, num_jobs):
+            u_idx.append(i)
+            v_idx.append(j)
+
     u = model.constant(u_idx)
     v = model.constant(v_idx)
 
