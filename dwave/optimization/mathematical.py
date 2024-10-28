@@ -30,6 +30,7 @@ from dwave.optimization.symbols import (
     Not,
     Or,
     Where,
+    Xor,
 )
 
 
@@ -39,6 +40,7 @@ __all__ = [
     "logical_and",
     "logical_not",
     "logical_or",
+    "logical_xor",
     "maximum",
     "minimum",
     "multiply",
@@ -221,6 +223,38 @@ def logical_or(x1: ArraySymbol, x2: ArraySymbol) -> Or:
         :class:`~dwave.optimization.symbols.Or`: equivalent symbol.
     """
     return Or(x1, x2)
+
+
+def logical_xor(x1: ArraySymbol, x2: ArraySymbol) -> Xor:
+    r"""Return an element-wise logical XOR on the given symbols.
+
+    Args:
+        x1, x2: Input array symbol.
+
+    Returns:
+        A symbol that is the element-wise XOR of the given symbols.
+
+    Examples:
+        This example XORs two binary symbols of size :math:`1 \times 3`.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import logical_xor
+        ...
+        >>> model = Model()
+        >>> x = model.binary(3)
+        >>> y = model.binary(3)
+        >>> z = logical_xor(x, y)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     x.set_state(0, [True, True, False])
+        ...     y.set_state(0, [False, True, False])
+        ...     print(z.state(0))
+        [1. 0. 0.]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Xor`: equivalent symbol.
+    """
+    return Xor(x1, x2)
 
 
 @_op(Maximum, NaryMaximum, "max")

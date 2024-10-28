@@ -23,7 +23,7 @@ import numpy as np
 
 import dwave.optimization
 import dwave.optimization.symbols
-from dwave.optimization import Model, logical, logical_and, logical_or, logical_not
+from dwave.optimization import Model, logical, logical_and, logical_or, logical_not, logical_xor
 
 
 class utils:
@@ -2094,3 +2094,61 @@ class TestWhere(utils.SymbolTests):
         with self.assertRaises(ValueError):
             # wrong shape
             dwave.optimization.where(model.binary(3), x, y)
+
+class TestXor(utils.BinaryOpTests):
+    def generate_symbols(self):
+        model = Model()
+        a = model.constant(1)
+        b = model.constant(1)
+        c = model.constant(0)
+        d = model.constant(0)
+        ab = logical_xor(a, b)
+        ac = logical_xor(a, c)
+        cd = logical_xor(c, d)
+        cb = logical_xor(c, b)
+        with model.lock():
+            yield from (ab, ac, cd, cb)
+
+    def op(self, lhs, rhs):
+        return np.logical_xor(lhs, rhs)
+
+    def symbol_op(self, lhs, rhs):
+        return logical_xor(lhs, rhs)
+
+    def test_scalar_xor(self):
+        model = Model()
+        a = model.constant(1)
+        b = model.constant(1)
+        c = model.constant(0)
+        d = model.constant(0)
+        ab = logical_xor(a, b)
+        ac = logical_xor(a, c)
+        cd = logical_xor(c, d)
+        cb = logical_xor(c, b)
+        self.assertEqual(model.num_symbols(), 8)
+
+        model.lock()
+        model.states.resize(1)
+        self.assertEqual(ab.state(0), 0)
+        self.assertEqual(ac.state(0), 1)
+        self.assertEqual(cd.state(0), 0)
+        self.assertEqual(cb.state(0), 1)
+
+        with self.assertRaises(TypeError):
+            x = a ^ b
+        with self.assertRaises(AttributeError):
+            x = a.logical_xor(b)
+
+    def test_array_xor(self):
+        model = Model()
+        a = model.constant([ 1, 0, 1, 0 ])
+        b = model.constant([ 1, 1, 1, 1 ])
+        c = model.constant([ 0, 0, 0, 0 ])
+        ab = logical_xor(a, b)
+        ac = logical_xor(a, c)
+
+        model.lock()
+        model.states.resize(1)
+
+        np.testing.assert_array_equal(ab.state(0), [ 0, 1, 0, 1 ])
+        np.testing.assert_array_equal(ac.state(0), [ 1, 0, 1, 0 ])

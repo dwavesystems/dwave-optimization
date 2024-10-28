@@ -16,6 +16,7 @@ Mathematical Functions
    ~logical_and
    ~logical_or
    ~logical_not
+   ~logical_xor
    ~maximum
    ~minimum
    ~multiply
