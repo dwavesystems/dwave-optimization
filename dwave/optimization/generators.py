@@ -16,12 +16,13 @@
 
 from __future__ import annotations
 
+import itertools
 import typing
 
 import numpy as np
 import numpy.typing
 
-from dwave.optimization.mathematical import add, maximum, where
+from dwave.optimization.mathematical import add, logical_or, maximum, where
 from dwave.optimization.model import Model
 
 __all__ = [
@@ -764,10 +765,16 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     `E. Taillard <http://mistic.heig-vd.ch/taillard/problemes.dir/problemes.html>`_
     provides benchmark instances compatible with this generator.
 
-    The model generated is based on the one proposed in
-    L. Blaise, "Modélisation et résolution de problèmes d’ordonnancement au
-    sein du solveur d’optimisation mathématique LocalSolver", Université de
-    Toulouse, https://hal-lirmm.ccsd.cnrs.fr/LAAS-ROC/tel-03923149v2
+    .. versionchanged:: 0.4.1
+        Prior to version `0.4.1`, the model generated was based on one proposed by
+
+        L. Blaise, "Modélisation et résolution de problèmes d’ordonnancement au
+        sein du solveur d’optimisation mathématique LocalSolver", Université de
+        Toulouse, https://hal-lirmm.ccsd.cnrs.fr/LAAS-ROC/tel-03923149v2.
+
+        Now the model uses the more natural formulation where the only decision
+        variables are the task start times, but with disjunctive non-overlapping
+        constraints between each pair of job on the machines.
 
     .. Note::
         There are many ways to model job-shop scheduling. The model returned
@@ -843,10 +850,6 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     start_times = model.integer(shape=(num_jobs, num_machines),
                                 lower_bound=0, upper_bound=upper_bound)
 
-    # We also need a redundant decision symbol for each machine defining the
-    # order of jobs on that machine
-    orders = [model.list(num_jobs) for _ in range(num_machines)]
-
     # The objective is simply to minimize the last end time
     end_times = start_times + times
     model.minimize(end_times.max())
@@ -859,13 +862,24 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
         model.add_constraint((ends <= starts).all())
 
     # Ensure for each machine, its tasks do not overlap
-    for m in range(num_machines):
-        order = orders[m]
+    # Collect all the pairs of jobs in two indices arrays
+    u_idx = []
+    v_idx = []
+    for i, j in itertools.combinations(range(num_jobs), 2):
+        u_idx.append(i)
+        v_idx.append(j)
 
-        ends = end_times[order[:-1], m]
-        starts = start_times[order[1:], m]
+    u = model.constant(u_idx)
+    v = model.constant(v_idx)
 
-        model.add_constraint((ends <= starts).all())
+    # Finally impose the non-overlapping constraints between jobs,
+    # on all machines
+    model.add_constraint(
+        logical_or(
+            end_times[u, :] <= start_times[v, :],
+            end_times[v, :] <= start_times[u, :]
+        ).all()
+    )
 
     model.lock()
     return model
