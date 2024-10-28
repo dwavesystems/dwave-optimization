@@ -198,19 +198,28 @@ jobs:
       - run: *run-tests
 
 
-  cpp-linux:
-    docker:
-      - image: cimg/python:3.9
+  cpp-gcc:
+    parameters:
+      gcc-version:
+        type: string
 
-    steps: &unix-cpp-tests
+    docker:
+      - image: gcc:<< parameters.gcc-version >>
+
+    steps:
       - checkout
       - run:
+          name: install python requirements
+          command: |
+            apt update
+            apt install python3-pip python3-venv -y
+      - run: &install-requirements
           name: create venv and install build dependencies
           command: |
-            python -m venv env
+            python3 -m venv env
             . env/bin/activate
             pip install -r requirements.txt
-      - run:
+      - run: &run-cpp-tests
           name: run c++ tests with meson
           command: |
             . env/bin/activate
@@ -222,7 +231,10 @@ jobs:
       xcode: 15.3.0
     resource_class: macos.m1.medium.gen1
 
-    steps: *unix-cpp-tests
+    steps:
+      - checkout
+      - run: *install-requirements
+      - run: *run-cpp-tests
 
   docs:
     docker:
@@ -314,7 +326,10 @@ workflows:
           only-binary: numpy
           requires:
             - python-linux
-      - cpp-linux
+      - cpp-gcc:
+          matrix:
+            parameters:
+              gcc-version: ["11", "12", "14"]
       - cpp-macOS
       - docs:
           requires:
