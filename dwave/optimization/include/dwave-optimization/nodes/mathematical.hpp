@@ -39,7 +39,9 @@ struct logical {
 
 template <class T>
 struct logical_xor {
-    constexpr bool operator()(const T& x, const T& y) const { return static_cast<bool>(x)^static_cast<bool>(y); }
+    constexpr bool operator()(const T& x, const T& y) const {
+        return static_cast<bool>(x) != static_cast<bool>(y);
+    }
 };
 
 template <class T>
