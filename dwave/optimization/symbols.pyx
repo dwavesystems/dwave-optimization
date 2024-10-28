@@ -363,6 +363,7 @@ cdef class Any(ArraySymbol):
         >>> with model.lock():
         ...     assert not b.state()
 
+    .. versionadded:: 0.4.1
     """
     def __init__(self, ArraySymbol array):
         cdef Model model = array.model

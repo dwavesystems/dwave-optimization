@@ -1852,6 +1852,8 @@ cdef class ArraySymbol(Symbol):
         """Create an :class:`~dwave.optimization.symbols.Any` symbol.
 
         The new symbol returns True when any elements evaluate to True.
+
+        .. versionadded:: 0.4.1
         """
         from dwave.optimization.symbols import Any  # avoid circular import
         return Any(self)
