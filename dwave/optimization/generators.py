@@ -764,6 +764,17 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     `E. Taillard <http://mistic.heig-vd.ch/taillard/problemes.dir/problemes.html>`_
     provides benchmark instances compatible with this generator.
 
+    .. versionchanged:: 0.4.1
+        Prior to version `0.4.1`, the model generated was based on one proposed by
+
+        L. Blaise, "Modélisation et résolution de problèmes d’ordonnancement au
+        sein du solveur d’optimisation mathématique LocalSolver", Université de
+        Toulouse, https://hal-lirmm.ccsd.cnrs.fr/LAAS-ROC/tel-03923149v2.
+
+        Now the model uses the more natural formulation where the only decision
+        variables are the task start times, but with disjunctive non-overlapping
+        constraints between each pair of job on the machines.
+
     .. Note::
         There are many ways to model job-shop scheduling. The model returned
         by this function may or may not give the best performance for your
