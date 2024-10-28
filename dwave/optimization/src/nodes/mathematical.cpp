@@ -1016,15 +1016,15 @@ struct ExtraData<std::logical_and<double>> {
 
 template<>
 struct ExtraData<std::logical_or<double>> {
-    explicit ExtraData(ssize_t nnz) : nnz(nnz) {}
+    explicit ExtraData(ssize_t num_nonzero) : num_nonzero(num_nonzero) {}
 
     virtual ~ExtraData() = default;
 
-    void commit() { old_nnz = nnz; }
-    void revert() { nnz = old_nnz; }
+    void commit() { old_num_nonzero = num_nonzero; }
+    void revert() { num_nonzero = old_num_nonzero; }
 
-    ssize_t nnz;
-    ssize_t old_nnz = nnz;
+    ssize_t num_nonzero;  // num nonzero, following SciPy's naming
+    ssize_t old_num_nonzero = num_nonzero;
 };
 
 template <>
@@ -1158,12 +1158,12 @@ void ReduceNode<std::logical_or<double>>::initialize_state(State& state) const {
     assert(static_cast<int>(state.size()) > index && "unexpected state length");
     assert(state[index] == nullptr && "already initialized state");
 
-    ssize_t nnz = init.value_or(1) ? 1 : 0;
+    ssize_t num_nonzero = init.value_or(1) ? 1 : 0;
     for (const double& value : array_ptr_->view(state)) {
-        nnz += static_cast<bool>(value);
+        num_nonzero += static_cast<bool>(value);
     }
 
-    state[index] = std::make_unique<ReduceNodeData<op>>(nnz > 0, nnz);
+    state[index] = std::make_unique<ReduceNodeData<op>>(num_nonzero > 0, num_nonzero);
 }
 
 template <>
@@ -1429,33 +1429,33 @@ template <>
 void ReduceNode<std::logical_or<double>>::propagate(State& state) const {
     auto ptr = data_ptr<ReduceNodeData<op>>(state);
 
-    ssize_t& nnz = ptr->extra.nnz;
+    ssize_t& num_nonzero = ptr->extra.num_nonzero;
 
-    // count the change in the nnz
+    // count the change in the num_nonzero
     for (const Update& update : array_ptr_->diff(state)) {
         const auto& [_, old, value] = update;
 
         if (update.placed()) {
             // added a value to the array
-            nnz += static_cast<bool>(value);
+            num_nonzero += static_cast<bool>(value);
         } else if (update.removed()) {
             // removed a value from the array
-            nnz -= static_cast<bool>(old);
+            num_nonzero -= static_cast<bool>(old);
         } else if (!old && value) {
             // changed a 0 to a truthy value
-            nnz += 1;
+            num_nonzero += 1;
         } else if (old && !value) {
             // changed a truthy value to a 0
-            nnz -= 1;
+            num_nonzero -= 1;
         } else {
             // otherwise we don't care because the net number of 0s hasn't changed
             assert(static_cast<bool>(old) == static_cast<bool>(value));
         }
     }
 
-    assert(nnz >= 0);  // should never go negative
+    assert(num_nonzero >= 0);  // should never go negative
 
-    ptr->values.value = nnz > 0;
+    ptr->values.value = num_nonzero > 0;
     if (ptr->values.value != ptr->values.old) Node::propagate(state);
 }
 
