@@ -413,11 +413,12 @@ class TestAll(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         nodes = [
-            model.constant(0),
-            model.constant(1),
-            model.constant([0, 0]),
-            model.constant([0, 1]),
-            model.constant([1, 1]),
+            model.constant(0).all(),
+            model.constant(1).all(),
+            model.constant([]).all(),
+            model.constant([0, 0]).all(),
+            model.constant([0, 1]).all(),
+            model.constant([1, 1]).all(),
         ]
 
         model.lock()
@@ -509,6 +510,61 @@ class TestAnd(utils.BinaryOpTests):
             x = a & b
         with self.assertRaises(AttributeError):
             x = a.logical_and(b)
+
+
+class TestAny(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        nodes = [
+            model.constant(0).any(),
+            model.constant(1).any(),
+            model.constant([]).any(),
+            model.constant([0, 0]).any(),
+            model.constant([0, 1]).any(),
+            model.constant([1, 1]).any(),
+        ]
+
+        model.lock()
+        yield from nodes
+
+    def test_empty(self):
+        model = Model()
+        empty = model.constant([]).any()
+        model.lock()
+        model.states.resize(1)
+
+        self.assertFalse(empty.state())
+        self.assertEqual(empty.state(), np.asarray([]).any())  # confirm consistency with NumPy
+
+    def test_scalar(self):
+        model = Model()
+        model.states.resize(1)
+
+        for val in [0, .0001, 1, 7]:
+            with self.subTest(f"[{val}].all()"):
+                symbol = model.constant([val]).any()
+                model.lock()
+                np.testing.assert_array_equal(symbol.state(0), bool(val))
+                model.unlock()
+
+            with self.subTest(f"({val}).all()"):
+                symbol = model.constant(val).any()
+                model.lock()
+                np.testing.assert_array_equal(symbol.state(0), bool(val))
+                model.unlock()
+
+        for arr in [np.zeros(5), np.ones(5), np.asarray([0, 1])]:
+            with self.subTest(f"[{arr}].all()"):
+                symbol = model.constant([arr]).any()
+                model.lock()
+                np.testing.assert_array_equal(symbol.state(0), arr.any())
+                model.unlock()
+
+            with self.subTest(f"{val}.all()"):
+                symbol = model.constant(arr).any()
+                model.lock()
+                np.testing.assert_array_equal(symbol.state(0), arr.any())
+                model.unlock()
 
 
 class TestArrayValidation(utils.SymbolTests):

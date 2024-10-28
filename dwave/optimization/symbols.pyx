@@ -47,6 +47,7 @@ from dwave.optimization.libcpp.nodes cimport (
     AddNode as cppAddNode,
     AllNode as cppAllNode,
     AndNode as cppAndNode,
+    AnyNode as cppAnyNode,
     AdvancedIndexingNode as cppAdvancedIndexingNode,
     ArrayValidationNode as cppArrayValidationNode,
     BasicIndexingNode as cppBasicIndexingNode,
@@ -95,6 +96,7 @@ __all__ = [
     "Add",
     "All",
     "And",
+    "Any",
     "AdvancedIndexing",
     "BasicIndexing",
     "BinaryVariable",
@@ -340,6 +342,47 @@ cdef class And(ArraySymbol):
     cdef cppAndNode* ptr
 
 _register(And, typeid(cppAndNode))
+
+
+cdef class Any(ArraySymbol):
+    """Tests whether any elements evaluate to True.
+
+    Examples:
+        This example checks the elements of a binary array.
+
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> model.states.resize(1)
+        >>> x = model.constant([True, False, False])
+        >>> a = x.any()
+        >>> with model.lock():
+        ...     assert a.state()
+
+        >>> y = model.constant([False, False, False])
+        >>> b = y.any()
+        >>> with model.lock():
+        ...     assert not b.state()
+
+    .. versionadded:: 0.4.1
+    """
+    def __init__(self, ArraySymbol array):
+        cdef Model model = array.model
+        self.ptr = model._graph.emplace_node[cppAnyNode](array.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppAnyNode* ptr = dynamic_cast_ptr[cppAnyNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Any")
+        cdef Any s = Any.__new__(Any)
+        s.ptr = ptr
+        s.initialize_arraynode(symbol.model, ptr)
+        return s
+
+    cdef cppAnyNode* ptr
+
+_register(Any, typeid(cppAnyNode))
 
 
 cdef class _ArrayValidation(Symbol):
