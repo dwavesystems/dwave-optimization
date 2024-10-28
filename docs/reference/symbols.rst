@@ -46,6 +46,7 @@ are inherited by the :ref:`model symbols <symbols_model_symbols>`.
     :toctree: generated/
 
     ~ArraySymbol.all
+    ~ArraySymbol.any
     ~ArraySymbol.has_state
     ~ArraySymbol.max
     ~ArraySymbol.maybe_equals

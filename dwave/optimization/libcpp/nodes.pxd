@@ -98,6 +98,9 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
     cdef cppclass AndNode(ArrayNode):
         pass
 
+    cdef cppclass AnyNode(ArrayNode):
+        pass
+
     cdef cppclass EqualNode(ArrayNode):
         pass
 

@@ -35,6 +35,10 @@ class And(ArraySymbol):
     ...
 
 
+class Any(ArraySymbol):
+    ...
+
+
 class AdvancedIndexing(ArraySymbol):
     ...
 

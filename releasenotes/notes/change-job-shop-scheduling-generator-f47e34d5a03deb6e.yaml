@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Change the formulation of the ``job_shop_scheduling()`` generator to remove redundant list variables and
+    replace them with a disjunctive non-overlapping constraint between each pair of jobs on the machines.
+
+upgrade:
+  - |
+    Remove redundant list variables in the ``job_shop_scheduling()`` generator and add disjunctive non-overlapping
+    constraints between each pair of jobs on the machines.
