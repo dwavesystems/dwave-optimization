@@ -22,7 +22,7 @@ import typing
 import numpy as np
 import numpy.typing
 
-from dwave.optimization.mathematical import add, maximum, where, logical_or
+from dwave.optimization.mathematical import add, logical_or, maximum, where
 from dwave.optimization.model import Model
 
 __all__ = [
