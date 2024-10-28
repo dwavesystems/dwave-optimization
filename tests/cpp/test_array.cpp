@@ -131,6 +131,13 @@ TEST_CASE("ArrayIterator") {
                 CHECK(*(it + 4) == 4);
             }
         }
+
+        THEN("We can construct another vector using reverse iterators") {
+            auto copy = std::vector<double>();
+            copy.assign(std::reverse_iterator(ArrayIterator(values.data()) + 6),
+                        std::reverse_iterator(ArrayIterator(values.data())));
+            CHECK(std::ranges::equal(copy, std::vector<double>{5, 4, 3, 2, 1, 0}));
+        }
     }
 }
 
