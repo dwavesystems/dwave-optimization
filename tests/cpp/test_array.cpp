@@ -138,6 +138,16 @@ TEST_CASE("ArrayIterator") {
                         std::reverse_iterator(ArrayIterator(values.data())));
             CHECK(std::ranges::equal(copy, std::vector<double>{5, 4, 3, 2, 1, 0}));
         }
+
+        WHEN("We instantiate the iterator to once-before-the-beginning") {
+            const auto rend = ArrayIterator(values.data()) - 1;
+            auto it = ArrayIterator(values.data() + values.size()) - 1;
+            auto copy = std::vector<double>();
+            for (; it != rend; --it) {
+                copy.push_back(*it);
+            }
+            CHECK(std::ranges::equal(copy, std::vector<double>{8, 7, 6, 5, 4, 3, 2, 1, 0}));
+        }
     }
 }
 

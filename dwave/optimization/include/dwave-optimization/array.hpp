@@ -356,8 +356,10 @@ class ArrayIterator {
         }
         return *this;
     }
+    ArrayIterator& operator-=(difference_type rhs) { return this->operator+=(-rhs); }
 
     friend ArrayIterator operator+(ArrayIterator lhs, difference_type rhs) { return lhs += rhs; }
+    friend ArrayIterator operator-(ArrayIterator lhs, difference_type rhs) { return lhs += -rhs; }
 
     difference_type operator-(const ArrayIterator& rhs) const {
         // We need to be careful here, we want to know how many steps the rhs
@@ -381,7 +383,7 @@ class ArrayIterator {
     struct MaskInfo {
         MaskInfo() noexcept : ptr(nullptr), fill(0) {}
 
-        MaskInfo(value_type const* ptr, value_type fill) noexcept : ptr(ptr), fill(fill) {}
+        MaskInfo(const value_type* ptr, value_type fill) noexcept : ptr(ptr), fill(fill) {}
 
         const value_type* ptr;  // ptr to the value indicating whether to use the mask value or not
         value_type fill;        // the value to provide for masked entries
