@@ -379,13 +379,16 @@ class ArrayIterator {
     const value_type* ptr_;
 
     struct MaskInfo {
-        MaskInfo() = delete;
+        MaskInfo() noexcept : ptr(nullptr), fill(0) {}
 
         MaskInfo(value_type const* ptr, value_type fill) noexcept : ptr(ptr), fill(fill) {}
 
         const value_type* ptr;  // ptr to the value indicating whether to use the mask value or not
         value_type fill;        // the value to provide for masked entries
     };
+
+
+    static_assert(std::semiregular<MaskInfo>);
 
     static_assert(std::is_trivially_copy_constructible<MaskInfo>::value);
     static_assert(std::is_nothrow_copy_constructible<MaskInfo>::value);
@@ -401,7 +404,7 @@ class ArrayIterator {
 
     // if this is a strided iterator, put information about the shape/strides here
     struct ShapeInfo {
-        ShapeInfo() = delete;
+        ShapeInfo() noexcept : ShapeInfo(0, nullptr, nullptr) {}
 
         ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
                 : ndim(ndim),
@@ -525,6 +528,8 @@ class ArrayIterator {
         std::unique_ptr<ssize_t[]> loc;
     };
 
+    static_assert(std::semiregular<ShapeInfo>);
+
     // unique_ptr is neither trivially copyable nor moveable, so ShapeInfo cannot be either
     static_assert(std::is_nothrow_copy_constructible<ShapeInfo>::value);
     static_assert(std::is_nothrow_move_constructible<ShapeInfo>::value);
@@ -539,6 +544,8 @@ class ArrayIterator {
 static_assert(std::forward_iterator<ArrayIterator>);
 static_assert(std::bidirectional_iterator<ArrayIterator>);
 // todo: random access iterator?
+
+static_assert(std::semiregular<ArrayIterator>);
 
 // unique_ptr is neither trivially copyable nor moveable, so ArrayIterator cannot be either
 static_assert(std::is_nothrow_copy_constructible<ArrayIterator>::value);
