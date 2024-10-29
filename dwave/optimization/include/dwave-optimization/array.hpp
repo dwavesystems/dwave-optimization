@@ -390,6 +390,13 @@ class ArrayIterator {
         const value_type* fill_ptr;  // the value to provide for masked entries, won't be iterated
     };
 
+    // These are implied by the simplicity of the class, but there was a time that it accidentally
+    // wasn't trivially copyable so let's be explicit.
+    static_assert(std::is_trivially_copy_constructible<MaskInfo>::value);
+    static_assert(std::is_trivially_move_constructible<MaskInfo>::value);
+    static_assert(std::is_trivially_copy_assignable<MaskInfo>::value);
+    static_assert(std::is_trivially_move_assignable<MaskInfo>::value);
+
     // if this is a masked iterator, put information about the mask here
     std::unique_ptr<MaskInfo> mask_ = nullptr;
 
@@ -408,13 +415,21 @@ class ArrayIterator {
         }
 
         ShapeInfo(const ShapeInfo& other) noexcept
-                : ndim(other.ndim),
-                  shape(other.shape),
-                  strides(other.strides),
-                  loc(std::make_unique<ssize_t[]>(ndim - 1)) {
-            std::copy(other.loc.get(), other.loc.get() + ndim - 1, loc.get());
+                : ShapeInfo(other.ndim, other.shape, other.strides) {
+            if (ndim >= 1) std::copy(other.loc.get(), other.loc.get() + ndim - 1, loc.get());
         }
+
         ShapeInfo(ShapeInfo&& other) = default;
+
+        // Both the copy and move operator using the copy-and-swap idiom
+        ShapeInfo& operator=(ShapeInfo other) noexcept {
+            using std::swap;  // ADL, if it matters
+            std::swap(ndim, other.ndim);
+            std::swap(shape, other.shape);
+            std::swap(strides, other.strides);
+            std::swap(loc, other.loc);
+            return *this;
+        }
 
         // returns the number of bytes to advance. Note that this is in bytes!
         std::ptrdiff_t advance() {
@@ -500,7 +515,7 @@ class ArrayIterator {
             return distance;
         }
 
-        const ssize_t ndim;
+        ssize_t ndim;
         const ssize_t* shape;
         const ssize_t* strides;
 
@@ -508,6 +523,12 @@ class ArrayIterator {
         // 0th dimension
         std::unique_ptr<ssize_t[]> loc;
     };
+
+    // unique_ptr is not trivial so the best we can have for ShapeInfo is nothrow
+    static_assert(std::is_nothrow_copy_constructible<ShapeInfo>::value);
+    static_assert(std::is_nothrow_move_constructible<ShapeInfo>::value);
+    static_assert(std::is_nothrow_copy_assignable<ShapeInfo>::value);
+    static_assert(std::is_nothrow_move_assignable<ShapeInfo>::value);
 
     // shape_ == nullptr => the array is contiguous. Otherwise the stride information
     // will be encoded in the `shape_`.
@@ -517,6 +538,12 @@ class ArrayIterator {
 static_assert(std::forward_iterator<ArrayIterator>);
 static_assert(std::bidirectional_iterator<ArrayIterator>);
 // todo: random access iterator?
+
+// unique_ptr is not trivial so the best we can have for ArrayIterator is nothrow
+static_assert(std::is_nothrow_copy_constructible<ArrayIterator>::value);
+static_assert(std::is_nothrow_move_constructible<ArrayIterator>::value);
+static_assert(std::is_nothrow_copy_assignable<ArrayIterator>::value);
+static_assert(std::is_nothrow_move_assignable<ArrayIterator>::value);
 
 // Represents an Array
 //
