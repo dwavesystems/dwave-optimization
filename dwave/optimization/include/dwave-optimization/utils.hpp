@@ -38,6 +38,9 @@ static_assert(sizeof(ssize_t) >= 1);  // check ssize_t exists
 [[noreturn]] inline void unreachable() {}
 #endif
 
+// backport cartesian_product from c++23
+std::vector<std::vector<ssize_t>> cartesian_product(std::vector<std::vector<ssize_t>> &v);
+
 class double_kahan {
  public:
     constexpr double_kahan() noexcept : value_(0), compensator_(0) {}

@@ -25,6 +25,23 @@
 
 namespace dwave::optimization {
 
+class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
+ public:
+    ConcatenateNode(std::vector<ArrayNode*> array_ptrs, ssize_t axis);
+
+    double const* buff(const State& state) const override;
+    std::span<const Update> diff(const State& state) const override;
+
+    void initialize_state(State& state) const override;
+    void commit(State& state) const override;
+    void revert(State& state) const override;
+    void propagate(State& state) const override;
+
+ private:
+    ssize_t axis_;
+    std::vector<ArrayNode*> array_ptrs_;
+};
+
 class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
  public:
     ReshapeNode(ArrayNode* node_ptr, std::span<const ssize_t> shape);

@@ -18,6 +18,154 @@
 
 namespace dwave::optimization {
 
+std::vector<ssize_t> make_concatenate_shape(std::vector<ArrayNode*> array_ptrs, ssize_t axis) {
+    // One or more arrays must be given
+    if (array_ptrs.size() < 1) {
+        throw std::invalid_argument("need at least one array to concatenate");
+    }
+
+    for (auto it = std::next(array_ptrs.begin()), stop = array_ptrs.end(); it != stop; it++) {
+
+        // Arrays must have the same number of dimensions
+        if ((*std::prev(it))->ndim() != (*it)->ndim()) {
+            throw std::invalid_argument(
+                    "all the input arrays must have the same number of dimensions," +
+                    std::string(" but the array at index ") +
+                    std::to_string(std::distance(array_ptrs.begin(), std::prev(it))) +
+                    " has " + std::to_string((*std::prev(it))->ndim()) +
+                    " dimension(s) and the array at index " +
+                    std::to_string(std::distance(array_ptrs.begin(), it)) +
+                    " has " +
+                    std::to_string((*it)->ndim()) +
+                    " dimension(s)");
+        }
+
+        // Array shapes must be the same except for on the concatenation axis
+        for (ssize_t i = 0; i < (*it)->ndim(); i++) {
+            if (i != axis) {
+                if ( (*std::prev(it))->shape()[i] != (*it)->shape()[i] ) {
+                    throw std::invalid_argument(
+                            "all the input array dimensions for the concatenation" +
+                            std::string(" axis must match exactly, but along dimension ") +
+                            std::to_string(i) + ", the array at index " +
+                            std::to_string(std::distance(array_ptrs.begin(), std::prev(it))) +
+                            " has size " +
+                            std::to_string((*std::prev(it))->shape()[i]) +
+                            " and the array at index " +
+                            std::to_string(std::distance(array_ptrs.begin(), it)) +
+                            " has size " +
+                            std::to_string((*it)->shape()[i]));
+                }
+            }
+        }
+    }
+
+    // Axis must be in range 0..ndim-1
+    // We can do this check on the first input array since
+    // we at this point know they all have the same shape
+    if (!(0 <= axis && axis < array_ptrs.at(0)->ndim())) {
+        throw std::invalid_argument(
+                "axis " +
+                std::to_string(axis) +
+                std::string(" is out of bounds for array of dimension ") +
+                std::to_string(array_ptrs.at(0)->ndim()));
+    }
+
+
+    // The shape of the input arrays, which will be the
+    // same except for possibly on the concatenation axis
+    std::span<const ssize_t> shape0 = array_ptrs.at(0)->shape();
+    std::vector<ssize_t> shape;
+    shape.reserve(shape0.size());
+    std::copy(shape0.begin(), shape0.end(), std::back_inserter(shape));
+
+    // On the concatenation axis we sum the axis dimension sizes
+    for (auto it = std::next(array_ptrs.begin()), stop = array_ptrs.end(); it != stop; it++) {
+       shape[axis] = shape[axis] + (*it)->shape()[axis];
+    }
+
+    return shape;
+}
+
+ConcatenateNode::ConcatenateNode(std::vector<ArrayNode*> array_ptrs, const ssize_t axis)
+        : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)) {
+
+    axis_ = axis;
+    array_ptrs_ = array_ptrs;
+
+    for (auto it = array_ptrs.begin(), stop = array_ptrs.end(); it != stop; it++) {
+        this->add_predecessor((*it));
+    }
+}
+
+double const* ConcatenateNode::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+std::span<const Update> ConcatenateNode::diff(const State& state) const {
+    return {};
+}
+
+void ConcatenateNode::initialize_state(State& state) const {
+    int index = topological_index();
+    assert(index >= 0 && "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > index && "unexpected state length");
+    assert(state[index] == nullptr && "already initialized state");
+
+    std::vector<double> values;
+    values.reserve(size());
+
+    // Prefix is defined over dimensions 0..axis-1
+    std::vector<std::vector<ssize_t>> prefix_dims(axis_);
+    for (ssize_t dim = 0; dim < prefix_dims.size(); dim++) {
+        for (ssize_t i = 0; i < shape()[dim]; i++) {
+            prefix_dims[dim].push_back(i);
+        }
+    }
+
+    // Suffix is defined over dimensions axis+1..ndim
+    std::vector<std::vector<ssize_t>> suffix_dims(ndim() - axis_ - 1);
+    for (ssize_t dim = 0; dim < suffix_dims.size(); dim++) {
+        for (ssize_t i = 0; i < shape()[axis_ + 1 + dim]; i++) {
+            suffix_dims[dim].push_back(i);
+        }
+    }
+
+    auto prefix_prod = cartesian_product(prefix_dims);
+    auto suffix_prod = cartesian_product(suffix_dims);
+
+    for (auto prefix : prefix_prod) {
+        for (ssize_t arr_i = 0; arr_i < array_ptrs_.size(); arr_i++) {
+            size_t arr_axis = array_ptrs_[arr_i]->shape()[axis_];
+            for (ssize_t arr_axis_i = 0; arr_axis_i < arr_axis; arr_axis_i++) {
+                for (auto suffix : suffix_prod) {
+                    std::vector<ssize_t> indices;
+                    indices.insert(indices.begin(), prefix.begin(), prefix.end());
+                    indices.insert(indices.begin() + prefix_dims.size(), arr_axis_i);
+                    indices.insert(indices.begin() + prefix_dims.size() + 1, suffix.begin(), suffix.end());
+
+                    ssize_t idx = ravel_multi_index(array_ptrs_[arr_i]->strides(), indices);
+                    values.emplace_back(array_ptrs_[arr_i]->buff(state)[idx]);
+                }
+            }
+        }
+    }
+
+    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
+}
+
+void ConcatenateNode::commit(State& state) const {
+
+}
+
+void ConcatenateNode::revert(State& state) const {
+
+}
+
+void ConcatenateNode::propagate(State& state) const {
+
+}
+
 ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::span<const ssize_t> shape)
         : ArrayOutputMixin(shape), array_ptr_(node_ptr) {
     // Don't (yet) support non-contiguous predecessors.

@@ -82,4 +82,25 @@ bool is_integer(const double& value) {
     return std::modf(value, &dummy) == 0.0;
 }
 
+// Based on https://stackoverflow.com/a/31169617
+// Since std::cartesian_product is only specified for c++23 we
+// add our own implementation of it.
+std::vector<std::vector<ssize_t>> cartesian_product(std::vector<std::vector<ssize_t>> &v) {
+    std::vector<std::vector<ssize_t>> out;
+    auto product = []( long long a, std::vector<ssize_t>& b ) { return a * b.size(); };
+    const long long N = std::accumulate(v.begin(), v.end(), 1LL, product);
+    out.reserve(N);
+    for (long long n = 0; n < N; ++n) {
+        lldiv_t q { n, 0 }; // Initial values for quotient and remainder
+        std::vector<ssize_t> u;
+        u.resize(v.size());
+        for (long long i = v.size()-1; 0 <= i; --i) {
+            q = div(q.quot, v[i].size());
+            u[i] = (v[i][q.rem]);
+        }
+        out.push_back(u);
+    }
+    return out;
+}
+
 };  // namespace dwave::optimization

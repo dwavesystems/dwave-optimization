@@ -25,6 +25,89 @@
 
 namespace dwave::optimization {
 
+TEST_CASE("ConcatenateNode") {
+
+    GIVEN("Two constant nodes with 8 elements each") {
+        auto a = ConstantNode(std::vector{1, 2, 3, 4, 5, 6, 7, 8});
+        auto b = ConstantNode(std::vector{9, 10, 11, 12, 13, 14, 15, 16});
+
+        WHEN("Reshaped to (2,2,2) and concatenated on axis 1") {
+            auto ra = ReshapeNode(&a, std::vector<ssize_t>({2,2,2}));
+            auto rb = ReshapeNode(&b, std::vector<ssize_t>({2,2,2}));
+
+            auto c = ConcatenateNode({&ra,&rb}, 1);
+
+            THEN("The concatenated node has shape (2,4,2) and ndim 3") {
+                CHECK(std::ranges::equal(c.shape(), std::vector{2,4,2}));
+                CHECK(c.ndim() == 3);
+            }
+        }
+    }
+
+    GIVEN("Two constant nodes with shape (2,2,2,1)") {
+        auto graph = Graph();
+
+        auto a_ptr = graph.emplace_node<ConstantNode>(
+                            std::vector<double>{1, 2, 3, 4, 5, 6, 7, 8});
+        auto b_ptr = graph.emplace_node<ConstantNode>(
+                            std::vector<double>{9, 10, 11, 12, 13, 14, 15, 16});
+
+        auto ra_ptr = graph.emplace_node<ReshapeNode>(a_ptr, std::vector<ssize_t>{2,2,2,1});
+        auto rb_ptr = graph.emplace_node<ReshapeNode>(b_ptr, std::vector<ssize_t>{2,2,2,1});
+
+        WHEN("Concatenated on axis 0") {
+            auto c_ptr = graph.emplace_node<ConcatenateNode>(
+                                std::vector<ArrayNode*>{ra_ptr, rb_ptr}, 0);
+
+            THEN("The concatenated node has shape (4,2,2,1)") {
+                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{4,2,2,1}));
+            }
+
+            AND_WHEN("The graph is initialized") {
+                auto state = graph.initialize_state();
+                auto expected = std::vector<ssize_t>{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+                THEN("Buffer is initialized correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+
+        WHEN("Concatenated on axis 1") {
+            auto c_ptr = graph.emplace_node<ConcatenateNode>(
+                                std::vector<ArrayNode*> {ra_ptr, rb_ptr}, 1);
+
+            THEN("The concatenated node has shape (2,4,2,1)") {
+                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2,4,2,1}));
+            }
+
+            AND_WHEN("The graph is initialized") {
+                auto state = graph.initialize_state();
+                auto expected = std::vector<ssize_t>{1,2,3,4,9,10,11,12,5,6,7,8,13,14,15,16};
+                THEN("Buffer is initialized correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+
+        WHEN("Concatenated on axis 2") {
+            auto c_ptr = graph.emplace_node<ConcatenateNode>(
+                                std::vector<ArrayNode*> {ra_ptr, rb_ptr}, 2);
+
+            THEN("The concatenated node has shape (2,2,4,1)") {
+                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2,2,4,1}));
+            }
+
+            AND_WHEN("The graph is initialized") {
+                auto state = graph.initialize_state();
+                auto expected = std::vector<ssize_t>{1,2,9,10,3,4,11,12,5,6,13,14,7,8,15,16};
+                THEN("Buffer is initialized correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+    }
+}
+
 TEST_CASE("ReshapeNode") {
     GIVEN("A 1d array encoding range(12)") {
         auto A = ConstantNode(std::vector{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11});
