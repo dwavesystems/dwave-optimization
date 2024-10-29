@@ -250,7 +250,7 @@ class ArrayIterator {
 
     ArrayIterator(const ArrayIterator& other) noexcept
             : ptr_(other.ptr_),
-              mask_((other.mask_) ? std::make_unique<MaskInfo>(*other.mask_) : nullptr),
+              // mask_((other.mask_) ? std::make_unique<MaskInfo>(*other.mask_) : nullptr),
               shape_((other.shape_) ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
 
     ArrayIterator(ArrayIterator&& other) = default;
@@ -259,39 +259,41 @@ class ArrayIterator {
 
     // Create a contiguous iterator pointing to ptr
     explicit ArrayIterator(value_type const* ptr) noexcept
-            : ptr_(ptr), mask_(nullptr), shape_(nullptr) {}
+            : ptr_(ptr),
+              // mask_(nullptr),
+              shape_(nullptr) {}
 
-    // Create a masked iterator with a fill value. Will return fill when *mask_ptr evaluates to true
-    ArrayIterator(value_type const* data_ptr, value_type const* mask_ptr,
-                  value_type fill = 0) noexcept
-            : ptr_(data_ptr), mask_(std::make_unique<MaskInfo>(mask_ptr, fill)), shape_(nullptr) {}
+    // // Create a masked iterator with a fill value. Will return fill when *mask_ptr evaluates to true
+    // ArrayIterator(value_type const* data_ptr, value_type const* mask_ptr,
+    //               value_type fill = 0) noexcept
+    //         : ptr_(data_ptr), mask_(std::make_unique<MaskInfo>(mask_ptr, fill)), shape_(nullptr) {}
 
     // shape and strides must outlive the iterator!
     ArrayIterator(value_type const* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides)
             : ptr_(ptr),
-              mask_(nullptr),
+              // mask_(nullptr),
               shape_((ndim >= 1) ? std::make_unique<ShapeInfo>(ndim, shape, strides) : nullptr) {}
 
     // Both the copy and move operator using the copy-and-swap idiom
     ArrayIterator& operator=(ArrayIterator other) noexcept {
         using std::swap;  // ADL, if it matters
         std::swap(ptr_, other.ptr_);
-        std::swap(mask_, other.mask_);
+        // std::swap(mask_, other.mask_);
         std::swap(shape_, other.shape_);
         return *this;
     }
 
     const value_type& operator*() const {
-        if (mask_ && *(mask_->ptr)) {
-            return mask_->fill;
-        }
+        // if (mask_ && *(mask_->ptr)) {
+        //     return mask_->fill;
+        // }
 
         return *ptr_;
     }
     const value_type* operator->() const {
-        if (mask_ && *(mask_->ptr)) {
-            return &(mask_->fill);
-        }
+        // if (mask_ && *(mask_->ptr)) {
+        //     return &(mask_->fill);
+        // }
 
         return ptr_;
     }
@@ -303,10 +305,10 @@ class ArrayIterator {
         } else if (shape_) {
             // do something else
             ptr_ += shape_->advance() / sizeof(value_type);
-        } else if (mask_) {
-            // advance both the mask ptr and the data ptr
-            ++(mask_->ptr);
-            ++ptr_;
+        // } else if (mask_) {
+        //     // advance both the mask ptr and the data ptr
+        //     ++(mask_->ptr);
+        //     ++ptr_;
         } else {
             ++ptr_;
         }
@@ -325,10 +327,10 @@ class ArrayIterator {
             unreachable();
         } else if (shape_) {
             ptr_ += shape_->unadvance() / sizeof(value_type);
-        } else if (mask_) {
-            // decrement both the mask ptr and the data ptr
-            --(mask_->ptr);
-            --ptr_;
+        // } else if (mask_) {
+        //     // decrement both the mask ptr and the data ptr
+        //     --(mask_->ptr);
+        //     --ptr_;
         } else {
             --ptr_;
         }
@@ -347,9 +349,9 @@ class ArrayIterator {
             unreachable();
         } else if (shape_) {
             ptr_ += shape_->advance(rhs) / sizeof(double);
-        } else if (mask_) {
-            ptr_ += rhs;
-            (mask_->ptr) += rhs;
+        // } else if (mask_) {
+        //     ptr_ += rhs;
+        //     (mask_->ptr) += rhs;
         } else {
             ptr_ += rhs;
         }
@@ -377,17 +379,18 @@ class ArrayIterator {
     // pointer to the underlying memory
     value_type const* ptr_ = nullptr;
 
-    struct MaskInfo {
-        MaskInfo() = delete;
+    // struct MaskInfo {
+    //     MaskInfo() = delete;
 
-        MaskInfo(value_type const* ptr, value_type fill) noexcept : ptr(ptr), fill(fill) {}
+    //     MaskInfo(value_type const* ptr, value_type fill) noexcept : ptr(ptr), fill(fill) {}
 
-        value_type const* ptr;  // ptr to the value indicating whether to use the mask value or not
-        const value_type fill;  // the value to provide for masked entries
-    };
+    //     value_type const* ptr;  // ptr to the value indicating whether to use the mask value or not
+    //     const value_type fill;  // the value to provide for masked entries
+    // };
 
-    // if this is a masked iterator, put information about the mask here
-    std::unique_ptr<MaskInfo> mask_ = nullptr;
+    // // if this is a masked iterator, put information about the mask here
+    // std::unique_ptr<MaskInfo> mask_ = nullptr;
+    bool mask_ = false;
 
     // if this is a strided iterator, put information about the shape/strides here
     struct ShapeInfo {

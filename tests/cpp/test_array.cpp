@@ -112,25 +112,25 @@ TEST_CASE("ArrayIterator") {
             }
         }
 
-        WHEN("We create a mask over the array and create a masked iterator") {
-            auto mask = std::vector<double>{true, false, false, true, false, false, false, true, false};
+        // WHEN("We create a mask over the array and create a masked iterator") {
+        //     auto mask = std::vector<double>{true, false, false, true, false, false, false, true, false};
 
-            auto it = ArrayIterator(values.data(), mask.data(), 6);
+        //     auto it = ArrayIterator(values.data(), mask.data(), 6);
 
-            THEN("It behaves like a contiguous iterator") {
-                CHECK(*it == 6);  // masked
-                ++it;
-                CHECK(*it == 1);  // not masked
-            }
+        //     THEN("It behaves like a contiguous iterator") {
+        //         CHECK(*it == 6);  // masked
+        //         ++it;
+        //         CHECK(*it == 1);  // not masked
+        //     }
 
-            THEN("We can do iterator arithmetic") {
-                CHECK(*(it + 0) == 6);  // masked
-                CHECK(*(it + 1) == 1);
-                CHECK(*(it + 2) == 2);
-                CHECK(*(it + 3) == 6);  // masked
-                CHECK(*(it + 4) == 4);
-            }
-        }
+        //     THEN("We can do iterator arithmetic") {
+        //         CHECK(*(it + 0) == 6);  // masked
+        //         CHECK(*(it + 1) == 1);
+        //         CHECK(*(it + 2) == 2);
+        //         CHECK(*(it + 3) == 6);  // masked
+        //         CHECK(*(it + 4) == 4);
+        //     }
+        // }
 
         THEN("We can construct another vector using reverse iterators") {
             auto copy = std::vector<double>();
