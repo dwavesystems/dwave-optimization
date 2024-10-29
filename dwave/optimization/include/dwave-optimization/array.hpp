@@ -417,11 +417,8 @@ class ArrayIterator {
         }
 
         ShapeInfo(const ShapeInfo& other) noexcept
-                : ndim(other.ndim),
-                  shape(other.shape),
-                  strides(other.strides),
-                  loc(std::make_unique<ssize_t[]>(ndim - 1)) {
-            std::copy(other.loc.get(), other.loc.get() + ndim - 1, loc.get());
+                : ShapeInfo(other.ndim, other.shape, other.strides) {
+            if (ndim >= 1) std::copy(other.loc.get(), other.loc.get() + ndim - 1, loc.get());
         }
         ShapeInfo(ShapeInfo&& other) = default;
 
