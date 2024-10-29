@@ -361,6 +361,7 @@ template class BinaryOpNode<std::equal_to<double>>;
 template class BinaryOpNode<std::less_equal<double>>;
 template class BinaryOpNode<std::logical_and<double>>;
 template class BinaryOpNode<std::logical_or<double>>;
+template class BinaryOpNode<functional::logical_xor<double>>;
 template class BinaryOpNode<functional::max<double>>;
 template class BinaryOpNode<functional::min<double>>;
 

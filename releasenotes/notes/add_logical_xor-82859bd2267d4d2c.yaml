@@ -1,0 +1,6 @@
+---
+
+features:
+  - |
+    Add C++ ``XorNode`` and Python ``Xor`` symbol. ``Xor`` propagates the logical exclusive-or of its
+    two predecessors element-wise. See `#125 <https://github.com/dwavesystems/dwave-optimization/issues/125>`_.

@@ -198,3 +198,7 @@ class Sum(ArraySymbol):
 
 class Where(ArraySymbol):
     ...
+
+
+class Xor(ArraySymbol):
+    ...

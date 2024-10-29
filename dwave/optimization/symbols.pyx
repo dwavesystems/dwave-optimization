@@ -86,6 +86,7 @@ from dwave.optimization.libcpp.nodes cimport (
     SquareNode as cppSquareNode,
     SumNode as cppSumNode,
     WhereNode as cppWhereNode,
+    XorNode as cppXorNode,
     )
 from dwave.optimization.model cimport ArraySymbol, Model, Symbol
 
@@ -134,6 +135,7 @@ __all__ = [
     "Square",
     "Sum",
     "Where",
+    "Xor",
     ]
 
 # We would like to be able to do constructions like dynamic_cast[cppConstantNode*](...)
@@ -2932,3 +2934,35 @@ cdef class Where(ArraySymbol):
     cdef cppWhereNode* ptr
 
 _register(Where, typeid(cppWhereNode))
+
+
+cdef class Xor(ArraySymbol):
+    """Boolean XOR element-wise between two symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.logical_xor`: equivalent function.
+
+        .. versionadded:: 0.4.1
+    """
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
+        if lhs.model is not rhs.model:
+            raise ValueError("lhs and rhs do not share the same underlying model")
+
+        cdef Model model = lhs.model
+
+        self.ptr = model._graph.emplace_node[cppXorNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppXorNode* ptr = dynamic_cast_ptr[cppXorNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Xor")
+        cdef Xor x = Xor.__new__(Xor)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppXorNode* ptr
+
+_register(Xor, typeid(cppXorNode))
