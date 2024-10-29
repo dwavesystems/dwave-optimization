@@ -253,9 +253,8 @@ class ArrayIterator {
               mask_((other.mask_) ? std::make_unique<MaskInfo>(*other.mask_) : nullptr),
               shape_((other.shape_) ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
 
-    ArrayIterator(ArrayIterator&& other) = default;
-
-    ~ArrayIterator() = default;
+    ArrayIterator(ArrayIterator&& other) noexcept
+            : ptr_(other.ptr_), mask_(std::move(other.mask_)), shape_(std::move(other.shape_)) {}
 
     // Create a contiguous iterator pointing to ptr
     explicit ArrayIterator(value_type const* ptr) noexcept
@@ -271,6 +270,8 @@ class ArrayIterator {
             : ptr_(ptr),
               mask_(nullptr),
               shape_((ndim >= 1) ? std::make_unique<ShapeInfo>(ndim, shape, strides) : nullptr) {}
+
+    ~ArrayIterator() = default;
 
     // Both the copy and move operator using the copy-and-swap idiom
     ArrayIterator& operator=(ArrayIterator other) noexcept {
@@ -375,7 +376,7 @@ class ArrayIterator {
 
  private:
     // pointer to the underlying memory
-    const value_type* ptr_ = nullptr;
+    const value_type* ptr_;
 
     struct MaskInfo {
         MaskInfo() = delete;
@@ -386,13 +387,17 @@ class ArrayIterator {
         value_type fill;        // the value to provide for masked entries
     };
 
+    static_assert(std::is_trivially_copy_constructible<MaskInfo>::value);
+    static_assert(std::is_nothrow_copy_constructible<MaskInfo>::value);
+    static_assert(std::is_trivially_move_constructible<MaskInfo>::value);
+    static_assert(std::is_nothrow_move_constructible<MaskInfo>::value);
     static_assert(std::is_trivially_copy_assignable<MaskInfo>::value);
     static_assert(std::is_nothrow_copy_assignable<MaskInfo>::value);
     static_assert(std::is_trivially_move_assignable<MaskInfo>::value);
     static_assert(std::is_nothrow_move_assignable<MaskInfo>::value);
 
     // if this is a masked iterator, put information about the mask here
-    std::unique_ptr<MaskInfo> mask_ = nullptr;
+    std::unique_ptr<MaskInfo> mask_;
 
     // if this is a strided iterator, put information about the shape/strides here
     struct ShapeInfo {
@@ -521,12 +526,14 @@ class ArrayIterator {
     };
 
     // unique_ptr is neither trivially copyable nor moveable, so ShapeInfo cannot be either
+    static_assert(std::is_nothrow_copy_constructible<ShapeInfo>::value);
+    static_assert(std::is_nothrow_move_constructible<ShapeInfo>::value);
     static_assert(std::is_nothrow_copy_assignable<ShapeInfo>::value);
     static_assert(std::is_nothrow_move_assignable<ShapeInfo>::value);
 
     // shape_ == nullptr => the array is contiguous. Otherwise the stride information
     // will be encoded in the `shape_`.
-    std::unique_ptr<ShapeInfo> shape_ = nullptr;
+    std::unique_ptr<ShapeInfo> shape_;
 };
 
 static_assert(std::forward_iterator<ArrayIterator>);
@@ -534,6 +541,8 @@ static_assert(std::bidirectional_iterator<ArrayIterator>);
 // todo: random access iterator?
 
 // unique_ptr is neither trivially copyable nor moveable, so ArrayIterator cannot be either
+static_assert(std::is_nothrow_copy_constructible<ArrayIterator>::value);
+static_assert(std::is_nothrow_move_constructible<ArrayIterator>::value);
 static_assert(std::is_nothrow_copy_assignable<ArrayIterator>::value);
 static_assert(std::is_nothrow_move_assignable<ArrayIterator>::value);
 
