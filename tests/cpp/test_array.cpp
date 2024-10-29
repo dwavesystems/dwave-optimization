@@ -114,8 +114,9 @@ TEST_CASE("ArrayIterator") {
 
         WHEN("We create a mask over the array and create a masked iterator") {
             auto mask = std::vector<double>{true, false, false, true, false, false, false, true, false};
+            double fill = 6;
 
-            auto it = ArrayIterator(values.data(), mask.data(), 6);
+            auto it = ArrayIterator(values.data(), mask.data(), &fill);
 
             THEN("It behaves like a contiguous iterator") {
                 CHECK(*it == 6);  // masked
