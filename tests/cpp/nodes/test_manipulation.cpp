@@ -55,9 +55,10 @@ TEST_CASE("ConcatenateNode") {
         auto ra_ptr = graph.emplace_node<ReshapeNode>(a_ptr, std::vector<ssize_t>{2,2,2,1});
         auto rb_ptr = graph.emplace_node<ReshapeNode>(b_ptr, std::vector<ssize_t>{2,2,2,1});
 
+        std::vector<ArrayNode*> v{ra_ptr, rb_ptr};
+
         WHEN("Concatenated on axis 0") {
-            auto c_ptr = graph.emplace_node<ConcatenateNode>(
-                                std::vector<ArrayNode*>{ra_ptr, rb_ptr}, 0);
+            auto c_ptr = graph.emplace_node<ConcatenateNode>(v, 0);
 
             THEN("The concatenated node has shape (4,2,2,1)") {
                 CHECK(std::ranges::equal(c_ptr->shape(), std::vector{4,2,2,1}));
@@ -73,8 +74,7 @@ TEST_CASE("ConcatenateNode") {
         }
 
         WHEN("Concatenated on axis 1") {
-            auto c_ptr = graph.emplace_node<ConcatenateNode>(
-                                std::vector<ArrayNode*> {ra_ptr, rb_ptr}, 1);
+            auto c_ptr = graph.emplace_node<ConcatenateNode>(v, 1);
 
             THEN("The concatenated node has shape (2,4,2,1)") {
                 CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2,4,2,1}));
@@ -90,8 +90,7 @@ TEST_CASE("ConcatenateNode") {
         }
 
         WHEN("Concatenated on axis 2") {
-            auto c_ptr = graph.emplace_node<ConcatenateNode>(
-                                std::vector<ArrayNode*> {ra_ptr, rb_ptr}, 2);
+            auto c_ptr = graph.emplace_node<ConcatenateNode>(v, 2);
 
             THEN("The concatenated node has shape (2,2,4,1)") {
                 CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2,2,4,1}));

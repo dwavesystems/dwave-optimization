@@ -98,7 +98,7 @@ std::vector<std::vector<ssize_t>> cartesian_product(std::vector<std::vector<ssiz
             q = div(q.quot, v[i].size());
             u[i] = (v[i][q.rem]);
         }
-        out.push_back(u);
+        out.emplace_back(std::move(u));
     }
     return out;
 }

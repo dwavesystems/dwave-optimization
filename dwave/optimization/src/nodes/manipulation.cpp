@@ -63,21 +63,19 @@ std::vector<ssize_t> make_concatenate_shape(std::vector<ArrayNode*> array_ptrs, 
     // Axis must be in range 0..ndim-1
     // We can do this check on the first input array since
     // we at this point know they all have the same shape
-    if (!(0 <= axis && axis < array_ptrs.at(0)->ndim())) {
+    if (!(0 <= axis && axis < array_ptrs.front()->ndim())) {
         throw std::invalid_argument(
                 "axis " +
                 std::to_string(axis) +
                 std::string(" is out of bounds for array of dimension ") +
-                std::to_string(array_ptrs.at(0)->ndim()));
+                std::to_string(array_ptrs.front()->ndim()));
     }
 
 
     // The shape of the input arrays, which will be the
     // same except for possibly on the concatenation axis
-    std::span<const ssize_t> shape0 = array_ptrs.at(0)->shape();
-    std::vector<ssize_t> shape;
-    shape.reserve(shape0.size());
-    std::copy(shape0.begin(), shape0.end(), std::back_inserter(shape));
+    std::span<const ssize_t> shape0 = array_ptrs.front()->shape();
+    std::vector<ssize_t> shape(shape0.begin(), shape0.end());
 
     // On the concatenation axis we sum the axis dimension sizes
     for (auto it = std::next(array_ptrs.begin()), stop = array_ptrs.end(); it != stop; ++it) {
@@ -88,10 +86,7 @@ std::vector<ssize_t> make_concatenate_shape(std::vector<ArrayNode*> array_ptrs, 
 }
 
 ConcatenateNode::ConcatenateNode(std::vector<ArrayNode*> array_ptrs, const ssize_t axis)
-        : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)) {
-
-    axis_ = axis;
-    array_ptrs_ = array_ptrs;
+        : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)), axis_(axis), array_ptrs_(array_ptrs) {
 
     for (auto it = array_ptrs.begin(), stop = array_ptrs.end(); it != stop; it++) {
         this->add_predecessor((*it));
