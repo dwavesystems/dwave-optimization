@@ -41,7 +41,7 @@ std::vector<ssize_t> make_concatenate_shape(std::vector<ArrayNode*> array_ptrs, 
         }
 
         // Array shapes must be the same except for on the concatenation axis
-        for (ssize_t i = 0; i < (*it)->ndim(); i++) {
+        for (ssize_t i = 0, stop = (*it)->ndim(); i < stop; i++) {
             if (i != axis) {
                 if ( (*std::prev(it))->shape()[i] != (*it)->shape()[i] ) {
                     throw std::invalid_argument(
@@ -117,16 +117,16 @@ void ConcatenateNode::initialize_state(State& state) const {
 
     // Prefix is defined over dimensions 0..axis-1
     std::vector<std::vector<ssize_t>> prefix_dims(axis_);
-    for (ssize_t dim = 0; dim < prefix_dims.size(); dim++) {
-        for (ssize_t i = 0; i < shape()[dim]; i++) {
+    for (ssize_t dim = 0, stop = prefix_dims.size(); dim < stop; dim++) {
+        for (ssize_t i = 0, stop = shape()[dim]; i < stop; i++) {
             prefix_dims[dim].push_back(i);
         }
     }
 
     // Suffix is defined over dimensions axis+1..ndim
     std::vector<std::vector<ssize_t>> suffix_dims(ndim() - axis_ - 1);
-    for (ssize_t dim = 0; dim < suffix_dims.size(); dim++) {
-        for (ssize_t i = 0; i < shape()[axis_ + 1 + dim]; i++) {
+    for (ssize_t dim = 0, stop = suffix_dims.size(); dim < stop; dim++) {
+        for (ssize_t i = 0, stop = shape()[axis_ + 1 + dim]; i < stop; i++) {
             suffix_dims[dim].push_back(i);
         }
     }
@@ -135,9 +135,8 @@ void ConcatenateNode::initialize_state(State& state) const {
     auto suffix_prod = cartesian_product(suffix_dims);
 
     for (auto prefix : prefix_prod) {
-        for (ssize_t arr_i = 0; arr_i < array_ptrs_.size(); arr_i++) {
-            size_t arr_axis = array_ptrs_[arr_i]->shape()[axis_];
-            for (ssize_t arr_axis_i = 0; arr_axis_i < arr_axis; arr_axis_i++) {
+        for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; arr_i++) {
+            for (ssize_t arr_axis_i = 0, stop = array_ptrs_[arr_i]->shape()[axis_]; arr_axis_i < stop; arr_axis_i++) {
                 for (auto suffix : suffix_prod) {
                     std::vector<ssize_t> indices;
                     indices.insert(indices.begin(), prefix.begin(), prefix.end());
