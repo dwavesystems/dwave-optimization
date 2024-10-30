@@ -1,0 +1,7 @@
+---
+features:
+  - Improve the move/copy behavior of C++ ``ArrayIterator``.
+upgrade:
+  - Change C++ ``ArrayIterator`` to no longer have ownership of its fill value when masked.
+fixes:
+  - Fix the possibility of creating a dangling reference when using a masked C++ ``ArrayIterator``.
