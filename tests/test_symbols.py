@@ -1504,6 +1504,9 @@ class TestMinimum(utils.SymbolTests):
         np.testing.assert_array_equal(m.state(0), x.state(0))
 
 
+class TestModulus(utils.BinaryOpTests):
+
+
 class TestMultiply(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

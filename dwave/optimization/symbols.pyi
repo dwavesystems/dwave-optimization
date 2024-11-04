@@ -124,6 +124,10 @@ class Minimum(ArraySymbol):
     ...
 
 
+class Modulus(ArraySymbol):
+    ...
+    
+
 class Multiply(ArraySymbol):
     ...
 

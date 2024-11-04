@@ -352,7 +352,7 @@ template class BinaryOpNode<std::plus<double>>;
 template class BinaryOpNode<std::minus<double>>;
 template class BinaryOpNode<std::multiplies<double>>;
 // template class BinaryOpNode<std::divides<double>>;
-// template class BinaryOpNode<std::modulus<double>>;  // maybe this doesn't work
+template class BinaryOpNode<functional::modulus<double>>;
 template class BinaryOpNode<std::equal_to<double>>;
 // template class BinaryOpNode<std::not_equal_to<double>>;
 // template class BinaryOpNode<std::greater<double>>;

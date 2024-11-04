@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <functional>
 #include <optional>
 #include <vector>
@@ -52,6 +53,25 @@ struct max {
 template <class T>
 struct min {
     constexpr T operator()(const T& x, const T& y) const { return std::min(x, y); }
+};
+
+template <class T>
+struct modulus {
+    constexpr double operator()(const T& x, const T& y) const {
+        // Copy numpy behavior and return 0 for `x % 0`
+        if (y == 0) {
+            return 0;
+        }
+        double x_double, y_double = static_cast<double>(x), static_cast<double>(y);
+        double remainder = std::fmod(x_double, y_double);
+        bool x_pos, y_pos = x_double >= 0, y_double >= 0;
+        // std::fmod result consistent with numpy for same-sign arguments
+        if (x_pos && y_pos || !x_pos && !y_pos)
+            return remainder;
+        // Make result consistent with numpy for different-sign arguments
+        else
+            return remainder + y_double;
+    }
 };
 
 template <class T>
@@ -114,6 +134,7 @@ using LessEqualNode = BinaryOpNode<std::less_equal<double>>;
 using MultiplyNode = BinaryOpNode<std::multiplies<double>>;
 using MaximumNode = BinaryOpNode<functional::max<double>>;
 using MinimumNode = BinaryOpNode<functional::min<double>>;
+using ModulusNode = BinaryOpNode<functional::modulus<double>>;
 using OrNode = BinaryOpNode<std::logical_or<double>>;
 using SubtractNode = BinaryOpNode<std::minus<double>>;
 using XorNode = BinaryOpNode<functional::logical_xor<double>>;
