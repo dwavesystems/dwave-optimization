@@ -98,7 +98,7 @@ double const* ConcatenateNode::buff(const State& state) const {
 }
 
 std::span<const Update> ConcatenateNode::diff(const State& state) const {
-    return {};
+   return data_ptr<ArrayNodeStateData>(state)->diff();
 }
 
 void ConcatenateNode::initialize_state(State& state) const {
@@ -149,11 +149,11 @@ void ConcatenateNode::initialize_state(State& state) const {
 }
 
 void ConcatenateNode::commit(State& state) const {
-
+    data_ptr<ArrayNodeStateData>(state)->commit();
 }
 
 void ConcatenateNode::revert(State& state) const {
-
+    data_ptr<ArrayNodeStateData>(state)->revert();
 }
 
 void ConcatenateNode::propagate(State& state) const {
