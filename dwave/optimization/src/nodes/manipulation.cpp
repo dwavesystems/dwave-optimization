@@ -129,17 +129,18 @@ void ConcatenateNode::initialize_state(State& state) const {
     auto prefix_prod = cartesian_product(prefix_dims);
     auto suffix_prod = cartesian_product(suffix_dims);
 
+    std::vector<ssize_t> indices;
     for (auto prefix : prefix_prod) {
         for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
             for (ssize_t arr_axis_i = 0, stop = array_ptrs_[arr_i]->shape()[axis_]; arr_axis_i < stop; ++arr_axis_i) {
                 for (auto suffix : suffix_prod) {
-                    std::vector<ssize_t> indices;
                     indices.insert(indices.begin(), prefix.begin(), prefix.end());
                     indices.insert(indices.begin() + prefix_dims.size(), arr_axis_i);
                     indices.insert(indices.begin() + prefix_dims.size() + 1, suffix.begin(), suffix.end());
 
                     ssize_t idx = ravel_multi_index(array_ptrs_[arr_i]->strides(), indices);
                     values.emplace_back(array_ptrs_[arr_i]->buff(state)[idx]);
+                    indices.clear();
                 }
             }
         }
