@@ -139,7 +139,7 @@ void ConcatenateNode::initialize_state(State& state) const {
                     indices.insert(indices.begin() + prefix_dims.size() + 1, suffix.begin(), suffix.end());
 
                     ssize_t idx = ravel_multi_index(array_ptrs_[arr_i]->strides(), indices);
-                    values.emplace_back(array_ptrs_[arr_i]->buff(state)[idx]);
+                    values.emplace_back(array_ptrs_[arr_i]->view(state)[idx]);
                     indices.clear();
                 }
             }
