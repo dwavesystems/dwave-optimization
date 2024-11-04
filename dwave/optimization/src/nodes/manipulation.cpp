@@ -158,7 +158,21 @@ void ConcatenateNode::revert(State& state) const {
 }
 
 void ConcatenateNode::propagate(State& state) const {
+    auto ptr = data_ptr<ArrayNodeStateData>(state);
+    ssize_t offset = 0;
 
+    for (auto it = array_ptrs_.begin(), stop = array_ptrs_.end(); it != stop; ++it) {
+        if (std::distance(array_ptrs_.begin(), it) > 0) {
+            offset += (*std::prev(it))->shape()[axis_];
+        }
+
+        for (auto diff : (*it)->diff(state)) {
+            auto indices = unravel_index((*it)->strides(), diff.index);
+            indices[axis_] += offset;
+            auto index = ravel_multi_index(this->strides(), indices);
+            ptr->set(index, diff.value);
+        }
+    }
 }
 
 ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::span<const ssize_t> shape)

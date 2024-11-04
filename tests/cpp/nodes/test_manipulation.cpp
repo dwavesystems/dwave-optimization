@@ -105,6 +105,87 @@ TEST_CASE("ConcatenateNode") {
             }
         }
     }
+
+    GIVEN("Two arrays with shapes (2,2,2) and (3,2,2) that are concatenated on axis 0") {
+        auto graph = Graph();
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2,2,2}, 0, 100);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3,2,2}, 0, 100);
+        auto c_ptr = graph.emplace_node<ConcatenateNode>(
+                            std::vector<ArrayNode*>{a_ptr, b_ptr}, 0);
+
+        WHEN("The graph is initialized") {
+            auto state = graph.initialize_state();
+
+            AND_WHEN("The arrays are modified") {
+                for (auto i : std::ranges::iota_view(0,8)) {
+                    a_ptr->set_value(state, i, i+1);
+                }
+                for (auto i : std::ranges::iota_view(0,12)) {
+                    b_ptr->set_value(state, i, i+9);
+                }
+
+                graph.propose(state, {a_ptr, b_ptr}, [](const Graph&, State&) { return true; });
+
+                THEN("ConcatenateNode values are propagated correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), std::ranges::iota_view{1,21}));
+                }
+            }
+        }
+    }
+
+    GIVEN("Two arrays with shapes (2,2,2) and (2,3,2) that are concatenated on axis 1") {
+        auto graph = Graph();
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2,2,2}, 0, 100);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2,3,2}, 0, 100);
+        auto c_ptr = graph.emplace_node<ConcatenateNode>(
+                            std::vector<ArrayNode*>{a_ptr, b_ptr}, 1);
+
+        WHEN("The graph is initialized") {
+            auto state = graph.initialize_state();
+
+            AND_WHEN("The arrays are modified") {
+                for (auto i : std::ranges::iota_view(0,8)) {
+                    a_ptr->set_value(state, i, i+1);
+                }
+                for (auto i : std::ranges::iota_view(0,12)) {
+                    b_ptr->set_value(state, i, i+9);
+                }
+
+                graph.propose(state, {a_ptr, b_ptr}, [](const Graph&, State&) { return true; });
+                std::vector<ssize_t> expected = {1,2,3,4,9,10,11,12,13,14,5,6,7,8,15,16,17,18,19,20};
+                THEN("ConcatenateNode values are propagated correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+    }
+
+    GIVEN("Two arrays with shapes (2,2,2) and (2,2,3) that are concatenated on axis 2") {
+        auto graph = Graph();
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2,2,2}, 0, 100);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2,2,3}, 0, 100);
+        auto c_ptr = graph.emplace_node<ConcatenateNode>(
+                            std::vector<ArrayNode*>{a_ptr, b_ptr}, 2);
+
+        WHEN("The graph is initialized") {
+            auto state = graph.initialize_state();
+
+            AND_WHEN("The arrays are modified") {
+                for (auto i : std::ranges::iota_view(0,8)) {
+                    a_ptr->set_value(state, i, i+1);
+                }
+                for (auto i : std::ranges::iota_view(0,12)) {
+                    b_ptr->set_value(state, i, i+9);
+                }
+
+                graph.propose(state, {a_ptr, b_ptr}, [](const Graph&, State&) { return true; });
+                std::vector<ssize_t> expected = {1,2,9,10,11,3,4,12,13,14,5,6,15,16,17,7,8,18,19,20};
+                THEN("ConcatenateNode values are propagated correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+    }
 }
 
 TEST_CASE("ReshapeNode") {
