@@ -195,4 +195,84 @@ TEST_CASE("Graph::objective()") {
     }
 }
 
+TEST_CASE("Graph::remove_unused_nodes()") {
+    GIVEN("A single integer variable") {
+        auto graph = Graph();
+
+        auto i_ptr = graph.emplace_node<IntegerNode>();
+
+        THEN("remove_unused_nodes() does nothing") {
+            ssize_t num_removed = graph.remove_unused_nodes();
+            CHECK(num_removed == 0);
+            CHECK(graph.num_nodes() == 1);
+            CHECK(i_ptr->topological_index() == 0);
+        }
+
+        WHEN("We add a successor that's not used in a constraint") {
+            graph.emplace_node<AbsoluteNode>(i_ptr);
+
+            THEN("remove_unused_nodes() removes it") {
+                ssize_t num_removed = graph.remove_unused_nodes();
+                CHECK(num_removed == 1);
+                CHECK(graph.num_nodes() == 1);
+                CHECK(i_ptr->topological_index() == 0);
+                CHECK(i_ptr->successors().size() == 0);
+            }
+        }
+
+        WHEN("We add two successors that are not used in a constraint") {
+            graph.emplace_node<LogicalNode>(graph.emplace_node<AbsoluteNode>(i_ptr));
+
+            THEN("remove_unused_nodes() removes them") {
+                ssize_t num_removed = graph.remove_unused_nodes();
+                CHECK(num_removed == 2);
+                CHECK(graph.num_nodes() == 1);
+                CHECK(i_ptr->topological_index() == 0);
+                CHECK(i_ptr->successors().size() == 0);
+            }
+        }
+
+        WHEN("We add two successors and use them in a constraint") {
+            graph.set_objective(
+                    graph.emplace_node<LogicalNode>(graph.emplace_node<AbsoluteNode>(i_ptr)));
+
+            THEN("remove_unused_nodes() doesn't remove them") {
+                ssize_t num_removed = graph.remove_unused_nodes();
+                CHECK(num_removed == 0);
+                CHECK(graph.num_nodes() == 3);
+                CHECK(i_ptr->topological_index() == 0);
+                CHECK(i_ptr->successors().size() == 1);
+            }
+        }
+
+        WHEN("We add a mix of nodes that are used in constraints and not used anywhere") {
+            // i -> a -> c -> d
+            // i -> b />    \> e -> objective
+
+            auto a_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
+            auto b_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
+            auto c_ptr = graph.emplace_node<AddNode>(a_ptr, b_ptr);
+            auto d_ptr = graph.emplace_node<LogicalNode>(c_ptr);
+            auto e_ptr = graph.emplace_node<LogicalNode>(c_ptr);
+
+            // give d a listener
+            auto d_expired = d_ptr->expired_ptr();
+
+            graph.set_objective(e_ptr);
+
+            THEN("remove_unused_nodes(ignore_listeners=True) removes only the ones we want") {
+                ssize_t num_removed = graph.remove_unused_nodes(true);
+                CHECK(num_removed == 1);
+                CHECK(*d_expired);  // it was d that was removed
+            }
+
+            THEN("remove_unused_nodes(ignore_listeners=False) removes none") {
+                ssize_t num_removed = graph.remove_unused_nodes();
+                CHECK(num_removed == 0);
+                CHECK(!*d_expired);  // d wasn't removed because it has a listener
+            }
+        }
+    }
+}
+
 }  // namespace dwave::optimization

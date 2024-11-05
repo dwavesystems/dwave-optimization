@@ -67,6 +67,7 @@ Model Methods
     ~Model.num_nodes
     ~Model.num_symbols
     ~Model.quadratic_model
+    ~Model.remove_unused_symbols
     ~Model.state_size
     ~Model.to_file
     ~Model.to_networkx

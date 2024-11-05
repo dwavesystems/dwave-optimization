@@ -88,6 +88,8 @@ class Model:
     # specify the linear/quadratic so let's leave it alone for now.
     def quadratic_model(self, x: ArraySymbol, quadratic, linear=None) -> QuadraticModel: ...
 
+    def remove_unused_symbols(self) -> int: ...
+
     def set(
         self,
         n: int,

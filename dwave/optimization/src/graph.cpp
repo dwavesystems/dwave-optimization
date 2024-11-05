@@ -298,6 +298,72 @@ void Graph::propose(State& state, std::vector<const Node*> sources,
     }
 }
 
+ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
+    // Establish a topological ordering. We'll use the fact that the node list
+    // is ordered, but we're going to mess with the topological indices!
+    topological_sort();
+
+    // We'll use this later to calculate how many nodes we removed
+    const ssize_t num_nodes_before = this->num_nodes();
+
+    // We generally want to avoid touching decisions
+    const ssize_t num_decisions = this->num_decisions();
+
+    // Mark the nodes that we plan to keep regardless of their number of successors
+    // For performance we store a signalling value in the topological_index of the
+    // nodes. We need to take some care to not override the topological index of
+    // any decisions.
+    constexpr ssize_t keep = -2;
+    {
+        // all constraints are kept
+        for (ArrayNode* ptr : constraints_) {
+            if (ptr->topological_index_ < num_decisions) continue;  // we'll always keep these
+            ptr->topological_index_ = keep;
+        }
+
+        // as is the objective if it exists
+        if (objective_ptr_ && objective_ptr_->topological_index_ >= num_decisions) {
+            objective_ptr_->topological_index_ = keep;
+        }
+
+        // If we're not ignoring listeners, we check if anyone is "listening" to
+        // the expired_ptr_. If so, we keep the node.
+        if (!ignore_listeners) {
+            for (auto& ptr : nodes_ | std::views::drop(num_decisions)) {
+                if (ptr->expired_ptr_.use_count() > 1) ptr->topological_index_ = keep;
+            }
+        }
+    }
+
+    // Now walk backwards through the topologically sorted node list
+    // removing any nodes with no successors that we haven't marked.
+    for (auto& ptr : nodes_ | std::views::drop(num_decisions) | std::views::reverse) {
+        if (!ptr->removable()) continue;  // some nodes can never be removed
+        if (ptr->topological_index_ == keep) continue;  // we marked these to keep
+        if (ptr->successors().size() > 0) continue;  // this node is used by other nodes
+
+        // Remove ptr from its predecessor's successor vectors.
+        // This very temporarily leaves the node in an invalid state, which is
+        // why we do it here rather than via a method.
+        for (auto pred_ptr : ptr->predecessors_) {
+            std::erase_if(pred_ptr->successors_,
+                          [&ptr](const Node::SuccessorView& sv) { return sv.ptr == ptr.get(); });
+        }
+
+        // now delete the node by clearing the unique_ptr
+        ptr.reset();
+    }
+
+    // Traverse the nodes_ one last time removing any nullptrs we created
+    std::erase_if(nodes_, [](const auto& ptr) { return !ptr; });
+
+    // Undo all of the weird stuff we did with the topological indices
+    reset_topological_sort();
+
+    // Finally return the number of nodes that have been removed!
+    return num_nodes_before - this->num_nodes();
+}
+
 // Node ***********************************************************************
 
 void Node::initialize_state(State& state) const {

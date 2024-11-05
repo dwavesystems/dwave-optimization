@@ -183,6 +183,9 @@ class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t set_index() const noexcept { return set_index_; };
 
  protected:
+    // This node is a pseudo-decision, so it is not removeable
+    bool removable() const override { return false; }
+
     const DisjointBitSetsNode* disjoint_bit_sets_node;
     const ssize_t set_index_;
     const ssize_t primary_set_size_;
@@ -274,6 +277,9 @@ class DisjointListNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t list_index() const noexcept { return list_index_; };
 
  protected:
+    // This node is a pseudo-decision, so it is not removeable
+    bool removable() const override { return false; }
+
     const DisjointListsNode* disjoint_list_node_ptr;
     const ssize_t list_index_;
     const ssize_t primary_set_size_;

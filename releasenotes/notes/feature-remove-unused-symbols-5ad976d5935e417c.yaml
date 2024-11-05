@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Add C++ ``Graph::remove_unused_nodes()`` method to remove nodes that are not
+    used in the objective or constraints.
+    See `#41 <https://github.com/dwavesystems/dwave-optimization/issues/41>`_.
+  - |
+    Add Python ``Model.remove_unused_symbols()`` method to remove nodes that are not
+    used in the objective or constraints.
+    See `#41 <https://github.com/dwavesystems/dwave-optimization/issues/41>`_.
