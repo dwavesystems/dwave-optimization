@@ -62,11 +62,11 @@ struct modulus {
         if (y == 0) {
             return 0;
         }
-        double x_double, y_double = static_cast<double>(x), static_cast<double>(y);
-        double remainder = std::fmod(x_double, y_double);
-        bool x_pos, y_pos = x_double >= 0, y_double >= 0;
+        const double x_double = static_cast<double>(x);
+        const double y_double = static_cast<double>(y);
+        const double remainder = std::fmod(x_double, y_double);
         // std::fmod result consistent with numpy for same-sign arguments
-        if (x_pos && y_pos || !x_pos && !y_pos)
+        if ((x_double >= 0) == (y_double >= 0))
             return remainder;
         // Make result consistent with numpy for different-sign arguments
         else
