@@ -56,22 +56,25 @@ struct min {
 };
 
 template <class T>
-struct modulus {
-    constexpr double operator()(const T& x, const T& y) const {
-        // Copy numpy behavior and return 0 for `x % 0`
-        if (y == 0) {
-            return 0;
-        }
-        const double x_double = static_cast<double>(x);
-        const double y_double = static_cast<double>(y);
-        const double remainder = std::fmod(x_double, y_double);
-        // std::fmod result consistent with numpy for same-sign arguments
-        if ((x_double >= 0) == (y_double >= 0))
-            return remainder;
-        // Make result consistent with numpy for different-sign arguments
-        else
-            return remainder + y_double;
-    }
+struct modulus {};
+
+template <>  
+struct modulus<double> {  
+    constexpr double operator()(const double& x, const double& y) const {  
+        // Copy numpy behavior and return 0 for `x % 0`  
+        if (y == 0) {  
+            return 0;  
+        }  
+        const double remainder = std::fmod(x, y);  
+    
+        if ((x >= 0) == (y >= 0)) {  
+            // std::fmod result consistent with numpy for same-sign arguments  
+            return remainder;  
+        } else {  
+             // Make result consistent with numpy for different-sign arguments  
+            return remainder + y;  
+        }  
+    }  
 };
 
 template <class T>
