@@ -40,6 +40,7 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         void add_constraint(ArrayNode*) except+
         void topological_sort()
         bool topologically_sorted() const
+        Py_ssize_t remove_unused_nodes()
 
     cdef cppclass Node:
         struct SuccessorView:

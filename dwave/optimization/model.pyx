@@ -843,6 +843,58 @@ cdef class Model:
         from dwave.optimization.symbols import QuadraticModel
         return QuadraticModel(x, quadratic, linear)
 
+    def remove_unused_symbols(self):
+        """Remove unused symbols from the model.
+
+        A symbol is considered unused if all of the following are true :
+
+        * It is not a decision.
+        * It is not an ancestor of the objective.
+        * It is not an ancestor of a constraint.
+        * It has no :class:`ArraySymbol` object(s) referring to it. See examples
+          below.
+
+        Returns:
+            The number of symbols removed.
+
+        Examples:
+            In this example we create a mix of unused and used symbols. Then
+            the unused symbols are removed with ``remove_unused_symbols()``.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> x = model.binary(5)
+            >>> x.sum()  # create a symbol that will never be used # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.Sum at ...>
+            >>> model.minimize(x.prod())
+            >>> model.num_symbols()
+            3
+            >>> model.remove_unused_symbols()
+            1
+            >>> model.num_symbols()
+            2
+
+            In this example we create a mix of unused and used symbols.
+            However, unlike the previous example, we assign the unused symbol
+            to a name in the namespace. This prevents the symbol from being
+            removed.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> x = model.binary(5)
+            >>> y = x.sum()  # create a symbol and assign it a name
+            >>> model.minimize(x.prod())
+            >>> model.num_symbols()
+            3
+            >>> model.remove_unused_symbols()
+            0
+            >>> model.num_symbols()
+            3
+
+        """
+        if self.is_locked():
+            raise ValueError("cannot remove symbols from a locked model")
+        return self._graph.remove_unused_nodes()
 
     def set(self, Py_ssize_t n, Py_ssize_t min_size = 0, max_size = None):
         """Create a set symbol as a decision variable.

@@ -275,6 +275,56 @@ class TestModel(unittest.TestCase):
         model.minimize(model.constant([[7]]))
         self.assertEqual(model.objective.state(), 7)
 
+    def test_remove_unused_symbols(self):
+        with self.subTest("all unused"):
+            model = Model()
+
+            # add three symbols to the model without keeping them in the namespace
+            # or adding to constraints/objective
+            model.constant(0) + model.integer()
+
+            num_removed = model.remove_unused_symbols()
+
+            # only the decision is kept
+            self.assertEqual(num_removed, 2)
+            self.assertEqual(model.num_symbols(), 1)
+            x, = model.iter_symbols()
+            self.assertIsInstance(x, dwave.optimization.symbols.IntegerVariable)
+
+        with self.subTest("all used in objective"):
+            model = Model()
+
+            # add three symbols to the model without keeping them in the namespace
+            # or adding to constraints/objective
+            model.minimize(model.constant(0) + model.integer())
+
+            num_removed = model.remove_unused_symbols()
+
+            # everything is kept
+            self.assertEqual(num_removed, 0)
+            self.assertEqual(model.num_symbols(), 3)
+
+        with self.subTest("all kept in the namespace"):
+            model = Model()
+
+            # add three symbols to the model and keep them in the namespace
+            y = model.constant(0) + model.integer()
+
+            num_removed = model.remove_unused_symbols()
+
+            # everything is kept
+            self.assertEqual(num_removed, 0)
+            self.assertEqual(model.num_symbols(), 3)
+
+            # now delete the namespace symbol
+            del y
+
+            num_removed = model.remove_unused_symbols()
+
+            # only the decision is kept
+            self.assertEqual(num_removed, 2)
+            self.assertEqual(model.num_symbols(), 1)
+
     def test_serialization(self):
         # Create a simple model
         model = Model()

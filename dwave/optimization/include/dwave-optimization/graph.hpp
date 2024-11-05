@@ -158,6 +158,20 @@ class Graph {
     std::span<DecisionNode* const> decisions() noexcept { return decisions_; }
     std::span<const DecisionNode* const> decisions() const noexcept { return decisions_; }
 
+    // Remove unused nodes from the graph.
+    //
+    // This method will reset the topological sort if there is one.
+    //
+    // A node is considered unused if all of the following are true:
+    // * It is not a decision.
+    // * It is not an ancestor of the objective.
+    // * It is not an ancestor of a constraint.
+    // * It has no "listeners" on its expired_ptr. Set ``ignore_listeners`` to
+    //   ``true`` to disable this condition.
+    //
+    // Returns the number of nodes removed from the graph.
+    ssize_t remove_unused_nodes(bool ignore_listeners = false);
+
  private:
     static void visit_(Node* n_ptr, int* count_ptr);
 
@@ -234,6 +248,7 @@ class Node {
     friend void Graph::reset_topological_sort();
     template <class NodeType, class... Args>
     friend NodeType* Graph::emplace_node(Args&&... args);
+    friend ssize_t Graph::remove_unused_nodes(bool);
 
  protected:
     // For use by non-dynamic node constructors.
