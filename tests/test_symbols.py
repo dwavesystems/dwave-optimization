@@ -23,7 +23,15 @@ import numpy as np
 
 import dwave.optimization
 import dwave.optimization.symbols
-from dwave.optimization import Model, logical, logical_and, logical_or, logical_not, logical_xor
+from dwave.optimization import (
+    Model,
+    logical,
+    logical_and,
+    logical_or,
+    logical_not,
+    logical_xor,
+    mod
+)
 
 
 class utils:
@@ -1505,7 +1513,73 @@ class TestMinimum(utils.SymbolTests):
 
 
 class TestModulus(utils.BinaryOpTests):
+    def generate_symbols(self):
+        model = Model()
+        a = model.constant(5)
+        b = model.constant(-5)
+        c = model.constant(3)
+        d = model.constant(-3)
+        ac = a % c
+        ad = a % d
+        bc = b % c
+        bd = b % d
+        with model.lock():
+            yield from (ac, ad, bc, bd)
 
+    def op(self, lhs, rhs):
+        return np.mod(lhs, rhs)
+
+    def symbol_op(self, lhs, rhs):
+        return lhs % rhs
+
+    def test_function_operator_equivalence(self):
+        model = Model()
+        i = model.constant([5, -5, 5, -5])
+        j = model.constant([3, 3, -3, -3])
+
+        mod_1 = i % j
+        mod_2 = mod(i, j)
+        with model.lock():
+            model.states.resize(1)
+            np.testing.assert_array_equal(mod_1.state(0), mod_2.state(0))
+
+    def test_scalar_mod(self):
+        model = Model()
+        a = model.constant(5)
+        b = model.constant(-5)
+        c = model.constant(3)
+        d = model.constant(-3)
+        ac = a % c
+        ad = a % d
+        bc = b % c
+        bd = b % d
+
+        with model.lock():
+            model.states.resize(1)
+            self.assertEqual(ac.state(0), 2)
+            self.assertEqual(ad.state(0), -1)
+            self.assertEqual(bc.state(0), 1)
+            self.assertEqual(bd.state(0), -2)
+
+    def test_array_mod(self):
+        model = Model()
+        a = model.constant([5, -5, 5, -5])
+        b = model.constant([3, 3, -3, -3])
+        ab = a % b
+
+        with model.lock():
+            model.states.resize(1)
+            np.testing.assert_array_equal(ab.state(0), [2, 1, -1, -2])
+
+    def test_float_mod(self):
+        model = Model()
+        a = model.constant([5, -5, 5, -5])
+        b = model.constant([3.33, 3.33, -3.33, -3.33])
+        ab = a % b
+
+        with model.lock():
+            model.states.resize(1)
+            np.testing.assert_allclose(ab.state(0), [1.67, 1.66, -1.66, -1.67], rtol=1e-10)
 
 class TestMultiply(utils.SymbolTests):
     def generate_symbols(self):
