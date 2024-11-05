@@ -22,6 +22,7 @@ from dwave.optimization.symbols import (
     Logical,
     Maximum,
     Minimum,
+    Modulus,
     Multiply,
     NaryAdd,
     NaryMaximum,
@@ -43,6 +44,7 @@ __all__ = [
     "logical_xor",
     "maximum",
     "minimum",
+    "mod",
     "multiply",
     "where",
 ]
@@ -337,6 +339,54 @@ def minimum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         [3. 2.]
     """
     raise RuntimeError("implementated by the op() decorator")
+
+
+def mod(x1: ArraySymbol, x2: ArraySymbol) -> Modulus:
+    r"""Return an element-wise modulus of the given symbols.
+    
+    Args:
+        x1, x2: Input array symbol.
+        
+    Returns:
+        A symbol that is the element-wise modulus of the given symbols.
+        
+    Examples:
+        This example demonstrates the behavior of the modulus of two integer
+        symbols :math:`i \mod{j}` with different combinations of positive and
+        negative values. Equivalently, you can use the ``%`` operator
+        (e.g., :code:`i % j`).
+        
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import mod
+        ...
+        >>> model = Model()
+        >>> i = model.integer(4)
+        >>> j = model.integer(4)
+        >>> k = mod(i, j) # alternatively: k = i % j
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [5, -5, 5, -5])
+        ...     j.set_state(0, [3, 3, -3, -3])
+        ...     print(k.state(0))
+        [ 2.  1. -1. -2.]
+        
+        This example demonstrates the modulus of a scalar float value and a
+        binary symbol.
+        
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import mod
+        ...
+        >>> model = Model()
+        >>> i = model.constant(0.33)
+        >>> j = model.binary(2)
+        >>> k = mod(i, j) # alternatively: k = i % j
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     j.set_state(0, [0, 1])
+        ...     print(k.state(0))
+        [0.   0.33]
+    """
+    return Modulus(x1, x2)
 
 
 @_op(Multiply, NaryMultiply, "multiply")
