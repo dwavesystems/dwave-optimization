@@ -248,7 +248,7 @@ class Node {
     friend void Graph::reset_topological_sort();
     template <class NodeType, class... Args>
     friend NodeType* Graph::emplace_node(Args&&... args);
-    friend ssize_t Graph::remove_unused_nodes(bool);
+    friend ssize_t Graph::remove_unused_nodes(bool ignore_listeners);
 
  protected:
     // For use by non-dynamic node constructors.
@@ -295,6 +295,9 @@ class Node {
         return static_cast<const StateData*>(state[index].get());
     }
 
+    // Whether this node type is elegible to be removed from the model
+    virtual bool removable() const { return true; }
+
  private:
     ssize_t topological_index_ = -1;  // negative is unset
 
@@ -334,6 +337,10 @@ NodeType* Graph::emplace_node(Args&&... args) {
 }
 
 class ArrayNode: public Array, public virtual Node {};
-class DecisionNode: public Decision, public virtual Node {};
+class DecisionNode: public Decision, public virtual Node {
+ protected:
+    // In general we do not allow decisions to be removed from models.
+    bool removable() const override { return false; }
+};
 
 }  // namespace dwave::optimization

@@ -325,6 +325,29 @@ class TestModel(unittest.TestCase):
             self.assertEqual(num_removed, 2)
             self.assertEqual(model.num_symbols(), 1)
 
+        with self.subTest("disjoint lists"):
+            model = Model()
+
+            base, lists = model.disjoint_lists(10, 4)
+
+            # only use some of the lists
+            model.minimize(lists[0].sum())
+            model.add_constraint(lists[1].sum() <= model.constant(3))
+
+            lists[2].prod()  # this one will hopefully be removed
+
+            self.assertEqual(model.num_symbols(), 10)
+
+            # make sure they aren't being kept alive by other objects
+            del lists
+            del base
+
+            num_removed = model.remove_unused_symbols()
+
+            # only 1 is removed
+            self.assertEqual(num_removed, 1)
+            self.assertEqual(model.num_symbols(), 9)
+
     def test_serialization(self):
         # Create a simple model
         model = Model()
