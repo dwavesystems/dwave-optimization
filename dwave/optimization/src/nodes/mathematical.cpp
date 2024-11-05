@@ -126,6 +126,7 @@ bool BinaryOpNode<BinaryOp>::integral() const {
     if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
                   std::is_same<BinaryOp, functional::min<double>>::value ||
                   std::is_same<BinaryOp, std::minus<double>>::value ||
+                  std::is_same<BinaryOp, functional::modulus<double>>::value ||
                   std::is_same<BinaryOp, std::multiplies<double>>::value ||
                   std::is_same<BinaryOp, std::plus<double>>::value) {
         return lhs_ptr->integral() && rhs_ptr->integral();
@@ -157,6 +158,12 @@ double BinaryOpNode<BinaryOp>::max() const {
     }
     if constexpr (std::is_same<BinaryOp, std::minus<double>>::value) {
         return lhs_ptr->max() - rhs_ptr->min();
+    }
+    if constexpr (std::is_same<BinaryOp, functional::modulus<double>>::value) {
+        // Upper bound is the greatest absolute value in the divisor (rhs)
+        double pos_max = rhs_ptr->max();
+        double neg_max = -(rhs_ptr->min());
+        return neg_max > pos_max ? neg_max : pos_max;
     }
     if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
         double lhs_low = lhs_ptr->min();
@@ -194,6 +201,12 @@ double BinaryOpNode<BinaryOp>::min() const {
     }
     if constexpr (std::is_same<BinaryOp, std::minus<double>>::value) {
         return lhs_ptr->min() - rhs_ptr->max();
+    }
+    if constexpr (std::is_same<BinaryOp, functional::modulus<double>>::value) {
+        // Lower bound is the smallest negative absolute value
+        double neg_min = rhs_ptr->min();
+        double pos_min = -(rhs_ptr->max());
+        return pos_min < neg_min ? pos_min : neg_min;
     }
     if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
         double lhs_low = lhs_ptr->min();
