@@ -19,5 +19,6 @@ Mathematical Functions
    ~logical_xor
    ~maximum
    ~minimum
+   ~mod
    ~multiply
    ~where
