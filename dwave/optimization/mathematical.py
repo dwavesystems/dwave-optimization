@@ -360,8 +360,8 @@ def mod(x1: ArraySymbol, x2: ArraySymbol) -> Modulus:
         >>> from dwave.optimization.mathematical import mod
         ...
         >>> model = Model()
-        >>> i = model.integer(4)
-        >>> j = model.integer(4)
+        >>> i = model.integer(4, lower_bound=-5)
+        >>> j = model.integer(4, lower_bound=-3)
         >>> k = mod(i, j) # alternatively: k = i % j
         >>> with model.lock():
         ...     model.states.resize(1)
