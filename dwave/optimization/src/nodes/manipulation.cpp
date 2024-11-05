@@ -18,7 +18,7 @@
 
 namespace dwave::optimization {
 
-std::vector<ssize_t> make_concatenate_shape(std::vector<ArrayNode*> array_ptrs, ssize_t axis) {
+std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ssize_t axis) {
     // One or more arrays must be given
     if (array_ptrs.size() < 1) {
         throw std::invalid_argument("need at least one array to concatenate");
@@ -85,8 +85,8 @@ std::vector<ssize_t> make_concatenate_shape(std::vector<ArrayNode*> array_ptrs, 
     return shape;
 }
 
-ConcatenateNode::ConcatenateNode(std::vector<ArrayNode*> array_ptrs, const ssize_t axis)
-        : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)), axis_(axis), array_ptrs_(array_ptrs) {
+ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t axis)
+        : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)), axis_(axis), array_ptrs_(array_ptrs.begin(), array_ptrs.end()) {
 
     for (auto it = array_ptrs.begin(), stop = array_ptrs.end(); it != stop; it++) {
         this->add_predecessor((*it));

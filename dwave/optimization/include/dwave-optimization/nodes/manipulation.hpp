@@ -27,7 +27,10 @@ namespace dwave::optimization {
 
 class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    ConcatenateNode(std::vector<ArrayNode*> array_ptrs, ssize_t axis);
+
+    explicit ConcatenateNode(std::span<ArrayNode*> array_ptrs, ssize_t axis);
+    explicit ConcatenateNode(std::ranges::contiguous_range auto&& array_ptrs, ssize_t axis)
+               : ConcatenateNode(std::span<ArrayNode*>(array_ptrs), axis) {}
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;

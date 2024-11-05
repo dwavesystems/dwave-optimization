@@ -35,7 +35,7 @@ TEST_CASE("ConcatenateNode") {
             auto ra = ReshapeNode(&a, std::vector<ssize_t>({2,2,2}));
             auto rb = ReshapeNode(&b, std::vector<ssize_t>({2,2,2}));
 
-            auto c = ConcatenateNode({&ra,&rb}, 1);
+            auto c = ConcatenateNode(std::vector<ArrayNode*>{&ra,&rb}, 1);
 
             THEN("The concatenated node has shape (2,4,2) and ndim 3") {
                 CHECK(std::ranges::equal(c.shape(), std::vector{2,4,2}));
