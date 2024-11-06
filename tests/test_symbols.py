@@ -1581,6 +1581,26 @@ class TestModulus(utils.BinaryOpTests):
             model.states.resize(1)
             np.testing.assert_allclose(ab.state(0), [1.67, 1.66, -1.66, -1.67], rtol=1e-10)
 
+    def test_zero_mod(self):
+        model = Model()
+        values = [
+            0,
+            1,
+            -1,
+            [1, -2, 3],
+            [0, -1, 2],
+        ]
+        for lhs, rhs in itertools.product(values, repeat=2):
+            np_result = np.mod(lhs, rhs)
+            lhs_c = model.constant(lhs)
+            rhs_c = model.constant(rhs)
+            result = lhs_c % rhs_c
+
+            with model.lock():
+                model.states.resize(1)
+                print(result.state(0))
+                np.testing.assert_equal(np_result, result.state(0))
+
 class TestMultiply(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
