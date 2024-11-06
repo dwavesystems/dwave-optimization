@@ -1598,7 +1598,6 @@ class TestModulus(utils.BinaryOpTests):
 
             with model.lock():
                 model.states.resize(1)
-                print(result.state(0))
                 np.testing.assert_equal(np_result, result.state(0))
 
 class TestMultiply(utils.SymbolTests):
