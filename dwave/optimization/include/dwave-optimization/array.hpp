@@ -242,9 +242,9 @@ struct Update {
 class ArrayIterator {
  public:
     using difference_type = std::ptrdiff_t;
-    using value_type = double;
-    using pointer = double*;
-    using reference = double&;
+    using value_type = const double;
+    using pointer = value_type*;
+    using reference = value_type&;
 
     ArrayIterator() = default;
 
@@ -258,19 +258,18 @@ class ArrayIterator {
     ~ArrayIterator() = default;
 
     // Create a contiguous iterator pointing to ptr
-    explicit ArrayIterator(value_type const* ptr) noexcept
+    explicit ArrayIterator(value_type* ptr) noexcept
             : ptr_(ptr), mask_(nullptr), shape_(nullptr) {}
 
     // Create a masked iterator with a fill value. Will return the value pointed at by *fill_ptr
     // when *mask_ptr evaluates to true.
-    ArrayIterator(const value_type* data_ptr, const value_type* mask_ptr,
-                  const value_type* fill_ptr) noexcept
+    ArrayIterator(value_type* data_ptr, value_type* mask_ptr, value_type* fill_ptr) noexcept
             : ptr_(data_ptr),
               mask_(std::make_unique<MaskInfo>(mask_ptr, fill_ptr)),
               shape_(nullptr) {}
 
     // shape and strides must outlive the iterator!
-    ArrayIterator(value_type const* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides)
+    ArrayIterator(value_type* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides)
             : ptr_(ptr),
               mask_(nullptr),
               shape_((ndim >= 1) ? std::make_unique<ShapeInfo>(ndim, shape, strides) : nullptr) {}
@@ -284,14 +283,14 @@ class ArrayIterator {
         return *this;
     }
 
-    const value_type& operator*() const {
+    value_type& operator*() const {
         if (mask_ && *(mask_->mask_ptr)) {
             return *(mask_->fill_ptr);
         }
 
         return *ptr_;
     }
-    const value_type* operator->() const {
+    value_type* operator->() const {
         if (mask_ && *(mask_->mask_ptr)) {
             return mask_->fill_ptr;
         }
@@ -378,7 +377,7 @@ class ArrayIterator {
 
  private:
     // pointer to the underlying memory
-    value_type const* ptr_ = nullptr;
+    value_type* ptr_ = nullptr;
 
     struct MaskInfo {
         MaskInfo() = delete;
@@ -386,6 +385,7 @@ class ArrayIterator {
         MaskInfo(const value_type* mask_ptr, const value_type* fill_ptr) noexcept
                 : mask_ptr(mask_ptr), fill_ptr(fill_ptr) {}
 
+        // Unlike the ptr_, we always want these to be const
         const value_type* mask_ptr;  // ptr to the value indicating whether to use the fill or not
         const value_type* fill_ptr;  // the value to provide for masked entries, won't be iterated
     };
