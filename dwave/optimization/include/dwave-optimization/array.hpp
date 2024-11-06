@@ -239,43 +239,43 @@ struct Update {
 
 // This is a generic iterator for arrays.
 // It handles contiguous, strided, and masked arrays with one type.
-class ArrayIterator {
+class ConstArrayIterator {
  public:
     using difference_type = std::ptrdiff_t;
     using value_type = const double;
     using pointer = value_type*;
     using reference = value_type&;
 
-    ArrayIterator() = default;
+    ConstArrayIterator() = default;
 
-    ArrayIterator(const ArrayIterator& other) noexcept
+    ConstArrayIterator(const ConstArrayIterator& other) noexcept
             : ptr_(other.ptr_),
               mask_((other.mask_) ? std::make_unique<MaskInfo>(*other.mask_) : nullptr),
               shape_((other.shape_) ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
 
-    ArrayIterator(ArrayIterator&& other) = default;
+    ConstArrayIterator(ConstArrayIterator&& other) = default;
 
-    ~ArrayIterator() = default;
+    ~ConstArrayIterator() = default;
 
     // Create a contiguous iterator pointing to ptr
-    explicit ArrayIterator(value_type* ptr) noexcept
+    explicit ConstArrayIterator(value_type* ptr) noexcept
             : ptr_(ptr), mask_(nullptr), shape_(nullptr) {}
 
     // Create a masked iterator with a fill value. Will return the value pointed at by *fill_ptr
     // when *mask_ptr evaluates to true.
-    ArrayIterator(value_type* data_ptr, value_type* mask_ptr, value_type* fill_ptr) noexcept
+    ConstArrayIterator(value_type* data_ptr, value_type* mask_ptr, value_type* fill_ptr) noexcept
             : ptr_(data_ptr),
               mask_(std::make_unique<MaskInfo>(mask_ptr, fill_ptr)),
               shape_(nullptr) {}
 
     // shape and strides must outlive the iterator!
-    ArrayIterator(value_type* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides)
+    ConstArrayIterator(value_type* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides)
             : ptr_(ptr),
               mask_(nullptr),
               shape_((ndim >= 1) ? std::make_unique<ShapeInfo>(ndim, shape, strides) : nullptr) {}
 
     // Both the copy and move operator using the copy-and-swap idiom
-    ArrayIterator& operator=(ArrayIterator other) noexcept {
+    ConstArrayIterator& operator=(ConstArrayIterator other) noexcept {
         using std::swap;  // ADL, if it matters
         std::swap(ptr_, other.ptr_);
         std::swap(mask_, other.mask_);
@@ -298,7 +298,7 @@ class ArrayIterator {
         return ptr_;
     }
 
-    ArrayIterator& operator++() {
+    ConstArrayIterator& operator++() {
         if (shape_ && mask_) {
             assert(false && "not implemented yet");  // or maybe ever
             unreachable();
@@ -315,13 +315,13 @@ class ArrayIterator {
         return *this;
     }
 
-    ArrayIterator operator++(int) {
-        ArrayIterator tmp = *this;
+    ConstArrayIterator operator++(int) {
+        ConstArrayIterator tmp = *this;
         ++(*this);
         return tmp;
     }
 
-    ArrayIterator& operator--() {
+    ConstArrayIterator& operator--() {
         if (shape_ && mask_) {
             assert(false && "not implemented yet");  // or maybe ever
             unreachable();
@@ -337,13 +337,13 @@ class ArrayIterator {
         return *this;
     }
 
-    ArrayIterator operator--(int) {
-        ArrayIterator tmp = *this;
+    ConstArrayIterator operator--(int) {
+        ConstArrayIterator tmp = *this;
         --(*this);
         return tmp;
     }
 
-    ArrayIterator& operator+=(difference_type rhs) {
+    ConstArrayIterator& operator+=(difference_type rhs) {
         if (shape_ && mask_) {
             assert(false && "not implemented yet");  // or maybe ever
             unreachable();
@@ -358,9 +358,11 @@ class ArrayIterator {
         return *this;
     }
 
-    friend ArrayIterator operator+(ArrayIterator lhs, difference_type rhs) { return lhs += rhs; }
+    friend ConstArrayIterator operator+(ConstArrayIterator lhs, difference_type rhs) {
+        return lhs += rhs;
+    }
 
-    difference_type operator-(const ArrayIterator& rhs) const {
+    difference_type operator-(const ConstArrayIterator& rhs) const {
         // We need to be careful here, we want to know how many steps the rhs
         // iterator needs to take to reach us, not the other way around.
 
@@ -373,7 +375,7 @@ class ArrayIterator {
     }
 
     // Equal if they both point to the same underlying array location
-    bool operator==(const ArrayIterator& rhs) const { return this->ptr_ == rhs.ptr_; }
+    bool operator==(const ConstArrayIterator& rhs) const { return this->ptr_ == rhs.ptr_; }
 
  private:
     // pointer to the underlying memory
@@ -535,15 +537,15 @@ class ArrayIterator {
     std::unique_ptr<ShapeInfo> shape_ = nullptr;
 };
 
-static_assert(std::forward_iterator<ArrayIterator>);
-static_assert(std::bidirectional_iterator<ArrayIterator>);
+static_assert(std::forward_iterator<ConstArrayIterator>);
+static_assert(std::bidirectional_iterator<ConstArrayIterator>);
 // todo: random access iterator?
 
-// unique_ptr is not trivial so the best we can have for ArrayIterator is nothrow
-static_assert(std::is_nothrow_copy_constructible<ArrayIterator>::value);
-static_assert(std::is_nothrow_move_constructible<ArrayIterator>::value);
-static_assert(std::is_nothrow_copy_assignable<ArrayIterator>::value);
-static_assert(std::is_nothrow_move_assignable<ArrayIterator>::value);
+// unique_ptr is not trivial so the best we can have for ConstArrayIterator is nothrow
+static_assert(std::is_nothrow_copy_constructible<ConstArrayIterator>::value);
+static_assert(std::is_nothrow_move_constructible<ConstArrayIterator>::value);
+static_assert(std::is_nothrow_copy_assignable<ConstArrayIterator>::value);
+static_assert(std::is_nothrow_move_assignable<ConstArrayIterator>::value);
 
 // Represents an Array
 //
@@ -565,8 +567,8 @@ class Array {
      public:
         View(const Array* array_ptr, const State* state_ptr)
                 : array_ptr_(array_ptr), state_ptr_(state_ptr) {}
-        ArrayIterator begin() const { return array_ptr_->begin(*state_ptr_); }
-        ArrayIterator end() const { return array_ptr_->end(*state_ptr_); }
+        ConstArrayIterator begin() const { return array_ptr_->begin(*state_ptr_); }
+        ConstArrayIterator end() const { return array_ptr_->end(*state_ptr_); }
 
         const double operator[](std::size_t n) const { return *(begin() + n); }
 
@@ -629,11 +631,11 @@ class Array {
 
     // Interface methods ******************************************************
 
-    ArrayIterator begin(const State& state) const {
-        if (contiguous()) return ArrayIterator(buff(state));
-        return ArrayIterator(buff(state), ndim(), shape().data(), strides().data());
+    ConstArrayIterator begin(const State& state) const {
+        if (contiguous()) return ConstArrayIterator(buff(state));
+        return ConstArrayIterator(buff(state), ndim(), shape().data(), strides().data());
     }
-    ArrayIterator end(const State& state) const { return this->begin(state) + this->size(state); }
+    ConstArrayIterator end(const State& state) const { return this->begin(state) + this->size(state); }
 
     View view(const State& state) const { return View(this, &state); }
 

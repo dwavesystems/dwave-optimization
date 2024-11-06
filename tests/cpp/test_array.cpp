@@ -28,12 +28,12 @@ TEST_CASE("Test SizeInfo") {
     CHECK(SizeInfo(5) == 5);
 }
 
-TEST_CASE("ArrayIterator") {
+TEST_CASE("ConstArrayIterator") {
     GIVEN("A std::vector<double>{0, 1, 2, 3, 4, 5, 6, 7, 8}") {
         auto values = std::vector<double>{0, 1, 2, 3, 4, 5, 6, 7, 8};
 
-        WHEN("We make an ArrayIterator from values.data()") {
-            auto it = ArrayIterator(values.data());
+        WHEN("We make an ConstArrayIterator from values.data()") {
+            auto it = ConstArrayIterator(values.data());
 
             THEN("It behaves like a contiguous iterator") {
                 CHECK(*it == 0);
@@ -48,15 +48,15 @@ TEST_CASE("ArrayIterator") {
                 CHECK(*(it + 3) == 3);
                 CHECK(*(it + 4) == 4);
 
-                CHECK(ArrayIterator(values.data() + 4) - it == 4);
-                CHECK(it - ArrayIterator(values.data() + 4) == -4);
+                CHECK(ConstArrayIterator(values.data() + 4) - it == 4);
+                CHECK(it - ConstArrayIterator(values.data() + 4) == -4);
             }
         }
 
         WHEN("We specify a shape and strides defining a subset of the values") {
             std::vector<ssize_t> shape{5};
             std::vector<ssize_t> strides{2 * sizeof(double)};
-            auto it = ArrayIterator(values.data(), 1, shape.data(), strides.data());
+            auto it = ConstArrayIterator(values.data(), 1, shape.data(), strides.data());
 
             THEN("It behaves like a strided iterator") {
                 CHECK(*it == 0);
@@ -72,7 +72,7 @@ TEST_CASE("ArrayIterator") {
                 CHECK(*(it + 4) == 8);
 
                 // this is past-the-end, but a proxy for END
-                CHECK(it + 5 == ArrayIterator(values.data() + 10));
+                CHECK(it + 5 == ConstArrayIterator(values.data() + 10));
             }
 
             THEN("We can decrement an advanced iterator") {
@@ -89,15 +89,16 @@ TEST_CASE("ArrayIterator") {
             std::vector<ssize_t> shape{Array::DYNAMIC_SIZE, 2};
             std::vector<ssize_t> strides{4 * sizeof(double), sizeof(double)};
 
-            auto it = ArrayIterator(values.data(), 2, shape.data(), strides.data());
+            auto it = ConstArrayIterator(values.data(), 2, shape.data(), strides.data());
 
             THEN("We can calculate the distance between two pointers in the strided array") {
-                const auto end = ArrayIterator(values.data() + 4, 2, shape.data(), strides.data());
+                const auto end =
+                        ConstArrayIterator(values.data() + 4, 2, shape.data(), strides.data());
                 CHECK(end - it == 2);
             }
 
             THEN("The distance between two iterators with different strides is asymmetric") {
-                const auto end = ArrayIterator(values.data() + 4);  // contiguous iterator
+                const auto end = ConstArrayIterator(values.data() + 4);  // contiguous iterator
 
                 CHECK(end - it == 2);   // 2 strides steps
                 CHECK(it - end == -4);  // 4 contiguous steps.
@@ -113,10 +114,10 @@ TEST_CASE("ArrayIterator") {
         }
 
         WHEN("We create a mask over the array and create a masked iterator") {
-            auto mask = std::vector<double>{true, false, false, true, false, false, false, true, false};
+            auto mask = std::vector<double>{1, 0, 0, 1, 0, 0, 0, 1, 0};
             const double fill = 6;
 
-            auto it = ArrayIterator(values.data(), mask.data(), &fill);
+            auto it = ConstArrayIterator(values.data(), mask.data(), &fill);
 
             THEN("It behaves like a contiguous iterator") {
                 CHECK(*it == 6);  // masked
@@ -135,8 +136,8 @@ TEST_CASE("ArrayIterator") {
 
         THEN("We can construct another vector using reverse iterators") {
             auto copy = std::vector<double>();
-            copy.assign(std::reverse_iterator(ArrayIterator(values.data()) + 6),
-                        std::reverse_iterator(ArrayIterator(values.data())));
+            copy.assign(std::reverse_iterator(ConstArrayIterator(values.data()) + 6),
+                        std::reverse_iterator(ConstArrayIterator(values.data())));
             CHECK(std::ranges::equal(copy, std::vector<double>{5, 4, 3, 2, 1, 0}));
         }
     }

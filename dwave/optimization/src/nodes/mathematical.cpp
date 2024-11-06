@@ -392,11 +392,11 @@ struct InverseOp<std::multiplies<double>> {
 };
 
 struct NaryOpNodeData : public ArrayNodeStateData {
-    explicit NaryOpNodeData(std::vector<double> values, std::vector<ArrayIterator> iterators)
+    explicit NaryOpNodeData(std::vector<double> values, std::vector<ConstArrayIterator> iterators)
             : ArrayNodeStateData(std::move(values)), iterators(std::move(iterators)) {}
 
     // used to avoid reallocating memory for predecessor iterators every propagation
-    std::vector<ArrayIterator> iterators;
+    std::vector<ConstArrayIterator> iterators;
 };
 
 template <class BinaryOp>
@@ -591,7 +591,7 @@ void NaryOpNode<BinaryOp>::initialize_state(State& state) const {
 
     values.reserve(size());
 
-    std::vector<ArrayIterator> iterators;
+    std::vector<ConstArrayIterator> iterators;
     for (const Array* array_ptr : operands_) {
         iterators.push_back(array_ptr->begin(state));
     }
@@ -945,11 +945,11 @@ double PartialReduceNode<BinaryOp>::reduce(const State& state, ssize_t index) co
 
     // 3. We create an iterator that starts from index just found and iterates through the axis we
     // are reducing over
-    ArrayIterator begin =
-            ArrayIterator(array_ptr_->buff(state) + start_idx, 1, &array_ptr_->shape()[axis],
+    ConstArrayIterator begin =
+            ConstArrayIterator(array_ptr_->buff(state) + start_idx, 1, &array_ptr_->shape()[axis],
                           &array_ptr_->strides()[axis]);
 
-    ArrayIterator end = begin + array_ptr_->shape(state)[axis];
+    ConstArrayIterator end = begin + array_ptr_->shape(state)[axis];
 
     // Get the initial value
     double init;
