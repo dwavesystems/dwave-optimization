@@ -237,45 +237,49 @@ struct Update {
     double value;   // The new/current value.
 };
 
+namespace {
+
 // This is a generic iterator for arrays.
 // It handles contiguous, strided, and masked arrays with one type.
-class ConstArrayIterator {
+template<bool IsConst>
+class ArrayIteratorImpl_ {
  public:
     using difference_type = std::ptrdiff_t;
-    using value_type = const double;
+    using value_type = std::conditional<IsConst, const double, double>::type;
     using pointer = value_type*;
     using reference = value_type&;
 
-    ConstArrayIterator() = default;
+    ArrayIteratorImpl_() = default;
 
-    ConstArrayIterator(const ConstArrayIterator& other) noexcept
+    ArrayIteratorImpl_(const ArrayIteratorImpl_& other) noexcept
             : ptr_(other.ptr_),
               mask_((other.mask_) ? std::make_unique<MaskInfo>(*other.mask_) : nullptr),
               shape_((other.shape_) ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
 
-    ConstArrayIterator(ConstArrayIterator&& other) = default;
+    ArrayIteratorImpl_(ArrayIteratorImpl_&& other) = default;
 
-    ~ConstArrayIterator() = default;
+    ~ArrayIteratorImpl_() = default;
 
     // Create a contiguous iterator pointing to ptr
-    explicit ConstArrayIterator(value_type* ptr) noexcept
+    explicit ArrayIteratorImpl_(value_type* ptr) noexcept
             : ptr_(ptr), mask_(nullptr), shape_(nullptr) {}
 
     // Create a masked iterator with a fill value. Will return the value pointed at by *fill_ptr
     // when *mask_ptr evaluates to true.
-    ConstArrayIterator(value_type* data_ptr, value_type* mask_ptr, value_type* fill_ptr) noexcept
+    ArrayIteratorImpl_(value_type* data_ptr, const value_type* mask_ptr,
+                       value_type* fill_ptr) noexcept
             : ptr_(data_ptr),
               mask_(std::make_unique<MaskInfo>(mask_ptr, fill_ptr)),
               shape_(nullptr) {}
 
     // shape and strides must outlive the iterator!
-    ConstArrayIterator(value_type* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides)
+    ArrayIteratorImpl_(value_type* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides)
             : ptr_(ptr),
               mask_(nullptr),
               shape_((ndim >= 1) ? std::make_unique<ShapeInfo>(ndim, shape, strides) : nullptr) {}
 
     // Both the copy and move operator using the copy-and-swap idiom
-    ConstArrayIterator& operator=(ConstArrayIterator other) noexcept {
+    ArrayIteratorImpl_& operator=(ArrayIteratorImpl_ other) noexcept {
         using std::swap;  // ADL, if it matters
         std::swap(ptr_, other.ptr_);
         std::swap(mask_, other.mask_);
@@ -298,7 +302,7 @@ class ConstArrayIterator {
         return ptr_;
     }
 
-    ConstArrayIterator& operator++() {
+    ArrayIteratorImpl_& operator++() {
         if (shape_ && mask_) {
             assert(false && "not implemented yet");  // or maybe ever
             unreachable();
@@ -315,13 +319,13 @@ class ConstArrayIterator {
         return *this;
     }
 
-    ConstArrayIterator operator++(int) {
-        ConstArrayIterator tmp = *this;
+    ArrayIteratorImpl_ operator++(int) {
+        ArrayIteratorImpl_ tmp = *this;
         ++(*this);
         return tmp;
     }
 
-    ConstArrayIterator& operator--() {
+    ArrayIteratorImpl_& operator--() {
         if (shape_ && mask_) {
             assert(false && "not implemented yet");  // or maybe ever
             unreachable();
@@ -337,13 +341,13 @@ class ConstArrayIterator {
         return *this;
     }
 
-    ConstArrayIterator operator--(int) {
-        ConstArrayIterator tmp = *this;
+    ArrayIteratorImpl_ operator--(int) {
+        ArrayIteratorImpl_ tmp = *this;
         --(*this);
         return tmp;
     }
 
-    ConstArrayIterator& operator+=(difference_type rhs) {
+    ArrayIteratorImpl_& operator+=(difference_type rhs) {
         if (shape_ && mask_) {
             assert(false && "not implemented yet");  // or maybe ever
             unreachable();
@@ -358,11 +362,11 @@ class ConstArrayIterator {
         return *this;
     }
 
-    friend ConstArrayIterator operator+(ConstArrayIterator lhs, difference_type rhs) {
+    friend ArrayIteratorImpl_ operator+(ArrayIteratorImpl_ lhs, difference_type rhs) {
         return lhs += rhs;
     }
 
-    difference_type operator-(const ConstArrayIterator& rhs) const {
+    difference_type operator-(const ArrayIteratorImpl_& rhs) const {
         // We need to be careful here, we want to know how many steps the rhs
         // iterator needs to take to reach us, not the other way around.
 
@@ -375,7 +379,7 @@ class ConstArrayIterator {
     }
 
     // Equal if they both point to the same underlying array location
-    bool operator==(const ConstArrayIterator& rhs) const { return this->ptr_ == rhs.ptr_; }
+    bool operator==(const ArrayIteratorImpl_& rhs) const { return this->ptr_ == rhs.ptr_; }
 
  private:
     // pointer to the underlying memory
@@ -384,12 +388,11 @@ class ConstArrayIterator {
     struct MaskInfo {
         MaskInfo() = delete;
 
-        MaskInfo(const value_type* mask_ptr, const value_type* fill_ptr) noexcept
+        MaskInfo(const value_type* mask_ptr, value_type* fill_ptr) noexcept
                 : mask_ptr(mask_ptr), fill_ptr(fill_ptr) {}
 
-        // Unlike the ptr_, we always want these to be const
         const value_type* mask_ptr;  // ptr to the value indicating whether to use the fill or not
-        const value_type* fill_ptr;  // the value to provide for masked entries, won't be iterated
+        value_type* fill_ptr;  // the value to provide for masked entries, won't be iterated
     };
 
     // These are implied by the simplicity of the class, but there was a time that it accidentally
@@ -536,6 +539,11 @@ class ConstArrayIterator {
     // will be encoded in the `shape_`.
     std::unique_ptr<ShapeInfo> shape_ = nullptr;
 };
+
+}  // namespace
+
+using ArrayIterator = ArrayIteratorImpl_<false>;
+using ConstArrayIterator = ArrayIteratorImpl_<true>;
 
 static_assert(std::forward_iterator<ConstArrayIterator>);
 static_assert(std::bidirectional_iterator<ConstArrayIterator>);

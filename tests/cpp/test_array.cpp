@@ -28,7 +28,25 @@ TEST_CASE("Test SizeInfo") {
     CHECK(SizeInfo(5) == 5);
 }
 
-TEST_CASE("ConstArrayIterator") {
+TEST_CASE("ArrayIterator and ConstArrayIterator") {
+    GIVEN("A std::vector<double>{0, 1, 2, 3, 4, 5, 6, 7, 8}") {
+        auto values = std::vector<double>{0, 1, 2, 3, 4, 5, 6, 7, 8};
+
+        WHEN("We use a strided ArrayIterator to mutate every other value") {
+            std::vector<ssize_t> shape{5};
+            std::vector<ssize_t> strides{2 * sizeof(double)};
+            auto it = ArrayIterator(values.data(), 1, shape.data(), strides.data());
+
+            for (auto end = it + 5; it != end; ++it) {
+                *it = -5;
+            }
+
+            THEN("The vector is edited") {
+                CHECK(std::ranges::equal(values, std::vector{-5, 1, -5, 3, -5, 5, -5, 7, -5}));
+            }
+        }
+    }
+
     GIVEN("A std::vector<double>{0, 1, 2, 3, 4, 5, 6, 7, 8}") {
         auto values = std::vector<double>{0, 1, 2, 3, 4, 5, 6, 7, 8};
 
