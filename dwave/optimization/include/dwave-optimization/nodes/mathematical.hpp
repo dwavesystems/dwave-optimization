@@ -65,15 +65,14 @@ struct modulus<double> {
         if (y == 0) {  
             return 0;  
         }  
-        const double remainder = std::fmod(x, y);  
+        double result = std::fmod(x, y);  
     
-        if ((x >= 0) == (y >= 0)) {  
-            // std::fmod result consistent with numpy for same-sign arguments  
-            return remainder;  
-        } else {  
+        if ((std::signbit(x) != std::signbit(y)) && (result != 0)) {
              // Make result consistent with numpy for different-sign arguments  
-            return remainder + y;  
-        }  
+            result += y;  
+        }
+
+        return result;
     }  
 };
 
