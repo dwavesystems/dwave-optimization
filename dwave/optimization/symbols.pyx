@@ -66,6 +66,7 @@ from dwave.optimization.libcpp.nodes cimport (
     MaximumNode as cppMaximumNode,
     MinNode as cppMinNode,
     MinimumNode as cppMinimumNode,
+    ModulusNode as cppModulusNode,
     MultiplyNode as cppMultiplyNode,
     NaryAddNode as cppNaryAddNode,
     NaryMaximumNode as cppNaryMaximumNode,
@@ -116,6 +117,7 @@ __all__ = [
     "Maximum",
     "Min",
     "Minimum",
+    "Modulus",
     "Multiply",
     "NaryAdd",
     "NaryMaximum",
@@ -1924,6 +1926,44 @@ cdef class Minimum(ArraySymbol):
     cdef cppMinimumNode* ptr
 
 _register(Minimum, typeid(cppMinimumNode))
+
+
+cdef class Modulus(ArraySymbol):
+    """Modulus element-wise between two symbols.
+
+    Examples:
+        This example calculates the modulus of two integer symbols.
+
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(10, lower_bound=-50, upper_bound=50)
+        >>> j = model.integer(10, lower_bound=-20, upper_bound=150)
+        >>> k = i % j
+        >>> type(k)
+        <class 'dwave.optimization.symbols.Modulus'>
+    """
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
+        if lhs.model is not rhs.model:
+            raise ValueError("lhs and rhs do not share the same underlying model")
+
+        cdef Model model = lhs.model
+
+        self.ptr = model._graph.emplace_node[cppModulusNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppModulusNode* ptr = dynamic_cast_ptr[cppModulusNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Modulus")
+        cdef Modulus m = Modulus.__new__(Modulus)
+        m.ptr = ptr
+        m.initialize_arraynode(symbol.model, ptr)
+        return m
+
+    cdef cppModulusNode* ptr
+
+_register(Modulus, typeid(cppModulusNode))
 
 
 cdef class Multiply(ArraySymbol):

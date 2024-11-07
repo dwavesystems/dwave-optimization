@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <functional>
 #include <optional>
 #include <vector>
@@ -52,6 +53,27 @@ struct max {
 template <class T>
 struct min {
     constexpr T operator()(const T& x, const T& y) const { return std::min(x, y); }
+};
+
+template <class T>
+struct modulus {};
+
+template <>  
+struct modulus<double> {  
+    constexpr double operator()(const double& x, const double& y) const {  
+        // Copy numpy behavior and return 0 for `x % 0`  
+        if (y == 0) {  
+            return 0;  
+        }  
+        double result = std::fmod(x, y);  
+    
+        if ((std::signbit(x) != std::signbit(y)) && (result != 0)) {
+             // Make result consistent with numpy for different-sign arguments  
+            result += y;  
+        }
+
+        return result;
+    }  
 };
 
 template <class T>
@@ -114,6 +136,7 @@ using LessEqualNode = BinaryOpNode<std::less_equal<double>>;
 using MultiplyNode = BinaryOpNode<std::multiplies<double>>;
 using MaximumNode = BinaryOpNode<functional::max<double>>;
 using MinimumNode = BinaryOpNode<functional::min<double>>;
+using ModulusNode = BinaryOpNode<functional::modulus<double>>;
 using OrNode = BinaryOpNode<std::logical_or<double>>;
 using SubtractNode = BinaryOpNode<std::minus<double>>;
 using XorNode = BinaryOpNode<functional::logical_xor<double>>;

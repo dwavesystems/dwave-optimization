@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Add C++ ``ModulusNode`` and Python ``Modulus`` symbol. ``Modulus`` propagates
+    the modulus of its two predecessors element-wise. Modulus symbols may be 
+    created with either the ``%`` operator or the ``mod()`` function in 
+    ``dwave.optimization.mathematical``. See
+    `#156 <https://https://github.com/dwavesystems/dwave-optimization/issues/156>`_.

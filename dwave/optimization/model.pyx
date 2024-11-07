@@ -1854,6 +1854,13 @@ cdef class ArraySymbol(Symbol):
 
         return NotImplemented
 
+    def __mod__(self, rhs):
+        if isinstance(rhs, ArraySymbol):
+            from dwave.optimization.symbols import Modulus # avoid circular import
+            return Modulus(self, rhs)
+
+        return NotImplemented
+
     def __mul__(self, rhs):
         if isinstance(rhs, ArraySymbol):
             from dwave.optimization.symbols import Multiply  # avoid circular import

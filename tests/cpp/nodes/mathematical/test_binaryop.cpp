@@ -25,9 +25,9 @@
 namespace dwave::optimization {
 
 TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<double>,
-                   std::plus<double>, std::minus<double>, std::multiplies<double>,
-                   functional::max<double>, functional::min<double>, std::logical_and<double>,
-                   std::logical_or<double>, functional::logical_xor<double>) {
+                   std::plus<double>, std::minus<double>, functional::modulus<double>,
+                   std::multiplies<double>, functional::max<double>, functional::min<double>,
+                   std::logical_and<double>, std::logical_or<double>, functional::logical_xor<double>) {
     auto graph = Graph();
 
     auto func = TestType();
