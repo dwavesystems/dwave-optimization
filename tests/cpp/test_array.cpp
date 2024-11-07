@@ -35,7 +35,7 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
         WHEN("We use a strided ArrayIterator to mutate every other value") {
             std::vector<ssize_t> shape{5};
             std::vector<ssize_t> strides{2 * sizeof(double)};
-            auto it = ArrayIterator(values.data(), 1, shape.data(), strides.data());
+            auto it = ArrayIterator(values.data(), shape, strides);
 
             for (auto end = it + 5; it != end; ++it) {
                 *it = -5;

@@ -277,6 +277,11 @@ class ArrayIteratorImpl_ {
             : ptr_(ptr),
               mask_(nullptr),
               shape_((ndim >= 1) ? std::make_unique<ShapeInfo>(ndim, shape, strides) : nullptr) {}
+    ArrayIteratorImpl_(value_type* ptr, std::span<const ssize_t> shape,
+                       std::span<const ssize_t> strides)
+            : ArrayIteratorImpl_(ptr, shape.size(), shape.data(), strides.data()) {
+        assert(shape.size() == strides.size());
+    }
 
     // Both the copy and move operator using the copy-and-swap idiom
     ArrayIteratorImpl_& operator=(ArrayIteratorImpl_ other) noexcept {
@@ -545,11 +550,17 @@ class ArrayIteratorImpl_ {
 using ArrayIterator = ArrayIteratorImpl_<false>;
 using ConstArrayIterator = ArrayIteratorImpl_<true>;
 
+static_assert(std::forward_iterator<ArrayIterator>);
+static_assert(std::bidirectional_iterator<ArrayIterator>);
 static_assert(std::forward_iterator<ConstArrayIterator>);
 static_assert(std::bidirectional_iterator<ConstArrayIterator>);
 // todo: random access iterator?
 
-// unique_ptr is not trivial so the best we can have for ConstArrayIterator is nothrow
+// unique_ptr is not trivial so the best we can have for ArrayIterator is nothrow
+static_assert(std::is_nothrow_copy_constructible<ArrayIterator>::value);
+static_assert(std::is_nothrow_move_constructible<ArrayIterator>::value);
+static_assert(std::is_nothrow_copy_assignable<ArrayIterator>::value);
+static_assert(std::is_nothrow_move_assignable<ArrayIterator>::value);
 static_assert(std::is_nothrow_copy_constructible<ConstArrayIterator>::value);
 static_assert(std::is_nothrow_move_constructible<ConstArrayIterator>::value);
 static_assert(std::is_nothrow_copy_assignable<ConstArrayIterator>::value);
