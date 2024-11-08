@@ -213,13 +213,13 @@ TEST_CASE("ConcatenateNode") {
             for (auto i : std::ranges::iota_view(0,24)) c->set_value(state, i, i+31);
 
             graph.propose(state, {a,b,c}, [](const Graph&, State&) { return true; });
-            std::vector<std::vector<double>> expected{
-                {1,  2,  3,  4, 13, 14, 15, 16, 17, 18, 31, 32, 33, 34, 35, 36, 37, 38},
-                {5,  6,  7,  8, 19, 20, 21, 22, 23, 24, 39, 40, 41, 42, 43, 44, 45, 46},
-                {9, 10, 11, 12, 25, 26, 27, 28, 29, 30, 47, 48, 49, 50, 51, 52, 53, 54}};
+            std::vector<double> expected{
+                1,  2,  3,  4, 13, 14, 15, 16, 17, 18, 31, 32, 33, 34, 35, 36, 37, 38,
+                5,  6,  7,  8, 19, 20, 21, 22, 23, 24, 39, 40, 41, 42, 43, 44, 45, 46,
+                9, 10, 11, 12, 25, 26, 27, 28, 29, 30, 47, 48, 49, 50, 51, 52, 53, 54};
 
             THEN("ConcatenatedNode values are propagated correctly") {
-                CHECK(std::ranges::equal(abc_ptr->view(state), std::ranges::join_view(expected)));
+                CHECK(std::ranges::equal(abc_ptr->view(state), expected));
             }
         }
 
@@ -237,16 +237,16 @@ TEST_CASE("ConcatenateNode") {
             for (auto i : std::ranges::iota_view(0,24)) c->set_value(state, i, i+31);
 
             graph.propose(state, {a,b,c}, [](const Graph&, State&) { return true; });
-            std::vector<std::vector<double>> expected{
-                { 1,  2, 13, 14, 15, 31, 32, 33, 34},
-                { 3,  4, 16, 17, 18, 35, 36, 37, 38},
-                { 5,  6, 19, 20, 21, 39, 40, 41, 42},
-                { 7,  8, 22, 23, 24, 43, 44, 45, 46},
-                { 9, 10, 25, 26, 27, 47, 48, 49, 50},
-                {11, 12, 28, 29, 30, 51, 52, 53, 54}};
+            std::vector<double> expected{
+                 1,  2, 13, 14, 15, 31, 32, 33, 34,
+                 3,  4, 16, 17, 18, 35, 36, 37, 38,
+                 5,  6, 19, 20, 21, 39, 40, 41, 42,
+                 7,  8, 22, 23, 24, 43, 44, 45, 46,
+                 9, 10, 25, 26, 27, 47, 48, 49, 50,
+                11, 12, 28, 29, 30, 51, 52, 53, 54};
 
             THEN("ConcatenatedNode values are propagated correctly") {
-                CHECK(std::ranges::equal(abc_ptr->view(state), std::ranges::join_view(expected)));
+                CHECK(std::ranges::equal(abc_ptr->view(state), expected));
             }
         }
 
@@ -264,16 +264,16 @@ TEST_CASE("ConcatenateNode") {
             for (auto i : std::ranges::iota_view(0,24)) c->set_value(state, i, i+31);
 
             graph.propose(state, {a,b,c}, [](const Graph&, State&) { return true; });
-            std::vector<std::vector<double>> expected{
-                { 1,  2, 13, 14, 15, 31, 32, 33, 34},
-                { 3,  4, 16, 17, 18, 35, 36, 37, 38},
-                { 5,  6, 19, 20, 21, 39, 40, 41, 42},
-                { 7,  8, 22, 23, 24, 43, 44, 45, 46},
-                { 9, 10, 25, 26, 27, 47, 48, 49, 50},
-                {11, 12, 28, 29, 30, 51, 52, 53, 54}};
+            std::vector<double> expected{
+                 1,  2, 13, 14, 15, 31, 32, 33, 34,
+                 3,  4, 16, 17, 18, 35, 36, 37, 38,
+                 5,  6, 19, 20, 21, 39, 40, 41, 42,
+                 7,  8, 22, 23, 24, 43, 44, 45, 46,
+                 9, 10, 25, 26, 27, 47, 48, 49, 50,
+                11, 12, 28, 29, 30, 51, 52, 53, 54};
 
             THEN("ConcatenatedNode values are propagated correctly") {
-                CHECK(std::ranges::equal(abc_ptr->view(state), std::ranges::join_view(expected)));
+                CHECK(std::ranges::equal(abc_ptr->view(state), expected));
             }
         }
     }
