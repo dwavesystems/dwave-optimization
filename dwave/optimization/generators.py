@@ -460,7 +460,6 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
         sublist representing various itineraries for each vehicle.
     """
 
-    time_distances = np.asarray(time_distances)
     if not isinstance(number_of_vehicles, int):
         raise ValueError("`number_of_vehicles` must be an integer.")
 

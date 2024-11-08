@@ -17,7 +17,9 @@ import collections.abc
 import itertools
 import math
 import operator
+import typing
 import unittest
+import warnings
 
 import numpy as np
 
@@ -1583,7 +1585,7 @@ class TestModulus(utils.BinaryOpTests):
 
     def test_zero_mod(self):
         model = Model()
-        values = [
+        values: typing.Union[int, list[int]] = [
             0,
             1,
             -1,
@@ -1591,7 +1593,9 @@ class TestModulus(utils.BinaryOpTests):
             [0, -1, 2],
         ]
         for lhs, rhs in itertools.product(values, repeat=2):
-            np_result = np.mod(lhs, rhs)
+            with np.errstate(divide='ignore'):
+                np_result = np.mod(lhs, rhs)
+
             lhs_c = model.constant(lhs)
             rhs_c = model.constant(rhs)
             result = lhs_c % rhs_c
@@ -1599,6 +1603,7 @@ class TestModulus(utils.BinaryOpTests):
             with model.lock():
                 model.states.resize(1)
                 np.testing.assert_equal(np_result, result.state(0))
+
 
 class TestMultiply(utils.SymbolTests):
     def generate_symbols(self):
