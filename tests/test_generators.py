@@ -14,9 +14,14 @@
 
 import numpy as np
 import unittest
+import warnings
 
 try:
-    import dimod
+    # dimod should fix its own warnings, but just so we're not too coupled,
+    # let's ignore import warnings from dimod.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        import dimod
 except ImportError:
     dimod_found = False
 else:
@@ -405,14 +410,16 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         # Unequal-length arrays
         with self.assertRaises(ValueError):
-            dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
-                demand=demand0,
-                number_of_vehicles=num_vehicles,
-                vehicle_capacity=capacity,
-                time_distances=[[1, 2, 3], [1, 2], [1, 2, 3]],
-                time_window_open=time_window_open,
-                time_window_close=time_window_close,
-                service_time=service_time)
+            with warnings.catch_warnings():  # older version of NumPy might throw deprecation
+                warnings.simplefilter("ignore")
+                dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
+                    demand=demand0,
+                    number_of_vehicles=num_vehicles,
+                    vehicle_capacity=capacity,
+                    time_distances=[[1, 2, 3], [1, 2], [1, 2, 3]],
+                    time_window_open=time_window_open,
+                    time_window_close=time_window_close,
+                    service_time=service_time)
 
         with self.assertRaises(ValueError):
             dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(

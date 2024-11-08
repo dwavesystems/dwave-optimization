@@ -107,7 +107,7 @@ jobs:
             . env/bin/activate
             cd tests/
             pip install -r requirements.txt
-            python -m unittest
+            python -Werror -m unittest
 
   python-macOS:
     macos:

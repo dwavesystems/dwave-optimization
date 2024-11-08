@@ -47,7 +47,7 @@ Documentation = "https://docs.ocean.dwavesys.com"
 build-verbosity = "1"
 skip = "pp* *musllinux*"
 before-test = "pip install -r {project}/tests/requirements.txt"
-test-command = "python -m unittest discover {project}/tests/"
+test-command = "python -Werror -m unittest discover {project}/tests/"
 
 [tool.cibuildwheel.config-settings]
 compile-args = ["-v"]
