@@ -45,7 +45,7 @@ std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ss
             if (i != axis) {
                 if ( (*std::prev(it))->shape()[i] != (*it)->shape()[i] ) {
                     throw std::invalid_argument(
-                            "all the input array dimensions for the concatenation" +
+                            "all the input array dimensions except for the concatenation" +
                             std::string(" axis must match exactly, but along dimension ") +
                             std::to_string(i) + ", the array at index " +
                             std::to_string(std::distance(array_ptrs.begin(), std::prev(it))) +
