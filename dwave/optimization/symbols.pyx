@@ -783,6 +783,18 @@ _register(BinaryVariable, typeid(cppBinaryNode))
 
 cdef class Concatenate(ArraySymbol):
     """Concatenate symbol.
+
+    Examples:
+        This example creates a Concatenate symbol.
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.symbols import Concatenate
+        >>> model = Model()
+        >>> a = model.constant([[1,2], [3,4]])
+        >>> b = model.constant([[5,6]])
+        >>> a_b = Concatenate((a,b), axis=0)
+        >>> type(a_b)
+        <class 'dwave.optimization.symbols.Concatenate'>
     """
     def __init__(self, tuple inputs, int axis = 0):
         if len(inputs) < 2:
