@@ -676,8 +676,8 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
 
     Args:
         processing_times:
-            Processing times, as an :math:`n \times m` |array-like|_ of
-            integers, where ``processing_times[n, m]`` is the time job
+            Processing times, as an :math:`m \times n` |array-like|_ of
+            integers, where ``processing_times[m, n]`` is the time job
             `n` is on machine `m`.
 
     Returns:
@@ -686,8 +686,8 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
     Examples:
 
         This example creates a model for a flow-shop-scheduling problem
-        with two jobs on three machines. For example, the second job
-        requires processing for 20 time units on the first machine in
+        with three jobs on two machines. For example, the first job
+        requires processing for 20 time units on the second machine in
         the flow of operations.
 
         >>> from dwave.optimization.generators import flow_shop_scheduling
