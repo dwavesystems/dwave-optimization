@@ -768,6 +768,17 @@ class TestBinaryVariable(utils.SymbolTests):
                 x.set_state(0, [0, 1, 2])
 
 
+class TestConcatenate(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        x = model.constant(np.arange(12)).reshape((2,1,2,3))
+        y = model.constant(np.arange(24)).reshape((2,2,2,3))
+        z = model.constant(np.arange(36)).reshape((2,3,2,3))
+        c = dwave.optimization.symbols.Concatenate((x,y,z), axis=1)
+        model.lock()
+        yield c
+
+
 class TestConstant(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

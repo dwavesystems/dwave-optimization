@@ -40,6 +40,8 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
     void revert(State& state) const override;
     void propagate(State& state) const override;
 
+    ssize_t axis() const { return axis_; }
+
  private:
     ssize_t axis_;
     std::vector<ArrayNode*> array_ptrs_;
