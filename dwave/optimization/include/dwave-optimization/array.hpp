@@ -237,335 +237,6 @@ struct Update {
     double value;   // The new/current value.
 };
 
-namespace {
-
-// This is a generic iterator for arrays.
-// It handles contiguous, strided, and masked arrays with one type.
-template<bool IsConst>
-class ArrayIteratorImpl_ {
- public:
-    using difference_type = std::ptrdiff_t;
-    using value_type = std::conditional<IsConst, const double, double>::type;
-    using pointer = value_type*;
-    using reference = value_type&;
-
-    ArrayIteratorImpl_() = default;
-
-    ArrayIteratorImpl_(const ArrayIteratorImpl_& other) noexcept
-            : ptr_(other.ptr_),
-              mask_((other.mask_) ? std::make_unique<MaskInfo>(*other.mask_) : nullptr),
-              shape_((other.shape_) ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
-
-    ArrayIteratorImpl_(ArrayIteratorImpl_&& other) = default;
-
-    ~ArrayIteratorImpl_() = default;
-
-    // Create a contiguous iterator pointing to ptr
-    explicit ArrayIteratorImpl_(value_type* ptr) noexcept
-            : ptr_(ptr), mask_(nullptr), shape_(nullptr) {}
-
-    // Create a masked iterator with a fill value. Will return the value pointed at by *fill_ptr
-    // when *mask_ptr evaluates to true.
-    ArrayIteratorImpl_(value_type* data_ptr, const value_type* mask_ptr,
-                       value_type* fill_ptr) noexcept
-            : ptr_(data_ptr),
-              mask_(std::make_unique<MaskInfo>(mask_ptr, fill_ptr)),
-              shape_(nullptr) {}
-
-    // shape and strides must outlive the iterator!
-    ArrayIteratorImpl_(value_type* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides)
-            : ptr_(ptr),
-              mask_(nullptr),
-              shape_((ndim >= 1) ? std::make_unique<ShapeInfo>(ndim, shape, strides) : nullptr) {}
-    ArrayIteratorImpl_(value_type* ptr, std::span<const ssize_t> shape,
-                       std::span<const ssize_t> strides)
-            : ArrayIteratorImpl_(ptr, shape.size(), shape.data(), strides.data()) {
-        assert(shape.size() == strides.size());
-    }
-
-    // Both the copy and move operator using the copy-and-swap idiom
-    ArrayIteratorImpl_& operator=(ArrayIteratorImpl_ other) noexcept {
-        using std::swap;  // ADL, if it matters
-        std::swap(ptr_, other.ptr_);
-        std::swap(mask_, other.mask_);
-        std::swap(shape_, other.shape_);
-        return *this;
-    }
-
-    value_type& operator*() const {
-        if (mask_ && *(mask_->mask_ptr)) {
-            return *(mask_->fill_ptr);
-        }
-
-        return *ptr_;
-    }
-    value_type* operator->() const {
-        if (mask_ && *(mask_->mask_ptr)) {
-            return mask_->fill_ptr;
-        }
-
-        return ptr_;
-    }
-
-    ArrayIteratorImpl_& operator++() {
-        if (shape_ && mask_) {
-            assert(false && "not implemented yet");  // or maybe ever
-            unreachable();
-        } else if (shape_) {
-            // do something else
-            ptr_ += shape_->advance() / sizeof(value_type);
-        } else if (mask_) {
-            // advance both the mask ptr and the data ptr
-            ++(mask_->mask_ptr);
-            ++ptr_;
-        } else {
-            ++ptr_;
-        }
-        return *this;
-    }
-
-    ArrayIteratorImpl_ operator++(int) {
-        ArrayIteratorImpl_ tmp = *this;
-        ++(*this);
-        return tmp;
-    }
-
-    ArrayIteratorImpl_& operator--() {
-        if (shape_ && mask_) {
-            assert(false && "not implemented yet");  // or maybe ever
-            unreachable();
-        } else if (shape_) {
-            ptr_ += shape_->unadvance() / sizeof(value_type);
-        } else if (mask_) {
-            // decrement both the mask ptr and the data ptr
-            --(mask_->mask_ptr);
-            --ptr_;
-        } else {
-            --ptr_;
-        }
-        return *this;
-    }
-
-    ArrayIteratorImpl_ operator--(int) {
-        ArrayIteratorImpl_ tmp = *this;
-        --(*this);
-        return tmp;
-    }
-
-    ArrayIteratorImpl_& operator+=(difference_type rhs) {
-        if (shape_ && mask_) {
-            assert(false && "not implemented yet");  // or maybe ever
-            unreachable();
-        } else if (shape_) {
-            ptr_ += shape_->advance(rhs) / sizeof(double);
-        } else if (mask_) {
-            ptr_ += rhs;
-            (mask_->mask_ptr) += rhs;
-        } else {
-            ptr_ += rhs;
-        }
-        return *this;
-    }
-
-    friend ArrayIteratorImpl_ operator+(ArrayIteratorImpl_ lhs, difference_type rhs) {
-        return lhs += rhs;
-    }
-
-    difference_type operator-(const ArrayIteratorImpl_& rhs) const {
-        // We need to be careful here, we want to know how many steps the rhs
-        // iterator needs to take to reach us, not the other way around.
-
-        // if the rhs iterator is contiguous, it's just the distance from its pointer
-        // to ours.
-        if (!rhs.shape_) return ptr_ - rhs.ptr_;
-
-        // otherwise we ask the rhs how far it is to us.
-        return rhs.shape_->distance((ptr_ - rhs.ptr_) * sizeof(value_type));
-    }
-
-    // Equal if they both point to the same underlying array location
-    bool operator==(const ArrayIteratorImpl_& rhs) const { return this->ptr_ == rhs.ptr_; }
-
- private:
-    // pointer to the underlying memory
-    value_type* ptr_ = nullptr;
-
-    struct MaskInfo {
-        MaskInfo() = delete;
-
-        MaskInfo(const value_type* mask_ptr, value_type* fill_ptr) noexcept
-                : mask_ptr(mask_ptr), fill_ptr(fill_ptr) {}
-
-        const value_type* mask_ptr;  // ptr to the value indicating whether to use the fill or not
-        value_type* fill_ptr;  // the value to provide for masked entries, won't be iterated
-    };
-
-    // These are implied by the simplicity of the class, but there was a time that it accidentally
-    // wasn't trivially copyable so let's be explicit.
-    static_assert(std::is_trivially_copy_constructible<MaskInfo>::value);
-    static_assert(std::is_trivially_move_constructible<MaskInfo>::value);
-    static_assert(std::is_trivially_copy_assignable<MaskInfo>::value);
-    static_assert(std::is_trivially_move_assignable<MaskInfo>::value);
-
-    // if this is a masked iterator, put information about the mask here
-    std::unique_ptr<MaskInfo> mask_ = nullptr;
-
-    // if this is a strided iterator, put information about the shape/strides here
-    struct ShapeInfo {
-        ShapeInfo() = delete;
-
-        ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
-                : ndim(ndim),
-                  shape(shape),
-                  strides(strides),
-                  loc(std::make_unique<ssize_t[]>(std::max<ssize_t>(ndim - 1, 0))) {
-            for (ssize_t i = 0; i < ndim - 1; ++i) {
-                loc[i] = 0;
-            }
-        }
-
-        ShapeInfo(const ShapeInfo& other) noexcept
-                : ShapeInfo(other.ndim, other.shape, other.strides) {
-            if (ndim >= 1) std::copy(other.loc.get(), other.loc.get() + ndim - 1, loc.get());
-        }
-
-        ShapeInfo(ShapeInfo&& other) = default;
-
-        // Both the copy and move operator using the copy-and-swap idiom
-        ShapeInfo& operator=(ShapeInfo other) noexcept {
-            using std::swap;  // ADL, if it matters
-            std::swap(ndim, other.ndim);
-            std::swap(shape, other.shape);
-            std::swap(strides, other.strides);
-            std::swap(loc, other.loc);
-            return *this;
-        }
-
-        // returns the number of bytes to advance. Note that this is in bytes!
-        std::ptrdiff_t advance() {
-            std::ptrdiff_t offset = 0;
-
-            ssize_t dim = ndim - 1;
-            for (; dim >= 1; --dim) {
-                offset += strides[dim];
-
-                // we don't need to advance any other dimensions
-                if (++loc[dim - 1] < shape[dim]) break;
-
-                offset -= strides[dim] * shape[dim];  // zero out this dim
-                loc[dim - 1] = 0;
-            }
-            if (dim == 0) {
-                // For dim 0, we don't care if we're past the end of the shape.
-                // This allows us to work for dynamic arrays as well.
-                offset += strides[dim];
-            }
-
-            return offset;
-        }
-
-        std::ptrdiff_t unadvance() {
-            std::ptrdiff_t offset = 0;
-
-            ssize_t dim = ndim - 1;
-            for (; dim >= 1; --dim) {
-                offset -= strides[dim];
-
-                if (--loc[dim - 1] >= 0) break;
-
-                assert(loc[dim - 1] == -1);
-
-                offset += strides[dim] * shape[dim];
-                loc[dim - 1] = shape[dim] - 1;
-            }
-            if (dim == 0) {
-                offset -= strides[dim];
-            }
-
-            return offset;
-        }
-
-        std::ptrdiff_t advance(std::ptrdiff_t n) {
-            std::ptrdiff_t offset = 0;
-
-            // do the dumb thing for now - we can improve the performance of this
-            // later
-            for (; n > 0; --n) {
-                offset += advance();
-            }
-            for (; n < 0; ++n) {
-                offset += unadvance();
-            }
-
-            return offset;
-        }
-
-        // Return how many steps from the current location are need to travel
-        // num_bytes
-        difference_type distance(difference_type num_bytes) const {
-            // each stride is multiplied by `num_bytes`, so we just take that off now
-            num_bytes /= sizeof(value_type);
-
-            // will track the number of steps in each dimension
-            std::unique_ptr<ssize_t[]> steps = std::make_unique<ssize_t[]>(ndim);
-            for (ssize_t dim = 0; dim < ndim; ++dim) {
-                ssize_t stride = strides[dim] / sizeof(value_type);
-
-                steps[dim] = num_bytes / stride;
-                num_bytes %= stride;
-            }
-
-            // now figure out, according to shape, how many total steps we made
-            ssize_t distance = 0;
-            for (ssize_t dim = ndim - 1, mul = 1; dim >= 0; --dim) {
-                distance += mul * steps[dim];
-                mul *= shape[dim];
-            }
-
-            return distance;
-        }
-
-        ssize_t ndim;
-        const ssize_t* shape;
-        const ssize_t* strides;
-
-        // loc is of length max(ndim - 1, 0) because we don't track our location in the
-        // 0th dimension
-        std::unique_ptr<ssize_t[]> loc;
-    };
-
-    // unique_ptr is not trivial so the best we can have for ShapeInfo is nothrow
-    static_assert(std::is_nothrow_copy_constructible<ShapeInfo>::value);
-    static_assert(std::is_nothrow_move_constructible<ShapeInfo>::value);
-    static_assert(std::is_nothrow_copy_assignable<ShapeInfo>::value);
-    static_assert(std::is_nothrow_move_assignable<ShapeInfo>::value);
-
-    // shape_ == nullptr => the array is contiguous. Otherwise the stride information
-    // will be encoded in the `shape_`.
-    std::unique_ptr<ShapeInfo> shape_ = nullptr;
-};
-
-}  // namespace
-
-using ArrayIterator = ArrayIteratorImpl_<false>;
-using ConstArrayIterator = ArrayIteratorImpl_<true>;
-
-static_assert(std::forward_iterator<ArrayIterator>);
-static_assert(std::bidirectional_iterator<ArrayIterator>);
-static_assert(std::forward_iterator<ConstArrayIterator>);
-static_assert(std::bidirectional_iterator<ConstArrayIterator>);
-// todo: random access iterator?
-
-// unique_ptr is not trivial so the best we can have for ArrayIterator is nothrow
-static_assert(std::is_nothrow_copy_constructible<ArrayIterator>::value);
-static_assert(std::is_nothrow_move_constructible<ArrayIterator>::value);
-static_assert(std::is_nothrow_copy_assignable<ArrayIterator>::value);
-static_assert(std::is_nothrow_move_assignable<ArrayIterator>::value);
-static_assert(std::is_nothrow_copy_constructible<ConstArrayIterator>::value);
-static_assert(std::is_nothrow_move_constructible<ConstArrayIterator>::value);
-static_assert(std::is_nothrow_copy_assignable<ConstArrayIterator>::value);
-static_assert(std::is_nothrow_move_assignable<ConstArrayIterator>::value);
-
 // Represents an Array
 //
 // This interface is designed to work with Python's buffer protocol
@@ -581,15 +252,412 @@ static_assert(std::is_nothrow_move_assignable<ConstArrayIterator>::value);
 // Nodes will signal that they have a state-dependent size by returning negative
 // values for size() and in the first element of shape().
 class Array {
+ private:
+    // This is a generic iterator for arrays.
+    // It handles contiguous, strided, and masked arrays with one type.
+    template <bool IsConst>
+    class ArrayIteratorImpl_ {
+     public:
+        using difference_type = std::ptrdiff_t;
+        using value_type = std::conditional<IsConst, const double, double>::type;
+        using pointer = value_type*;
+        using reference = value_type&;
+
+        static constexpr ssize_t itemsize = sizeof(value_type);
+
+        ArrayIteratorImpl_() = default;
+
+        ArrayIteratorImpl_(const ArrayIteratorImpl_& other) noexcept
+                : ptr_(other.ptr_),
+                  mask_((other.mask_) ? std::make_unique<MaskInfo>(*other.mask_) : nullptr),
+                  shape_((other.shape_) ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
+
+        ArrayIteratorImpl_(ArrayIteratorImpl_&& other) = default;
+
+        ~ArrayIteratorImpl_() = default;
+
+        // Create a contiguous iterator pointing to ptr
+        explicit ArrayIteratorImpl_(value_type* ptr) noexcept
+                : ptr_(ptr), mask_(nullptr), shape_(nullptr) {}
+
+        // Create a masked iterator with a fill value. Will return the value pointed at by *fill_ptr
+        // when *mask_ptr evaluates to true.
+        ArrayIteratorImpl_(value_type* data_ptr, const value_type* mask_ptr,
+                           value_type* fill_ptr) noexcept
+                : ptr_(data_ptr),
+                  mask_(std::make_unique<MaskInfo>(mask_ptr, fill_ptr)),
+                  shape_(nullptr) {}
+
+        // shape and strides must outlive the iterator!
+        ArrayIteratorImpl_(value_type* ptr, ssize_t ndim, const ssize_t* shape,
+                           const ssize_t* strides)
+                : ptr_(ptr),
+                  mask_(nullptr),
+                  shape_((ndim >= 1) ? std::make_unique<ShapeInfo>(ndim, shape, strides)
+                                     : nullptr) {}
+        ArrayIteratorImpl_(value_type* ptr, std::span<const ssize_t> shape,
+                           std::span<const ssize_t> strides)
+                : ArrayIteratorImpl_(ptr, shape.size(), shape.data(), strides.data()) {
+            assert(shape.size() == strides.size());
+        }
+
+        // Both the copy and move operator using the copy-and-swap idiom
+        ArrayIteratorImpl_& operator=(ArrayIteratorImpl_ other) noexcept {
+            using std::swap;  // ADL, if it matters
+            std::swap(ptr_, other.ptr_);
+            std::swap(mask_, other.mask_);
+            std::swap(shape_, other.shape_);
+            return *this;
+        }
+
+        value_type& operator*() const {
+            if (mask_ && *(mask_->mask_ptr)) {
+                return *(mask_->fill_ptr);
+            }
+            return *ptr_;
+        }
+        value_type* operator->() const {
+            if (mask_ && *(mask_->mask_ptr)) {
+                return mask_->fill_ptr;
+            }
+            return ptr_;
+        }
+
+        value_type& operator[](ssize_t idx) const { return *(*this + idx); }
+
+        ArrayIteratorImpl_& operator++() {
+            if (shape_ && mask_) {
+                assert(false && "not implemented yet");  // or maybe ever
+                unreachable();
+            } else if (shape_) {
+                ptr_ += shape_->increment1() / itemsize;
+            } else if (mask_) {
+                // advance both the mask ptr and the data ptr
+                ++(mask_->mask_ptr);
+                ++ptr_;
+            } else {
+                ++ptr_;
+            }
+            return *this;
+        }
+
+        ArrayIteratorImpl_ operator++(int) {
+            ArrayIteratorImpl_ tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        ArrayIteratorImpl_& operator--() {
+            if (shape_ && mask_) {
+                assert(false && "not implemented yet");  // or maybe ever
+                unreachable();
+            } else if (shape_) {
+                ptr_ += shape_->decrement1() / itemsize;
+            } else if (mask_) {
+                // decrement both the mask ptr and the data ptr
+                --(mask_->mask_ptr);
+                --ptr_;
+            } else {
+                --ptr_;
+            }
+            return *this;
+        }
+
+        ArrayIteratorImpl_ operator--(int) {
+            ArrayIteratorImpl_ tmp = *this;
+            --(*this);
+            return tmp;
+        }
+
+        ArrayIteratorImpl_& operator+=(difference_type rhs) {
+            if (shape_ && mask_) {
+                assert(false && "not implemented yet");  // or maybe ever
+                unreachable();
+            } else if (shape_) {
+                ptr_ += shape_->increment(rhs) / itemsize;
+            } else if (mask_) {
+                ptr_ += rhs;
+                (mask_->mask_ptr) += rhs;
+            } else {
+                ptr_ += rhs;
+            }
+            return *this;
+        }
+        ArrayIteratorImpl_& operator-=(difference_type rhs) { return this->operator+=(-rhs); }
+
+        friend ArrayIteratorImpl_ operator+(ArrayIteratorImpl_ lhs, difference_type rhs) {
+            return lhs += rhs;
+        }
+        friend ArrayIteratorImpl_ operator+(difference_type lhs, ArrayIteratorImpl_ rhs) {
+            return rhs += lhs;
+        }
+        friend ArrayIteratorImpl_ operator-(ArrayIteratorImpl_ lhs, difference_type rhs) {
+            return lhs -= rhs;
+        }
+
+        friend difference_type operator-(const ArrayIteratorImpl_& a, const ArrayIteratorImpl_& b) {
+            if (!a.shape_ && !b.shape_) {
+                // if they are both contiguous then it's just the distance
+                // between the pointers
+                return a.ptr_ - b.ptr_;
+            } else if (!a.shape_ || !b.shape_) {
+                assert(false && "a must be reachable from b");
+                unreachable();
+            }
+
+            // Check that lhs and rhs are consistent with eachother. They still
+            // might have different starting locations, but with these they are
+            // at least comparible.
+            assert(std::ranges::equal(std::span(a.shape_->shape, a.shape_->ndim),
+                                      std::span(b.shape_->shape, b.shape_->ndim)));
+            assert(std::ranges::equal(std::span(a.shape_->strides, a.shape_->ndim),
+                                      std::span(b.shape_->strides, b.shape_->ndim)));
+
+            // If they point to the same pointer then they are 0 apart
+            if (a.ptr_ == b.ptr_) return 0;
+
+            // shape information about our iterators for easy access
+            const ShapeInfo& shapeinfo = *a.shape_;
+
+            if (!shapeinfo.ndim) return 0;  // 0dim arrays have no distance.
+
+            // Calculating the distance between two strided iterators is
+            // relatively complex. So we do it in a few steps.
+
+            // We'll be mutating them, so we start by making copies of each.
+            // We're trying to calculate the number of iterations from source
+            // to target.
+            ArrayIteratorImpl_ target = a;
+            ArrayIteratorImpl_ source = b;
+
+            // Zero out the location in each axis except the 0th and track those
+            // changes in the offset
+            difference_type offset = 0;
+            ssize_t incs_per_step = 1;  // for each step in the axis how many increment operations
+            {
+                ssize_t* target_loc = a.shape_->loc.get();
+                ssize_t* source_loc = b.shape_->loc.get();
+
+                for (ssize_t axis = shapeinfo.ndim - 1; axis > 0; --axis) {
+                    const ssize_t stride = shapeinfo.strides[axis] / itemsize;
+
+                    // resetting the source removes steps
+                    offset -= source_loc[axis - 1] * incs_per_step;
+                    source.ptr_ -= source_loc[axis - 1] * stride;
+                    source_loc[axis - 1] = 0;
+
+                    // resetting the target adds steps
+                    offset += target_loc[axis - 1] * incs_per_step;
+                    target.ptr_ -= target_loc[axis - 1] * stride;
+                    target_loc[axis - 1] = 0;
+
+                    incs_per_step *= shapeinfo.shape[axis];
+                }
+            }
+
+            // ok, now we're along the same "column" so we calculate how far
+            // target is from source
+            const ssize_t stride = shapeinfo.strides[0] / itemsize;
+            offset += (target.ptr_ - source.ptr_) / stride * incs_per_step;
+
+            return offset;
+        }
+
+        // Equal if they both point to the same underlying array location
+        friend bool operator==(const ArrayIteratorImpl_& lhs, const ArrayIteratorImpl_& rhs) {
+            return lhs.ptr_ == rhs.ptr_;
+        }
+
+        // Other comparison operators are in terms of the distance. If all of the strides are
+        // nonnegative or all of the strides are nonpositive then we could potentially check
+        // faster in some cases. But for now this is easier.
+        friend auto operator<=>(const ArrayIteratorImpl_& lhs, const ArrayIteratorImpl_& rhs) {
+            return 0 <=> rhs - lhs;
+        }
+
+     private:
+        // pointer to the underlying memory
+        value_type* ptr_ = nullptr;
+
+        struct MaskInfo {
+            MaskInfo() = delete;
+
+            MaskInfo(const value_type* mask_ptr, value_type* fill_ptr) noexcept
+                    : mask_ptr(mask_ptr), fill_ptr(fill_ptr) {}
+
+            const value_type*
+                    mask_ptr;      // ptr to the value indicating whether to use the fill or not
+            value_type* fill_ptr;  // the value to provide for masked entries, won't be iterated
+        };
+
+        // if this is a masked iterator, put information about the mask here
+        std::unique_ptr<MaskInfo> mask_ = nullptr;
+
+        // if this is a strided iterator, put information about the shape/strides here
+        struct ShapeInfo {
+            ShapeInfo() = delete;
+
+            ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
+                    : ndim(ndim),
+                      shape(shape),
+                      strides(strides),
+                      loc(std::make_unique<ssize_t[]>(std::max<ssize_t>(ndim - 1, 0))) {
+                for (ssize_t i = 0; i < ndim - 1; ++i) {
+                    loc[i] = 0;
+                }
+            }
+
+            ShapeInfo(const ShapeInfo& other) noexcept
+                    : ShapeInfo(other.ndim, other.shape, other.strides) {
+                if (ndim >= 1) std::copy(other.loc.get(), other.loc.get() + ndim - 1, loc.get());
+            }
+
+            ShapeInfo(ShapeInfo&& other) = default;
+
+            // Both the copy and move operator using the copy-and-swap idiom
+            ShapeInfo& operator=(ShapeInfo other) noexcept {
+                using std::swap;  // ADL, if it matters
+                std::swap(ndim, other.ndim);
+                std::swap(shape, other.shape);
+                std::swap(strides, other.strides);
+                std::swap(loc, other.loc);
+                return *this;
+            }
+
+            // Return the pointer offset (in bytes) relative to the current
+            // position in order to decrement the iterator once.
+            difference_type decrement1() {
+                difference_type offset = 0;
+
+                ssize_t dim = ndim - 1;
+                for (; dim >= 1; --dim) {
+                    offset -= strides[dim];
+
+                    if (--loc[dim - 1] >= 0) break;
+
+                    assert(loc[dim - 1] == -1);
+
+                    offset += strides[dim] * shape[dim];
+                    loc[dim - 1] = shape[dim] - 1;
+                }
+                if (dim == 0) {
+                    offset -= strides[dim];
+                }
+
+                return offset;
+            }
+
+            // Return the pointer offset (in bytes) relative to the current
+            // position in order to increment the iterator once.
+            difference_type increment1() {
+                difference_type offset = 0;
+
+                ssize_t dim = ndim - 1;
+                for (; dim >= 1; --dim) {
+                    offset += strides[dim];
+
+                    // we don't need to advance any other dimensions
+                    if (++loc[dim - 1] < shape[dim]) break;
+
+                    offset -= strides[dim] * shape[dim];  // zero out this dim
+                    loc[dim - 1] = 0;
+                }
+                if (dim == 0) {
+                    // For dim 0, we don't care if we're past the end of the shape.
+                    // This allows us to work for dynamic arrays as well.
+                    offset += strides[dim];
+                }
+
+                return offset;
+            }
+
+            // Return the pointer offset (in bytes) relative to the current
+            // position in order to increment the iterator n times.
+            // n can be negative.
+            difference_type increment(ssize_t n) {
+                // handle a few simple cases with faster implementations
+                if (n == 0) return 0;
+                if (n == +1) return increment1();
+                if (n == -1) return decrement1();
+
+                difference_type offset = 0;  // the number of bytes we need to move
+
+                // working from right-to-left, figure out how many steps in each
+                // axis. We handle axis 0 as a special case
+                {
+                    // The order of .quot and .rem is not defined by the standard
+                    // so we do some silliness to get the struct.
+                    decltype(std::div(ssize_t(), ssize_t())) qr;
+                    qr.quot = n;
+
+                    ssize_t axis = this->ndim - 1;
+                    for (; axis >= 1; --axis) {
+                        // if we're partway through the axis, we shift to
+                        // the beginning by adding the number of steps to the total
+                        // that we want to go, and updating the offset accordingly
+                        if (loc[axis - 1]) {
+                            assert(loc[axis - 1] > 0);  // should never be negative
+                            qr.quot += loc[axis - 1];
+                            offset -= loc[axis - 1] * strides[axis];
+                            // loc[axis - 1] = 0;  // overwritten later, so skip resetting the loc
+                        }
+
+                        // now, the number of steps might be more than our axis
+                        // can support, so we do a div
+                        qr = std::div(qr.quot, shape[axis]);
+
+                        // adjust so that the remainder is positive
+                        if (qr.rem < 0) {
+                            qr.quot -= 1;
+                            qr.rem += shape[axis];
+                        }
+
+                        // finally adjust our location and offset
+                        loc[axis - 1] = qr.rem;
+                        offset += qr.rem * strides[axis];
+                        // qr.rem = 0;  // overwritten later, so skip resetting the .rem
+
+                        // if there's nothing left to do then exit early
+                        if (qr.quot == 0) break;
+                    }
+                    if (axis == 0) {
+                        offset += qr.quot * strides[0];
+                    }
+                }
+
+                return offset;
+            }
+
+            ssize_t ndim;
+            const ssize_t* shape;
+            const ssize_t* strides;
+
+            // loc is of length max(ndim - 1, 0) because we don't track our location in the
+            // 0th dimension
+            std::unique_ptr<ssize_t[]> loc;
+        };
+
+        // shape_ == nullptr => the array is contiguous. Otherwise the stride information
+        // will be encoded in the `shape_`.
+        std::unique_ptr<ShapeInfo> shape_ = nullptr;
+    };
+
  public:
+    using iterator = ArrayIteratorImpl_<false>;
+    using const_iterator = ArrayIteratorImpl_<true>;
+
     class View {
      public:
+        using iterator = ArrayIteratorImpl_<false>;
+        using const_iterator = ArrayIteratorImpl_<true>;
+
         View(const Array* array_ptr, const State* state_ptr)
                 : array_ptr_(array_ptr), state_ptr_(state_ptr) {}
-        ConstArrayIterator begin() const { return array_ptr_->begin(*state_ptr_); }
-        ConstArrayIterator end() const { return array_ptr_->end(*state_ptr_); }
 
-        const double operator[](std::size_t n) const { return *(begin() + n); }
+        const_iterator begin() const { return array_ptr_->begin(*state_ptr_); }
+        const_iterator end() const { return array_ptr_->end(*state_ptr_); }
+
+        const double& operator[](ssize_t n) const { return *(begin() + n); }
 
         ssize_t size() const { return array_ptr_->size(*state_ptr_); }
 
@@ -600,10 +668,6 @@ class Array {
         const Array* array_ptr_;
         const State* state_ptr_;
     };
-
-    static_assert(std::ranges::range<View>);
-    static_assert(std::ranges::sized_range<View>);
-    static_assert(std::is_trivially_copyable<View>::value);
 
     // constant used to signal that the size is based on the state
     static constexpr ssize_t DYNAMIC_SIZE = -1;
@@ -650,13 +714,13 @@ class Array {
 
     // Interface methods ******************************************************
 
-    ConstArrayIterator begin(const State& state) const {
-        if (contiguous()) return ConstArrayIterator(buff(state));
-        return ConstArrayIterator(buff(state), ndim(), shape().data(), strides().data());
+    const_iterator begin(const State& state) const {
+        if (contiguous()) return const_iterator(buff(state));
+        return const_iterator(buff(state), ndim(), shape().data(), strides().data());
     }
-    ConstArrayIterator end(const State& state) const { return this->begin(state) + this->size(state); }
+    const_iterator end(const State& state) const { return this->begin(state) + this->size(state); }
 
-    View view(const State& state) const { return View(this, &state); }
+    const View view(const State& state) const { return View(this, &state); }
 
     // The number of doubles in the flattened array.
     // If the size is dependent on the state, should return DYNAMIC_SIZE.

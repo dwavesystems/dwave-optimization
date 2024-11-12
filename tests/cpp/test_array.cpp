@@ -15,11 +15,16 @@
 #include <sstream>
 
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/generators/catch_generators.hpp"
 #include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {
+
+static_assert(std::ranges::range<Array::View>);
+static_assert(std::ranges::sized_range<Array::View>);
+static_assert(std::is_trivially_copyable<Array::View>::value);
 
 TEST_CASE("Test SizeInfo") {
     CHECK(SizeInfo(0) == SizeInfo(0));
@@ -29,6 +34,91 @@ TEST_CASE("Test SizeInfo") {
 }
 
 TEST_CASE("ArrayIterator and ConstArrayIterator") {
+    using ArrayIterator = typename Array::iterator;
+    using ConstArrayIterator = typename Array::const_iterator;
+
+    static_assert(std::is_nothrow_copy_constructible<ArrayIterator>::value);
+    static_assert(std::is_nothrow_move_constructible<ArrayIterator>::value);
+    static_assert(std::is_nothrow_copy_assignable<ArrayIterator>::value);
+    static_assert(std::is_nothrow_move_assignable<ArrayIterator>::value);
+    static_assert(std::is_nothrow_copy_constructible<ConstArrayIterator>::value);
+    static_assert(std::is_nothrow_move_constructible<ConstArrayIterator>::value);
+    static_assert(std::is_nothrow_copy_assignable<ConstArrayIterator>::value);
+    static_assert(std::is_nothrow_move_assignable<ConstArrayIterator>::value);
+
+    static_assert(std::random_access_iterator<ArrayIterator>);
+    static_assert(std::random_access_iterator<ConstArrayIterator>);
+
+    GIVEN("A buffer encoding 2d array [[0, 1, 2], [3, 4, 5]]") {
+        auto values = std::array<double, 6>{0, 1, 2, 3, 4, 5};
+        auto shape = std::array<ssize_t, 2>{2, 3};
+        // auto strides = std::array<ssize_t, 2>{24, 8};
+
+        auto [strides, start] = GENERATE(
+            std::pair(std::array<ssize_t, 2>{24, 8}, 0),
+            std::pair(std::array<ssize_t, 2>{-24, 8}, 3));
+
+        auto n = GENERATE(0, 3, 4, 5);
+
+        AND_GIVEN("a = buffer.begin(), b = a + n") {
+            const ConstArrayIterator a = ConstArrayIterator(values.data() + start, shape, strides);
+            const ConstArrayIterator b = a + n;
+
+            // semantic requirements
+            THEN("a += n is equal to b") {
+                ConstArrayIterator c = a;
+                CHECK((c += n) == b);
+            }
+            THEN("(a + n) is equal to (a += n)") {
+                ConstArrayIterator c = a + n;
+                ConstArrayIterator d = a;
+                CHECK(c == (d += n));
+            }
+            THEN("(a + n) is equal to (n + a)") {
+                CHECK(a + n == n + a);
+            }
+            THEN("If (a + (n - 1)) is valid, then --b is equal to (a + (n - 1))") {
+                ConstArrayIterator c = b;
+                CHECK(--c == a + (n - 1));
+            }
+            THEN("(b += -n) and (b -= n) are both equal to a") {
+                ConstArrayIterator c = b;
+                auto d = b;
+                CHECK((c += -n) == a);
+                CHECK((d -= n) == a);
+            }
+            THEN("(b - n) is equal to (b -= n)") {
+                ConstArrayIterator c = b;
+                CHECK(b - n == (c -= n));
+            }
+            THEN("If b is dereferenceable, then a[n] is valid and is equal to *b") {
+                CHECK(a[n] == *b);
+            }
+            THEN("bool(a <= b) is true") {
+                CHECK(a <= b);
+            }
+        }
+    }
+
+    GIVEN("A buffer encoding 3d array [[[0, 1, 2], [3, 4, 5]], [[6, 7, 8], [9, 10, 11]]") {
+        auto values = std::array<double, 12>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+        auto shape = std::array<ssize_t, 3>{2, 2, 3};
+        auto strides = std::array<ssize_t, 3>{48, 24, 8};
+
+        auto it = ConstArrayIterator(values.data(), shape, strides);
+        auto end = it + values.size();
+
+        THEN("Various iterator arithmetic operations are all self-consistent") {
+            auto it2 = it;
+            CHECK(++(++(++(++it2))) == it + 4);
+            auto end2 = end;
+            CHECK(--(--(--(--end2))) == end - 4);
+            CHECK(((it + 1) + 3) == it + 4);
+            CHECK(((it - 1005) + 1009) == it + 4);
+            CHECK(((it + 1) + 13) == it + 14);
+        }
+    }
+
     GIVEN("A std::vector<double>{0, 1, 2, 3, 4, 5, 6, 7, 8}") {
         auto values = std::vector<double>{0, 1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -45,10 +135,6 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
                 CHECK(std::ranges::equal(values, std::vector{-5, 1, -5, 3, -5, 5, -5, 7, -5}));
             }
         }
-    }
-
-    GIVEN("A std::vector<double>{0, 1, 2, 3, 4, 5, 6, 7, 8}") {
-        auto values = std::vector<double>{0, 1, 2, 3, 4, 5, 6, 7, 8};
 
         WHEN("We make an ConstArrayIterator from values.data()") {
             auto it = ConstArrayIterator(values.data());
@@ -110,16 +196,8 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
             auto it = ConstArrayIterator(values.data(), 2, shape.data(), strides.data());
 
             THEN("We can calculate the distance between two pointers in the strided array") {
-                const auto end =
-                        ConstArrayIterator(values.data() + 4, 2, shape.data(), strides.data());
+                const auto end = it + 2;
                 CHECK(end - it == 2);
-            }
-
-            THEN("The distance between two iterators with different strides is asymmetric") {
-                const auto end = ConstArrayIterator(values.data() + 4);  // contiguous iterator
-
-                CHECK(end - it == 2);   // 2 strides steps
-                CHECK(it - end == -4);  // 4 contiguous steps.
             }
 
             THEN("We decrement an advanced iterator") {
