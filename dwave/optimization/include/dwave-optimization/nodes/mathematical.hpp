@@ -86,7 +86,7 @@ struct square_root {};
 
 template <>
 struct square_root<double> {
-    constexpr double operator()(const double& x) const { return std::sqrt(x); }
+    double operator()(const double& x) const { return std::sqrt(x); }
 };
 
 }  // namespace functional
