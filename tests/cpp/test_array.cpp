@@ -37,6 +37,8 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
     using ArrayIterator = typename Array::iterator;
     using ConstArrayIterator = typename Array::const_iterator;
 
+    static_assert(std::is_nothrow_constructible<ArrayIterator>::value);
+    static_assert(std::is_nothrow_constructible<ConstArrayIterator>::value);
     static_assert(std::is_nothrow_copy_constructible<ArrayIterator>::value);
     static_assert(std::is_nothrow_move_constructible<ArrayIterator>::value);
     static_assert(std::is_nothrow_copy_assignable<ArrayIterator>::value);
@@ -48,6 +50,19 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
 
     static_assert(std::random_access_iterator<ArrayIterator>);
     static_assert(std::random_access_iterator<ConstArrayIterator>);
+
+    // Both iterators are input iterators
+    static_assert(std::input_iterator<ArrayIterator>);
+    static_assert(std::input_iterator<ConstArrayIterator>);
+
+    // But only ArrayIterator is an output iterator.
+    static_assert(std::output_iterator<ArrayIterator, double>);
+    static_assert(!std::output_iterator<ConstArrayIterator, double>);
+
+    GIVEN("A default-constructed Array iterator") {
+        auto it = ArrayIterator();
+        CHECK(it.get() == nullptr);
+    }
 
     GIVEN("A buffer encoding 2d array [[0, 1, 2], [3, 4, 5]]") {
         auto values = std::array<double, 6>{0, 1, 2, 3, 4, 5};

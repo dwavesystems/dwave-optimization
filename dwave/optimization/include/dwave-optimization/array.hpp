@@ -253,8 +253,22 @@ struct Update {
 // values for size() and in the first element of shape().
 class Array {
  private:
-    // This is a generic iterator for arrays.
-    // It handles contiguous, strided, and masked arrays with one type.
+    // The implementation of an iterator over the Array.
+    //
+    // Arrays can be contiguous or strided, so an iterator for them must be
+    // too.
+    //
+    // For a contiguous array, the array iterator only needs to hold a pointer
+    // to the memory it is iterating over.
+    //
+    // For a strided array, the iterator also holds information about
+    // the strides and shape of the parent array, as well as its location within
+    // that array.
+    //
+    // For a masked array, the iterator also holds information about whether
+    // the current value should be masked, and what value to return if so.
+    //
+    // `IsConst` toggles whether the iterator is an output iterator or not.
     template <bool IsConst>
     class ArrayIteratorImpl_ {
      public:
@@ -263,45 +277,51 @@ class Array {
         using pointer = value_type*;
         using reference = value_type&;
 
-        static constexpr ssize_t itemsize = sizeof(value_type);
-
+        // Default constructor. Contiguous iterator pointing to nullptr.
         ArrayIteratorImpl_() = default;
 
+        // Copy constructor.
         ArrayIteratorImpl_(const ArrayIteratorImpl_& other) noexcept
                 : ptr_(other.ptr_),
                   mask_((other.mask_) ? std::make_unique<MaskInfo>(*other.mask_) : nullptr),
                   shape_((other.shape_) ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
 
+        // Move constructor.
         ArrayIteratorImpl_(ArrayIteratorImpl_&& other) = default;
 
+        // Destructor.
         ~ArrayIteratorImpl_() = default;
 
-        // Create a contiguous iterator pointing to ptr
+        // Construct a contiguous iterator pointing to ``ptr``.
         explicit ArrayIteratorImpl_(value_type* ptr) noexcept
                 : ptr_(ptr), mask_(nullptr), shape_(nullptr) {}
 
-        // Create a masked iterator with a fill value. Will return the value pointed at by *fill_ptr
-        // when *mask_ptr evaluates to true.
+        // Construct a masked iterator with a fill value.
+        // Will return the value pointed at by ``fill_ptr`` when ``*mask_ptr``
+        // evaluates to true.
+        // The iterator does not own the mask or the fill value. Therefore
+        // the mask/fill must outlive the iterator.
         ArrayIteratorImpl_(value_type* data_ptr, const value_type* mask_ptr,
                            value_type* fill_ptr) noexcept
                 : ptr_(data_ptr),
                   mask_(std::make_unique<MaskInfo>(mask_ptr, fill_ptr)),
                   shape_(nullptr) {}
 
-        // shape and strides must outlive the iterator!
+        // Construct a strided iterator.
+        // The iterator does not own the shape/strides, it only holds a pointer.
+        // Therefore shape/strides must outlive the iterator.
         ArrayIteratorImpl_(value_type* ptr, ssize_t ndim, const ssize_t* shape,
-                           const ssize_t* strides)
+                           const ssize_t* strides) noexcept
                 : ptr_(ptr),
                   mask_(nullptr),
-                  shape_((ndim >= 1) ? std::make_unique<ShapeInfo>(ndim, shape, strides)
-                                     : nullptr) {}
+                  shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
         ArrayIteratorImpl_(value_type* ptr, std::span<const ssize_t> shape,
                            std::span<const ssize_t> strides)
                 : ArrayIteratorImpl_(ptr, shape.size(), shape.data(), strides.data()) {
             assert(shape.size() == strides.size());
         }
 
-        // Both the copy and move operator using the copy-and-swap idiom
+        // Copy and move assignment operator.
         ArrayIteratorImpl_& operator=(ArrayIteratorImpl_ other) noexcept {
             using std::swap;  // ADL, if it matters
             std::swap(ptr_, other.ptr_);
@@ -310,19 +330,18 @@ class Array {
             return *this;
         }
 
-        value_type& operator*() const {
+        value_type& operator*() const noexcept {
             if (mask_ && *(mask_->mask_ptr)) {
                 return *(mask_->fill_ptr);
             }
             return *ptr_;
         }
-        value_type* operator->() const {
+        value_type* operator->() const noexcept {
             if (mask_ && *(mask_->mask_ptr)) {
                 return mask_->fill_ptr;
             }
             return ptr_;
         }
-
         value_type& operator[](ssize_t idx) const { return *(*this + idx); }
 
         ArrayIteratorImpl_& operator++() {
@@ -340,7 +359,6 @@ class Array {
             }
             return *this;
         }
-
         ArrayIteratorImpl_ operator++(int) {
             ArrayIteratorImpl_ tmp = *this;
             ++(*this);
@@ -362,7 +380,6 @@ class Array {
             }
             return *this;
         }
-
         ArrayIteratorImpl_ operator--(int) {
             ArrayIteratorImpl_ tmp = *this;
             --(*this);
@@ -405,9 +422,9 @@ class Array {
                 unreachable();
             }
 
-            // Check that lhs and rhs are consistent with eachother. They still
+            // Check that lhs and rhs are consistent with each other. They still
             // might have different starting locations, but with these they are
-            // at least comparible.
+            // at least comparable.
             assert(std::ranges::equal(std::span(a.shape_->shape, a.shape_->ndim),
                                       std::span(b.shape_->shape, b.shape_->ndim)));
             assert(std::ranges::equal(std::span(a.shape_->strides, a.shape_->ndim),
@@ -467,33 +484,51 @@ class Array {
         friend bool operator==(const ArrayIteratorImpl_& lhs, const ArrayIteratorImpl_& rhs) {
             return lhs.ptr_ == rhs.ptr_;
         }
+        friend bool operator!=(const ArrayIteratorImpl_& lhs, const ArrayIteratorImpl_& rhs) {
+            return lhs.ptr_ != rhs.ptr_;
+        }
 
         // Other comparison operators are in terms of the distance. If all of the strides are
-        // nonnegative or all of the strides are nonpositive then we could potentially check
+        // non-negative or all of the strides are non-positive then we could potentially check
         // faster in some cases. But for now this is easier.
         friend auto operator<=>(const ArrayIteratorImpl_& lhs, const ArrayIteratorImpl_& rhs) {
             return 0 <=> rhs - lhs;
         }
 
+        /// Return a pointer to the underlying memory location.
+        value_type* get() const noexcept { return ptr_; }
+
      private:
-        // pointer to the underlying memory
+        static constexpr difference_type itemsize = sizeof(value_type);
+
+        // All iterators hold a pointer to the underlying memory.
         value_type* ptr_ = nullptr;
 
+        // Masked iterators store information about the mask in the MaskInfo
+        // structure.
         struct MaskInfo {
             MaskInfo() = delete;
 
             MaskInfo(const value_type* mask_ptr, value_type* fill_ptr) noexcept
                     : mask_ptr(mask_ptr), fill_ptr(fill_ptr) {}
 
-            const value_type*
-                    mask_ptr;      // ptr to the value indicating whether to use the fill or not
-            value_type* fill_ptr;  // the value to provide for masked entries, won't be iterated
+            // dereferencing ``mask_ptr`` tells the iterator whether to substitute
+            // the fill value or not. Therefore this pointer is incremented along
+            // with ArrayIteratorImpl_::ptr_.
+            const value_type* mask_ptr;
+
+            // A pointer to the fill value that is substituted when ``!*mask_ptr``.
+            // This pointer is not incremented.
+            value_type* fill_ptr;
         };
 
-        // if this is a masked iterator, put information about the mask here
+        // Pointer to the MaskInfo. If nullptr then the iterator is not a masked
+        // iterator.
         std::unique_ptr<MaskInfo> mask_ = nullptr;
 
-        // if this is a strided iterator, put information about the shape/strides here
+        // Strided iterators store information about the shape and strides of
+        // the parent array, as well as their location within that array in
+        // the ShapeInfo structure.
         struct ShapeInfo {
             ShapeInfo() = delete;
 
@@ -507,14 +542,19 @@ class Array {
                 }
             }
 
+            // Copy constructor
             ShapeInfo(const ShapeInfo& other) noexcept
-                    : ShapeInfo(other.ndim, other.shape, other.strides) {
-                if (ndim >= 1) std::copy(other.loc.get(), other.loc.get() + ndim - 1, loc.get());
+                    : ndim(other.ndim),
+                      shape(other.shape),
+                      strides(other.strides),
+                      loc(std::make_unique<ssize_t[]>(std::max<ssize_t>(ndim - 1, 0))) {
+                if (ndim > 0) std::copy(other.loc.get(), other.loc.get() + ndim - 1, loc.get());
             }
 
+            // Move constructor.
             ShapeInfo(ShapeInfo&& other) = default;
 
-            // Both the copy and move operator using the copy-and-swap idiom
+            // Copy and move assignment operator.
             ShapeInfo& operator=(ShapeInfo other) noexcept {
                 using std::swap;  // ADL, if it matters
                 std::swap(ndim, other.ndim);
@@ -529,19 +569,19 @@ class Array {
             difference_type decrement1() {
                 difference_type offset = 0;
 
-                ssize_t dim = ndim - 1;
-                for (; dim >= 1; --dim) {
-                    offset -= strides[dim];
+                ssize_t axis = ndim - 1;
+                for (; axis >= 1; --axis) {
+                    offset -= strides[axis];
 
-                    if (--loc[dim - 1] >= 0) break;
+                    if (--loc[axis - 1] >= 0) break;
 
-                    assert(loc[dim - 1] == -1);
+                    assert(loc[axis - 1] == -1);
 
-                    offset += strides[dim] * shape[dim];
-                    loc[dim - 1] = shape[dim] - 1;
+                    offset += strides[axis] * shape[axis];
+                    loc[axis - 1] = shape[axis] - 1;
                 }
-                if (dim == 0) {
-                    offset -= strides[dim];
+                if (axis == 0) {
+                    offset -= strides[axis];
                 }
 
                 return offset;
@@ -585,10 +625,11 @@ class Array {
                 // working from right-to-left, figure out how many steps in each
                 // axis. We handle axis 0 as a special case
                 {
-                    // The order of .quot and .rem is not defined by the standard
-                    // so we do some silliness to get the struct.
-                    decltype(std::div(ssize_t(), ssize_t())) qr;
-                    qr.quot = n;
+                    // We'll be using std::div() over ssize_t, so we'll store our
+                    // current location in the struct returned by it.
+                    // Unfortunately std::div() is not templated, but overloaded,
+                    // so we use decltype instead.
+                    decltype(std::div(ssize_t(), ssize_t())) qr{ .quot = n, .rem = 0 };
 
                     ssize_t axis = this->ndim - 1;
                     for (; axis >= 1; --axis) {
@@ -628,17 +669,22 @@ class Array {
                 return offset;
             }
 
+            // Information about the shape/strides of the parent array. Note
+            // the pointers are non-owning!
             ssize_t ndim;
             const ssize_t* shape;
             const ssize_t* strides;
 
-            // loc is of length max(ndim - 1, 0) because we don't track our location in the
-            // 0th dimension
+            // The current location of the iterator within the parent array.
+            // Note that we don't care about out location in the 0th axis of the
+            // array so `loc.size() == max(ndim - 1, 0)`.
+            // E.g. for an array with shape (2, 3, 4), a loc of [2, 3] corresponds
+            // to the location array[?, 2, 3].
             std::unique_ptr<ssize_t[]> loc;
         };
 
-        // shape_ == nullptr => the array is contiguous. Otherwise the stride information
-        // will be encoded in the `shape_`.
+        // Pointer to the ShapeInfo. If nullptr then the iterator is not a
+        // strided iterator.
         std::unique_ptr<ShapeInfo> shape_ = nullptr;
     };
 
