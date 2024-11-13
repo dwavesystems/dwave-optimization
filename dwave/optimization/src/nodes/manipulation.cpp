@@ -61,8 +61,8 @@ std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ss
     }
 
     // Axis must be in range 0..ndim-1
-    // We can do this check on the first input array since
-    // we at this point know they all have the same shape
+    // We can do this check on the first input array since we at
+    // this point know they all have the same number of dimensions
     if (!(0 <= axis && axis < array_ptrs.front()->ndim())) {
         throw std::invalid_argument(
                 "axis " +
