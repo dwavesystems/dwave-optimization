@@ -25,7 +25,7 @@
 namespace dwave::optimization {
 
 TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logical<double>,
-                   functional::square<double>, std::negate<double>, std::logical_not<double>) {
+                   functional::square<double>, functional::square_root<double>, std::negate<double>, std::logical_not<double>) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -51,7 +51,9 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
             THEN("The output has the value and shape we expect") {
                 CHECK(p_ptr->size(state) == 1);
                 CHECK(p_ptr->shape(state).size() == 0);
-                CHECK(p_ptr->view(state)[0] == func(-5));
+                auto p = p_ptr->view(state)[0];
+                auto f = func(-5);
+                CHECK( ( (p == f) || (std::isnan(p) && std::isnan(f)) ) );
             }
         }
     }
@@ -136,8 +138,10 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
             THEN("The output has the value and shape we expect") {
                 CHECK(p_ptr->size(state) == 1);
                 CHECK(p_ptr->shape(state).size() == 0);
-                CHECK(p_ptr->view(state)[0] == func(-5));
-            }
+
+                auto p = p_ptr->view(state)[0];
+                auto f = func(-5);
+                CHECK( ( (p == f) || (std::isnan(p) && std::isnan(f)) ) );            }
 
             AND_WHEN("We change the integer's state and propagate") {
                 a_ptr->set_value(state, 0, 17);
@@ -159,7 +163,9 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
                     p_ptr->revert(state);
 
                     THEN("The value reverts to the previous") {
-                        CHECK(p_ptr->view(state)[0] == func(-5));
+                        auto p = p_ptr->view(state)[0];
+                        auto f = func(-5);
+                        CHECK( ( (p == f) || (std::isnan(p) && std::isnan(f)) ) );
                     }
                     THEN("The diffs are cleared") { CHECK(p_ptr->diff(state).size() == 0); }
                 }
@@ -186,8 +192,16 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
             THEN("The output has the value and shape we expect") {
                 CHECK(p_ptr->size(state) == 12);
                 CHECK(p_ptr->shape(state).size() == 3);
-                CHECK(p_ptr->view(state)[0] == func(-5));
-                CHECK(p_ptr->view(state)[4] == func(-1));
+                {
+                    auto p = p_ptr->view(state)[0];
+                    auto f = func(-5);
+                    CHECK( ( (p == f) || (std::isnan(p) && std::isnan(f)) ) );
+                }
+                {
+                    auto p = p_ptr->view(state)[4];
+                    auto f = func(-1);
+                    CHECK( ( (p == f) || (std::isnan(p) && std::isnan(f)) ) );
+                }
             }
 
             AND_WHEN("We change the integer's state and propagate") {
@@ -210,7 +224,9 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
                     p_ptr->revert(state);
 
                     THEN("The value reverts to the previous") {
-                        CHECK(p_ptr->view(state)[0] == func(-5));
+                        auto p = p_ptr->view(state)[0];
+                        auto f = func(-5);
+                        CHECK( ( (p == f) || (std::isnan(p) && std::isnan(f)) ) );
                     }
                     THEN("The diffs are cleared") { CHECK(p_ptr->diff(state).size() == 0); }
                 }
@@ -317,6 +333,20 @@ TEST_CASE("UnaryOpNode - SquareNode") {
             // we might consider capping this differently for integer types in the future
             CHECK(square_ptr->max() ==
                   static_cast<std::size_t>(2000000000) * static_cast<std::size_t>(2000000000));
+        }
+    }
+}
+
+TEST_CASE("UnaryOpNode - SquareRootNode") {
+    auto graph = Graph();
+    GIVEN("An integer with max domain") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
+        auto square_root_ptr = graph.emplace_node<SquareRootNode>(i_ptr);
+
+        THEN("The min/max are expected") {
+            CHECK(square_root_ptr->min() == 0);
+            // we might consider capping this differently for integer types in the future
+            CHECK(square_root_ptr->max() == std::sqrt(static_cast<std::size_t>(2000000000)));
         }
     }
 }

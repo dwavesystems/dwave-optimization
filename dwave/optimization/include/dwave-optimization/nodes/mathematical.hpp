@@ -58,27 +58,35 @@ struct min {
 template <class T>
 struct modulus {};
 
-template <>  
-struct modulus<double> {  
-    constexpr double operator()(const double& x, const double& y) const {  
-        // Copy numpy behavior and return 0 for `x % 0`  
-        if (y == 0) {  
-            return 0;  
-        }  
-        double result = std::fmod(x, y);  
-    
+template <>
+struct modulus<double> {
+    constexpr double operator()(const double& x, const double& y) const {
+        // Copy numpy behavior and return 0 for `x % 0`
+        if (y == 0) {
+            return 0;
+        }
+        double result = std::fmod(x, y);
+
         if ((std::signbit(x) != std::signbit(y)) && (result != 0)) {
-             // Make result consistent with numpy for different-sign arguments  
-            result += y;  
+             // Make result consistent with numpy for different-sign arguments
+            result += y;
         }
 
         return result;
-    }  
+    }
 };
 
 template <class T>
 struct square {
     constexpr T operator()(const T& x) const { return x * x; }
+};
+
+template <class T>
+struct square_root {};
+
+template <>
+struct square_root<double> {
+    constexpr double operator()(const double& x) const { return std::sqrt(x); }
 };
 
 }  // namespace functional
@@ -364,5 +372,6 @@ using LogicalNode = UnaryOpNode<functional::logical<double>>;
 using NegativeNode = UnaryOpNode<std::negate<double>>;
 using NotNode = UnaryOpNode<std::logical_not<double>>;
 using SquareNode = UnaryOpNode<functional::square<double>>;
+using SquareRootNode = UnaryOpNode<functional::square_root<double>>;
 
 }  // namespace dwave::optimization

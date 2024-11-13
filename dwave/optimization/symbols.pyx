@@ -85,6 +85,7 @@ from dwave.optimization.libcpp.nodes cimport (
     SizeNode as cppSizeNode,
     SubtractNode as cppSubtractNode,
     SquareNode as cppSquareNode,
+    SquareRootNode as cppSquareRootNode,
     SumNode as cppSumNode,
     WhereNode as cppWhereNode,
     XorNode as cppXorNode,
@@ -135,6 +136,7 @@ __all__ = [
     "SetVariable",
     "Size",
     "Square",
+    "SquareRoot",
     "Sum",
     "Where",
     "Xor",
@@ -1071,7 +1073,7 @@ cdef class DisjointBitSets(Symbol):
 
         The given state must be a partition of ``range(primary_set_size)``
         into :meth:`.num_disjoint_sets` partitions, encoded as a 2D
-        :code:`num_disjoint_sets` :math:`\times` :code:`primary_set_size` 
+        :code:`num_disjoint_sets` :math:`\times` :code:`primary_set_size`
         Boolean array.
 
         Args:
@@ -2869,6 +2871,42 @@ cdef class Square(ArraySymbol):
     cdef cppSquareNode* ptr
 
 _register(Square, typeid(cppSquareNode))
+
+
+cdef class SquareRoot(ArraySymbol):
+    """SquareRoots element-wise of a symbol.
+
+    Examples:
+        This example adds the square-roots of an integer decision
+        variable to a model.
+
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(10, lower_bound=-5, upper_bound=5)
+        >>> ii = i.sqrt()
+        >>> type(ii)
+        <class 'dwave.optimization.symbols.SquareRoot'>
+    """
+    def __init__(self, ArraySymbol x):
+        cdef Model model = x.model
+
+        self.ptr = model._graph.emplace_node[cppSquareRootNode](x.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppSquareRootNode* ptr = dynamic_cast_ptr[cppSquareRootNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a SquareRoot")
+
+        cdef SquareRoot x = SquareRoot.__new__(SquareRoot)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppSquareRootNode* ptr
+
+_register(SquareRoot, typeid(cppSquareRootNode))
 
 
 cdef class Subtract(ArraySymbol):

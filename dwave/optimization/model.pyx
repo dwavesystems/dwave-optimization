@@ -1454,7 +1454,7 @@ cdef class Symbol:
 
         See Also:
             :meth:`.shares_memory`: ``a.shares_memory(b)`` is equivalent to ``a.id() == b.id()``.
-            
+
             :meth:`.equals`: ``a.equals(b)`` will return ``True`` if ``a.id() == b.id()``. Though
             the inverse is not necessarily true.
 
@@ -1530,7 +1530,7 @@ cdef class Symbol:
 
     def maybe_equals(self, other):
         """Compare to another symbol.
-        
+
         This method exists because a complete equality test can be expensive.
 
         Args:
@@ -1668,9 +1668,9 @@ cdef class Symbol:
 
         The state size, set at construction of the symbol, accounts for the
         largest possible size for symbols.
-        
+
         The size of an instantiated state can be accessed with ``.state().size``
-        (for example, the size of a symbol ``num_routes`` is given by 
+        (for example, the size of a symbol ``num_routes`` is given by
         ``num_routes.state().size``).
 
         .. note::
@@ -1706,6 +1706,7 @@ cdef class Symbol:
         """
         index = self.node_ptr.topological_index()
         return index if index >= 0 else None
+
 
 def _split_indices(indices):
     """Given a set of indices, made up of slices, integers, and array symbols,
@@ -2032,6 +2033,14 @@ cdef class ArraySymbol(Symbol):
             return Size(self)
 
         return self.array_ptr.size()
+
+    def sqrt(self):
+        """Create a :class:`~dwave.optimization.symbols.SquareRoot` symbol.
+
+        The new symbol returns the sqrt of its elements.
+        """
+        from dwave.optimization.symbols import SquareRoot  # avoid circular import
+        return SquareRoot(self)
 
     def state(self, Py_ssize_t index = 0, *, bool copy = True):
         """Return the state of the symbol.

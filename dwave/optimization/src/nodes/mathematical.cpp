@@ -1692,6 +1692,10 @@ template <>
 bool UnaryOpNode<functional::square<double>>::integral() const {
     return array_ptr_->integral();
 }
+template <>
+bool UnaryOpNode<functional::square_root<double>>::integral() const {
+    return array_ptr_->integral();
+}
 template <class UnaryOp>
 bool UnaryOpNode<UnaryOp>::integral() const {
     using result_type = typename std::invoke_result<UnaryOp, double&>::type;
@@ -1734,6 +1738,10 @@ double UnaryOpNode<functional::square<double>>::max() const {
     }
     return max * max;
 }
+template <>
+double UnaryOpNode<functional::square_root<double>>::max() const {
+    return std::sqrt(array_ptr_->max());
+}
 template <class UnaryOp>
 double UnaryOpNode<UnaryOp>::max() const {
     using result_type = typename std::invoke_result<UnaryOp, double&>::type;
@@ -1775,6 +1783,10 @@ double UnaryOpNode<functional::square<double>>::min() const {
         return Array::max();
     }
     return min * min;
+}
+template <>
+double UnaryOpNode<functional::square_root<double>>::min() const {
+    return std::sqrt(array_ptr_->min());
 }
 template <class UnaryOp>
 double UnaryOpNode<UnaryOp>::min() const {
@@ -1832,6 +1844,7 @@ ssize_t UnaryOpNode<UnaryOp>::size_diff(const State& state) const {
 template class UnaryOpNode<functional::abs<double>>;
 template class UnaryOpNode<functional::logical<double>>;
 template class UnaryOpNode<functional::square<double>>;
+template class UnaryOpNode<functional::square_root<double>>;
 template class UnaryOpNode<std::negate<double>>;
 template class UnaryOpNode<std::logical_not<double>>;
 

@@ -126,7 +126,7 @@ class Minimum(ArraySymbol):
 
 class Modulus(ArraySymbol):
     ...
-    
+
 
 class Multiply(ArraySymbol):
     ...
@@ -189,6 +189,10 @@ class Size(ArraySymbol):
 
 
 class Square(ArraySymbol):
+    ...
+
+
+class SquareRoot(ArraySymbol):
     ...
 
 
