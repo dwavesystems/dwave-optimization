@@ -248,6 +248,9 @@ class utils:
         def op(self, x):
             pass
 
+        def num_symbols(self):
+            return -1
+
         def symbol_op(self, x):
             # if the op is different for symbols, allow the override
             return self.op(x)
@@ -265,7 +268,7 @@ class utils:
                     model = Model()
                     a = model.constant(scalar)
                     op_a = self.symbol_op(a)
-                    self.assertEqual(model.num_symbols(), 2)
+                    self.assertEqual(model.num_symbols(), self.num_symbols())
 
                     # Should be a scalar
                     self.assertEqual(op_a.shape(), ())
@@ -273,7 +276,7 @@ class utils:
 
                     model.lock()
                     model.states.resize(1)
-                    self.assertEqual(op_a.state(0), self.op(scalar))
+                    self.assertTrue(np.array_equal(op_a.state(0),self.op(scalar),True))
 
         def test_1d_input(self):
             model = Model()
@@ -292,6 +295,9 @@ class TestAbsolute(utils.UnaryOpTests):
     def op(self, x):
         return abs(x)
 
+    def num_symbols(self):
+        return 2
+
     def test_abs(self):
         from dwave.optimization.symbols import Absolute
 
@@ -299,7 +305,7 @@ class TestAbsolute(utils.UnaryOpTests):
         x = model.integer(5, lower_bound=-5, upper_bound=5)
         a = abs(x)
         self.assertIsInstance(a, Absolute)
-        self.assertEqual(model.num_symbols(), 2)
+        self.assertEqual(model.num_symbols(), self.num_symbols())
 
 
 class TestAdd(utils.BinaryOpTests):
@@ -1387,6 +1393,9 @@ class TestLogical(utils.UnaryOpTests):
     def symbol_op(self, x):
         return logical(x)
 
+    def num_symbols(self):
+        return 2
+
 
 class TestMax(utils.SymbolTests):
     def generate_symbols(self):
@@ -1748,6 +1757,9 @@ class TestNegate(utils.UnaryOpTests):
     def op(self, x):
         return -x
 
+    def num_symbols(self):
+        return 2
+
 
 class TestNot(utils.UnaryOpTests):
     def op(self, x):
@@ -1755,6 +1767,9 @@ class TestNot(utils.UnaryOpTests):
 
     def symbol_op(self, x):
         return logical_not(x)
+
+    def num_symbols(self):
+        return 2
 
 
 class TestOr(utils.BinaryOpTests):
@@ -2014,6 +2029,23 @@ class TestSquare(utils.UnaryOpTests):
     def op(self, x):
         return x ** 2
 
+    def num_symbols(self):
+        return 2
+
+
+class TestSquareRoot(utils.UnaryOpTests):
+    def op(self, x):
+        if isinstance(x, int) or isinstance(x, float):
+            if x >= 0:
+                return math.sqrt(x)
+            else:
+                return np.array(math.nan)
+
+        return x.sqrt()
+
+    def num_symbols(self):
+        return 2
+
 
 class TestSetVariable(utils.SymbolTests):
     def generate_symbols(self) -> collections.abc.Iterator[dwave.optimization.symbols.SetVariable]:
@@ -2251,6 +2283,7 @@ class TestWhere(utils.SymbolTests):
         with self.assertRaises(ValueError):
             # wrong shape
             dwave.optimization.where(model.binary(3), x, y)
+
 
 class TestXor(utils.BinaryOpTests):
     def generate_symbols(self):
