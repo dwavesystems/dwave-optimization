@@ -44,6 +44,7 @@ bool SizeInfo::operator==(const SizeInfo& other) const {
 
 SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
     if (max_depth <= 0) return *this;
+    if (this->array_ptr == nullptr) return *this;
 
     SizeInfo sizeinfo = this->array_ptr->sizeinfo();
 
