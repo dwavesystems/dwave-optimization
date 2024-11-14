@@ -435,22 +435,22 @@ def sqrt(x: ArraySymbol) -> SquareRoot:
     r"""Return an element-wise sqrt on the given symbol.
 
     Args:
-        x: Input array symbol.
+        x: Input symbol.
 
     Returns:
-        A symbol that propagates the element-wise sqrt of the given symbol.
+        A symbol that propagates the sqrt of the given symbol.
 
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import sqrt
         ...
         >>> model = Model()
-        >>> x = model.constant([0, 1, -2, .5])
-        >>> not_x = sqrt(x)
+        >>> x = model.constant(16)
+        >>> sqrt_x = sqrt(x)
         >>> model.states.resize(1)
         >>> with model.lock():
-        ...     print(not_x.state())
-        [1. 0. 0. 0.]
+        ...     print(sqrt_x.state())
+        4
 
     See Also:
         :class:`~dwave.optimization.symbols.SquareRoot`: equivalent symbol.

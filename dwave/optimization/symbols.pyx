@@ -2874,7 +2874,7 @@ _register(Square, typeid(cppSquareNode))
 
 
 cdef class SquareRoot(ArraySymbol):
-    """SquareRoots element-wise of a symbol.
+    """Takes the SquareRoot a symbol.
 
     Examples:
         This example adds the square-roots of an integer decision
@@ -2882,8 +2882,8 @@ cdef class SquareRoot(ArraySymbol):
 
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> i = model.integer(10, lower_bound=-5, upper_bound=5)
-        >>> ii = i.sqrt()
+        >>> i = model.constant(10)
+        >>> ii = sqrt(i)
         >>> type(ii)
         <class 'dwave.optimization.symbols.SquareRoot'>
     """
