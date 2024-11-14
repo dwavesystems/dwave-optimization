@@ -45,6 +45,7 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
  private:
     ssize_t axis_;
     std::vector<ArrayNode*> array_ptrs_;
+    std::vector<ssize_t> array_starts_;
 };
 
 class ReshapeNode : public ArrayOutputMixin<ArrayNode> {

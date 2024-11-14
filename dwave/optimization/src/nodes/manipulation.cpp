@@ -88,6 +88,15 @@ std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ss
 ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t axis)
         : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)), axis_(axis), array_ptrs_(array_ptrs.begin(), array_ptrs.end()) {
 
+    // Compute buffer start position for each input array
+    array_starts_.reserve(array_ptrs.size());
+    array_starts_.emplace_back(0);
+    for (ssize_t arr_i = 1, stop = array_ptrs.size(); arr_i < stop; ++arr_i) {
+        auto subshape = array_ptrs_[arr_i - 1]->shape().last(this->ndim() - axis_);
+        ssize_t prod = std::accumulate(subshape.begin(), subshape.end(), 1, std::multiplies<ssize_t>());
+        array_starts_.emplace_back(prod + array_starts_[arr_i - 1]);
+    }
+
     for (auto it = array_ptrs.begin(), stop = array_ptrs.end(); it != stop; it++) {
         this->add_predecessor((*it));
     }
@@ -108,42 +117,18 @@ void ConcatenateNode::initialize_state(State& state) const {
     assert(state[index] == nullptr && "already initialized state");
 
     std::vector<double> values;
-    values.reserve(size());
+    values.resize(size());
 
-    // Prefix is defined over dimensions 0..axis-1
-    std::vector<std::vector<ssize_t>> prefix_dims(axis_);
-    for (ssize_t dim = 0, stop = prefix_dims.size(); dim < stop; ++dim) {
-        for (ssize_t i = 0, stop = shape()[dim]; i < stop; ++i) {
-            prefix_dims[dim].push_back(i);
-        }
-    }
+    for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
+        // Create a view into our buffer with the same shape as
+        // our input array starting at the correct place
+        auto view_it = ArrayIterator(
+                            values.data() + array_starts_[arr_i],
+                            this->ndim(),
+                            array_ptrs_[arr_i]->shape().data(),
+                            this->strides().data());
 
-    // Suffix is defined over dimensions axis+1..ndim
-    std::vector<std::vector<ssize_t>> suffix_dims(ndim() - axis_ - 1);
-    for (ssize_t dim = 0, stop = suffix_dims.size(); dim < stop; ++dim) {
-        for (ssize_t i = 0, stop = shape()[axis_ + 1 + dim]; i < stop; ++i) {
-            suffix_dims[dim].push_back(i);
-        }
-    }
-
-    auto prefix_prod = cartesian_product(prefix_dims);
-    auto suffix_prod = cartesian_product(suffix_dims);
-
-    std::vector<ssize_t> indices;
-    for (auto prefix : prefix_prod) {
-        for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
-            for (ssize_t arr_axis_i = 0, stop = array_ptrs_[arr_i]->shape()[axis_]; arr_axis_i < stop; ++arr_axis_i) {
-                for (auto suffix : suffix_prod) {
-                    indices.insert(indices.begin(), prefix.begin(), prefix.end());
-                    indices.insert(indices.begin() + prefix_dims.size(), arr_axis_i);
-                    indices.insert(indices.begin() + prefix_dims.size() + 1, suffix.begin(), suffix.end());
-
-                    ssize_t idx = ravel_multi_index(array_ptrs_[arr_i]->strides(), indices);
-                    values.emplace_back(array_ptrs_[arr_i]->view(state)[idx]);
-                    indices.clear();
-                }
-            }
-        }
+        std::copy(array_ptrs_[arr_i]->begin(state), array_ptrs_[arr_i]->end(state), view_it);
     }
 
     state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
@@ -159,18 +144,20 @@ void ConcatenateNode::revert(State& state) const {
 
 void ConcatenateNode::propagate(State& state) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);
-    ssize_t offset = 0;
 
-    for (auto it = array_ptrs_.begin(), stop = array_ptrs_.end(); it != stop; ++it) {
-        if (std::distance(array_ptrs_.begin(), it) > 0) {
-            offset += (*std::prev(it))->shape()[axis_];
-        }
+    for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
+        auto view_it = ArrayIterator(
+                            ptr->buff() + array_starts_[arr_i],
+                            this->ndim(),
+                            array_ptrs_[arr_i]->shape().data(),
+                            this->strides().data());
 
-        for (auto diff : (*it)->diff(state)) {
-            auto indices = unravel_index((*it)->strides(), diff.index);
-            indices[axis_] += offset;
-            auto index = ravel_multi_index(this->strides(), indices);
-            ptr->set(index, diff.value);
+        for (auto diff : array_ptrs_[arr_i]->diff(state)) {
+            auto update_it = view_it + diff.index;
+            ssize_t buffer_index = &*update_it - ptr->buffer.data();
+            assert(*update_it == diff.old);
+            ptr->updates.emplace_back(buffer_index, *view_it, diff.value);
+            *update_it = diff.value;
         }
     }
 }
