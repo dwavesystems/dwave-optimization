@@ -1,0 +1,8 @@
+---
+features:
+  - Implement C++ ``BinaryOpNode::sizeinfo()`` overload.
+fixes:
+  - |
+    Fix serializing models with binary operations over dynamic predecessors.
+    Previously it was not possible to estimate the state size which caused
+    serialization to fail.

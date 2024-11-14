@@ -360,6 +360,30 @@ ssize_t BinaryOpNode<BinaryOp>::size_diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->size_diff();
 }
 
+template <class BinaryOp>
+SizeInfo BinaryOpNode<BinaryOp>::sizeinfo() const {
+    if (!dynamic()) return SizeInfo(size());
+
+    const Array* lhs_ptr = operands_[0];
+    const Array* rhs_ptr = operands_[1];
+
+    if (lhs_ptr->dynamic() && rhs_ptr->dynamic()) {
+        // not (yet) possible for both predecessors to be dynamic
+        assert(false && "not implemeted");
+        unreachable();
+    } else if (lhs_ptr->dynamic()) {
+        assert(rhs_ptr->size() == 1);
+        return SizeInfo(lhs_ptr);
+    } else if (rhs_ptr->dynamic()) {
+        assert(lhs_ptr->size() == 1);
+        return SizeInfo(rhs_ptr);
+    }
+
+    // not possible for us to be dynamic and none of our predecessors to be
+    assert(false && "not implemeted");
+    unreachable();
+}
+
 // Uncommented are the tested specializations
 template class BinaryOpNode<std::plus<double>>;
 template class BinaryOpNode<std::minus<double>>;
