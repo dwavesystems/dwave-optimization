@@ -1,0 +1,9 @@
+---
+features:
+  - Add ``const`` and non-``const`` versions of C++ array iterators.
+  - Make C++ array iterators random access iterators. Previously they were bidirectional iterators.
+upgrade:
+  - |
+    The ``dwave::optimization::ArrayIterator`` class has been moved. It can now
+    be found as a nested class in the ``Array``,
+    i.e. ``dwave::optimization::Array::const_iterator``.
