@@ -2881,6 +2881,7 @@ cdef class SquareRoot(ArraySymbol):
         variable to a model.
 
         >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import sqrt
         >>> model = Model()
         >>> i = model.constant(10)
         >>> ii = sqrt(i)
