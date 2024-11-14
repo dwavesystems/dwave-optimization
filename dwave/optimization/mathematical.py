@@ -30,6 +30,7 @@ from dwave.optimization.symbols import (
     NaryMultiply,
     Not,
     Or,
+    SquareRoot,
     Where,
     Xor,
 )
@@ -343,19 +344,19 @@ def minimum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
 
 def mod(x1: ArraySymbol, x2: ArraySymbol) -> Modulus:
     r"""Return an element-wise modulus of the given symbols.
-    
+
     Args:
         x1, x2: Input array symbol.
-        
+
     Returns:
         A symbol that is the element-wise modulus of the given symbols.
-        
+
     Examples:
         This example demonstrates the behavior of the modulus of two integer
         symbols :math:`i \mod{j}` with different combinations of positive and
         negative values. Equivalently, you can use the ``%`` operator
         (e.g., :code:`i % j`).
-        
+
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import mod
         ...
@@ -369,10 +370,10 @@ def mod(x1: ArraySymbol, x2: ArraySymbol) -> Modulus:
         ...     j.set_state(0, [3, 3, -3, -3])
         ...     print(k.state(0))
         [ 2.  1. -1. -2.]
-        
+
         This example demonstrates the modulus of a scalar float value and a
         binary symbol.
-        
+
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import mod
         ...
@@ -428,6 +429,33 @@ def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         [21. 10.]
     """
     raise RuntimeError("implementated by the op() decorator")
+
+
+def sqrt(x: ArraySymbol) -> SquareRoot:
+    r"""Return an element-wise sqrt on the given symbol.
+
+    Args:
+        x: Input array symbol.
+
+    Returns:
+        A symbol that propagates the element-wise sqrt of the given symbol.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import sqrt
+        ...
+        >>> model = Model()
+        >>> x = model.constant([0, 1, -2, .5])
+        >>> not_x = sqrt(x)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(not_x.state())
+        [1. 0. 0. 0.]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.SquareRoot`: equivalent symbol.
+    """
+    return SquareRoot(x)
 
 
 def where(condition: ArraySymbol, x: ArraySymbol, y: ArraySymbol) -> Where:

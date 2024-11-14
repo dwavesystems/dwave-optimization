@@ -24,6 +24,7 @@ import warnings
 import numpy as np
 
 import dwave.optimization
+from dwave.optimization.mathematical import sqrt
 import dwave.optimization.symbols
 from dwave.optimization import (
     Model,
@@ -2033,18 +2034,40 @@ class TestSquare(utils.UnaryOpTests):
         return 2
 
 
-class TestSquareRoot(utils.UnaryOpTests):
-    def op(self, x):
-        if isinstance(x, int) or isinstance(x, float):
-            if x >= 0:
-                return math.sqrt(x)
-            else:
-                return np.array(math.nan)
+class TestSquareRoot(utils.SymbolTests):
+    rng = np.random.default_rng(1)
 
-        return x.sqrt()
+    def generate_symbols(self):
+        model = Model()
+        A = model.constant(np.arange(5))
+        B = model.constant(np.arange(5, 10))
+        a = A.sum()
+        b = B.sum()
+        model.lock()
+        yield a
+        yield b
 
-    def num_symbols(self):
-        return 2
+    def test_simple_inputs(self):
+        model = Model()
+        empty = sqrt(model.constant(0))
+        model.lock()
+        model.states.resize(1)
+
+        self.assertEqual(empty.state(), np.sqrt(0))  # confirm consistency with NumPy
+
+        simple_inputs = self.rng.random(size=(100)) * 1000000
+        for si in simple_inputs:
+            model = Model()
+            sqrt_node = sqrt(model.constant(si))
+            model.lock()
+            model.states.resize(1)
+
+            self.assertEqual(sqrt_node.state(), np.sqrt(si))  # confirm consistency with NumPy
+
+    def test_negative_inputs(self):
+        model = Model()
+        neg_one = model.constant(-1)
+        self.assertRaises(ValueError, sqrt, neg_one)
 
 
 class TestSetVariable(utils.SymbolTests):

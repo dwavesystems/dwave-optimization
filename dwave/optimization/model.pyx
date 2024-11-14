@@ -2034,14 +2034,6 @@ cdef class ArraySymbol(Symbol):
 
         return self.array_ptr.size()
 
-    def sqrt(self):
-        """Create a :class:`~dwave.optimization.symbols.SquareRoot` symbol.
-
-        The new symbol returns the sqrt of its elements.
-        """
-        from dwave.optimization.symbols import SquareRoot  # avoid circular import
-        return SquareRoot(self)
-
     def state(self, Py_ssize_t index = 0, *, bool copy = True):
         """Return the state of the symbol.
 

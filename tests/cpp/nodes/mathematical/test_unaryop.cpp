@@ -25,14 +25,13 @@
 namespace dwave::optimization {
 
 TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logical<double>,
-                   functional::square<double>, functional::square_root<double>, std::negate<double>, std::logical_not<double>) {
+                   functional::square<double>, std::negate<double>, std::logical_not<double>) {
     auto graph = Graph();
 
     auto func = TestType();
 
     GIVEN("A constant scalar input") {
         auto a_ptr = graph.emplace_node<ConstantNode>(-5);
-
         auto p_ptr = graph.emplace_node<UnaryOpNode<TestType>>(a_ptr);
 
         THEN("The shape is also a scalar") {
@@ -348,6 +347,7 @@ TEST_CASE("UnaryOpNode - SquareRootNode") {
             // we might consider capping this differently for integer types in the future
             CHECK(square_root_ptr->max() == std::sqrt(static_cast<std::size_t>(2000000000)));
         }
+        THEN("sqrt(i) is integral") { CHECK_FALSE(square_root_ptr->integral()); }
     }
 }
 

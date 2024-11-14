@@ -14,7 +14,9 @@
 
 #include "dwave-optimization/nodes/mathematical.hpp"
 
+#include <span>
 #include <ranges>
+#include <exception>
 
 #include "_state.hpp"
 #include "dwave-optimization/utils.hpp"
@@ -1645,6 +1647,11 @@ template class ReduceNode<std::plus<double>>;
 template <class UnaryOp>
 UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
         : ArrayOutputMixin(node_ptr->shape()), array_ptr_(node_ptr) {
+    if constexpr (std::is_same<UnaryOp, functional::square_root<double>>::value) {
+        if (node_ptr->min() < 0) {
+            throw std::invalid_argument("SquareRoot requires its input to be a non-negative number");
+        }
+    }
     add_predecessor(node_ptr);
 }
 
@@ -1694,7 +1701,7 @@ bool UnaryOpNode<functional::square<double>>::integral() const {
 }
 template <>
 bool UnaryOpNode<functional::square_root<double>>::integral() const {
-    return array_ptr_->integral();
+    return false;
 }
 template <class UnaryOp>
 bool UnaryOpNode<UnaryOp>::integral() const {
@@ -1786,6 +1793,7 @@ double UnaryOpNode<functional::square<double>>::min() const {
 }
 template <>
 double UnaryOpNode<functional::square_root<double>>::min() const {
+    assert(array_ptr_->min() >= 0);
     return std::sqrt(array_ptr_->min());
 }
 template <class UnaryOp>
