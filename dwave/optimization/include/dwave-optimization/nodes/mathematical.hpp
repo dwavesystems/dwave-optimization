@@ -103,6 +103,8 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
 
     ssize_t size_diff(const State& state) const override;
 
+    SizeInfo sizeinfo() const override;
+
     void commit(State& state) const override;
     void revert(State& state) const override;
     void initialize_state(State& state) const override;

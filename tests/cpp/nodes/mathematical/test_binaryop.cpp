@@ -290,6 +290,10 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
         THEN("We have the shape we expect") {
             CHECK(std::ranges::equal(le_ptr->shape(), std::vector{-1}));
             CHECK(std::ranges::equal(ge_ptr->shape(), std::vector{-1}));
+
+            // derives its size from the dynamic node
+            CHECK(le_ptr->sizeinfo() == SizeInfo(y_ptr));
+            CHECK(ge_ptr->sizeinfo() == SizeInfo(y_ptr));
         }
 
         // let's also toss an ArrayValidationNode on there to do most of the
