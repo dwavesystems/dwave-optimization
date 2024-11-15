@@ -4,7 +4,7 @@
 Symbols
 =======
 
-Symbols are a model's decision variables, intermediate variables, constants, 
+Symbols are a model's decision variables, intermediate variables, constants,
 and mathematical operations.
 
 See :ref:`Symbols <intro_optimization_symbols>` for an introduction to
@@ -47,6 +47,7 @@ are inherited by the :ref:`model symbols <symbols_model_symbols>`.
 
     ~ArraySymbol.all
     ~ArraySymbol.any
+    ~ArraySymbol.concatenate
     ~ArraySymbol.has_state
     ~ArraySymbol.max
     ~ArraySymbol.maybe_equals
