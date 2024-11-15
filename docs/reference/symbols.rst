@@ -4,7 +4,7 @@
 Symbols
 =======
 
-Symbols are a model's decision variables, intermediate variables, constants,
+Symbols are a model's decision variables, intermediate variables, constants, 
 and mathematical operations.
 
 See :ref:`Symbols <intro_optimization_symbols>` for an introduction to
