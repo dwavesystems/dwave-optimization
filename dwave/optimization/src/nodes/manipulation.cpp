@@ -97,7 +97,7 @@ ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t
         array_starts_.emplace_back(prod + array_starts_[arr_i - 1]);
     }
 
-    for (auto it = array_ptrs.begin(), stop = array_ptrs.end(); it != stop; it++) {
+    for (auto it = array_ptrs.begin(), stop = array_ptrs.end(); it != stop; ++it) {
         this->add_predecessor((*it));
     }
 }
