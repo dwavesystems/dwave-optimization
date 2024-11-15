@@ -778,6 +778,40 @@ class TestConcatenate(utils.SymbolTests):
         model.lock()
         yield c
 
+    def test_errors(self):
+        model = Model()
+        with self.subTest("same number of dimensions"):
+            A = model.constant(np.arange(6)).reshape((1,2,3))
+            B = model.constant(np.arange(24)).reshape((1,2,3,4))
+            with self.assertRaisesRegex(
+                ValueError, (r"^all the input arrays must have the same "
+                             r"number of dimensions, but the array at index 0 "
+                             r"has 3 dimension\(s\) and the array at index 1 "
+                             r"has 4 dimension\(s\)")
+            ):
+                dwave.optimization.symbols.Concatenate((A,B))
+
+        with self.subTest("array shapes are the same"):
+            A = model.constant(np.arange(6)).reshape((1,2,3))
+            B = model.constant(np.arange(6)).reshape((3,2,1))
+            axis = 1
+            with self.assertRaisesRegex(
+                ValueError, (r"^all the input array dimensions except for the "
+                             r"concatenation axis must match exactly, but "
+                             r"along dimension 0, the array at index 0 has "
+                             r"size 1 and the array at index 1 has size 3")
+            ):
+                dwave.optimization.symbols.Concatenate((A,B), axis)
+
+        with self.subTest("axis out of bounds"):
+            A = model.constant(np.arange(6)).reshape((1,2,3))
+            B = model.constant(np.arange(6)).reshape((1,2,3))
+            axis = 3
+            with self.assertRaisesRegex(
+                ValueError, r"^axis 3 is out of bounds for array of dimension 3"
+            ):
+                dwave.optimization.symbols.Concatenate((A,B), axis)
+
 
 class TestConstant(utils.SymbolTests):
     def generate_symbols(self):
