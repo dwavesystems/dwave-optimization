@@ -321,4 +321,32 @@ TEST_CASE("UnaryOpNode - SquareNode") {
     }
 }
 
+TEST_CASE("UnaryOpNode - SquareRootNode") {
+    auto graph = Graph();
+    GIVEN("An integer with max domain") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
+        auto square_root_ptr = graph.emplace_node<SquareRootNode>(i_ptr);
+
+        THEN("The min/max are expected") {
+            CHECK(square_root_ptr->min() == 0);
+            // we might consider capping this differently for integer types in the future
+            CHECK(square_root_ptr->max() == std::sqrt(static_cast<std::size_t>(2000000000)));
+        }
+        THEN("sqrt(i) is not integral") { CHECK_FALSE(square_root_ptr->integral()); }
+    }
+    GIVEN("An arbitrary number") {
+        double c = 10.0;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        auto square_root_ptr = graph.emplace_node<SquareRootNode>(c_ptr);
+        auto state = graph.initialize_state();
+        CHECK(square_root_ptr->min() == std::sqrt(c));
+        CHECK(square_root_ptr->max() == std::sqrt(c));
+    }
+    GIVEN("A negative number") {
+        double c = -10.0;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        CHECK_THROWS(graph.emplace_node<SquareRootNode>(c_ptr));
+    }
+}
+
 }  // namespace dwave::optimization

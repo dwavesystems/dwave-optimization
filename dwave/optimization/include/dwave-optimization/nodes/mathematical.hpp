@@ -81,6 +81,14 @@ struct square {
     constexpr T operator()(const T& x) const { return x * x; }
 };
 
+template <class T>
+struct square_root {};
+
+template <>
+struct square_root<double> {
+    double operator()(const double& x) const { return std::sqrt(x); }
+};
+
 }  // namespace functional
 
 template <class BinaryOp>
@@ -366,5 +374,6 @@ using LogicalNode = UnaryOpNode<functional::logical<double>>;
 using NegativeNode = UnaryOpNode<std::negate<double>>;
 using NotNode = UnaryOpNode<std::logical_not<double>>;
 using SquareNode = UnaryOpNode<functional::square<double>>;
+using SquareRootNode = UnaryOpNode<functional::square_root<double>>;
 
 }  // namespace dwave::optimization
