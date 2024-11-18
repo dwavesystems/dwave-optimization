@@ -32,9 +32,9 @@ from dwave.optimization import (
     logical_or,
     logical_not,
     logical_xor,
-    mod
+    mod,
+    sqrt,
 )
-from dwave.optimization.mathematical import sqrt
 
 
 class utils:
