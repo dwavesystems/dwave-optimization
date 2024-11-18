@@ -24,6 +24,7 @@
 
 namespace dwave::optimization {
 
+// NOTE: square_root should also be included but the templated tests need to be updated first.
 TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logical<double>,
                    functional::square<double>, std::negate<double>, std::logical_not<double>) {
     auto graph = Graph();
@@ -326,6 +327,7 @@ TEST_CASE("UnaryOpNode - SquareRootNode") {
     GIVEN("An integer with max domain") {
         auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
         auto square_root_ptr = graph.emplace_node<SquareRootNode>(i_ptr);
+        graph.emplace_node<ArrayValidationNode>(square_root_ptr);
 
         THEN("The min/max are expected") {
             CHECK(square_root_ptr->min() == 0);
@@ -347,6 +349,7 @@ TEST_CASE("UnaryOpNode - SquareRootNode") {
         auto c_ptr = graph.emplace_node<ConstantNode>(c);
         CHECK_THROWS(graph.emplace_node<SquareRootNode>(c_ptr));
     }
+    
 }
 
 }  // namespace dwave::optimization
