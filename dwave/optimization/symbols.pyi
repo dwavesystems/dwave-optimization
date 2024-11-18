@@ -86,6 +86,10 @@ class DisjointList(ArraySymbol):
     ...
 
 
+class Divide(ArraySymbol):
+    ...
+
+
 class Equal(ArraySymbol):
     ...
 

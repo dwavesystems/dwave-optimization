@@ -19,6 +19,7 @@ from dwave.optimization.model import ArraySymbol
 from dwave.optimization.symbols import (
     Add,
     And,
+    Divide,
     Logical,
     Maximum,
     Minimum,
@@ -37,6 +38,7 @@ from dwave.optimization.symbols import (
 
 __all__ = [
     "add",
+    "divide",
     "logical",
     "logical_and",
     "logical_not",
@@ -103,6 +105,41 @@ def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add,
         [10. 10.]
     """
     raise RuntimeError("implementated by the op() decorator")
+
+
+def divide(x1: ArraySymbol, x2: ArraySymbol) -> Divide:
+    r"""Return an element-wise division on the given symbols.
+
+    In the underlying directed acyclic expression graph, produces a
+    ``Divide`` node if two array nodes are provided.
+
+    Args:
+        x1, x2: Input array symbol.
+
+    Returns:
+        A symbol that divides the given symbols element-wise.
+        Dividing two symbols returns a
+        :class:`~dwave.optimization.symbols.Divide`.
+
+    Examples:
+        This example divides two integer symbols of size :math:`1 \times 2`.
+        Equivalently, you can use the ``/`` operator (e.g., :code:`i /j`).
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import divide
+        ...
+        >>> model = Model()
+        >>> i = model.integer(2)
+        >>> j = model.integer(2)
+        >>> k = divide(i, j)   # alternatively: k = i / j
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [21, 10])
+        ...     j.set_state(0, [7, 2])
+        ...     print(k.state(0))
+        [3. 5.]
+    """
+    return Divide(x1, x2)
 
 
 def logical(x: ArraySymbol) -> Logical:

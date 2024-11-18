@@ -123,7 +123,8 @@ bool BinaryOpNode<BinaryOp>::integral() const {
     auto lhs_ptr = operands_[0];
     auto rhs_ptr = operands_[1];
 
-    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
+    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value ||
+                  std::is_same<BinaryOp, functional::max<double>>::value ||
                   std::is_same<BinaryOp, functional::min<double>>::value ||
                   std::is_same<BinaryOp, std::minus<double>>::value ||
                   std::is_same<BinaryOp, functional::modulus<double>>::value ||
@@ -151,6 +152,16 @@ double BinaryOpNode<BinaryOp>::max() const {
 
     // these can result in inf. If we update propagation/initialization to handle
     // that case we should update these as well.
+    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value) {
+        double lhs_low = lhs_ptr->min();
+        double lhs_high = lhs_ptr->max();
+        double rhs_low = rhs_ptr->min();
+        double rhs_high = rhs_ptr->max();
+
+        // TODO: How do we want to handle cases where a denominator is zero?
+        return std::max(
+                {lhs_low / rhs_low, lhs_low / rhs_high, lhs_high / rhs_low, lhs_high / rhs_high});
+    }
     if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
                   std::is_same<BinaryOp, functional::min<double>>::value ||
                   std::is_same<BinaryOp, std::plus<double>>::value) {
@@ -194,6 +205,16 @@ double BinaryOpNode<BinaryOp>::min() const {
 
     // these can result in inf. If we update propagation/initialization to handle
     // that case we should update these as well.
+    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value) {
+        double lhs_low = lhs_ptr->min();
+        double lhs_high = lhs_ptr->max();
+        double rhs_low = rhs_ptr->min();
+        double rhs_high = rhs_ptr->max();
+
+        // TODO: How do we want to handle cases where a denominator is zero?
+        return std::min(
+                {lhs_low / rhs_low, lhs_low / rhs_high, lhs_high / rhs_low, lhs_high / rhs_high});
+    }
     if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
                   std::is_same<BinaryOp, functional::min<double>>::value ||
                   std::is_same<BinaryOp, std::plus<double>>::value) {
@@ -388,7 +409,7 @@ SizeInfo BinaryOpNode<BinaryOp>::sizeinfo() const {
 template class BinaryOpNode<std::plus<double>>;
 template class BinaryOpNode<std::minus<double>>;
 template class BinaryOpNode<std::multiplies<double>>;
-// template class BinaryOpNode<std::divides<double>>;
+template class BinaryOpNode<std::divides<double>>;
 template class BinaryOpNode<functional::modulus<double>>;
 template class BinaryOpNode<std::equal_to<double>>;
 // template class BinaryOpNode<std::not_equal_to<double>>;
@@ -421,6 +442,12 @@ struct InverseOp<std::plus<double>> {
     double op(const double& x, const double& y) { return x - y; }
 };
 
+template <>
+struct InverseOp<std::divides<double>> {
+    static bool constexpr exists() { return true; }
+
+    double op(const double& x, const double& y) { return x * y; }
+};
 template <>
 struct InverseOp<std::multiplies<double>> {
     static bool constexpr exists() { return true; }

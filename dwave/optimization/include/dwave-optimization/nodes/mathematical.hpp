@@ -133,6 +133,7 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
 // https://numpy.org/doc/stable/reference/routines.math.html
 using AddNode = BinaryOpNode<std::plus<double>>;
 using AndNode = BinaryOpNode<std::logical_and<double>>;
+using DivideNode = BinaryOpNode<std::divides<double>>;
 using EqualNode = BinaryOpNode<std::equal_to<double>>;
 using LessEqualNode = BinaryOpNode<std::less_equal<double>>;
 using MultiplyNode = BinaryOpNode<std::multiplies<double>>;
