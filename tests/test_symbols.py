@@ -32,7 +32,8 @@ from dwave.optimization import (
     logical_or,
     logical_not,
     logical_xor,
-    mod
+    mod,
+    sqrt,
 )
 
 
@@ -2013,6 +2014,39 @@ class TestReshape(utils.SymbolTests):
 class TestSquare(utils.UnaryOpTests):
     def op(self, x):
         return x ** 2
+
+
+class TestSquareRoot(utils.SymbolTests):
+    rng = np.random.default_rng(1)
+
+    def generate_symbols(self):
+        model = Model()
+        a = model.constant(125)
+        op_a = sqrt(a)
+        model.lock()
+        yield op_a
+
+    def test_simple_inputs(self):
+        model = Model()
+        empty = sqrt(model.constant(0))
+        model.lock()
+        model.states.resize(1)
+
+        self.assertEqual(empty.state(), np.sqrt(0))  # confirm consistency with NumPy
+
+        simple_inputs = self.rng.random(size=(100)) * 1000000
+        for si in simple_inputs:
+            model = Model()
+            sqrt_node = sqrt(model.constant(si))
+            model.lock()
+            model.states.resize(1)
+
+            self.assertEqual(sqrt_node.state(), np.sqrt(si))  # confirm consistency with NumPy
+
+    def test_negative_inputs(self):
+        model = Model()
+        neg_one = model.constant(-1)
+        self.assertRaises(ValueError, sqrt, neg_one)
 
 
 class TestSetVariable(utils.SymbolTests):

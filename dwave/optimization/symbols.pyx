@@ -85,6 +85,7 @@ from dwave.optimization.libcpp.nodes cimport (
     SizeNode as cppSizeNode,
     SubtractNode as cppSubtractNode,
     SquareNode as cppSquareNode,
+    SquareRootNode as cppSquareRootNode,
     SumNode as cppSumNode,
     WhereNode as cppWhereNode,
     XorNode as cppXorNode,
@@ -135,6 +136,7 @@ __all__ = [
     "SetVariable",
     "Size",
     "Square",
+    "SquareRoot",
     "Sum",
     "Where",
     "Xor",
@@ -2869,6 +2871,41 @@ cdef class Square(ArraySymbol):
     cdef cppSquareNode* ptr
 
 _register(Square, typeid(cppSquareNode))
+
+
+cdef class SquareRoot(ArraySymbol):
+    """Takes the SquareRoot a symbol.
+    Examples:
+        This example adds the square-roots of an integer decision
+        variable to a model.
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import sqrt
+        >>> model = Model()
+        >>> i = model.constant(10)
+        >>> ii = sqrt(i)
+        >>> type(ii)
+        <class 'dwave.optimization.symbols.SquareRoot'>
+    """
+    def __init__(self, ArraySymbol x):
+        cdef Model model = x.model
+
+        self.ptr = model._graph.emplace_node[cppSquareRootNode](x.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppSquareRootNode* ptr = dynamic_cast_ptr[cppSquareRootNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a SquareRoot")
+
+        cdef SquareRoot x = SquareRoot.__new__(SquareRoot)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppSquareRootNode* ptr
+
+_register(SquareRoot, typeid(cppSquareRootNode))
 
 
 cdef class Subtract(ArraySymbol):

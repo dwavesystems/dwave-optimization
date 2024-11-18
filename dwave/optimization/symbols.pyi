@@ -192,6 +192,10 @@ class Square(ArraySymbol):
     ...
 
 
+class SquareRoot(ArraySymbol):
+    ...
+
+
 class Subtract(ArraySymbol):
     ...
 
