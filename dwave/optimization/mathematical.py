@@ -47,6 +47,7 @@ __all__ = [
     "minimum",
     "mod",
     "multiply",
+    "sqrt",
     "where",
 ]
 
