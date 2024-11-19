@@ -47,7 +47,6 @@ are inherited by the :ref:`model symbols <symbols_model_symbols>`.
 
     ~ArraySymbol.all
     ~ArraySymbol.any
-    ~ArraySymbol.concatenate
     ~ArraySymbol.has_state
     ~ArraySymbol.max
     ~ArraySymbol.maybe_equals

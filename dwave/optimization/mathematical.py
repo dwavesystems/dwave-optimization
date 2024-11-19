@@ -19,6 +19,7 @@ from dwave.optimization.model import ArraySymbol
 from dwave.optimization.symbols import (
     Add,
     And,
+    Concatenate,
     Logical,
     Maximum,
     Minimum,
@@ -38,6 +39,7 @@ from dwave.optimization.symbols import (
 
 __all__ = [
     "add",
+    "concatenate",
     "logical",
     "logical_and",
     "logical_not",
@@ -105,6 +107,40 @@ def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add,
         [10. 10.]
     """
     raise RuntimeError("implementated by the op() decorator")
+
+
+def concatenate(xi: tuple[ArraySymbol], axis : int = 0):
+    r"""Return the concatenation of one or more symbols on the given axis.
+
+    Args:
+        xi: Tuple of one or more input array symbols to concatenate.
+        axis: The concatenation axis.
+
+    Returns:
+        A symbol that is the concatenation of the given symbols along the specified axis.
+
+    Examples:
+        This example concatenates two constant symbols along the first axis.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import concatenate
+        ...
+        >>> model = Model()
+        >>> a = model.constant([[0,1], [2,3]])
+        >>> b = model.constant([[4,5]])
+        >>> a_b = concatenate((a,b), axis=0)
+        >>> a_b.shape()
+        (3,2)
+        >>> type(a_b)
+        <class 'dwave.optimization.symbols.Concatenate'>
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     print(a_b.state(0))
+        [[0. 1.]
+        [2. 3.]
+        [4. 5.]]
+    """
+    return xi[0] if len(xi) == 1 else Concatenate(xi, axis)
 
 
 def logical(x: ArraySymbol) -> Logical:
