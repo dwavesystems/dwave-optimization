@@ -85,6 +85,14 @@ std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ss
     return shape;
 }
 
+double const* ConcatenateNode::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+void ConcatenateNode::commit(State& state) const {
+    data_ptr<ArrayNodeStateData>(state)->commit();
+}
+
 ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t axis)
         : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)), axis_(axis), array_ptrs_(array_ptrs.begin(), array_ptrs.end()) {
 
@@ -100,10 +108,6 @@ ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t
     for (auto it = array_ptrs.begin(), stop = array_ptrs.end(); it != stop; ++it) {
         this->add_predecessor((*it));
     }
-}
-
-double const* ConcatenateNode::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
 }
 
 std::span<const Update> ConcatenateNode::diff(const State& state) const {
@@ -134,14 +138,6 @@ void ConcatenateNode::initialize_state(State& state) const {
     state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
 }
 
-void ConcatenateNode::commit(State& state) const {
-    data_ptr<ArrayNodeStateData>(state)->commit();
-}
-
-void ConcatenateNode::revert(State& state) const {
-    data_ptr<ArrayNodeStateData>(state)->revert();
-}
-
 void ConcatenateNode::propagate(State& state) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);
 
@@ -160,6 +156,10 @@ void ConcatenateNode::propagate(State& state) const {
             *update_it = diff.value;
         }
     }
+}
+
+void ConcatenateNode::revert(State& state) const {
+    data_ptr<ArrayNodeStateData>(state)->revert();
 }
 
 ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::span<const ssize_t> shape)

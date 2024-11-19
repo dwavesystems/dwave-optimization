@@ -33,12 +33,11 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
                : ConcatenateNode(std::span<ArrayNode*>(array_ptrs), axis) {}
 
     double const* buff(const State& state) const override;
-    std::span<const Update> diff(const State& state) const override;
-
-    void initialize_state(State& state) const override;
     void commit(State& state) const override;
-    void revert(State& state) const override;
+    std::span<const Update> diff(const State& state) const override;
+    void initialize_state(State& state) const override;
     void propagate(State& state) const override;
+    void revert(State& state) const override;
 
     ssize_t axis() const { return axis_; }
 
