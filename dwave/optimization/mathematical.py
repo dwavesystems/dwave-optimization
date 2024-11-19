@@ -130,15 +130,15 @@ def concatenate(xi: tuple[ArraySymbol], axis : int = 0):
         >>> b = model.constant([[4,5]])
         >>> a_b = concatenate((a,b), axis=0)
         >>> a_b.shape()
-        (3,2)
+        (3, 2)
         >>> type(a_b)
         <class 'dwave.optimization.symbols.Concatenate'>
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     print(a_b.state(0))
         [[0. 1.]
-        [2. 3.]
-        [4. 5.]]
+         [2. 3.]
+         [4. 5.]]
     """
     return xi[0] if len(xi) == 1 else Concatenate(xi, axis)
 
