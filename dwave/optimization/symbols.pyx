@@ -797,8 +797,8 @@ cdef class Concatenate(ArraySymbol):
         <class 'dwave.optimization.symbols.Concatenate'>
     """
     def __init__(self, tuple inputs, int axis = 0):
-        if len(inputs) < 2:
-            raise TypeError("must have at least two predecessor nodes")
+        if len(inputs) < 1:
+            raise TypeError("must have at least one predecessor node")
 
         cdef Model model = inputs[0].model
         cdef vector[cppArrayNode*] cppinputs
