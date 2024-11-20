@@ -41,6 +41,11 @@ ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t
     }
 
     for (auto it = array_ptrs.begin(), stop = array_ptrs.end(); it != stop; ++it) {
+        if ((*it)->dynamic()) {
+            throw std::invalid_argument(
+                "concatenate input arrays cannot be dynamic");
+        }
+
         this->add_predecessor((*it));
     }
 }
@@ -151,8 +156,7 @@ void ConcatenateNode::propagate(State& state) const {
                             this->strides().data());
 
         for (auto diff : array_ptrs_[arr_i]->diff(state)) {
-            assert(!diff.placed());
-            assert(!diff.removed());
+            assert(!diff.placed() && !diff.removed() && "no dynamic support implemented");
             auto update_it = view_it + diff.index;
             ssize_t buffer_index = &*update_it - ptr->buffer.data();
             assert(*update_it == diff.old);
