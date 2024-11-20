@@ -41,7 +41,11 @@ from dwave.optimization.libcpp.array cimport (
     SizeInfo as cppSizeInfo,
     Slice as cppSlice,
     )
-from dwave.optimization.libcpp.graph cimport ArrayNode as cppArrayNode, Node as cppNode
+from dwave.optimization.libcpp.graph cimport (
+    ArrayNode as cppArrayNode,
+    ArrayNodePtr as cppArrayNodePtr,
+    Node as cppNode,
+    )
 from dwave.optimization.libcpp.nodes cimport (
     AbsoluteNode as cppAbsoluteNode,
     AddNode as cppAddNode,
@@ -91,8 +95,6 @@ from dwave.optimization.libcpp.nodes cimport (
     XorNode as cppXorNode,
     )
 from dwave.optimization.model cimport ArraySymbol, Model, Symbol
-
-ctypedef cppArrayNode* cppArrayNodePtr  # Cython gets confused when templating pointers
 
 __all__ = [
     "Absolute",

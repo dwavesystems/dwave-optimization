@@ -45,6 +45,7 @@ from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.array cimport Array as cppArray
+from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.symbols cimport symbol_from_ptr
 
 
@@ -573,8 +574,8 @@ cdef class Model:
             <dwave.optimization.symbols.LessEqual at ...>
             >>> constraints = next(model.iter_constraints())
         """
-        for i in range(self._graph.num_constraints()):
-            yield symbol_from_ptr(self, self._graph.constraints()[i])
+        for ptr in self._graph.constraints():
+            yield symbol_from_ptr(self, ptr)
 
     def iter_decisions(self):
         """Iterate over all decision variables in the model.
@@ -590,19 +591,8 @@ cdef class Model:
             <dwave.optimization.symbols.LessEqual at ...>
             >>> decisions = next(model.iter_decisions())
         """
-        cdef Py_ssize_t num_decisions = self.num_decisions()
-        cdef Py_ssize_t seen_decisions = 0
-
-        cdef Symbol symbol
-        for symbol in self.iter_symbols():
-            if 0 <= symbol.node_ptr.topological_index() < num_decisions:
-                # we found a decision!
-                yield symbol
-                seen_decisions += 1
-
-                if seen_decisions >= num_decisions:
-                    # we found them all
-                    return
+        for ptr in self._graph.decisions():
+            yield symbol_from_ptr(self, ptr)
 
     def iter_symbols(self):
         """Iterate over all symbols in the model.
@@ -616,8 +606,11 @@ cdef class Model:
             >>> c = model.constant([[2, 3], [5, 6]])
             >>> symbol_1, symbol_2 = model.iter_symbols()
         """
-        for i in range(self._graph.num_nodes()):
-            yield symbol_from_ptr(self, self._graph.nodes()[i].get())
+        # Because nodes() is a span of unique_ptr, we can't just iterate over
+        # it cythonically. Cython would try to do a copy/move assignment.
+        nodes = self._graph.nodes()
+        for i in range(nodes.size()):
+            yield symbol_from_ptr(self, nodes[i].get())
 
     def list(self, n : int):
         """Create a list symbol as a decision variable.

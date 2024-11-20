@@ -19,15 +19,38 @@ from libcpp cimport bool
 from libcpp.memory cimport shared_ptr, unique_ptr
 from libcpp.vector cimport vector
 
-from dwave.optimization.libcpp.array cimport Array, span
+from dwave.optimization.libcpp cimport span
+from dwave.optimization.libcpp.array cimport Array
 from dwave.optimization.libcpp.state cimport State
+
+cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass Node:
+        struct SuccessorView:
+            Node* ptr
+        shared_ptr[bool] expired_ptr() const
+        const vector[Node*]& predecessors() const
+        const vector[SuccessorView]& successors() const
+        Py_ssize_t topological_index()
+
+    cdef cppclass ArrayNode(Node, Array):
+        pass
+
+    cdef cppclass DecisionNode(Node):
+        pass
+
+# Sometimes Cython isn't able to reason about pointers as template inputs, so
+# we make a few aliases for convenience
+ctypedef Node* NodePtr
+ctypedef ArrayNode* ArrayNodePtr
+ctypedef DecisionNode* DecisionNodePtr
 
 cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass Graph:
         T* emplace_node[T](...) except+
         void initialize_state(State&) except+
         span[const unique_ptr[Node]] nodes() const
-        span[ArrayNode*] constraints() const
+        span[const ArrayNodePtr] constraints()
+        span[const DecisionNodePtr] decisions()
         Py_ssize_t num_nodes()
         Py_ssize_t num_decisions()
         Py_ssize_t num_constraints()
@@ -41,14 +64,3 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         void topological_sort()
         bool topologically_sorted() const
         Py_ssize_t remove_unused_nodes()
-
-    cdef cppclass Node:
-        struct SuccessorView:
-            Node* ptr
-        shared_ptr[bool] expired_ptr() const
-        const vector[Node*]& predecessors() const
-        const vector[SuccessorView]& successors() const
-        Py_ssize_t topological_index()
-
-    cdef cppclass ArrayNode(Node, Array):
-        pass
