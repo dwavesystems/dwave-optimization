@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add C++ ``DivideNode`` and Python ``Divide`` symbol. ``Divide`` propagates the division of its
+    predecessors element-wise.
