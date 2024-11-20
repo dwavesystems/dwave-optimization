@@ -24,6 +24,8 @@
 
 namespace dwave::optimization {
 
+#define CHECK_CLOSE_ENOUGH(a,b) CHECK(std::abs(a - b) < 10e-16)
+
 TEMPLATE_TEST_CASE("BinaryOpNode", "", 
                     // std::divides<double>, 
                     std::equal_to<double>, std::less_equal<double>,
@@ -93,7 +95,7 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "",
                 CHECK(p_ptr->shape(state).size() == 1);
 
                 for (int i = 0; i < p_ptr->size(state); ++i) {
-                    CHECK(p_ptr->view(state)[i] == func(values_a[i], values_b[i]));
+                    CHECK_CLOSE_ENOUGH(p_ptr->view(state)[i], func(values_a[i], values_b[i]));
                 }
             }
         }
@@ -126,7 +128,7 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "",
                 CHECK(p_ptr->shape(state).size() == 1);
 
                 for (int i = 0; i < p_ptr->size(state); ++i) {
-                    CHECK(p_ptr->view(state)[i] == func(values_a[i], b_ptr->view(state)[i]));
+                    CHECK_CLOSE_ENOUGH(p_ptr->view(state)[i], func(values_a[i], b_ptr->view(state)[i]));
                 }
             }
 
@@ -418,8 +420,20 @@ TEST_CASE("BinaryOpNode - DivideNode") {
         auto y_ptr = graph.emplace_node<DivideNode>(x_ptr, a_ptr);
 
         THEN("y's max/min/integral are as expected") {
-            CHECK(std::abs(y_ptr->max() - -5.0/-3.0) < 10e-16);
-            CHECK(std::abs(y_ptr->min() - 5.0/-3.0) < 10e-16);
+            CHECK_CLOSE_ENOUGH(y_ptr->max(), -5.0/-3.0);
+            CHECK_CLOSE_ENOUGH(y_ptr->min(), 5.0/-3.0);
+            CHECK_FALSE(y_ptr->integral());
+        }
+    }
+    GIVEN("x = IntegerNode(-5, 5), a = 0, y = x / a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(0);
+
+        auto y_ptr = graph.emplace_node<DivideNode>(x_ptr, a_ptr);
+
+        THEN("Check division-by-zero") {
+            CHECK(std::isinf(y_ptr->max()));
+            CHECK(std::isinf(y_ptr->min()));
             CHECK_FALSE(y_ptr->integral());
         }
     }
