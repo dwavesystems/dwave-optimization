@@ -18,6 +18,61 @@
 
 namespace dwave::optimization {
 
+std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ssize_t axis);
+
+double const* ConcatenateNode::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+void ConcatenateNode::commit(State& state) const {
+    data_ptr<ArrayNodeStateData>(state)->commit();
+}
+
+ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t axis)
+        : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)), axis_(axis), array_ptrs_(array_ptrs.begin(), array_ptrs.end()) {
+
+    // Compute buffer start position for each input array
+    array_starts_.reserve(array_ptrs.size());
+    array_starts_.emplace_back(0);
+    for (ssize_t arr_i = 1, stop = array_ptrs.size(); arr_i < stop; ++arr_i) {
+        auto subshape = array_ptrs_[arr_i - 1]->shape().last(this->ndim() - axis_);
+        ssize_t prod = std::accumulate(subshape.begin(), subshape.end(), 1, std::multiplies<ssize_t>());
+        array_starts_.emplace_back(prod + array_starts_[arr_i - 1]);
+    }
+
+    for (auto it = array_ptrs.begin(), stop = array_ptrs.end(); it != stop; ++it) {
+        this->add_predecessor((*it));
+    }
+}
+
+std::span<const Update> ConcatenateNode::diff(const State& state) const {
+   return data_ptr<ArrayNodeStateData>(state)->diff();
+}
+
+void ConcatenateNode::initialize_state(State& state) const {
+    int index = topological_index();
+    assert(index >= 0 && "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > index && "unexpected state length");
+    assert(state[index] == nullptr && "already initialized state");
+
+    std::vector<double> values;
+    values.resize(size());
+
+    for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
+        // Create a view into our buffer with the same shape as
+        // our input array starting at the correct place
+        auto view_it = ArrayIterator(
+                            values.data() + array_starts_[arr_i],
+                            this->ndim(),
+                            array_ptrs_[arr_i]->shape().data(),
+                            this->strides().data());
+
+        std::copy(array_ptrs_[arr_i]->begin(state), array_ptrs_[arr_i]->end(state), view_it);
+    }
+
+    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
+}
+
 std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ssize_t axis) {
     // One or more arrays must be given
     if (array_ptrs.size() < 1) {
@@ -83,59 +138,6 @@ std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ss
     }
 
     return shape;
-}
-
-double const* ConcatenateNode::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
-}
-
-void ConcatenateNode::commit(State& state) const {
-    data_ptr<ArrayNodeStateData>(state)->commit();
-}
-
-ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t axis)
-        : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)), axis_(axis), array_ptrs_(array_ptrs.begin(), array_ptrs.end()) {
-
-    // Compute buffer start position for each input array
-    array_starts_.reserve(array_ptrs.size());
-    array_starts_.emplace_back(0);
-    for (ssize_t arr_i = 1, stop = array_ptrs.size(); arr_i < stop; ++arr_i) {
-        auto subshape = array_ptrs_[arr_i - 1]->shape().last(this->ndim() - axis_);
-        ssize_t prod = std::accumulate(subshape.begin(), subshape.end(), 1, std::multiplies<ssize_t>());
-        array_starts_.emplace_back(prod + array_starts_[arr_i - 1]);
-    }
-
-    for (auto it = array_ptrs.begin(), stop = array_ptrs.end(); it != stop; ++it) {
-        this->add_predecessor((*it));
-    }
-}
-
-std::span<const Update> ConcatenateNode::diff(const State& state) const {
-   return data_ptr<ArrayNodeStateData>(state)->diff();
-}
-
-void ConcatenateNode::initialize_state(State& state) const {
-    int index = topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
-    std::vector<double> values;
-    values.resize(size());
-
-    for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
-        // Create a view into our buffer with the same shape as
-        // our input array starting at the correct place
-        auto view_it = ArrayIterator(
-                            values.data() + array_starts_[arr_i],
-                            this->ndim(),
-                            array_ptrs_[arr_i]->shape().data(),
-                            this->strides().data());
-
-        std::copy(array_ptrs_[arr_i]->begin(state), array_ptrs_[arr_i]->end(state), view_it);
-    }
-
-    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
 }
 
 void ConcatenateNode::propagate(State& state) const {
