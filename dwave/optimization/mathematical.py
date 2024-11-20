@@ -122,7 +122,7 @@ def divide(x1: ArraySymbol, x2: ArraySymbol) -> Divide:
         :class:`~dwave.optimization.symbols.Divide`.
 
     Examples:
-        This example divides two integer symbols of size :math:`1 \times 2`.
+        This example divides two integer symbols.
         Equivalently, you can use the ``/`` operator (e.g., :code:`i /j`).
 
         >>> from dwave.optimization import Model
