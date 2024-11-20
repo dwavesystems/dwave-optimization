@@ -24,7 +24,9 @@
 
 namespace dwave::optimization {
 
-TEMPLATE_TEST_CASE("BinaryOpNode", "", std::equal_to<double>, std::less_equal<double>,
+TEMPLATE_TEST_CASE("BinaryOpNode", "", 
+                    // std::divides<double>, 
+                    std::equal_to<double>, std::less_equal<double>,
                    std::plus<double>, std::minus<double>, functional::modulus<double>,
                    std::multiplies<double>, functional::max<double>, functional::min<double>,
                    std::logical_and<double>, std::logical_or<double>, functional::logical_xor<double>) {
@@ -390,6 +392,35 @@ TEST_CASE("BinaryOpNode - MultiplyNode") {
             CHECK(y_ptr->max() == 15);
             CHECK(y_ptr->min() == -15);
             CHECK(y_ptr->integral());
+        }
+    }
+}
+TEST_CASE("BinaryOpNode - DivideNode") {
+    auto graph = Graph();
+
+    GIVEN("x = IntegerNode(-5, 5), a = 3, y = x / a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(3);
+
+        auto y_ptr = graph.emplace_node<DivideNode>(x_ptr, a_ptr);
+
+        THEN("y's max/min/integral are as expected") {
+            CHECK(std::abs(y_ptr->max() - 5.0/3.0) < 10e-16);
+            CHECK(std::abs(y_ptr->min() - -5.0/3.0) < 10e-16);
+            CHECK_FALSE(y_ptr->integral());
+        }
+    }
+
+    GIVEN("x = IntegerNode(-5, 5), a = -3, y = x / a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<ConstantNode>(-3);
+
+        auto y_ptr = graph.emplace_node<DivideNode>(x_ptr, a_ptr);
+
+        THEN("y's max/min/integral are as expected") {
+            CHECK(std::abs(y_ptr->max() - -5.0/-3.0) < 10e-16);
+            CHECK(std::abs(y_ptr->min() - 5.0/-3.0) < 10e-16);
+            CHECK_FALSE(y_ptr->integral());
         }
     }
 }

@@ -123,8 +123,10 @@ bool BinaryOpNode<BinaryOp>::integral() const {
     auto lhs_ptr = operands_[0];
     auto rhs_ptr = operands_[1];
 
-    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value ||
-                  std::is_same<BinaryOp, functional::max<double>>::value ||
+    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value) {
+        return false;
+    }
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
                   std::is_same<BinaryOp, functional::min<double>>::value ||
                   std::is_same<BinaryOp, std::minus<double>>::value ||
                   std::is_same<BinaryOp, functional::modulus<double>>::value ||
