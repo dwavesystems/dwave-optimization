@@ -66,7 +66,7 @@ void ConcatenateNode::initialize_state(State& state) const {
     for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
         // Create a view into our buffer with the same shape as
         // our input array starting at the correct place
-        auto view_it = ArrayIterator(
+        auto view_it = Array::iterator(
                             values.data() + array_starts_[arr_i],
                             this->ndim(),
                             array_ptrs_[arr_i]->shape().data(),
@@ -149,7 +149,7 @@ void ConcatenateNode::propagate(State& state) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);
 
     for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
-        auto view_it = ArrayIterator(
+        auto view_it = Array::iterator(
                             ptr->buff() + array_starts_[arr_i],
                             this->ndim(),
                             array_ptrs_[arr_i]->shape().data(),
