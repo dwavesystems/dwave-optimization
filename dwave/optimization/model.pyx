@@ -1777,13 +1777,6 @@ cdef class ArraySymbol(Symbol):
         # fundamental that I am hesitant to do even that.
         raise ValueError("the truth value of an array symbol is ambiguous")
 
-    def __div__(self, rhs):
-        if isinstance(rhs, ArraySymbol):
-            from dwave.optimization.symbols import Divide  # avoid circular import
-            return Divide(self, rhs)
-
-        return NotImplemented
-
     def __eq__(self, rhs):
         if isinstance(rhs, ArraySymbol):
             # We could consider returning a Constant(True) is the case that self is rhs
@@ -1903,6 +1896,13 @@ cdef class ArraySymbol(Symbol):
         if isinstance(rhs, ArraySymbol):
             from dwave.optimization.symbols import Subtract  # avoid circular import
             return Subtract(self, rhs)
+
+        return NotImplemented
+
+    def __truediv__(self, rhs):
+        if isinstance(rhs, ArraySymbol):
+            from dwave.optimization.symbols import Divide  # avoid circular import
+            return Divide(self, rhs)
 
         return NotImplemented
 
