@@ -16,7 +16,7 @@ import typing
 
 import numpy.typing
 
-from dwave.optimization.model import Symbol, ArraySymbol
+from dwave.optimization.graph_manager import Symbol, ArraySymbol
 
 
 class Absolute(ArraySymbol):

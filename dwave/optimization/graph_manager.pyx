@@ -1,3 +1,5 @@
+# distutils: language = c++
+
 # Copyright 2024 D-Wave Systems Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,101 +51,22 @@ from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.symbols cimport symbol_from_ptr
 
 
-__all__ = ["Model"]
-
-
 @contextlib.contextmanager
 def locked(model):
     """Context manager that hold a locked model and unlocks it when the context is exited."""
     try:
         yield
     finally:
-        model.unlock()
+        model._unlock()
 
 
-cdef class Model:
-    """Nonlinear model.
-
-    The nonlinear model represents a general optimization problem with an
-    :term:`objective function` and/or constraints over variables of various
-    types.
-
-    The :class:`.Model` class can contain this model and its methods provide
-    convenient utilities for working with representations of a problem.
-
-    Examples:
-        This example creates a model for a
-        :class:`flow-shop-scheduling <dwave.optimization.generators.flow_shop_scheduling>`
-        problem with two jobs on three machines.
-
-        >>> from dwave.optimization.generators import flow_shop_scheduling
-        ...
-        >>> processing_times = [[10, 5, 7], [20, 10, 15]]
-        >>> model = flow_shop_scheduling(processing_times=processing_times)
-    """
+cdef class _GraphManager:
     def __init__(self):
-        self.states = States(self)
+        self._states = States(self)
 
         self._data_sources = []
 
-    def add_constraint(self, ArraySymbol value):
-        """Add a constraint to the model.
-
-        Args:
-            value: Value that must evaluate to True for the state
-                of the model to be feasible.
-
-        Returns:
-            The constraint symbol.
-
-        Examples:
-            This example adds a single constraint to a model.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> i = model.integer()
-            >>> c = model.constant(5)
-            >>> constraint_sym = model.add_constraint(i <= c)
-
-            The returned constraint symbol can be assigned and evaluated
-            for a model state:
-
-            >>> with model.lock():
-            ...     model.states.resize(1)
-            ...     i.set_state(0, 1) # Feasible state
-            ...     print(constraint_sym.state(0))
-            1.0
-            >>> with model.lock():
-            ...     i.set_state(0, 6) # Infeasible state
-            ...     print(constraint_sym.state(0))
-            0.0
-        """
-        if value is None:
-            raise ValueError("value cannot be None")
-        # TODO: shall we accept array valued constraints?
-        self._graph.add_constraint(value.array_ptr)
-        return value
-
-    def binary(self, shape=None):
-        r"""Create a binary symbol as a decision variable.
-
-        Args:
-            shape: Shape of the binary array to create.
-
-        Returns:
-            A binary symbol.
-
-        Examples:
-            This example creates a :math:`1 \times 20`-sized binary symbol.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> x = model.binary((1,20))
-        """
-        from dwave.optimization.symbols import BinaryVariable #avoid circular import
-        return BinaryVariable(self, shape)
-
-    def constant(self, array_like):
+    def _constant(self, array_like):
         r"""Create a constant symbol.
 
         Args:
@@ -165,119 +88,11 @@ cdef class Model:
         from dwave.optimization.symbols import Constant  # avoid circular import
         return Constant(self, array_like)
 
-    def decision_state_size(self):
-        r"""An estimated size, in bytes, of the model's decision states.
-
-        Examples:
-            This example checks the size of a model with one
-            :math:`10 \times 10`-sized integer symbol.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> visit_site = model.integer((10, 10))
-            >>> model.decision_state_size()
-            800
-        """
-        return sum(sym.state_size() for sym in self.iter_decisions())
-
-    def disjoint_bit_sets(self, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets):
-        """Create a disjoint-sets symbol as a decision variable.
-
-        Divides a set of the elements of ``range(primary_set_size)`` into
-        ``num_disjoint_sets`` ordered partitions, stored as bit sets (arrays
-        of length ``primary_set_size``, with ones at the indices of elements
-        currently in the set, and zeros elsewhere). The ordering of a set is
-        not semantically meaningful.
-
-        Also creates from the symbol ``num_disjoint_sets`` extra successors
-        that output the disjoint sets as arrays.
-
-        Args:
-            primary_set_size: Number of elements in the primary set that are
-                partitioned into disjoint sets. Must be non-negative.
-            num_disjoint_sets: Number of disjoint sets. Must be positive.
-
-        Returns:
-            A tuple where the first element is the disjoint-sets symbol and
-            the second is a set of its newly added successors.
-
-        Examples:
-            This example creates a symbol of 10 elements that is divided
-            into 4 sets.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> parts_set, parts_subsets = model.disjoint_bit_sets(10, 4)
-        """
-
-        from dwave.optimization.symbols import DisjointBitSets, DisjointBitSet  # avoid circular import
-        main = DisjointBitSets(self, primary_set_size, num_disjoint_sets)
-        sets = tuple(DisjointBitSet(main, i) for i in range(num_disjoint_sets))
-        return main, sets
-
-    def disjoint_lists(self, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists):
-        """Create a disjoint-lists symbol as a decision variable.
-
-        Divides a set of the elements of ``range(primary_set_size)`` into
-        ``num_disjoint_lists`` ordered partitions.
-
-        Also creates ``num_disjoint_lists`` extra successors from the
-        symbol that output the disjoint lists as arrays.
-
-        Args:
-            primary_set_size: Number of elements in the primary set to
-                be partitioned into disjoint lists.
-            num_disjoint_lists: Number of disjoint lists.
-
-        Returns:
-            A tuple where the first element is the disjoint-lists symbol
-            and the second is a list of its newly added successor nodes.
-
-        Examples:
-            This example creates a symbol of 10 elements that is divided
-            into 4 lists.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> destinations, routes = model.disjoint_lists(10, 4)
-        """
-        from dwave.optimization.symbols import DisjointLists, DisjointList  # avoid circular import
-        main = DisjointLists(self, primary_set_size, num_disjoint_lists)
-        lists = [DisjointList(main, i) for i in range(num_disjoint_lists)]
-        return main, lists
-
-    def feasible(self, int index = 0):
-        """Check the feasibility of the state at the input index.
-
-        Args:
-            index: index of the state to check for feasibility.
-
-        Returns:
-            Feasibility of the state.
-
-        Examples:
-            This example demonstrates checking the feasibility of a simple model with
-            feasible and infeasible states.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> b = model.binary()
-            >>> model.add_constraint(b) # doctest: +ELLIPSIS
-            <dwave.optimization.BinaryVariable at ...>
-            >>> model.states.resize(2)
-            >>> b.set_state(0, 1) # Feasible
-            >>> b.set_state(1, 0) # Infeasible
-            >>> with model.lock():
-            ...     model.feasible(0)
-            True
-            >>> with model.lock():
-            ...     model.feasible(1)
-            False
-        """
-        return all(sym.state(index) for sym in self.iter_constraints())
+    def _decision_state_size(self):
+        return sum(sym.state_size() for sym in self._iter_decisions())
 
     @classmethod
-    def from_file(cls, file, *,
+    def _from_file(cls, file, *,
                   check_header = True,
                   ):
         """Construct a model from the given file.
@@ -314,7 +129,7 @@ cdef class Model:
             header_len = struct.unpack('<I', file.read(4))[0]
             header_data = json.loads(file.read(header_len).decode('ascii'))
 
-        cdef Model model = cls()
+        cdef _GraphManager model = cls()
 
         with zipfile.ZipFile(file, mode="r") as zf:
             model_info = json.loads(zf.read("info.json"))
@@ -352,12 +167,12 @@ cdef class Model:
             objective_buff = zf.read("objective.json")
             if objective_buff:
                 objective_id = json.loads(objective_buff)
-                if not isinstance(objective_id, int) or objective_id >= model.num_nodes():
+                if not isinstance(objective_id, int) or objective_id >= model._num_nodes():
                     raise ValueError("objective must be an integer and a valid node id")
-                model.minimize(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
+                model._minimize(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
 
             for cid in json.loads(zf.read("constraints.json")):
-                model.add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
+                model._add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
 
             # Read any states that have been encoded
             num_states = model_info.get("num_states")
@@ -365,11 +180,11 @@ cdef class Model:
                 raise ValueError("expected num_states to be a positive integer")
 
             if num_states > 0:
-                model.states.resize(num_states)
+                model._states.resize(num_states)
 
                 # now read the states of the decision variables
-                num_decisions = model.num_decisions()  # use the model not the serialization
-                for node in itertools.islice(model.iter_symbols(), 0, num_decisions):
+                num_decisions = model._num_decisions()  # use the model not the serialization
+                for node in itertools.islice(model._iter_symbols(), 0, num_decisions):
                     for i in range(num_states):
                         node._state_from_zipfile(zf, f"nodes/{node.topological_index()}/states/{i}/", i)
 
@@ -384,39 +199,13 @@ cdef class Model:
 
         return model
 
-    def integer(self, shape=None, lower_bound=None, upper_bound=None):
-        r"""Create an integer symbol as a decision variable.
-
-        Args:
-            shape: Shape of the integer array to create.
-
-            lower_bound: Lower bound for the symbol, which is the
-                smallest allowed integer value. If None, the default
-                value is used.
-            upper_bound: Upper bound for the symbol, which is the
-                largest allowed integer value. If None, the default
-                value is used.
-
-        Returns:
-            An integer symbol.
-
-        Examples:
-            This example creates a :math:`20 \times 20`-sized integer symbol.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> i = model.integer((20,20), lower_bound=-100, upper_bound=100)
-        """
-        from dwave.optimization.symbols import IntegerVariable #avoid circular import
-        return IntegerVariable(self, shape, lower_bound, upper_bound)
-
     def _header_data(self, *, only_decision, max_num_states=float('inf')):
         """The header data associated with the model (but not the states)."""
-        num_nodes = self.num_decisions() if only_decision else self.num_nodes()
-        num_states = max(0, min(self.states.size(), max_num_states))
+        num_nodes = self._num_decisions() if only_decision else self._num_nodes()
+        num_states = max(0, min(self._states.size(), max_num_states))
 
-        decision_state_size = self.decision_state_size()
-        state_size = decision_state_size if only_decision else self.state_size()
+        decision_state_size = self._decision_state_size()
+        state_size = decision_state_size if only_decision else self._state_size()
 
         return dict(
             decision_state_size=decision_state_size,
@@ -425,7 +214,7 @@ cdef class Model:
             num_states=num_states,
         )
 
-    def into_file(self, file, *,
+    def _into_file(self, file, *,
                   Py_ssize_t max_num_states = 0,
                   bool only_decision = False,
                   ):
@@ -449,14 +238,14 @@ cdef class Model:
 
         TODO: describe the format
         """
-        if not self.is_locked():
+        if not self._is_locked():
             # lock for the duration of the method
-            with self.lock():
-                return self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
+            with self._lock():
+                return self._into_file(file, max_num_states=max_num_states, only_decision=only_decision)
 
         if isinstance(file, str):
             with open(file, "wb") as f:
-                return self.into_file(
+                return self._into_file(
                     f,
                     max_num_states=max_num_states,
                     only_decision=only_decision,
@@ -504,11 +293,11 @@ cdef class Model:
             # If we're only encoding the decision variables then we want to stop early.
             # We know that we're topologically sorted so the first num_decisions are
             # exactly the decision variables.
-            stop = self.num_decisions() if only_decision else self.num_nodes()
+            stop = self._num_decisions() if only_decision else self._num_nodes()
 
             # On the first pass we made a nodetypes.txt file that has the node names
             with zf.open("nodetypes.txt", "w", force_zip64=True) as f:
-                for node in itertools.islice(self.iter_symbols(), 0, stop):
+                for node in itertools.islice(self._iter_symbols(), 0, stop):
                     f.write(type(node).__name__.encode("UTF-8"))
                     f.write(b"\n")
 
@@ -517,8 +306,8 @@ cdef class Model:
                 # We don't actually need to make the Python symbols here, but it's convenient
                 # Also, if we're only_decision then there will never be predecessors, but
                 # let's reuse the code for now.
-                stop = self.num_decisions() if only_decision else self.num_nodes()
-                for node in itertools.islice(self.iter_symbols(), 0, stop):
+                stop = self._num_decisions() if only_decision else self._num_nodes()
+                for node in itertools.islice(self._iter_symbols(), 0, stop):
                     f.write(f"{node.topological_index()}".encode("UTF-8"))
                     for pred in node.iter_predecessors():
                         f.write(f" {pred.topological_index()}".encode("UTF-8"))
@@ -526,31 +315,31 @@ cdef class Model:
 
             # On the third pass, we allow nodes to save whatever info they want
             # to in a nested node/<topological_index> directory
-            for node in itertools.islice(self.iter_symbols(), 0, stop):
+            for node in itertools.islice(self._iter_symbols(), 0, stop):
                 directory = f"nodes/{node.topological_index()}/"
                 node._into_zipfile(zf, directory)
 
             # Encode the objective and the constraints
-            if self.objective is not None and self.objective.topological_index() < stop:
-                zf.writestr("objective.json", encoder.encode(self.objective.topological_index()))
+            if self._objective is not None and self._objective.topological_index() < stop:
+                zf.writestr("objective.json", encoder.encode(self._objective.topological_index()))
             else:
                 zf.writestr("objective.json", b"")
 
             constraints = []  # todo: not yet available at the python level
-            for c in self.iter_constraints():
+            for c in self._iter_constraints():
                 if c is not None and c.topological_index() < stop:
                     constraints.append(c.topological_index())
             zf.writestr("constraints.json", encoder.encode(constraints))
 
             # Encode the states if requested
             if num_states > 0:  # redundant, but good short circuit
-                for node in itertools.islice(self.iter_symbols(), self.num_decisions()):
+                for node in itertools.islice(self._iter_symbols(), self._num_decisions()):
                     # only save states that have been initialized
                     for i in filter(node.has_state, range(num_states)):
                         directory = f"nodes/{node.topological_index()}/states/{i}/"
                         node._state_into_zipfile(zf, directory, i)
 
-    cpdef bool is_locked(self) noexcept:
+    cpdef bool _is_locked(self) noexcept:
         """Lock status of the model.
 
         No new symbols can be added to a locked model.
@@ -560,41 +349,7 @@ cdef class Model:
         """
         return self._lock_count > 0
 
-    def iter_constraints(self):
-        """Iterate over all constraints in the model.
-
-        Examples:
-            This example adds a single constraint to a model and iterates over it.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> i = model.integer()
-            >>> c = model.constant(5)
-            >>> model.add_constraint(i <= c) # doctest: +ELLIPSIS
-            <dwave.optimization.symbols.LessEqual at ...>
-            >>> constraints = next(model.iter_constraints())
-        """
-        for ptr in self._graph.constraints():
-            yield symbol_from_ptr(self, ptr)
-
-    def iter_decisions(self):
-        """Iterate over all decision variables in the model.
-
-        Examples:
-            This example adds a single decision symbol to a model and iterates over it.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> i = model.integer()
-            >>> c = model.constant(5)
-            >>> model.add_constraint(i <= c) # doctest: +ELLIPSIS
-            <dwave.optimization.symbols.LessEqual at ...>
-            >>> decisions = next(model.iter_decisions())
-        """
-        for ptr in self._graph.decisions():
-            yield symbol_from_ptr(self, ptr)
-
-    def iter_symbols(self):
+    def _iter_symbols(self):
         """Iterate over all symbols in the model.
 
         Examples:
@@ -612,26 +367,7 @@ cdef class Model:
         for i in range(nodes.size()):
             yield symbol_from_ptr(self, nodes[i].get())
 
-    def list(self, n : int):
-        """Create a list symbol as a decision variable.
-
-        Args:
-            n: Values in the list are permutations of ``range(n)``.
-
-        Returns:
-            A list symbol.
-
-        Examples:
-            This example creates a list symbol of 200 elements.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> routes = model.list(200)
-        """
-        from dwave.optimization.symbols import ListVariable  # avoid circular import
-        return ListVariable(self, n)
-
-    def lock(self):
+    def _lock(self):
         """Lock the model.
 
         No new symbols can be added to a locked model.
@@ -675,78 +411,7 @@ cdef class Model:
 
         return locked(self)
 
-    def minimize(self, ArraySymbol value):
-        """Set the objective value to minimize.
-
-        Optimization problems have an objective and/or constraints. The objective
-        expresses one or more aspects of the problem that should be minimized
-        (equivalent to maximization when multiplied by a minus sign). For example,
-        an optimized itinerary might minimize the value of distance traveled or
-        cost of transportation or travel time.
-
-        Args:
-            value: Value for which to minimize the cost function.
-
-        Examples:
-            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
-            within bounds.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(lower_bound=-5, upper_bound=5)
-            >>> c = model.constant(4)
-            >>> y = i*i - c*i
-            >>> model.minimize(y)
-        """
-        if value is None:
-            raise ValueError("value cannot be None")
-        if value.size() < 1:
-            raise ValueError("the value of an empty array is ambiguous")
-        if value.size() > 1:
-            raise ValueError("the value of an array with more than one element is ambiguous")
-        self._graph.set_objective(value.array_ptr)
-        self.objective = value
-
-    cpdef Py_ssize_t num_constraints(self) noexcept:
-        """Number of constraints in the model.
-
-        Examples:
-            This example checks the number of constraints in the model after
-            adding a couple of constraints.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> i = model.integer()
-            >>> c = model.constant([5, -14])
-            >>> model.add_constraint(i <= c[0]) # doctest: +ELLIPSIS
-            <dwave.optimization.symbols.LessEqual at ...>
-            >>> model.add_constraint(c[1] <= i) # doctest: +ELLIPSIS
-            <dwave.optimization.symbols.LessEqual at ...>
-            >>> model.num_constraints()
-            2
-        """
-        return self._graph.num_constraints()
-
-    cpdef Py_ssize_t num_decisions(self) noexcept:
-        """Number of independent decision nodes in the model.
-
-        An array-of-integers symbol, for example, counts as a single
-        decision node.
-
-        Examples:
-            This example checks the number of decisions in a model after
-            adding a single (size 20) decision symbol.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> c = model.constant([1, 5, 8.4])
-            >>> i = model.integer(20, upper_bound=100)
-            >>> model.num_decisions()
-            1
-        """
-        return self._graph.num_decisions()
-
-    def num_edges(self):
+    def _num_edges(self):
         """Number of edges in the directed acyclic graph for the model.
 
         Examples:
@@ -767,7 +432,7 @@ cdef class Model:
             num_edges += self._graph.nodes()[i].get().successors().size()
         return num_edges
 
-    cpdef Py_ssize_t num_nodes(self) noexcept:
+    cpdef Py_ssize_t _num_nodes(self) noexcept:
         """Number of nodes in the directed acyclic graph for the model.
 
         See also:
@@ -787,7 +452,7 @@ cdef class Model:
         """
         return self._graph.num_nodes()
 
-    def num_symbols(self):
+    def _num_symbols(self):
         """Number of symbols tracked by the model.
 
         Equivalent to the number of nodes in the directed acyclic
@@ -808,35 +473,9 @@ cdef class Model:
             >>> model.num_symbols()
             2
         """
-        return self.num_nodes()
+        return self._num_nodes()
 
-    def quadratic_model(self, ArraySymbol x, quadratic, linear=None):
-        """Create a quadratic model from an array and a quadratic model.
-
-        Args:
-            x: An array.
-
-            quadratic: Quadratic values for the quadratic model.
-
-            linear: Linear values for the quadratic model.
-
-        Returns:
-            A quadratic model.
-
-        Examples:
-            This example creates a quadratic model.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> x = model.binary(3)
-            >>> Q = {(0, 0): 0, (0, 1): 1, (0, 2): 2, (1, 1): 1, (1, 2): 3, (2, 2): 2}
-            >>> qm = model.quadratic_model(x, Q)
-
-        """
-        from dwave.optimization.symbols import QuadraticModel
-        return QuadraticModel(x, quadratic, linear)
-
-    def remove_unused_symbols(self):
+    def _remove_unused_symbols(self):
         """Remove unused symbols from the model.
 
         A symbol is considered unused if all of the following are true :
@@ -885,33 +524,11 @@ cdef class Model:
             3
 
         """
-        if self.is_locked():
+        if self._is_locked():
             raise ValueError("cannot remove symbols from a locked model")
         return self._graph.remove_unused_nodes()
 
-    def set(self, Py_ssize_t n, Py_ssize_t min_size = 0, max_size = None):
-        """Create a set symbol as a decision variable.
-
-        Args:
-            n: Values in the set are subsets of ``range(n)``.
-            min_size: Minimum set size. Defaults to ``0``.
-            max_size: Maximum set size. Defaults to ``n``.
-
-        Returns:
-            A set symbol.
-
-        Examples:
-            This example creates a set symbol of up to 4 elements
-            with values between 0 to 99.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> destinations = model.set(100, max_size=4)
-        """
-        from dwave.optimization.symbols import SetVariable  # avoid circular import
-        return SetVariable(self, n, min_size, n if max_size is None else max_size)
-
-    def state_size(self):
+    def _state_size(self):
         """An estimate of the size, in bytes, of all states in the model.
 
         Iterates over the model's states and totals the sizes of all.
@@ -926,20 +543,20 @@ cdef class Model:
             >>> model.state_size()
             184
         """
-        return sum(sym.state_size() for sym in self.iter_symbols())
+        return sum(sym.state_size() for sym in self._iter_symbols())
 
-    def to_file(self, **kwargs):
+    def _to_file(self, **kwargs):
         """Serialize the model to a new file-like object.
 
         See also:
             :meth:`.into_file`, :meth:`.from_file`
         """
         file = tempfile.TemporaryFile(mode="w+b")
-        self.into_file(file, **kwargs)
+        self._into_file(file, **kwargs)
         file.seek(0)
         return file
 
-    def to_networkx(self):
+    def _to_networkx(self):
         """Convert the model to a NetworkX graph.
 
         Returns:
@@ -982,35 +599,35 @@ cdef class Model:
         G = networkx.MultiDiGraph()
 
         # Add the symbols, in order if we happen to be topologically sorted
-        G.add_nodes_from(repr(symbol) for symbol in self.iter_symbols())
+        G.add_nodes_from(repr(symbol) for symbol in self._iter_symbols())
 
         # Sanity check. If several nodes map to the same symbol repr we'll see
         # too few nodes in the graph
-        if len(G) != self.num_symbols():
+        if len(G) != self._num_symbols():
             raise RuntimeError("symbol repr() is not unique to the underlying node")
 
         # Now add the edges
-        for symbol in self.iter_symbols():
+        for symbol in self._iter_symbols():
             for successor in symbol.iter_successors():
                 G.add_edge(repr(symbol), repr(successor))
 
         # Sanity check again. If the repr of symbols isn't unique to the underlying
         # node then we'll see too many nodes in the graph here
-        if len(G) != self.num_symbols():
+        if len(G) != self._num_symbols():
             raise RuntimeError("symbol repr() is not unique to the underlying node")
 
         # Add the objective if it's present. We call it "minimize" to be
         # consistent with the minimize() function
-        if self.objective is not None:
-            G.add_edge(repr(self.objective), "minimize")
+        if self._objective is not None:
+            G.add_edge(repr(self._objective), "minimize")
 
         # Likewise if we have constraints, add a special node for them
-        for symbol in self.iter_constraints():
+        for symbol in self._iter_constraints():
             G.add_edge(repr(symbol), "constraint(s)")
 
         return G
 
-    def unlock(self):
+    def _unlock(self):
         """Release a lock, decrementing the lock count.
 
         Symbols can be added to unlocked models only.
@@ -1027,10 +644,101 @@ cdef class Model:
         # non-decision states
         if self._lock_count < 1:
             self._graph.reset_topological_sort()
-            for i in range(self.states.size()):
+            for i in range(self._states.size()):
                 # this might actually increase the size of the states in some
                 # cases, but that's fine
-                self.states._states[i].resize(self.num_decisions())
+                self._states._states[i].resize(self._num_decisions())
+
+
+    def _add_constraint(self, ArraySymbol value):
+        if value is None:
+            raise ValueError("value cannot be None")
+        # TODO: shall we accept array valued constraints?
+        self._graph.add_constraint(value.array_ptr)
+        return value
+
+    def _iter_constraints(self):
+        """Iterate over all constraints in the model.
+
+        Examples:
+            This example adds a single constraint to a model and iterates over it.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer()
+            >>> c = model.constant(5)
+            >>> model.add_constraint(i <= c) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
+            >>> constraints = next(model.iter_constraints())
+        """
+        for ptr in self._graph.constraints():
+            yield symbol_from_ptr(self, ptr)
+
+    def _iter_decisions(self):
+        """Iterate over all decision variables in the model.
+
+        Examples:
+            This example adds a single decision symbol to a model and iterates over it.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer()
+            >>> c = model.constant(5)
+            >>> model.add_constraint(i <= c) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
+            >>> decisions = next(model.iter_decisions())
+        """
+        for ptr in self._graph.decisions():
+            yield symbol_from_ptr(self, ptr)
+
+    def _minimize(self, ArraySymbol value):
+        if value is None:
+            raise ValueError("value cannot be None")
+        if value.size() < 1:
+            raise ValueError("the value of an empty array is ambiguous")
+        if value.size() > 1:
+            raise ValueError("the value of an array with more than one element is ambiguous")
+        self._graph.set_objective(value.array_ptr)
+        self._objective = value
+
+    cpdef Py_ssize_t _num_constraints(self) noexcept:
+        """Number of constraints in the model.
+
+        Examples:
+            This example checks the number of constraints in the model after
+            adding a couple of constraints.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer()
+            >>> c = model.constant([5, -14])
+            >>> model.add_constraint(i <= c[0]) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
+            >>> model.add_constraint(c[1] <= i) # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.LessEqual at ...>
+            >>> model.num_constraints()
+            2
+        """
+        return self._graph.num_constraints()
+
+    cpdef Py_ssize_t _num_decisions(self) noexcept:
+        """Number of independent decision nodes in the model.
+
+        An array-of-integers symbol, for example, counts as a single
+        decision node.
+
+        Examples:
+            This example checks the number of decisions in a model after
+            adding a single (size 20) decision symbol.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> c = model.constant([1, 5, 8.4])
+            >>> i = model.integer(20, upper_bound=100)
+            >>> model.num_decisions()
+            1
+        """
+        return self._graph.num_decisions()
 
 
 cdef class States:
@@ -1085,7 +793,8 @@ cdef class States:
         >>> model.states.size()
         0
     """
-    def __init__(self, Model model):
+
+    def __init__(self, model):
         self._model_ref = weakref.ref(model)
 
     def __len__(self):
@@ -1161,6 +870,10 @@ cdef class States:
         Returns:
             A model.
         """
+
+        # avoid circular import
+        from dwave.optimization.model import Model
+
         self.resolve()
 
         if not replace:
@@ -1168,15 +881,15 @@ cdef class States:
 
         # todo: we don't need to actually construct a model, but this is nice and
         # abstract. We should performance test and then potentially re-implement
-        cdef Model model = Model.from_file(file, check_header=check_header)
+        cdef _GraphManager model = _GraphManager._from_file(file, check_header=check_header)
 
         # Check that the model is compatible
-        for n0, n1 in zip(model.iter_symbols(), self._model().iter_symbols()):
+        for n0, n1 in zip(model._iter_symbols(), self._model()._iter_symbols()):
             # todo: replace with proper node quality testing once we have it
             if not isinstance(n0, type(n1)):
                 raise ValueError("cannot load states into a model with mismatched decisions")
 
-        self.attach_states(move(model.states.detach_states()))
+        self.attach_states(move(model._states.detach_states()))
 
     def from_future(self, future, result_hook):
         """Populate the states from the result of a future computation.
@@ -1199,9 +912,9 @@ cdef class States:
         """Initialize any uninitialized states."""
         self.resolve()
 
-        cdef Model model = self._model()
+        cdef _GraphManager model = self._model()
 
-        if not model.is_locked():
+        if not model._is_locked():
             raise ValueError("Cannot initialize states of an unlocked model")
         for i in range(self._states.size()):
             self._states[i].resize(model.num_nodes())
@@ -1219,12 +932,12 @@ cdef class States:
         TODO: describe the format
         """
         self.resolve()
-        return self._model().into_file(file, only_decision=True, max_num_states=self.size())
+        return self._model()._into_file(file, only_decision=True, max_num_states=self.size())
 
 
-    cdef Model _model(self):
+    cdef _GraphManager _model(self):
         """Get a ref-counted Model object."""
-        cdef Model m = self._model_ref()
+        cdef _GraphManager m = self._model_ref()
         if m is None:
             raise ReferenceError("accessing the states of a garbage collected model")
         return m
@@ -1295,7 +1008,7 @@ cdef class States:
     def to_file(self):
         """Serialize the states to a new file-like object."""
         self.resolve()
-        return self._model().to_file(only_decision=True, max_num_states=self.size())
+        return self._model()._to_file(only_decision=True, max_num_states=self.size())
 
 
 cdef class Symbol:
@@ -1318,7 +1031,7 @@ cdef class Symbol:
         cls = type(self)
         return f"<{cls.__module__}.{cls.__qualname__} at {self.id():#x}>"
 
-    cdef void initialize_node(self, Model model, cppNode* node_ptr) noexcept:
+    cdef void initialize_node(self, _GraphManager model, cppNode* node_ptr) noexcept:
         self.model = model
 
         self.node_ptr = node_ptr
@@ -1349,7 +1062,7 @@ cdef class Symbol:
         return deref(self.expired_ptr)
 
     @staticmethod
-    cdef Symbol from_ptr(Model model, cppNode* ptr):
+    cdef Symbol from_ptr(_GraphManager model, cppNode* ptr):
         """Construct a Symbol from a C++ Node pointer.
 
         There are times when a Node* needs to be passed through the Python layer
@@ -1370,7 +1083,7 @@ cdef class Symbol:
         raise ValueError("Symbols cannot be constructed directly")
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _GraphManager model, predecessors):
         """Construct a symbol from a compressed file.
 
         Args:
@@ -1401,27 +1114,27 @@ cdef class Symbol:
         Returns:
             True if the state is initialized.
         """
-        if not self.model.is_locked() and self.node_ptr.topological_index() < 0:
+        if not self.model._is_locked() and self.node_ptr.topological_index() < 0:
             raise TypeError("the state of an intermediate variable cannot be accessed without "
                             "locking the model first. See model.lock().")
 
-        cdef Py_ssize_t num_states = self.model.states.size()
+        cdef Py_ssize_t num_states = self.model._states.size()
 
         if not -num_states <= index < num_states:
             raise ValueError(f"index out of range: {index}")
         if index < 0:  # allow negative indexing
             index += num_states
 
-        self.model.states.resolve()
+        self.model._states.resolve()
 
         # States are extended lazily, so if the state isn't yet long enough then this
         # node's state has not been initialized
-        if <Py_ssize_t>(self.model.states._states[index].size()) <= self.node_ptr.topological_index():
+        if <Py_ssize_t>(self.model._states._states[index].size()) <= self.node_ptr.topological_index():
             return False
 
         # Check that the state pointer is not null
         # We need to explicitly cast to evoke unique_ptr's operator bool
-        return <bool>(self.model.states._states[index][self.node_ptr.topological_index()])
+        return <bool>(self.model._states._states[index][self.node_ptr.topological_index()])
 
     cpdef uintptr_t id(self) noexcept:
         """Return the "identity" of the underlying node.
@@ -1615,20 +1328,20 @@ cdef class Symbol:
             state 0: [0. 1. 2. 3. 4.] and []
             state 1: [3. 4.] and [0. 1. 2.]
         """
-        if not 0 <= index < self.model.states.size():
+        if not 0 <= index < self.model._states.size():
             raise ValueError(f"index out of range: {index}")
 
         if self.node_ptr.topological_index() < 0:
             # unsorted nodes don't have a state to reset
             return
 
-        self.model.states.resolve()
+        self.model._states.resolve()
 
         # make sure the state vector at least contains self
-        if <Py_ssize_t>(self.model.states._states[index].size()) <= self.node_ptr.topological_index():
-            self.model.states._states[index].resize(self.node_ptr.topological_index() + 1)
+        if <Py_ssize_t>(self.model._states._states[index].size()) <= self.node_ptr.topological_index():
+            self.model._states._states[index].resize(self.node_ptr.topological_index() + 1)
 
-        self.model._graph.recursive_reset(self.model.states._states[index], self.node_ptr)
+        self.model._graph.recursive_reset(self.model._states._states[index], self.node_ptr)
 
     def shares_memory(self, other):
         """Determine if two symbols share memory.
@@ -1750,7 +1463,7 @@ cdef class ArraySymbol(Symbol):
         # via their subclasses.
         raise ValueError("ArraySymbols cannot be constructed directly")
 
-    cdef void initialize_arraynode(self, Model model, cppArrayNode* array_ptr) noexcept:
+    cdef void initialize_arraynode(self, _GraphManager model, cppArrayNode* array_ptr) noexcept:
         self.array_ptr = array_ptr
         self.initialize_node(model, array_ptr)
 
@@ -2057,14 +1770,14 @@ cdef class ArraySymbol(Symbol):
             # todo: document once implemented
             raise NotImplementedError("copy=False is not (yet) supported")
 
-        cdef Py_ssize_t num_states = self.model.states.size()
+        cdef Py_ssize_t num_states = self.model._states.size()
 
         if not -num_states <= index < num_states:
             raise ValueError(f"index out of range: {index}")
         elif index < 0:  # allow negative indexing
             index += num_states
 
-        if not self.model.is_locked() and self.node_ptr.topological_index() < 0:
+        if not self.model._is_locked() and self.node_ptr.topological_index() < 0:
             raise TypeError("the state of an intermediate variable cannot be accessed without "
                             "locking the model first. See model.lock().")
 
@@ -2175,28 +1888,28 @@ cdef class StateView:
         # we're assuming this object is being created because we want to access
         # the state, so let's go ahead and create the state if it's not already
         # there
-        symbol.model.states.resolve()
-        symbol.model._graph.recursive_initialize(symbol.model.states._states[index], symbol.node_ptr)
+        symbol.model._states.resolve()
+        symbol.model._graph.recursive_initialize(symbol.model._states._states[index], symbol.node_ptr)
 
     def __getbuffer__(self, Py_buffer *buffer, int flags):
         # todo: inspect/respect/test flags
-        self.symbol.model.states.resolve()
+        self.symbol.model._states.resolve()
 
         cdef cppArray* ptr = self.symbol.array_ptr
 
-        buffer.buf = <void*>(ptr.buff(self.symbol.model.states._states.at(self.index)))
+        buffer.buf = <void*>(ptr.buff(self.symbol.model._states._states.at(self.index)))
         buffer.format = <char*>(ptr.format().c_str())
         buffer.internal = NULL
         buffer.itemsize = ptr.itemsize()
-        buffer.len = ptr.len(self.symbol.model.states._states.at(self.index))
+        buffer.len = ptr.len(self.symbol.model._states._states.at(self.index))
         buffer.ndim = ptr.ndim()
         buffer.obj = self
         buffer.readonly = 1  # todo: consider loosening this requirement
-        buffer.shape = <Py_ssize_t*>(ptr.shape(self.symbol.model.states._states.at(self.index)).data())
+        buffer.shape = <Py_ssize_t*>(ptr.shape(self.symbol.model._states._states.at(self.index)).data())
         buffer.strides = <Py_ssize_t*>(ptr.strides().data())
         buffer.suboffsets = NULL
 
-        self.symbol.model.states._view_count += 1
+        self.symbol.model._states._view_count += 1
 
     def __releasebuffer__(self, Py_buffer *buffer):
-        self.symbol.model.states._view_count -= 1
+        self.symbol.model._states._view_count -= 1

@@ -65,8 +65,8 @@ else
 endif
 
 py.extension_module(
-    'model',
-    'dwave/optimization/model.pyx',
+    'graph_manager',
+    'dwave/optimization/graph_manager.pyx',
     dependencies: libdwave_optimization,
     gnu_symbol_visibility: 'default',
     install: true,

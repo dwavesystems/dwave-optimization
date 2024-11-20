@@ -23,56 +23,20 @@ from dwave.optimization.libcpp.graph cimport ArrayNode as cppArrayNode, Node as 
 from dwave.optimization.libcpp.graph cimport Graph as cppGraph
 from dwave.optimization.libcpp.state cimport State as cppState
 
-__all__ = ["Model"]
 
+cdef class _GraphManager:
+    cpdef bool _is_locked(self) noexcept
+    cpdef Py_ssize_t _num_nodes(self) noexcept
 
-cdef class Model:
-    cpdef bool is_locked(self) noexcept
-    cpdef Py_ssize_t num_decisions(self) noexcept
-    cpdef Py_ssize_t num_nodes(self) noexcept
-    cpdef Py_ssize_t num_constraints(self) noexcept
-    
-    # Allow dynamic attributes on the Model class
+    # Allow dynamic attributes on the _GraphManager class
     cdef dict __dict__
 
-    # Make the Model class weak referenceable
+    # Make the _GraphManager class weak referenceable
     cdef object __weakref__
 
     cdef cppGraph _graph
 
-    cdef readonly object objective  # todo: cdef ArraySymbol?
-    """Objective to be minimized.
-
-    Examples:
-        This example prints the value of the objective of a model representing 
-        the simple polynomial, :math:`y = i^2 - 4i`, for a state with value 
-        :math:`i=2.0`. 
-
-        >>> from dwave.optimization import Model
-        ...
-        >>> model = Model()
-        >>> i = model.integer(lower_bound=-5, upper_bound=5)
-        >>> c = model.constant(4)
-        >>> y = i**2 - c*i
-        >>> model.minimize(y) 
-        >>> with model.lock():
-        ...     model.states.resize(1)
-        ...     i.set_state(0, 2.0)
-        ...     print(f"Objective = {model.objective.state(0)}")
-        Objective = -4.0
-    """
-
-    cdef readonly States states
-    """States of the model.
-
-    :ref:`States <intro_optimization_states>` represent assignments of values
-    to a symbol.
-
-    See also:
-        :ref:`States methods <optimization_models>` such as 
-        :meth:`~dwave.optimization.model.States.size` and 
-        :meth:`~dwave.optimization.model.States.resize`.
-    """
+    cdef readonly States _states
 
     # The number of times "lock()" has been called.
     cdef readonly Py_ssize_t _lock_count
@@ -81,6 +45,11 @@ cdef class Model:
     # We could pair each of these with an expired_ptr for the node holding
     # memory for easier cleanup later if that becomes a concern.
     cdef object _data_sources
+
+    cpdef Py_ssize_t _num_constraints(self) noexcept
+    cpdef Py_ssize_t _num_decisions(self) noexcept
+
+    cdef readonly object _objective  # todo: cdef ArraySymbol?
 
 
 cdef class States:
@@ -91,7 +60,8 @@ cdef class States:
     cpdef resolve(self)
     cpdef Py_ssize_t size(self) except -1
 
-    cdef Model _model(self)
+    # TODO: rename this to _graph_manager?
+    cdef _GraphManager _model(self)
 
     # In order to not create a circular reference, we only hold a weakref
     # to the model from the states. This introduces some overhead, but it
@@ -114,7 +84,7 @@ cdef class States:
 
 cdef class Symbol:
     # Inheriting nodes must call this method from their __init__()
-    cdef void initialize_node(self, Model model, cppNode* node_ptr) noexcept
+    cdef void initialize_node(self, _GraphManager model, cppNode* node_ptr) noexcept
 
     cpdef uintptr_t id(self) noexcept
 
@@ -122,12 +92,12 @@ cdef class Symbol:
     cpdef bool expired(self) noexcept
 
     @staticmethod
-    cdef Symbol from_ptr(Model model, cppNode* ptr)
+    cdef Symbol from_ptr(_GraphManager model, cppNode* ptr)
 
     # Hold on to a reference to the Model, both for access but also, importantly,
     # to ensure that the model doesn't get garbage collected unless all of
     # the observers have also been garbage collected.
-    cdef readonly Model model
+    cdef readonly _GraphManager model
 
     # Hold Node* pointer. This is redundant as most observers will also hold
     # a pointer to their observed node with the correct type. But the cost
@@ -145,7 +115,7 @@ cdef class Symbol:
 # also Symbols (probably a fair assumption)
 cdef class ArraySymbol(Symbol):
     # Inheriting symbols must call this method from their __init__()
-    cdef void initialize_arraynode(self, Model model, cppArrayNode* array_ptr) noexcept
+    cdef void initialize_arraynode(self, _GraphManager model, cppArrayNode* array_ptr) noexcept
 
     # Hold ArrayNode* pointer. Again this is redundant, because we're also holding
     # a pointer to Node* and we can theoretically dynamic cast each time.

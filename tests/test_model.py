@@ -22,18 +22,19 @@ import unittest
 
 import numpy as np
 
+import dwave.optimization.graph_manager
 import dwave.optimization.symbols
 from dwave.optimization import Model
 
 
 class TestArraySymbol(unittest.TestCase):
     def test_abstract(self):
-        from dwave.optimization.model import ArraySymbol
+        from dwave.optimization.graph_manager import ArraySymbol
         with self.assertRaisesRegex(ValueError, "ArraySymbols cannot be constructed directly"):
             ArraySymbol()
 
     def test_bool(self):
-        from dwave.optimization.model import ArraySymbol
+        from dwave.optimization.graph_manager import ArraySymbol
 
         # bypass the init, this should be done very carefully as it can lead to
         # segfaults dependig on what methods are accessed!
@@ -107,7 +108,7 @@ class TestArraySymbol(unittest.TestCase):
 
         with self.subTest("__pow__"):
             self.assertIsInstance(x ** 1, type(x))
-            self.assertIsInstance(x ** 1, dwave.optimization.model.ArraySymbol)
+            self.assertIsInstance(x ** 1, dwave.optimization.graph_manager.ArraySymbol)
             self.assertIsInstance(x ** 2, dwave.optimization.symbols.Square)
             self.assertIsInstance(x ** 3, dwave.optimization.symbols.NaryMultiply)
             self.assertIsInstance(x ** 4, dwave.optimization.symbols.NaryMultiply)
@@ -121,7 +122,7 @@ class TestArraySymbol(unittest.TestCase):
         def __getitem__(self, index):
             if not isinstance(index, tuple):
                 return self[(index,)]
-            i0, i1 = dwave.optimization.model._split_indices(index)
+            i0, i1 = dwave.optimization.graph_manager._split_indices(index)
             np.testing.assert_array_equal(self.array[index], self.array[i0][i1])
 
     def test_split_indices(self):
@@ -607,7 +608,7 @@ class TestStates(unittest.TestCase):
         model = Model()
 
         self.assertTrue(hasattr(model, "states"))
-        self.assertIsInstance(model.states, dwave.optimization.model.States)
+        self.assertIsInstance(model.states, dwave.optimization.graph_manager.States)
 
         # by default there are no states
         self.assertEqual(len(model.states), 0)
@@ -677,7 +678,7 @@ class TestStates(unittest.TestCase):
 
 class TestSymbol(unittest.TestCase):
     def test_abstract(self):
-        from dwave.optimization.model import Symbol
+        from dwave.optimization.graph_manager import Symbol
         with self.assertRaisesRegex(ValueError, "Symbols cannot be constructed directly"):
             Symbol()
 
