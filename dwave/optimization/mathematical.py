@@ -14,6 +14,7 @@
 
 import functools
 import typing
+import collections
 
 from dwave.optimization.model import ArraySymbol
 from dwave.optimization.symbols import (
@@ -109,11 +110,11 @@ def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add,
     raise RuntimeError("implementated by the op() decorator")
 
 
-def concatenate(xi: tuple[ArraySymbol], axis : int = 0):
+def concatenate(array_likes : typing.Union[collections.Iterable, ArraySymbol], axis : int = 0) -> ArraySymbol:
     r"""Return the concatenation of one or more symbols on the given axis.
 
     Args:
-        xi: Tuple of one or more input array symbols to concatenate.
+        array_like: Array symbols to concatenate.
         axis: The concatenation axis.
 
     Returns:
@@ -140,7 +141,17 @@ def concatenate(xi: tuple[ArraySymbol], axis : int = 0):
          [2. 3.]
          [4. 5.]]
     """
-    return xi[0] if len(xi) == 1 else Concatenate(xi, axis)
+    if isinstance(array_likes, ArraySymbol):
+        return array_likes
+
+    if isinstance(array_likes, collections.Iterable) and (0 < len(array_likes)):
+        if isinstance(array_likes[0], ArraySymbol):
+            if len(array_likes) == 1:
+                return array_likes[0]
+
+            return Concatenate(tuple(array_likes), axis)
+
+    raise RuntimeError("concatenate takes one or more ArraySymbol as input")
 
 
 def logical(x: ArraySymbol) -> Logical:
