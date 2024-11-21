@@ -1699,6 +1699,11 @@ template class ReduceNode<std::plus<double>>;
 template <class UnaryOp>
 UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
         : ArrayOutputMixin(node_ptr->shape()), array_ptr_(node_ptr) {
+    if constexpr (std::is_same<UnaryOp, functional::square_root<double>>::value) {
+        if (node_ptr->min() < 0) {
+            throw std::invalid_argument("SquareRoot's predecessors cannot take a negative value");
+        }
+    }
     add_predecessor(node_ptr);
 }
 
@@ -1788,6 +1793,13 @@ double UnaryOpNode<functional::square<double>>::max() const {
     }
     return max * max;
 }
+
+template <>
+double UnaryOpNode<functional::square_root<double>>::max() const {
+    assert(array_ptr_->max() >= 0);
+    return std::sqrt(array_ptr_->max());
+}
+
 template <class UnaryOp>
 double UnaryOpNode<UnaryOp>::max() const {
     using result_type = typename std::invoke_result<UnaryOp, double&>::type;
@@ -1829,6 +1841,11 @@ double UnaryOpNode<functional::square<double>>::min() const {
         return Array::max();
     }
     return min * min;
+}
+template <>
+double UnaryOpNode<functional::square_root<double>>::min() const {
+    assert(array_ptr_->min() >= 0);
+    return std::sqrt(array_ptr_->min());
 }
 template <class UnaryOp>
 double UnaryOpNode<UnaryOp>::min() const {
@@ -1886,6 +1903,7 @@ ssize_t UnaryOpNode<UnaryOp>::size_diff(const State& state) const {
 template class UnaryOpNode<functional::abs<double>>;
 template class UnaryOpNode<functional::logical<double>>;
 template class UnaryOpNode<functional::square<double>>;
+template class UnaryOpNode<functional::square_root<double>>;
 template class UnaryOpNode<std::negate<double>>;
 template class UnaryOpNode<std::logical_not<double>>;
 

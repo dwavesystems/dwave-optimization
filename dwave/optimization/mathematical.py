@@ -31,6 +31,7 @@ from dwave.optimization.symbols import (
     NaryMultiply,
     Not,
     Or,
+    SquareRoot,
     Where,
     Xor,
 )
@@ -48,6 +49,7 @@ __all__ = [
     "minimum",
     "mod",
     "multiply",
+    "sqrt",
     "where",
 ]
 
@@ -465,6 +467,29 @@ def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         [21. 10.]
     """
     raise RuntimeError("implementated by the op() decorator")
+
+
+def sqrt(x: ArraySymbol) -> SquareRoot:
+    r"""Return an element-wise sqrt on the given symbol.
+    Args:
+        x: Input symbol.
+    Returns:
+        A symbol that propagates the sqrt of the given symbol.
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import sqrt
+        ...
+        >>> model = Model()
+        >>> x = model.constant(16)
+        >>> sqrt_x = sqrt(x)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(sqrt_x.state())
+        4
+    See Also:
+        :class:`~dwave.optimization.symbols.SquareRoot`: equivalent symbol.
+    """
+    return SquareRoot(x)
 
 
 def where(condition: ArraySymbol, x: ArraySymbol, y: ArraySymbol) -> Where:
