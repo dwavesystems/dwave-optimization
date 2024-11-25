@@ -12,9 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import collections
 import functools
 import typing
-import collections
 
 from dwave.optimization.model import ArraySymbol
 from dwave.optimization.symbols import (
