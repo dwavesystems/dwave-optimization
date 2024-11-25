@@ -144,7 +144,7 @@ def concatenate(array_likes : typing.Union[collections.abc.Iterable, ArraySymbol
     if isinstance(array_likes, ArraySymbol):
         return array_likes
 
-    if isinstance(array_likes, collections.abc.Iterable) and (0 < len(array_likes)):
+    if isinstance(array_likes, collections.abc.Sequence) and (0 < len(array_likes)):
         if isinstance(array_likes[0], ArraySymbol):
             if len(array_likes) == 1:
                 return array_likes[0]
