@@ -827,7 +827,7 @@ cdef class Concatenate(ArraySymbol):
 
     @classmethod
     def _from_zipfile(cls, zf, directory, Model model, predecessors):
-        if len(predecessors) < 2:
+        if len(predecessors) < 1:
             raise ValueError("Concatenate must have at least one predecessor")
 
         with zf.open(directory + "axis.json", "r") as f:
