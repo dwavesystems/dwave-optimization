@@ -790,9 +790,9 @@ cdef class Concatenate(ArraySymbol):
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.symbols import Concatenate
         >>> model = Model()
-        >>> a = model.constant([[1,2], [3,4]])
-        >>> b = model.constant([[5,6]])
-        >>> a_b = Concatenate((a,b), axis=0)
+        >>> a = model.constant([[1, 2], [3, 4]])
+        >>> b = model.constant([[5, 6]])
+        >>> a_b = Concatenate((a, b), axis=0)
         >>> type(a_b)
         <class 'dwave.optimization.symbols.Concatenate'>
     """
