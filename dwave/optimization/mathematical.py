@@ -151,7 +151,7 @@ def concatenate(array_likes : typing.Union[collections.abc.Iterable, ArraySymbol
 
             return Concatenate(tuple(array_likes), axis)
 
-    raise RuntimeError("concatenate takes one or more ArraySymbol as input")
+    raise TypeError("concatenate takes one or more ArraySymbol as input")
 
 
 def logical(x: ArraySymbol) -> Logical:
