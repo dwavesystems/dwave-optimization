@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add C++ ``ConcatenateNode`` and Python ``Concatenate`` symbol and ``concatenate()`` function.
+    See `#46 <https://github.com/dwavesystems/dwave-optimization/issues/46>`_.
