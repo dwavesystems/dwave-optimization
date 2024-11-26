@@ -25,6 +25,261 @@
 
 namespace dwave::optimization {
 
+TEST_CASE("ConcatenateNode") {
+
+    GIVEN("Two constant nodes with 8 elements each") {
+        auto a = ConstantNode(std::vector{1, 2, 3, 4, 5, 6, 7, 8});
+        auto b = ConstantNode(std::vector{9, 10, 11, 12, 13, 14, 15, 16});
+
+        WHEN("Reshaped to (2,2,2) and concatenated on axis 1") {
+            auto ra = ReshapeNode(&a, std::vector<ssize_t>({2,2,2}));
+            auto rb = ReshapeNode(&b, std::vector<ssize_t>({2,2,2}));
+
+            auto c = ConcatenateNode(std::vector<ArrayNode*>{&ra,&rb}, 1);
+
+            THEN("The concatenated node has shape (2,4,2) and ndim 3") {
+                CHECK(std::ranges::equal(c.shape(), std::vector{2,4,2}));
+                CHECK(c.ndim() == 3);
+            }
+        }
+    }
+
+    GIVEN("Two constant nodes with shape (2,2,2,1)") {
+        auto graph = Graph();
+
+        auto a_ptr = graph.emplace_node<ConstantNode>(
+                            std::vector<double>{1, 2, 3, 4, 5, 6, 7, 8});
+        auto b_ptr = graph.emplace_node<ConstantNode>(
+                            std::vector<double>{9, 10, 11, 12, 13, 14, 15, 16});
+
+        auto ra_ptr = graph.emplace_node<ReshapeNode>(a_ptr, std::vector<ssize_t>{2,2,2,1});
+        auto rb_ptr = graph.emplace_node<ReshapeNode>(b_ptr, std::vector<ssize_t>{2,2,2,1});
+
+        std::vector<ArrayNode*> v{ra_ptr, rb_ptr};
+
+        WHEN("Concatenated on axis 0") {
+            auto c_ptr = graph.emplace_node<ConcatenateNode>(v, 0);
+
+            THEN("The concatenated node has shape (4,2,2,1)") {
+                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{4,2,2,1}));
+            }
+
+            AND_WHEN("The graph is initialized") {
+                auto state = graph.initialize_state();
+                auto expected = std::vector<ssize_t>{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+                THEN("Buffer is initialized correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+
+        WHEN("Concatenated on axis 1") {
+            auto c_ptr = graph.emplace_node<ConcatenateNode>(v, 1);
+
+            THEN("The concatenated node has shape (2,4,2,1)") {
+                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2,4,2,1}));
+            }
+
+            AND_WHEN("The graph is initialized") {
+                auto state = graph.initialize_state();
+                auto expected = std::vector<ssize_t>{1,2,3,4,9,10,11,12,5,6,7,8,13,14,15,16};
+                THEN("Buffer is initialized correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+
+        WHEN("Concatenated on axis 2") {
+            auto c_ptr = graph.emplace_node<ConcatenateNode>(v, 2);
+
+            THEN("The concatenated node has shape (2,2,4,1)") {
+                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2,2,4,1}));
+            }
+
+            AND_WHEN("The graph is initialized") {
+                auto state = graph.initialize_state();
+                auto expected = std::vector<ssize_t>{1,2,9,10,3,4,11,12,5,6,13,14,7,8,15,16};
+                THEN("Buffer is initialized correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+    }
+
+    GIVEN("Two arrays with shapes (2,2,2) and (3,2,2) that are concatenated on axis 0") {
+        auto graph = Graph();
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2,2,2}, 0, 100);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3,2,2}, 0, 100);
+        auto c_ptr = graph.emplace_node<ConcatenateNode>(
+                            std::vector<ArrayNode*>{a_ptr, b_ptr}, 0);
+
+        WHEN("The graph is initialized and the arrays are given new values") {
+            auto state = graph.initialize_state();
+
+            // Ranges 1-8, 9-20
+            for (auto i : std::ranges::iota_view(0,8)) a_ptr->set_value(state, i, i+1);
+            for (auto i : std::ranges::iota_view(0,12)) b_ptr->set_value(state, i, i+9);
+
+            graph.propose(state, {a_ptr, b_ptr}, [](const Graph&, State&) { return true; });
+            THEN("ConcatenateNode values are propagated correctly") {
+                CHECK(std::ranges::equal(c_ptr->view(state), std::ranges::iota_view{1,21}));
+            }
+        }
+    }
+
+    GIVEN("Two arrays with shapes (2,2,2) and (2,3,2) that are concatenated on axis 1") {
+        auto graph = Graph();
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2,2,2}, 0, 100);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2,3,2}, 0, 100);
+        auto c_ptr = graph.emplace_node<ConcatenateNode>(
+                            std::vector<ArrayNode*>{a_ptr, b_ptr}, 1);
+
+        WHEN("The graph is initialized and the arrays are given new values") {
+            auto state = graph.initialize_state();
+
+            // Ranges 1-8, 9-20
+            for (auto i : std::ranges::iota_view(0,8)) a_ptr->set_value(state, i, i+1);
+            for (auto i : std::ranges::iota_view(0,12)) b_ptr->set_value(state, i, i+9);
+
+            graph.propose(state, {a_ptr, b_ptr}, [](const Graph&, State&) { return true; });
+            std::vector<ssize_t> expected = {1,2,3,4,9,10,11,12,13,14,5,6,7,8,15,16,17,18,19,20};
+            THEN("ConcatenateNode values are propagated correctly") {
+                CHECK(std::ranges::equal(c_ptr->view(state), expected));
+            }
+        }
+    }
+
+    GIVEN("Two arrays with shapes (2,2,2) and (2,2,3) that are concatenated on axis 2") {
+        auto graph = Graph();
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2,2,2}, 0, 100);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2,2,3}, 0, 100);
+        auto c_ptr = graph.emplace_node<ConcatenateNode>(
+                            std::vector<ArrayNode*>{a_ptr, b_ptr}, 2);
+
+        WHEN("The graph is initialized and the arrays are given new values") {
+            auto state = graph.initialize_state();
+
+            // Ranges 1-8, 9-20
+            for (auto i : std::ranges::iota_view(0,8)) a_ptr->set_value(state, i, i+1);
+            for (auto i : std::ranges::iota_view(0,12)) b_ptr->set_value(state, i, i+9);
+
+            graph.propose(state, {a_ptr, b_ptr}, [](const Graph&, State&) { return true; });
+            std::vector<ssize_t> expected = {1,2,9,10,11,3,4,12,13,14,5,6,15,16,17,7,8,18,19,20};
+            THEN("ConcatenateNode values are propagated correctly") {
+                CHECK(std::ranges::equal(c_ptr->view(state), expected));
+            }
+        }
+    }
+
+    GIVEN("Three arrays with 12, 18 and 24 elements") {
+        auto graph = Graph();
+
+        auto a = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{12}, 0, 100);
+        auto b = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{18}, 0, 100);
+        auto c = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{24}, 0, 100);
+
+        WHEN("The arrays are reshaped, concatenated on axis 0, and assigned new values") {
+            auto a_r = graph.emplace_node<ReshapeNode>(a, std::vector<ssize_t>{2,3,2,1});
+            auto b_r = graph.emplace_node<ReshapeNode>(b, std::vector<ssize_t>{3,3,2,1});
+            auto c_r = graph.emplace_node<ReshapeNode>(c, std::vector<ssize_t>{4,3,2,1});
+            auto abc_ptr = graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r,b_r,c_r}, 0);
+
+            auto state = graph.initialize_state();
+
+            // Values 1-12, 13-30, 31-54
+            for (auto i : std::ranges::iota_view(0,12)) a->set_value(state, i, i+1);
+            for (auto i : std::ranges::iota_view(0,18)) b->set_value(state, i, i+13);
+            for (auto i : std::ranges::iota_view(0,24)) c->set_value(state, i, i+31);
+
+            graph.propose(state, {a,b,c}, [](const Graph&, State&) { return true; });
+            auto expected = std::ranges::iota_view(1,55);
+
+            THEN("ConcatenatedNode values are propagated correctly") {
+               CHECK(std::ranges::equal(abc_ptr->view(state), expected));
+            }
+        }
+
+        WHEN("The arrays are reshaped, concatenated on axis 1, and assigned new values") {
+            auto a_r = graph.emplace_node<ReshapeNode>(a, std::vector<ssize_t>{3,2,2,1});
+            auto b_r = graph.emplace_node<ReshapeNode>(b, std::vector<ssize_t>{3,3,2,1});
+            auto c_r = graph.emplace_node<ReshapeNode>(c, std::vector<ssize_t>{3,4,2,1});
+            auto abc_ptr = graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r,b_r,c_r}, 1);
+
+            auto state = graph.initialize_state();
+
+            // Values 1-12, 13-30, 31-54
+            for (auto i : std::ranges::iota_view(0,12)) a->set_value(state, i, i+1);
+            for (auto i : std::ranges::iota_view(0,18)) b->set_value(state, i, i+13);
+            for (auto i : std::ranges::iota_view(0,24)) c->set_value(state, i, i+31);
+
+            graph.propose(state, {a,b,c}, [](const Graph&, State&) { return true; });
+            std::vector<double> expected{
+                1,  2,  3,  4, 13, 14, 15, 16, 17, 18, 31, 32, 33, 34, 35, 36, 37, 38,
+                5,  6,  7,  8, 19, 20, 21, 22, 23, 24, 39, 40, 41, 42, 43, 44, 45, 46,
+                9, 10, 11, 12, 25, 26, 27, 28, 29, 30, 47, 48, 49, 50, 51, 52, 53, 54};
+
+            THEN("ConcatenatedNode values are propagated correctly") {
+                CHECK(std::ranges::equal(abc_ptr->view(state), expected));
+            }
+        }
+
+        WHEN("The arrays are reshaped, concatenated on axis 2, and assigned new values") {
+            auto a_r = graph.emplace_node<ReshapeNode>(a, std::vector<ssize_t>{3,2,2,1});
+            auto b_r = graph.emplace_node<ReshapeNode>(b, std::vector<ssize_t>{3,2,3,1});
+            auto c_r = graph.emplace_node<ReshapeNode>(c, std::vector<ssize_t>{3,2,4,1});
+            auto abc_ptr = graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r,b_r,c_r}, 2);
+
+            auto state = graph.initialize_state();
+
+            // Values 1-12, 13-30, 31-54
+            for (auto i : std::ranges::iota_view(0,12)) a->set_value(state, i, i+1);
+            for (auto i : std::ranges::iota_view(0,18)) b->set_value(state, i, i+13);
+            for (auto i : std::ranges::iota_view(0,24)) c->set_value(state, i, i+31);
+
+            graph.propose(state, {a,b,c}, [](const Graph&, State&) { return true; });
+            std::vector<double> expected{
+                 1,  2, 13, 14, 15, 31, 32, 33, 34,
+                 3,  4, 16, 17, 18, 35, 36, 37, 38,
+                 5,  6, 19, 20, 21, 39, 40, 41, 42,
+                 7,  8, 22, 23, 24, 43, 44, 45, 46,
+                 9, 10, 25, 26, 27, 47, 48, 49, 50,
+                11, 12, 28, 29, 30, 51, 52, 53, 54};
+
+            THEN("ConcatenatedNode values are propagated correctly") {
+                CHECK(std::ranges::equal(abc_ptr->view(state), expected));
+            }
+        }
+
+        WHEN("The arrays are reshaped, concatenated on axis 3, and assigned new values") {
+            auto a_r = graph.emplace_node<ReshapeNode>(a, std::vector<ssize_t>{3,2,1,2});
+            auto b_r = graph.emplace_node<ReshapeNode>(b, std::vector<ssize_t>{3,2,1,3});
+            auto c_r = graph.emplace_node<ReshapeNode>(c, std::vector<ssize_t>{3,2,1,4});
+            auto abc_ptr = graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r,b_r,c_r}, 3);
+
+            auto state = graph.initialize_state();
+
+            // Values 1-12, 13-30, 31-54
+            for (auto i : std::ranges::iota_view(0,12)) a->set_value(state, i, i+1);
+            for (auto i : std::ranges::iota_view(0,18)) b->set_value(state, i, i+13);
+            for (auto i : std::ranges::iota_view(0,24)) c->set_value(state, i, i+31);
+
+            graph.propose(state, {a,b,c}, [](const Graph&, State&) { return true; });
+            std::vector<double> expected{
+                 1,  2, 13, 14, 15, 31, 32, 33, 34,
+                 3,  4, 16, 17, 18, 35, 36, 37, 38,
+                 5,  6, 19, 20, 21, 39, 40, 41, 42,
+                 7,  8, 22, 23, 24, 43, 44, 45, 46,
+                 9, 10, 25, 26, 27, 47, 48, 49, 50,
+                11, 12, 28, 29, 30, 51, 52, 53, 54};
+
+            THEN("ConcatenatedNode values are propagated correctly") {
+                CHECK(std::ranges::equal(abc_ptr->view(state), expected));
+            }
+        }
+    }
+
+}
+
 TEST_CASE("ReshapeNode") {
     GIVEN("A 1d array encoding range(12)") {
         auto A = ConstantNode(std::vector{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11});

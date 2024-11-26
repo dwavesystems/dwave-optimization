@@ -56,6 +56,7 @@ from dwave.optimization.libcpp.nodes cimport (
     ArrayValidationNode as cppArrayValidationNode,
     BasicIndexingNode as cppBasicIndexingNode,
     BinaryNode as cppBinaryNode,
+    ConcatenateNode as cppConcatenateNode,
     ConstantNode as cppConstantNode,
     DisjointBitSetNode as cppDisjointBitSetNode,
     DisjointBitSetsNode as cppDisjointBitSetsNode,
@@ -106,6 +107,7 @@ __all__ = [
     "BasicIndexing",
     "BinaryVariable",
     "_CombinedIndexing",
+    "Concatenate",
     "Constant",
     "DisjointBitSets",
     "DisjointBitSet",
@@ -779,6 +781,70 @@ cdef class BinaryVariable(ArraySymbol):
     cdef cppBinaryNode* ptr
 
 _register(BinaryVariable, typeid(cppBinaryNode))
+
+
+cdef class Concatenate(ArraySymbol):
+    """Concatenate symbol.
+
+    Examples:
+        This example creates a Concatenate symbol.
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.symbols import Concatenate
+        >>> model = Model()
+        >>> a = model.constant([[1, 2], [3, 4]])
+        >>> b = model.constant([[5, 6]])
+        >>> a_b = Concatenate((a, b), axis=0)
+        >>> type(a_b)
+        <class 'dwave.optimization.symbols.Concatenate'>
+    """
+    def __init__(self, tuple inputs, int axis = 0):
+        if len(inputs) < 1:
+            raise TypeError("must have at least one predecessor node")
+
+        cdef Model model = inputs[0].model
+        cdef vector[cppArrayNode*] cppinputs
+
+        cdef ArraySymbol array
+        for node in inputs:
+            if node.model != model:
+                raise ValueError("all predecessors must be from the same model")
+            array = <ArraySymbol?>node
+            cppinputs.push_back(array.array_ptr)
+
+        self.ptr = model._graph.emplace_node[cppConcatenateNode](
+            cppinputs, axis)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppConcatenateNode* ptr = dynamic_cast_ptr[cppConcatenateNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Concatenate")
+
+        cdef Concatenate m = Concatenate.__new__(Concatenate)
+        m.ptr = ptr
+        m.initialize_arraynode(symbol.model, ptr)
+        return m
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+        if len(predecessors) < 1:
+            raise ValueError("Concatenate must have at least one predecessor")
+
+        with zf.open(directory + "axis.json", "r") as f:
+            return Concatenate(tuple(predecessors), axis=json.load(f))
+
+    def _into_zipfile(self, zf, directory):
+        encoder = json.JSONEncoder(separators=(',', ':'))
+        zf.writestr(directory + "axis.json", encoder.encode(self.axis()))
+
+    def axis(self):
+        return self.ptr.axis()
+
+    cdef cppConcatenateNode* ptr
+
+_register(Concatenate, typeid(cppConcatenateNode))
 
 
 cdef class Constant(ArraySymbol):

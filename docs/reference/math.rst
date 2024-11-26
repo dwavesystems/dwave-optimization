@@ -12,6 +12,7 @@ Mathematical Functions
    :toctree: generated/
 
    ~add
+   ~concatenate
    ~logical
    ~logical_and
    ~logical_or

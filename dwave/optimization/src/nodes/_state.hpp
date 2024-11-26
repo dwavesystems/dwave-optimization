@@ -74,6 +74,7 @@ class ArrayNodeStateData : public NodeStateData {
         return !updates.empty();
     }
 
+    double* buff() noexcept { return buffer.data(); }
     const double* buff() const noexcept { return buffer.data(); }
 
     void commit() noexcept {
