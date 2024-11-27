@@ -78,6 +78,9 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
 
 
 cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass ConcatenateNode(ArrayNode):
+        Py_ssize_t axis()
+
     cdef cppclass ReshapeNode(ArrayNode):
         pass
 

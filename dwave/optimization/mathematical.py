@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import collections
 import functools
 import typing
 
@@ -19,6 +20,7 @@ from dwave.optimization.model import ArraySymbol
 from dwave.optimization.symbols import (
     Add,
     And,
+    Concatenate,
     Divide,
     Logical,
     Maximum,
@@ -39,6 +41,7 @@ from dwave.optimization.symbols import (
 
 __all__ = [
     "add",
+    "concatenate",
     "divide",
     "logical",
     "logical_and",
@@ -107,6 +110,50 @@ def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add,
         [10. 10.]
     """
     raise RuntimeError("implementated by the op() decorator")
+
+
+def concatenate(array_likes : typing.Union[collections.abc.Iterable, ArraySymbol], axis : int = 0) -> ArraySymbol:
+    r"""Return the concatenation of one or more symbols on the given axis.
+
+    Args:
+        array_like: Array symbols to concatenate.
+        axis: The concatenation axis.
+
+    Returns:
+        A symbol that is the concatenation of the given symbols along the specified axis.
+
+    Examples:
+        This example concatenates two constant symbols along the first axis.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import concatenate
+        ...
+        >>> model = Model()
+        >>> a = model.constant([[0,1], [2,3]])
+        >>> b = model.constant([[4,5]])
+        >>> a_b = concatenate((a,b), axis=0)
+        >>> a_b.shape()
+        (3, 2)
+        >>> type(a_b)
+        <class 'dwave.optimization.symbols.Concatenate'>
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     print(a_b.state(0))
+        [[0. 1.]
+         [2. 3.]
+         [4. 5.]]
+    """
+    if isinstance(array_likes, ArraySymbol):
+        return array_likes
+
+    if isinstance(array_likes, collections.abc.Sequence) and (0 < len(array_likes)):
+        if isinstance(array_likes[0], ArraySymbol):
+            if len(array_likes) == 1:
+                return array_likes[0]
+
+            return Concatenate(tuple(array_likes), axis)
+
+    raise TypeError("concatenate takes one or more ArraySymbol as input")
 
 
 def divide(x1: ArraySymbol, x2: ArraySymbol) -> Divide:
