@@ -1564,8 +1564,8 @@ cdef class Divide(ArraySymbol):
 
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> i = model.integer(10, lower_bound=-50, upper_bound=50)
-        >>> j = model.integer(10, lower_bound=0, upper_bound=10)
+        >>> i = model.integer(10, lower_bound=-50, upper_bound=-1)
+        >>> j = model.integer(10, lower_bound=1, upper_bound=10)
         >>> k = i/j
         >>> type(k)
         <class 'dwave.optimization.symbols.Divide'>
