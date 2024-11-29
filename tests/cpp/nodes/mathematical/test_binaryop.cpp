@@ -24,6 +24,7 @@
 
 namespace dwave::optimization {
 
+// NOTE: divides test is disabled because the template-tests have invalid denominators. 
 TEMPLATE_TEST_CASE("BinaryOpNode", "", 
                     // std::divides<double>, 
                     std::equal_to<double>, std::less_equal<double>,
