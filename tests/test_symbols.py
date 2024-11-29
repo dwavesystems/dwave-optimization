@@ -1187,10 +1187,9 @@ class TestDivide(utils.SymbolTests):
 
         a = model.constant(5)
         b = model.constant(0)
-        ab = a/b
-        model.lock()
-        model.states.resize(1)
-        self.assertTrue(math.isinf(ab.state(0)))
+
+        with self.assertRaises(ValueError):
+            a / b
 
     def test_unsupported_floor_division(self):
         model = Model()

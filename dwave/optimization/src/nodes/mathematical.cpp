@@ -41,6 +41,14 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
         throw std::invalid_argument("arrays must have the same shape or one must be a scalar");
     }
 
+    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value) {
+        bool strictly_negative = rhs_ptr->min() < 0 && rhs_ptr->max() < 0;
+        bool strictly_positive = rhs_ptr->min() > 0 && rhs_ptr->max() > 0;
+        if (!strictly_negative && !strictly_positive) {
+            throw std::invalid_argument("Divide's denominator predecessor must be either strictly positive or strictly negative");
+        }
+    }
+
     this->add_predecessor(a_ptr);
     this->add_predecessor(b_ptr);
 }
@@ -1700,7 +1708,8 @@ template <class UnaryOp>
 UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
         : ArrayOutputMixin(node_ptr->shape()), array_ptr_(node_ptr) {
     if constexpr (std::is_same<UnaryOp, functional::square_root<double>>::value) {
-        if (node_ptr->min() < 0) {
+        bool negative = node_ptr->min() < 0;
+        if (negative) {
             throw std::invalid_argument("SquareRoot's predecessors cannot take a negative value");
         }
     }

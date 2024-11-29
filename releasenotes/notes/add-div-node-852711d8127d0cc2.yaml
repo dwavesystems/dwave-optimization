@@ -3,4 +3,5 @@ features:
   - |
     Add C++ ``DivideNode`` and Python ``Divide`` symbol, and overriding 
     __truediv__. ``Divide`` propagates the division of its predecessors 
-    element-wise.
+    element-wise. Note that predecessors of Divide must be either 
+    strictly positive or strictly negative.

@@ -429,14 +429,27 @@ TEST_CASE("BinaryOpNode - DivideNode") {
         auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
         auto a_ptr = graph.emplace_node<ConstantNode>(0);
 
-        auto y_ptr = graph.emplace_node<DivideNode>(x_ptr, a_ptr);
-
         THEN("Check division-by-zero") {
-            CHECK(std::isinf(y_ptr->max()));
-            CHECK(std::isinf(y_ptr->min()));
-            CHECK_FALSE(y_ptr->integral());
+            CHECK_THROWS(graph.emplace_node<DivideNode>(x_ptr, a_ptr));
         }
     }
+    GIVEN("x = IntegerNode(-5, 5), a = IntegerNode(-5, 0), y = x / a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 0);
+
+        THEN("Check division-by-zero") {
+            CHECK_THROWS(graph.emplace_node<DivideNode>(x_ptr, a_ptr));
+        }
+    }
+    GIVEN("x = IntegerNode(-5, 5), a = IntegerNode(0, 5), y = x / a") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 5);
+
+        THEN("Check division-by-zero") {
+            CHECK_THROWS(graph.emplace_node<DivideNode>(x_ptr, a_ptr));
+        }
+    }
+
 }
 
 TEST_CASE("BinaryOpNode - SubtractNode") {
