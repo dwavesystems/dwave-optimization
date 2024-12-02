@@ -62,7 +62,7 @@ cdef class Model:
         Objective = -4.0
     """
 
-    cdef readonly States states
+    cdef readonly object states
     """States of the model.
 
     :ref:`States <intro_optimization_states>` represent assignments of values
@@ -81,35 +81,6 @@ cdef class Model:
     # We could pair each of these with an expired_ptr for the node holding
     # memory for easier cleanup later if that becomes a concern.
     cdef object _data_sources
-
-
-cdef class States:
-    """The states/solutions of the model."""
-
-    cdef void attach_states(self, vector[cppState]) noexcept
-    cdef vector[cppState] detach_states(self)
-    cpdef resolve(self)
-    cpdef Py_ssize_t size(self) except -1
-
-    cdef Model _model(self)
-
-    # In order to not create a circular reference, we only hold a weakref
-    # to the model from the states. This introduces some overhead, but it
-    # makes sure that the Model is promptly garbage collected
-    cdef readonly object _model_ref
-
-    # The state(s) of the model kept as a ragged vector-of-vectors (each
-    # cppState is a vector).
-    # Accessors should check the length of the state when accessing!
-    cdef vector[cppState] _states
-
-    # The number of views into the states that exist. The model cannot
-    # be unlocked while there are unsafe views
-    cdef Py_ssize_t _view_count
-
-    # Object that contains or will contain the information needed to construct states
-    cdef readonly object _future
-    cdef readonly object _result_hook
 
 
 cdef class Symbol:
@@ -151,8 +122,3 @@ cdef class ArraySymbol(Symbol):
     # a pointer to Node* and we can theoretically dynamic cast each time.
     # But again, it's cheap and it simplifies things.
     cdef cppArrayNode* array_ptr
-
-
-cdef class StateView:
-    cdef readonly Py_ssize_t index  # which state we're accessing
-    cdef readonly ArraySymbol symbol
