@@ -76,6 +76,17 @@ py.extension_module(
 )
 
 py.extension_module(
+    'states',
+    'dwave/optimization/states.pyx',
+    dependencies: libdwave_optimization,
+    gnu_symbol_visibility: 'default',
+    install: true,
+    install_rpath: '$ORIGIN',
+    override_options : ['cython_language=cpp'],
+    subdir: 'dwave/optimization/',
+)
+
+py.extension_module(
     'symbols',
     'dwave/optimization/symbols.pyx',
     dependencies: libdwave_optimization,
