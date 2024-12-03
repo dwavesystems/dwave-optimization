@@ -15,7 +15,7 @@
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.state cimport State as cppState
-from dwave.optimization.model cimport Model
+from dwave.optimization._graph cimport _Graph
 
 
 cdef class States:
@@ -24,7 +24,7 @@ cdef class States:
     cpdef resolve(self)
     cpdef Py_ssize_t size(self) except -1
 
-    cdef Model _model(self)
+    cdef _Graph _model(self)
 
     # In order to not create a circular reference, we only hold a weakref
     # to the model from the states. This introduces some overhead, but it

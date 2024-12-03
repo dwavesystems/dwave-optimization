@@ -17,8 +17,8 @@ import weakref
 from libcpp.utility cimport move
 
 from dwave.optimization.libcpp.array cimport Array as cppArray
-from dwave.optimization.model cimport ArraySymbol
-
+from dwave.optimization._graph cimport ArraySymbol
+from dwave.optimization.model import Model
 
 __all__ = ["States"]
 
@@ -75,7 +75,9 @@ cdef class States:
         >>> model.states.size()
         0
     """
-    def __init__(self, Model model):
+    def __init__(self, model):
+        if not isinstance(model, Model):
+            raise TypeError("model must be an instance of Model")
         self._model_ref = weakref.ref(model)
 
     def __len__(self):
@@ -158,7 +160,7 @@ cdef class States:
 
         # todo: we don't need to actually construct a model, but this is nice and
         # abstract. We should performance test and then potentially re-implement
-        cdef Model model = Model.from_file(file, check_header=check_header)
+        cdef _Graph model = Model.from_file(file, check_header=check_header)
         cdef States states = model.states
 
         # Check that the model is compatible
@@ -190,7 +192,7 @@ cdef class States:
         """Initialize any uninitialized states."""
         self.resolve()
 
-        cdef Model model = self._model()
+        cdef _Graph model = self._model()
 
         if not model.is_locked():
             raise ValueError("Cannot initialize states of an unlocked model")
@@ -213,9 +215,9 @@ cdef class States:
         return self._model().into_file(file, only_decision=True, max_num_states=self.size())
 
 
-    cdef Model _model(self):
+    cdef _Graph _model(self):
         """Get a ref-counted Model object."""
-        cdef Model m = self._model_ref()
+        cdef _Graph m = self._model_ref()
         if m is None:
             raise ReferenceError("accessing the states of a garbage collected model")
         return m

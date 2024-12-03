@@ -16,7 +16,7 @@ import collections
 import functools
 import typing
 
-from dwave.optimization.model import ArraySymbol
+from dwave.optimization._graph import ArraySymbol
 from dwave.optimization.symbols import (
     Add,
     And,
