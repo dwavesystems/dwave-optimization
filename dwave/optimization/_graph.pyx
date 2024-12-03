@@ -41,7 +41,7 @@ __all__ = []
 
 cdef class _Graph:
     def __cinit__(self):
-        self.states = States(self)
+        self._lock_count = 0
         self._data_sources = []
 
     def __init__(self, *args, **kwargs):
@@ -213,7 +213,10 @@ cdef class _Graph:
     def _header_data(self, *, only_decision, max_num_states=float('inf')):
         """The header data associated with the model (but not the states)."""
         num_nodes = self.num_decisions() if only_decision else self.num_nodes()
-        num_states = max(0, min(self.states.size(), max_num_states))
+        try:
+            num_states = max(0, min(self.states.size(), max_num_states))
+        except AttributeError:
+            num_states = 0
 
         decision_state_size = self.decision_state_size()
         state_size = decision_state_size if only_decision else self.state_size()
@@ -484,7 +487,6 @@ cdef class _Graph:
         if value.size() > 1:
             raise ValueError("the value of an array with more than one element is ambiguous")
         self._graph.set_objective(value.array_ptr)
-        self.objective = value
 
     cpdef Py_ssize_t num_constraints(self) noexcept:
         """Number of constraints in the model.
@@ -672,16 +674,10 @@ cdef class _Graph:
 
         self._lock_count -= 1
 
-        cdef States states = self.states  # for Cython access
-
         # if we're now unlocked, then reset the topological sort and the
         # non-decision states
         if self._lock_count < 1:
             self._graph.reset_topological_sort()
-            for i in range(states.size()):
-                # this might actually increase the size of the states in some
-                # cases, but that's fine
-                states._states[i].resize(self.num_decisions())
 
 
 cdef class Symbol:
@@ -790,6 +786,9 @@ cdef class Symbol:
         if not self.model.is_locked() and self.node_ptr.topological_index() < 0:
             raise TypeError("the state of an intermediate variable cannot be accessed without "
                             "locking the model first. See model.lock().")
+
+        if not hasattr(self.model, "states"):
+            return False
 
         cdef States states = self.model.states  # for Cython access
 

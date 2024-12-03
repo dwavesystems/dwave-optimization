@@ -25,8 +25,10 @@ packed.
 
 import contextlib
 import tempfile
+import typing
 
 from dwave.optimization._graph import ArraySymbol, _Graph, Symbol
+from dwave.optimization.states import States
 
 __all__ = ["Model"]
 
@@ -61,8 +63,43 @@ class Model(_Graph):
         >>> model = flow_shop_scheduling(processing_times=processing_times)
     """
 
+    objective: typing.Optional[ArraySymbol]
+    """Objective to be minimized.
+
+    Examples:
+        This example prints the value of the objective of a model representing
+        the simple polynomial, :math:`y = i^2 - 4i`, for a state with value
+        :math:`i=2.0`.
+
+        >>> from dwave.optimization import Model
+        ...
+        >>> model = Model()
+        >>> i = model.integer(lower_bound=-5, upper_bound=5)
+        >>> c = model.constant(4)
+        >>> y = i**2 - c*i
+        >>> model.minimize(y)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, 2.0)
+        ...     print(f"Objective = {model.objective.state(0)}")
+        Objective = -4.0
+    """
+
+    states: States
+    """States of the model.
+
+    :ref:`States <intro_optimization_states>` represent assignments of values
+    to a symbol.
+
+    See also:
+        :ref:`States methods <optimization_models>` such as
+        :meth:`~dwave.optimization.model.States.size` and
+        :meth:`~dwave.optimization.model.States.resize`.
+    """
+
     def __init__(self):
-        pass
+        self.objective = None
+        self.states = States(self)
 
     def binary(self, shape=None):
         r"""Create a binary symbol as a decision variable.
@@ -285,6 +322,11 @@ class Model(_Graph):
         super().lock()
         return locked(self)
 
+    def minimize(self, value: ArraySymbol):
+        # inherit the docstring from _Graph
+        super().minimize(value)
+        self.objective = value
+
     def quadratic_model(self, x, quadratic, linear=None):
         """Create a quadratic model from an array and a quadratic model.
 
@@ -414,3 +456,13 @@ class Model(_Graph):
             G.add_edge(repr(symbol), "constraint(s)")
 
         return G
+
+    def unlock(self):
+        # inherit the docstring from _Graph
+        if not self.is_locked():
+            return
+
+        super().unlock()
+
+        if not self.is_locked():
+            self.states._reset_intermediate_states()

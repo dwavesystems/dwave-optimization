@@ -36,40 +36,6 @@ cdef class _Graph:
 
     cdef cppGraph _graph
 
-    cdef readonly object objective  # todo: cdef ArraySymbol?
-    """Objective to be minimized.
-
-    Examples:
-        This example prints the value of the objective of a model representing 
-        the simple polynomial, :math:`y = i^2 - 4i`, for a state with value 
-        :math:`i=2.0`. 
-
-        >>> from dwave.optimization import Model
-        ...
-        >>> model = Model()
-        >>> i = model.integer(lower_bound=-5, upper_bound=5)
-        >>> c = model.constant(4)
-        >>> y = i**2 - c*i
-        >>> model.minimize(y) 
-        >>> with model.lock():
-        ...     model.states.resize(1)
-        ...     i.set_state(0, 2.0)
-        ...     print(f"Objective = {model.objective.state(0)}")
-        Objective = -4.0
-    """
-
-    cdef readonly object states
-    """States of the model.
-
-    :ref:`States <intro_optimization_states>` represent assignments of values
-    to a symbol.
-
-    See also:
-        :ref:`States methods <optimization_models>` such as 
-        :meth:`~dwave.optimization.model.States.size` and 
-        :meth:`~dwave.optimization.model.States.resize`.
-    """
-
     # The number of times "lock()" has been called.
     cdef readonly Py_ssize_t _lock_count
 
