@@ -168,7 +168,10 @@ double BinaryOpNode<BinaryOp>::max() const {
         double rhs_low = rhs_ptr->min();
         double rhs_high = rhs_ptr->max();
 
-        // TODO: How do we want to handle cases where a denominator is zero?
+        assert(lhs_low != 0);
+        assert(lhs_high != 0);
+        assert(rhs_low != 0);
+        assert(rhs_high != 0);
         return std::max(
                 {lhs_low / rhs_low, lhs_low / rhs_high, lhs_high / rhs_low, lhs_high / rhs_high});
     }
@@ -458,6 +461,7 @@ struct InverseOp<std::divides<double>> {
 
     double op(const double& x, const double& y) { return x * y; }
 };
+
 template <>
 struct InverseOp<std::multiplies<double>> {
     static bool constexpr exists() { return true; }
@@ -1708,8 +1712,7 @@ template <class UnaryOp>
 UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
         : ArrayOutputMixin(node_ptr->shape()), array_ptr_(node_ptr) {
     if constexpr (std::is_same<UnaryOp, functional::square_root<double>>::value) {
-        bool negative = node_ptr->min() < 0;
-        if (negative) {
+        if (node_ptr->min() < 0) {
             throw std::invalid_argument("SquareRoot's predecessors cannot take a negative value");
         }
     }

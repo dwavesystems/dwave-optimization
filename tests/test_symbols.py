@@ -1146,6 +1146,7 @@ class TestDisjointListsVariable(utils.SymbolTests):
             self.assertEqual(s.state_size(), 10 * 8)
 
 
+# NOTE: Inheriting from BinaryOpTests causes runtime errors so just inheritting from SymbolTests
 class TestDivide(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

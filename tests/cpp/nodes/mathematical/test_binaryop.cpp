@@ -396,6 +396,7 @@ TEST_CASE("BinaryOpNode - MultiplyNode") {
         }
     }
 }
+
 TEST_CASE("BinaryOpNode - DivideNode") {
     auto graph = Graph();
 
