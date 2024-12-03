@@ -172,14 +172,14 @@ def divide(x1: ArraySymbol, x2: ArraySymbol) -> Divide:
 
     Examples:
         This example divides two integer symbols.
-        Equivalently, you can use the ``/`` operator (e.g., :code:`i /j`).
+        Equivalently, you can use the ``/`` operator (e.g., :code:`i / j`).
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import divide
         ...
         >>> model = Model()
-        >>> i = model.integer(2)
-        >>> j = model.integer(2)
+        >>> i = model.integer(2,lower_bound=1)
+        >>> j = model.integer(2,lower_bound=1)
         >>> k = divide(i, j)   # alternatively: k = i / j
         >>> with model.lock():
         ...     model.states.resize(1)

@@ -1158,6 +1158,17 @@ class TestDivide(utils.SymbolTests):
         yield ab
         yield ba
 
+    def test_doc_example(self):
+        model = Model()
+        i = model.integer(2,lower_bound=1)
+        j = model.integer(2,lower_bound=1)
+        k = i / j
+        with model.lock():
+            model.states.resize(1)
+            i.set_state(0, [21, 10])
+            j.set_state(0, [7, 2])
+            self.assertListEqual([3., 5.], list(k.state(0)))
+
     def test_simple_division(self):
         model = Model()
         a = model.constant(5)
