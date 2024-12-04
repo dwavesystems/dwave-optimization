@@ -18,7 +18,6 @@ import tempfile
 import typing
 
 import numpy
-import numpy.typing
 
 from dwave.optimization.states import States
 from dwave.optimization.symbols import *
