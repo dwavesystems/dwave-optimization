@@ -31,7 +31,8 @@ from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.array cimport Array as cppArray
-from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
+from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode, Node as cppNode
+from dwave.optimization.libcpp.nodes cimport InputNode as cppInputNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
 from dwave.optimization.symbols cimport symbol_from_ptr
@@ -402,6 +403,10 @@ cdef class _Graph:
         for ptr in self._graph.decisions():
             yield symbol_from_ptr(self, ptr)
 
+    def iter_inputs(self):
+        for ptr in self._graph.inputs():
+            yield symbol_from_ptr(self, ptr)
+
     def iter_symbols(self):
         """Iterate over all symbols in the model.
 
@@ -521,6 +526,9 @@ cdef class _Graph:
         for i in range(self._graph.num_nodes()):
             num_edges += self._graph.nodes()[i].get().successors().size()
         return num_edges
+
+    cpdef Py_ssize_t num_inputs(self) noexcept:
+        return self._graph.num_inputs()
 
     cpdef Py_ssize_t num_nodes(self) noexcept:
         """Number of nodes in the directed acyclic graph for the model.
