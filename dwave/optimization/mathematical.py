@@ -178,8 +178,8 @@ def divide(x1: ArraySymbol, x2: ArraySymbol) -> Divide:
         >>> from dwave.optimization.mathematical import divide
         ...
         >>> model = Model()
-        >>> i = model.integer(2,lower_bound=1)
-        >>> j = model.integer(2,lower_bound=1)
+        >>> i = model.integer(2, lower_bound=1)
+        >>> j = model.integer(2, lower_bound=1)
         >>> k = divide(i, j)   # alternatively: k = i / j
         >>> with model.lock():
         ...     model.states.resize(1)
