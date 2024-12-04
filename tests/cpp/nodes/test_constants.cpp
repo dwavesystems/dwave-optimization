@@ -15,6 +15,7 @@
 #include "catch2/catch_test_macros.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
+#include "dwave-optimization/nodes/testing.hpp"
 
 namespace dwave::optimization {
 

@@ -35,6 +35,7 @@ from dwave.optimization import (
     mod,
     sqrt,
 )
+from dwave.optimization.model import Expression
 
 
 class utils:
@@ -1240,6 +1241,23 @@ class TestDivide(utils.SymbolTests):
             a // b
 
 
+class TestInput(utils.SymbolTests):
+    def generate_symbols(self):
+        exp = Expression()
+        inp = exp.input(-10, 10, False)
+        exp.lock()
+        yield inp
+
+    # TODO: enable once implemented
+    @unittest.skip("not yet implemented")
+    def test_serialization(*args, **kwargs):
+        pass
+
+    @unittest.skip("Input state must be explicity initialized so can't run this test")
+    def test_state_serialization(*args, **kwargs):
+        pass
+
+
 class TestIntegerVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
@@ -1882,6 +1900,64 @@ class TestNaryMultiply(utils.NaryOpTests):
 
         with self.assertRaises(ValueError):
             x *= b  # after promotion
+
+
+class TestNaryReduce(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        c0 = model.constant([0, 0])
+        c1 = model.constant([0, 1])
+
+        exp = Expression()
+        inputs = [exp.input(-10, 10, False) for _ in range(3)]
+        exp.set_output(inputs[0] + inputs[1] + inputs[2])
+
+        acc = dwave.optimization.symbols.NaryReduce(exp, (c0, c1))
+
+        model.lock()
+        yield acc
+
+    def test_mismatched_inputs(self):
+        model = Model()
+        c0 = model.constant([0, 0])
+        c1 = model.constant([0, 1])
+
+        exp = Expression()
+        inputs = [exp.input(-10, 10, False) for _ in range(3)]
+        exp.set_output(inputs[0] + inputs[1] + inputs[2])
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.NaryReduce(exp, (c0,))
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.NaryReduce(exp, (c0, c1), initial_values=(0,))
+
+    def test_invalid_expressions(self):
+        model = Model()
+        c0 = model.constant([0, 0])
+
+        # Can't use an Expression that uses a non-scalar input
+        exp = Expression()
+        inp1 = exp.input(-10, 10, False)
+        inp5 = dwave.optimization.symbols.Input(exp, -10, 10, False, (5,))
+        exp.set_output(inp1)
+        try:
+            dwave.optimization.symbols.NaryReduce(exp, (c0,))
+            self.assertTrue(False, "should raise exception")
+        except Exception as e:
+            self.assertIsInstance(e, dwave.optimization.symbols.UnsupportedNaryReduceExpression)
+            self.assertRegex(str(e), "scalar")
+            self.assertTrue(inp5.equals(e.symbol))
+
+    # TODO: enable once implemented
+    @unittest.skip("not yet implemented")
+    def test_serialization(*args, **kwargs):
+        pass
+
+    # TODO: enable once implemented
+    @unittest.skip("not yet implemented")
+    def test_state_serialization(*args, **kwargs):
+        pass
 
 
 class TestNegate(utils.UnaryOpTests):

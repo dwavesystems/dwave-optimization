@@ -20,6 +20,7 @@ from dwave.optimization.libcpp cimport span
 from dwave.optimization.libcpp.array cimport Array
 from dwave.optimization.libcpp.state cimport State
 
+
 cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass Node:
         struct SuccessorView:
@@ -35,11 +36,19 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
     cdef cppclass DecisionNode(Node):
         pass
 
+    cdef cppclass InputNode(Node, Array):
+        pass
+
 # Sometimes Cython isn't able to reason about pointers as template inputs, so
 # we make a few aliases for convenience
 ctypedef Node* NodePtr
 ctypedef ArrayNode* ArrayNodePtr
 ctypedef DecisionNode* DecisionNodePtr
+
+# This seems to be necessary to allow Cython to iterate over the returned
+# span from `inputs()` directly. Otherwise it tries to cast it to a non-const
+# version of span before iterating, which the C++ compiler will complain about.
+ctypedef InputNode* const constInputNodePtr
 
 cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass Graph:
@@ -48,9 +57,11 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         span[const unique_ptr[Node]] nodes() const
         span[const ArrayNodePtr] constraints()
         span[const DecisionNodePtr] decisions()
+        span[constInputNodePtr] inputs()
+        Py_ssize_t num_constraints()
         Py_ssize_t num_nodes()
         Py_ssize_t num_decisions()
-        Py_ssize_t num_constraints()
+        Py_ssize_t num_inputs()
         @staticmethod
         void recursive_initialize(State&, Node*) except+
         @staticmethod

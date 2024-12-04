@@ -18,6 +18,7 @@
 #include <ranges>
 
 #include "dwave-optimization/utils.hpp"
+#include "_state.hpp"
 
 namespace dwave::optimization {
 

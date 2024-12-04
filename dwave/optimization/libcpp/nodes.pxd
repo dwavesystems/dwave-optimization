@@ -53,6 +53,9 @@ cdef extern from "dwave-optimization/nodes/constants.hpp" namespace "dwave::opti
     cdef cppclass ConstantNode(ArrayNode):
         const double* buff() const
 
+    cdef cppclass InputNode(ArrayNode):
+        const double* buff() const
+
 
 cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass WhereNode(ArrayNode):
@@ -71,6 +74,11 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
         vector[slice_or_int] infer_indices() except +
 
     cdef cppclass PermutationNode(ArrayNode):
+        pass
+
+
+cdef extern from "dwave-optimization/nodes/lambda.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass NaryReduceNode(ArrayNode):
         pass
 
 

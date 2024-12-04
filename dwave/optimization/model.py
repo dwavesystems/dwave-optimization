@@ -40,7 +40,61 @@ if typing.TYPE_CHECKING:
 
     _ShapeLike: typing.TypeAlias = typing.Union[int, collections.abc.Sequence[int]]
 
-__all__ = ["Model"]
+__all__ = ["Expression", "Model"]
+
+
+class Expression(_Graph):
+    def __init__(
+        self,
+        num_inputs: int = 0,
+        lower_bound: typing.Optional[float] = None,
+        upper_bound: typing.Optional[float] = None,
+        integral: typing.Optional[bool] = None,
+    ):
+        self.output: typing.Optional[ArraySymbol] = None
+
+        if num_inputs > 0:
+            if (lower_bound is None or upper_bound is None or integral is None):
+                raise ValueError(
+                    "`lower_bound`, `upper_bound` and `integral` must be provided "
+                    "explicitly when initializing inputs"
+                )
+            for _ in range(num_inputs):
+                self.input(lower_bound, upper_bound, integral)
+
+    def input(self, lower_bound: float, upper_bound: float, integral: bool):
+        """TODO"""
+        # avoid circular import
+        from dwave.optimization.symbols import Input
+        # Shape is always scalar for now
+        return Input(self, lower_bound, upper_bound, integral, shape=tuple())
+
+    def set_output(self, value: ArraySymbol):
+        """TODO"""
+        self.output = value
+
+    def constant(self, value: float) -> Constant:
+        # TODO: docstring
+        r"""Create a constant symbol.
+
+        Args:
+            array_like: An |array-like|_ representing a constant. Can be a scalar
+                or a NumPy array. If the array's ``dtype`` is ``np.double``, the
+                array is not copied.
+
+        Returns:
+            A constant symbol.
+
+        Examples:
+            This example creates a :math:`1 \times 4`-sized constant symbol
+            with the specified values.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> time_limits = model.constant([10, 15, 5, 8.5])
+        """
+        from dwave.optimization.symbols import Constant  # avoid circular import
+        return Constant(self, value)
 
 
 @contextlib.contextmanager

@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include <numeric>
+#include <variant>
 #include <vector>
 
 namespace dwave::optimization {
@@ -165,5 +166,21 @@ void deduplicate_diff(std::vector<Update>& diff);
 
 // Return whether the given double encodes an integer.
 bool is_integer(const double& value);
+
+template <class T, class... Ts, class node_type>
+bool is_variant(const node_type* node_ptr) {
+    // If the pointer can be dynamically cast to this type, return true
+    if (dynamic_cast<const T*>(node_ptr)) {
+        return true;
+    }
+
+    // If there are still types left to check then "recurse"
+    if constexpr (sizeof...(Ts) > 0) {
+        return is_variant<Ts...>(node_ptr);
+    }
+
+    // If none match, then this Node didn't belong to the list of types
+    return false;
+}
 
 }  // namespace dwave::optimization
