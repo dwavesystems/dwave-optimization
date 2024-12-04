@@ -97,6 +97,7 @@ from dwave.optimization.libcpp.nodes cimport (
     XorNode as cppXorNode,
     )
 from dwave.optimization.model cimport ArraySymbol, Model, Symbol
+from dwave.optimization.states cimport States
 
 __all__ = [
     "Absolute",
@@ -777,7 +778,7 @@ cdef class BinaryVariable(ArraySymbol):
             items.push_back(arr[i])
 
         # The validity of the state is checked in C++
-        self.ptr.initialize_state(self.model.states._states[index], move(items))
+        self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
     # An observing pointer to the C++ BinaryNode
     cdef cppBinaryNode* ptr
@@ -1170,7 +1171,7 @@ cdef class DisjointBitSets(Symbol):
                 sets[i].push_back(arr[i, j])
 
         # The validity of the state is checked in C++
-        self.ptr.initialize_state(self.model.states._states[index], move(sets))
+        self.ptr.initialize_state((<States>self.model.states)._states[index], move(sets))
 
     def _state_from_zipfile(self, zf, directory, Py_ssize_t state_index):
         arrays = []
@@ -1423,7 +1424,7 @@ cdef class DisjointLists(Symbol):
                 items[i].push_back(arr[j])
 
         # The validity of the state is checked in C++
-        self.ptr.initialize_state(self.model.states._states[index], move(items))
+        self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
     def _state_from_zipfile(self, zf, directory, Py_ssize_t state_index):
         arrays = []
@@ -1722,7 +1723,7 @@ cdef class IntegerVariable(ArraySymbol):
             items.push_back(arr[i])
 
         # The validity of the state is checked in C++
-        self.ptr.initialize_state(self.model.states._states[index], move(items))
+        self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
     def upper_bound(self):
         """The highest value allowed for the integer symbol."""
@@ -1847,7 +1848,7 @@ cdef class ListVariable(ArraySymbol):
             items.push_back(arr[i])
 
         # The validity of the state is checked in C++
-        self.ptr.initialize_state(self.model.states._states[index], move(items))
+        self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
     # An observing pointer to the C++ ListNode
     cdef cppListNode* ptr
@@ -2913,7 +2914,7 @@ cdef class SetVariable(ArraySymbol):
             items.push_back(arr[i])
 
         # The validity of the state is checked in C++
-        self.ptr.initialize_state(self.model.states._states[index], move(items))
+        self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
     # Observing pointer to the node
     cdef cppSetNode* ptr

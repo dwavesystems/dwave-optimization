@@ -76,7 +76,7 @@ Model Methods
 States Class
 ------------
 
-.. currentmodule:: dwave.optimization.model
+.. currentmodule:: dwave.optimization.states
 
 .. autoclass:: States
 

@@ -1,0 +1,5 @@
+---
+features:
+  - Add ``dwave.optimization.states`` submodule holding the implementation of the ``States`` class.
+upgrade:
+  - Move the implementation of the ``States`` class to ``dwave.optimization.states``.
