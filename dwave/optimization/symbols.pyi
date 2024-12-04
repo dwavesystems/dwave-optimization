@@ -104,6 +104,10 @@ class Equal(ArraySymbol):
     ...
 
 
+class Input(ArraySymbol):
+    ...
+
+
 class IntegerVariable(ArraySymbol):
     def lower_bound(self) -> float: ...
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
@@ -159,6 +163,10 @@ class NaryMinimum(ArraySymbol):
 
 
 class NaryMultiply(ArraySymbol):
+    ...
+
+
+class NaryReduce(ArraySymbol):
     ...
 
 

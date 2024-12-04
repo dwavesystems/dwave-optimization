@@ -27,6 +27,7 @@ cdef extern from "dwave-optimization/array.hpp" namespace "dwave::optimization" 
         bint contiguous() const
         bint dynamic() const
         const string& format() const
+        bint integral() const
         Py_ssize_t itemsize() const
         Py_ssize_t len(State&) const
         Py_ssize_t len() const
