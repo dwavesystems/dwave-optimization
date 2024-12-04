@@ -62,6 +62,7 @@ from dwave.optimization.libcpp.nodes cimport (
     DisjointBitSetsNode as cppDisjointBitSetsNode,
     DisjointListNode as cppDisjointListNode,
     DisjointListsNode as cppDisjointListsNode,
+    DivideNode as cppDivideNode,
     EqualNode as cppEqualNode,
     IntegerNode as cppIntegerNode,
     LessEqualNode as cppLessEqualNode,
@@ -114,6 +115,7 @@ __all__ = [
     "DisjointBitSet",
     "DisjointLists",
     "DisjointList",
+    "Divide",
     "Equal",
     "IntegerVariable",
     "LessEqual",
@@ -1553,6 +1555,44 @@ cdef class DisjointList(ArraySymbol):
     cdef cppDisjointListNode* ptr
 
 _register(DisjointList, typeid(cppDisjointListNode))
+
+
+cdef class Divide(ArraySymbol):
+    """Division element-wise between two symbols.
+
+    Examples:
+        This example divides two integer symbols.
+
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> i = model.integer(10, lower_bound=-50, upper_bound=-1)
+        >>> j = model.integer(10, lower_bound=1, upper_bound=10)
+        >>> k = i/j
+        >>> type(k)
+        <class 'dwave.optimization.symbols.Divide'>
+    """
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
+        if lhs.model is not rhs.model:
+            raise ValueError("lhs and rhs do not share the same underlying model")
+
+        cdef Model model = lhs.model
+
+        self.ptr = model._graph.emplace_node[cppDivideNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppDivideNode* ptr = dynamic_cast_ptr[cppDivideNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Divide")
+        cdef Divide x = Divide.__new__(Divide)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppDivideNode* ptr
+
+_register(Divide, typeid(cppDivideNode))
 
 
 cdef class Equal(ArraySymbol):

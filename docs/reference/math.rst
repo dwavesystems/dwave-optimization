@@ -13,6 +13,7 @@ Mathematical Functions
 
    ~add
    ~concatenate
+   ~divide
    ~logical
    ~logical_and
    ~logical_or

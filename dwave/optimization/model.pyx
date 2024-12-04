@@ -1634,6 +1634,13 @@ cdef class ArraySymbol(Symbol):
 
         return NotImplemented
 
+    def __truediv__(self, rhs):
+        if isinstance(rhs, ArraySymbol):
+            from dwave.optimization.symbols import Divide  # avoid circular import
+            return Divide(self, rhs)
+
+        return NotImplemented
+
     def all(self):
         """Create an :class:`~dwave.optimization.symbols.All` symbol.
 

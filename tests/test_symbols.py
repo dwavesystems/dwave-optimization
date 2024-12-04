@@ -1146,6 +1146,73 @@ class TestDisjointListsVariable(utils.SymbolTests):
             self.assertEqual(s.state_size(), 10 * 8)
 
 
+# NOTE: Inheriting from BinaryOpTests causes runtime errors so just inheritting from SymbolTests
+class TestDivide(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        a = model.constant(5)
+        b = model.constant(7)
+        ab = a / b
+        ba = b / a
+        model.lock()
+        yield ab
+        yield ba
+
+    def test_doc_example(self):
+        model = Model()
+        i = model.integer(2,lower_bound=1)
+        j = model.integer(2,lower_bound=1)
+        k = i / j
+        with model.lock():
+            model.states.resize(1)
+            i.set_state(0, [21, 10])
+            j.set_state(0, [7, 2])
+            self.assertListEqual([3., 5.], list(k.state(0)))
+
+    def test_simple_division(self):
+        model = Model()
+        a = model.constant(5)
+        b = model.constant(7)
+        x = a / b
+        self.assertEqual(model.num_symbols(), 3)
+
+        self.assertEqual(x.shape(), a.shape())
+        self.assertEqual(x.shape(), b.shape())
+        self.assertEqual(x.size(), a.size())
+        self.assertEqual(x.size(), b.size())
+
+        model.lock()
+        model.states.resize(1)
+        self.assertEqual(x.state(0), 5.0/7.0)
+
+    def test_unlike_shapes(self):
+        model = Model()
+
+        a = model.constant(np.zeros((5, 5)))
+        b = model.constant(np.zeros((6, 4)))
+
+        with self.assertRaises(ValueError):
+            a / b
+
+    def test_division_by_zero(self):
+        model = Model()
+
+        a = model.constant(5)
+        b = model.constant(0)
+
+        with self.assertRaises(ValueError):
+            a / b
+
+    def test_unsupported_floor_division(self):
+        model = Model()
+
+        a = model.constant(np.zeros((5, 5)))
+        b = model.constant(np.zeros((6, 4)))
+
+        with self.assertRaises(TypeError):
+            a // b
+
+
 class TestIntegerVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
