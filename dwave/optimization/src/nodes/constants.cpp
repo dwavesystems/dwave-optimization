@@ -18,6 +18,7 @@
 #include <ranges>
 
 #include "dwave-optimization/utils.hpp"
+#include "_state.hpp"
 
 namespace dwave::optimization {
 
@@ -109,5 +110,6 @@ double ConstantNode::min() const {
     // Return the cached value
     return buffer_stats_->min;
 }
+
 
 }  // namespace dwave::optimization
