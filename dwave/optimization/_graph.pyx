@@ -40,6 +40,11 @@ __all__ = []
 
 
 cdef class _Graph:
+    """A ``_Graph`` is a class that manages a C++ ``dwave::optimization::Graph``.
+
+    It is not intended for a user to use ``_Graph`` directly. Rather classes
+    can inherit from ``_Graph``.
+    """
     def __cinit__(self):
         self._lock_count = 0
         self._data_sources = []
@@ -419,37 +424,6 @@ cdef class _Graph:
         """Lock the model.
 
         No new symbols can be added to a locked model.
-
-        Returns:
-            A context manager. If the context is subsequently exited then the
-            :meth:`.unlock` will be called.
-
-        See also:
-            :meth:`.is_locked`, :meth:`.unlock`
-
-        Examples:
-            This example checks the status of a model after locking it and
-            subsequently unlocking it.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> i = model.integer(20, upper_bound=100)
-            >>> cntx = model.lock()
-            >>> model.is_locked()
-            True
-            >>> model.unlock()
-            >>> model.is_locked()
-            False
-
-            This example locks a model temporarily with a context manager.
-
-            >>> model = Model()
-            >>> with model.lock():
-            ...     # no nodes can be added within the context
-            ...     print(model.is_locked())
-            True
-            >>> model.is_locked()
-            False
         """
         self._graph.topological_sort()  # does nothing if already sorted, so safe to call always
         self._lock_count += 1
