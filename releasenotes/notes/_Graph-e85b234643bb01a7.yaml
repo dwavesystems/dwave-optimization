@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Add a new Cython extension type, ``_Graph``. The ``_Graph`` class is
+    responsible for managing a C++ ``dwave::optimization::Graph``.
+    Also make ``Model`` a Python class that inherits from ``_Graph``, rather than
+    a Cython extension type.
+upgrade:
+  - |
+    It is no longer possible to ``from dwave.optimization.model cimport Model``.
+    Instead, importers should ``from dwave.optimization.model cimport _Graph``.
+    A ``_Graph`` has most of the functionality that a ``Model`` did, although
+    most of the symbol construction methods have been kept on ``Model``.

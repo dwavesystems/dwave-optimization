@@ -16,10 +16,10 @@
 
 from libcpp.typeinfo cimport type_info
 
-from dwave.optimization.model cimport Model
 from dwave.optimization.libcpp.graph cimport Array as cppArray
 from dwave.optimization.libcpp.graph cimport Node as cppNode
+from dwave.optimization.model cimport _Graph
 
 cdef void _register(object cls, const type_info& typeinfo)
 
-cdef object symbol_from_ptr(Model model, cppNode* ptr)
+cdef object symbol_from_ptr(_Graph model, cppNode* ptr)

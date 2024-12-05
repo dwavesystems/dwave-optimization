@@ -96,7 +96,7 @@ from dwave.optimization.libcpp.nodes cimport (
     WhereNode as cppWhereNode,
     XorNode as cppXorNode,
     )
-from dwave.optimization.model cimport ArraySymbol, Model, Symbol
+from dwave.optimization.model cimport ArraySymbol, _Graph, Symbol
 from dwave.optimization.states cimport States
 
 __all__ = [
@@ -176,7 +176,7 @@ cdef void _register(object cls, const type_info& typeinfo):
     _cpp_type_to_python[type_index(typeinfo)] = <PyObject*>(cls)
 
 
-cdef object symbol_from_ptr(Model model, cppNode* node_ptr):
+cdef object symbol_from_ptr(_Graph model, cppNode* node_ptr):
     """Create a Python/Cython symbol from a C++ Node*."""
 
     # If it's null, either after the cast of just as given, then we can't get a symbol from it
@@ -236,7 +236,7 @@ cdef class Absolute(ArraySymbol):
         <class 'dwave.optimization.symbols.Absolute'>
     """
     def __init__(self, ArraySymbol x):
-        cdef Model model = x.model
+        cdef _Graph model = x.model
 
         self.ptr = model._graph.emplace_node[cppAbsoluteNode](x.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -274,7 +274,7 @@ cdef class Add(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppAddNode](lhs.array_ptr, rhs.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -308,7 +308,7 @@ cdef class All(ArraySymbol):
         <class 'dwave.optimization.symbols.All'>
     """
     def __init__(self, ArraySymbol array):
-        cdef Model model = array.model
+        cdef _Graph model = array.model
         self.ptr = model._graph.emplace_node[cppAllNode](array.array_ptr)
         self.initialize_arraynode(model, self.ptr)
 
@@ -337,7 +337,7 @@ cdef class And(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppAndNode](lhs.array_ptr, rhs.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -379,7 +379,7 @@ cdef class Any(ArraySymbol):
     .. versionadded:: 0.4.1
     """
     def __init__(self, ArraySymbol array):
-        cdef Model model = array.model
+        cdef _Graph model = array.model
         self.ptr = model._graph.emplace_node[cppAnyNode](array.array_ptr)
         self.initialize_arraynode(model, self.ptr)
 
@@ -400,7 +400,7 @@ _register(Any, typeid(cppAnyNode))
 
 cdef class _ArrayValidation(Symbol):
     def __init__(self, ArraySymbol array_node):
-        cdef Model model = array_node.model
+        cdef _Graph model = array_node.model
 
         self.ptr = model._graph.emplace_node[cppArrayValidationNode](array_node.array_ptr)
 
@@ -437,7 +437,7 @@ cdef class AdvancedIndexing(ArraySymbol):
         <class 'dwave.optimization.symbols.AdvancedIndexing'>
     """
     def __init__(self, ArraySymbol array, *indices):
-        cdef Model model = array.model
+        cdef _Graph model = array.model
 
         cdef vector[cppAdvancedIndexingNode.array_or_slice] cppindices
 
@@ -508,7 +508,7 @@ cdef class AdvancedIndexing(ArraySymbol):
         return sym
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         cdef cppNode* ptr
 
         indices = []
@@ -566,7 +566,7 @@ cdef class BasicIndexing(ArraySymbol):
     """
     def __init__(self, ArraySymbol array, *indices):
 
-        cdef Model model = array.model
+        cdef _Graph model = array.model
 
         cdef vector[cppBasicIndexingNode.slice_or_int] cppindices
         for index in indices:
@@ -607,7 +607,7 @@ cdef class BasicIndexing(ArraySymbol):
         return sym
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         if len(predecessors) != 1:
             raise ValueError(f"`BasicIndexing` should have exactly one predecessor")
 
@@ -666,7 +666,7 @@ cdef class BinaryVariable(ArraySymbol):
         >>> type(x)
         <class 'dwave.optimization.symbols.BinaryVariable'>
     """
-    def __init__(self, Model model, shape=None):
+    def __init__(self, _Graph model, shape=None):
         # Get an observing pointer to the node
         cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape)
 
@@ -686,7 +686,7 @@ cdef class BinaryVariable(ArraySymbol):
         return x
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         """Construct a binary symbol from a compressed file.
 
         Args:
@@ -805,7 +805,7 @@ cdef class Concatenate(ArraySymbol):
         if len(inputs) < 1:
             raise TypeError("must have at least one predecessor node")
 
-        cdef Model model = inputs[0].model
+        cdef _Graph model = inputs[0].model
         cdef vector[cppArrayNode*] cppinputs
 
         cdef ArraySymbol array
@@ -831,7 +831,7 @@ cdef class Concatenate(ArraySymbol):
         return m
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         if len(predecessors) < 1:
             raise ValueError("Concatenate must have at least one predecessor")
 
@@ -862,7 +862,7 @@ cdef class Constant(ArraySymbol):
         >>> type(a)
         <class 'dwave.optimization.symbols.Constant'>
     """
-    def __init__(self, Model model, array_like):
+    def __init__(self, _Graph model, array_like):
         # In the future we won't need to be contiguous, but we do need to be right now
         array = np.asarray(array_like, dtype=np.double, order="C")
 
@@ -963,7 +963,7 @@ cdef class Constant(ArraySymbol):
         return constant
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         """Construct a constant symbol from a compressed file.
 
         Args:
@@ -1060,7 +1060,7 @@ cdef class DisjointBitSets(Symbol):
         <class 'dwave.optimization.symbols.DisjointBitSets'>
     """
     def __init__(
-        self, Model model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets
+        self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets
     ):
         # Get an observing pointer to the node
         self.ptr = model._graph.emplace_node[cppDisjointBitSetsNode](
@@ -1081,7 +1081,7 @@ cdef class DisjointBitSets(Symbol):
         return x
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         """Construct a disjoint-sets symbol from a compressed file.
 
         Args:
@@ -1221,7 +1221,7 @@ cdef class DisjointBitSet(ArraySymbol):
         if set_index > <Py_ssize_t>(parent.ptr.successors().size()):
             raise ValueError("`DisjointBitSet`s must be created successively")
 
-        cdef Model model = parent.model
+        cdef _Graph model = parent.model
         if set_index == <Py_ssize_t>(parent.ptr.successors().size()):
             # The DisjointBitSet has not been added to the model yet, so add it
             self.ptr = model._graph.emplace_node[cppDisjointBitSetNode](parent.ptr)
@@ -1245,7 +1245,7 @@ cdef class DisjointBitSet(ArraySymbol):
         return x
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         """Construct a disjoint-set symbol from a compressed file.
 
         Args:
@@ -1317,7 +1317,7 @@ cdef class DisjointLists(Symbol):
         <class 'dwave.optimization.symbols.DisjointLists'>
     """
     def __init__(
-        self, Model model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists
+        self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists
     ):
         # Get an observing pointer to the node
         self.ptr = model._graph.emplace_node[cppDisjointListsNode](
@@ -1337,7 +1337,7 @@ cdef class DisjointLists(Symbol):
         return x
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         """Construct a disjoint-lists symbol from a compressed file.
 
         Args:
@@ -1474,7 +1474,7 @@ cdef class DisjointList(ArraySymbol):
         if list_index > <Py_ssize_t>(parent.ptr.successors().size()):
             raise ValueError("`DisjointList`s must be created successively")
 
-        cdef Model model = parent.model
+        cdef _Graph model = parent.model
         if list_index == <Py_ssize_t>(parent.ptr.successors().size()):
             # The DisjointListNode has not been added to the model yet, so add it
             self.ptr = model._graph.emplace_node[cppDisjointListNode](parent.ptr)
@@ -1498,7 +1498,7 @@ cdef class DisjointList(ArraySymbol):
         return x
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         """Construct a disjoint-list symbol from a compressed file.
 
         Args:
@@ -1575,7 +1575,7 @@ cdef class Divide(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppDivideNode](lhs.array_ptr, rhs.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -1613,7 +1613,7 @@ cdef class Equal(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppEqualNode](lhs.array_ptr, rhs.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -1645,7 +1645,7 @@ cdef class IntegerVariable(ArraySymbol):
         >>> type(i)
         <class 'dwave.optimization.symbols.IntegerVariable'>
     """
-    def __init__(self, Model model, shape=None, lower_bound=None, upper_bound=None):
+    def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
         cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape )
 
         if lower_bound is None and upper_bound is None:
@@ -1671,7 +1671,7 @@ cdef class IntegerVariable(ArraySymbol):
         return x
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         if predecessors:
             raise ValueError(f"{cls.__name__} cannot have predecessors")
 
@@ -1753,7 +1753,7 @@ cdef class LessEqual(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppLessEqualNode](lhs.array_ptr, rhs.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -1785,7 +1785,7 @@ cdef class ListVariable(ArraySymbol):
         >>> type(l)
         <class 'dwave.optimization.symbols.ListVariable'>
     """
-    def __init__(self, Model model, Py_ssize_t n):
+    def __init__(self, _Graph model, Py_ssize_t n):
         # Get an observing pointer to the node
         self.ptr = model._graph.emplace_node[cppListNode](n)
 
@@ -1803,7 +1803,7 @@ cdef class ListVariable(ArraySymbol):
         return x
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         if predecessors:
             raise ValueError(f"{cls.__name__} cannot have predecessors")
 
@@ -1863,7 +1863,7 @@ cdef class Logical(ArraySymbol):
         :func:`~dwave.optimization.mathematical.logical`: equivalent function.
     """
     def __init__(self, ArraySymbol x):
-        cdef Model model = x.model
+        cdef _Graph model = x.model
 
         self.ptr = model._graph.emplace_node[cppLogicalNode](x.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -1898,7 +1898,7 @@ cdef class Max(ArraySymbol):
         <class 'dwave.optimization.symbols.Max'>
     """
     def __init__(self, ArraySymbol node):
-        cdef Model model = node.model
+        cdef _Graph model = node.model
 
         self.ptr = model._graph.emplace_node[cppMaxNode](node.array_ptr)
 
@@ -1940,7 +1940,7 @@ cdef class Maximum(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppMaximumNode](lhs.array_ptr, rhs.array_ptr)
 
@@ -1976,7 +1976,7 @@ cdef class Min(ArraySymbol):
         <class 'dwave.optimization.symbols.Min'>
     """
     def __init__(self, ArraySymbol node):
-        cdef Model model = node.model
+        cdef _Graph model = node.model
 
         self.ptr = model._graph.emplace_node[cppMinNode](node.array_ptr)
 
@@ -2018,7 +2018,7 @@ cdef class Minimum(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppMinimumNode](lhs.array_ptr, rhs.array_ptr)
 
@@ -2057,7 +2057,7 @@ cdef class Modulus(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppModulusNode](lhs.array_ptr, rhs.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -2095,7 +2095,7 @@ cdef class Multiply(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppMultiplyNode](lhs.array_ptr, rhs.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -2136,7 +2136,7 @@ cdef class NaryAdd(ArraySymbol):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")
 
-        cdef Model model = inputs[0].model
+        cdef _Graph model = inputs[0].model
         cdef vector[cppArrayNode*] cppinputs
 
         cdef ArraySymbol array
@@ -2193,7 +2193,7 @@ cdef class NaryMaximum(ArraySymbol):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")
 
-        cdef Model model = inputs[0].model
+        cdef _Graph model = inputs[0].model
         cdef vector[cppArrayNode*] cppinputs
 
         cdef ArraySymbol array
@@ -2243,7 +2243,7 @@ cdef class NaryMinimum(ArraySymbol):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")
 
-        cdef Model model = inputs[0].model
+        cdef _Graph model = inputs[0].model
         cdef vector[cppArrayNode*] cppinputs
 
         cdef ArraySymbol array
@@ -2292,7 +2292,7 @@ cdef class NaryMultiply(ArraySymbol):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")
 
-        cdef Model model = inputs[0].model
+        cdef _Graph model = inputs[0].model
         cdef vector[cppArrayNode*] cppinputs
 
         cdef ArraySymbol array
@@ -2341,7 +2341,7 @@ cdef class Negative(ArraySymbol):
         <class 'dwave.optimization.symbols.Negative'>
     """
     def __init__(self, ArraySymbol x):
-        cdef Model model = x.model
+        cdef _Graph model = x.model
 
         self.ptr = model._graph.emplace_node[cppNegativeNode](x.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -2368,7 +2368,7 @@ cdef class Not(ArraySymbol):
         :func:`~dwave.optimization.mathematical.logical_not`: equivalent function.
     """
     def __init__(self, ArraySymbol x):
-        cdef Model model = x.model
+        cdef _Graph model = x.model
 
         self.ptr = model._graph.emplace_node[cppNotNode](x.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -2398,7 +2398,7 @@ cdef class Or(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppOrNode](lhs.array_ptr, rhs.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -2433,7 +2433,7 @@ cdef class PartialSum(ArraySymbol):
         <class 'dwave.optimization.symbols.PartialSum'>
     """
     def __init__(self, ArraySymbol array, int axis):
-        cdef Model model = array.model
+        cdef _Graph model = array.model
         self.ptr = model._graph.emplace_node[cppPartialSumNode](array.array_ptr, axis)
         self.initialize_arraynode(model, self.ptr)
 
@@ -2452,7 +2452,7 @@ cdef class PartialSum(ArraySymbol):
         return ps
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         if len(predecessors) != 1:
             raise ValueError("PartialSum must have exactly one predecessor")
 
@@ -2522,7 +2522,7 @@ cdef class Prod(ArraySymbol):
         <class 'dwave.optimization.symbols.Prod'>
     """
     def __init__(self, ArraySymbol node):
-        cdef Model model = node.model
+        cdef _Graph model = node.model
 
         self.ptr = model._graph.emplace_node[cppProdNode](node.array_ptr)
 
@@ -2707,7 +2707,7 @@ cdef class QuadraticModel(ArraySymbol):
         return self.ptr.get_quadratic_model().get_quadratic(u, v)
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         """Construct a QuadraticModel from a zipfile."""
         if len(predecessors) != 1:
             raise ValueError("Reshape must have exactly one predecessor")
@@ -2788,7 +2788,7 @@ cdef class Reshape(ArraySymbol):
         <class 'dwave.optimization.symbols.Reshape'>
     """
     def __init__(self, ArraySymbol node, shape):
-        cdef Model model = node.model
+        cdef _Graph model = node.model
 
         self.ptr = model._graph.emplace_node[cppReshapeNode](
             node.array_ptr,
@@ -2809,7 +2809,7 @@ cdef class Reshape(ArraySymbol):
         return m
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         if len(predecessors) != 1:
             raise ValueError("Reshape must have exactly one predecessor")
 
@@ -2845,7 +2845,7 @@ cdef class SetVariable(ArraySymbol):
         >>> type(s)
         <class 'dwave.optimization.symbols.SetVariable'>
     """
-    def __init__(self, Model model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
+    def __init__(self, _Graph model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
         self.ptr = model._graph.emplace_node[cppSetNode](n, min_size, max_size)
         self.initialize_arraynode(model, self.ptr)
 
@@ -2861,7 +2861,7 @@ cdef class SetVariable(ArraySymbol):
         return x
 
     @classmethod
-    def _from_zipfile(cls, zf, directory, Model model, predecessors):
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         if predecessors:
             raise ValueError(f"{cls.__name__} cannot have predecessors")
 
@@ -2924,7 +2924,7 @@ _register(SetVariable, typeid(cppSetNode))
 
 cdef class Size(ArraySymbol):
     def __init__(self, ArraySymbol array):
-        cdef Model model = array.model
+        cdef _Graph model = array.model
 
         self.ptr = model._graph.emplace_node[cppSizeNode](array.array_ptr)
         self.initialize_arraynode(array.model, self.ptr)
@@ -2961,7 +2961,7 @@ cdef class Square(ArraySymbol):
         <class 'dwave.optimization.symbols.Square'>
     """
     def __init__(self, ArraySymbol x):
-        cdef Model model = x.model
+        cdef _Graph model = x.model
 
         self.ptr = model._graph.emplace_node[cppSquareNode](x.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -2996,7 +2996,7 @@ cdef class SquareRoot(ArraySymbol):
         <class 'dwave.optimization.symbols.SquareRoot'>
     """
     def __init__(self, ArraySymbol x):
-        cdef Model model = x.model
+        cdef _Graph model = x.model
 
         self.ptr = model._graph.emplace_node[cppSquareRootNode](x.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -3035,7 +3035,7 @@ cdef class Subtract(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppSubtractNode](lhs.array_ptr, rhs.array_ptr)
         self.initialize_arraynode(model, self.ptr)
@@ -3070,7 +3070,7 @@ cdef class Sum(ArraySymbol):
         <class 'dwave.optimization.symbols.Sum'>
     """
     def __init__(self, ArraySymbol array):
-        cdef Model model = array.model
+        cdef _Graph model = array.model
         self.ptr = model._graph.emplace_node[cppSumNode](array.array_ptr)
         self.initialize_arraynode(model, self.ptr)
 
@@ -3096,7 +3096,7 @@ cdef class Where(ArraySymbol):
         :func:`~dwave.optimization.mathematical.where`: equivalent function.
     """
     def __init__(self, ArraySymbol condition, ArraySymbol x, ArraySymbol y):
-        cdef Model model = condition.model
+        cdef _Graph model = condition.model
 
         if condition.model is not x.model:
             raise ValueError("condition and x do not share the same underlying model")
@@ -3134,7 +3134,7 @@ cdef class Xor(ArraySymbol):
         if lhs.model is not rhs.model:
             raise ValueError("lhs and rhs do not share the same underlying model")
 
-        cdef Model model = lhs.model
+        cdef _Graph model = lhs.model
 
         self.ptr = model._graph.emplace_node[cppXorNode](lhs.array_ptr, rhs.array_ptr)
         self.initialize_arraynode(model, self.ptr)

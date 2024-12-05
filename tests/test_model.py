@@ -118,7 +118,7 @@ class TestArraySymbol(unittest.TestCase):
         def __getitem__(self, index):
             if not isinstance(index, tuple):
                 return self[(index,)]
-            i0, i1 = dwave.optimization.model._split_indices(index)
+            i0, i1 = dwave.optimization._model._split_indices(index)
             np.testing.assert_array_equal(self.array[index], self.array[i0][i1])
 
     def test_split_indices(self):
