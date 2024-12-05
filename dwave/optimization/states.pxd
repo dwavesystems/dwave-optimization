@@ -15,7 +15,7 @@
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.state cimport State as cppState
-from dwave.optimization._graph cimport _Graph
+from dwave.optimization.model cimport _Graph
 
 
 cdef class States:

@@ -1,6 +1,4 @@
-# distutils: language = c++
-
-# Copyright 2024 D-Wave Systems Inc.
+# Copyright 2024 D-Wave Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,12 +12,4 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from libcpp.typeinfo cimport type_info
-
-from dwave.optimization.libcpp.graph cimport Array as cppArray
-from dwave.optimization.libcpp.graph cimport Node as cppNode
-from dwave.optimization.model cimport _Graph
-
-cdef void _register(object cls, const type_info& typeinfo)
-
-cdef object symbol_from_ptr(_Graph model, cppNode* ptr)
+from dwave.optimization._model cimport ArraySymbol, _Graph, Symbol

@@ -30,7 +30,7 @@ import contextlib
 import tempfile
 import typing
 
-from dwave.optimization._graph import ArraySymbol, _Graph, Symbol
+from dwave.optimization._model import ArraySymbol, _Graph, Symbol
 from dwave.optimization.states import States
 
 if typing.TYPE_CHECKING:

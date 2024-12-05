@@ -17,7 +17,7 @@ import weakref
 from libcpp.utility cimport move
 
 from dwave.optimization.libcpp.array cimport Array as cppArray
-from dwave.optimization._graph cimport ArraySymbol
+from dwave.optimization.model cimport ArraySymbol, _Graph
 from dwave.optimization.model import Model
 
 __all__ = ["States"]
