@@ -42,8 +42,8 @@ __all__ = []
 cdef class _Graph:
     """A ``_Graph`` is a class that manages a C++ ``dwave::optimization::Graph``.
 
-    It is not intended for a user to use ``_Graph`` directly. Rather classes
-    can inherit from ``_Graph``.
+    It is not intended for a user to use ``_Graph`` directly. Rather, classes
+    may inherit from ``_Graph``.
     """
     def __cinit__(self):
         self._lock_count = 0
