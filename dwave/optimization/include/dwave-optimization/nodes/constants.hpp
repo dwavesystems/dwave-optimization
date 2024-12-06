@@ -104,17 +104,6 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     void commit(State&) const noexcept override {}
     void revert(State&) const noexcept override {}
 
- protected:
-    // Information about the values in the buffer
-    struct BufferStats {
-        BufferStats() = delete;
-        explicit BufferStats(std::span<const double> buffer);
-
-        bool integral;
-        double min;
-        double max;
-    };
-
  private:
     // Allocate the memory to hold shape worth of doubles, but don't populate it
     explicit ConstantNode(std::initializer_list<ssize_t> shape)
@@ -133,6 +122,15 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     // holds its values on the object itself rather than in a State.
     double* buffer_ptr_;
 
+    // Information about the values in the buffer
+    struct BufferStats {
+        BufferStats() = delete;
+        explicit BufferStats(std::span<const double> buffer);
+
+        bool integral;
+        double min;
+        double max;
+    };
     mutable std::optional<BufferStats> buffer_stats_;
 };
 

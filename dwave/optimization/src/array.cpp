@@ -229,7 +229,7 @@ bool array_shape_equal(const std::span<const Array* const> array_ptrs) {
         first_size = first_size.substitute();
     }
 
-    for (const Array* array_ptr : array_ptrs | std::views::take(1)) {
+    for (const Array* array_ptr : array_ptrs | std::views::drop(1)) {
         auto this_size = array_ptr->sizeinfo();
 
         if (first_size == this_size) continue;
@@ -246,10 +246,6 @@ bool array_shape_equal(const std::span<const Array* const> array_ptrs) {
     }
 
     return true;
-}
-
-bool array_shape_equal(const std::vector<const Array*>& array_ptrs) {
-    return array_shape_equal(std::span<const Array* const>{array_ptrs});
 }
 
 bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr) {

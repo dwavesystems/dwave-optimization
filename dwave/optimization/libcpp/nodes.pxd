@@ -53,13 +53,15 @@ cdef extern from "dwave-optimization/nodes/constants.hpp" namespace "dwave::opti
     cdef cppclass ConstantNode(ArrayNode):
         const double* buff() const
 
-    cdef cppclass InputNode(ArrayNode):
-        const double* buff() const
-
 
 cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass WhereNode(ArrayNode):
         pass
+
+
+cdef extern from "dwave-optimization/nodes/inputs.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass InputNode(ArrayNode):
+        const double* buff() const
 
 
 cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optimization" nogil:
