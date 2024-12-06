@@ -63,35 +63,77 @@ class Expression(_Graph):
                 self.input(lower_bound, upper_bound, integral)
 
     def input(self, lower_bound: float, upper_bound: float, integral: bool):
-        """TODO"""
+        r"""Create an "input" symbol. This functions similarly to a decision variable,
+        in that it takes no predecessors, but its state will always be set manually
+        (not by any solver). Used as a placeholder for input to the expression.
+
+        The output of the symbol is always a scalar (0-dimensional) array.
+
+        Provided bounds and integrality are used to supply information for
+        min/max/integral/logical properties of the resulting node, and will be used to
+        validate the state when set manually.
+
+        Note that the order in which inputs are added to the expression matters and is
+        used by other nodes (see `class::dwave.optimization.symbols.NaryReduce`) to
+        infer how arguments are supplied to the expression during evaluation.
+
+        Args:
+            lower_bound: lower bound on any possible output of the node.
+            upper_bound: upper bound on any possible output of the node.
+            integral: whether the output of the node should always be integral.
+
+        Returns:
+            An input symbol.
+
+        Examples:
+            This example creates two input symbols on an expression and adds them.
+
+            >>> from dwave.optimization.model import Expression
+            >>> expression = Expression()
+            >>> x, y = expression.input(-7.3, 5, false), expression.input(8, 10, true)
+            >>> added = x + y
+        """
         # avoid circular import
         from dwave.optimization.symbols import Input
         # Shape is always scalar for now
         return Input(self, lower_bound, upper_bound, integral, shape=tuple())
 
     def set_output(self, value: ArraySymbol):
-        """TODO"""
+        """Set the output of the expression.
+
+        Args:
+            value: The symbol that will be used to represent the output.
+
+        Examples:
+            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
+            within bounds.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(lower_bound=-5, upper_bound=5)
+            >>> c = model.constant(4)
+            >>> y = i*i - c*i
+            >>> model.minimize(y)
+        """
         self.output = value
 
     def constant(self, value: float) -> Constant:
-        # TODO: docstring
-        r"""Create a constant symbol.
+        r"""Create a scalar constant symbol.
 
         Args:
-            array_like: An |array-like|_ representing a constant. Can be a scalar
-                or a NumPy array. If the array's ``dtype`` is ``np.double``, the
-                array is not copied.
+            value: A number representing the constant.
 
         Returns:
             A constant symbol.
 
         Examples:
-            This example creates a :math:`1 \times 4`-sized constant symbol
-            with the specified values.
+            This example creates a constant and adds it to an input.
 
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> time_limits = model.constant([10, 15, 5, 8.5])
+            >>> from dwave.optimization.model import Expression
+            >>> expression = Expression()
+            >>> c0 = expression.consant(5.7)
+            >>> i0 = expression.input(-10, 10, false)
+            >>> added = c0 + i0
         """
         from dwave.optimization.symbols import Constant  # avoid circular import
         return Constant(self, value)

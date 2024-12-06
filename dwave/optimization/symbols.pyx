@@ -1642,7 +1642,7 @@ _register(Equal, typeid(cppEqualNode))
 
 
 cdef class Input(ArraySymbol):
-    """TODO"""
+    """An input symbol. Functions as a "placeholder" in a model/expression."""
 
     # TODO: implement serialization
 
