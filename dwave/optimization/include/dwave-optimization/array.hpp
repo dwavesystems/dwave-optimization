@@ -931,7 +931,6 @@ bool array_shape_equal(const Array& lhs, const Array& rhs);
 
 // Test whether multiple arrays all have the same shape.
 bool array_shape_equal(const std::span<const Array* const> array_ptrs);
-bool array_shape_equal(const std::vector<const Array*>& array_ptrs);
 
 /// Get the shape induced by broadcasting two arrays together.
 /// See https://numpy.org/doc/stable/user/basics.broadcasting.html.

@@ -1,4 +1,4 @@
-// Copyright 2023 D-Wave Systems Inc.
+// Copyright 2024 D-Wave Inc.
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -21,55 +21,6 @@
 
 namespace dwave::optimization {
 
-// InputNode acts like a placeholder or store of data very similar to ConstantNode,
-// with the key different being that its contents *may* change in between propagations.
-// However, it is not a decision variable--instead its use cases are acting as an "input"
-// for "models as functions", or for placeholders in large models where (otherwise constant)
-// data changes infrequently (e.g. a scheduling problem with a preference matrix).
-//
-// Currently there is no "default" way to initialize the state, so its must be initialized
-// explicitly with some data.
-class InputNode : public ArrayOutputMixin<ArrayNode> {
- public:
-    explicit InputNode(std::span<const ssize_t> shape, double min, double max, bool integral)
-            : ArrayOutputMixin(shape), min_(min), max_(max), integral_(integral) {};
-
-    explicit InputNode(std::initializer_list<ssize_t> shape, double min, double max, bool integral)
-            : ArrayOutputMixin(shape), min_(min), max_(max), integral_(integral) {};
-
-    explicit InputNode()
-            : InputNode({}, -std::numeric_limits<double>::infinity(),
-                        std::numeric_limits<double>::infinity(), false) {};
-
-    bool integral() const override { return integral_; };
-
-    double max() const override { return max_; };
-    double min() const override { return min_; };
-
-    void initialize_state(State& state) const override {
-        throw std::logic_error(
-                "InputNode must have state explicity initialized (with `initialize_state(state, "
-                "data)`)");
-    }
-
-    void initialize_state(State& state, std::span<const double> data) const;
-
-    double const* buff(const State&) const override;
-
-    std::span<const Update> diff(const State& state) const noexcept override;
-
-    void propagate(State& state) const noexcept override {};
-    void commit(State& state) const noexcept override;
-    void revert(State& state) const noexcept override;
-
-    void assign(State& state, const std::vector<double>& new_values) const;
-    void assign(State& state, std::span<const double> new_values) const;
-
- private:
-    double min_, max_;
-    bool integral_;
-};
-
 class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // Runtime constructor that can be used from Cython/Python
@@ -77,24 +28,19 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
                    const ArrayNode* output, const std::vector<double>& initial_values,
                    const std::vector<ArrayNode*>& operands);
 
-    // Array overloads
     double const* buff(const State& state) const override;
-    std::span<const Update> diff(const State& state) const override;
-    ssize_t size(const State& state) const override;
-    std::span<const ssize_t> shape(const State& state) const override;
-    ssize_t size_diff(const State& state) const override;
-    SizeInfo sizeinfo() const override;
-
-    // Information about the values are all inherited from the array
-    bool integral() const override;
-    double min() const override;
-    double max() const override;
-
-    // Node overloads
     void commit(State& state) const override;
+    std::span<const Update> diff(const State& state) const override;
     void initialize_state(State& state) const override;
+    bool integral() const override;
+    double max() const override;
+    double min() const override;
     void propagate(State& state) const override;
     void revert(State& state) const override;
+    std::span<const ssize_t> shape(const State& state) const override;
+    ssize_t size(const State& state) const override;
+    ssize_t size_diff(const State& state) const override;
+    SizeInfo sizeinfo() const override;
 
  private:
     double evaluate_expression(State& register_) const;

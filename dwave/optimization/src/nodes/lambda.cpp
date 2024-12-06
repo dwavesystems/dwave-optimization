@@ -1,4 +1,4 @@
-// Copyright 2023 D-Wave Systems Inc.
+// Copyright 2024 D-Wave Inc.
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -17,75 +17,12 @@
 #include "_state.hpp"
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
+#include "dwave-optimization/nodes/inputs.hpp"
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/state.hpp"
 #include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
-
-void InputNode::initialize_state(State& state, std::span<const double> data) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
-    if (static_cast<ssize_t>(data.size()) != this->size()) {
-        throw std::invalid_argument("data size does not match size of InputNode");
-    }
-
-    std::vector<double> copy(data.begin(), data.end());
-
-    state[index] = std::make_unique<ArrayNodeStateData>(std::move(copy));
-}
-
-double const* InputNode::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
-}
-
-std::span<const Update> InputNode::diff(const State& state) const noexcept {
-    return data_ptr<ArrayNodeStateData>(state)->diff();
-}
-
-void InputNode::commit(State& state) const noexcept {
-    data_ptr<ArrayNodeStateData>(state)->commit();
-}
-
-void InputNode::revert(State& state) const noexcept {
-    data_ptr<ArrayNodeStateData>(state)->revert();
-}
-
-void InputNode::assign(State& state, std::span<const double> new_values) const {
-    if (static_cast<ssize_t>(new_values.size()) != this->size()) {
-        throw std::invalid_argument("size of new values must match");
-    }
-
-    double min_val = std::numeric_limits<double>::infinity();
-    double max_val = -std::numeric_limits<double>::infinity();
-
-    static double dummy = 0;
-    bool all_is_integral = true;
-    for (const double& v : new_values) {
-        min_val = std::min(min_val, v);
-        max_val = std::max(min_val, v);
-        all_is_integral &= (std::modf(v, &dummy) == 0.0);
-    }
-
-    if (min_val < min()) {
-        throw std::invalid_argument("new data contains a value smaller than the min");
-    }
-    if (max_val > max()) {
-        throw std::invalid_argument("new data contains a value smaller than the min");
-    }
-    if (integral() && !all_is_integral) {
-        throw std::invalid_argument("new data contains a non-integral value");
-    }
-
-    data_ptr<ArrayNodeStateData>(state)->assign(new_values);
-}
-
-void InputNode::assign(State& state, const std::vector<double>& new_values) const {
-    this->assign(state, std::span(new_values));
-}
 
 class NaryReduceNodeData : public ArrayNodeStateData {
  public:
@@ -100,6 +37,22 @@ class NaryReduceNodeData : public ArrayNodeStateData {
 
     State register_;
 };
+
+template <class T, class... Ts, class node_type>
+bool is_variant(const node_type* node_ptr) {
+    // If the pointer can be dynamically cast to this type, return true
+    if (dynamic_cast<const T*>(node_ptr)) {
+        return true;
+    }
+
+    // If there are still types left to check then "recurse"
+    if constexpr (sizeof...(Ts) > 0) {
+        return is_variant<Ts...>(node_ptr);
+    }
+
+    // If none match, then this Node didn't belong to the list of types
+    return false;
+}
 
 Graph validate_expression(Graph&& expression, const std::vector<InputNode*> inputs,
                           const ArrayNode* output) {
@@ -139,9 +92,9 @@ Graph validate_expression(Graph&& expression, const std::vector<InputNode*> inpu
     return expression;
 }
 
-auto get_operands_shape(const std::vector<InputNode*>& inputs,
-                        const std::vector<double>& initial_values,
-                        const std::vector<ArrayNode*>& operands) {
+auto get_operands_shape(std::span<InputNode* const> inputs,
+                        std::span<const double> initial_values,
+                        std::span<ArrayNode* const> operands) {
     if (operands.size() == 0) {
         throw std::invalid_argument("Must have at least one operand");
     }
@@ -184,29 +137,11 @@ double const* NaryReduceNode::buff(const State& state) const {
     return data_ptr<NaryReduceNodeData>(state)->buffer.data();
 };
 
+void NaryReduceNode::commit(State& state) const { data_ptr<NaryReduceNodeData>(state)->commit(); }
+
 std::span<const Update> NaryReduceNode::diff(const State& state) const {
     return data_ptr<NaryReduceNodeData>(state)->diff();
 }
-
-ssize_t NaryReduceNode::size(const State& state) const { return operands_[0]->size(state); }
-
-std::span<const ssize_t> NaryReduceNode::shape(const State& state) const {
-    return operands_[0]->shape(state);
-}
-
-ssize_t NaryReduceNode::size_diff(const State& state) const {
-    return data_ptr<NaryReduceNodeData>(state)->size_diff();
-}
-
-SizeInfo NaryReduceNode::sizeinfo() const { return operands_[0]->sizeinfo(); }
-
-bool NaryReduceNode::integral() const { return false; }
-
-double NaryReduceNode::min() const { return -std::numeric_limits<double>::infinity(); }
-
-double NaryReduceNode::max() const { return std::numeric_limits<double>::infinity(); }
-
-void NaryReduceNode::commit(State& state) const { data_ptr<NaryReduceNodeData>(state)->commit(); }
 
 double NaryReduceNode::evaluate_expression(State& register_) const {
     // First propagate all the nodes
@@ -263,6 +198,12 @@ void NaryReduceNode::initialize_state(State& state) const {
                                                            std::move(reg));
 }
 
+bool NaryReduceNode::integral() const { return false; }
+
+double NaryReduceNode::max() const { return std::numeric_limits<double>::infinity(); }
+
+double NaryReduceNode::min() const { return std::numeric_limits<double>::lowest(); }
+
 void NaryReduceNode::propagate(State& state) const {
     NaryReduceNodeData* data = data_ptr<NaryReduceNodeData>(state);
     ssize_t new_size = this->size(state);
@@ -296,5 +237,17 @@ void NaryReduceNode::propagate(State& state) const {
 }
 
 void NaryReduceNode::revert(State& state) const { data_ptr<NaryReduceNodeData>(state)->revert(); }
+
+std::span<const ssize_t> NaryReduceNode::shape(const State& state) const {
+    return operands_[0]->shape(state);
+}
+
+ssize_t NaryReduceNode::size(const State& state) const { return operands_[0]->size(state); }
+
+SizeInfo NaryReduceNode::sizeinfo() const { return operands_[0]->sizeinfo(); }
+
+ssize_t NaryReduceNode::size_diff(const State& state) const {
+    return data_ptr<NaryReduceNodeData>(state)->size_diff();
+}
 
 }  // namespace dwave::optimization
