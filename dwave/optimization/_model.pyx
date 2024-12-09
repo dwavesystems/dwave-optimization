@@ -438,29 +438,8 @@ cdef class _Graph:
         # note that we do not initialize the nodes or resize the states!
         # We do it lazily for performance
 
-    def minimize(self, ArraySymbol value):
-        """Set the objective value to minimize.
-
-        Optimization problems have an objective and/or constraints. The objective
-        expresses one or more aspects of the problem that should be minimized
-        (equivalent to maximization when multiplied by a minus sign). For example,
-        an optimized itinerary might minimize the value of distance traveled or
-        cost of transportation or travel time.
-
-        Args:
-            value: Value for which to minimize the cost function.
-
-        Examples:
-            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
-            within bounds.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(lower_bound=-5, upper_bound=5)
-            >>> c = model.constant(4)
-            >>> y = i*i - c*i
-            >>> model.minimize(y)
-        """
+    def _set_objective(self, ArraySymbol value):
+        """Set the objective value on the ``dwave::optimization::Graph``."""
         if value is None:
             raise ValueError("value cannot be None")
         if value.size() < 1:
