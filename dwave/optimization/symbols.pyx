@@ -1644,9 +1644,14 @@ _register(Equal, typeid(cppEqualNode))
 cdef class Input(ArraySymbol):
     """An input symbol. Functions as a "placeholder" in a model/expression."""
 
-    # TODO: implement serialization
-
-    def __init__(self, expression: Expression, lower_bound: float, upper_bound: float, integral: bool, shape: Optional[tuple] = None):
+    def __init__(
+        self,
+        expression: Expression,
+        lower_bound: float,
+        upper_bound: float,
+        integral: bool,
+        shape: Optional[tuple] = None
+    ):
         cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape)
 
         cdef _Graph cygraph = expression

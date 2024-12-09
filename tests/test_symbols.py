@@ -1246,14 +1246,20 @@ class TestInput(utils.SymbolTests):
         exp = Expression()
         inp = exp.input(-10, 10, False)
         exp.lock()
+
+        # monkeypatch to_file in to test serialization
+        def to_file(self, **kwargs) -> typing.BinaryIO:
+            import tempfile
+            file = tempfile.TemporaryFile(mode="w+b")
+            self.into_file(file, **kwargs)
+            file.seek(0)
+            return file
+
+        Expression.to_file = to_file
+
         yield inp
 
-    @unittest.skip("Expressions can't be serialized currently")
-    def test_serialization(*args, **kwargs):
-        pass
-
-    # TODO: still want to test serialization of the Inputs as this is necessary
-    # (though currently implicitly tested by the NaryReduce serialization)
+        del Expression.to_file
 
     @unittest.skip("Input state must be explicity initialized so can't run this test")
     def test_state_serialization(*args, **kwargs):
