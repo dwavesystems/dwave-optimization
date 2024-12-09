@@ -1221,10 +1221,12 @@ class TestInput(utils.SymbolTests):
         exp.lock()
         yield inp
 
-    # TODO: enable once implemented
-    @unittest.skip("not yet implemented")
+    @unittest.skip("Expressions can't be serialized currently")
     def test_serialization(*args, **kwargs):
         pass
+
+    # TODO: still want to test serialization of the Inputs as this is necessary
+    # (though currently implicitly tested by the NaryReduce serialization)
 
     @unittest.skip("Input state must be explicity initialized so can't run this test")
     def test_state_serialization(*args, **kwargs):
@@ -1921,16 +1923,6 @@ class TestNaryReduce(utils.SymbolTests):
             self.assertIsInstance(e, dwave.optimization.symbols.UnsupportedNaryReduceExpression)
             self.assertRegex(str(e), "scalar")
             self.assertTrue(inp5.equals(e.symbol))
-
-    # TODO: enable once implemented
-    @unittest.skip("not yet implemented")
-    def test_serialization(*args, **kwargs):
-        pass
-
-    # TODO: enable once implemented
-    @unittest.skip("not yet implemented")
-    def test_state_serialization(*args, **kwargs):
-        pass
 
 
 class TestNegate(utils.UnaryOpTests):

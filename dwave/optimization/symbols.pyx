@@ -19,6 +19,7 @@
 import collections.abc
 import json
 import numbers
+import tempfile
 
 cimport cpython.object
 import cython
@@ -48,6 +49,7 @@ from dwave.optimization.libcpp.graph cimport (
     ArrayNodePtr as cppArrayNodePtr,
     Node as cppNode,
     NodePtr as cppNodePtr,
+    Graph as cppGraph,
     )
 from dwave.optimization.libcpp.nodes cimport (
     AbsoluteNode as cppAbsoluteNode,
@@ -1667,6 +1669,33 @@ cdef class Input(ArraySymbol):
         inp.initialize_arraynode(symbol.model, ptr)
         return inp
 
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        if predecessors:
+            raise ValueError(f"{cls.__name__} cannot have predecessors")
+
+        with zf.open(directory + "properties.json", "r") as f:
+            properties = json.load(f)
+
+        return Input(model,
+            properties["lb"],
+            properties["ub"],
+            properties["integral"],
+            shape=properties["shape"],
+        )
+
+    def _into_zipfile(self, zf, directory):
+        properties = dict(
+            lb=self.ptr.min(),
+            ub=self.ptr.max(),
+            integral=self.ptr.integral(),
+            shape=self.shape(),
+        )
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+
+        zf.writestr(directory + "properties.json", encoder.encode(properties))
+
     cdef cppInputNode* ptr
 
 _register(Input, typeid(cppInputNode))
@@ -2377,14 +2406,22 @@ class UnsupportedNaryReduceExpression(Exception):
 
 
 cdef class NaryReduce(ArraySymbol):
-    """TODO"""
+    """Sum of the elements of a symbol along an axis.
 
-    # TODO: implement serialization
+    Examples:
+        This example adds the sum of a binary symbol
+        along an axis to a model.
+
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> x = model.binary((10, 5))
+        >>> x_sum_0 = x.sum(axis=0)
+        >>> type(x_sum_0)
+        <class 'dwave.optimization.symbols.PartialSum'>
+    """
 
     def __init__(
         self,
-        # input_symbols: Collection[Input],
-        # ArraySymbol output_symbol,
         expression: Expression,
         operands: Collection[ArraySymbol],
         initial_values: Optional[tuple[float]] = None,
@@ -2458,6 +2495,52 @@ cdef class NaryReduce(ArraySymbol):
         x.ptr = ptr
         x.initialize_arraynode(symbol.model, ptr)
         return x
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        with zf.open(directory + "expression.nl", "r") as f:
+            expression = Expression.from_file(f)
+        with zf.open(directory + "initial_values.json", "r") as f:
+            initial_values = json.load(f)
+
+        return NaryReduce(expression, predecessors, initial_values=initial_values)
+
+    def _into_zipfile(self, zf, directory):
+        """Store a NaryReduce symbol as a compressed file.
+
+        Args:
+            zf:
+                File pointer to a compressed file to store the
+                disjoint-list symbol. Strings are interpreted as a
+                file name.
+            directory:
+                Directory where the file is located.
+        Returns:
+            A compressed file.
+
+        See also:
+            :meth:`._from_zipfile`
+        """
+
+        cdef _Graph expr = Expression()
+
+        # We want to serialize the cppGraph owned by the NaryReduceNode,
+        # so we swap the cppGraph to a temporary `_Graph`, do the
+        # serialization, then swap it back
+
+        self.ptr.swap_expression(move(expr._graph))
+        assert expr._graph.topologically_sorted()
+
+        with zf.open(directory + "expression.nl", mode="w") as f:
+            expr.into_file(f)
+
+        # swap the cppGraph back to the node
+        self.ptr.swap_expression(move(expr._graph))
+
+        del expr
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+        zf.writestr(directory + "initial_values.json", encoder.encode(self.ptr.get_initial_values()))
 
     cdef cppNaryReduceNode* ptr
 

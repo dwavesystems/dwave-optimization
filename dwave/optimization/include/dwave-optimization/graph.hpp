@@ -75,6 +75,7 @@ class Graph {
     Graph();
     ~Graph();
     Graph(Graph&&);
+    Graph& operator=(Graph&& other) = default;
 
     template <class NodeType, class... Args>
     NodeType* emplace_node(Args&&... args);
