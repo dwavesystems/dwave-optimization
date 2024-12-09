@@ -31,7 +31,7 @@ from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.array cimport Array as cppArray
-from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
+from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode, Graph as cppGraph
 from dwave.optimization.libcpp.nodes cimport InputNode as cppInputNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
@@ -260,8 +260,10 @@ cdef class _Graph:
         """
         if not self.is_locked():
             # lock for the duration of the method
-            with self.lock():
-                return self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
+            self.lock()
+            self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
+            self.unlock()
+            return
 
         if isinstance(file, str):
             with open(file, "wb") as f:
@@ -340,7 +342,7 @@ cdef class _Graph:
                 node._into_zipfile(zf, directory)
 
             # Encode the objective and the constraints
-            if self.objective is not None and self.objective.topological_index() < stop:
+            if hasattr(self, "objective") and self.objective is not None and self.objective.topological_index() < stop:
                 zf.writestr("objective.json", encoder.encode(self.objective.topological_index()))
             else:
                 zf.writestr("objective.json", b"")

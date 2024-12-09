@@ -42,10 +42,16 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t size_diff(const State& state) const override;
     SizeInfo sizeinfo() const override;
 
+    void swap_expression(Graph&& other) {
+       std::swap(expression_, other);
+    };
+
+    const std::vector<double>& get_initial_values() const { return initial_values_; };
+
  private:
     double evaluate_expression(State& register_) const;
 
-    const Graph expression_;
+    Graph expression_;
     const std::vector<InputNode*> inputs_;
     const ArrayNode* output_;
     const std::vector<ArrayNode*> operands_;
