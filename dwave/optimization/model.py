@@ -108,13 +108,14 @@ class Expression(_Graph):
             This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
             within bounds.
 
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(lower_bound=-5, upper_bound=5)
-            >>> c = model.constant(4)
+            >>> from dwave.optimization import Expression
+            >>> expr = Expression()
+            >>> i = model.input(-5, 5, integral=True)
+            >>> c = expr.constant(4)
             >>> y = i*i - c*i
-            >>> model.minimize(y)
+            >>> expr.set_output(y)
         """
+        self._set_objective(value)
         self.output = value
 
     def constant(self, value: float) -> Constant:
@@ -443,8 +444,29 @@ class Model(_Graph):
         return locked(self)
 
     def minimize(self, value: ArraySymbol):
-        # inherit the docstring from _Graph
-        super().minimize(value)
+        """Set the objective value to minimize.
+
+        Optimization problems have an objective and/or constraints. The objective
+        expresses one or more aspects of the problem that should be minimized
+        (equivalent to maximization when multiplied by a minus sign). For example,
+        an optimized itinerary might minimize the value of distance traveled or
+        cost of transportation or travel time.
+
+        Args:
+            value: Value for which to minimize the cost function.
+
+        Examples:
+            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
+            within bounds.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(lower_bound=-5, upper_bound=5)
+            >>> c = model.constant(4)
+            >>> y = i*i - c*i
+            >>> model.minimize(y)
+        """
+        self._set_objective(value)
         self.objective = value
 
     # dev note: the typing is underspecified, but it would be quite complex to fully
