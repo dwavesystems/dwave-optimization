@@ -31,7 +31,8 @@ from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.array cimport Array as cppArray
-from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
+from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode, Graph as cppGraph
+from dwave.optimization.libcpp.nodes cimport InputNode as cppInputNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
 from dwave.optimization.symbols cimport symbol_from_ptr
@@ -259,8 +260,10 @@ cdef class _Graph:
         """
         if not self.is_locked():
             # lock for the duration of the method
-            with self.lock():
-                return self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
+            self.lock()
+            self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
+            self.unlock()
+            return
 
         if isinstance(file, str):
             with open(file, "wb") as f:
@@ -339,7 +342,7 @@ cdef class _Graph:
                 node._into_zipfile(zf, directory)
 
             # Encode the objective and the constraints
-            if self.objective is not None and self.objective.topological_index() < stop:
+            if hasattr(self, "objective") and self.objective is not None and self.objective.topological_index() < stop:
                 zf.writestr("objective.json", encoder.encode(self.objective.topological_index()))
             else:
                 zf.writestr("objective.json", b"")
@@ -402,6 +405,10 @@ cdef class _Graph:
         for ptr in self._graph.decisions():
             yield symbol_from_ptr(self, ptr)
 
+    def iter_inputs(self):
+        for ptr in self._graph.inputs():
+            yield symbol_from_ptr(self, ptr)
+
     def iter_symbols(self):
         """Iterate over all symbols in the model.
 
@@ -431,29 +438,8 @@ cdef class _Graph:
         # note that we do not initialize the nodes or resize the states!
         # We do it lazily for performance
 
-    def minimize(self, ArraySymbol value):
-        """Set the objective value to minimize.
-
-        Optimization problems have an objective and/or constraints. The objective
-        expresses one or more aspects of the problem that should be minimized
-        (equivalent to maximization when multiplied by a minus sign). For example,
-        an optimized itinerary might minimize the value of distance traveled or
-        cost of transportation or travel time.
-
-        Args:
-            value: Value for which to minimize the cost function.
-
-        Examples:
-            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
-            within bounds.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(lower_bound=-5, upper_bound=5)
-            >>> c = model.constant(4)
-            >>> y = i*i - c*i
-            >>> model.minimize(y)
-        """
+    def _set_objective(self, ArraySymbol value):
+        """Set the objective value on the ``dwave::optimization::Graph``."""
         if value is None:
             raise ValueError("value cannot be None")
         if value.size() < 1:
@@ -521,6 +507,9 @@ cdef class _Graph:
         for i in range(self._graph.num_nodes()):
             num_edges += self._graph.nodes()[i].get().successors().size()
         return num_edges
+
+    cpdef Py_ssize_t num_inputs(self) noexcept:
+        return self._graph.num_inputs()
 
     cpdef Py_ssize_t num_nodes(self) noexcept:
         """Number of nodes in the directed acyclic graph for the model.
