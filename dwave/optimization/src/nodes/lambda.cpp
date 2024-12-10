@@ -92,8 +92,7 @@ Graph validate_expression(Graph&& expression, const std::vector<InputNode*> inpu
     return expression;
 }
 
-auto get_operands_shape(std::span<InputNode* const> inputs,
-                        std::span<const double> initial_values,
+auto get_operands_shape(std::span<InputNode* const> inputs, std::span<const double> initial_values,
                         std::span<ArrayNode* const> operands) {
     if (operands.size() == 0) {
         throw std::invalid_argument("Must have at least one operand");
@@ -128,6 +127,21 @@ NaryReduceNode::NaryReduceNode(Graph&& expression, const std::vector<InputNode*>
           output_(output),
           operands_(operands),
           initial_values_(initial_values) {
+    for (ssize_t op_idx = 0; op_idx < static_cast<ssize_t>(operands_.size()); op_idx++) {
+        if (operands_[op_idx]->min() < inputs_[op_idx]->min()) {
+            throw std::invalid_argument(
+                    "operand with index " + std::to_string(op_idx) +
+                    " has minimum smaller than corresponding input in expression");
+        } else if (operands_[op_idx]->max() > inputs_[op_idx]->max()) {
+            throw std::invalid_argument(
+                    "operand with index " + std::to_string(op_idx) +
+                    " has maximum larger than corresponding input in expression");
+        } else if (inputs_[op_idx]->integral() && !operands_[op_idx]->integral()) {
+            throw std::invalid_argument("operand with index " + std::to_string(op_idx) +
+                                        " is non-integral, but corresponding input is");
+        }
+    }
+
     for (const auto& op : operands_) {
         add_predecessor(op);
     }
@@ -189,6 +203,7 @@ void NaryReduceNode::initialize_state(State& state) const {
             iterators[arg_index]++;
         }
         // Final input comes from the previous expression
+        val = std::clamp(val, inputs_[num_args]->min(), inputs_[num_args]->max());
         inputs_[num_args]->assign(reg, std::span(&val, 1));
         val = evaluate_expression(reg);
         values.push_back(val);
@@ -198,11 +213,11 @@ void NaryReduceNode::initialize_state(State& state) const {
                                                            std::move(reg));
 }
 
-bool NaryReduceNode::integral() const { return false; }
+bool NaryReduceNode::integral() const { return output_->integral(); }
 
-double NaryReduceNode::max() const { return std::numeric_limits<double>::infinity(); }
+double NaryReduceNode::max() const { return output_->max(); }
 
-double NaryReduceNode::min() const { return std::numeric_limits<double>::lowest(); }
+double NaryReduceNode::min() const { return output_->min(); }
 
 void NaryReduceNode::propagate(State& state) const {
     NaryReduceNodeData* data = data_ptr<NaryReduceNodeData>(state);
@@ -228,6 +243,7 @@ void NaryReduceNode::propagate(State& state) const {
             data->iterators[arg_index]++;
         }
         // Final input comes from the previous expression
+        val = std::clamp(val, inputs_[num_args]->min(), inputs_[num_args]->max());
         inputs_[num_args]->assign(data->register_, std::span(&val, 1));
         val = evaluate_expression(data->register_);
         data->set(index, val);
