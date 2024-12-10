@@ -38,7 +38,7 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
             : ArrayOutputMixin(shape), min_(min), max_(max), integral_(integral) {};
 
     explicit InputNode()
-            : InputNode({}, std::numeric_limits<double>::lowest(),
+            : InputNode({}, -std::numeric_limits<double>::infinity(),
                         std::numeric_limits<double>::infinity(), false) {};
 
     void assign(State& state, std::span<const double> new_values) const;
