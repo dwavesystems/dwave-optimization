@@ -131,8 +131,6 @@ TEST_CASE("Test fraction") {
 }
 
 TEST_CASE("Test deduplicate_diff") {
-    auto pred = [](Update& a, Update& b) { return Update::equals(a, b); };
-
     GIVEN("An empty vector of updates") {
         std::vector<Update> updates;
 
@@ -150,8 +148,7 @@ TEST_CASE("Test deduplicate_diff") {
             THEN("deduplicate_diff() sorts them") {
                 CHECK(std::ranges::equal(
                         updates,
-                        std::vector<Update>{Update(2, 1, 0), Update(3, 0, 1), Update(5, 0, -1)},
-                        pred));
+                        std::vector<Update>{Update(2, 1, 0), Update(3, 0, 1), Update(5, 0, -1)}));
             }
         }
     }
@@ -163,7 +160,7 @@ TEST_CASE("Test deduplicate_diff") {
             deduplicate_diff(updates);
             THEN("deduplicate_diff() sorts them and removes noops") {
                 CHECK(std::ranges::equal(
-                        updates, std::vector<Update>{Update(2, 1, 0), Update(3, 0, 1)}, pred));
+                        updates, std::vector<Update>{Update(2, 1, 0), Update(3, 0, 1)}));
             }
         }
     }
@@ -196,8 +193,7 @@ TEST_CASE("Test deduplicate_diff") {
             THEN("deduplicate_diff() removes the noop") {
                 CHECK(std::ranges::equal(
                         updates,
-                        std::vector<Update>{Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2)},
-                        pred));
+                        std::vector<Update>{Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2)}));
             }
         }
     }
@@ -211,8 +207,7 @@ TEST_CASE("Test deduplicate_diff") {
             THEN("deduplicate_diff() removes the noop") {
                 CHECK(std::ranges::equal(
                         updates,
-                        std::vector<Update>{Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2)},
-                        pred));
+                        std::vector<Update>{Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2)}));
             }
         }
     }
@@ -226,8 +221,7 @@ TEST_CASE("Test deduplicate_diff") {
             THEN("deduplicate_diff() removes the noop") {
                 CHECK(std::ranges::equal(
                         updates,
-                        std::vector<Update>{Update(2, 0, 1), Update(3, 1, -4), Update(6, -1, 57)},
-                        pred));
+                        std::vector<Update>{Update(2, 0, 1), Update(3, 1, -4), Update(6, -1, 57)}));
             }
         }
     }
@@ -241,8 +235,7 @@ TEST_CASE("Test deduplicate_diff") {
             deduplicate_diff(updates);
             THEN("deduplicate_diff() trims the diff properly") {
                 CHECK(std::ranges::equal(
-                        updates, std::vector<Update>{Update(3, 1, 5), Update::placement(5, 4)},
-                        pred));
+                        updates, std::vector<Update>{Update(3, 1, 5), Update::placement(5, 4)}));
             }
         }
     }

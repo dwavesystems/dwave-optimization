@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Implement C++ ``operator<=>(const Update&, const Update&)``
+    and ``operator==(const Update&, const Update&)``.
+    This allows ``Update`` to be used with ``std::ranges::stable_sort()``.
+upgrade:
+  - |
+    Remove C++ ``Update::equals(const Update&)`` method in favour of
+    ``operator==(const Update&, const Update&)``.
