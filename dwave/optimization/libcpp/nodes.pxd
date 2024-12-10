@@ -16,7 +16,7 @@ from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp cimport span, variant
 from dwave.optimization.libcpp.array cimport Array, Slice
-from dwave.optimization.libcpp.graph cimport ArrayNode, Node
+from dwave.optimization.libcpp.graph cimport ArrayNode, Graph, Node
 from dwave.optimization.libcpp.state cimport State
 
 
@@ -59,6 +59,11 @@ cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimizat
         pass
 
 
+cdef extern from "dwave-optimization/nodes/inputs.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass InputNode(ArrayNode):
+        const double* buff() const
+
+
 cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass AdvancedIndexingNode(ArrayNode):
         ctypedef variant[ArrayNodePtr, Slice] array_or_slice
@@ -72,6 +77,12 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
 
     cdef cppclass PermutationNode(ArrayNode):
         pass
+
+
+cdef extern from "dwave-optimization/nodes/lambda.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass NaryReduceNode(ArrayNode):
+        void swap_expression(Graph&& other)
+        const vector[double] get_initial_values() const
 
 
 cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::optimization" nogil:

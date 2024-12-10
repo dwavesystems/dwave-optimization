@@ -40,7 +40,104 @@ if typing.TYPE_CHECKING:
 
     _ShapeLike: typing.TypeAlias = typing.Union[int, collections.abc.Sequence[int]]
 
-__all__ = ["Model"]
+__all__ = ["Expression", "Model"]
+
+
+class Expression(_Graph):
+    def __init__(
+        self,
+        num_inputs: int = 0,
+        lower_bound: typing.Optional[float] = None,
+        upper_bound: typing.Optional[float] = None,
+        integral: typing.Optional[bool] = None,
+    ):
+        self.output: typing.Optional[ArraySymbol] = None
+
+        if num_inputs > 0:
+            if (lower_bound is None or upper_bound is None or integral is None):
+                raise ValueError(
+                    "`lower_bound`, `upper_bound` and `integral` must be provided "
+                    "explicitly when initializing inputs"
+                )
+            for _ in range(num_inputs):
+                self.input(lower_bound, upper_bound, integral)
+
+    def input(self, lower_bound: float, upper_bound: float, integral: bool):
+        r"""Create an "input" symbol. This functions similarly to a decision variable,
+        in that it takes no predecessors, but its state will always be set manually
+        (not by any solver). Used as a placeholder for input to the expression.
+
+        The output of the symbol is always a scalar (0-dimensional) array.
+
+        Provided bounds and integrality are used to supply information for
+        min/max/integral/logical properties of the resulting node, and will be used to
+        validate the state when set manually.
+
+        Note that the order in which inputs are added to the expression matters and is
+        used by other nodes (see `class::dwave.optimization.symbols.NaryReduce`) to
+        infer how arguments are supplied to the expression during evaluation.
+
+        Args:
+            lower_bound: lower bound on any possible output of the node.
+            upper_bound: upper bound on any possible output of the node.
+            integral: whether the output of the node should always be integral.
+
+        Returns:
+            An input symbol.
+
+        Examples:
+            This example creates two input symbols on an expression and adds them.
+
+            >>> from dwave.optimization.model import Expression
+            >>> expression = Expression()
+            >>> x, y = expression.input(-7.3, 5, false), expression.input(8, 10, true)
+            >>> added = x + y
+        """
+        # avoid circular import
+        from dwave.optimization.symbols import Input
+        # Shape is always scalar for now
+        return Input(self, lower_bound, upper_bound, integral, shape=tuple())
+
+    def set_output(self, value: ArraySymbol):
+        """Set the output of the expression.
+
+        Args:
+            value: The symbol that will be used to represent the output.
+
+        Examples:
+            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
+            within bounds.
+
+            >>> from dwave.optimization import Expression
+            >>> expr = Expression()
+            >>> i = model.input(-5, 5, integral=True)
+            >>> c = expr.constant(4)
+            >>> y = i*i - c*i
+            >>> expr.set_output(y)
+        """
+        self._set_objective(value)
+        self.output = value
+
+    def constant(self, value: float) -> Constant:
+        r"""Create a scalar constant symbol.
+
+        Args:
+            value: A number representing the constant.
+
+        Returns:
+            A constant symbol.
+
+        Examples:
+            This example creates a constant and adds it to an input.
+
+            >>> from dwave.optimization.model import Expression
+            >>> expression = Expression()
+            >>> c0 = expression.consant(5.7)
+            >>> i0 = expression.input(-10, 10, false)
+            >>> added = c0 + i0
+        """
+        from dwave.optimization.symbols import Constant  # avoid circular import
+        return Constant(self, value)
 
 
 @contextlib.contextmanager
@@ -347,8 +444,29 @@ class Model(_Graph):
         return locked(self)
 
     def minimize(self, value: ArraySymbol):
-        # inherit the docstring from _Graph
-        super().minimize(value)
+        """Set the objective value to minimize.
+
+        Optimization problems have an objective and/or constraints. The objective
+        expresses one or more aspects of the problem that should be minimized
+        (equivalent to maximization when multiplied by a minus sign). For example,
+        an optimized itinerary might minimize the value of distance traveled or
+        cost of transportation or travel time.
+
+        Args:
+            value: Value for which to minimize the cost function.
+
+        Examples:
+            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
+            within bounds.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(lower_bound=-5, upper_bound=5)
+            >>> c = model.constant(4)
+            >>> y = i*i - c*i
+            >>> model.minimize(y)
+        """
+        self._set_objective(value)
         self.objective = value
 
     # dev note: the typing is underspecified, but it would be quite complex to fully
