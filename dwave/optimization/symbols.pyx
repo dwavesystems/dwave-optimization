@@ -2411,18 +2411,34 @@ class UnsupportedNaryReduceExpression(Exception):
 
 
 cdef class NaryReduce(ArraySymbol):
-    """Sum of the elements of a symbol along an axis.
+    """Using a supplied :class:`~dwave.optimization.model.Expression`, perform
+    a reduction operation along one or more array operands. The reduction
+    operation (represented by the `Expression`) takes as input one value from
+    each of the operand arrays, as well as the result of the previously
+    computed operation, and computes a new value at the next output index.
+
+    This takes inspiration from
+    `numpy.ufunc.reduce <https://numpy.org/doc/2.1/reference/generated/numpy.ufunc.reduce.html>`_ 
+    but is different in that the reduction operation can take an arbitrary
+    number of arguments, instead of always two (hence the "n-ary" in
+    `NaryReduce`).
 
     Examples:
-        This example adds the sum of a binary symbol
-        along an axis to a model.
+        This example performs a simple cumulative sum on an integer variable.
 
-        >>> from dwave.optimization.model import Model
-        >>> model = Model()
-        >>> x = model.binary((10, 5))
-        >>> x_sum_0 = x.sum(axis=0)
-        >>> type(x_sum_0)
-        <class 'dwave.optimization.symbols.PartialSum'>
+        >>> from dwave.optimization.model import Expression, Model
+        >>> from dwave.optimization.symbols import NaryReduce
+        >>> model = Model()  # the main model
+        >>> x = model.integer(10, lower_bound=0, upper_bound=5)
+        >>> expr = Expression()  # the reduction operation
+        >>> xi = expr.input(0, 5, integral=True)  # will take the values of `x`
+        >>> # will take the previous result of the reduction, so the bounds must
+        >>> # include the entire possible range of the output of the reduction
+        >>> previous = expr.input(0, 5 * 10, integral=True)
+        >>> expr.set_output(xi + previous)
+        >>> cumulative_sum_x = NaryReduce(expr, (x,))
+        >>> type(cumulative_sum_x)
+        <class 'dwave.optimization.symbols.NaryReduce'>
     """
 
     def __init__(
