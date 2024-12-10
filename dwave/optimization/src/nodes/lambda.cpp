@@ -99,11 +99,11 @@ auto get_operands_shape(std::span<InputNode* const> inputs, std::span<const doub
     }
 
     if (operands.size() + 1 != inputs.size()) {
-        throw std::invalid_argument("Expression must have one more InputNode than operands");
+        throw std::invalid_argument("Expression must have one more inputs than operands");
     }
 
-    if (operands.size() + 1 != initial_values.size()) {
-        throw std::invalid_argument("Must have same number of initial values as operands");
+    if (inputs.size() != initial_values.size()) {
+        throw std::invalid_argument("Must have same number of initial values as expression inputs");
     }
 
     std::vector<const Array*> array_ops;
@@ -138,8 +138,21 @@ NaryReduceNode::NaryReduceNode(Graph&& expression, const std::vector<InputNode*>
                     " has maximum larger than corresponding input in expression");
         } else if (inputs_[op_idx]->integral() && !operands_[op_idx]->integral()) {
             throw std::invalid_argument("operand with index " + std::to_string(op_idx) +
-                                        " is non-integral, but corresponding input is");
+                                        " is non-integral, but corresponding input is integral");
         }
+    }
+
+    InputNode* previous = inputs_.back();
+
+    if (previous->integral() && !output_->integral()) {
+        throw std::invalid_argument(
+                "If expression output can be non-integral, last input must not be integral");
+    } else if (output_->min() < previous->min()) {
+        throw std::invalid_argument(
+                "Expression output must not have a lower min than the last input");
+    } else if (output_->max() > previous->max()) {
+        throw std::invalid_argument(
+                "Expression output must not have a higher max than the last input");
     }
 
     for (const auto& op : operands_) {
