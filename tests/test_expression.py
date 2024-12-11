@@ -22,18 +22,6 @@ class TestExpression(unittest.TestCase):
     def test(self):
         Expression()
 
-    def test_initial_inputs(self):
-        exp = Expression(num_inputs=10, lower_bound=-5, upper_bound=3.7, integral=False)
-        self.assertEqual(exp.num_inputs(), 10)
-
-        # Test that all arguments must be provided if starting with initial inputs
-        with self.assertRaises(ValueError):
-            Expression(num_inputs=10, upper_bound=3.7, integral=False)
-        with self.assertRaises(ValueError):
-            Expression(num_inputs=10, lower_bound=-5, integral=False)
-        with self.assertRaises(ValueError):
-            Expression(num_inputs=10, lower_bound=-5, upper_bound=3.7)
-
     def test_unsupported_symbols(self):
         # Can't add decisions to an Expression, even manually
         exp = Expression()

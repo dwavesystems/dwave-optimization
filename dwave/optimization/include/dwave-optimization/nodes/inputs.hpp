@@ -64,9 +64,9 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     void revert(State& state) const noexcept override;
 
  private:
-    double min_;
-    double max_;
-    bool integral_;
+    const double min_;
+    const double max_;
+    const bool integral_;
 };
 
 }  // namespace dwave::optimization

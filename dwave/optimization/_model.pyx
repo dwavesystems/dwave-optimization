@@ -186,7 +186,8 @@ cdef class _Graph:
                 objective_id = json.loads(objective_buff)
                 if not isinstance(objective_id, int) or objective_id >= model.num_nodes():
                     raise ValueError("objective must be an integer and a valid node id")
-                model.minimize(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
+                model._set_objective(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
+                # model.minimize(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
 
             for cid in json.loads(zf.read("constraints.json")):
                 model.add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
@@ -342,8 +343,9 @@ cdef class _Graph:
                 node._into_zipfile(zf, directory)
 
             # Encode the objective and the constraints
-            if hasattr(self, "objective") and self.objective is not None and self.objective.topological_index() < stop:
-                zf.writestr("objective.json", encoder.encode(self.objective.topological_index()))
+            objective = self._objective_symbol()
+            if objective is not None and objective.topological_index() < stop:
+                zf.writestr("objective.json", encoder.encode(objective.topological_index()))
             else:
                 zf.writestr("objective.json", b"")
 
@@ -553,6 +555,14 @@ cdef class _Graph:
             2
         """
         return self.num_nodes()
+
+    def _objective_symbol(self):
+        cdef cppArrayNode* ptr = self._graph.objective()
+        if not ptr:
+            # nullptr, so objective is not set
+            return None
+
+        return symbol_from_ptr(self, ptr)
 
     def remove_unused_symbols(self):
         """Remove unused symbols from the model.

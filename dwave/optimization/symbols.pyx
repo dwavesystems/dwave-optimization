@@ -1647,9 +1647,9 @@ cdef class Input(ArraySymbol):
     def __init__(
         self,
         expression: Expression,
-        lower_bound: float,
-        upper_bound: float,
-        integral: bool,
+        lower_bound: float = -float("inf"),
+        upper_bound: float = float("inf"),
+        integral: bool = False,
         shape: Optional[tuple] = None
     ):
         cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape)
@@ -2456,6 +2456,11 @@ cdef class NaryReduce(ArraySymbol):
 
         if len(initial_values) != expression.num_inputs():
             raise ValueError("must have same number of initial values as inputs")
+
+        if expression.output is None:
+            raise ValueError(
+                "expression must have its output set (see `Expression.set_output()`)"
+            )
 
         cdef _Graph graph = expression
         cdef ArraySymbol output_symbol = expression.output
