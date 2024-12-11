@@ -44,25 +44,42 @@ __all__ = ["Expression", "Model"]
 
 
 class Expression(_Graph):
-    def __init__(
-        self,
-        num_inputs: int = 0,
-        lower_bound: typing.Optional[float] = None,
-        upper_bound: typing.Optional[float] = None,
-        integral: typing.Optional[bool] = None,
-    ):
+    def __init__(self):
         self.output: typing.Optional[ArraySymbol] = None
 
-        if num_inputs > 0:
-            if (lower_bound is None or upper_bound is None or integral is None):
-                raise ValueError(
-                    "`lower_bound`, `upper_bound` and `integral` must be provided "
-                    "explicitly when initializing inputs"
-                )
-            for _ in range(num_inputs):
-                self.input(lower_bound, upper_bound, integral)
+    def constant(self, value: float) -> Constant:
+        r"""Create a scalar constant symbol.
 
-    def input(self, lower_bound: float, upper_bound: float, integral: bool):
+        Args:
+            value: A number representing the constant.
+
+        Returns:
+            A constant symbol.
+
+        Examples:
+            This example creates a constant and adds it to an input.
+
+            >>> from dwave.optimization.model import Expression
+            >>> expression = Expression()
+            >>> c0 = expression.consant(5.7)
+            >>> i0 = expression.input(-10, 10, false)
+            >>> added = c0 + i0
+        """
+        from dwave.optimization.symbols import Constant  # avoid circular import
+        return Constant(self, value)
+
+    @classmethod
+    def from_file(cls, *args, **kwargs):
+        model = super().from_file(*args, **kwargs)
+        model.output = model._objective_symbol()
+        return model
+
+    def input(
+        self,
+        lower_bound: float = -float("inf"),
+        upper_bound: float = float("inf"),
+        integral: bool = False,
+    ):
         r"""Create an "input" symbol. This functions similarly to a decision variable,
         in that it takes no predecessors, but its state will always be set manually
         (not by any solver). Used as a placeholder for input to the expression.
@@ -117,27 +134,6 @@ class Expression(_Graph):
         """
         self._set_objective(value)
         self.output = value
-
-    def constant(self, value: float) -> Constant:
-        r"""Create a scalar constant symbol.
-
-        Args:
-            value: A number representing the constant.
-
-        Returns:
-            A constant symbol.
-
-        Examples:
-            This example creates a constant and adds it to an input.
-
-            >>> from dwave.optimization.model import Expression
-            >>> expression = Expression()
-            >>> c0 = expression.consant(5.7)
-            >>> i0 = expression.input(-10, 10, false)
-            >>> added = c0 + i0
-        """
-        from dwave.optimization.symbols import Constant  # avoid circular import
-        return Constant(self, value)
 
 
 @contextlib.contextmanager
@@ -353,6 +349,12 @@ class Model(_Graph):
             False
         """
         return all(sym.state(index) for sym in self.iter_constraints())
+
+    @classmethod
+    def from_file(cls, *args, **kwargs):
+        model = super().from_file(*args, **kwargs)
+        model.objective = model._objective_symbol()
+        return model
 
     def integer(
             self,

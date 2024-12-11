@@ -62,6 +62,7 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         Py_ssize_t num_nodes()
         Py_ssize_t num_decisions()
         Py_ssize_t num_inputs()
+        ArrayNode* objective()
         @staticmethod
         void recursive_initialize(State&, Node*) except+
         @staticmethod

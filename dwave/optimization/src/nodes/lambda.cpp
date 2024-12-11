@@ -143,7 +143,6 @@ NaryReduceNode::NaryReduceNode(Graph&& expression, const std::vector<InputNode*>
     }
 
     InputNode* previous = inputs_.back();
-
     if (previous->integral() && !output_->integral()) {
         throw std::invalid_argument(
                 "If expression output can be non-integral, last input must not be integral");

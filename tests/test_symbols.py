@@ -90,7 +90,7 @@ class utils:
                 index = x.topological_index()
 
                 with model.to_file() as f:
-                    new = Model.from_file(f)
+                    new = type(model).from_file(f)
 
                 # Get the symbol back
                 y, = itertools.islice(new.iter_symbols(), index, index+1)
@@ -1890,7 +1890,7 @@ class TestNaryReduce(utils.SymbolTests):
         c1 = model.constant([0, 1])
 
         exp = Expression()
-        inputs = [exp.input(-10, 10, False) for _ in range(3)]
+        inputs = [exp.input() for _ in range(3)]
         exp.set_output(inputs[0] + inputs[1] + inputs[2])
 
         acc = dwave.optimization.symbols.NaryReduce(exp, (c0, c1))
@@ -1904,7 +1904,7 @@ class TestNaryReduce(utils.SymbolTests):
         c1 = model.constant([0, 1])
 
         exp = Expression()
-        inputs = [exp.input(-10, 10, False) for _ in range(3)]
+        inputs = [exp.input() for _ in range(3)]
         exp.set_output(inputs[0] + inputs[1] + inputs[2])
 
         with self.assertRaises(ValueError):
