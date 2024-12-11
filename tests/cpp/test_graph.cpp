@@ -174,6 +174,69 @@ TEST_CASE("Topological Sort", "[topological_sort]") {
     // test edge cases.
 }
 
+TEST_CASE("Graph constructors, assignment operators, and swapping") {
+    static_assert(std::is_nothrow_default_constructible<Graph>::value);
+    static_assert(!std::is_copy_constructible<Graph>::value);
+    static_assert(!std::is_copy_assignable<Graph>::value);
+    static_assert(std::is_nothrow_move_constructible<Graph>::value);
+    static_assert(std::is_nothrow_move_assignable<Graph>::value);
+    static_assert(std::is_swappable<Graph>::value);
+
+    GIVEN("A graph with a few nodes in it") {
+        auto graph = Graph();
+        auto a_ptr = graph.emplace_node<ConstantNode>(1.5);
+        auto b_ptr = graph.emplace_node<ConstantNode>(2);
+        auto c_ptr = graph.emplace_node<AddNode>(a_ptr, b_ptr);
+        graph.set_objective(c_ptr);
+
+        WHEN("We construct another graph using the move constructor") {
+            auto other = Graph(std::move(graph));
+
+            THEN("The nodes have all be moved over") {
+                // these tests are far from complete, but we're using default
+                // constructors/operators so this is intended to be a sanity
+                // check
+                CHECK(other.nodes().size() == 3);
+                CHECK(graph.nodes().size() == 0);
+            }
+        }
+
+        WHEN("We construct another graph using the move assignment operator") {
+            auto other = Graph();
+            other = std::move(graph);
+
+            THEN("The nodes have all be moved over") {
+                // these tests are far from complete, but we're using default
+                // constructors/operators so this is intended to be a sanity
+                // check
+                CHECK(other.nodes().size() == 3);
+                CHECK(graph.nodes().size() == 0);
+            }
+        }
+
+        AND_GIVEN("A different graph with at least one node") {
+            auto other = Graph();
+            auto d_ptr = other.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{1});
+            other.add_constraint(d_ptr);
+
+            WHEN("We swap the graphs") {
+                std::swap(graph, other);
+
+                THEN("Their content have been swapped as expected") {
+                    // these tests are far from complete, but we're using default
+                    // constructors/operators so this is intended to be a sanity
+                    // check
+                    CHECK(other.nodes().size() == 3);
+                    CHECK(other.constraints().size() == 0);
+
+                    CHECK(graph.nodes().size() == 1);
+                    CHECK(graph.constraints().size() == 1);
+                }
+            }
+        }
+    }
+}
+
 TEST_CASE("Graph::objective()") {
     GIVEN("A graph") {
         auto graph = Graph();
