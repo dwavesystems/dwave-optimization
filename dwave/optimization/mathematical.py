@@ -532,7 +532,7 @@ def sqrt(x: ArraySymbol) -> SquareRoot:
         >>> model.states.resize(1)
         >>> with model.lock():
         ...     print(sqrt_x.state())
-        4
+        4.0
     See Also:
         :class:`~dwave.optimization.symbols.SquareRoot`: equivalent symbol.
     """

@@ -244,7 +244,7 @@ class Model(_Graph):
             >>> model = Model()
             >>> b = model.binary()
             >>> model.add_constraint(b) # doctest: +ELLIPSIS
-            <dwave.optimization.BinaryVariable at ...>
+            <dwave.optimization.symbols.BinaryVariable at ...>
             >>> model.states.resize(2)
             >>> b.set_state(0, 1) # Feasible
             >>> b.set_state(1, 0) # Infeasible
