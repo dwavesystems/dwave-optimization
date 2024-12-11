@@ -23,7 +23,7 @@ namespace dwave::optimization {
 void deduplicate_diff(std::vector<Update>& diff) {
     if (diff.empty()) return;
 
-    std::stable_sort(diff.begin(), diff.end());
+    std::ranges::stable_sort(diff);
 
     // Find the index of first non-noop Update. If there are none, leave it as -1
     // to represent no final updates.

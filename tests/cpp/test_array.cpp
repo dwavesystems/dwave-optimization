@@ -578,6 +578,8 @@ TEST_CASE("Dynamically Sized 2d Array") {
 }
 
 TEST_CASE("Update") {
+    static_assert(std::totally_ordered<Update>);
+
     SECTION("Update::removal()") {
         auto update = Update::removal(105, 56.5);
         CHECK(update.index == 105);

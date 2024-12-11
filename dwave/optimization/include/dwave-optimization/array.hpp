@@ -189,15 +189,11 @@ struct Update {
         return Update(index, old, nothing);
     }
 
-    // We use the index to compare updates. This is useful because we can
-    // stablely sort a vector of updates and preserve the other of operations
-    // on a single index.
-    friend constexpr bool operator<(const Update& lhs, const Update& rhs) {
-        return lhs.index < rhs.index;
+    // We want to be able to stably sort updates based on the index.
+    friend constexpr auto operator<=>(const Update& lhs, const Update& rhs) {
+        return lhs.index <=> rhs.index;
     }
-
-    // Added for easier unit testing, checks that all members are equal (or nan and nan)
-    static bool equals(const Update& lhs, const Update& rhs) {
+    friend constexpr bool operator==(const Update& lhs, const Update& rhs) noexcept {
         return (lhs.index == rhs.index &&
                 (lhs.old == rhs.old || (std::isnan(lhs.old) && std::isnan(rhs.old))) &&
                 (lhs.value == rhs.value || (std::isnan(lhs.value) && std::isnan(rhs.value))));
@@ -224,10 +220,8 @@ struct Update {
 
     double value_or(double val) const { return std::isnan(value) ? val : value; }
 
-    // Returns whether this is a identity update, i.e. whether the old value equals the
-    // value. In the case of both old and value being NaN, this should still return
-    // false.
-    bool identity() const { return old == value; }
+    // Return true if the update does nothing - that is old and value are the same.
+    bool identity() const { return null() || old == value; }
 
     // Use NaN to represent the "nothing" value used in placements/removals
     static constexpr double nothing = std::numeric_limits<double>::signaling_NaN();
