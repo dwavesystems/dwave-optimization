@@ -26,9 +26,6 @@ namespace dwave::optimization {
 
 // Graph **********************************************************************
 
-Graph::Graph() = default;
-Graph::~Graph() = default;
-
 void Graph::topological_sort() {
     if (topologically_sorted_) return;
 

@@ -71,8 +71,18 @@ struct Decision {
 
 class Graph {
  public:
-    Graph();
-    ~Graph();
+    Graph() noexcept = default;
+    ~Graph() noexcept = default;
+
+    // We disallow copy construction and assignment because it would only be
+    // a shallow copy/assignment in terms of the underlying nodes.
+    // We could implement these in the future if desired but it would be quite
+    // non-trivial.
+    Graph(const Graph&) = delete;
+    Graph& operator=(const Graph&) = delete;
+
+    Graph(Graph&&) noexcept = default;
+    Graph& operator=(Graph&&) noexcept = default;
 
     template <class NodeType, class... Args>
     NodeType* emplace_node(Args&&... args);
@@ -177,7 +187,8 @@ class Graph {
 
     std::vector<std::unique_ptr<Node>> nodes_;
 
-    // The nodes with important semantic meanings to the model
+    // The nodes with important semantic meanings to the model.
+    // All of these pointers are non-owning!
     ArrayNode* objective_ptr_ = nullptr;
     std::vector<ArrayNode*> constraints_;
     std::vector<DecisionNode*> decisions_;
