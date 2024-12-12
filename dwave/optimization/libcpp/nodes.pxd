@@ -59,9 +59,9 @@ cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimizat
         pass
 
 
-cdef extern from "dwave-optimization/nodes/inputs.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass InputNode(ArrayNode):
-        const double* buff() const
+# This would usually be defined in here, but we need it for Graph.inputs() so to
+# avoid the circular dependency we define it in graph.pxd.
+from dwave.optimization.libcpp.graph cimport InputNode
 
 
 cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optimization" nogil:

@@ -36,19 +36,18 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
     cdef cppclass DecisionNode(Node):
         pass
 
-    cdef cppclass InputNode(Node, Array):
-        pass
+# This would usually be defined in nodes.pxd, but we need it for Graph.inputs() so to
+# avoid the circular dependency we define it here.
+cdef extern from "dwave-optimization/nodes/inputs.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass InputNode(ArrayNode):
+        const double* buff() const
 
 # Sometimes Cython isn't able to reason about pointers as template inputs, so
 # we make a few aliases for convenience
 ctypedef Node* NodePtr
 ctypedef ArrayNode* ArrayNodePtr
 ctypedef DecisionNode* DecisionNodePtr
-
-# This seems to be necessary to allow Cython to iterate over the returned
-# span from `inputs()` directly. Otherwise it tries to cast it to a non-const
-# version of span before iterating, which the C++ compiler will complain about.
-ctypedef InputNode* const constInputNodePtr
+ctypedef InputNode* InputNodePtr
 
 cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass Graph:
@@ -57,7 +56,7 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         span[const unique_ptr[Node]] nodes() const
         span[const ArrayNodePtr] constraints()
         span[const DecisionNodePtr] decisions()
-        span[constInputNodePtr] inputs()
+        span[const InputNodePtr] inputs()
         Py_ssize_t num_constraints()
         Py_ssize_t num_nodes()
         Py_ssize_t num_decisions()
