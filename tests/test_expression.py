@@ -24,59 +24,59 @@ class TestExpression(unittest.TestCase):
 
     def test_unsupported_symbols(self):
         # Can't add decisions to an Expression, even manually
-        exp = Expression()
+        expr = Expression()
         with self.assertRaises(TypeError):
-            dwave.optimization.symbols.IntegerVariable(exp)
+            dwave.optimization.symbols.IntegerVariable(expr)
 
         # Can't add other symbols, e.g. Reshape
-        exp = Expression()
-        inp = exp.input(0, 1, False)
+        expr = Expression()
+        inp = expr.input(0, 1, False)
         with self.assertRaises(TypeError):
             dwave.optimization.symbols.Reshape(inp, (1, 1, 1))
 
     def test_num_inputs(self):
-        exp = Expression()
-        self.assertEqual(exp.num_inputs(), 0)
+        expr = Expression()
+        self.assertEqual(expr.num_inputs(), 0)
 
-        inp0 = exp.input(-1, 1, True)
-        self.assertEqual(exp.num_inputs(), 1)
+        inp0 = expr.input(-1, 1, True)
+        self.assertEqual(expr.num_inputs(), 1)
 
-        inp1 = exp.input(-1, 1, True)
-        self.assertEqual(exp.num_inputs(), 2)
+        inp1 = expr.input(-1, 1, True)
+        self.assertEqual(expr.num_inputs(), 2)
 
         inp0 + inp1
-        self.assertEqual(exp.num_inputs(), 2)
-        self.assertEqual(exp.num_nodes(), 3)
+        self.assertEqual(expr.num_inputs(), 2)
+        self.assertEqual(expr.num_nodes(), 3)
 
-        exp.input(-1, 1, True)
-        self.assertEqual(exp.num_inputs(), 3)
-        self.assertEqual(exp.num_nodes(), 4)
+        expr.input(-1, 1, True)
+        self.assertEqual(expr.num_inputs(), 3)
+        self.assertEqual(expr.num_nodes(), 4)
 
     def test_iter_inputs(self):
-        exp = Expression()
-        self.assertListEqual(list(exp.iter_inputs()), [])
+        expr = Expression()
+        self.assertListEqual(list(expr.iter_inputs()), [])
 
-        inp0 = exp.input(-1, 1, True)
-        symbols = list(exp.iter_inputs())
+        inp0 = expr.input(-1, 1, True)
+        symbols = list(expr.iter_inputs())
         self.assertEqual(len(symbols), 1)
         self.assertTrue(inp0.equals(symbols[0]))
 
-        inp1 = exp.input(-1, 1, True)
-        symbols = list(exp.iter_inputs())
+        inp1 = expr.input(-1, 1, True)
+        symbols = list(expr.iter_inputs())
         self.assertEqual(len(symbols), 2)
         self.assertTrue(inp0.equals(symbols[0]))
         self.assertTrue(inp1.equals(symbols[1]))
 
         inp0 + inp1
-        symbols = list(exp.iter_inputs())
+        symbols = list(expr.iter_inputs())
         self.assertEqual(len(symbols), 2)
 
-        inp2 = exp.input(-1, 1, True)
-        symbols = list(exp.iter_inputs())
+        inp2 = expr.input(-1, 1, True)
+        symbols = list(expr.iter_inputs())
         self.assertEqual(len(symbols), 3)
         self.assertTrue(inp2.equals(symbols[2]))
 
     def test_constants(self):
-        exp = Expression()
-        c0, c1 = exp.constant(5), exp.constant(-7.5)
+        expr = Expression()
+        c0, c1 = expr.constant(5), expr.constant(-7.5)
         c0 + c1

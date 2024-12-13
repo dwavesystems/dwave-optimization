@@ -1645,11 +1645,11 @@ cdef class Input(ArraySymbol):
 
     def __init__(
         self,
-        expression: Expression,
-        lower_bound: float = -float("inf"),
-        upper_bound: float = float("inf"),
-        integral: bool = False,
-        shape: Optional[tuple] = None
+        expression,
+        shape=None,
+        double lower_bound = -float("inf"),
+        double upper_bound = float("inf"),
+        bool integral = False,
     ):
         cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape)
 
@@ -1680,10 +1680,10 @@ cdef class Input(ArraySymbol):
             properties = json.load(f)
 
         return Input(model,
-            properties["lb"],
-            properties["ub"],
-            properties["integral"],
             shape=properties["shape"],
+            lower_bound=properties["lb"],
+            upper_bound=properties["ub"],
+            integral=properties["integral"],
         )
 
     def _into_zipfile(self, zf, directory):

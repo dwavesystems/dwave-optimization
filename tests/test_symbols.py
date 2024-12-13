@@ -1243,9 +1243,9 @@ class TestDivide(utils.SymbolTests):
 
 class TestInput(utils.SymbolTests):
     def generate_symbols(self):
-        exp = Expression()
-        inp = exp.input(-10, 10, False)
-        exp.lock()
+        expr = Expression()
+        inp = expr.input(lower_bound=-10, upper_bound=10, integral=False)
+        expr.lock()
 
         # monkeypatch to_file in to test serialization
         def to_file(self, **kwargs) -> typing.BinaryIO:
@@ -1916,11 +1916,11 @@ class TestNaryReduce(utils.SymbolTests):
         c0 = model.constant([0, 0])
         c1 = model.constant([0, 1])
 
-        exp = Expression()
-        inputs = [exp.input() for _ in range(3)]
-        exp.set_output(inputs[0] + inputs[1] + inputs[2])
+        expr = Expression()
+        inputs = [expr.input() for _ in range(3)]
+        expr.set_output(inputs[0] + inputs[1] + inputs[2])
 
-        acc = dwave.optimization.symbols.NaryReduce(exp, (c0, c1), initial=7)
+        acc = dwave.optimization.symbols.NaryReduce(expr, (c0, c1), initial=7)
 
         model.lock()
         yield acc
@@ -1929,24 +1929,24 @@ class TestNaryReduce(utils.SymbolTests):
         model = Model()
         c0 = model.constant([0, 0])
 
-        exp = Expression()
-        inputs = [exp.input() for _ in range(3)]
-        exp.set_output(inputs[0] + inputs[1] + inputs[2])
+        expr = Expression()
+        inputs = [expr.input() for _ in range(3)]
+        expr.set_output(inputs[0] + inputs[1] + inputs[2])
 
         with self.assertRaises(ValueError):
-            dwave.optimization.symbols.NaryReduce(exp, (c0,))
+            dwave.optimization.symbols.NaryReduce(expr, (c0,))
 
     def test_invalid_expressions(self):
         model = Model()
         c0 = model.constant([0, 0])
 
         # Can't use an Expression that uses a non-scalar input
-        exp = Expression()
-        inp1 = exp.input(-10, 10, False)
-        inp5 = dwave.optimization.symbols.Input(exp, -10, 10, False, (5,))
-        exp.set_output(inp1)
+        expr = Expression()
+        inp1 = expr.input(-10, 10, False)
+        inp5 = dwave.optimization.symbols.Input(expr, (5,), -10, 10, False)
+        expr.set_output(inp1)
         try:
-            dwave.optimization.symbols.NaryReduce(exp, (c0,))
+            dwave.optimization.symbols.NaryReduce(expr, (c0,))
             self.assertTrue(False, "should raise exception")
         except Exception as e:
             self.assertIsInstance(
@@ -1956,11 +1956,11 @@ class TestNaryReduce(utils.SymbolTests):
             self.assertTrue(inp5.equals(e.symbol))
 
         # Can't use an expression without higher possible output than last input
-        exp = Expression()
-        inp0, inp1 = exp.input(0, 100), exp.input(0, 10)
-        exp.set_output(inp0 + inp1)
+        expr = Expression()
+        inp0, inp1 = expr.input(0, 100), expr.input(0, 10)
+        expr.set_output(inp0 + inp1)
         try:
-            dwave.optimization.symbols.NaryReduce(exp, (c0,))
+            dwave.optimization.symbols.NaryReduce(expr, (c0,))
             self.assertTrue(False, "should raise exception")
         except Exception as e:
             self.assertIsInstance(

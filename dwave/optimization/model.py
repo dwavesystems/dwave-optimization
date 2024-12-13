@@ -148,7 +148,13 @@ class Expression(_Graph):
         # avoid circular import
         from dwave.optimization.symbols import Input
         # Shape is always scalar for now
-        return Input(self, lower_bound, upper_bound, integral, shape=tuple())
+        return Input(
+            self,
+            shape=tuple(),
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
+            integral=integral
+        )
 
     def set_output(self, value: ArraySymbol):
         """Set the output of the expression.
