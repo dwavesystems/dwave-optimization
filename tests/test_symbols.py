@@ -1938,7 +1938,7 @@ class TestNaryReduce(utils.SymbolTests):
             dwave.optimization.symbols.NaryReduce(exp, (c0,))
 
         with self.assertRaises(ValueError):
-            dwave.optimization.symbols.NaryReduce(exp, (c0, c1), initial_values=(0,))
+            dwave.optimization.symbols.NaryReduce(exp, (c0, c1), initial=(0,))
 
     def test_invalid_expressions(self):
         model = Model()
@@ -1953,9 +1953,24 @@ class TestNaryReduce(utils.SymbolTests):
             dwave.optimization.symbols.NaryReduce(exp, (c0,))
             self.assertTrue(False, "should raise exception")
         except Exception as e:
-            self.assertIsInstance(e, dwave.optimization.symbols.UnsupportedNaryReduceExpression)
+            self.assertIsInstance(
+                e, dwave.optimization.symbols.UnsupportedNaryReduceExpression
+            )
             self.assertRegex(str(e), "scalar")
             self.assertTrue(inp5.equals(e.symbol))
+
+        # Can't use an expression without higher possible output than last input
+        exp = Expression()
+        inp0, inp1 = exp.input(0, 100), exp.input(0, 10)
+        exp.set_output(inp0 + inp1)
+        try:
+            dwave.optimization.symbols.NaryReduce(exp, (c0,))
+            self.assertTrue(False, "should raise exception")
+        except Exception as e:
+            self.assertIsInstance(
+                e, dwave.optimization.symbols.UnsupportedNaryReduceExpression
+            )
+            self.assertRegex(str(e), "must not have a higher max than the last input")
 
 
 class TestNegate(utils.UnaryOpTests):

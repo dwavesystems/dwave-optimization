@@ -44,8 +44,43 @@ __all__ = ["Expression", "Model"]
 
 
 class Expression(_Graph):
+    """A mathematical expression.
+
+    The :class:`.Expression` is very similar to the :class:`.Model`, and has
+    many of the same methods and properties. However, unlike :class:`.Model`s,
+    :class:`.Expression`s are not meant to represent optimization problems,
+    and do not have decision symbols, constraints, or an objective. Instead,
+    they have only inputs, an output, and intermediate symbols that represent
+    some mathematical expression or computation.
+
+    Examples:
+        This example creates an expression that computes the minimum of its
+        first two inputs, and then multiplies that by third input (i.e.
+        computes the expression `min(x, y) * z`).
+
+        >>> from dwave.optimization.model import Expression
+        >>> expr = Expression()
+        >>> x, y, z = expr.input(), expr.input(), expr.input()
+        >>> expr.set_output(min(x, y) * z)
+    """
+
+    output: typing.Optional[ArraySymbol]
+    """The final output of the expression.
+
+    Examples:
+        >>> from dwave.optimization.model import Expression
+        >>> expr = Expression()
+        >>> x, y = expr.input(), expr.input()
+        >>> added = x + y
+        >>> type(added)
+        <class 'dwave.optimization.symbols.Add'>
+        >>> expr.set_output(added)
+        >>> expr.output is added
+        True
+    """
+
     def __init__(self):
-        self.output: typing.Optional[ArraySymbol] = None
+        self.output = None
 
     def constant(self, value: float) -> Constant:
         r"""Create a scalar constant symbol.
@@ -106,9 +141,9 @@ class Expression(_Graph):
             This example creates two input symbols on an expression and adds them.
 
             >>> from dwave.optimization.model import Expression
-            >>> expression = Expression()
-            >>> x, y = expression.input(-7.3, 5, false), expression.input(8, 10, true)
-            >>> added = x + y
+            >>> expr = Expression()
+            >>> x, y = expr.input(-7.3, 5), expr.input(8, 10, True)
+            >>> expr.set_output(x + y)
         """
         # avoid circular import
         from dwave.optimization.symbols import Input
