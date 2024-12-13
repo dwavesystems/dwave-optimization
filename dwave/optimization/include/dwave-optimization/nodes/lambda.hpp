@@ -24,9 +24,7 @@ namespace dwave::optimization {
 class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // Runtime constructor that can be used from Cython/Python
-    NaryReduceNode(Graph&& expression, const std::vector<InputNode*>& inputs,
-                   const ArrayNode* output, const std::vector<double>& initial_values,
-                   const std::vector<ArrayNode*>& operands);
+    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, double initial);
 
     double const* buff(const State& state) const override;
     void commit(State& state) const override;
@@ -42,20 +40,16 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t size_diff(const State& state) const override;
     SizeInfo sizeinfo() const override;
 
-    void swap_expression(Graph&& other) {
-       std::swap(expression_, other);
-    };
+    void swap_expression(Graph&& other) { std::swap(expression_, other); };
 
-    const std::vector<double>& get_initial_values() const { return initial_values_; };
+    const double initial;
 
  private:
     double evaluate_expression(State& register_) const;
 
     Graph expression_;
-    const std::vector<InputNode*> inputs_;
-    const ArrayNode* output_;
     const std::vector<ArrayNode*> operands_;
-    const std::vector<double> initial_values_;
+    const ArrayNode* output_;
 };
 
 }  // namespace dwave::optimization

@@ -101,7 +101,7 @@ from dwave.optimization.libcpp.nodes cimport (
     XorNode as cppXorNode,
     )
 from dwave.optimization.model cimport ArraySymbol, _Graph, Symbol
-from dwave.optimization.model import Expression
+from dwave.optimization.model import Expression, UnsupportedExpression
 from dwave.optimization.states cimport States
 
 __all__ = [
@@ -2400,13 +2400,6 @@ cdef class NaryMultiply(ArraySymbol):
 _register(NaryMultiply, typeid(cppNaryMultiplyNode))
 
 
-# TODO: consider different location for this?
-class UnsupportedNaryReduceExpression(Exception):
-    def __init__(self, message: str, symbol: Optional[Symbol] = None):
-        super().__init__(message)
-        self.symbol = symbol
-
-
 cdef class NaryReduce(ArraySymbol):
     """Using a supplied :class:`~dwave.optimization.model.Expression`, perform
     a reduction operation along one or more array operands. The reduction
@@ -2420,7 +2413,20 @@ cdef class NaryReduce(ArraySymbol):
     number of arguments, instead of always two (hence the "n-ary" in
     `NaryReduce`).
 
-    TODO: args
+    Args:
+        expression:
+            An :class:`~dwave.optimization.model.Expression` representing the
+            reduction operation. The last input on the expression will be given
+            the previous output of the operation at each iteration over the
+            values of the operands.
+        operands:
+            A list of the 1d-array symbols that will be the operands to the
+            reduction. There should be one fewer operands than inputs on the
+            expression.
+        initial (optional):
+            A float representing the value used to start the reduction. This
+            will be used to set the last input of the expression on the very
+            first iteration.
 
     Examples:
         This example performs a simple cumulative sum on an integer variable.
@@ -2440,18 +2446,12 @@ cdef class NaryReduce(ArraySymbol):
         <class 'dwave.optimization.symbols.NaryReduce'>
     """
 
-    def __init__(self, expression, operands, initial=None):
+    def __init__(self, expression, operands, initial=0):
         if len(operands) == 0:
             raise ValueError("must have at least one operand")
 
         if expression.num_inputs() != len(operands) + 1:
             raise ValueError("must have exactly one more input than number of operands")
-
-        if initial is None:
-            initial = (0,) * expression.num_inputs()
-
-        if len(initial) != expression.num_inputs():
-            raise ValueError("must have same number of initial values as inputs")
 
         if expression.output is None:
             raise ValueError(
@@ -2462,17 +2462,7 @@ cdef class NaryReduce(ArraySymbol):
         cdef ArraySymbol output_symbol = expression.output
 
         cdef _Graph model = operands[0].model
-        cdef cppArrayNode* output = output_symbol.array_ptr
-        cdef vector[double] cppinitial
-        cdef cppInputNode* cppinput
-        cdef vector[cppInputNode*] cppinputs
         cdef vector[cppArrayNode*] cppoperands
-
-        for val in initial:
-            cppinitial.push_back(val)
-
-        for cppinput in graph._graph.inputs():
-            cppinputs.push_back(cppinput)
 
         cdef ArraySymbol array
         for node in operands:
@@ -2481,10 +2471,12 @@ cdef class NaryReduce(ArraySymbol):
             array = <ArraySymbol?>node
             cppoperands.push_back(array.array_ptr)
 
+        cdef double cppinitial = initial
+
         expression.lock()
         try:
             self.ptr = model._graph.emplace_node[cppNaryReduceNode](
-                move(graph._graph), cppinputs, output, cppinitial, cppoperands
+                move(graph._graph), cppoperands, cppinitial
             )
         except ValueError as e:
             expression.unlock()
@@ -2504,13 +2496,13 @@ cdef class NaryReduce(ArraySymbol):
 
         # some errors may not contain an associated node
         if node_ptr_int is None:
-            return UnsupportedNaryReduceExpression(message)
+            return UnsupportedExpression(message)
 
         # get a symbol from the supplied node pointer (encoded as an int) 
         cdef uintptr_t node_ptr_val = node_ptr_int
         cdef cppNode* node_ptr = reinterpret_cast[cppNodePtr](<void *>node_ptr_val)
         cdef Symbol symbol = symbol_from_ptr(expression, node_ptr)
-        return UnsupportedNaryReduceExpression(message, symbol)
+        return UnsupportedExpression(message, symbol)
 
     @staticmethod
     def _from_symbol(Symbol symbol):
@@ -2568,7 +2560,7 @@ cdef class NaryReduce(ArraySymbol):
         del expr
 
         encoder = json.JSONEncoder(separators=(',', ':'))
-        zf.writestr(directory + "initial.json", encoder.encode(self.ptr.get_initial_values()))
+        zf.writestr(directory + "initial.json", encoder.encode(self.ptr.initial))
 
     cdef cppNaryReduceNode* ptr
 

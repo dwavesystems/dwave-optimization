@@ -42,12 +42,11 @@ TEST_CASE("NaryReduceNode") {
                                           expression.emplace_node<InputNode>()};
         auto output_ptr = expression.emplace_node<AddNode>(
                 expression.emplace_node<MultiplyNode>(inputs[0], inputs[1]), inputs[2]);
+        expression.set_objective(output_ptr);
         expression.topological_sort();
 
         THEN("We can create an accumulate node") {
-            std::vector<double> initial_values({1, 2, 3});
-            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), inputs,
-                                                                 output_ptr, initial_values, args);
+            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 5);
 
             AND_WHEN("We initialize a state") {
                 auto state = graph.initialize_state();
@@ -76,14 +75,13 @@ TEST_CASE("NaryReduceNode") {
                                 inputs[1]),
                         inputs[2]),
                 expression.emplace_node<ConstantNode>(5));
+        expression.set_objective(output_ptr);
         expression.topological_sort();
 
         THEN("We can create a lambda node") {
             std::vector<ArrayNode*> args({i_ptr, j_ptr});
 
-            std::vector<double> initial_values({1, 2, 3});
-            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), inputs,
-                                                                 output_ptr, initial_values, args);
+            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 6);
 
             auto validation_ptr = graph.emplace_node<ArrayValidationNode>(reduce_ptr);
 
@@ -129,14 +127,13 @@ TEST_CASE("NaryReduceNode") {
                                           expression.emplace_node<InputNode>()};
         auto output_ptr = expression.emplace_node<MaximumNode>(
                 expression.emplace_node<AddNode>(inputs[0], inputs[2]), inputs[1]);
+        expression.set_objective(output_ptr);
         expression.topological_sort();
 
         THEN("We can create a lambda node with basic functions and logic control") {
             std::vector<ArrayNode*> args({i_ptr, j_ptr});
 
-            std::vector<double> initial_values({0, 0, 0});
-            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), inputs,
-                                                                 output_ptr, initial_values, args);
+            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0);
 
             auto validation_ptr = graph.emplace_node<ArrayValidationNode>(reduce_ptr);
 
@@ -175,7 +172,6 @@ TEST_CASE("NaryReduceNode") {
     GIVEN("A non-integral constant node") {
         std::vector<double> i = {0, 1, 2, 2.5};
 
-        std::vector<double> initial_values({1, 1});
         auto args = std::vector<ArrayNode*>{graph.emplace_node<ConstantNode>(i)};
 
         THEN("We can't create a NaryReduceNode with an expression with decision variables") {
@@ -184,12 +180,11 @@ TEST_CASE("NaryReduceNode") {
                     expression.emplace_node<InputNode>(),
                     expression.emplace_node<InputNode>(),
             };
-            auto output_ptr = expression.emplace_node<AddNode>(
-                    inputs[0], expression.emplace_node<IntegerNode>());
+            expression.set_objective(expression.emplace_node<AddNode>(
+                    inputs[0], expression.emplace_node<IntegerNode>()));
             expression.topological_sort();
 
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), inputs,
-                                                            output_ptr, initial_values, args));
+            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0));
         }
 
         THEN("We can't create a NaryReduceNode with non-scalar nodes") {
@@ -198,11 +193,11 @@ TEST_CASE("NaryReduceNode") {
                     expression.emplace_node<InputNode>(std::vector<ssize_t>{2}, 0, 10, false),
                     expression.emplace_node<InputNode>(std::vector<ssize_t>{2}, 0, 10, false),
             };
-            auto output_ptr = expression.emplace_node<AddNode>(inputs[0], inputs[1]);
+            expression.set_objective(expression.emplace_node<MinNode>(
+                    expression.emplace_node<AddNode>(inputs[0], inputs[1])));
             expression.topological_sort();
 
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), inputs,
-                                                            output_ptr, initial_values, args));
+            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0));
         }
 
         THEN("We can't create a NaryReduceNode with an expression that has inputs with a smaller "
@@ -212,10 +207,9 @@ TEST_CASE("NaryReduceNode") {
                     expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 1, false),
                     expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 1, false),
             };
-            auto output_ptr = expression.emplace_node<AddNode>(inputs[0], inputs[1]);
+            expression.set_objective(expression.emplace_node<AddNode>(inputs[0], inputs[1]));
             expression.topological_sort();
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), inputs,
-                                                            output_ptr, initial_values, args));
+            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0));
         }
 
         THEN("We can't create a NaryReduceNode with an expression that has inputs with an integral "
@@ -225,17 +219,15 @@ TEST_CASE("NaryReduceNode") {
                     expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
                     expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
             };
-            auto output_ptr = expression.emplace_node<AddNode>(inputs[0], inputs[1]);
+            expression.set_objective(expression.emplace_node<AddNode>(inputs[0], inputs[1]));
             expression.topological_sort();
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), inputs,
-                                                            output_ptr, initial_values, args));
+            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0));
         }
     }
 
     GIVEN("An integral constant node") {
         std::vector<double> i = {0, 1, 2};
 
-        std::vector<double> initial_values{1, 1};
         auto args = std::vector<ArrayNode*>{graph.emplace_node<ConstantNode>(i)};
 
         THEN("We can't create a NaryReduceNode with an expression that has inputs with an integral "
@@ -245,12 +237,11 @@ TEST_CASE("NaryReduceNode") {
                     expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
                     expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
             };
-            auto output_ptr = expression.emplace_node<AddNode>(
+            expression.set_objective(expression.emplace_node<AddNode>(
                     inputs[0], expression.emplace_node<MultiplyNode>(
-                                       expression.emplace_node<ConstantNode>(0.5), inputs[1]));
+                                       expression.emplace_node<ConstantNode>(0.5), inputs[1])));
             expression.topological_sort();
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), inputs,
-                                                            output_ptr, initial_values, args));
+            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0));
         }
     }
 }

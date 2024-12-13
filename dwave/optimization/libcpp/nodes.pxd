@@ -82,7 +82,7 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
 cdef extern from "dwave-optimization/nodes/lambda.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass NaryReduceNode(ArrayNode):
         void swap_expression(...)
-        const vector[double] get_initial_values() const
+        const double initial
 
 
 cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::optimization" nogil:
