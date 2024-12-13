@@ -117,7 +117,7 @@ class Expression(_Graph):
     ):
         r"""Create an "input" symbol. This functions similarly to a decision variable,
         in that it takes no predecessors, but its state will always be set manually
-        (not by any solver). Used as a placeholder for input to the expression.
+        (not by any solver). Used as a placeholder for input to an expression or model.
 
         The output of the symbol is always a scalar (0-dimensional) array.
 
@@ -126,7 +126,7 @@ class Expression(_Graph):
         validate the state when set manually.
 
         Note that the order in which inputs are added to the expression matters and is
-        used by other nodes (see :class:`~dwave.optimization.symbols.NaryReduce`) to
+        used by other symbols (see :class:`~dwave.optimization.symbols.NaryReduce`) to
         infer how arguments are supplied to the expression during evaluation.
 
         Args:
@@ -660,7 +660,7 @@ class Model(_Graph):
             self.states._reset_intermediate_states()
 
 
-class UnsupportedExpression(Exception):
+class UnsupportedExpressionError(Exception):
     """An exception for when an expression is unsupported in a certain
     use-case, e.g. an expression which has non-scalar symbols is used to
     create a :class:`~dwave.optimization.symbols.NaryReduce` symbol.

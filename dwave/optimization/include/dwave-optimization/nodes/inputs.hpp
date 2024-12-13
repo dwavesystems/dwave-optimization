@@ -14,8 +14,6 @@
 
 #pragma once
 
-#include <vector>
-
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
 
@@ -49,7 +47,7 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
 
     bool integral() const override { return integral_; };
 
-    void initialize_state(State& state) const override {
+    [[noreturn]] void initialize_state(State& state) const override {
         throw std::logic_error(
                 "InputNode must have state explicity initialized (with `initialize_state(state, "
                 "data)`)");

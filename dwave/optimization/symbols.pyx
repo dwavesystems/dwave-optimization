@@ -17,7 +17,6 @@
 import collections.abc
 import json
 import numbers
-import tempfile
 
 cimport cpython.object
 import cython
@@ -101,7 +100,7 @@ from dwave.optimization.libcpp.nodes cimport (
     XorNode as cppXorNode,
     )
 from dwave.optimization.model cimport ArraySymbol, _Graph, Symbol
-from dwave.optimization.model import Expression, UnsupportedExpression
+from dwave.optimization.model import Expression, UnsupportedExpressionError
 from dwave.optimization.states cimport States
 
 __all__ = [
@@ -2496,13 +2495,13 @@ cdef class NaryReduce(ArraySymbol):
 
         # some errors may not contain an associated node
         if node_ptr_int is None:
-            return UnsupportedExpression(message)
+            return UnsupportedExpressionError(message)
 
         # get a symbol from the supplied node pointer (encoded as an int) 
         cdef uintptr_t node_ptr_val = node_ptr_int
         cdef cppNode* node_ptr = reinterpret_cast[cppNodePtr](<void *>node_ptr_val)
         cdef Symbol symbol = symbol_from_ptr(expression, node_ptr)
-        return UnsupportedExpression(message, symbol)
+        return UnsupportedExpressionError(message, symbol)
 
     @staticmethod
     def _from_symbol(Symbol symbol):
