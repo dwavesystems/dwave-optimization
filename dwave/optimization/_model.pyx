@@ -261,8 +261,10 @@ cdef class _Graph:
         if not self.is_locked():
             # lock for the duration of the method
             self.lock()
-            self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
-            self.unlock()
+            try:
+                self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
+            finally:
+                self.unlock()
             return
 
         if isinstance(file, str):
