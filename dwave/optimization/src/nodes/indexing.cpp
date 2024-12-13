@@ -641,12 +641,38 @@ ssize_t AdvancedIndexingNode::size(const State& state) const {
 }
 
 SizeInfo AdvancedIndexingNode::sizeinfo() const {
+    // easy case, fixed size
     if (!dynamic()) return SizeInfo(size());
-    // when we get around to supporting broadcasting this will need to change
-    assert(predecessors().size() >= 2);
-    assert(!dynamic_cast<ArrayNode*>(predecessors()[0])->dynamic() &&
-           "sizeinfo for dynamic base arrays not supported");
-    return SizeInfo(dynamic_cast<ArrayNode*>(predecessors()[1]));
+
+    return SizeInfo(this);
+
+    // // if the base array is dynamic AND the first indexer is a slice then
+    // // our size is derived from the base array via alchemy
+    // assert(indices_.size() >= 1);  // should always be true
+    // if (array_ptr_->dynamic() && std::holds_alternative<Slice>(indices_[0])) {
+    //     // there are additional subcases we can investigate here to try to be
+    //     // more specific, e.g. whether or not any of the indexing arrays are
+    //     // dynamic etc... But for now let's just handwave a bit, say our size
+    //     // is derived from ourselves, and so the best we can with the upper bound.
+    //     std::optional<ssize_t> max;
+    //     for (const Node* ptr : predecessors()) {
+    //         // 100 is a magic number... we really need a better way to do this.
+    //         auto sizeinfo = dynamic_cast<const ArrayNode*>(ptr)->sizeinfo().substitute(100);
+    //         // assert(false);
+    //         if (max && sizeinfo.max) {
+    //             if (*sizeinfo.max < *max) max = sizeinfo.max;
+    //         } else if (sizeinfo.max) {
+    //             max = sizeinfo.max;
+    //         }
+    //     }
+    //     return SizeInfo(this, std::nullopt, max);
+    // }
+
+    // // If the first indexer is not a slice, then whether or not we are dynamic
+    // // we derive our size from indexing arrays.
+    // // If we eventually add broadcasting then this will need to change.
+    // assert(predecessors().size() >= 2);  // should always be true
+    // return SizeInfo(dynamic_cast<ArrayNode*>(predecessors()[1]));
 }
 
 std::span<const ssize_t> AdvancedIndexingNode::shape(const State& state) const {
@@ -1515,7 +1541,7 @@ ssize_t BasicIndexingNode::size(const State& state) const {
 }
 
 SizeInfo BasicIndexingNode::sizeinfo() const {
-    if (size_ >= 0) return SizeInfo(size_);
+    if (!dynamic()) return SizeInfo(size_);
 
     auto sizeinfo = SizeInfo(array_ptr_);
 
