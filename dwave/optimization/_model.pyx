@@ -31,8 +31,7 @@ from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.array cimport Array as cppArray
-from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode, Graph as cppGraph
-from dwave.optimization.libcpp.nodes cimport InputNode as cppInputNode
+from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
 from dwave.optimization.symbols cimport symbol_from_ptr

@@ -16,7 +16,7 @@ from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp cimport span, variant
 from dwave.optimization.libcpp.array cimport Array, Slice
-from dwave.optimization.libcpp.graph cimport ArrayNode, Graph, Node
+from dwave.optimization.libcpp.graph cimport ArrayNode, Node
 from dwave.optimization.libcpp.state cimport State
 
 

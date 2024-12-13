@@ -1950,7 +1950,7 @@ class TestNaryReduce(utils.SymbolTests):
             self.assertTrue(False, "should raise exception")
         except Exception as e:
             self.assertIsInstance(
-                e, dwave.optimization.model.UnsupportedExpression
+                e, dwave.optimization.model.UnsupportedExpressionError
             )
             self.assertRegex(str(e), "scalar")
             self.assertTrue(inp5.equals(e.symbol))
@@ -1964,7 +1964,7 @@ class TestNaryReduce(utils.SymbolTests):
             self.assertTrue(False, "should raise exception")
         except Exception as e:
             self.assertIsInstance(
-                e, dwave.optimization.model.UnsupportedExpression
+                e, dwave.optimization.model.UnsupportedExpressionError
             )
             self.assertRegex(str(e), "must not have a higher max than the last input")
 
