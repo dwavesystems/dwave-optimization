@@ -16,7 +16,6 @@
 
 #include <iostream>
 #include <numeric>
-#include <variant>
 #include <vector>
 
 namespace dwave::optimization {

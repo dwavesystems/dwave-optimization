@@ -130,28 +130,29 @@ NaryReduceNode::NaryReduceNode(Graph&& expression, const std::vector<InputNode*>
     for (ssize_t op_idx = 0; op_idx < static_cast<ssize_t>(operands_.size()); op_idx++) {
         if (operands_[op_idx]->min() < inputs_[op_idx]->min()) {
             throw std::invalid_argument(
-                    "operand with index " + std::to_string(op_idx) +
-                    " has minimum smaller than corresponding input in expression");
+                    R"({"message": "operand with index )" + std::to_string(op_idx) +
+                    R"( has minimum smaller than corresponding input in expression"})");
         } else if (operands_[op_idx]->max() > inputs_[op_idx]->max()) {
             throw std::invalid_argument(
-                    "operand with index " + std::to_string(op_idx) +
-                    " has maximum larger than corresponding input in expression");
+                    R"({"message": "operand with index )" + std::to_string(op_idx) +
+                    R"( has maximum larger than corresponding input in expression"})");
         } else if (inputs_[op_idx]->integral() && !operands_[op_idx]->integral()) {
-            throw std::invalid_argument("operand with index " + std::to_string(op_idx) +
-                                        " is non-integral, but corresponding input is integral");
+            throw std::invalid_argument(
+                    R"({"message": "operand with index )" + std::to_string(op_idx) +
+                    R"( is non-integral, but corresponding input is integral"})");
         }
     }
 
     InputNode* previous = inputs_.back();
     if (previous->integral() && !output_->integral()) {
         throw std::invalid_argument(
-                "If expression output can be non-integral, last input must not be integral");
+                R"({"message": "if expression output can be non-integral, last input must not be integral"})");;
     } else if (output_->min() < previous->min()) {
         throw std::invalid_argument(
-                "Expression output must not have a lower min than the last input");
+                R"({"message": "expression output must not have a lower min than the last input"})");
     } else if (output_->max() > previous->max()) {
         throw std::invalid_argument(
-                "Expression output must not have a higher max than the last input");
+                R"({"message": "expression output must not have a higher max than the last input"})");
     }
 
     for (const auto& op : operands_) {

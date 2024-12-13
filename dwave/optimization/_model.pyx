@@ -187,7 +187,6 @@ cdef class _Graph:
                 if not isinstance(objective_id, int) or objective_id >= model.num_nodes():
                     raise ValueError("objective must be an integer and a valid node id")
                 model._set_objective(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
-                # model.minimize(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
 
             for cid in json.loads(zf.read("constraints.json")):
                 model.add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
@@ -408,6 +407,19 @@ cdef class _Graph:
             yield symbol_from_ptr(self, ptr)
 
     def iter_inputs(self):
+        """Iterate over all inputs in the model.
+
+        Examples:
+            This example iterates over a model's inputs.
+
+            >>> from dwave.optimization.model import Expression
+            >>> expr = Expression()
+            >>> i0, i1 = expr.input(), expr.input()
+            >>> c = expr.constant(7)
+            >>> inputs = list(expr.iter_inputs())
+            >>> len(inputs)
+            2
+        """
         for ptr in self._graph.inputs():
             yield symbol_from_ptr(self, ptr)
 
@@ -441,7 +453,12 @@ cdef class _Graph:
         # We do it lazily for performance
 
     def _set_objective(self, ArraySymbol value):
-        """Set the objective value on the ``dwave::optimization::Graph``."""
+        """Set the objective value on the ``dwave::optimization::Graph``.
+
+        Note that we use this term somewhat loosely, as this "objective" is used for
+        both for the proper objective of a :class:`dwave.optimization.model.Model`
+        as well as the output of an :class:`dwave.optimization.model.Expression`.
+        """
         if value is None:
             raise ValueError("value cannot be None")
         if value.size() < 1:
@@ -511,6 +528,23 @@ cdef class _Graph:
         return num_edges
 
     cpdef Py_ssize_t num_inputs(self) noexcept:
+        """Number of input nodes on the model/expression.
+
+        See also:
+            :meth:`.num_symbols`
+            :class:`dwave.optimization.symbols.Input`
+
+        Examples:
+            This example adds two inputs and a constant to an expression and
+            checks the number of inputs.
+
+            >>> from dwave.optimization.model import Expression
+            >>> expr = Expression()
+            >>> i0, i1 = expr.input(), expr.input()
+            >>> c = expr.constant(7)
+            >>> expr.num_inputs()
+            2
+        """
         return self._graph.num_inputs()
 
     cpdef Py_ssize_t num_nodes(self) noexcept:
@@ -557,6 +591,10 @@ cdef class _Graph:
         return self.num_nodes()
 
     def _objective_symbol(self):
+        """Return the node set as the objective on the `._graph` as symbol. If the
+        objective is not currently set, return `None`.
+        """
+
         cdef cppArrayNode* ptr = self._graph.objective()
         if not ptr:
             # nullptr, so objective is not set
