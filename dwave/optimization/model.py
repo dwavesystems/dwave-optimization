@@ -56,7 +56,7 @@ class Expression(_Graph):
     Examples:
         This example creates an expression that computes the minimum of its
         first two inputs, and then multiplies that by third input (i.e.
-        computes the expression `min(x, y) * z`).
+        computes the expression ``min(x, y) * z``).
 
         >>> from dwave.optimization.model import Expression
         >>> expr = Expression()
@@ -126,7 +126,7 @@ class Expression(_Graph):
         validate the state when set manually.
 
         Note that the order in which inputs are added to the expression matters and is
-        used by other nodes (see `class::dwave.optimization.symbols.NaryReduce`) to
+        used by other nodes (see :class:`~dwave.optimization.symbols.NaryReduce`) to
         infer how arguments are supplied to the expression during evaluation.
 
         Args:
@@ -657,10 +657,10 @@ class Model(_Graph):
 class UnsupportedExpression(Exception):
     """An exception for when an expression is unsupported in a certain
     use-case, e.g. an expression which has non-scalar symbols is used to
-    create a :class:`.NaryReduce` symbol.
+    create a :class:`~dwave.optimization.symbols.NaryReduce` symbol.
 
     This exception may include a reference to the specific symbol that caused
-    the issue (`.property`).
+    the issue (``.symbol``).
     """
 
     def __init__(self, message: str, symbol: typing.Optional[Symbol] = None):

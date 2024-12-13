@@ -458,8 +458,8 @@ cdef class _Graph:
         """Set the objective value on the ``dwave::optimization::Graph``.
 
         Note that we use this term somewhat loosely, as this "objective" is used for
-        both for the proper objective of a :class:`dwave.optimization.model.Model`
-        as well as the output of an :class:`dwave.optimization.model.Expression`.
+        both for the proper objective of a :class:`~dwave.optimization.model.Model`
+        as well as the output of an :class:`~dwave.optimization.model.Expression`.
         """
         if value is None:
             raise ValueError("value cannot be None")
@@ -534,7 +534,7 @@ cdef class _Graph:
 
         See also:
             :meth:`.num_symbols`
-            :class:`dwave.optimization.symbols.Input`
+            :class:`~dwave.optimization.symbols.Input`
 
         Examples:
             This example adds two inputs and a constant to an expression and
@@ -593,8 +593,8 @@ cdef class _Graph:
         return self.num_nodes()
 
     def _objective_symbol(self):
-        """Return the node set as the objective on the `._graph` as symbol. If the
-        objective is not currently set, return `None`.
+        """Return the node set as the objective on the ``._graph`` as a symbol.
+        If the objective is not currently set, return ``None``.
         """
 
         cdef cppArrayNode* ptr = self._graph.objective()
