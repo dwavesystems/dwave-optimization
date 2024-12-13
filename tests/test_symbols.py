@@ -1893,7 +1893,7 @@ class TestNaryReduce(utils.SymbolTests):
         inputs = [exp.input() for _ in range(3)]
         exp.set_output(inputs[0] + inputs[1] + inputs[2])
 
-        acc = dwave.optimization.symbols.NaryReduce(exp, (c0, c1))
+        acc = dwave.optimization.symbols.NaryReduce(exp, (c0, c1), initial=7)
 
         model.lock()
         yield acc
@@ -1901,7 +1901,6 @@ class TestNaryReduce(utils.SymbolTests):
     def test_mismatched_inputs(self):
         model = Model()
         c0 = model.constant([0, 0])
-        c1 = model.constant([0, 1])
 
         exp = Expression()
         inputs = [exp.input() for _ in range(3)]
@@ -1909,9 +1908,6 @@ class TestNaryReduce(utils.SymbolTests):
 
         with self.assertRaises(ValueError):
             dwave.optimization.symbols.NaryReduce(exp, (c0,))
-
-        with self.assertRaises(ValueError):
-            dwave.optimization.symbols.NaryReduce(exp, (c0, c1), initial=(0,))
 
     def test_invalid_expressions(self):
         model = Model()
@@ -1927,7 +1923,7 @@ class TestNaryReduce(utils.SymbolTests):
             self.assertTrue(False, "should raise exception")
         except Exception as e:
             self.assertIsInstance(
-                e, dwave.optimization.symbols.UnsupportedNaryReduceExpression
+                e, dwave.optimization.model.UnsupportedExpression
             )
             self.assertRegex(str(e), "scalar")
             self.assertTrue(inp5.equals(e.symbol))
@@ -1941,7 +1937,7 @@ class TestNaryReduce(utils.SymbolTests):
             self.assertTrue(False, "should raise exception")
         except Exception as e:
             self.assertIsInstance(
-                e, dwave.optimization.symbols.UnsupportedNaryReduceExpression
+                e, dwave.optimization.model.UnsupportedExpression
             )
             self.assertRegex(str(e), "must not have a higher max than the last input")
 

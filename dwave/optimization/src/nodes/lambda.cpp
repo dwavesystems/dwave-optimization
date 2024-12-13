@@ -54,8 +54,7 @@ bool is_variant(const node_type* node_ptr) {
     return false;
 }
 
-Graph validate_expression(Graph&& expression, const std::vector<InputNode*> inputs,
-                          const ArrayNode* output) {
+Graph validate_expression(Graph&& expression) {
     if (!expression.topologically_sorted()) {
         throw std::invalid_argument("Expression must be topologically sorted");
     }
@@ -92,18 +91,13 @@ Graph validate_expression(Graph&& expression, const std::vector<InputNode*> inpu
     return expression;
 }
 
-auto get_operands_shape(std::span<InputNode* const> inputs, std::span<const double> initial_values,
-                        std::span<ArrayNode* const> operands) {
+auto get_operands_shape(const Graph& expression, std::span<ArrayNode* const> operands) {
     if (operands.size() == 0) {
         throw std::invalid_argument("Must have at least one operand");
     }
 
-    if (operands.size() + 1 != inputs.size()) {
+    if (static_cast<ssize_t>(operands.size()) + 1 != expression.num_inputs()) {
         throw std::invalid_argument("Expression must have one more inputs than operands");
-    }
-
-    if (inputs.size() != initial_values.size()) {
-        throw std::invalid_argument("Must have same number of initial values as expression inputs");
     }
 
     std::vector<const Array*> array_ops;
@@ -118,35 +112,41 @@ auto get_operands_shape(std::span<InputNode* const> inputs, std::span<const doub
     return operands[0]->shape();
 }
 
-NaryReduceNode::NaryReduceNode(Graph&& expression, const std::vector<InputNode*>& inputs,
-                               const ArrayNode* output, const std::vector<double>& initial_values,
-                               const std::vector<ArrayNode*>& operands)
-        : ArrayOutputMixin(get_operands_shape(inputs, initial_values, operands)),
-          expression_(validate_expression(std::move(expression), inputs, output)),
-          inputs_(inputs),
-          output_(output),
+NaryReduceNode::NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands,
+                               double initial)
+        : ArrayOutputMixin(get_operands_shape(expression, operands)),
+          initial(initial),
+          expression_(validate_expression(std::move(expression))),
           operands_(operands),
-          initial_values_(initial_values) {
+          output_(expression_.objective()) {
+    if (!output_) {
+        throw std::invalid_argument(
+                R"({"message": "expression must have output (objective) set"})");
+    }
+
+    std::span<const InputNode* const> inputs = expression_.inputs();
+
     for (ssize_t op_idx = 0; op_idx < static_cast<ssize_t>(operands_.size()); op_idx++) {
-        if (operands_[op_idx]->min() < inputs_[op_idx]->min()) {
+        if (operands_[op_idx]->min() < inputs[op_idx]->min()) {
             throw std::invalid_argument(
                     R"({"message": "operand with index )" + std::to_string(op_idx) +
                     R"( has minimum smaller than corresponding input in expression"})");
-        } else if (operands_[op_idx]->max() > inputs_[op_idx]->max()) {
+        } else if (operands_[op_idx]->max() > inputs[op_idx]->max()) {
             throw std::invalid_argument(
                     R"({"message": "operand with index )" + std::to_string(op_idx) +
                     R"( has maximum larger than corresponding input in expression"})");
-        } else if (inputs_[op_idx]->integral() && !operands_[op_idx]->integral()) {
+        } else if (inputs[op_idx]->integral() && !operands_[op_idx]->integral()) {
             throw std::invalid_argument(
                     R"({"message": "operand with index )" + std::to_string(op_idx) +
                     R"( is non-integral, but corresponding input is integral"})");
         }
     }
 
-    InputNode* previous = inputs_.back();
+    const InputNode* previous = inputs.back();
     if (previous->integral() && !output_->integral()) {
         throw std::invalid_argument(
-                R"({"message": "if expression output can be non-integral, last input must not be integral"})");;
+                R"({"message": "if expression output can be non-integral, last input must not be integral"})");
+        ;
     } else if (output_->min() < previous->min()) {
         throw std::invalid_argument(
                 R"({"message": "expression output must not have a lower min than the last input"})");
@@ -198,26 +198,28 @@ void NaryReduceNode::initialize_state(State& state) const {
         iterators.push_back(array_ptr->begin(state));
     }
 
-    // Get the initial output of the expression
-    for (ssize_t inp_index = 0; inp_index < num_args + 1; inp_index++) {
-        inputs_[inp_index]->initialize_state(reg, std::span(initial_values_).subspan(inp_index, 1));
+    // Initialize the inputs
+    for (const auto inp : expression_.inputs()) {
+        double val = inp->min();
+        inp->initialize_state(reg, std::span(&val, 1));
     }
 
     // Finish the initialization after the input states have been set
     expression_.initialize_state(reg);
 
-    double val = evaluate_expression(reg);
+    double val = initial;
 
     // Compute the expression for each subsequent index
     for (ssize_t index = 0; index < start_size; ++index) {
         for (ssize_t arg_index = 0; arg_index < num_args; ++arg_index) {
             double input_val = *iterators[arg_index];
-            inputs_[arg_index]->assign(reg, std::span<double>(&input_val, 1));
+            expression_.inputs()[arg_index]->assign(reg, std::span<double>(&input_val, 1));
             iterators[arg_index]++;
         }
         // Final input comes from the previous expression
-        val = std::clamp(val, inputs_[num_args]->min(), inputs_[num_args]->max());
-        inputs_[num_args]->assign(reg, std::span(&val, 1));
+        val = std::clamp(val, expression_.inputs()[num_args]->min(),
+                         expression_.inputs()[num_args]->max());
+        expression_.inputs()[num_args]->assign(reg, std::span(&val, 1));
         val = evaluate_expression(reg);
         values.push_back(val);
     }
@@ -242,22 +244,18 @@ void NaryReduceNode::propagate(State& state) const {
         data->iterators.push_back(array_ptr->begin(state));
     }
 
-    // Set inputs to the initial values
-    for (ssize_t inp_index = 0; inp_index < num_args + 1; inp_index++) {
-        inputs_[inp_index]->assign(data->register_,
-                                   std::span(initial_values_).subspan(inp_index, 1));
-    }
-    double val = evaluate_expression(data->register_);
+    double val = initial;
 
     for (ssize_t index = 0; index < new_size; ++index) {
         for (ssize_t arg_index = 0; arg_index < num_args; ++arg_index) {
             double arg_val = *data->iterators[arg_index];
-            inputs_[arg_index]->assign(data->register_, std::span(&arg_val, 1));
+            expression_.inputs()[arg_index]->assign(data->register_, std::span(&arg_val, 1));
             data->iterators[arg_index]++;
         }
         // Final input comes from the previous expression
-        val = std::clamp(val, inputs_[num_args]->min(), inputs_[num_args]->max());
-        inputs_[num_args]->assign(data->register_, std::span(&val, 1));
+        val = std::clamp(val, expression_.inputs()[num_args]->min(),
+                         expression_.inputs()[num_args]->max());
+        expression_.inputs()[num_args]->assign(data->register_, std::span(&val, 1));
         val = evaluate_expression(data->register_);
         data->set(index, val);
     }

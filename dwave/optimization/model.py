@@ -652,3 +652,17 @@ class Model(_Graph):
 
         if not self.is_locked():
             self.states._reset_intermediate_states()
+
+
+class UnsupportedExpression(Exception):
+    """An exception for when an expression is unsupported in a certain
+    use-case, e.g. an expression which has non-scalar symbols is used to
+    create a :class:`.NaryReduce` symbol.
+
+    This exception may include a reference to the specific symbol that caused
+    the issue (`.property`).
+    """
+
+    def __init__(self, message: str, symbol: typing.Optional[Symbol] = None):
+        super().__init__(message)
+        self.symbol = symbol
