@@ -2403,7 +2403,7 @@ _register(NaryMultiply, typeid(cppNaryMultiplyNode))
 cdef class NaryReduce(ArraySymbol):
     """Using a supplied :class:`~dwave.optimization.model.Expression`, perform
     a reduction operation along one or more array operands. The reduction
-    operation (represented by the `Expression`) takes as input one value from
+    operation (represented by the ``Expression``) takes as input one value from
     each of the operand arrays, as well as the result of the previously
     computed operation, and computes a new value at the next output index.
 
