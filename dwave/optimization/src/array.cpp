@@ -16,6 +16,56 @@
 
 namespace dwave::optimization {
 
+const double& Array::View::operator[](ssize_t n) const {
+    assert(0 <= n && n < size());
+    return *(begin() + n);
+}
+
+const double& Array::View::at(ssize_t n) const {
+    if (n < 0 || n >= size()) {
+        throw std::out_of_range(std::string("index ") + std::to_string(n) +
+                                std::string(" out of range for an Array of size ") +
+                                std::to_string(size()));
+    }
+    return (*this)[n];
+}
+
+const double& Array::View::back() const {
+    assert(size() >= 1);
+    return *(--end());
+}
+
+Array::const_iterator Array::View::begin() const {
+    // either both are null or neither
+    assert(static_cast<bool>(array_ptr_) == static_cast<bool>(state_ptr_));
+
+    if (!array_ptr_) return const_iterator();
+    return array_ptr_->begin(*state_ptr_);
+}
+
+bool Array::View::empty() const { return !size(); }
+
+Array::const_iterator Array::View::end() const {
+    // either both are null or neither
+    assert(static_cast<bool>(array_ptr_) == static_cast<bool>(state_ptr_));
+
+    if (!array_ptr_) return const_iterator();
+    return array_ptr_->end(*state_ptr_);
+}
+
+const double& Array::View::front() const {
+    assert(size() >= 1);
+    return *begin();
+}
+
+ssize_t Array::View::size() const {
+    // either both are null or neither
+    assert(static_cast<bool>(array_ptr_) == static_cast<bool>(state_ptr_));
+
+    if (!array_ptr_) return 0;
+    return array_ptr_->size(*state_ptr_);
+}
+
 SizeInfo::SizeInfo(const Array* array_ptr, std::optional<ssize_t> min, std::optional<ssize_t> max)
         : array_ptr(array_ptr), multiplier(1), offset(0), min(min), max(max) {
     assert(array_ptr->dynamic());

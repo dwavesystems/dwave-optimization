@@ -22,9 +22,32 @@
 
 namespace dwave::optimization {
 
-static_assert(std::ranges::range<Array::View>);
-static_assert(std::ranges::sized_range<Array::View>);
-static_assert(std::is_trivially_copyable<Array::View>::value);
+TEST_CASE("Array::View") {
+    static_assert(std::semiregular<Array::View>);
+
+    static_assert(std::is_nothrow_constructible<Array::View>::value);
+    static_assert(std::is_nothrow_copy_constructible<Array::View>::value);
+    static_assert(std::is_nothrow_move_constructible<Array::View>::value);
+    static_assert(std::is_nothrow_copy_assignable<Array::View>::value);
+    static_assert(std::is_nothrow_move_assignable<Array::View>::value);
+
+    static_assert(!std::ranges::contiguous_range<Array::View>);
+    static_assert(std::ranges::random_access_range<Array::View>);
+    static_assert(std::ranges::range<Array::View>);
+    static_assert(std::ranges::sized_range<Array::View>);
+    static_assert(std::is_trivially_copyable<Array::View>::value);
+
+    // Because non-empty Views are so tied to Arrays, we do most of the
+    // testing in the Array tests. But we can test the empty ones here
+    SECTION("Empty View") {
+        auto view = Array::View();
+
+        CHECK(view.size() == 0);
+        CHECK(view.begin() == view.end());
+        CHECK(view.empty());
+        CHECK_THROWS_AS(view.at(0), std::out_of_range);
+    }
+}
 
 TEST_CASE("Test SizeInfo") {
     CHECK(SizeInfo(0) == SizeInfo(0));
@@ -48,8 +71,11 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
     static_assert(std::is_nothrow_copy_assignable<ConstArrayIterator>::value);
     static_assert(std::is_nothrow_move_assignable<ConstArrayIterator>::value);
 
+    // The iterators are random access but not contiguous
     static_assert(std::random_access_iterator<ArrayIterator>);
     static_assert(std::random_access_iterator<ConstArrayIterator>);
+    static_assert(!std::contiguous_iterator<ArrayIterator>);
+    static_assert(!std::contiguous_iterator<ConstArrayIterator>);
 
     // Both iterators are input iterators
     static_assert(std::input_iterator<ArrayIterator>);
@@ -376,6 +402,12 @@ TEST_CASE("Scalar") {
             CHECK(a.size() == 1);
 
             CHECK(std::ranges::equal(a.view(state), std::vector{5.5}));
+            CHECK(a.view(state).front() == 5.5);
+            CHECK(a.view(state).back() == 5.5);
+            CHECK(a.view(state).at(0) == 5.5);
+
+            CHECK_THROWS_AS(a.view(state).at(1), std::out_of_range);
+            CHECK_THROWS_AS(a.view(state).at(-1), std::out_of_range);
 
             // for contiguous buff() points to the value
             CHECK(*(a.buff(state)) == 5.5);
@@ -491,6 +523,14 @@ TEST_CASE("Dynamically Sized 1d Array") {
                 CHECK(v.len(state) == 5 * sizeof(double));
 
                 CHECK(std::ranges::equal(v.view(state), v.state_));
+
+                CHECK(v.view(state).front() == v.state_.front());
+                CHECK(v.view(state).back() == v.state_.back());
+                CHECK(v.view(state).at(0) == v.state_.at(0));
+
+                CHECK_THROWS_AS(v.view(state).at(100), std::out_of_range);
+                CHECK_THROWS_AS(v.view(state).at(-1), std::out_of_range);
+
 
                 // for contiguous view is the same as span(buff(), size())
                 CHECK(std::ranges::equal(std::span(v.buff(state), v.size(state)), v.view(state)));

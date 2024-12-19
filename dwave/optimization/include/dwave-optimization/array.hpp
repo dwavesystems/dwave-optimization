@@ -686,25 +686,39 @@ class Array {
     using iterator = ArrayIteratorImpl_<false>;
     using const_iterator = ArrayIteratorImpl_<true>;
 
+    /// Container-like access to the Array's values as a flat array.
+    ///
+    /// Satisfies the requirements for std::ranges::random_access_range and
+    /// std::ranges::sized_range.
     class View {
+        // This models most, but not all, of the Container named requirements.
+        // Some of the methods, like operator==(), are not modelled because it's
+        // not obvious what the value to the user would be. If we ever need them
+        // they are easy to add.
      public:
         using iterator = ArrayIteratorImpl_<false>;
         using const_iterator = ArrayIteratorImpl_<true>;
 
+        View() = default;
+
         View(const Array* array_ptr, const State* state_ptr)
-                : array_ptr_(array_ptr), state_ptr_(state_ptr) {}
+                : array_ptr_(array_ptr), state_ptr_(state_ptr) {
+            assert(array_ptr && "array_ptr must not be nullptr");
+            assert(state_ptr && "state_ptr must not be nullptr");
+        }
 
-        const_iterator begin() const { return array_ptr_->begin(*state_ptr_); }
-        const_iterator end() const { return array_ptr_->end(*state_ptr_); }
+        const double& operator[](ssize_t n) const;
 
-        const double& operator[](ssize_t n) const { return *(begin() + n); }
-
-        ssize_t size() const { return array_ptr_->size(*state_ptr_); }
-
-        // Convenience access
-        const double& front() const { return *begin(); }
+        const double& at(ssize_t n) const;
+        const double& back() const;
+        const_iterator begin() const;
+        bool empty() const;
+        const_iterator end() const;
+        const double& front() const;
+        ssize_t size() const;
 
      private:
+        // non-owning pointers to Array and State.
         const Array* array_ptr_;
         const State* state_ptr_;
     };

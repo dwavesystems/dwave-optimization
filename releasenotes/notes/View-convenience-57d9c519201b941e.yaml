@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add some convenience methods to C++ ``Array::View`` class.
+    Specifically, implement ``Array::View::at()``, ``Array::View::back()``,
+    and ``Array::View::empty()``. Also make ``Array::View`` semi-regular.
