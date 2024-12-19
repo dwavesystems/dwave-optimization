@@ -21,7 +21,6 @@
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
-#include "../../utils.hpp"
 
 namespace dwave::optimization {
 
@@ -80,6 +79,8 @@ TEST_CASE("AdvancedIndexingNode") {
         auto s_ptr = graph.emplace_node<SetNode>(5);
         auto B_ptr = graph.emplace_node<AdvancedIndexingNode>(A_ptr, s_ptr);
 
+        graph.emplace_node<ArrayValidationNode>(B_ptr);
+
         THEN("The resulting array has the size/shape we expect") {
             CHECK(B_ptr->dynamic());
             CHECK(std::ranges::equal(B_ptr->shape(), std::vector{-1}));
@@ -120,8 +121,6 @@ TEST_CASE("AdvancedIndexingNode") {
                     CHECK(B_ptr->size(state) == s_ptr->size(state));
 
                     CHECK(std::ranges::equal(B_ptr->view(state), std::vector{4}));
-
-                    verify_array_diff({}, {4}, B_ptr->diff(state));
                 }
 
                 AND_WHEN("We commit") {
@@ -166,8 +165,6 @@ TEST_CASE("AdvancedIndexingNode") {
                     CHECK(std::ranges::equal(B_ptr->view(state), std::vector{4, 3}));
 
                     CHECK(B_ptr->size_diff(state) == 2);  // grew by two
-
-                    verify_array_diff({}, {4, 3}, B_ptr->diff(state));
                 }
 
                 AND_WHEN("We commit") {
@@ -195,8 +192,6 @@ TEST_CASE("AdvancedIndexingNode") {
                             CHECK(std::ranges::equal(B_ptr->view(state), std::vector{4}));
 
                             CHECK(B_ptr->size_diff(state) == -1);  // shrank by one
-
-                            verify_array_diff({4, 3}, {4}, B_ptr->diff(state));
                         }
 
                         AND_WHEN("We commit") {
@@ -256,6 +251,8 @@ TEST_CASE("AdvancedIndexingNode") {
 
         auto B_ptr = graph.emplace_node<AdvancedIndexingNode>(A_ptr, i_ptr, j_ptr);
 
+        graph.emplace_node<ArrayValidationNode>(B_ptr);
+
         THEN("Then the resulting matrix has the size/shape we expect") {
             CHECK(std::ranges::equal(B_ptr->shape(), std::vector{3}));
             CHECK(B_ptr->size() == 3);
@@ -306,8 +303,6 @@ TEST_CASE("AdvancedIndexingNode") {
                     CHECK(std::ranges::equal(i_ptr->view(state), std::vector{0, 1, 2}));
                     CHECK(std::ranges::equal(j_ptr->view(state), std::vector{2, 1, 0}));
                     CHECK(std::ranges::equal(B_ptr->view(state), std::vector{2, 4, 6}));
-
-                    verify_array_diff({2, 7, 3}, {2, 4, 6}, B_ptr->diff(state));
                 }
 
                 AND_WHEN("We commit") {
@@ -379,7 +374,6 @@ TEST_CASE("AdvancedIndexingNode") {
                 B_ptr->propagate(state);
 
                 CHECK(std::ranges::equal(B_ptr->view(state), std::vector{0}));
-                verify_array_diff({}, {0}, B_ptr->diff(state));
             }
         }
 
@@ -419,7 +413,6 @@ TEST_CASE("AdvancedIndexingNode") {
                 CHECK(std::ranges::equal(i_ptr->view(state), std::vector{0, 2, 1}));
                 CHECK(std::ranges::equal(j_ptr->view(state), std::vector{2, 1, 0}));
                 CHECK(std::ranges::equal(B_ptr->view(state), std::vector{2, 7, 3}));
-                verify_array_diff({2, 7}, {2, 7, 3}, B_ptr->diff(state));
 
                 AND_WHEN("We revert") {
                     dyn_ptr->revert(state);
@@ -448,7 +441,6 @@ TEST_CASE("AdvancedIndexingNode") {
                 CHECK(std::ranges::equal(i_ptr->view(state), std::vector{0}));
                 CHECK(std::ranges::equal(j_ptr->view(state), std::vector{2}));
                 CHECK(std::ranges::equal(B_ptr->view(state), std::vector{2}));
-                verify_array_diff({2, 7}, {2}, B_ptr->diff(state));
 
                 AND_WHEN("We revert") {
                     dyn_ptr->revert(state);
@@ -475,7 +467,6 @@ TEST_CASE("AdvancedIndexingNode") {
                 CHECK(std::ranges::equal(i_ptr->view(state), std::vector{0}));
                 CHECK(std::ranges::equal(j_ptr->view(state), std::vector{1}));
                 CHECK(std::ranges::equal(B_ptr->view(state), std::vector{1}));
-                verify_array_diff({2, 7}, {1}, B_ptr->diff(state));
 
                 AND_WHEN("We revert") {
                     dyn_ptr->revert(state);
@@ -506,7 +497,6 @@ TEST_CASE("AdvancedIndexingNode") {
                 CHECK(std::ranges::equal(i_ptr->view(state), std::vector{0, 2}));
                 CHECK(std::ranges::equal(j_ptr->view(state), std::vector{2, 1}));
                 CHECK(std::ranges::equal(B_ptr->view(state), std::vector{2, 7}));
-                verify_array_diff({2, 7}, {2, 7}, B_ptr->diff(state));
 
                 AND_WHEN("We revert") {
                     dyn_ptr->revert(state);
@@ -739,6 +729,8 @@ TEST_CASE("AdvancedIndexingNode") {
             auto adv =
                     graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, k_ptr, Slice());
 
+            graph.emplace_node<ArrayValidationNode>(adv);
+
             THEN("We get the shape we expect") {
                 CHECK(adv->dynamic());
                 CHECK(std::ranges::equal(adv->shape(), std::vector{-1, 4}));
@@ -767,8 +759,6 @@ TEST_CASE("AdvancedIndexingNode") {
                         CHECK(adv->size(state) == 8);
                         CHECK(std::ranges::equal(adv->view(state),
                                                  std::vector{36, 37, 38, 39, 116, 117, 118, 119}));
-                        verify_array_diff({}, {36, 37, 38, 39, 116, 117, 118, 119},
-                                          adv->diff(state));
                     }
 
                     AND_WHEN("We shrink the indexing nodes and propagate") {
@@ -790,8 +780,6 @@ TEST_CASE("AdvancedIndexingNode") {
                             CHECK(adv->size(state) == 4);
                             CHECK(std::ranges::equal(adv->view(state),
                                                      std::vector{36, 37, 38, 39}));
-                            verify_array_diff({36, 37, 38, 39, 116, 117, 118, 119},
-                                              {36, 37, 38, 39}, adv->diff(state));
                         }
 
                         AND_WHEN("We revert") {
@@ -817,6 +805,8 @@ TEST_CASE("AdvancedIndexingNode") {
         WHEN("We access the matrix by (i, :, j, k)") {
             auto adv =
                     graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr, k_ptr);
+
+            graph.emplace_node<ArrayValidationNode>(adv);
 
             THEN("We get the shape we expect") {
                 CHECK(adv->dynamic());
@@ -846,7 +836,6 @@ TEST_CASE("AdvancedIndexingNode") {
                         CHECK(adv->size(state) == 6);
                         CHECK(std::ranges::equal(adv->view(state),
                                                  std::vector{7, 27, 47, 71, 91, 111}));
-                        verify_array_diff({}, {7, 27, 47, 71, 91, 111}, adv->diff(state));
                     }
 
                     AND_WHEN("We shrink the indexing nodes and propagate") {
@@ -867,8 +856,6 @@ TEST_CASE("AdvancedIndexingNode") {
                         THEN("The state has the expected values and the diff is correct") {
                             CHECK(adv->size(state) == 3);
                             CHECK(std::ranges::equal(adv->view(state), std::vector{7, 27, 47}));
-                            verify_array_diff({7, 27, 47, 71, 91, 111}, {7, 27, 47},
-                                              adv->diff(state));
                         }
 
                         AND_WHEN("We revert") {
@@ -1211,6 +1198,8 @@ TEST_CASE("AdvancedIndexingNode") {
             auto adv =
                     graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr, k_ptr);
 
+            graph.emplace_node<ArrayValidationNode>(adv);
+
             THEN("We get the shape we expect") {
                 CHECK(adv->dynamic());
                 CHECK(std::ranges::equal(adv->shape(), std::vector{-1, 3}));
@@ -1239,7 +1228,6 @@ TEST_CASE("AdvancedIndexingNode") {
                         CHECK(adv->size(state) == 6);
                         CHECK(std::ranges::equal(adv->view(state),
                                                  std::vector{24, 8, 46, 84, 68, 106}));
-                        verify_array_diff({}, {24, 8, 46, 84, 68, 106}, adv->diff(state));
                     }
 
                     AND_WHEN("We mutate the main array") {
@@ -1260,8 +1248,6 @@ TEST_CASE("AdvancedIndexingNode") {
                             CHECK(adv->size(state) == 6);
                             CHECK(std::ranges::equal(adv->view(state),
                                                      std::vector{24, -4, 46, -1, -2, 106}));
-                            verify_array_diff({24, 8, 46, 84, 68, 106}, {24, -4, 46, -1, -2, 106},
-                                              adv->diff(state));
                         }
                     }
 
@@ -1283,8 +1269,6 @@ TEST_CASE("AdvancedIndexingNode") {
                             CHECK(adv->size(state) == 6);
                             CHECK(std::ranges::equal(adv->view(state),
                                                      std::vector{24, -4, 46, -1, -2, 106}));
-                            verify_array_diff({24, 8, 46, 84, 68, 106}, {24, -4, 46, -1, -2, 106},
-                                              adv->diff(state));
                         }
                     }
                 }
@@ -1295,6 +1279,8 @@ TEST_CASE("AdvancedIndexingNode") {
             auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr,
                                                                 Slice());
             auto val = graph.emplace_node<ArrayValidationNode>(adv);
+
+            graph.emplace_node<ArrayValidationNode>(adv);
 
             THEN("We get the shape we expect") {
                 CHECK(adv->dynamic());
@@ -1328,7 +1314,6 @@ TEST_CASE("AdvancedIndexingNode") {
                         CHECK(adv->size(state) == 2 * 3 * 4);
                         CHECK(std::ranges::equal(adv->shape(state), std::vector{2, 3, 4}));
                         CHECK(std::ranges::equal(adv->view(state), expected));
-                        verify_array_diff({}, expected, adv->diff(state));
                     }
 
                     arr_ptr->commit(state);
@@ -1360,7 +1345,6 @@ TEST_CASE("AdvancedIndexingNode") {
                             CHECK(adv->size(state) == 2 * 3 * 4);
                             CHECK(std::ranges::equal(adv->shape(state), std::vector{2, 3, 4}));
                             CHECK(std::ranges::equal(adv->view(state), new_expected));
-                            verify_array_diff(expected, new_expected, adv->diff(state));
                         }
                     }
 
@@ -1381,7 +1365,6 @@ TEST_CASE("AdvancedIndexingNode") {
                             CHECK(adv->size(state) == 2 * 3 * 4);
                             CHECK(std::ranges::equal(adv->shape(state), std::vector{2, 3, 4}));
                             CHECK(std::ranges::equal(adv->view(state), new_expected));
-                            verify_array_diff(expected, new_expected, adv->diff(state));
                         }
 
                         AND_WHEN("We revert") {
@@ -1422,7 +1405,6 @@ TEST_CASE("AdvancedIndexingNode") {
                             CHECK(adv->size(state) == 2 * 3 * 4);
                             CHECK(std::ranges::equal(adv->shape(state), std::vector{2, 3, 4}));
                             CHECK(std::ranges::equal(adv->view(state), new_expected));
-                            verify_array_diff(expected, new_expected, adv->diff(state));
                         }
 
                         AND_WHEN("We revert") {
@@ -1458,6 +1440,8 @@ TEST_CASE("AdvancedIndexingNode") {
         WHEN("We access the matrix by (i, j, :, :)") {
             auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, Slice(),
                                                                 Slice());
+
+            graph.emplace_node<ArrayValidationNode>(adv);
 
             THEN("We get the shape we expect") {
                 CHECK(!adv->dynamic());
@@ -1496,7 +1480,6 @@ TEST_CASE("AdvancedIndexingNode") {
                         std::vector<double> new_state({40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
                                                        50, 51, 52, 53, 54, 55, 56, 57, 58, 59});
                         CHECK(std::ranges::equal(adv->view(state), new_state));
-                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
                     }
                 }
 
@@ -1516,7 +1499,6 @@ TEST_CASE("AdvancedIndexingNode") {
                         std::vector<double> new_state({80, -81, 82, 83, 84, 85, 86, 87, 88, 89,
                                                        90, 91,  92, 93, 94, 95, 96, 97, 98, 99});
                         CHECK(std::ranges::equal(adv->view(state), new_state));
-                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
                     }
                 }
             }
@@ -1525,6 +1507,8 @@ TEST_CASE("AdvancedIndexingNode") {
         WHEN("We access the matrix by (:, i, j, :)") {
             auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr,
                                                                 Slice());
+
+            graph.emplace_node<ArrayValidationNode>(adv);
 
             THEN("We get the shape we expect") {
                 CHECK(!adv->dynamic());
@@ -1560,7 +1544,6 @@ TEST_CASE("AdvancedIndexingNode") {
 
                         std::vector<double> new_state({8, 9, 10, 11, 68, 69, 70, 71});
                         CHECK(std::ranges::equal(adv->view(state), new_state));
-                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
                     }
                 }
 
@@ -1579,7 +1562,6 @@ TEST_CASE("AdvancedIndexingNode") {
 
                         std::vector<double> new_state({24, -25, 26, 27, 84, 85, 86, 87});
                         CHECK(std::ranges::equal(adv->view(state), new_state));
-                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
                     }
                 }
             }
@@ -1588,6 +1570,8 @@ TEST_CASE("AdvancedIndexingNode") {
         WHEN("We access the matrix by (i, j, :, k)") {
             auto adv =
                     graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, Slice(), k_ptr);
+
+            graph.emplace_node<ArrayValidationNode>(adv);
 
             THEN("We get the shape we expect") {
                 CHECK(!adv->dynamic());
@@ -1625,7 +1609,6 @@ TEST_CASE("AdvancedIndexingNode") {
 
                         std::vector<double> new_state({41, 45, 49, 53, 57});
                         CHECK(std::ranges::equal(adv->view(state), new_state));
-                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
                     }
                 }
 
@@ -1644,7 +1627,6 @@ TEST_CASE("AdvancedIndexingNode") {
 
                         std::vector<double> new_state({83, -87, 91, 95, 99});
                         CHECK(std::ranges::equal(adv->view(state), new_state));
-                        verify_array_diff(expected_initial_state, new_state, adv->diff(state));
                     }
                 }
             }

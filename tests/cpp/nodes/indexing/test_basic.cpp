@@ -21,7 +21,6 @@
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
-#include "../../utils.hpp"
 
 namespace dwave::optimization {
 
@@ -625,6 +624,8 @@ TEST_CASE("BasicIndexingNode") {
         auto x_ptr = graph.emplace_node<ListNode>(5);
         auto y_ptr = graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(1, std::nullopt, 2));
 
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+
         THEN("y has the shape we expect") {
             CHECK(y_ptr->size() == 2);
             CHECK(y_ptr->ndim() == 1);
@@ -646,8 +647,6 @@ TEST_CASE("BasicIndexingNode") {
             THEN("The states are as expected") {
                 CHECK(std::ranges::equal(x_ptr->view(state), std::vector{0, 2, 1, 3, 4}));
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{2, 3}));
-
-                verify_array_diff({1, 3}, {2, 3}, y_ptr->diff(state));
             }
         }
     }
@@ -656,6 +655,8 @@ TEST_CASE("BasicIndexingNode") {
         auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{3, 3});
         auto y_ptr = graph.emplace_node<BasicIndexingNode>(
                 x_ptr, Slice(std::nullopt, std::nullopt, 2), Slice(1, std::nullopt));
+
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
 
         THEN("y has the shape and strides we expect") {
             CHECK(std::ranges::equal(y_ptr->shape(), std::vector{2, 2}));
@@ -681,8 +682,6 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(std::ranges::equal(x_ptr->view(state),
                                          std::vector{1, 1, 0, 0, 0, 0, 0, 0, 0}));
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{1, 0, 0, 0}));
-
-                verify_array_diff({0, 0, 0, 0}, {1, 0, 0, 0}, y_ptr->diff(state));
             }
         }
     }
@@ -738,6 +737,8 @@ TEST_CASE("BasicIndexingNode") {
         auto x_ptr = graph.emplace_node<SetNode>(5);
         auto y_ptr = graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(0, -2));  // x[:-2]
 
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+
         THEN("The resulting BasicIndexingNode has the shape we expect") {
             CHECK(y_ptr->size() == Array::DYNAMIC_SIZE);
             CHECK(y_ptr->ndim() == 1);
@@ -784,8 +785,6 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->shape(state)[0] == y_ptr->size(state));
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
 
-                verify_array_diff({}, {0}, y_ptr->diff(state));
-
                 x_ptr->commit(state);
                 y_ptr->commit(state);
 
@@ -793,8 +792,6 @@ TEST_CASE("BasicIndexingNode") {
 
                 x_ptr->propagate(state);
                 y_ptr->propagate(state);
-
-                verify_array_diff({0}, {0, 1}, y_ptr->diff(state));
 
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0, 1}));
             }
@@ -810,8 +807,6 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->shape(state)[0] == y_ptr->size(state));
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0, 1}));
 
-                verify_array_diff({}, {0, 1}, y_ptr->diff(state));
-
                 x_ptr->commit(state);
                 y_ptr->commit(state);
 
@@ -819,8 +814,6 @@ TEST_CASE("BasicIndexingNode") {
 
                 x_ptr->propagate(state);
                 y_ptr->propagate(state);
-
-                verify_array_diff({0, 1}, {0, 1, 2}, y_ptr->diff(state));
             }
 
             AND_WHEN("We shrink the dynamic array below the range") {
@@ -840,7 +833,6 @@ TEST_CASE("BasicIndexingNode") {
                 x_ptr->propagate(state);
                 y_ptr->propagate(state);
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
-                verify_array_diff({0, 1}, {0}, y_ptr->diff(state));
 
                 x_ptr->commit(state);
                 y_ptr->commit(state);
@@ -850,7 +842,6 @@ TEST_CASE("BasicIndexingNode") {
                 x_ptr->propagate(state);
                 y_ptr->propagate(state);
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector<double>()));
-                verify_array_diff({0}, {}, y_ptr->diff(state));
 
                 x_ptr->commit(state);
                 y_ptr->commit(state);
@@ -887,7 +878,6 @@ TEST_CASE("BasicIndexingNode") {
                 y_ptr->propagate(state);
 
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0, 1}));
-                verify_array_diff({0, 1}, {0, 1}, y_ptr->diff(state));
             }
 
             AND_WHEN("We shrink and grow the dynamic array") {
@@ -902,7 +892,6 @@ TEST_CASE("BasicIndexingNode") {
                 y_ptr->propagate(state);
 
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
-                verify_array_diff({}, {0}, y_ptr->diff(state));
 
                 x_ptr->commit(state);
                 y_ptr->commit(state);
@@ -915,7 +904,6 @@ TEST_CASE("BasicIndexingNode") {
                 y_ptr->propagate(state);
 
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
-                verify_array_diff({0}, {0}, y_ptr->diff(state));
             }
 
             AND_WHEN("We change the shape of the dynamic array, and then revert") {
@@ -939,6 +927,8 @@ TEST_CASE("BasicIndexingNode") {
         auto x_ptr = graph.emplace_node<SetNode>(5);
         auto y_ptr =
                 graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(-2, std::nullopt));  // x[-2:]
+
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
 
         THEN("The resulting BasicIndexingNode has the shape we expect") {
             CHECK(y_ptr->size() == Array::DYNAMIC_SIZE);
@@ -968,7 +958,6 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->shape(state).size() == 1);
                 CHECK(y_ptr->shape(state)[0] == 1);
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
-                verify_array_diff({}, {0}, y_ptr->diff(state));
             }
 
             AND_WHEN("We grow the dynamic array up to the range") {
@@ -983,8 +972,6 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->shape(state)[0] == 2);
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0, 1}));
 
-                verify_array_diff({}, {0, 1}, y_ptr->diff(state));
-
                 x_ptr->commit(state);
                 y_ptr->commit(state);
 
@@ -992,8 +979,6 @@ TEST_CASE("BasicIndexingNode") {
 
                 x_ptr->propagate(state);
                 y_ptr->propagate(state);
-
-                verify_array_diff({0, 1}, {1, 2}, y_ptr->diff(state));
 
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{1, 2}));
             }
@@ -1009,8 +994,6 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->shape(state)[0] == y_ptr->size(state));
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{2, 3}));
 
-                verify_array_diff({}, {2, 3}, y_ptr->diff(state));
-
                 x_ptr->commit(state);
                 y_ptr->commit(state);
 
@@ -1018,8 +1001,6 @@ TEST_CASE("BasicIndexingNode") {
 
                 x_ptr->propagate(state);
                 y_ptr->propagate(state);
-
-                verify_array_diff({2, 3}, {3, 4}, y_ptr->diff(state));
             }
 
             AND_WHEN("We shrink the dynamic array below the range") {
@@ -1039,7 +1020,6 @@ TEST_CASE("BasicIndexingNode") {
                 x_ptr->propagate(state);
                 y_ptr->propagate(state);
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{1, 2}));
-                verify_array_diff({2, 3}, {1, 2}, y_ptr->diff(state));
 
                 x_ptr->commit(state);
                 y_ptr->commit(state);
@@ -1050,7 +1030,6 @@ TEST_CASE("BasicIndexingNode") {
                 x_ptr->propagate(state);
                 y_ptr->propagate(state);
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
-                verify_array_diff({1, 2}, {0}, y_ptr->diff(state));
 
                 x_ptr->commit(state);
                 y_ptr->commit(state);
@@ -1060,7 +1039,6 @@ TEST_CASE("BasicIndexingNode") {
                 x_ptr->propagate(state);
                 y_ptr->propagate(state);
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector<double>()));
-                verify_array_diff({0}, {}, y_ptr->diff(state));
             }
 
             AND_WHEN("We shrink and grow the dynamic array") {
@@ -1075,7 +1053,6 @@ TEST_CASE("BasicIndexingNode") {
                 y_ptr->propagate(state);  // [2, 3]
 
                 CHECK(std::ranges::equal(y_ptr->view(state), std::vector{2, 3}));
-                verify_array_diff({}, {2, 3}, y_ptr->diff(state));
             }
 
             AND_WHEN("We change the shape of the dynamic array, and then revert") {

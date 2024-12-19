@@ -19,7 +19,6 @@
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
-#include "../utils.hpp"
 
 namespace dwave::optimization {
 
@@ -40,6 +39,8 @@ TEST_CASE("DisjointBitSetsNode") {
             std::vector<DisjointBitSetNode*> sets;
             for (int i = 0; i < 3; ++i) {
                 sets.push_back(graph.emplace_node<DisjointBitSetNode>(ptr));
+
+                graph.emplace_node<ArrayValidationNode>(sets.at(i));
             }
 
             THEN("We shouldn't be able to add any more successors") {
@@ -100,12 +101,6 @@ TEST_CASE("DisjointBitSetsNode") {
                         CHECK(std::ranges::equal(sets[0]->view(state), std::vector{0, 1, 0, 1, 0}));
                         CHECK(std::ranges::equal(sets[1]->view(state), std::vector{1, 0, 0, 0, 0}));
                         CHECK(std::ranges::equal(sets[2]->view(state), std::vector{0, 0, 1, 0, 1}));
-                    }
-
-                    THEN("The successor nodes' diffs have the changes") {
-                        verify_array_diff({1, 1, 1, 1, 1}, {0, 1, 0, 1, 0}, sets[0]->diff(state));
-                        verify_array_diff({0, 0, 0, 0, 0}, {1, 0, 0, 0, 0}, sets[1]->diff(state));
-                        verify_array_diff({0, 0, 0, 0, 0}, {0, 0, 1, 0, 1}, sets[2]->diff(state));
                     }
 
                     THEN("The successor nodes' size_diffs are correct") {
@@ -217,6 +212,8 @@ TEST_CASE("DisjointListsNode") {
             std::vector<DisjointListNode*> lists;
             for (int i = 0; i < 3; ++i) {
                 lists.push_back(graph.emplace_node<DisjointListNode>(ptr));
+
+                graph.emplace_node<ArrayValidationNode>(lists.at(i));
             }
 
             THEN("We shouldn't be able to add any more successors") {
@@ -278,12 +275,6 @@ TEST_CASE("DisjointListsNode") {
                         CHECK(std::ranges::equal(lists[0]->view(state), std::vector{0, 4, 2}));
                         CHECK(lists[1]->shape(state)[0] == 0);
                         CHECK(std::ranges::equal(lists[2]->view(state), std::vector{3, 1}));
-                    }
-
-                    THEN("The successor nodes' diffs have the changes") {
-                        verify_array_diff({0, 1, 2, 3, 4}, {0, 4, 2}, lists[0]->diff(state));
-                        CHECK(lists[1]->diff(state).size() == 0);
-                        verify_array_diff({}, {3, 1}, lists[2]->diff(state));
                     }
 
                     THEN("The successor nodes' size_diffs are correct") {
@@ -463,6 +454,8 @@ TEST_CASE("SetNode") {
 
         auto ptr = graph.emplace_node<SetNode>(num_elements);
 
+        graph.emplace_node<ArrayValidationNode>(ptr);
+
         THEN("The shape is dynamic") {
             CHECK(ptr->ndim() == 1);
             CHECK(ptr->size() == Array::DYNAMIC_SIZE);
@@ -495,7 +488,6 @@ TEST_CASE("SetNode") {
                     CHECK(std::ranges::equal(ptr->view(state), std::vector{0}));
 
                     CHECK(ptr->size_diff(state) == 1);
-                    verify_array_diff({}, {0}, ptr->diff(state));
                 }
 
                 AND_WHEN("We commit") {
@@ -598,7 +590,6 @@ TEST_CASE("SetNode") {
                     CHECK(std::ranges::equal(ptr->view(state), std::vector{2, 0}));
 
                     CHECK(ptr->size_diff(state) == -1);
-                    verify_array_diff({2, 0, 3}, {2, 0}, ptr->diff(state));
                 }
 
                 AND_WHEN("We commit") {
