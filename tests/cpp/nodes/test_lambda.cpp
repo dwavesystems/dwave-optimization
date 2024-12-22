@@ -41,7 +41,7 @@ TEST_CASE("NaryReduceNode") {
                                           expression.emplace_node<InputNode>(),
                                           expression.emplace_node<InputNode>()};
         auto output_ptr = expression.emplace_node<AddNode>(
-                expression.emplace_node<MultiplyNode>(inputs[0], inputs[1]), inputs[2]);
+                expression.emplace_node<MultiplyNode>(inputs[1], inputs[2]), inputs[0]);
         expression.set_objective(output_ptr);
         expression.topological_sort();
 
@@ -71,9 +71,9 @@ TEST_CASE("NaryReduceNode") {
                 expression.emplace_node<SubtractNode>(
                         expression.emplace_node<MultiplyNode>(
                                 expression.emplace_node<AddNode>(
-                                        inputs[0], expression.emplace_node<ConstantNode>(1)),
-                                inputs[1]),
-                        inputs[2]),
+                                        inputs[1], expression.emplace_node<ConstantNode>(1)),
+                                inputs[2]),
+                        inputs[0]),
                 expression.emplace_node<ConstantNode>(5));
         expression.set_objective(output_ptr);
         expression.topological_sort();
@@ -126,7 +126,7 @@ TEST_CASE("NaryReduceNode") {
                                           expression.emplace_node<InputNode>(),
                                           expression.emplace_node<InputNode>()};
         auto output_ptr = expression.emplace_node<MaximumNode>(
-                expression.emplace_node<AddNode>(inputs[0], inputs[2]), inputs[1]);
+                expression.emplace_node<AddNode>(inputs[1], inputs[0]), inputs[2]);
         expression.set_objective(output_ptr);
         expression.topological_sort();
 

@@ -2401,10 +2401,11 @@ _register(NaryMultiply, typeid(cppNaryMultiplyNode))
 
 cdef class NaryReduce(ArraySymbol):
     """Using a supplied :class:`~dwave.optimization.model.Expression`, perform
-    a reduction operation along one or more array operands. The reduction
-    operation (represented by the ``Expression``) takes as input one value from
-    each of the operand arrays, as well as the result of the previously
-    computed operation, and computes a new value at the next output index.
+    an element-wise reduction operation along one or more array operands. The
+    reduction operation (represented by the ``Expression``) takes as input one
+    value from each of the operand arrays, as well as the result of the
+    previously computed operation, and computes a new value at the next output
+    index.
 
     This takes inspiration from
     `numpy.ufunc.reduce <https://numpy.org/doc/2.1/reference/generated/numpy.ufunc.reduce.html>`_ 
@@ -2415,7 +2416,7 @@ cdef class NaryReduce(ArraySymbol):
     Args:
         expression:
             An :class:`~dwave.optimization.model.Expression` representing the
-            reduction operation. The last input on the expression will be given
+            reduction operation. The first input on the expression will be given
             the previous output of the operation at each iteration over the
             values of the operands.
         operands:
@@ -2435,10 +2436,11 @@ cdef class NaryReduce(ArraySymbol):
         >>> model = Model()  # the main model
         >>> x = model.integer(10, lower_bound=0, upper_bound=5)
         >>> expr = Expression()  # the reduction operation
+        >>> # first input is used to take the value of the previous output
+        >>> previous = expr.input()
         >>> # xi will take the values of `x`. Provided bounds are necessary
         >>> # in this case, but may be helpful in other expressions.
         >>> xi = expr.input(0, 5, integral=True)
-        >>> previous = expr.input()
         >>> expr.set_output(xi + previous)
         >>> cumulative_sum_x = NaryReduce(expr, (x,))
         >>> type(cumulative_sum_x)

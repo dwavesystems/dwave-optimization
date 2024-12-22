@@ -21,6 +21,15 @@
 
 namespace dwave::optimization {
 
+// Performs an n-ary element-wise reduction operation on the 1d array operands.
+//
+// The operation is taken in as another (separate) `Graph`, which is expected
+// to have n + 1 `InputNode`s, where n is the number of operands. The extra
+// `InputNode` will be used for the previous/initial value of the output of
+// the reduction. Following the convention of `numpy.ufunc.reduce()` and
+// `std::accumulate()`, the special input should be the first `InputNode`
+// on the given `Graph`, with the remaining inputs used for the values of
+// the operands.
 class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // Runtime constructor that can be used from Cython/Python
@@ -46,6 +55,9 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
 
  private:
     double evaluate_expression(State& register_) const;
+
+    std::span<const InputNode* const> operand_inputs() const;
+    const InputNode* const reduction_input() const;
 
     Graph expression_;
     const std::vector<ArrayNode*> operands_;
