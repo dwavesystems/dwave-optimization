@@ -64,4 +64,6 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
     const ArrayNode* output_;
 };
 
+Graph validate_expression(Graph&& expression);
+
 }  // namespace dwave::optimization
