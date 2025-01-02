@@ -110,4 +110,8 @@ double ConstantNode::min() const {
     return buffer_stats_->min;
 }
 
+void ConstantNode::update(State& state, int index) const {
+    throw std::logic_error("update() called on a constant");
+}
+
 }  // namespace dwave::optimization

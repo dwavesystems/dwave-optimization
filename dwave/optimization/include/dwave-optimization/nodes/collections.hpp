@@ -57,10 +57,6 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     void commit(State&) const override;
     void revert(State&) const override;
 
-    void update [[noreturn]] (State&, int) const override {
-        throw std::logic_error("update() called on a decisison variable");
-    }
-
     // Exchange the values in the list at index i and index j
     // Note that for variable-length collections these indices might not
     // be in the "visible" range.
@@ -125,10 +121,6 @@ class DisjointBitSetsNode : public DecisionNode {
 
     void commit(State&) const override;
     void revert(State&) const override;
-
-    void update [[noreturn]] (State&, int) const override {
-        throw std::logic_error("update() called on a decisison variable");
-    }
 
     // Overloads required by the Decision ABC
 
@@ -211,10 +203,6 @@ class DisjointListsNode : public DecisionNode {
     void commit(State&) const override;
     void revert(State&) const override;
     void propagate(State&) const override;
-
-    void update [[noreturn]] (State&, int) const override {
-        throw std::logic_error("update() called on a decisison variable");
-    }
 
     // Overloads required by the Decision ABC
 

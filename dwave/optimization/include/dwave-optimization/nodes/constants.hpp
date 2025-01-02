@@ -96,6 +96,10 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     // This node never needs to update its successors
     void propagate(State&) const noexcept override {}
 
+    // Constants don't have predecessors so no one should be calling update().
+    // Always throws a logic_error.
+    [[noreturn]] void update(State& state, int index) const override;
+
     // Never any changes to revert or commit
     void commit(State&) const noexcept override {}
     void revert(State&) const noexcept override {}

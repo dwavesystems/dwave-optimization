@@ -371,4 +371,10 @@ void Node::initialize_state(State& state) const {
     state[topological_index_] = std::make_unique<NodeStateData>();
 }
 
+// DecisionNode ***************************************************************
+
+[[noreturn]] void DecisionNode::update(State& state, int index) const {
+    throw std::logic_error("update() called on a decisison variable");
+}
+
 }  // namespace dwave::optimization
