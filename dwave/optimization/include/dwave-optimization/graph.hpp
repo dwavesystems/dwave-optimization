@@ -348,7 +348,12 @@ NodeType* Graph::emplace_node(Args&&... args) {
 }
 
 class ArrayNode: public Array, public virtual Node {};
-class DecisionNode: public Decision, public virtual Node {
+class DecisionNode : public Decision, public virtual Node {
+ public:
+    // Decisions don't have predecessors so no one should be calling update().
+    // Always throws a logic_error.
+    [[noreturn]] void update(State& state, int index) const override;
+
  protected:
     // In general we do not allow decisions to be removed from models.
     bool removable() const override { return false; }
