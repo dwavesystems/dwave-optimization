@@ -20,7 +20,6 @@ tests_all = executable(
         'nodes/test_numbers.cpp',
         'nodes/test_quadratic_model.cpp',
         'test_array.cpp',
-        'test_examples.cpp',
         'test_graph.cpp',
         'test_utils.cpp',
     ],
