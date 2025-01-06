@@ -24,8 +24,7 @@ namespace dwave::optimization {
 
 /// A base class for various collections. Cannot be used directly - it has no
 /// public constructors.
-/// Subclasses must implement an overload of Node::initialize_state() and
-/// Decision::default_move()
+/// Subclasses must implement an overload of Node::initialize_state()
 class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
     CollectionNode() = delete;
@@ -122,10 +121,6 @@ class DisjointBitSetsNode : public DecisionNode {
     void commit(State&) const override;
     void revert(State&) const override;
 
-    // Overloads required by the Decision ABC
-
-    void default_move(State& state, RngAdaptor& rng) const override;
-
     // Disjoint-Bitset-specific methods ********************************************
 
     void swap_between_sets(State& state, ssize_t from_disjoint_set, ssize_t to_disjoint_set,
@@ -204,10 +199,6 @@ class DisjointListsNode : public DecisionNode {
     void revert(State&) const override;
     void propagate(State&) const override;
 
-    // Overloads required by the Decision ABC
-
-    void default_move(State& state, RngAdaptor& rng) const override;
-
     // Disjoint-list-specific methods ********************************************
     ssize_t get_disjoint_list_size(State& state, ssize_t list_index) const;
 
@@ -281,8 +272,6 @@ class ListNode : public CollectionNode {
     explicit ListNode(ssize_t n, ssize_t min_size, ssize_t max_size)
             : CollectionNode(n, min_size, max_size) {}
 
-    void default_move(State& state, RngAdaptor& rng) const override;
-
     // A ListNode's initial state defaults to range(n)
     void initialize_state(State& state) const override;
     using CollectionNode::initialize_state;  // for explicit initialization
@@ -298,8 +287,6 @@ class SetNode : public CollectionNode {
 
     explicit SetNode(ssize_t n, ssize_t min_size, ssize_t max_size)
             : CollectionNode(n, min_size, max_size) {}
-
-    void default_move(State& state, RngAdaptor& rng) const override;
 
     // A SetNode's default initial state is empty
     void initialize_state(State& state) const override;

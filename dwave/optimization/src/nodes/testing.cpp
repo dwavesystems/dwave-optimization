@@ -402,8 +402,4 @@ void DynamicArrayTestingNode::shrink(State& state) const {
     data_ptr<DynamicArrayTestingNodeData>(state)->shrink(row_size);
 }
 
-void DynamicArrayTestingNode::default_move(State& state, RngAdaptor& rng) const {
-    random_move(state, rng);
-}
-
 }  // namespace dwave::optimization

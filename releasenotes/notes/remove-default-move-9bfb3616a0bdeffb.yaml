@@ -1,0 +1,3 @@
+---
+deprecations:
+  - Remove ``::default_move()`` method from the C++ ``Decision`` class and all subclasses.

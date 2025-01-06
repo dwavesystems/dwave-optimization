@@ -64,10 +64,8 @@ class RngAdaptor {
 // Confirm this will work with rngs
 static_assert(std::uniform_random_bit_generator<RngAdaptor>);
 
-// A decision is a class that has at least one move.
-struct Decision {
-    virtual void default_move(State& state, RngAdaptor& rng) const = 0;
-};
+// A decision is an independent variable in the model. The value(s) to be optimized.
+struct Decision {};
 
 class Graph {
  public:

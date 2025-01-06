@@ -138,12 +138,6 @@ bool IntegerNode::set_value(State& state, ssize_t i, int value) const {
     return data_ptr<ArrayNodeStateData>(state)->set(i, value);
 }
 
-void IntegerNode::default_move(State& state, RngAdaptor& rng) const {
-    std::uniform_int_distribution<std::size_t> index_dist(0, this->size(state) - 1);
-    std::uniform_int_distribution<std::size_t> value_dist(lower_bound_, upper_bound_);
-    this->set_value(state, index_dist(rng), value_dist(rng));
-}
-
 // Binary Node
 
 std::unique_ptr<NodeStateData> BinaryNode::new_data_ptr(std::vector<double>&& number_data) const {
@@ -165,11 +159,6 @@ bool BinaryNode::set(State& state, ssize_t i) const {
 
 bool BinaryNode::unset(State& state, ssize_t i) const {
     return data_ptr<ArrayNodeStateData>(state)->set(i, 0);
-}
-
-void BinaryNode::default_move(State& state, RngAdaptor& rng) const {
-    std::uniform_int_distribution<std::size_t> index_dist(0, this->size(state) - 1);
-    this->flip(state, index_dist(rng));
 }
 
 }  // namespace dwave::optimization

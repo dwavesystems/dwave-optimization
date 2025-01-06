@@ -118,8 +118,6 @@ class IntegerNode : public NumberNode {
                 std::optional<int> lower_bound = std::nullopt,   // inclusive
                 std::optional<int> upper_bound = std::nullopt);  // inclusive
 
-    void default_move(State& state, RngAdaptor& rng) const override;
-
     // Overloads needed by the Node ABC **************************************
 
     bool integral() const override;
@@ -140,8 +138,6 @@ class BinaryNode : public IntegerNode {
  public:
     explicit BinaryNode(std::initializer_list<ssize_t> shape) : IntegerNode(shape, 0, 1) {}
     explicit BinaryNode(std::span<const ssize_t> shape) : IntegerNode(shape, 0, 1) {}
-
-    void default_move(State& state, RngAdaptor& rng) const override;
 
     // Overloads needed by the NumberNode ABC **************************************
 

@@ -82,9 +82,6 @@ class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decis
     void revert(State&) const override;
     void update(State&, int) const override;
 
-    // Overloads required by the Decision ABC
-    void default_move(State& state, RngAdaptor& rng) const override;
-
     // State mutation methods *************************************************
 
     void grow(State& state, std::span<const double> values) const;
