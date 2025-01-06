@@ -778,6 +778,39 @@ class TestConcatenate(utils.SymbolTests):
         model.lock()
         yield c
 
+    def test_simple_concatenate(self):
+        model = Model()
+        with self.subTest("Concatenate ndarray of constants returns ndarray"):
+            A = [model.constant(0), model.constant(1)]
+            self.assertIsInstance(
+                dwave.optimization.concatenate(np.asarray((A,), dtype=object)),
+                np.ndarray
+            )
+        with self.subTest("Concatenate ndarray of binary returns Concatenate"):
+            A = [model.binary(5), model.binary(5)]
+            self.assertIsInstance(
+                dwave.optimization.concatenate(np.asarray(tuple(A), dtype=object)),
+                dwave.optimization.symbols.Concatenate
+            )
+        with self.subTest("Concatenate ArraySymbol returns ArraySymbol"):
+            self.assertIsInstance(
+                dwave.optimization.concatenate(model.constant(5)),
+                dwave.optimization.model.ArraySymbol
+            )
+            self.assertIsInstance(
+                dwave.optimization.concatenate(model.binary(5)),
+                dwave.optimization.model.ArraySymbol
+            )
+        with self.subTest("Concatenate Iterable and Sized of length 1 returns ArraySymbol"):
+            self.assertIsInstance(
+                dwave.optimization.concatenate((model.binary(5), )),
+                dwave.optimization.model.ArraySymbol
+            )
+            self.assertIsInstance(
+                dwave.optimization.concatenate((model.constant(5),)),
+                dwave.optimization.model.ArraySymbol
+            )
+
     def test_errors(self):
         model = Model()
         with self.subTest("same number of dimensions"):
