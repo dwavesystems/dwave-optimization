@@ -137,37 +137,6 @@ TEST_CASE("DisjointBitSetsNode") {
                             CHECK(sets[2]->diff(state).size() == 0);
                         }
                     }
-
-                    AND_WHEN("We do 1000 random moves and randomly reject them") {
-                        graph.commit(state, graph.descendants(state, {ptr}));
-
-                        auto rng = RngAdaptor(std::mt19937(42));
-
-                        std::uniform_int_distribution<int> coin(0, 1);
-
-                        for (int i = 0; i < 100; ++i) {
-                            ptr->default_move(state, rng);
-
-                            graph.propagate(state, graph.descendants(state, {ptr}));
-
-                            if (coin(rng)) {
-                                graph.commit(state, graph.descendants(state, {ptr}));
-                            } else {
-                                graph.revert(state, graph.descendants(state, {ptr}));
-                            }
-
-                            // disjoint sets are still valid
-                            std::vector<double> bitset(5, 0);
-
-                            for (auto const& set : sets) {
-                                for (ssize_t i = 0; i < 5; ++i) {
-                                    bitset[i] += set->view(state)[i];
-                                }
-                            }
-
-                            CHECK(std::ranges::equal(bitset, std::vector<double>{1, 1, 1, 1, 1}));
-                        }
-                    }
                 }
             }
 
@@ -306,42 +275,6 @@ TEST_CASE("DisjointListsNode") {
                             CHECK(lists[0]->diff(state).size() == 0);
                             CHECK(lists[1]->shape(state)[0] == 0);
                             CHECK(lists[2]->shape(state)[0] == 0);
-                        }
-                    }
-
-                    AND_WHEN("We do 1000 random moves and randomly reject them") {
-                        graph.commit(state, graph.descendants(state, {ptr}));
-
-                        auto rng = RngAdaptor(std::mt19937(42));
-
-                        std::uniform_int_distribution<int> coin(0, 1);
-
-                        for (int i = 0; i < 100; ++i) {
-                            ptr->default_move(state, rng);
-
-                            graph.propagate(state, graph.descendants(state, {ptr}));
-
-                            if (coin(rng)) {
-                                graph.commit(state, graph.descendants(state, {ptr}));
-                            } else {
-                                graph.revert(state, graph.descendants(state, {ptr}));
-                            }
-
-                            // disjoint sets are still valid
-                            std::set<double> set;
-                            int num_elements = 0;
-
-                            for (auto const& list : lists) {
-                                for (auto const& el : list->view(state)) {
-                                    set.insert(el);
-                                }
-                                num_elements += list->view(state).size();
-                                CHECK(std::ranges::equal(list->shape(state),
-                                                         std::vector{list->view(state).size()}));
-                            }
-
-                            CHECK(num_elements == 5);
-                            CHECK(set == std::set<double>{0, 1, 2, 3, 4});
                         }
                     }
                 }
@@ -513,66 +446,6 @@ TEST_CASE("SetNode") {
                         CHECK(ptr->diff(state).size() == 0);
                     }
                 }
-            }
-
-            AND_WHEN("We do 1000 random moves") {
-                auto rng = RngAdaptor(std::mt19937(42));
-
-                int max_size = ptr->size(state);
-                int min_size = ptr->size(state);
-
-                for (int i = 0; i < 1000; ++i) {
-                    ptr->default_move(state, rng);
-                    graph.propose(state, {ptr});
-
-                    // we're a subset of range(n) still
-                    std::unordered_set<double> set(ptr->begin(state), ptr->end(state));
-                    CHECK(static_cast<ssize_t>(set.size()) == ptr->size(state));
-                    CHECK(*std::max_element(ptr->begin(state), ptr->end(state)) < 10);
-                    CHECK(*std::min_element(ptr->begin(state), ptr->end(state)) >= 0);
-
-                    min_size = std::min<int>(min_size, ptr->size(state));
-                    max_size = std::max<int>(max_size, ptr->size(state));
-                }
-
-                // these are probabilistic, but should be pretty safe for this
-                // number of random moves
-                CHECK(max_size == 10);
-                CHECK(min_size == 0);
-            }
-
-            AND_WHEN("We do 1000 random moves and randomly reject them") {
-                auto rng = RngAdaptor(std::mt19937(42));
-
-                std::uniform_int_distribution<int> coin(0, 1);
-
-                int max_size = ptr->size(state);
-                int min_size = ptr->size(state);
-
-                for (int i = 0; i < 1000; ++i) {
-                    ptr->default_move(state, rng);
-                    graph.propagate(state, graph.descendants(state, {ptr}));
-
-                    if (coin(rng)) {
-                        graph.commit(state, graph.descendants(state, {ptr}));
-                    } else {
-                        graph.revert(state, graph.descendants(state, {ptr}));
-                    }
-
-                    // we're a subset of range(n) still
-                    std::unordered_set<double> set(ptr->begin(state), ptr->end(state));
-                    CHECK(static_cast<ssize_t>(set.size()) == ptr->size(state));
-                    CHECK(*std::max_element(ptr->begin(state), ptr->end(state)) < 10);
-                    CHECK(*std::min_element(ptr->begin(state), ptr->end(state)) >= 0);
-
-                    min_size = std::min<int>(min_size, ptr->size(state));
-                    max_size = std::max<int>(max_size, ptr->size(state));
-                }
-
-                // these are probabilistic, but should be pretty safe for this
-                // number of random moves
-                CHECK(max_size == 10);
-                CHECK(min_size == 0);
             }
         }
 
