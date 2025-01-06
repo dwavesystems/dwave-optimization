@@ -68,16 +68,6 @@ void NumberNode::initialize_state(State& state) const {
     initialize_state(state, std::move(number_data));
 }
 
-void NumberNode::initialize_state(State& state, RngAdaptor& rng) const {
-    assert(this->topological_index() >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > this->topological_index() && "unexpected state length");
-    assert(state[this->topological_index()] == nullptr && "already initialized state");
-
-    std::vector<double> number_data(this->size());
-    std::generate(number_data.begin(), number_data.end(), [&]() { return generate_value(rng); });
-    initialize_state(state, std::move(number_data));
-}
-
 // Specializations for the linear case
 bool NumberNode::exchange(State& state, ssize_t i, ssize_t j) const {
     return data_ptr<ArrayNodeStateData>(state)->exchange(i, j);
@@ -116,11 +106,6 @@ bool IntegerNode::integral() const { return true; }
 
 bool IntegerNode::is_valid(double value) const {
     return (value >= lower_bound()) && (value <= upper_bound()) && (std::round(value) == value);
-}
-
-double IntegerNode::generate_value(RngAdaptor& rng) const {
-    std::uniform_int_distribution<ssize_t> value_dist(lower_bound_, upper_bound_);
-    return value_dist(rng);
 }
 
 double IntegerNode::default_value() const {
