@@ -19,7 +19,6 @@
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
-#include "../utils.hpp"
 
 namespace dwave::optimization {
 
@@ -40,6 +39,8 @@ TEST_CASE("DisjointBitSetsNode") {
             std::vector<DisjointBitSetNode*> sets;
             for (int i = 0; i < 3; ++i) {
                 sets.push_back(graph.emplace_node<DisjointBitSetNode>(ptr));
+
+                graph.emplace_node<ArrayValidationNode>(sets.at(i));
             }
 
             THEN("We shouldn't be able to add any more successors") {
@@ -94,18 +95,12 @@ TEST_CASE("DisjointBitSetsNode") {
                     ptr->swap_between_sets(state, 0, 1, 0);  // {1 3} {0 2} {4}
                     ptr->swap_between_sets(state, 1, 2, 2);  // {1 3} {0} {2 4}
 
-                    ptr->propagate(state);
+                    graph.propagate(state, graph.descendants(state, {ptr}));
 
                     THEN("The node's state reflects the relevant changes") {
                         CHECK(std::ranges::equal(sets[0]->view(state), std::vector{0, 1, 0, 1, 0}));
                         CHECK(std::ranges::equal(sets[1]->view(state), std::vector{1, 0, 0, 0, 0}));
                         CHECK(std::ranges::equal(sets[2]->view(state), std::vector{0, 0, 1, 0, 1}));
-                    }
-
-                    THEN("The successor nodes' diffs have the changes") {
-                        verify_array_diff({1, 1, 1, 1, 1}, {0, 1, 0, 1, 0}, sets[0]->diff(state));
-                        verify_array_diff({0, 0, 0, 0, 0}, {1, 0, 0, 0, 0}, sets[1]->diff(state));
-                        verify_array_diff({0, 0, 0, 0, 0}, {0, 0, 1, 0, 1}, sets[2]->diff(state));
                     }
 
                     THEN("The successor nodes' size_diffs are correct") {
@@ -115,7 +110,7 @@ TEST_CASE("DisjointBitSetsNode") {
                     }
 
                     AND_WHEN("We commit") {
-                        ptr->commit(state);
+                        graph.commit(state, graph.descendants(state, {ptr}));
 
                         THEN("The changes persist") {
                             CHECK(std::ranges::equal(sets[0]->view(state),
@@ -128,7 +123,7 @@ TEST_CASE("DisjointBitSetsNode") {
                     }
 
                     AND_WHEN("We revert") {
-                        ptr->revert(state);
+                        graph.revert(state, graph.descendants(state, {ptr}));
 
                         THEN("The changes are undone") {
                             CHECK(std::ranges::equal(sets[0]->view(state),
@@ -144,6 +139,8 @@ TEST_CASE("DisjointBitSetsNode") {
                     }
 
                     AND_WHEN("We do 1000 random moves and randomly reject them") {
+                        graph.commit(state, graph.descendants(state, {ptr}));
+
                         auto rng = RngAdaptor(std::mt19937(42));
 
                         std::uniform_int_distribution<int> coin(0, 1);
@@ -151,10 +148,12 @@ TEST_CASE("DisjointBitSetsNode") {
                         for (int i = 0; i < 100; ++i) {
                             ptr->default_move(state, rng);
 
+                            graph.propagate(state, graph.descendants(state, {ptr}));
+
                             if (coin(rng)) {
-                                ptr->commit(state);
+                                graph.commit(state, graph.descendants(state, {ptr}));
                             } else {
-                                ptr->revert(state);
+                                graph.revert(state, graph.descendants(state, {ptr}));
                             }
 
                             // disjoint sets are still valid
@@ -217,6 +216,8 @@ TEST_CASE("DisjointListsNode") {
             std::vector<DisjointListNode*> lists;
             for (int i = 0; i < 3; ++i) {
                 lists.push_back(graph.emplace_node<DisjointListNode>(ptr));
+
+                graph.emplace_node<ArrayValidationNode>(lists.at(i));
             }
 
             THEN("We shouldn't be able to add any more successors") {
@@ -272,18 +273,12 @@ TEST_CASE("DisjointListsNode") {
                     ptr->pop_to_list(state, 0, 1, 2, 0);  // [0 4 3 2] [] [1]
                     ptr->pop_to_list(state, 0, 2, 2, 1);  // [0 4 2] [] [1 3]
                     ptr->swap_in_list(state, 2, 1, 0);    // [0 4 2] [] [3 1]
-                    ptr->propagate(state);
+                    graph.propagate(state, graph.descendants(state, {ptr}));
 
                     THEN("The node's state reflects the relevant changes") {
                         CHECK(std::ranges::equal(lists[0]->view(state), std::vector{0, 4, 2}));
                         CHECK(lists[1]->shape(state)[0] == 0);
                         CHECK(std::ranges::equal(lists[2]->view(state), std::vector{3, 1}));
-                    }
-
-                    THEN("The successor nodes' diffs have the changes") {
-                        verify_array_diff({0, 1, 2, 3, 4}, {0, 4, 2}, lists[0]->diff(state));
-                        CHECK(lists[1]->diff(state).size() == 0);
-                        verify_array_diff({}, {3, 1}, lists[2]->diff(state));
                     }
 
                     THEN("The successor nodes' size_diffs are correct") {
@@ -293,7 +288,7 @@ TEST_CASE("DisjointListsNode") {
                     }
 
                     AND_WHEN("We commit") {
-                        ptr->commit(state);
+                        graph.commit(state, graph.descendants(state, {ptr}));
 
                         THEN("The changes persist") {
                             CHECK(std::ranges::equal(lists[0]->view(state), std::vector{0, 4, 2}));
@@ -303,7 +298,7 @@ TEST_CASE("DisjointListsNode") {
                     }
 
                     AND_WHEN("We revert") {
-                        ptr->revert(state);
+                        graph.revert(state, graph.descendants(state, {ptr}));
 
                         THEN("The changes are undone") {
                             CHECK(std::ranges::equal(lists[0]->view(state),
@@ -315,6 +310,8 @@ TEST_CASE("DisjointListsNode") {
                     }
 
                     AND_WHEN("We do 1000 random moves and randomly reject them") {
+                        graph.commit(state, graph.descendants(state, {ptr}));
+
                         auto rng = RngAdaptor(std::mt19937(42));
 
                         std::uniform_int_distribution<int> coin(0, 1);
@@ -322,10 +319,12 @@ TEST_CASE("DisjointListsNode") {
                         for (int i = 0; i < 100; ++i) {
                             ptr->default_move(state, rng);
 
+                            graph.propagate(state, graph.descendants(state, {ptr}));
+
                             if (coin(rng)) {
-                                ptr->commit(state);
+                                graph.commit(state, graph.descendants(state, {ptr}));
                             } else {
-                                ptr->revert(state);
+                                graph.revert(state, graph.descendants(state, {ptr}));
                             }
 
                             // disjoint sets are still valid
@@ -355,11 +354,7 @@ TEST_CASE("DisjointListsNode") {
                         THEN("The state is correct") {
                             CHECK(std::ranges::equal(lists[0]->view(state), std::vector{0, 3, 1}));
                             CHECK(std::ranges::equal(lists[2]->view(state), std::vector{4, 2}));
-                            ptr->propagate(state);
-                            lists[0]->propagate(state);
-                            lists[2]->propagate(state);
-                            validation_nodes[0]->propagate(state);
-                            validation_nodes[2]->propagate(state);
+                            graph.propagate(state, graph.descendants(state, {ptr}));
                         }
                     }
                 }
@@ -425,7 +420,7 @@ TEST_CASE("ListNode") {
 
                 // As a technical detail, the state is eagerly updated, but in general
                 // one has to propagate
-                ptr->propagate(state);
+                graph.propagate(state, graph.descendants(state, {ptr}));
 
                 THEN("The node's state reflects the relevant changes") {
                     CHECK(std::ranges::equal(ptr->view(state), std::vector{0, 2, 3, 1, 4}));
@@ -434,7 +429,7 @@ TEST_CASE("ListNode") {
                 }
 
                 AND_WHEN("We commit") {
-                    ptr->commit(state);
+                    graph.commit(state, graph.descendants(state, {ptr}));
 
                     THEN("The changes persist") {
                         CHECK(std::ranges::equal(ptr->view(state), std::vector{0, 2, 3, 1, 4}));
@@ -443,7 +438,7 @@ TEST_CASE("ListNode") {
                 }
 
                 AND_WHEN("We revert") {
-                    ptr->revert(state);
+                    graph.revert(state, graph.descendants(state, {ptr}));
 
                     THEN("The changes are undone") {
                         CHECK(std::ranges::equal(ptr->view(state), std::vector{0, 1, 2, 3, 4}));
@@ -462,6 +457,8 @@ TEST_CASE("SetNode") {
         const int num_elements = 10;
 
         auto ptr = graph.emplace_node<SetNode>(num_elements);
+
+        graph.emplace_node<ArrayValidationNode>(ptr);
 
         THEN("The shape is dynamic") {
             CHECK(ptr->ndim() == 1);
@@ -488,18 +485,17 @@ TEST_CASE("SetNode") {
 
             AND_WHEN("We grow by one") {
                 ptr->grow(state);
-                ptr->propagate(state);
+                graph.propagate(state, graph.descendants(state, {ptr}));
 
                 THEN("The diff has been updated") {
                     // the specific value added is implementation-dependant
                     CHECK(std::ranges::equal(ptr->view(state), std::vector{0}));
 
                     CHECK(ptr->size_diff(state) == 1);
-                    verify_array_diff({}, {0}, ptr->diff(state));
                 }
 
                 AND_WHEN("We commit") {
-                    ptr->commit(state);
+                    graph.commit(state, graph.descendants(state, {ptr}));
 
                     THEN("The values are updated but the diff is cleared") {
                         CHECK(std::ranges::equal(ptr->view(state), std::vector{0}));
@@ -509,7 +505,7 @@ TEST_CASE("SetNode") {
                 }
 
                 AND_WHEN("We revert") {
-                    ptr->revert(state);
+                    graph.revert(state, graph.descendants(state, {ptr}));
 
                     THEN("We're back where we started") {
                         CHECK(std::ranges::equal(ptr->view(state), std::vector<double>{}));
@@ -527,7 +523,7 @@ TEST_CASE("SetNode") {
 
                 for (int i = 0; i < 1000; ++i) {
                     ptr->default_move(state, rng);
-                    ptr->commit(state);
+                    graph.propose(state, {ptr});
 
                     // we're a subset of range(n) still
                     std::unordered_set<double> set(ptr->begin(state), ptr->end(state));
@@ -555,11 +551,12 @@ TEST_CASE("SetNode") {
 
                 for (int i = 0; i < 1000; ++i) {
                     ptr->default_move(state, rng);
+                    graph.propagate(state, graph.descendants(state, {ptr}));
 
                     if (coin(rng)) {
-                        ptr->commit(state);
+                        graph.commit(state, graph.descendants(state, {ptr}));
                     } else {
-                        ptr->revert(state);
+                        graph.revert(state, graph.descendants(state, {ptr}));
                     }
 
                     // we're a subset of range(n) still
@@ -591,18 +588,17 @@ TEST_CASE("SetNode") {
 
             AND_WHEN("We shrink by one") {
                 ptr->shrink(state);
-                ptr->propagate(state);
+                graph.propagate(state, graph.descendants(state, {ptr}));
 
                 THEN("The diff has been updated") {
                     // the specific value added is implementation-dependant
                     CHECK(std::ranges::equal(ptr->view(state), std::vector{2, 0}));
 
                     CHECK(ptr->size_diff(state) == -1);
-                    verify_array_diff({2, 0, 3}, {2, 0}, ptr->diff(state));
                 }
 
                 AND_WHEN("We commit") {
-                    ptr->commit(state);
+                    graph.commit(state, graph.descendants(state, {ptr}));
 
                     THEN("The values are updated but the diff is cleared") {
                         CHECK(std::ranges::equal(ptr->view(state), std::vector{2, 0}));
@@ -612,7 +608,7 @@ TEST_CASE("SetNode") {
                 }
 
                 AND_WHEN("We revert") {
-                    ptr->revert(state);
+                    graph.revert(state, graph.descendants(state, {ptr}));
 
                     THEN("We're back where we started") {
                         CHECK(std::ranges::equal(ptr->view(state), std::vector<double>{2, 0, 3}));
