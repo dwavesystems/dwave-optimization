@@ -356,48 +356,12 @@ void DynamicArrayTestingNode::grow(State& state, std::span<const double> values)
     node_data->current_shape[0] += values.size() / (strides()[0] / itemsize());
 }
 
-void DynamicArrayTestingNode::random_move(State& state, RngAdaptor& rng) const {
-    auto node_data = data_ptr<DynamicArrayTestingNodeData>(state);
-
-    assert(ndim() > 0);
-
-    const ssize_t row_size = strides()[0] / itemsize();
-
-    // Could change this depending on desired number type
-    std::uniform_real_distribution<double> val_dist(-10, 10);
-
-    size_t change_type = std::uniform_int_distribution<size_t>(0, 2)(rng);
-    if (change_type == 0) {
-        // Random placement
-        std::vector<double> new_row;
-        for (ssize_t i = 0; i < row_size; ++i) {
-            new_row.emplace_back(val_dist(rng));
-        }
-        grow(state, new_row);
-    } else if (change_type == 1 && node_data->current_data.size() > 0) {
-        // Random removal
-        shrink(state);
-    } else if (node_data->current_data.size() > 0) {
-        // Random update at a random index
-        ssize_t index =
-                std::uniform_int_distribution<ssize_t>(0, node_data->current_data.size() - 1)(rng);
-        set(state, index, val_dist(rng));
-    }
-}
-
-void DynamicArrayTestingNode::random_moves(State& state, RngAdaptor& rng,
-                                           size_t max_changes) const {
-    size_t num_changes = std::uniform_int_distribution<size_t>(0, max_changes)(rng);
-    for (size_t i = 0; i < num_changes; ++i) {
-        random_move(state, rng);
-    }
-}
-
 void DynamicArrayTestingNode::set(State& state, ssize_t index, double value) const {
     data_ptr<DynamicArrayTestingNodeData>(state)->set(index, value);
 }
 
 void DynamicArrayTestingNode::shrink(State& state) const {
+    if (!size(state)) return;  // nothing to do
     const ssize_t row_size = strides()[0] / itemsize();
     data_ptr<DynamicArrayTestingNodeData>(state)->shrink(row_size);
 }

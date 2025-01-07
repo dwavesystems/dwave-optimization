@@ -1037,24 +1037,30 @@ TEST_CASE("BasicIndexingNode") {
                               Slice(0, -5), Slice(1, -5), Slice(3, -5), Slice(-1, std::nullopt),
                               Slice(-5, std::nullopt), Slice(-5, -2));
 
-        auto x_ptr =
-                graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1});
+        auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1},
+                                                                 -10, 10, false);
         auto y_ptr = graph.emplace_node<BasicIndexingNode>(x_ptr, slice);
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
         AND_WHEN("We do random moves and accept") {
             auto state = graph.initialize_state();
-            auto rng = RngAdaptor(std::mt19937(42));
+            auto rng = std::default_random_engine(42);
 
-            for (int i = 0; i < 1000; ++i) {
-                x_ptr->random_moves(state, rng, 20);
+            for (int i = 0; i < 100; ++i) {
+                // do up to 20 random moves
+                const int num_moves = std::uniform_int_distribution<int>(0, 20)(rng);
+                std::uniform_int_distribution<int> move_type(0, 2);
+                for (int m = 0; m < num_moves; ++m) {
+                    x_ptr->random_move(state, rng);
+                }
+
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
                 graph.commit(state, graph.descendants(state, {x_ptr}));
             }
         }
     }
 
-    // TODO slicing on multidimensional dynamic array, when we have one to test...
+    // todo: slicing on multidimensional dynamic array, when we have one to test...
 }
 
 }  // namespace dwave::optimization
