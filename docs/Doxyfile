@@ -1,0 +1,10 @@
+# Doxyfile 1.9.1
+
+PROJECT_NAME           = dwave-optimization
+OUTPUT_DIRECTORY       = build/doxygen/
+INPUT                  = ../dwave/optimization/include/dwave-optimization/ \
+                         ../dwave/optimization/include/dwave-optimization/nodes/
+FILE_PATTERNS          = *.hpp *.cpp
+GENERATE_HTML          = NO
+GENERATE_LATEX         = NO
+GENERATE_XML           = YES

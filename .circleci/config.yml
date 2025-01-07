@@ -244,6 +244,13 @@ jobs:
       - checkout
       - attach_workspace:
           at: dist
+
+      - run:
+          name: install doxygen
+          command: |
+            sudo apt update
+            sudo apt install doxygen
+
       - run:
           name: install package and docs dependencies
           command: |
@@ -255,7 +262,7 @@ jobs:
           name: build docs
           command: |
             . env/bin/activate
-            make -C docs html
+            make -C docs cpp html
 
       - store_artifacts:
           path: docs/build/html
