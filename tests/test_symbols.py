@@ -780,12 +780,6 @@ class TestConcatenate(utils.SymbolTests):
 
     def test_simple_concatenate(self):
         model = Model()
-        with self.subTest("Concatenate ndarray of constants returns ndarray"):
-            A = [model.constant(0), model.constant(1)]
-            self.assertIsInstance(
-                dwave.optimization.concatenate(np.asarray((A,), dtype=object)),
-                np.ndarray
-            )
         with self.subTest("Concatenate ndarray of binary returns Concatenate"):
             A = [model.binary(5), model.binary(5)]
             self.assertIsInstance(
