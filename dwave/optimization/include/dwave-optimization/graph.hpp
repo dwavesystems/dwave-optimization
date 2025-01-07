@@ -35,35 +35,6 @@ class ArrayNode;
 class Node;
 class DecisionNode;
 
-// We don't want this interface to be opinionated about what type of rng we're using.
-// So we create this class to do type erasure on RNGs.
-// The performance won't be great, but this is only intended to be used for default
-// moves.
-class RngAdaptor {
- public:
-    // use a fixed width so we can be sure of the min and max
-    using result_type = std::uint32_t;
-
-    // By default just use Mersenne Twister
-    RngAdaptor() : RngAdaptor(std::mt19937()) {}
-
-    template <class Generator>
-    explicit RngAdaptor(Generator&& r)
-            : rng_(engine_type<std::decay_t<Generator>>(std::forward<Generator>(r))) {}
-
-    static constexpr result_type min() { return std::numeric_limits<result_type>::min(); }
-    static constexpr result_type max() { return std::numeric_limits<result_type>::max(); }
-    result_type operator()() const { return rng_(); }
-
- private:
-    template <class Generator>
-    using engine_type = std::independent_bits_engine<Generator, 32, result_type>;
-
-    std::function<result_type()> rng_;
-};
-// Confirm this will work with rngs
-static_assert(std::uniform_random_bit_generator<RngAdaptor>);
-
 // A decision is an independent variable in the model. The value(s) to be optimized.
 struct Decision {};
 
