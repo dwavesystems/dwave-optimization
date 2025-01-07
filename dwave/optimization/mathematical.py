@@ -153,7 +153,8 @@ def concatenate(array_likes : typing.Union[collections.abc.Iterable, ArraySymbol
                 return array_likes[0]
 
             # Special case for handling list of constants
-            if isinstance(array_likes[0], Constant):
+            if (isinstance(array_likes, list)
+                and isinstance(array_likes[0], Constant)):
                 return Concatenate(tuple(s.reshape((1,)) for s in array_likes))
 
             return Concatenate(tuple(array_likes), axis)
