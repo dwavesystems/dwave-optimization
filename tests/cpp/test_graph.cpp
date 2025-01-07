@@ -18,20 +18,6 @@
 
 namespace dwave::optimization {
 
-TEST_CASE("Test RngAdaptor") {
-    GIVEN("A Mersenne Twister engine and an RngAdaptor constructed from one") {
-        std::mt19937 mt_rng(42);
-        RngAdaptor ra_rng(std::mt19937(42));
-
-        THEN("The behave the same") {
-            std::uniform_int_distribution<> d6(1, 6);
-            for (int i = 0; i < 10; ++i) {
-                CHECK(d6(ra_rng) == d6(mt_rng));
-            }
-        }
-    }
-}
-
 TEST_CASE("Topological Sort", "[topological_sort]") {
     auto graph = Graph();
 

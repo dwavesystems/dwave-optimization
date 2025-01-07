@@ -340,13 +340,6 @@ void DisjointBitSetsNode::revert(State& state) const {
     data_ptr<DisjointBitSetsNodeData>(state)->revert();
 }
 
-void DisjointBitSetsNode::default_move(State& state, RngAdaptor& rng) const {
-    std::uniform_int_distribution<std::size_t> dist_sets(0, num_disjoint_sets_ - 1);
-    std::uniform_int_distribution<std::size_t> dist_el(0, primary_set_size_ - 1);
-
-    swap_between_sets(state, dist_sets(rng), dist_sets(rng), dist_el(rng));
-}
-
 void DisjointBitSetsNode::swap_between_sets(State& state, ssize_t from_disjoint_set,
                                             ssize_t to_disjoint_set, ssize_t element) const {
     data_ptr<DisjointBitSetsNodeData>(state)->swap_between_sets(from_disjoint_set, to_disjoint_set,
@@ -662,41 +655,6 @@ void DisjointListsNode::pop_to_list(State& state, ssize_t from_list_index, ssize
                                                         element_j);
 }
 
-void DisjointListsNode::default_move(State& state, RngAdaptor& rng) const {
-    auto data = data_ptr<DisjointListStateData>(state);
-
-    // choose a list to pop from (list_i) randomly weighted by how many items are in it,
-    // and another list to pop to (list_j) uniformly randomly
-    size_t list_i = 0;
-
-    std::uniform_real_distribution<double> uni_dist(0.0, 1.0);
-
-    size_t num_items = 0;
-    for (size_t list_index = 0; list_index < data->lists.size(); list_index++) {
-        auto size = data->lists[list_index].size();
-        if (size > 0) {
-            num_items += size;
-            if (uni_dist(rng) <= static_cast<double>(size) / num_items) {
-                list_i = list_index;
-            }
-        }
-    }
-
-    std::uniform_int_distribution<std::size_t> dist_lists(0, data->lists.size() - 1);
-    size_t list_j = dist_lists(rng);
-
-    if (list_i != list_j) {
-        std::uniform_int_distribution<std::size_t> eli_dist(0, data->lists[list_i].size() - 1);
-        std::uniform_int_distribution<std::size_t> elj_dist(0, data->lists[list_j].size());
-
-        this->pop_to_list(state, list_i, eli_dist(rng), list_j, elj_dist(rng));
-    } else {
-        std::uniform_int_distribution<std::size_t> el_dist(0, data->lists[list_i].size() - 1);
-
-        this->swap_in_list(state, list_i, el_dist(rng), el_dist(rng));
-    }
-}
-
 DisjointListNode::DisjointListNode(DisjointListsNode* disjoint_list_node)
         : ArrayOutputMixin(Array::DYNAMIC_SIZE),
           disjoint_list_node_ptr(disjoint_list_node),
@@ -745,14 +703,6 @@ ssize_t DisjointListNode::size_diff(const State& state) const {
     return data->lists[list_index_].size() - data->previous_list_sizes[list_index_];
 }
 
-void ListNode::default_move(State& state, RngAdaptor& rng) const {
-    std::uniform_int_distribution<std::size_t> dist(0, this->size(state) - 1);
-    // This might mean we're selecting the same variable twice.
-    // But for large-ish lists that should be quite rare and anyway it's
-    // pretty harmless.
-    this->exchange(state, dist(rng), dist(rng));
-}
-
 void ListNode::initialize_state(State& state) const {
     int index = this->topological_index();
     assert(index >= 0 && "must be topologically sorted");
@@ -760,27 +710,6 @@ void ListNode::initialize_state(State& state) const {
     assert(state[index] == nullptr && "already initialized state");
 
     state[index] = std::make_unique<CollectionStateData>(max_size_);
-}
-
-void SetNode::default_move(State& state, RngAdaptor& rng) const {
-    // 50/50 that we grow or shrink
-    const ssize_t size = this->size(state);
-
-    std::uniform_int_distribution<int> coin(0, 1);
-
-    if (size < max_size_ && coin(rng)) {
-        // Grow
-
-        // first randomly shuffle the value we're going to add
-        std::uniform_int_distribution<int> unused(size, max_size_ - 1);
-        this->exchange(state, size, unused(rng));
-
-        // then grow
-        this->grow(state);
-    } else if (size > min_size_) {
-        // Shrink
-        this->shrink(state);
-    }
 }
 
 void SetNode::initialize_state(State& state) const {

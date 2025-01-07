@@ -44,7 +44,7 @@ TEST_CASE("BinaryNode") {
 
         WHEN("We create a state using a random number generator") {
             auto state = graph.empty_state();
-            auto rng = RngAdaptor(std::mt19937(42));
+            auto rng = std::default_random_engine(42);
             ptr->initialize_state(state, rng);
             graph.initialize_state(state);
             auto state_view = ptr->view(state);
@@ -157,7 +157,7 @@ TEST_CASE("BinaryNode") {
 
         WHEN("We create a state using a random number generator") {
             auto state = graph.empty_state();
-            auto rng = RngAdaptor(std::mt19937(42));
+            auto rng = std::default_random_engine(42);
             ptr->initialize_state(state, rng);
             graph.initialize_state(state);
             auto state_view = ptr->view(state);
@@ -331,7 +331,7 @@ TEST_CASE("IntegerNode") {
 
         WHEN("We create a state using a random number generator") {
             auto state = graph.empty_state();
-            auto rng = RngAdaptor(std::mt19937(42));
+            auto rng = std::default_random_engine(42);
             ptr->initialize_state(state, rng);
             graph.initialize_state(state);
             auto state_view = ptr->view(state);

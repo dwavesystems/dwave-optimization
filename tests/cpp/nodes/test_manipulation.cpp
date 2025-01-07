@@ -22,6 +22,7 @@
 #include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
+#include "dwave-optimization/nodes/testing.hpp"
 
 namespace dwave::optimization {
 
@@ -308,22 +309,24 @@ TEST_CASE("ReshapeNode") {
                 graph.emplace_node<ReshapeNode>(x_ptr, std::vector<ssize_t>{3, 3}),
                 graph.emplace_node<ReshapeNode>(A_ptr, std::vector<ssize_t>{3, 3})));
 
-        WHEN("We do random moves") {
-            auto rng = RngAdaptor(std::mt19937(42));
+        graph.emplace_node<ArrayValidationNode>(lhs_ptr);
+        graph.emplace_node<ArrayValidationNode>(rhs_ptr);
 
+        WHEN("We do random moves") {
             auto state = graph.initialize_state();
 
+            auto rng = std::default_random_engine(42);
             std::uniform_int_distribution<int> num_moves(1, 5);
             std::uniform_int_distribution<int> coin(0, 1);
+            std::uniform_int_distribution<int> variable(0, 8);
 
-            for (auto i = 0; i < 100; ++i) {
-                // do a random number of default moves
-                for (auto j = 0, n = num_moves(rng); j < n; ++j) {
-                    x_ptr->default_move(state, rng);
+            for (int i = 0; i < 100; ++i) {
+                // do a random number of flips of random variables
+                for (int j = 0, n = num_moves(rng); j < n; ++j) {
+                    x_ptr->flip(state, variable(rng));
                 }
 
-                graph.propose(state, {x_ptr},
-                              [&rng, &coin](const Graph&, State&) { return coin(rng); });
+                graph.propose(state, {x_ptr}, [&](const Graph&, State&) { return coin(rng); });
 
                 CHECK(std::ranges::equal(lhs_ptr->view(state), rhs_ptr->view(state)));
             }

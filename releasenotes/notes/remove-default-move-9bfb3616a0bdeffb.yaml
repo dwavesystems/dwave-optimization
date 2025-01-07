@@ -1,0 +1,8 @@
+---
+features:
+  - Add random overloads for C++ ``DynamicArrayTestingNode::grow()`` and ``DynamicArrayTestingNode::set()``.
+deprecations:
+  - Remove ``::default_move()`` method from the C++ ``Decision`` class and all subclasses.
+  - Remove C++ ``DynamicArrayTestingNode::random_moves()`` method.
+  - Rework C++ ``NumberNode::initialize_state()`` overloads for better consistency.
+  - Remove ``RngAdaptor`` class.

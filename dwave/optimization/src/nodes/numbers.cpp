@@ -68,16 +68,6 @@ void NumberNode::initialize_state(State& state) const {
     initialize_state(state, std::move(number_data));
 }
 
-void NumberNode::initialize_state(State& state, RngAdaptor& rng) const {
-    assert(this->topological_index() >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > this->topological_index() && "unexpected state length");
-    assert(state[this->topological_index()] == nullptr && "already initialized state");
-
-    std::vector<double> number_data(this->size());
-    std::generate(number_data.begin(), number_data.end(), [&]() { return generate_value(rng); });
-    initialize_state(state, std::move(number_data));
-}
-
 // Specializations for the linear case
 bool NumberNode::exchange(State& state, ssize_t i, ssize_t j) const {
     return data_ptr<ArrayNodeStateData>(state)->exchange(i, j);
@@ -118,11 +108,6 @@ bool IntegerNode::is_valid(double value) const {
     return (value >= lower_bound()) && (value <= upper_bound()) && (std::round(value) == value);
 }
 
-double IntegerNode::generate_value(RngAdaptor& rng) const {
-    std::uniform_int_distribution<ssize_t> value_dist(lower_bound_, upper_bound_);
-    return value_dist(rng);
-}
-
 double IntegerNode::default_value() const {
     return (lower_bound() <= 0 && upper_bound() >= 0) ? 0 : lower_bound();
 }
@@ -136,12 +121,6 @@ bool IntegerNode::set_value(State& state, ssize_t i, int value) const {
         throw std::invalid_argument("Invalid integer value provided");
     }
     return data_ptr<ArrayNodeStateData>(state)->set(i, value);
-}
-
-void IntegerNode::default_move(State& state, RngAdaptor& rng) const {
-    std::uniform_int_distribution<std::size_t> index_dist(0, this->size(state) - 1);
-    std::uniform_int_distribution<std::size_t> value_dist(lower_bound_, upper_bound_);
-    this->set_value(state, index_dist(rng), value_dist(rng));
 }
 
 // Binary Node
@@ -165,11 +144,6 @@ bool BinaryNode::set(State& state, ssize_t i) const {
 
 bool BinaryNode::unset(State& state, ssize_t i) const {
     return data_ptr<ArrayNodeStateData>(state)->set(i, 0);
-}
-
-void BinaryNode::default_move(State& state, RngAdaptor& rng) const {
-    std::uniform_int_distribution<std::size_t> index_dist(0, this->size(state) - 1);
-    this->flip(state, index_dist(rng));
 }
 
 }  // namespace dwave::optimization
