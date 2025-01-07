@@ -20,8 +20,8 @@ from dwave.optimization._model import ArraySymbol
 from dwave.optimization.symbols import (
     Add,
     And,
-    Constant,
     Concatenate,
+    Constant,
     Divide,
     Logical,
     Maximum,
