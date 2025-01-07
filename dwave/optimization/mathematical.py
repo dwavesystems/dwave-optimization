@@ -146,12 +146,14 @@ def concatenate(array_likes : typing.Union[collections.abc.Iterable, ArraySymbol
     if isinstance(array_likes, ArraySymbol):
         return array_likes
 
-    if isinstance(array_likes, collections.abc.Sequence) and (0 < len(array_likes)):
-        if isinstance(array_likes[0], ArraySymbol):
-            if len(array_likes) == 1:
-                return array_likes[0]
+    if (isinstance(array_likes, collections.abc.Iterable)
+        and isinstance(array_likes, collections.abc.Sized)
+        and (0 < len(array_likes))):
 
-            return Concatenate(tuple(array_likes), axis)
+        if len(array_likes) == 1:
+            return array_likes[0]
+
+        return Concatenate(tuple(array_likes), axis)
 
     raise TypeError("concatenate takes one or more ArraySymbol as input")
 
