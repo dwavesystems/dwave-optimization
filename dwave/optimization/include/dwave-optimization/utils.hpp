@@ -127,6 +127,17 @@ class fraction {
         return lhs;
     }
 
+    constexpr friend fraction operator+(const fraction& lhs, const fraction& rhs) {
+        return fraction(lhs.numerator_ * rhs.denominator_ + rhs.numerator_ * lhs.denominator_,
+                        lhs.denominator_ * rhs.denominator_);
+    }
+    constexpr friend fraction operator+(const fraction& lhs,  const std::integral auto& rhs) {
+        return lhs + fraction(rhs);
+    }
+    constexpr friend fraction operator+(const std::integral auto& lhs, fraction& rhs) {
+        return fraction(lhs) + rhs;
+    }
+
     /// Fractions can be printed
     friend std::ostream& operator<<(std::ostream& os, const fraction& rhs) {
         os << "fraction(" << rhs.numerator();
