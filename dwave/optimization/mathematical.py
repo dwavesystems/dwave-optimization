@@ -20,6 +20,7 @@ from dwave.optimization._model import ArraySymbol
 from dwave.optimization.symbols import (
     Add,
     And,
+    Constant,
     Concatenate,
     Divide,
     Logical,
@@ -150,6 +151,10 @@ def concatenate(array_likes : typing.Union[collections.abc.Iterable, ArraySymbol
         if isinstance(array_likes[0], ArraySymbol):
             if len(array_likes) == 1:
                 return array_likes[0]
+
+            # Special case for handling list of constants
+            if isinstance(array_likes[0], Constant):
+                return Concatenate(tuple(s.reshape((1,)) for s in array_likes))
 
             return Concatenate(tuple(array_likes), axis)
 
