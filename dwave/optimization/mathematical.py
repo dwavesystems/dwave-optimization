@@ -21,7 +21,6 @@ from dwave.optimization.symbols import (
     Add,
     And,
     Concatenate,
-    Constant,
     Divide,
     Logical,
     Maximum,
@@ -53,6 +52,7 @@ __all__ = [
     "minimum",
     "mod",
     "multiply",
+    "stack",
     "sqrt",
     "where",
 ]
@@ -151,11 +151,6 @@ def concatenate(array_likes : typing.Union[collections.abc.Iterable, ArraySymbol
         if isinstance(array_likes[0], ArraySymbol):
             if len(array_likes) == 1:
                 return array_likes[0]
-
-            # Special case for handling list of constants
-            if (isinstance(array_likes, list)
-                and isinstance(array_likes[0], Constant)):
-                return Concatenate(tuple(s.reshape((1,)) for s in array_likes))
 
             return Concatenate(tuple(array_likes), axis)
 
@@ -520,6 +515,55 @@ def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         [21. 10.]
     """
     raise RuntimeError("implementated by the op() decorator")
+
+
+def stack(xi: collections.abc.Iterable):
+    r"""Joins n 0d arrays (scalars) into a length n 1d array.
+
+    The 1d array is constructed by reshaping each 0d array and
+    concatenating them on the first axis.
+
+    Args:
+        xi: sequence of n scalars
+
+    Returns:
+        A 1d array of n scalars
+
+    Examples:
+
+        This example stacks three constants.
+
+        >>> from dwave.optimization import Model, stack
+        ...
+        >>> model = Model()
+        >>> x = [model.constant(1), model.constant(2), model.constant(3)]
+        >>> s = stack(x)
+        >>> s.shape()
+        (3,)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     print(s.state(0))
+        [1. 2. 3.]
+
+        This example concatenates two sequences of scalars by first stacking them.
+
+        >>> from dwave.optimization import Model, stack, concatenate
+        ...
+        >>> model = Model()
+        >>> a = stack([model.constant(1), model.constant(2)])
+        >>> b = stack([model.constant(3), model.constant(4)])
+        >>> a_b = concatenate((a, b))
+        >>> a_b.shape()
+        (4,)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     print(a_b.state(0))
+        [1. 2. 3. 4.]
+    """
+    if all([ (isinstance(x, ArraySymbol) and x.ndim() == 0) for x in xi]):
+        return concatenate([x.reshape((1,)) for x in xi])
+
+    raise ValueError("stack takes an Iterable of n 0d arrays (scalars)")
 
 
 def sqrt(x: ArraySymbol) -> SquareRoot:

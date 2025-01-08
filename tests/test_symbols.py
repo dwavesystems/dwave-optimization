@@ -778,21 +778,6 @@ class TestConcatenate(utils.SymbolTests):
         model.lock()
         yield c
 
-    def test_constants(self):
-        model = Model()
-        with self.subTest("list of single constant returns ArraySymbol"):
-            A = [model.constant(0)]
-            self.assertIsInstance(
-                dwave.optimization.concatenate(A),
-                dwave.optimization.model.ArraySymbol
-            )
-        with self.subTest("list of constants returns Concatenate"):
-            A = [model.constant(0), model.constant(1)]
-            self.assertIsInstance(
-                dwave.optimization.concatenate(A),
-                dwave.optimization.symbols.Concatenate
-            )
-
     def test_errors(self):
         model = Model()
         with self.subTest("same number of dimensions"):
