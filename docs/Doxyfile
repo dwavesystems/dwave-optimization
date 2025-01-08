@@ -1,7 +1,7 @@
 # Doxyfile 1.9.1
 
 PROJECT_NAME           = dwave-optimization
-OUTPUT_DIRECTORY       = build/doxygen/
+OUTPUT_DIRECTORY       = $(DOXYGEN_OUTPUT_DIRECTORY)
 INPUT                  = ../dwave/optimization/include/dwave-optimization/ \
                          ../dwave/optimization/include/dwave-optimization/nodes/
 FILE_PATTERNS          = *.hpp *.cpp
