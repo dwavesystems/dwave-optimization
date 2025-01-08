@@ -3,6 +3,9 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import os
+import subprocess
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -21,8 +24,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.ifconfig',
     'sphinx_design',
-#   'breathe',
-#   'reno.sphinxext',
+    'breathe',
 ]
 
 autosummary_generate = True
@@ -61,7 +63,7 @@ linkcheck_anchors = False
 linkcheck_ignore = [r'https://cloud.dwavesys.com/leap',  # redirects, many checks
                     r'.clang-format',
                     r'setup.cfg',
-                    ]  
+                    ]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -80,6 +82,16 @@ import dwave.optimization
 autodoc_type_aliases = {
     'numpy.typing.ArrayLike': 'numpy.typing.ArrayLike',
 }
+
+# -- Breathe --------------------------------------------------------------
+
+breathe_projects = {
+  'dwave-optimization': os.path.join(os.path.dirname(os.path.abspath(__file__)), 'build', 'doxygen', 'xml'),
+}
+
+# see https://breathe.readthedocs.io/en/latest/readthedocs.html
+if os.environ.get('READTHEDOCS', False):
+    subprocess.call('make cpp', shell=True, cwd=os.path.dirname(os.path.abspath(__file__)))
 
 # -- Options for HTML output ----------------------------------------------
 
