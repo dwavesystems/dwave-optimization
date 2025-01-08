@@ -8,3 +8,4 @@ FILE_PATTERNS          = *.hpp *.cpp
 GENERATE_HTML          = NO
 GENERATE_LATEX         = NO
 GENERATE_XML           = YES
+WARN_IF_UNDOCUMENTED   = NO
