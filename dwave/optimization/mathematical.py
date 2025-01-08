@@ -143,6 +143,21 @@ def concatenate(array_likes : typing.Union[collections.abc.Iterable, ArraySymbol
         [[0. 1.]
          [2. 3.]
          [4. 5.]]
+
+        This example concatenates two sequences of scalars by first stacking them.
+
+        >>> from dwave.optimization import Model, stack, concatenate
+        ...
+        >>> model = Model()
+        >>> a = stack([model.constant(1), model.constant(2)])
+        >>> b = stack([model.constant(3), model.constant(4)])
+        >>> a_b = concatenate((a, b))
+        >>> a_b.shape()
+        (4,)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     print(a_b.state(0))
+        [1. 2. 3. 4.]
     """
     if isinstance(array_likes, ArraySymbol):
         return array_likes
@@ -544,21 +559,6 @@ def stack(xi: collections.abc.Iterable):
         ...     model.states.resize(1)
         ...     print(s.state(0))
         [1. 2. 3.]
-
-        This example concatenates two sequences of scalars by first stacking them.
-
-        >>> from dwave.optimization import Model, stack, concatenate
-        ...
-        >>> model = Model()
-        >>> a = stack([model.constant(1), model.constant(2)])
-        >>> b = stack([model.constant(3), model.constant(4)])
-        >>> a_b = concatenate((a, b))
-        >>> a_b.shape()
-        (4,)
-        >>> with model.lock():
-        ...     model.states.resize(1)
-        ...     print(a_b.state(0))
-        [1. 2. 3. 4.]
     """
     if all([ (isinstance(x, ArraySymbol) and x.ndim() == 0) for x in xi]):
         return concatenate([x.reshape((1,)) for x in xi])
