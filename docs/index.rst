@@ -23,6 +23,7 @@ Documentation
 
   intro
   reference/index
+  release_notes
 
 .. sdk-end-marker
 
