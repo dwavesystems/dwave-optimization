@@ -13,6 +13,7 @@ import subprocess
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    # extensions provided by sphinx
     'sphinx.ext.autosummary',
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
@@ -23,6 +24,9 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
     'sphinx.ext.ifconfig',
+
+    # other extensions
+    'reno.sphinxext',
     'sphinx_design',
     'breathe',
 ]

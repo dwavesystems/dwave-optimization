@@ -9,4 +9,4 @@ meson~=1.6.0
 ninja~=1.11.0
 
 # Other requirements, see also tests/requirements.txt and docs/requirements.txt
-reno==4.1.0  # for changelog
+reno==4.1.0  # for changelog, keep synced with docs/requirements.txt
