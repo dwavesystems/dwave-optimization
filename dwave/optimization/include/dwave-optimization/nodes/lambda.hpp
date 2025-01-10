@@ -14,10 +14,13 @@
 
 #pragma once
 
+#include <variant>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
+#include "dwave-optimization/nodes/constants.hpp"
+#include "dwave-optimization/nodes/mathematical.hpp"
 
 namespace dwave::optimization {
 
@@ -64,6 +67,12 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
     const ArrayNode* output_;
 };
 
-Graph validate_expression(Graph&& expression);
+void validate_expression(const Graph& expression);
+
+void validate_naryreduce_arguments(const Graph& expression, const std::vector<ArrayNode*> operands);
+
+using NaryReduceSupportedNodes =
+        std::variant<const InputNode*, const ConstantNode*, const MaximumNode*, const NegativeNode*,
+                     const AddNode*, const SubtractNode*, const MultiplyNode*>;
 
 }  // namespace dwave::optimization

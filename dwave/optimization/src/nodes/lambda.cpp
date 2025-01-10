@@ -16,9 +16,7 @@
 
 #include "_state.hpp"
 #include "dwave-optimization/array.hpp"
-#include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/inputs.hpp"
-#include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/state.hpp"
 #include "dwave-optimization/utils.hpp"
 
@@ -38,25 +36,26 @@ class NaryReduceNodeData : public ArrayNodeStateData {
     State register_;
 };
 
-template <class T, class... Ts, class node_type>
-bool is_variant(const node_type* node_ptr) {
-    // If the pointer can be dynamically cast to this type, return true
-    if (dynamic_cast<const T*>(node_ptr)) {
-        return true;
+// Returns whether the node pointer can be cast to one of the types in the supplied variant
+template <class V, std::size_t type_index = 0>
+bool variant_supports(const ArrayNode* node_ptr) {
+    if constexpr (type_index < std::variant_size_v<V>) {
+        if (dynamic_cast<std::variant_alternative_t<type_index, V>>(node_ptr)) {
+            return true;
+        }
+        return variant_supports<V, type_index + 1>(node_ptr);
     }
-
-    // If there are still types left to check then "recurse"
-    if constexpr (sizeof...(Ts) > 0) {
-        return is_variant<Ts...>(node_ptr);
-    }
-
-    // If none match, then this Node didn't belong to the list of types
     return false;
 }
 
-Graph validate_expression(Graph&& expression) {
+void validate_expression(const Graph& expression) {
     if (!expression.topologically_sorted()) {
         throw std::invalid_argument("Expression must be topologically sorted");
+    }
+
+    if (!expression.objective()) {
+        throw std::invalid_argument(
+                R"({"message": "expression must have output (objective) set"})");
     }
 
     if (expression.num_decisions()) {
@@ -74,8 +73,7 @@ Graph validate_expression(Graph&& expression) {
                     std::to_string((uintptr_t)(void*)node_ptr.get()) + "}");
         }
 
-        if (!is_variant<InputNode, ConstantNode, MaximumNode, NegativeNode, AddNode, SubtractNode,
-                        MultiplyNode>(array_node)) {
+        if (!variant_supports<NaryReduceSupportedNodes>(array_node)) {
             throw std::invalid_argument(
                     R"({"message": "Expression contains unsupported node", "node_ptr": )" +
                     std::to_string((uintptr_t)(void*)node_ptr.get()) + "}");
@@ -87,7 +85,10 @@ Graph validate_expression(Graph&& expression) {
                     std::to_string((uintptr_t)(void*)node_ptr.get()) + "}");
         }
     }
+}
 
+Graph _validate_expression(Graph&& expression) {
+    validate_expression(expression);
     return expression;
 }
 
@@ -112,48 +113,58 @@ auto get_operands_shape(const Graph& expression, std::span<ArrayNode* const> ope
     return operands[0]->shape();
 }
 
-NaryReduceNode::NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands,
-                               double initial)
-        : ArrayOutputMixin(get_operands_shape(expression, operands)),
-          initial(initial),
-          expression_(validate_expression(std::move(expression))),
-          operands_(operands),
-          output_(expression_.objective()) {
-    if (!output_) {
-        throw std::invalid_argument(
-                R"({"message": "expression must have output (objective) set"})");
-    }
+void validate_naryreduce_arguments(const Graph& expression,
+                                   const std::vector<ArrayNode*> operands) {
+    auto output = expression.objective();
 
-    assert(operand_inputs().size() == operands_.size());
+    auto operand_inputs = expression.inputs().subspan(1);
 
-    for (ssize_t op_idx = 0; op_idx < static_cast<ssize_t>(operands_.size()); op_idx++) {
-        if (operands_[op_idx]->min() < operand_inputs()[op_idx]->min()) {
+    assert(operand_inputs.size() == operands.size());
+
+    for (ssize_t op_idx = 0; op_idx < static_cast<ssize_t>(operands.size()); op_idx++) {
+        if (operands[op_idx]->min() < operand_inputs[op_idx]->min()) {
             throw std::invalid_argument(
                     R"({"message": "operand with index )" + std::to_string(op_idx) +
                     R"( has minimum smaller than corresponding input in expression"})");
-        } else if (operands_[op_idx]->max() > operand_inputs()[op_idx]->max()) {
+        } else if (operands[op_idx]->max() > operand_inputs[op_idx]->max()) {
             throw std::invalid_argument(
                     R"({"message": "operand with index )" + std::to_string(op_idx) +
                     R"( has maximum larger than corresponding input in expression"})");
-        } else if (operand_inputs()[op_idx]->integral() && !operands_[op_idx]->integral()) {
+        } else if (operand_inputs[op_idx]->integral() && !operands[op_idx]->integral()) {
             throw std::invalid_argument(
                     R"({"message": "operand with index )" + std::to_string(op_idx) +
                     R"( is non-integral, but corresponding input is integral"})");
         }
     }
 
-    if (reduction_input()->integral() && !output_->integral()) {
+    auto reduction_input = expression.inputs()[0];
+
+    if (reduction_input->integral() && !output->integral()) {
         throw std::invalid_argument(
                 R"({"message": "if expression output can be non-integral, last input must not be integral"})");
         ;
-    } else if (output_->min() < reduction_input()->min()) {
+    } else if (output->min() < reduction_input->min()) {
         throw std::invalid_argument(
                 R"({"message": "expression output must not have a lower min than the last input"})");
-    } else if (output_->max() > reduction_input()->max()) {
+    } else if (output->max() > reduction_input->max()) {
         throw std::invalid_argument(
                 R"({"message": "expression output must not have a higher max than the last input"})");
     }
+}
 
+Graph _validate_naryreduce_arguments(Graph&& expression, const std::vector<ArrayNode*> operands) {
+    validate_naryreduce_arguments(expression, operands);
+    return expression;
+}
+
+NaryReduceNode::NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands,
+                               double initial)
+        : ArrayOutputMixin(get_operands_shape(expression, operands)),
+          initial(initial),
+          expression_(_validate_naryreduce_arguments(_validate_expression(std::move(expression)),
+                                                     operands)),
+          operands_(operands),
+          output_(expression_.objective()) {
     for (const auto& op : operands_) {
         add_predecessor(op);
     }
@@ -266,9 +277,7 @@ void NaryReduceNode::propagate(State& state) const {
     if (data->diff().size()) Node::propagate(state);
 }
 
-const InputNode* const NaryReduceNode::reduction_input() const {
-    return expression_.inputs()[0];
-}
+const InputNode* const NaryReduceNode::reduction_input() const { return expression_.inputs()[0]; }
 
 void NaryReduceNode::revert(State& state) const { data_ptr<NaryReduceNodeData>(state)->revert(); }
 

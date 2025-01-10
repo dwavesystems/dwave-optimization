@@ -1936,7 +1936,7 @@ class TestNaryReduce(utils.SymbolTests):
         with self.assertRaises(ValueError):
             dwave.optimization.symbols.NaryReduce(expr, (c0,))
 
-    def test_invalid_expressions(self):
+    def test_invalid_expression_non_scalar(self):
         model = Model()
         c0 = model.constant([0, 0])
 
@@ -1954,6 +1954,10 @@ class TestNaryReduce(utils.SymbolTests):
             )
             self.assertRegex(str(e), "scalar")
             self.assertTrue(inp5.equals(e.symbol))
+
+    def test_invalid_expression_input_range(self):
+        model = Model()
+        c0 = model.constant([0, 0])
 
         # Can't use an expression without higher possible output than last input
         expr = Expression()

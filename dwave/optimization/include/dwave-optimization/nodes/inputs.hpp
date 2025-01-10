@@ -39,6 +39,10 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
             : InputNode({}, -std::numeric_limits<double>::infinity(),
                         std::numeric_limits<double>::infinity(), false) {};
 
+    explicit InputNode(std::initializer_list<ssize_t> shape)
+            : InputNode(shape, -std::numeric_limits<double>::infinity(),
+                        std::numeric_limits<double>::infinity(), false) {};
+
     void assign(State& state, std::span<const double> new_values) const;
 
     double const* buff(const State&) const override;
