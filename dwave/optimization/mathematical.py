@@ -546,7 +546,7 @@ def stack(arrays: collections.abc.Iterable[ArraySymbol], axis: int = 0) -> Array
     r"""Joins a sequence of ArraySymbols along a new axis.
 
         Args:
-            xi: sequence of ArraySymbol
+            arrays: sequence of ArraySymbol
         Returns:
             The joined ArraySymbols on a new axis
         Examples:
