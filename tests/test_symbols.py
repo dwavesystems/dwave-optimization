@@ -34,6 +34,7 @@ from dwave.optimization import (
     logical_xor,
     mod,
     sqrt,
+    stack,
 )
 
 
@@ -2360,6 +2361,91 @@ class TestSubtract(utils.BinaryOpTests):
 
         with self.assertRaises(ValueError):
             a - b
+
+
+class TestStack(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        A = model.constant(np.arange(6).reshape((3, 2)))
+        s = stack([A])
+        model.lock()
+        yield s
+
+    def test_scalars(self):
+        model = Model()
+        symbols = [model.constant(1), model.constant(2), model.constant(3)]
+        s = stack(symbols)
+        with model.lock():
+            model.states.resize(1)
+            self.assertIsInstance(s, dwave.optimization.model.ArraySymbol)
+            self.assertEqual(s.shape(), (3, ))
+            self.assertEqual(s.ndim(), 1)
+            np.testing.assert_array_equal(s.state(0), np.arange(1, 4))
+
+    def test_1d_arrays(self):
+        model = Model()
+        A = model.constant(np.arange(3).reshape((3, )))
+        B = model.constant(np.arange(3, 6).reshape((3, )))
+        s0 = stack((A, B), axis=0)
+        s1 = stack((A, B), axis=1)
+        with model.lock():
+            model.states.resize(1)
+            np.testing.assert_array_equal(
+                s0.state(0), np.stack((A, B), axis=0))
+            np.testing.assert_array_equal(
+                s1.state(0), np.stack((A, B), axis=1))
+
+    def test_2d_arrays(self):
+        model = Model()
+        A = model.constant(np.arange(4).reshape((2, 2)))
+        B = model.constant(np.arange(4, 8).reshape((2, 2)))
+        s0 = stack((A, B), axis=0)
+        s1 = stack((A, B), axis=1)
+        s2 = stack((A, B), axis=2)
+        with model.lock():
+            model.states.resize(1)
+            np.testing.assert_array_equal(
+                s0.state(0), np.stack((A, B), axis=0))
+            np.testing.assert_array_equal(
+                s1.state(0), np.stack((A, B), axis=1))
+            np.testing.assert_array_equal(
+                s2.state(0), np.stack((A, B), axis=2))
+
+    def test_nd_arrays(self):
+        rng = np.random.default_rng(1)
+        dims = rng.integers(0, 5)
+        shape = tuple(rng.integers(1, 4) for _ in range(dims + 1))
+        model = Model()
+        A = np.random.randint(0, 10, shape)
+        B = np.random.randint(0, 10, shape)
+        C = np.random.randint(0, 10, shape)
+        symbols = [model.constant(A), model.constant(B), model.constant(C)]
+        for axis in range(dims+1):
+            s = stack(symbols, axis)
+            with model.lock():
+                model.states.resize(1)
+                np.testing.assert_array_equal(
+                    s.state(0),
+                    np.stack((A, B, C), axis))
+
+    def test_errors(self):
+        with self.subTest("not ArraySymbols"):
+            A = [0, 1, 2]
+            with self.assertRaisesRegex(
+                ValueError,
+                (r"^stack takes an Iterable of ArraySymbols of same shape")
+            ):
+                stack(A)
+
+        with self.subTest("axis out of bounds"):
+            model = Model()
+            A = model.constant(np.arange(9).reshape((3, 1, 3)))
+            B = model.constant(np.arange(9).reshape((3, 1, 3)))
+            with self.assertRaisesRegex(
+                ValueError,
+                (r"axis 4 is out of bounds for array of dimension 4")
+            ):
+                stack((A, B), axis=4)
 
 
 class TestSum(utils.SymbolTests):
