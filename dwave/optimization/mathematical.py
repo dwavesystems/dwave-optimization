@@ -587,8 +587,9 @@ def stack(xi: collections.abc.Iterable, axis: int = 0) -> ArraySymbol:
              [2. 4. 6.]]
     """
     if all(isinstance(x, ArraySymbol) for x in xi):
-        if not (0 <= axis and axis <= xi[0].ndim()):
-            raise ValueError(f"axis {axis} is out of bounds for array of dimension {xi[0].ndim()+1}")
+        if not 0 <= axis <= xi[0].ndim():
+            raise ValueError(f'axis {axis} is out of bounds for array'
+                             f' of dimension {xi[0].ndim()+1}')
 
         make_shape = lambda x: (x.shape()[:axis]) + (1,) + (x.shape()[axis:])
         return concatenate([x.reshape(make_shape(x)) for x in xi], axis)
