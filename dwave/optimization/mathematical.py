@@ -586,7 +586,7 @@ def stack(xi: collections.abc.Iterable, axis : int = 0) -> ArraySymbol:
             [[1. 3. 5.]
              [2. 4. 6.]]
     """
-    if all([ isinstance(x, ArraySymbol) for x in xi]):
+    if all(isinstance(x, ArraySymbol) for x in xi):
         if not (0 <= axis and axis <= xi[0].ndim()):
             raise ValueError(f"axis {axis} is out of bounds for array of dimension {xi[0].ndim()+1}")
 
