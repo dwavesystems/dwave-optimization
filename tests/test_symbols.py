@@ -2414,7 +2414,7 @@ class TestStack(utils.SymbolTests):
     def test_nd_arrays(self):
         rng = np.random.default_rng(1)
         dims = rng.integers(0, 5)
-        shape = tuple([rng.integers(1, 4) for _ in range(dims + 1)])
+        shape = tuple(rng.integers(1, 4) for _ in range(dims + 1))
         model = Model()
         A = np.random.randint(0, 10, shape)
         B = np.random.randint(0, 10, shape)
