@@ -542,7 +542,7 @@ def sqrt(x: ArraySymbol) -> SquareRoot:
     return SquareRoot(x)
 
 
-def stack(xi: collections.abc.Iterable, axis: int = 0) -> ArraySymbol:
+def stack(arrays: collections.abc.Iterable[ArraySymbol], axis: int = 0) -> ArraySymbol:
     r"""Joins a sequence of ArraySymbols along a new axis.
 
         Args:
@@ -586,13 +586,13 @@ def stack(xi: collections.abc.Iterable, axis: int = 0) -> ArraySymbol:
             [[1. 3. 5.]
              [2. 4. 6.]]
     """
-    if all(isinstance(x, ArraySymbol) for x in xi):
-        if not 0 <= axis <= xi[0].ndim():
+    if all(isinstance(arr, ArraySymbol) for arr in arrays):
+        if not 0 <= axis <= arrays[0].ndim():
             raise ValueError(f'axis {axis} is out of bounds for array'
-                             f' of dimension {xi[0].ndim()+1}')
+                             f' of dimension {arrays[0].ndim()+1}')
 
         make_shape = lambda x: (x.shape()[:axis]) + (1,) + (x.shape()[axis:])
-        return concatenate([x.reshape(make_shape(x)) for x in xi], axis)
+        return concatenate([arr.reshape(make_shape(arr)) for arr in arrays], axis)
 
     raise ValueError("stack takes an Iterable of ArraySymbols of same shape")
 
