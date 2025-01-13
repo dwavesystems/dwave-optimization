@@ -2439,8 +2439,8 @@ class TestStack(utils.SymbolTests):
 
         with self.subTest("axis out of bounds"):
             model = Model()
-            A = model.constant(np.arange(9).reshape(3, 1, 3))
-            B = model.constant(np.arange(9).reshape(3, 1, 3))
+            A = model.constant(np.arange(9).reshape((3, 1, 3)))
+            B = model.constant(np.arange(9).reshape((3, 1, 3)))
             with self.assertRaisesRegex(
                 ValueError,
                 (r"axis 4 is out of bounds for array of dimension 4")
