@@ -33,6 +33,7 @@ from dwave.optimization import (
     logical_not,
     logical_xor,
     mod,
+    put,
     sqrt,
     stack,
 )
@@ -2051,6 +2052,61 @@ class TestProd(utils.SymbolTests):
 
         self.assertEqual(a.state(0), 0)
         self.assertEqual(b.state(0), 5*6*7*8*9)
+
+
+class TestPut(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+
+        array = model.constant([0, 1, 2])
+        indices = model.constant([1])
+        values = model.constant([-1])
+        p = put(array, indices, values)
+        with model.lock():
+            yield p
+
+    def test_1d(self):
+        model = Model()
+
+        array = model.constant(np.zeros((3, 3)))
+        indices = model.constant([0, 1, 2])
+        values = model.integer(3)
+        array = put(array, indices, values)
+
+        model.states.resize(1)
+        with model.lock():
+            values.set_state(0, [10, 20, 30])
+            np.testing.assert_array_equal(array.state(), [[10, 20, 30], [0, 0, 0], [0, 0, 0]])
+            values.set_state(0, [100, 200, 300])
+            np.testing.assert_array_equal(array.state(), [[100, 200, 300], [0, 0, 0], [0, 0, 0]])
+
+    def test_disallow_scalar(self):
+        model = Model()
+
+        array = model.constant(0)
+        indices = model.constant([0])
+        values = model.constant([1])
+
+        with self.assertRaises(ValueError):
+            put(array, indices, values)
+
+    def test_disallow_different_shapes(self):
+        model = Model()
+
+        array = model.constant(np.zeros((3, 3)))
+        indices = model.set(3)
+        values = model.set(3)  # may be a different size than indices
+        with self.assertRaises(ValueError):
+            put(array, indices, values)
+
+    def test_disallow_out_of_range(self):
+        model = Model()
+
+        array = model.constant(np.zeros((3, 3)))
+        indices = model.integer(3, upper_bound=100)  # may be out of bounds
+        values = model.constant([0, 1, 2])
+        with self.assertRaises(IndexError):
+            put(array, indices, values)
 
 
 class TestQuadraticModel(utils.SymbolTests):

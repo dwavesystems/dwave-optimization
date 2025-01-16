@@ -259,6 +259,9 @@ PutNode::PutNode(ArrayNode* array_ptr, ArrayNode* indices_ptr, ArrayNode* values
     if (array_ptr_->dynamic()) {
         throw std::invalid_argument("array cannot be dynamic");
     }
+    if (array_ptr_->ndim() < 1) {
+        throw std::invalid_argument("array cannot be a scalar");
+    }
 
     if (indices_ptr_->ndim() != 1 || values_ptr_->ndim() != 1) {
         throw std::invalid_argument("indices and values must be 1-dimensional");
@@ -268,7 +271,8 @@ PutNode::PutNode(ArrayNode* array_ptr, ArrayNode* indices_ptr, ArrayNode* values
     }
 
     if (!array_shape_equal(indices_ptr_, values_ptr_)) {
-        throw std::invalid_argument("shape mismatch: indices and values must be the same size");
+        throw std::invalid_argument(
+                "shape mismatch: indices and values must always be the same size");
     }
 
     if (indices_ptr_->min() < 0) {

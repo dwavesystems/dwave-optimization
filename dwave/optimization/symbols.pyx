@@ -82,6 +82,7 @@ from dwave.optimization.libcpp.nodes cimport (
     PartialSumNode as cppPartialSumNode,
     PermutationNode as cppPermutationNode,
     ProdNode as cppProdNode,
+    PutNode as cppPutNode,
     QuadraticModel as cppQuadraticModel,
     QuadraticModelNode as cppQuadraticModelNode,
     ReshapeNode as cppReshapeNode,
@@ -135,6 +136,7 @@ __all__ = [
     "PartialSum",
     "Permutation",
     "Prod",
+    "Put",
     "QuadraticModel",
     "Reshape",
     "Subtract",
@@ -2540,6 +2542,42 @@ cdef class Prod(ArraySymbol):
     cdef cppProdNode* ptr
 
 _register(Prod, typeid(cppProdNode))
+
+
+cdef class Put(ArraySymbol):
+    """A symbol that replaces the specified elements in an array with given values.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.put`: equivalent function.
+
+    .. versionadded:: 0.4.4
+    """
+    def __init__(self, ArraySymbol array, ArraySymbol indices, ArraySymbol values):
+        cdef _Graph model = array.model
+
+        if indices.model is not model or values.model is not model:
+            raise ValueError(
+                "array, indices, and values do not all share the same underlying model"
+            )
+
+        self.ptr = model._graph.emplace_node[cppPutNode](array.array_ptr, indices.array_ptr, values.array_ptr)
+
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppPutNode* ptr = dynamic_cast_ptr[cppPutNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Put")
+
+        cdef Put m = Put.__new__(Put)
+        m.ptr = ptr
+        m.initialize_arraynode(symbol.model, ptr)
+        return m
+
+    cdef cppPutNode* ptr
+
+_register(Put, typeid(cppPutNode))
 
 
 cdef class QuadraticModel(ArraySymbol):
