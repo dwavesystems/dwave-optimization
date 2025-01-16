@@ -236,14 +236,15 @@ struct Update {
 /// This interface is designed to work with
 /// [Python's buffer protocol](https://docs.python.org/3/c-api/buffer.html).
 ///
-/// We also support a notion of state-dependent size. This allows arrays to
-/// change their size based on the state of the decision variables.
-/// Arrays are only permitted to grow and shrink along axis 0. This means that
-/// growing or shrinking an array is equivalent to extending or shrinking the
-/// buffer - there are no insertions needed.
-/// Arrays will signal that they have a state-dependent size by returning negative
-/// values for Array::size() and in the first element of Array::shape(). Also,
-/// the Array::dynamic() method has been provided for convenience.
+/// However, unlike Python's buffer protocol, Array supports state-dependent
+/// size; arrays are allowed to change their size based on the state of
+/// decision variables.
+/// Arrays are permitted to extend and contract only along axis 0.
+/// Such operations are equivalent to growing or shrinking a buffer, with no
+/// insertions being needed.
+/// Arrays signal a state-dependent size by returning negative values for
+/// Array::size() and in the first element of Array::shape(). For convenience,
+/// the Array::dynamic() method is provided.
 class Array {
  private:
     // The implementation of an iterator over the Array.
@@ -285,12 +286,12 @@ class Array {
         // Destructor.
         ~ArrayIteratorImpl_() = default;
 
-        // Construct a contiguous iterator pointing to ``ptr``.
+        // Construct a contiguous iterator pointing to `ptr`.
         explicit ArrayIteratorImpl_(value_type* ptr) noexcept
                 : ptr_(ptr), mask_(nullptr), shape_(nullptr) {}
 
         // Construct a masked iterator with a fill value.
-        // Will return the value pointed at by ``fill_ptr`` when ``*mask_ptr``
+        // Will return the value pointed at by `fill_ptr` when `*mask_ptr`
         // evaluates to true.
         // The iterator does not own the mask or the fill value. Therefore
         // the mask/fill must outlive the iterator.
@@ -505,12 +506,12 @@ class Array {
             MaskInfo(const value_type* mask_ptr, value_type* fill_ptr) noexcept
                     : mask_ptr(mask_ptr), fill_ptr(fill_ptr) {}
 
-            // dereferencing ``mask_ptr`` tells the iterator whether to substitute
+            // dereferencing `mask_ptr` tells the iterator whether to substitute
             // the fill value or not. Therefore this pointer is incremented along
             // with ArrayIteratorImpl_::ptr_.
             const value_type* mask_ptr;
 
-            // A pointer to the fill value that is substituted when ``!*mask_ptr``.
+            // A pointer to the fill value that is substituted when `!*mask_ptr`.
             // This pointer is not incremented.
             value_type* fill_ptr;
         };
@@ -713,12 +714,12 @@ class Array {
             assert(state_ptr && "state_ptr must not be nullptr");
         }
 
-        /// Return a reference to the nth element of the view.
+        /// Return a reference to the element at location `n`.
         const double& operator[](ssize_t n) const;
 
-        /// Return a reference to the nth element of the view.
+        /// Return a reference to the element at location `n`.
         ///
-        /// This function checks whether n is within bounds and throws a
+        /// This function checks whether `n` is within bounds and throws a
         /// std::out_of_range exception if it is not.
         const double& at(ssize_t n) const;
 
@@ -771,31 +772,31 @@ class Array {
     /// Always returns a positive number.
     ssize_t len(const State& state) const { return size(state) * itemsize(); }
 
-    /// Exactly ``sizeof(double)``.
+    /// Exactly `sizeof(double)`.
     constexpr ssize_t itemsize() const { return sizeof(double); }
 
-    /// "d" for double, see https://docs.python.org/3/library/struct.html
+    /// "d" for double; see https://docs.python.org/3/library/struct.html
     const std::string& format() const;
 
     /// The number of dimensions the memory represents as an n-dimensional array.
-    /// If 0 the buffer points to a single item representing a scalar.
+    /// If 0, the buffer points to a single item, which represents a scalar.
     virtual ssize_t ndim() const = 0;
 
-    /// An array of ndim length indicating the shape of the buffer contents
+    /// An array of Array::ndim() length indicating the shape of the buffer contents
     /// as an n-dimensional array.
     /// Note that this is in terms of the actual type rather than in terms of
-    /// num bytes.
+    /// number of bytes.
     virtual std::span<const ssize_t> shape(const State& state) const = 0;
 
-    /// An array of ndim length indicating the shape of the buffer contents
+    /// A span of Array::ndim() length indicating the shape of the buffer contents
     /// as an n-dimensional array.
     /// Note that this is in terms of the actual type rather than in terms of
-    /// num bytes.
-    /// If the shape is state-dependent, the first value in shape will be
-    /// Array::DYNAMIC_SIZE
+    /// number of bytes.
+    /// If the shape is state-dependent, the first value in shape is
+    /// Array::DYNAMIC_SIZE.
     virtual std::span<const ssize_t> shape() const = 0;
 
-    /// An array of length ndim giving the number of bytes to skip to get to a
+    /// A span of length Array::ndim() giving the number of bytes to step to get to a
     /// new element in each dimension.
     virtual std::span<const ssize_t> strides() const = 0;
 
@@ -838,7 +839,7 @@ class Array {
     /// Whether the data is stored contiguously.
     virtual bool contiguous() const = 0;
 
-    /// Whether the size if the array is state-dependent or not.
+    /// Whether the size of the array is state-dependent or not.
     bool dynamic() const { return size() < 0; }
 
     // Update signaling *******************************************************
@@ -846,7 +847,7 @@ class Array {
     /// A list of the array indices that have been updated and their previous values.
     virtual std::span<const Update> diff(const State& state) const = 0;
 
-    /// The change in the array's size
+    /// The change in the array's size.
     virtual ssize_t size_diff(const State& state) const {
         assert(size() >= 0 &&
                "size_diff(const State&) must be overloaded if the size is state-dependent");
