@@ -21,8 +21,12 @@ optimization problems. The package includes:
     hybrid nonlinear-program solver.
 *   Model generators for common optimization problems.
 
+.. end_optimization_about
+
 Example Usage
 -------------
+
+.. start_optimization_examples
 
 The
 `flow-shop scheduling <https://en.wikipedia.org/wiki/Flow-shop_scheduling>`_
@@ -44,7 +48,7 @@ two jobs on three machines.
     processing_times = [[10, 5, 7], [20, 10, 15]]
     model = flow_shop_scheduling(processing_times=processing_times)
 
-.. end_optimization_about
+.. end_optimization_examples
 
 For explanations of the terminology, see the
 `Ocean glossary <https://docs.dwavequantum.com/en/latest/concepts/index.html>`_.

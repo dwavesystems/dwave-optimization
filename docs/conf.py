@@ -23,6 +23,7 @@ extensions = [
 
     # other extensions
     'breathe',
+    'sphinx_design',
 ]
 
 autosummary_generate = True

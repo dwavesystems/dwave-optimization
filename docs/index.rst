@@ -20,6 +20,61 @@ About dwave-optimization
 For explanations of the terminology, see the
 :ref:`Concepts <index_concepts>` section.
 
+Design Principals
+=================
+
+.. toctree::
+  :maxdepth: 1
+  :hidden:
+
+  philosophy
+
+`dwave-optimization` and the hybrid nonlinear solver incorporate features and
+:ref:`design principals <optimization_philosophy>` from each of the following
+areas:
+
+.. grid:: 2
+    :gutter: 3
+
+    .. grid-item-card:: Quantum Optimization
+        :class-body: sd-outline-warning
+        :link: optimization_philosophy_quantum_optimization
+        :link-type: ref
+
+        Take advantage of quantum-mechanical effects not available to classical
+        compute.
+
+    .. grid-item-card:: (Mixed-Integer) Linear Programming
+        :class-body: sd-outline-info
+        :link: optimization_philosophy_linear_programming
+        :link-type: ref
+
+        Learn the basics of solving optimization problems with linear program
+        solvers.
+
+    .. grid-item-card:: Lists, Sets, and other combinatorial variables
+        :class-body: sd-outline-info
+        :link: optimization_philosophy_constraint_programming
+        :link-type: ref
+
+        Explore how lists, sets, and other combinatorial structures make
+        optimization simpler and more performant.
+
+    .. grid-item-card:: Tensor Programming
+        :class-body: sd-outline-info
+        :link: optimization_philosophy_tensor_programming
+        :link-type: ref
+
+        Use N-dimensional arrays and operations to work with your data directly
+        and succinctly.
+
+Example Usage
+=============
+
+.. include:: README.rst
+  :start-after: start_optimization_examples
+  :end-before: end_optimization_examples
+
 Usage Information
 =================
 
