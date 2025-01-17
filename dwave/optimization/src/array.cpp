@@ -88,8 +88,7 @@ bool SizeInfo::operator==(const SizeInfo& other) const {
     if (this->array_ptr != other.array_ptr) return false;
 
     return (this->multiplier == other.multiplier && this->offset == other.offset &&
-            this->min.value_or(0) == other.min.value_or(0) &&
-            this->max == other.max);
+            this->min.value_or(0) == other.min.value_or(0) && this->max == other.max);
 }
 
 SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
@@ -242,9 +241,7 @@ bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr) {
 
     return false;
 }
-bool array_shape_equal(const Array& lhs, const Array& rhs) {
-    return array_shape_equal(&lhs, &rhs);
-}
+bool array_shape_equal(const Array& lhs, const Array& rhs) { return array_shape_equal(&lhs, &rhs); }
 
 // We follow NumPy's broadcasting rules
 // See https://numpy.org/doc/stable/user/basics.broadcasting.html

@@ -12,8 +12,8 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#include "catch2/catch_test_macros.hpp"
 #include "catch2/catch_template_test_macros.hpp"
+#include "catch2/catch_test_macros.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
@@ -24,13 +24,13 @@
 
 namespace dwave::optimization {
 
-// NOTE: divides test is disabled because the template-tests have invalid denominators. 
-TEMPLATE_TEST_CASE("BinaryOpNode", "", 
-                    // std::divides<double>, 
-                    std::equal_to<double>, std::less_equal<double>,
-                   std::plus<double>, std::minus<double>, functional::modulus<double>,
-                   std::multiplies<double>, functional::max<double>, functional::min<double>,
-                   std::logical_and<double>, std::logical_or<double>, functional::logical_xor<double>) {
+// NOTE: divides test is disabled because the template-tests have invalid denominators.
+TEMPLATE_TEST_CASE("BinaryOpNode", "",
+                   // std::divides<double>,
+                   std::equal_to<double>, std::less_equal<double>, std::plus<double>,
+                   std::minus<double>, functional::modulus<double>, std::multiplies<double>,
+                   functional::max<double>, functional::min<double>, std::logical_and<double>,
+                   std::logical_or<double>, functional::logical_xor<double>) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -407,8 +407,8 @@ TEST_CASE("BinaryOpNode - DivideNode") {
         auto y_ptr = graph.emplace_node<DivideNode>(x_ptr, a_ptr);
 
         THEN("y's max/min/integral are as expected") {
-            CHECK(std::abs(y_ptr->max() - 5.0/3.0) < 10e-16);
-            CHECK(std::abs(y_ptr->min() - -5.0/3.0) < 10e-16);
+            CHECK(std::abs(y_ptr->max() - 5.0 / 3.0) < 10e-16);
+            CHECK(std::abs(y_ptr->min() - -5.0 / 3.0) < 10e-16);
             CHECK_FALSE(y_ptr->integral());
         }
     }
@@ -420,8 +420,8 @@ TEST_CASE("BinaryOpNode - DivideNode") {
         auto y_ptr = graph.emplace_node<DivideNode>(x_ptr, a_ptr);
 
         THEN("y's max/min/integral are as expected") {
-            CHECK(y_ptr->max() == -5.0/-3.0);
-            CHECK(y_ptr->min() == 5.0/-3.0);
+            CHECK(y_ptr->max() == -5.0 / -3.0);
+            CHECK(y_ptr->min() == 5.0 / -3.0);
             CHECK_FALSE(y_ptr->integral());
         }
     }
@@ -449,7 +449,6 @@ TEST_CASE("BinaryOpNode - DivideNode") {
             CHECK_THROWS(graph.emplace_node<DivideNode>(x_ptr, a_ptr));
         }
     }
-
 }
 
 TEST_CASE("BinaryOpNode - SubtractNode") {

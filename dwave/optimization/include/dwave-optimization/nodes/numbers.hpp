@@ -54,7 +54,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     void initialize_state(State& state, std::vector<double>&& number_data) const;
 
     // Initialize a state from an existing container, making a copy.
-    template<std::ranges::range R>
+    template <std::ranges::range R>
     void initialize_state(State& state, const R& values) const {
         return initialize_state(state, std::vector<double>(values.begin(), values.end()));
     }

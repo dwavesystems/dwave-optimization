@@ -73,9 +73,7 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     // Overloads needed by the Array ABC **************************************
 
     // There are never any updates to propagate
-    std::span<const Update> diff(const State& state) const noexcept override {
-        return {};
-    }
+    std::span<const Update> diff(const State& state) const noexcept override { return {}; }
 
     // Whether the values in the array can be interpreted as integers.
     // Returns ``true`` for an empty array. This has the slightly odd effect of

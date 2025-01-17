@@ -159,8 +159,8 @@ TEST_CASE("Test deduplicate_diff") {
         WHEN("We call deduplicate_diff") {
             deduplicate_diff(updates);
             THEN("deduplicate_diff() sorts them and removes noops") {
-                CHECK(std::ranges::equal(
-                        updates, std::vector<Update>{Update(2, 1, 0), Update(3, 0, 1)}));
+                CHECK(std::ranges::equal(updates,
+                                         std::vector<Update>{Update(2, 1, 0), Update(3, 0, 1)}));
             }
         }
     }

@@ -58,22 +58,22 @@ struct min {
 template <class T>
 struct modulus {};
 
-template <>  
-struct modulus<double> {  
-    constexpr double operator()(const double& x, const double& y) const {  
-        // Copy numpy behavior and return 0 for `x % 0`  
-        if (y == 0) {  
-            return 0;  
-        }  
-        double result = std::fmod(x, y);  
-    
+template <>
+struct modulus<double> {
+    constexpr double operator()(const double& x, const double& y) const {
+        // Copy numpy behavior and return 0 for `x % 0`
+        if (y == 0) {
+            return 0;
+        }
+        double result = std::fmod(x, y);
+
         if ((std::signbit(x) != std::signbit(y)) && (result != 0)) {
-             // Make result consistent with numpy for different-sign arguments  
-            result += y;  
+            // Make result consistent with numpy for different-sign arguments
+            result += y;
         }
 
         return result;
-    }  
+    }
 };
 
 template <class T>
@@ -272,7 +272,6 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
 
     // Calculate the output value based on the state of the predecessor
     double reduce(const State& state, ssize_t index) const;
-
 };
 
 using PartialSumNode = PartialReduceNode<std::plus<double>>;

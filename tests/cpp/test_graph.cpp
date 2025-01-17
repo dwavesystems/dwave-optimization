@@ -137,8 +137,10 @@ TEST_CASE("Topological Sort", "[topological_sort]") {
             graph.topological_sort();
 
             THEN("The order remains stable wrt successor order") {
-                CHECK(disjoint_bitset0->topological_index() < disjoint_bitset1->topological_index());
-                CHECK(disjoint_bitset1->topological_index() < disjoint_bitset2->topological_index());
+                CHECK(disjoint_bitset0->topological_index() <
+                      disjoint_bitset1->topological_index());
+                CHECK(disjoint_bitset1->topological_index() <
+                      disjoint_bitset2->topological_index());
             }
         }
 
@@ -149,8 +151,10 @@ TEST_CASE("Topological Sort", "[topological_sort]") {
             graph.topological_sort();
 
             THEN("The order remains stable wrt successor order") {
-                CHECK(disjoint_bitset0->topological_index() < disjoint_bitset1->topological_index());
-                CHECK(disjoint_bitset1->topological_index() < disjoint_bitset2->topological_index());
+                CHECK(disjoint_bitset0->topological_index() <
+                      disjoint_bitset1->topological_index());
+                CHECK(disjoint_bitset1->topological_index() <
+                      disjoint_bitset2->topological_index());
             }
         }
     }

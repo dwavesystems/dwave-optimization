@@ -29,7 +29,7 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
  public:
     explicit ConcatenateNode(std::span<ArrayNode*> array_ptrs, ssize_t axis);
     explicit ConcatenateNode(std::ranges::contiguous_range auto&& array_ptrs, ssize_t axis)
-               : ConcatenateNode(std::span<ArrayNode*>(array_ptrs), axis) {}
+            : ConcatenateNode(std::span<ArrayNode*>(array_ptrs), axis) {}
 
     double const* buff(const State& state) const override;
     void commit(State& state) const override;
@@ -61,7 +61,6 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     // pointer to the "array" part of the predecessor
     const Array* array_ptr_;
 };
-
 
 class SizeNode : public ScalarOutputMixin<ArrayNode> {
  public:

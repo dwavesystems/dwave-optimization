@@ -12,8 +12,8 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#include "catch2/catch_test_macros.hpp"
 #include "catch2/catch_template_test_macros.hpp"
+#include "catch2/catch_test_macros.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
@@ -349,7 +349,6 @@ TEST_CASE("UnaryOpNode - SquareRootNode") {
         auto c_ptr = graph.emplace_node<ConstantNode>(c);
         CHECK_THROWS(graph.emplace_node<SquareRootNode>(c_ptr));
     }
-    
 }
 
 }  // namespace dwave::optimization
