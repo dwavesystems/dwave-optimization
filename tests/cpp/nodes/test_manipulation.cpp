@@ -278,6 +278,267 @@ TEST_CASE("ConcatenateNode") {
     }
 }
 
+TEST_CASE("PutNode") {
+    SECTION("a = [0, 1, 2, 3, 4], ind = [0, 2], v = [-44, -55], b = PutNode(a, ind, v)") {
+        auto graph = Graph();
+
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3, 4});
+        auto ind_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 2});
+        auto v_ptr = graph.emplace_node<ConstantNode>(std::vector{-44, -55});
+
+        auto put_ptr = graph.emplace_node<PutNode>(a_ptr, ind_ptr, v_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(put_ptr);
+
+        auto state = graph.initialize_state();
+
+        CHECK(std::ranges::equal(put_ptr->view(state), std::vector{-44, 1, -55, 3, 4}));
+    }
+
+    GIVEN("A 3x3 array of integers, and a set indexer, and a same-length array of values") {
+        auto graph = Graph();
+
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3, 3});
+        auto ind_ptr = graph.emplace_node<SetNode>(9);
+
+        auto c_ptr =
+                graph.emplace_node<ConstantNode>(std::vector{-10, -1, -2, -3, -4, -5, -6, -7, -8});
+        auto v_ptr = graph.emplace_node<AdvancedIndexingNode>(c_ptr, ind_ptr);
+
+        auto put_ptr = graph.emplace_node<PutNode>(a_ptr, ind_ptr, v_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(put_ptr);
+
+        auto state = graph.empty_state();
+        a_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5, 6, 7, 8});
+        ind_ptr->initialize_state(state, {1, 3});
+        graph.initialize_state(state);
+
+        CHECK(std::ranges::equal(put_ptr->view(state), std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
+        CHECK(std::ranges::equal(put_ptr->mask(state), std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+
+        WHEN("The base array is updated") {
+            a_ptr->set_value(state, 2, 4);  // not overwritten by put
+            a_ptr->set_value(state, 3, 6);  // overwritten by put
+            graph.propagate(state, graph.descendants(state, {a_ptr}));
+
+            THEN("Commiting updates the output correctly") {
+                graph.commit(state, graph.descendants(state, {a_ptr}));
+                CHECK(std::ranges::equal(put_ptr->view(state),
+                                         std::vector{0, -1, 4, -3, 4, 5, 6, 7, 8}));
+                CHECK(std::ranges::equal(put_ptr->mask(state),
+                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+            }
+
+            THEN("Reverting results in no change") {
+                graph.revert(state, graph.descendants(state, {ind_ptr}));
+                CHECK(std::ranges::equal(put_ptr->view(state),
+                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK(std::ranges::equal(put_ptr->mask(state),
+                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+            }
+        }
+
+        WHEN("The indices are updated") {
+            ind_ptr->grow(state);
+            ind_ptr->exchange(state, 0, 3);
+            graph.propagate(state, graph.descendants(state, {ind_ptr}));
+
+            THEN("Commiting updates the output correctly") {
+                graph.commit(state, graph.descendants(state, {ind_ptr}));
+                // implementation details but required for the final check
+                CHECK(std::ranges::equal(ind_ptr->view(state), std::vector{2, 3, 0}));
+                CHECK(std::ranges::equal(v_ptr->view(state), std::vector{-2, -3, -10}));
+
+                CHECK(std::ranges::equal(put_ptr->view(state),
+                                         std::vector{-10, 1, -2, -3, 4, 5, 6, 7, 8}));
+                CHECK(std::ranges::equal(put_ptr->mask(state),
+                                         std::vector{1, 0, 1, 1, 0, 0, 0, 0, 0}));
+            }
+
+            THEN("Reverting results in no change") {
+                graph.revert(state, graph.descendants(state, {ind_ptr}));
+                CHECK(std::ranges::equal(put_ptr->view(state),
+                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK(std::ranges::equal(put_ptr->mask(state),
+                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+            }
+        }
+
+        WHEN("An index is removed") {
+            ind_ptr->shrink(state);
+            graph.propagate(state, graph.descendants(state, {ind_ptr}));
+
+            THEN("Commiting updates the output correctly") {
+                graph.commit(state, graph.descendants(state, {ind_ptr}));
+                // implementation details but required for the final check
+                CHECK(std::ranges::equal(ind_ptr->view(state), std::vector{1}));
+                CHECK(std::ranges::equal(v_ptr->view(state), std::vector{-1}));
+
+                CHECK(std::ranges::equal(put_ptr->view(state),
+                                         std::vector{0, -1, 2, 3, 4, 5, 6, 7, 8}));
+                CHECK(std::ranges::equal(put_ptr->mask(state),
+                                         std::vector{0, 1, 0, 0, 0, 0, 0, 0, 0}));
+            }
+
+            THEN("Reverting results in no change") {
+                graph.revert(state, graph.descendants(state, {ind_ptr}));
+                CHECK(std::ranges::equal(put_ptr->view(state),
+                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK(std::ranges::equal(put_ptr->mask(state),
+                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+            }
+        }
+
+        WHEN("An index is removed and then added again") {
+            ind_ptr->shrink(state);
+            ind_ptr->grow(state);
+            graph.propagate(state, graph.descendants(state, {ind_ptr}));
+
+            THEN("Commiting updates the output correctly") {
+                graph.commit(state, graph.descendants(state, {ind_ptr}));
+                // implementation details but required for the final check
+                CHECK(std::ranges::equal(ind_ptr->view(state), std::vector{1, 3}));
+                CHECK(std::ranges::equal(v_ptr->view(state), std::vector{-1, -3}));
+
+                CHECK(std::ranges::equal(put_ptr->view(state),
+                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK(std::ranges::equal(put_ptr->mask(state),
+                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+            }
+
+            THEN("Reverting results in no change") {
+                graph.revert(state, graph.descendants(state, {ind_ptr}));
+                CHECK(std::ranges::equal(put_ptr->view(state),
+                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK(std::ranges::equal(put_ptr->mask(state),
+                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+            }
+        }
+
+        WHEN("An index is added and then removed again") {
+            ind_ptr->grow(state);
+            ind_ptr->shrink(state);
+            graph.propagate(state, graph.descendants(state, {ind_ptr}));
+
+            THEN("Commiting updates the output correctly") {
+                graph.commit(state, graph.descendants(state, {ind_ptr}));
+
+                // implementation details but required for the final check
+                CHECK(std::ranges::equal(ind_ptr->view(state), std::vector{1, 3}));
+                CHECK(std::ranges::equal(v_ptr->view(state), std::vector{-1, -3}));
+
+                CHECK(std::ranges::equal(put_ptr->view(state),
+                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK(std::ranges::equal(put_ptr->mask(state),
+                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+            }
+
+            THEN("Reverting results in no change") {
+                graph.revert(state, graph.descendants(state, {ind_ptr}));
+                CHECK(std::ranges::equal(put_ptr->view(state),
+                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
+
+                CHECK(std::ranges::equal(put_ptr->mask(state),
+                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+            }
+        }
+    }
+
+    GIVEN("A 2x3 array of integers, 3 indices with duplicates, and 3 values") {
+        auto graph = Graph();
+
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3});
+        auto ind_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3}, 0, 5);
+        auto v_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3});
+
+        auto put_ptr = graph.emplace_node<PutNode>(a_ptr, ind_ptr, v_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(put_ptr);
+
+        auto state = graph.empty_state();
+        a_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5});
+        ind_ptr->initialize_state(state, {1, 3, 1});
+        v_ptr->initialize_state(state, {10, 20, 30});
+        graph.initialize_state(state);
+
+        // duplicate takes the "most recent", i.e. second, value
+        CHECK(std::ranges::equal(put_ptr->view(state), std::vector{0, 30, 2, 20, 4, 5}));
+        CHECK(std::ranges::equal(put_ptr->mask(state), std::vector{0, 2, 0, 1, 0, 0}));
+
+        WHEN("One of the duplicate values is updated") {
+            v_ptr->set_value(state, 0, 40);
+            graph.propagate(state, graph.descendants(state, {v_ptr}));
+
+            THEN("Commiting keeps the change") {
+                graph.commit(state, graph.descendants(state, {v_ptr}));
+                CHECK(std::ranges::equal(put_ptr->view(state), std::vector{0, 40, 2, 20, 4, 5}));
+                CHECK(std::ranges::equal(put_ptr->mask(state), std::vector{0, 2, 0, 1, 0, 0}));
+            }
+
+            THEN("Reverting results in no change") {
+                graph.revert(state, graph.descendants(state, {v_ptr}));
+                CHECK(std::ranges::equal(put_ptr->view(state), std::vector{0, 30, 2, 20, 4, 5}));
+                CHECK(std::ranges::equal(put_ptr->mask(state), std::vector{0, 2, 0, 1, 0, 0}));
+            }
+        }
+    }
+
+    GIVEN("A length 6 array of integers, and two integer arrays for indexing and values") {
+        auto graph = Graph();
+
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{6});
+        auto ind_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2}, 0, 5);
+        auto val_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2});
+        auto mask_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+                std::initializer_list<ssize_t>{-1}, 0, 1, true);
+
+        auto put_ptr = graph.emplace_node<PutNode>(
+                a_ptr, graph.emplace_node<AdvancedIndexingNode>(ind_ptr, mask_ptr),
+                graph.emplace_node<AdvancedIndexingNode>(val_ptr, mask_ptr));
+
+        graph.emplace_node<ArrayValidationNode>(put_ptr);
+
+        auto state = graph.empty_state();
+        a_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5});
+        graph.initialize_state(state);
+
+        WHEN("The indices contain two duplicates with different corresponding values") {
+            ind_ptr->set_value(state, 0, 0);
+            ind_ptr->set_value(state, 1, 0);
+
+            val_ptr->set_value(state, 0, 10);
+            val_ptr->set_value(state, 1, 11);
+
+            mask_ptr->grow(state, {0});
+            mask_ptr->grow(state, {1});
+
+            // This is now effectively put([0, 1, 2, 3, 4, 5], [0, 0], [10, 11])
+
+            graph.propagate(state, graph.descendants(state, {val_ptr, ind_ptr, mask_ptr}));
+            graph.commit(state, graph.descendants(state, {val_ptr, ind_ptr, mask_ptr}));
+
+            THEN("State is correct") {
+                CHECK(std::ranges::equal(put_ptr->view(state), std::vector{11, 1, 2, 3, 4, 5}));
+
+                AND_WHEN("We shrink the mask, shrinking both effective indices and values") {
+                    mask_ptr->shrink(state);
+
+                    // This is now effectively put([0, 1, 2, 3, 4, 5], [0], [10])
+
+                    graph.propagate(state, graph.descendants(state, {val_ptr, ind_ptr, mask_ptr}));
+                    graph.commit(state, graph.descendants(state, {val_ptr, ind_ptr, mask_ptr}));
+
+                    THEN("First index goes to the other provided value") {
+                        CHECK(std::ranges::equal(put_ptr->view(state),
+                                                 std::vector{10, 1, 2, 3, 4, 5}));
+                    }
+                }
+            }
+        }
+    }
+}
+
 TEST_CASE("ReshapeNode") {
     GIVEN("A 1d array encoding range(12)") {
         auto A = ConstantNode(std::vector{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11});

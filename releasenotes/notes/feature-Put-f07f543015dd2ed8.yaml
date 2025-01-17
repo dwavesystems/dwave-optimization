@@ -1,0 +1,5 @@
+---
+features:
+  - Add C++ ``PutNode``.
+  - Generalize C++ ``ConstantNode`` range constructors to work with all ranges rather than just with vectors.
+  - Add ``Put`` symbol and ``put()`` function. See `#202 <https://github.com/dwavesystems/dwave-optimization/issues/202>`_.

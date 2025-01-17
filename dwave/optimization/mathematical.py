@@ -33,6 +33,7 @@ from dwave.optimization.symbols import (
     NaryMultiply,
     Not,
     Or,
+    Put,
     SquareRoot,
     Where,
     Xor,
@@ -52,6 +53,7 @@ __all__ = [
     "minimum",
     "mod",
     "multiply",
+    "put",
     "sqrt",
     "stack",
     "where",
@@ -519,6 +521,67 @@ def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         [21. 10.]
     """
     raise RuntimeError("implemented by the op() decorator")
+
+
+def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
+    r"""Replace the specified elements in an array with given values.
+
+    This function is roughly equivalent to the following function defined for
+    NumPy arrays.
+
+    .. code-block:: python
+
+        def put(array, indices, values):
+            array = array.copy()
+            array.flat[indices] = values
+            return array
+
+    Args:
+        array: Base array. Must be not be a dynamic array nor a scalar.
+        indices:
+            The indices in the flattened base array to be replaced.
+
+            .. warning::
+                If ``indices`` has duplicate values, it is undefined which
+                of the possible corresponding values from ``values`` will
+                be propagated.
+                This will likely hurt the performance of the model.
+                Care should be taken to ensure that ``indices`` does not
+                contain duplicates.
+
+        values: Values to place in ``array`` at ``indices``.
+
+    Examples:
+        For some models, it is useful to overwrite some elements in an array.
+
+        >>> import numpy as np
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization import put
+        ...
+        >>> model = Model()
+        ...
+        >>> array = model.constant(np.zeros((3, 3)))
+        >>> indices = model.constant([0, 1, 2])
+        >>> values = model.integer(3)
+        >>> array = put(array, indices, values)  # replace array with one that has been overwritten
+        ...
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     values.set_state(0, [10, 20, 30])
+        ...     print(array.state(0))
+        [[10. 20. 30.]
+         [ 0.  0.  0.]
+         [ 0.  0.  0.]]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Put`: equivalent symbol.
+
+        :func:`numpy.put`: The NumPy function that this function emulates for
+        :class:`~dwave.optimization.model.ArraySymbol`\s.
+
+    .. versionadded:: 0.4.4
+    """
+    return Put(array, indices, values)
 
 
 def sqrt(x: ArraySymbol) -> SquareRoot:

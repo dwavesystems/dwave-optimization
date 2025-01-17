@@ -25,13 +25,14 @@
 
 namespace dwave::optimization {
 
-// We don't current distinguish between dynamic and constant-sized nodes.
-// This means that nodes that always have a constant shape are doing extra
+// Hold the state of a contiguous array of values.
+// We don't current distinguish between dynamic and constant-sized arrays.
+// This means that arrays that always have a constant shape are doing extra
 // work. We could add a separate class, or perhaps template, but for now the
 // difference should be quite minimal.
-class ArrayNodeStateData : public NodeStateData {
+class ArrayStateData {
  public:
-    explicit ArrayNodeStateData(std::vector<double>&& values) noexcept
+    explicit ArrayStateData(std::vector<double>&& values) noexcept
             : buffer(std::move(values)), previous_size_(buffer.size()) {}
 
     // Assign new values to the state, tracking the changes from the previous state to the new
@@ -80,10 +81,6 @@ class ArrayNodeStateData : public NodeStateData {
     void commit() noexcept {
         updates.clear();
         previous_size_ = buffer.size();
-    }
-
-    std::unique_ptr<NodeStateData> copy() const override {
-        return std::make_unique<ArrayNodeStateData>(*this);
     }
 
     std::span<const Update> diff() const noexcept { return updates; }
@@ -189,6 +186,18 @@ class ArrayNodeStateData : public NodeStateData {
     // need to be a bit careful with subtraction etc
     std::size_t previous_size_ = 0;
 };
+
+
+class ArrayNodeStateData: public ArrayStateData, public NodeStateData {
+ public:
+    explicit ArrayNodeStateData(std::vector<double>&& values) noexcept
+            : ArrayStateData(std::move(values)), NodeStateData() {}
+
+    std::unique_ptr<NodeStateData> copy() const override {
+        return std::make_unique<ArrayNodeStateData>(*this);
+    }
+};
+
 
 class ScalarNodeStateData : public NodeStateData {
  public:

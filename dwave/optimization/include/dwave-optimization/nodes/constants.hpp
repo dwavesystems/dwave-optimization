@@ -18,6 +18,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <utility>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
@@ -41,17 +42,23 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     ConstantNode(double* data_ptr, std::span<const ssize_t> shape)
             : ArrayOutputMixin(shape), own_data_(false), buffer_ptr_(data_ptr) {}
 
-    // Create a ConstantNode by copying the contents of a vector
-    template <class T>
-    explicit ConstantNode(const std::vector<T>& other)
-            : ConstantNode(other, {static_cast<ssize_t>(other.size())}) {}
+    /// Create a ConstantNode by copying the contents of a range
+    template <std::ranges::sized_range Range>
+    explicit ConstantNode(Range&& values)
+            : ConstantNode(std::forward<Range>(values), {static_cast<ssize_t>(values.size())}) {}
 
-    // Create a ConstantNode by copying the contents of a vector and interpreting
-    // it as the given shape
-    template <class U>
-    ConstantNode(const std::vector<U>& other, std::initializer_list<ssize_t> shape)
-            : ConstantNode(shape) {
-        std::copy(other.begin(), other.begin() + size(), buffer_ptr_);
+    /// Create a ConstantNode by copying the contents of a range and interpreting
+    /// it as the given shape
+    template <std::ranges::sized_range Range>
+    ConstantNode(Range&& values, std::initializer_list<ssize_t> shape) : ConstantNode(shape) {
+        const ssize_t size = this->size();
+        if (size < 0) {
+            throw std::invalid_argument("ConstantNode cannot be dynamic");
+        }
+        if (values.size() < static_cast<std::size_t>(size)) {
+            throw std::out_of_range("too few values for the given shape");
+        }
+        std::copy(values.begin(), std::next(values.begin(), size), buffer_ptr_);
     }
 
     ~ConstantNode() {
