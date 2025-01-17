@@ -13,6 +13,7 @@
 //    limitations under the License.
 
 #include <tuple>
+#include <unordered_set>
 
 #include "dwave-optimization/nodes/manipulation.hpp"
 
@@ -183,6 +184,7 @@ class PutNodeState : private ArrayStateData, public NodeStateData {
     using ArrayStateData::buff;
 
     void commit() {
+        assert(ambiguities_.empty() && "commiting with ambiguities still present!");
         ArrayStateData::commit();
         mask_diff_.clear();
     }
@@ -198,7 +200,15 @@ class PutNodeState : private ArrayStateData, public NodeStateData {
         assert(mask_[index] >= 1);
         mask_[index] -= 1;
         mask_diff_.emplace_back(index, -1);
-        if (!mask_[index]) ArrayStateData::set(index, array_value);
+        if (mask_[index]) {
+            // uh oh, we found a case where we are not certain what value
+            // we should be propagating! So we save it as ambiguous so we
+            // can fix it later
+            ambiguities_.emplace(index);
+        } else {
+            // we've gone from masked to not, an easy case.
+            ArrayStateData::set(index, array_value);
+        }
     }
 
     using ArrayStateData::diff;
@@ -214,7 +224,33 @@ class PutNodeState : private ArrayStateData, public NodeStateData {
 
     std::span<const ssize_t> mask() const { return mask_; }
 
+    std::size_t num_ambiguities() const { return ambiguities_.size(); }
+
+    // Sometimes we can be uncertain about some indices. So we save them as
+    // ambiguities and do a big expensive repair at the end.
+    void resolve_ambiguities(const Array::View& indices, const Array::View& values) {
+        if (ambiguities_.empty()) return;  // nothing to do
+
+        const auto first = indices.begin();
+        const auto last = indices.end();
+
+        for (const ssize_t& index : ambiguities_) {
+            if (!mask_[index]) continue;  // the ambiguity was eventually resolved
+
+            // go looking for this value in index. It's expensive.
+            auto it = std::find(first, last, index);
+
+            assert(it != last);  // this should have been covered by the mask check above
+
+            // ok, we found a match, so now we need to look that value up in values
+            ArrayStateData::set(index, values[it - first]);
+        }
+
+        ambiguities_.clear();
+    }
+
     void revert() {
+        assert(ambiguities_.empty() && "reverting with ambiguities still present!");
         ArrayStateData::revert();
         // doing it in reverse shouldn't matter, but it's a good habit
         for (const auto& [index, change] : mask_diff_ | std::views::reverse) {
@@ -245,6 +281,12 @@ class PutNodeState : private ArrayStateData, public NodeStateData {
  private:
     std::vector<ssize_t> mask_;
     std::vector<std::tuple<ssize_t, std::int8_t>> mask_diff_;
+
+    // When a value is masked more than once, it can be ambiguous what happens
+    // when only one of the masks is removed. In that case we save the index
+    // in the array where we're not certain and do a repair before propagating.
+    // We use a unordered_set to avoid rechecking the same index multiple times.
+    std::unordered_set<ssize_t> ambiguities_;
 };
 
 PutNode::PutNode(ArrayNode* array_ptr, ArrayNode* indices_ptr, ArrayNode* values_ptr)
@@ -384,6 +426,10 @@ void PutNode::propagate(State& state) const {
                     ptr->increment_mask(array_index, 0);
                 }
             }
+        }
+
+        if (ptr->num_ambiguities()) {
+            ptr->resolve_ambiguities(indices_ptr_->view(state), values_ptr_->view(state));
         }
     }
 

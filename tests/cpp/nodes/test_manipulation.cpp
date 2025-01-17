@@ -486,6 +486,60 @@ TEST_CASE("PutNode") {
             }
         }
     }
+
+    GIVEN("A length 6 array of integers, and two integer arrays for indexing and values") {
+        auto graph = Graph();
+
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{6});
+        auto ind_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2}, 0, 5);
+        auto val_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2});
+        auto mask_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+                std::initializer_list<ssize_t>{-1}, 0, 1, true);
+
+        auto put_ptr = graph.emplace_node<PutNode>(
+                a_ptr, graph.emplace_node<AdvancedIndexingNode>(ind_ptr, mask_ptr),
+                graph.emplace_node<AdvancedIndexingNode>(val_ptr, mask_ptr));
+
+        graph.emplace_node<ArrayValidationNode>(put_ptr);
+
+        auto state = graph.empty_state();
+        a_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5});
+        graph.initialize_state(state);
+
+        WHEN("The indices contain two duplicates with different corresponding values") {
+            ind_ptr->set_value(state, 0, 0);
+            ind_ptr->set_value(state, 1, 0);
+
+            val_ptr->set_value(state, 0, 10);
+            val_ptr->set_value(state, 1, 11);
+
+            mask_ptr->grow(state, {0});
+            mask_ptr->grow(state, {1});
+
+            // This is now effectively put([0, 1, 2, 3, 4, 5], [0, 0], [10, 11])
+
+            graph.propagate(state, graph.descendants(state, {val_ptr, ind_ptr, mask_ptr}));
+            graph.commit(state, graph.descendants(state, {val_ptr, ind_ptr, mask_ptr}));
+
+            THEN("State is correct") {
+                CHECK(std::ranges::equal(put_ptr->view(state), std::vector{11, 1, 2, 3, 4, 5}));
+
+                AND_WHEN("We shrink the mask, shrinking both effective indices and values") {
+                    mask_ptr->shrink(state);
+
+                    // This is now effectively put([0, 1, 2, 3, 4, 5], [0], [10])
+
+                    graph.propagate(state, graph.descendants(state, {val_ptr, ind_ptr, mask_ptr}));
+                    graph.commit(state, graph.descendants(state, {val_ptr, ind_ptr, mask_ptr}));
+
+                    THEN("First index goes to the other provided value") {
+                        CHECK(std::ranges::equal(put_ptr->view(state),
+                                                 std::vector{10, 1, 2, 3, 4, 5}));
+                    }
+                }
+            }
+        }
+    }
 }
 
 TEST_CASE("ReshapeNode") {
