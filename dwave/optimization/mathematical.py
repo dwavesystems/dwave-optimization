@@ -110,7 +110,7 @@ def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add,
         ...     print(i_plus_j.state(0))
         [10. 10.]
     """
-    raise RuntimeError("implementated by the op() decorator")
+    raise RuntimeError("implemented by the op() decorator")
 
 
 def concatenate(array_likes : typing.Union[collections.abc.Iterable, ArraySymbol], axis : int = 0) -> ArraySymbol:
@@ -387,7 +387,7 @@ def maximum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         ...     print(m.state(0))
         [7. 5.]
     """
-    raise RuntimeError("implementated by the op() decorator")
+    raise RuntimeError("implemented by the op() decorator")
 
 
 @_op(Minimum, NaryMinimum, "min")
@@ -427,7 +427,7 @@ def minimum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         ...     print(m.state(0))
         [3. 2.]
     """
-    raise RuntimeError("implementated by the op() decorator")
+    raise RuntimeError("implemented by the op() decorator")
 
 
 def mod(x1: ArraySymbol, x2: ArraySymbol) -> Modulus:
@@ -516,7 +516,7 @@ def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         ...     print(k.state(0))
         [21. 10.]
     """
-    raise RuntimeError("implementated by the op() decorator")
+    raise RuntimeError("implemented by the op() decorator")
 
 
 def sqrt(x: ArraySymbol) -> SquareRoot:
