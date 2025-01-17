@@ -174,7 +174,7 @@ void ConcatenateNode::revert(State& state) const {
 }
 
 // A PutNode needs to track its buffer as well as a mask of which elements in the
-// original array are currently.
+// original array are currently overwritten.
 // We use ArrayStateData for the buffer
 class PutNodeState : private ArrayStateData, public NodeStateData {
  public:
