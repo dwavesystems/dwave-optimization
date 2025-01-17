@@ -541,7 +541,8 @@ def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
 
             .. warning::
                 If ``indices`` has duplicate values, it is undefined which
-                value from ``values`` will be propagated.
+                of the possible corresponding values from ``values`` will
+                be propagated.
                 This will likely hurt the performance of the model.
                 Care should be taken to ensure that ``indices`` does not
                 contain duplicates.
