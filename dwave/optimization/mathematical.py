@@ -545,46 +545,48 @@ def sqrt(x: ArraySymbol) -> SquareRoot:
 def stack(arrays: collections.abc.Iterable[ArraySymbol], axis: int = 0) -> ArraySymbol:
     r"""Joins a sequence of ArraySymbols along a new axis.
 
-        Args:
-            arrays: sequence of ArraySymbol
-        Returns:
-            The joined ArraySymbols on a new axis
-        Examples:
-            This example stacks three scalars on the first axis.
-            >>> from dwave.optimization import Model, stack
-            ...
-            >>> model = Model()
-            >>> x = [model.constant(1), model.constant(2), model.constant(3)]
-            >>> s = stack(x)
-            >>> s.shape()
-            (3,)
-            >>> with model.lock():
-            ...     model.states.resize(1)
-            ...     print(s.state(0))
-            [1. 2. 3.]
+    Args:
+        arrays: sequence of ArraySymbol
+    Returns:
+        The joined ArraySymbols on a new axis
+    Examples:
+        This example stacks three scalars on the first axis.
 
-            This example stacks three 1d arrays on axis 0 and 1
-            >>> from dwave.optimization import Model, stack
-            ...
-            >>> model = Model()
-            >>> a = model.constant([1,2])
-            >>> b = model.constant([3,4])
-            >>> c = model.constant([5,6])
-            >>> s0 = stack((a,b,c), axis=0)
-            >>> s0.shape()
-            (3,2)
-            >>> s1 = stack((a,b,c), axis=1)
-            >>> s1.shape()
-            (2,3)
-            >>> with model.lock():
-            ...     model.states.resize(1)
-            ...     print(s0.state(0))
-            ...     print(s1.state(0))
-            [[1. 2.]
-             [3. 4.]
-             [5. 6.]]
-            [[1. 3. 5.]
-             [2. 4. 6.]]
+        >>> from dwave.optimization import Model, stack
+        ...
+        >>> model = Model()
+        >>> x = [model.constant(1), model.constant(2), model.constant(3)]
+        >>> s = stack(x)
+        >>> s.shape()
+        (3,)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     print(s.state(0))
+        [1. 2. 3.]
+
+        This example stacks three 1d arrays on axis 0 and 1
+
+        >>> from dwave.optimization import Model, stack
+        ...
+        >>> model = Model()
+        >>> a = model.constant([1,2])
+        >>> b = model.constant([3,4])
+        >>> c = model.constant([5,6])
+        >>> s0 = stack((a,b,c), axis=0)
+        >>> s0.shape()
+        (3, 2)
+        >>> s1 = stack((a,b,c), axis=1)
+        >>> s1.shape()
+        (2, 3)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     print(s0.state(0))
+        ...     print(s1.state(0))
+        [[1. 2.]
+         [3. 4.]
+         [5. 6.]]
+        [[1. 3. 5.]
+         [2. 4. 6.]]
     """
     if all(isinstance(arr, ArraySymbol) for arr in arrays):
         if not 0 <= axis <= arrays[0].ndim():
