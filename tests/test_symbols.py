@@ -1661,6 +1661,9 @@ class TestModule(unittest.TestCase):
         for name in dwave.optimization.symbols.__all__:
             getattr(dwave.optimization.symbols, name)
 
+        for name in dwave.optimization.mathematical.__all__:
+            getattr(dwave.optimization.mathematical, name)
+
 
 class TestModulus(utils.BinaryOpTests):
     def generate_symbols(self):
