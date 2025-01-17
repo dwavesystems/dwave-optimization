@@ -536,7 +536,16 @@ def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
 
     Args:
         array: Base array. Must be not be a dynamic array nor a scalar.
-        indices: The indices in the flattened base array to be replaced.
+        indices:
+            The indices in the flattened base array to be replaced.
+
+            .. warning::
+                If ``indices`` has duplicate values, it is undefined which
+                value from ``values`` will be propagated.
+                This will likely hurt the performance of the model.
+                Care should be taken to ensure that ``indices`` does not
+                contain duplicates.
+
         values: Values to place in ``array`` at ``indices``.
 
     Examples:
