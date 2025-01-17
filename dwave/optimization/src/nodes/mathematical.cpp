@@ -45,7 +45,9 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
         bool strictly_negative = rhs_ptr->min() < 0 && rhs_ptr->max() < 0;
         bool strictly_positive = rhs_ptr->min() > 0 && rhs_ptr->max() > 0;
         if (!strictly_negative && !strictly_positive) {
-            throw std::invalid_argument("Divide's denominator predecessor must be either strictly positive or strictly negative");
+            throw std::invalid_argument(
+                    "Divide's denominator predecessor must be either strictly positive or strictly "
+                    "negative");
         }
     }
 
@@ -786,7 +788,7 @@ std::vector<ssize_t> as_contiguous_strides(const std::span<const ssize_t> shape)
 }
 
 std::span<const ssize_t> nonempty(std::span<const ssize_t> span) {
-    if (span.empty()){
+    if (span.empty()) {
         throw std::invalid_argument("Input span should not be empty");
     }
     return span;
@@ -809,7 +811,7 @@ PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, std::span<co
 
     // Validate axes
     /// TODO: support negative axes
-    if (axes.size() != 1){
+    if (axes.size() != 1) {
         throw std::invalid_argument("Partial reduction support only one axis");
     }
 
@@ -836,9 +838,10 @@ PartialReduceNode<std::plus<double>>::PartialReduceNode(ArrayNode* array_ptr, co
         : PartialReduceNode(array_ptr, axis, 0) {}
 
 template <>
-PartialReduceNode<std::plus<double>>::PartialReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes)
+PartialReduceNode<std::plus<double>>::PartialReduceNode(ArrayNode* array_ptr,
+                                                        std::span<const ssize_t> axes)
         : PartialReduceNode(array_ptr, nonempty(axes)[0], 0) {
-    if (axes.size() != 1){
+    if (axes.size() != 1) {
         throw std::invalid_argument("Partial sum supports only one axis");
     }
 }
@@ -854,7 +857,6 @@ PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, const ssize
 
 template <class BinaryOp>
 std::span<const ssize_t> PartialReduceNode<BinaryOp>::axes() const {
-
     // TODO: support multiple axes
     return std::span(axes_.get(), 1);
 }
@@ -1024,9 +1026,8 @@ double PartialReduceNode<BinaryOp>::reduce(const State& state, ssize_t index) co
 
     // 3. We create an iterator that starts from index just found and iterates through the axis we
     // are reducing over
-    const_iterator begin =
-            const_iterator(array_ptr_->buff(state) + start_idx, 1, &array_ptr_->shape()[axis],
-                          &array_ptr_->strides()[axis]);
+    const_iterator begin = const_iterator(array_ptr_->buff(state) + start_idx, 1,
+                                          &array_ptr_->shape()[axis], &array_ptr_->strides()[axis]);
 
     const_iterator end = begin + array_ptr_->shape(state)[axis];
 
@@ -1094,7 +1095,7 @@ struct ExtraData<std::logical_and<double>> {
     ssize_t old_num_zero = num_zero;
 };
 
-template<>
+template <>
 struct ExtraData<std::logical_or<double>> {
     explicit ExtraData(ssize_t num_nonzero) : num_nonzero(num_nonzero) {}
 
@@ -1175,8 +1176,7 @@ template <>
 ReduceNode<std::plus<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 0) {}
 
 template <class BinaryOp>
-ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr)
-        : init(), array_ptr_(array_ptr) {
+ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr) : init(), array_ptr_(array_ptr) {
     if (array_ptr_->dynamic()) {
         throw std::invalid_argument(
                 "cannot do a reduction on a dynamic array with an operation that has no identity "
@@ -1337,10 +1337,10 @@ double ReduceNode<BinaryOp>::max() const {
 
         // more than one element
         return std::max({
-            init * std::pow(low, size),
-            init * std::pow(high, size),
-            init * low * std::pow(high, size - 1),
-            init * high * std::pow(low, size - 1),
+                init * std::pow(low, size),
+                init * std::pow(high, size),
+                init * low * std::pow(high, size - 1),
+                init * high * std::pow(low, size - 1),
         });
     }
     if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
@@ -1424,10 +1424,10 @@ double ReduceNode<BinaryOp>::min() const {
 
         // more than one element
         return std::min({
-            init * std::pow(low, size),
-            init * std::pow(high, size),
-            init * low * std::pow(high, size - 1),
-            init * high * std::pow(low, size - 1),
+                init * std::pow(low, size),
+                init * std::pow(high, size),
+                init * low * std::pow(high, size - 1),
+                init * high * std::pow(low, size - 1),
         });
     }
     if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {

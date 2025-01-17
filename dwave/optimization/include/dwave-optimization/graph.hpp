@@ -316,7 +316,7 @@ NodeType* Graph::emplace_node(Args&&... args) {
     return ptr;  // return the observing pointer
 }
 
-class ArrayNode: public Array, public virtual Node {};
+class ArrayNode : public Array, public virtual Node {};
 class DecisionNode : public Decision, public virtual Node {
  public:
     // Decisions don't have predecessors so no one should be calling update().

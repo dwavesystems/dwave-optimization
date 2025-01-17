@@ -90,7 +90,7 @@ class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decis
     void grow(State& state, std::initializer_list<double> values) const;
 
     // Grow the array by one row with random values.
-    template<std::uniform_random_bit_generator Generator>
+    template <std::uniform_random_bit_generator Generator>
     void grow(State& state, Generator& rng) const {
         // generate a new row randomly
         assert(ndim() > 0);
@@ -110,7 +110,7 @@ class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decis
     void set(State& state, ssize_t index, double value) const;
 
     // Set the value at a random index to a random value.
-    template<std::uniform_random_bit_generator Generator>
+    template <std::uniform_random_bit_generator Generator>
     void set(State& state, Generator& rng) const {
         const ssize_t size = this->size(state);
         assert(size >= 0);  // should always be true

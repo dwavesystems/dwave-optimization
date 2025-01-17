@@ -623,7 +623,7 @@ class Array {
                     // current location in the struct returned by it.
                     // Unfortunately std::div() is not templated, but overloaded,
                     // so we use decltype instead.
-                    decltype(std::div(ssize_t(), ssize_t())) qr{ .quot = n, .rem = 0 };
+                    decltype(std::div(ssize_t(), ssize_t())) qr{.quot = n, .rem = 0};
 
                     ssize_t axis = this->ndim - 1;
                     for (; axis >= 1; --axis) {

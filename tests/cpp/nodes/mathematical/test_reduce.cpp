@@ -12,8 +12,8 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#include "catch2/catch_test_macros.hpp"
 #include "catch2/catch_template_test_macros.hpp"
+#include "catch2/catch_test_macros.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
@@ -193,10 +193,9 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
     }
 }
 
-TEMPLATE_TEST_CASE("ReduceNode", "",
-                   functional::max<double>, functional::min<double>,
-                   std::logical_and<double>, std::logical_or<double>,
-                   std::multiplies<double>, std::plus<double>) {
+TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<double>,
+                   std::logical_and<double>, std::logical_or<double>, std::multiplies<double>,
+                   std::plus<double>) {
     auto graph = Graph();
 
     auto func = TestType();

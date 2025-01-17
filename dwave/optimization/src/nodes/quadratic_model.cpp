@@ -13,6 +13,7 @@
 //    limitations under the License.
 
 #include "dwave-optimization/nodes/quadratic_model.hpp"
+
 #include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {

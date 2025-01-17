@@ -95,9 +95,8 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
         auto shape = std::array<ssize_t, 2>{2, 3};
         // auto strides = std::array<ssize_t, 2>{24, 8};
 
-        auto [strides, start] = GENERATE(
-            std::pair(std::array<ssize_t, 2>{24, 8}, 0),
-            std::pair(std::array<ssize_t, 2>{-24, 8}, 3));
+        auto [strides, start] = GENERATE(std::pair(std::array<ssize_t, 2>{24, 8}, 0),
+                                         std::pair(std::array<ssize_t, 2>{-24, 8}, 3));
 
         auto n = GENERATE(0, 3, 4, 5);
 
@@ -115,9 +114,7 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
                 ConstArrayIterator d = a;
                 CHECK(c == (d += n));
             }
-            THEN("(a + n) is equal to (n + a)") {
-                CHECK(a + n == n + a);
-            }
+            THEN("(a + n) is equal to (n + a)") { CHECK(a + n == n + a); }
             THEN("If (a + (n - 1)) is valid, then --b is equal to (a + (n - 1))") {
                 ConstArrayIterator c = b;
                 CHECK(--c == a + (n - 1));
@@ -135,9 +132,7 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
             THEN("If b is dereferenceable, then a[n] is valid and is equal to *b") {
                 CHECK(a[n] == *b);
             }
-            THEN("bool(a <= b) is true") {
-                CHECK(a <= b);
-            }
+            THEN("bool(a <= b) is true") { CHECK(a <= b); }
         }
     }
 
@@ -531,7 +526,6 @@ TEST_CASE("Dynamically Sized 1d Array") {
                 CHECK_THROWS_AS(v.view(state).at(100), std::out_of_range);
                 CHECK_THROWS_AS(v.view(state).at(-1), std::out_of_range);
 
-
                 // for contiguous view is the same as span(buff(), size())
                 CHECK(std::ranges::equal(std::span(v.buff(state), v.size(state)), v.view(state)));
             }
@@ -734,7 +728,8 @@ TEST_CASE("Ravelling-unravelling indices") {
         auto arr = Array3d();
         auto last_element_flat = arr.size() - 1;
         CHECK(ravel_multi_index(arr.strides(), {2, 3, 4}) == last_element_flat);
-        CHECK(ravel_multi_index(arr.strides(), unravel_index(arr.strides(), last_element_flat)) == last_element_flat);
+        CHECK(ravel_multi_index(arr.strides(), unravel_index(arr.strides(), last_element_flat)) ==
+              last_element_flat);
     }
 }
 
