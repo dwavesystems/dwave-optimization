@@ -6,24 +6,64 @@
 Introduction
 ============
 
-`Nonlinear programming (NLP) <https://en.wikipedia.org/wiki/Nonlinear_programming>`_ 
-is the process of solving an optimization problem where some of the constraints 
-are not linear equalities and/or the objective function is not a linear function. 
-Such optimization problems are pervasive in business and logistics: inventory 
-management, scheduling employees, equipment delivery, and many more. 
+`dwave-optimization` enables you to formulate optimization models for workforce
+scheduling, production scheduling, resource allocation, logistics routing, and
+many more.
+The model can then be submitted to the
+`Leap <https://cloud.dwavesys.com/leap/>`_\ |TM| service's quantum-classical 
+hybrid nonlinear solver to find good solutions.
+
+Features
+========
+
+.. toctree::
+  :maxdepth: 1
+  :hidden:
+
+  philosophy
+
+`dwave-optimization` and the hybrid nonlinear solver incorporate features and
+design principals from each of the following areas:
+
+.. grid:: 2
+    :gutter: 3
+
+    .. grid-item-card:: Quantum Optimization
+        :class-body: sd-outline-warning
+        :link: optimization_philosophy_quantum_optimization
+        :link-type: ref
+
+        Take advantage of quantum-mechanical effects not available to classical
+        compute.
+
+    .. grid-item-card:: (Mixed-Integer) Linear Programming
+        :class-body: sd-outline-info
+        :link: optimization_philosophy_linear_programming
+        :link-type: ref
+
+        Learn the basics of solving optimization problems with linear program
+        solvers.
+
+    .. grid-item-card:: Lists, Sets, and other combinatorial variables
+        :class-body: sd-outline-info
+        :link: optimization_philosophy_constraint_programming
+        :link-type: ref
+
+        Explore how lists, sets, and other combinatorial structures make
+        optimization simpler and more performant.
+
+    .. grid-item-card:: Tensor Programming
+        :class-body: sd-outline-info
+        :link: optimization_philosophy_tensor_programming
+        :link-type: ref
+
+        Use N-dimensional arrays and operations to work with your data directly
+        and succinctly.
 
 .. _intro_optimization_nonlinear_models: 
 
 Nonlinear Models
 ================
-
-`dwave-optimization` enables you to formulate the nonlinear models needed for 
-such industrial optimization problems. The model can then be submitted to the
-`Leap <https://cloud.dwavesys.com/leap/>`_\ |TM| service's quantum-classical 
-hybrid nonlinear-program solver to find good solutions.
-
-Examples of problems suited to such solution methods are resource routing,
-scheduling, allocation, and job-shop scheduling.  
 
 Successful implementation, as for any solver, requires following some 
 :ref:`best practices <intro_optimization_usage_guidelines>` in formulating 
