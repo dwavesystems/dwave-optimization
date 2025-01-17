@@ -110,10 +110,12 @@ def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add,
         ...     print(i_plus_j.state(0))
         [10. 10.]
     """
-    raise RuntimeError("implementated by the op() decorator")
+    raise RuntimeError("implemented by the op() decorator")
 
 
-def concatenate(array_likes : typing.Union[collections.abc.Iterable, ArraySymbol], axis : int = 0) -> ArraySymbol:
+def concatenate(array_likes: typing.Union[collections.abc.Iterable, ArraySymbol],
+                axis: int = 0,
+                ) -> ArraySymbol:
     r"""Return the concatenation of one or more symbols on the given axis.
 
     Args:
@@ -148,8 +150,8 @@ def concatenate(array_likes : typing.Union[collections.abc.Iterable, ArraySymbol
         return array_likes
 
     if (isinstance(array_likes, collections.abc.Iterable)
-        and isinstance(array_likes, collections.abc.Sized)
-        and (0 < len(array_likes))):
+            and isinstance(array_likes, collections.abc.Sized)
+            and (0 < len(array_likes))):
 
         if len(array_likes) == 1:
             return array_likes[0]
@@ -387,7 +389,7 @@ def maximum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         ...     print(m.state(0))
         [7. 5.]
     """
-    raise RuntimeError("implementated by the op() decorator")
+    raise RuntimeError("implemented by the op() decorator")
 
 
 @_op(Minimum, NaryMinimum, "min")
@@ -427,24 +429,24 @@ def minimum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         ...     print(m.state(0))
         [3. 2.]
     """
-    raise RuntimeError("implementated by the op() decorator")
+    raise RuntimeError("implemented by the op() decorator")
 
 
 def mod(x1: ArraySymbol, x2: ArraySymbol) -> Modulus:
     r"""Return an element-wise modulus of the given symbols.
-    
+
     Args:
         x1, x2: Input array symbol.
-        
+
     Returns:
         A symbol that is the element-wise modulus of the given symbols.
-        
+
     Examples:
         This example demonstrates the behavior of the modulus of two integer
         symbols :math:`i \mod{j}` with different combinations of positive and
         negative values. Equivalently, you can use the ``%`` operator
         (e.g., :code:`i % j`).
-        
+
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import mod
         ...
@@ -458,10 +460,10 @@ def mod(x1: ArraySymbol, x2: ArraySymbol) -> Modulus:
         ...     j.set_state(0, [3, 3, -3, -3])
         ...     print(k.state(0))
         [ 2.  1. -1. -2.]
-        
+
         This example demonstrates the modulus of a scalar float value and a
         binary symbol.
-        
+
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import mod
         ...
@@ -516,7 +518,7 @@ def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         ...     print(k.state(0))
         [21. 10.]
     """
-    raise RuntimeError("implementated by the op() decorator")
+    raise RuntimeError("implemented by the op() decorator")
 
 
 def sqrt(x: ArraySymbol) -> SquareRoot:

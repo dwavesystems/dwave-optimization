@@ -1,0 +1,4 @@
+---
+fixes:
+  - Fix ``from dwave.optimization.symbols import *``.
+  - Fix typo in error message. See `#193 <https://github.com/dwavesystems/dwave-optimization/issues/193>`_.
