@@ -106,7 +106,6 @@ __all__ = [
     "AdvancedIndexing",
     "BasicIndexing",
     "BinaryVariable",
-    "_CombinedIndexing",
     "Concatenate",
     "Constant",
     "DisjointBitSets",

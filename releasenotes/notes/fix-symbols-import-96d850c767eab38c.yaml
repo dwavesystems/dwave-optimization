@@ -1,0 +1,3 @@
+---
+fixes:
+  - Fix ``from dwave.optimization.symbols import *``.
