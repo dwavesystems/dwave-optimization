@@ -89,6 +89,7 @@ from dwave.optimization.libcpp.nodes cimport (
     SetNode as cppSetNode,
     SizeNode as cppSizeNode,
     SubtractNode as cppSubtractNode,
+    RoundIntNode as cppRoundIntNode,
     SquareNode as cppSquareNode,
     SquareRootNode as cppSquareRootNode,
     SumNode as cppSumNode,
@@ -141,6 +142,7 @@ __all__ = [
     "Subtract",
     "SetVariable",
     "Size",
+    "RoundInt",
     "Square",
     "SquareRoot",
     "Sum",
@@ -2979,6 +2981,43 @@ cdef class Size(ArraySymbol):
     cdef cppSizeNode* ptr
 
 _register(Size, typeid(cppSizeNode))
+
+
+cdef class RoundInt(ArraySymbol):
+    """Takes the RoundInt of a symbol.
+
+    Examples:
+        This example adds the round-int of a decision
+        variable to a model.
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import rint
+        >>> model = Model()
+        >>> i = model.constant(10.4)
+        >>> ii = rint(i)
+        >>> type(ii)
+        <class 'dwave.optimization.symbols.RoundInt'>
+    """
+    def __init__(self, ArraySymbol x):
+        cdef _Graph model = x.model
+
+        self.ptr = model._graph.emplace_node[cppRoundIntNode](x.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppRoundIntNode* ptr = dynamic_cast_ptr[cppRoundIntNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a RoundInt")
+
+        cdef RoundInt x = RoundInt.__new__(RoundInt)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppRoundIntNode* ptr
+
+_register(RoundInt, typeid(cppRoundIntNode))
 
 
 cdef class Square(ArraySymbol):

@@ -34,6 +34,7 @@ from dwave.optimization import (
     logical_xor,
     mod,
     put,
+    rint,
     sqrt,
     stack,
 )
@@ -2215,6 +2216,50 @@ class TestReshape(utils.SymbolTests):
         syms = [A.reshape(12), A.reshape((2, 6)), A.reshape(3, 4)]
         model.lock()
         yield from syms
+
+
+class TestRoundInt(utils.SymbolTests):
+    rng = np.random.default_rng(1)
+
+    def generate_symbols(self):
+        model = Model()
+        a = model.constant(1.3)
+        op_a = rint(a)
+        model.lock()
+        yield op_a
+
+    def test_simple_inputs(self):
+        model = Model()
+        empty = rint(model.constant(0))
+        model.lock()
+        model.states.resize(1)
+        self.assertEqual(empty.state(), np.rint(0))  # confirm consistency with NumPy
+
+        simple_inputs = (self.rng.random(size=(100)) * 2 - 1) * 1000000
+        for si in simple_inputs:
+            model = Model()
+            rint_node = rint(model.constant(si))
+            model.lock()
+            model.states.resize(1)
+
+            self.assertEqual(rint_node.state(), np.rint(si))  # confirm consistency with NumPy
+
+    def test_indexing_using_rint(self):
+        model = Model()
+        rint_node_idx3 = rint(model.constant(3.1))
+        rint_node_idx6 = rint(model.constant(5.8))
+        rint_node_idx8 = rint(model.constant(8))
+
+        arr = model.constant(2 * np.arange(10)) # value at each index is (index * 2)
+        six = arr[rint_node_idx3]
+        twelve = arr[rint_node_idx6]
+        sixteen = arr[rint_node_idx8]
+
+        model.lock()
+        model.states.resize(1)
+        self.assertEqual(six.state(0), 6)
+        self.assertEqual(twelve.state(0), 12)
+        self.assertEqual(sixteen.state(0), 16)
 
 
 class TestSquare(utils.UnaryOpTests):

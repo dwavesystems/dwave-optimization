@@ -34,6 +34,7 @@ from dwave.optimization.symbols import (
     Not,
     Or,
     Put,
+    RoundInt,
     SquareRoot,
     Where,
     Xor,
@@ -54,6 +55,7 @@ __all__ = [
     "mod",
     "multiply",
     "put",
+    "rint",
     "sqrt",
     "stack",
     "where",
@@ -583,6 +585,27 @@ def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
     """
     return Put(array, indices, values)
 
+def rint(x: ArraySymbol) -> RoundInt:
+    r"""Return an element-wise rint on the given symbol.
+    Args:
+        x: Input symbol.
+    Returns:
+        A symbol that propagates the rint of the given symbol.
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import rint
+        ...
+        >>> model = Model()
+        >>> x = model.constant(1.3)
+        >>> rint_x = rint(x)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(rint_x.state())
+        1
+    See Also:
+        :class:`~dwave.optimization.symbols.RoundIntNode`: equivalent symbol.
+    """
+    return RoundInt(x)
 
 def sqrt(x: ArraySymbol) -> SquareRoot:
     r"""Return an element-wise sqrt on the given symbol.

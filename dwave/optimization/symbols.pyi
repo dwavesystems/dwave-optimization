@@ -198,6 +198,9 @@ class Size(ArraySymbol):
     ...
 
 
+class RoundInt(ArraySymbol):
+    ...
+
 class Square(ArraySymbol):
     ...
 

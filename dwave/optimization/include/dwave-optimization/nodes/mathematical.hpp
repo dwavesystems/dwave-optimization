@@ -77,6 +77,14 @@ struct modulus<double> {
 };
 
 template <class T>
+struct rint {};
+
+template <>
+struct rint<double> {
+    double operator()(const double& x) const { return std::rint(x); }
+};
+
+template <class T>
 struct square {
     constexpr T operator()(const T& x) const { return x * x; }
 };
@@ -373,6 +381,7 @@ using AbsoluteNode = UnaryOpNode<functional::abs<double>>;
 using LogicalNode = UnaryOpNode<functional::logical<double>>;
 using NegativeNode = UnaryOpNode<std::negate<double>>;
 using NotNode = UnaryOpNode<std::logical_not<double>>;
+using RoundIntNode = UnaryOpNode<functional::rint<double>>;
 using SquareNode = UnaryOpNode<functional::square<double>>;
 using SquareRootNode = UnaryOpNode<functional::square_root<double>>;
 

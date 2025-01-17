@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add C++ ``RoundIntNode`` and Python ``RoundInt`` symbol. ``RoundInt`` propagates the rints (nearest integer) of its
+    predecessor element-wise.
