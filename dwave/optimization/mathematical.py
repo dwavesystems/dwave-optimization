@@ -601,7 +601,7 @@ def rint(x: ArraySymbol) -> RoundInt:
         >>> model.states.resize(1)
         >>> with model.lock():
         ...     print(rint_x.state())
-        1
+        1.0
     See Also:
         :class:`~dwave.optimization.symbols.RoundIntNode`: equivalent symbol.
     """
