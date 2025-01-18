@@ -1760,6 +1760,10 @@ bool UnaryOpNode<std::negate<double>>::integral() const {
     return array_ptr_->integral();
 }
 template <>
+bool UnaryOpNode<functional::rint<double>>::integral() const {
+    return true;
+}
+template <>
 bool UnaryOpNode<functional::square<double>>::integral() const {
     return array_ptr_->integral();
 }
@@ -1795,6 +1799,13 @@ template <>
 double UnaryOpNode<std::negate<double>>::max() const {
     return -(array_ptr_->min());
 }
+
+template <>
+double UnaryOpNode<functional::rint<double>>::max() const {
+    const double max = array_ptr_->max();
+    return std::rint(max);
+}
+
 template <>
 double UnaryOpNode<functional::square<double>>::max() const {
     const double max = array_ptr_->max();
@@ -1844,6 +1855,13 @@ template <>
 double UnaryOpNode<std::negate<double>>::min() const {
     return -(array_ptr_->max());
 }
+
+template <>
+double UnaryOpNode<functional::rint<double>>::min() const {
+    const double min = array_ptr_->min();
+    return std::rint(min);
+}
+
 template <>
 double UnaryOpNode<functional::square<double>>::min() const {
     const double min = array_ptr_->min();
@@ -1914,6 +1932,7 @@ ssize_t UnaryOpNode<UnaryOp>::size_diff(const State& state) const {
 
 template class UnaryOpNode<functional::abs<double>>;
 template class UnaryOpNode<functional::logical<double>>;
+template class UnaryOpNode<functional::rint<double>>;
 template class UnaryOpNode<functional::square<double>>;
 template class UnaryOpNode<functional::square_root<double>>;
 template class UnaryOpNode<std::negate<double>>;

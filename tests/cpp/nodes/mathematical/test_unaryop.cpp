@@ -307,6 +307,61 @@ TEST_CASE("UnaryOpNode - NotNode") {
     }
 }
 
+TEST_CASE("UnaryOpNode - RoundIntNode") {
+    auto graph = Graph();
+    GIVEN("An arbitrary number") {
+        double c = 10.3;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        auto rint_ptr = graph.emplace_node<RoundIntNode>(c_ptr);
+        auto state = graph.initialize_state();
+        CHECK(rint_ptr->min() == std::rint(c));
+        CHECK(rint_ptr->max() == std::rint(c));
+    }
+
+    GIVEN("A negative number") {
+        double c = -10.5;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        auto rint_ptr = graph.emplace_node<RoundIntNode>(c_ptr);
+        auto state = graph.initialize_state();
+        CHECK(rint_ptr->min() == std::rint(c));
+        CHECK(rint_ptr->max() == std::rint(c));
+    }
+
+    GIVEN("A constant 1d array of doubles") {
+        auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{-3.8, 0.3, 1.2, 5.6});
+        auto rint_ptr = graph.emplace_node<RoundIntNode>(c_ptr);
+
+        THEN("The min/max are expected") {
+            CHECK(rint_ptr->integral());
+            CHECK(rint_ptr->min() == -4);
+            CHECK(rint_ptr->max() == 6);
+        }
+    }
+
+    WHEN("We access a constant 1d array using integers from a RoundIntNode") {
+        double c0 = 0.3;
+        auto c0_ptr = graph.emplace_node<ConstantNode>(c0);
+        auto rint0_ptr = graph.emplace_node<RoundIntNode>(c0_ptr);
+
+        double c3 = 2.8;
+        auto c3_ptr = graph.emplace_node<ConstantNode>(c3);
+        auto rint3_ptr = graph.emplace_node<RoundIntNode>(c3_ptr);;
+
+
+        auto arr_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 10, 20, 30});
+
+        auto a0_ptr = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, rint0_ptr);
+        auto a3_ptr = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, rint3_ptr);
+
+        auto state = graph.initialize_state();
+
+        THEN("We get the value we expect") {
+            CHECK(std::ranges::equal(a0_ptr->view(state), std::vector{0}));
+            CHECK(std::ranges::equal(a3_ptr->view(state), std::vector{30}));
+        }
+    }
+}
+
 TEST_CASE("UnaryOpNode - SquareNode") {
     auto graph = Graph();
     GIVEN("An integer with max domain") {
