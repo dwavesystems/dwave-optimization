@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add C++ ``RintNode`` and Python ``Rint`` symbol. ``Rint`` propagates the values of its
+    predecessor rounded to the nearst integer element-wise.

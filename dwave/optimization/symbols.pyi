@@ -190,6 +190,10 @@ class Reshape(ArraySymbol):
     ...
 
 
+class Rint(ArraySymbol):
+    ...
+
+
 class SetVariable(ArraySymbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
 

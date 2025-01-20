@@ -26,7 +26,8 @@ namespace dwave::optimization {
 
 // NOTE: square_root should also be included but the templated tests need to be updated first.
 TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logical<double>,
-                   functional::square<double>, std::negate<double>, std::logical_not<double>) {
+                   functional::rint<double>, functional::square<double>, std::negate<double>,
+                   std::logical_not<double>) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -303,6 +304,61 @@ TEST_CASE("UnaryOpNode - NotNode") {
             auto state = graph.initialize_state();
             CHECK(std::ranges::equal(nc_ptr->view(state),
                                      std::vector{false, false, true, false, false, false, false}));
+        }
+    }
+}
+
+TEST_CASE("UnaryOpNode - RintNode") {
+    auto graph = Graph();
+    GIVEN("An arbitrary number") {
+        double c = 10.3;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        auto rint_ptr = graph.emplace_node<RintNode>(c_ptr);
+        auto state = graph.initialize_state();
+        CHECK(rint_ptr->min() == std::rint(c));
+        CHECK(rint_ptr->max() == std::rint(c));
+    }
+
+    GIVEN("A negative number") {
+        double c = -10.5;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        auto rint_ptr = graph.emplace_node<RintNode>(c_ptr);
+        auto state = graph.initialize_state();
+        CHECK(rint_ptr->min() == std::rint(c));
+        CHECK(rint_ptr->max() == std::rint(c));
+    }
+
+    GIVEN("A constant 1d array of doubles") {
+        auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{-3.8, 0.3, 1.2, 5.6});
+        auto rint_ptr = graph.emplace_node<RintNode>(c_ptr);
+
+        THEN("The min/max are expected") {
+            CHECK(rint_ptr->integral());
+            CHECK(rint_ptr->min() == -4);
+            CHECK(rint_ptr->max() == 6);
+        }
+    }
+
+    WHEN("We access a constant 1d array using integers from a RintNode") {
+        double c0 = 0.3;
+        auto c0_ptr = graph.emplace_node<ConstantNode>(c0);
+        auto rint0_ptr = graph.emplace_node<RintNode>(c0_ptr);
+
+        double c3 = 2.8;
+        auto c3_ptr = graph.emplace_node<ConstantNode>(c3);
+        auto rint3_ptr = graph.emplace_node<RintNode>(c3_ptr);;
+
+
+        auto arr_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 10, 20, 30});
+
+        auto a0_ptr = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, rint0_ptr);
+        auto a3_ptr = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, rint3_ptr);
+
+        auto state = graph.initialize_state();
+
+        THEN("We get the value we expect") {
+            CHECK(std::ranges::equal(a0_ptr->view(state), std::vector{0}));
+            CHECK(std::ranges::equal(a3_ptr->view(state), std::vector{30}));
         }
     }
 }
