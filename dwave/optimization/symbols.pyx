@@ -89,7 +89,7 @@ from dwave.optimization.libcpp.nodes cimport (
     SetNode as cppSetNode,
     SizeNode as cppSizeNode,
     SubtractNode as cppSubtractNode,
-    RoundIntNode as cppRoundIntNode,
+    RintNode as cppRintNode,
     SquareNode as cppSquareNode,
     SquareRootNode as cppSquareRootNode,
     SumNode as cppSumNode,
@@ -142,7 +142,7 @@ __all__ = [
     "Subtract",
     "SetVariable",
     "Size",
-    "RoundInt",
+    "Rint",
     "Square",
     "SquareRoot",
     "Sum",
@@ -2983,8 +2983,8 @@ cdef class Size(ArraySymbol):
 _register(Size, typeid(cppSizeNode))
 
 
-cdef class RoundInt(ArraySymbol):
-    """Takes the RoundInt of a symbol.
+cdef class Rint(ArraySymbol):
+    """Takes the values of a symbol and rounds them to the nearest integer.
 
     Examples:
         This example adds the round-int of a decision
@@ -2996,28 +2996,28 @@ cdef class RoundInt(ArraySymbol):
         >>> i = model.constant(10.4)
         >>> ii = rint(i)
         >>> type(ii)
-        <class 'dwave.optimization.symbols.RoundInt'>
+        <class 'dwave.optimization.symbols.Rint'>
     """
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
 
-        self.ptr = model._graph.emplace_node[cppRoundIntNode](x.array_ptr)
+        self.ptr = model._graph.emplace_node[cppRintNode](x.array_ptr)
         self.initialize_arraynode(model, self.ptr)
 
     @staticmethod
     def _from_symbol(Symbol symbol):
-        cdef cppRoundIntNode* ptr = dynamic_cast_ptr[cppRoundIntNode](symbol.node_ptr)
+        cdef cppRintNode* ptr = dynamic_cast_ptr[cppRintNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a RoundInt")
+            raise TypeError("given symbol cannot be used to construct a Rint")
 
-        cdef RoundInt x = RoundInt.__new__(RoundInt)
+        cdef Rint x = Rint.__new__(Rint)
         x.ptr = ptr
         x.initialize_arraynode(symbol.model, ptr)
         return x
 
-    cdef cppRoundIntNode* ptr
+    cdef cppRintNode* ptr
 
-_register(RoundInt, typeid(cppRoundIntNode))
+_register(Rint, typeid(cppRintNode))
 
 
 cdef class Square(ArraySymbol):

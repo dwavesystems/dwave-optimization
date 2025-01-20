@@ -381,7 +381,7 @@ using AbsoluteNode = UnaryOpNode<functional::abs<double>>;
 using LogicalNode = UnaryOpNode<functional::logical<double>>;
 using NegativeNode = UnaryOpNode<std::negate<double>>;
 using NotNode = UnaryOpNode<std::logical_not<double>>;
-using RoundIntNode = UnaryOpNode<functional::rint<double>>;
+using RintNode = UnaryOpNode<functional::rint<double>>;
 using SquareNode = UnaryOpNode<functional::square<double>>;
 using SquareRootNode = UnaryOpNode<functional::square_root<double>>;
 

@@ -2218,7 +2218,7 @@ class TestReshape(utils.SymbolTests):
         yield from syms
 
 
-class TestRoundInt(utils.SymbolTests):
+class TestRint(utils.SymbolTests):
     rng = np.random.default_rng(1)
 
     def generate_symbols(self):

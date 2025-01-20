@@ -161,7 +161,7 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
     cdef cppclass ProdNode(ArrayNode):
         pass
 
-    cdef cppclass RoundIntNode(ArrayNode):
+    cdef cppclass RintNode(ArrayNode):
         pass
 
     cdef cppclass SquareNode(ArrayNode):
