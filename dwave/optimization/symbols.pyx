@@ -3057,10 +3057,12 @@ _register(Square, typeid(cppSquareNode))
 
 
 cdef class SquareRoot(ArraySymbol):
-    """Takes the SquareRoot a symbol.
+    """Square root of a symbol.
+
     Examples:
-        This example adds the square-roots of an integer decision
-        variable to a model.
+        This example adds the square root of an integer decision variable to a
+        model.
+
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.mathematical import sqrt
         >>> model = Model()
