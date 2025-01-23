@@ -920,6 +920,57 @@ TEST_CASE("StackNode") {
             }
         }
     }
-}
 
+    GIVEN("Integral constant nodes with many elements") {
+        auto a = ConstantNode(std::vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        auto b = ConstantNode(std::vector{11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
+
+        WHEN("When stacked") {
+            auto s = StackNode(std::vector<ArrayNode*>{&a,&b}, 0);
+
+            THEN("The stack node is integral and we know the min and max") {
+                CHECK(s.integral());
+                CHECK(s.min() == 1);
+                CHECK(s.max() == 20);
+            }
+        }
+    }
+
+    GIVEN("Two integral scalars") {
+        auto a = ConstantNode(std::vector{-5});
+        auto b = ConstantNode(std::vector{7});
+
+        WHEN("When stacked") {
+            auto s = StackNode(std::vector<ArrayNode*>{&a,&b}, 0);
+
+            THEN("The stack node is integral and we know the min and max") {
+                CHECK(s.integral());
+                CHECK(s.min() == -5);
+                CHECK(s.max() == 7);
+            }
+        }
+    }
+
+    GIVEN("One integral scalar that is stacked") {
+        auto a = ConstantNode(std::vector{9});
+        auto s = StackNode(std::vector<ArrayNode*>{&a}, 0);
+
+        THEN("The stack node is integral and we know the min and max") {
+            CHECK(s.integral());
+            CHECK(s.min() == 9);
+            CHECK(s.max() == 9);
+        }
+    }
+
+    GIVEN("A non-integral scalar that is stacked") {
+        auto a = ConstantNode(std::vector{5.5});
+        auto s = StackNode(std::vector<ArrayNode*>{&a}, 0);
+
+        THEN("THe stack node is not integral and we know the min and max") {
+            CHECK(s.integral() == false);
+            CHECK(s.min() == 5.5);
+            CHECK(s.max() == 5.5);
+        }
+    }
+}
 }  // namespace dwave::optimization
