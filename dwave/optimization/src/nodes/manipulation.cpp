@@ -542,4 +542,128 @@ void SizeNode::propagate(State& state) const {
 
 void SizeNode::revert(State& state) const { return data_ptr<SizeNodeData>(state)->revert(); }
 
+std::vector<ssize_t> make_stack_shape(std::span<ArrayNode*> array_ptrs, ssize_t axis) {
+    // At least one input array is required
+    if (array_ptrs.size() < 1) {
+        throw std::invalid_argument("need at least one array to stack");
+    }
+
+    // All input arrays must have same shape
+    for (auto it = std::next(array_ptrs.begin()), stop = array_ptrs.end(); it != stop; ++it) {
+
+        // First verify same number of dimensions
+        if ((*std::prev(it))->ndim() != (*it)->ndim()) {
+            throw std::invalid_argument("all input arrays must have the same shape");
+        }
+
+        for (ssize_t i = 0, stop = (*it)->ndim(); i < stop; ++i) {
+            if ((*std::prev(it))->shape()[i] != (*it)->shape()[i]) {
+                throw std::invalid_argument("all input arrays must have the same shape");
+            }
+        }
+    }
+
+    // Axis must be in range 0..ndim
+    if (!(0 <= axis && axis <= array_ptrs.front()->ndim())) {
+        throw std::invalid_argument("axis " + std::to_string(axis) +
+                                    std::string(" is out of bounds for array of dimension ") +
+                                    std::to_string(array_ptrs.front()->ndim() + 1));
+    }
+
+    // Construct the stack shape, insert new dimension at axis
+    std::span<const ssize_t> shape0 = array_ptrs.front()->shape();
+    std::vector<ssize_t> shape(shape0.begin(), shape0.end());
+    auto axis_it = shape.begin();
+    std::advance(axis_it, axis);
+    shape.insert(axis_it, array_ptrs.size());
+    return shape;
+}
+
+double const* StackNode::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+void StackNode::commit(State& state) const { data_ptr<ArrayNodeStateData>(state)->commit(); }
+
+std::span<const Update> StackNode::diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->diff();
+}
+
+void StackNode::initialize_state(State& state) const {
+    int index = topological_index();
+    assert(index >= 0 && "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > index && "unexpected state length");
+    assert(state[index] == nullptr && "already initialized state");
+
+    std::vector<double> values;
+    values.resize(this->size());
+
+    // Since stack adds a new dimension of size equal to the number
+    // of inputs, we need to do this for the strided iterator to work
+    std::vector<ssize_t> shape(this->shape().begin(), this->shape().end());
+    shape[this->axis_] = 1;
+
+    for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
+        // Create a view into our buffer with the same shape as
+        // our input array starting at the correct place
+        auto view_it = Array::iterator(values.data() + array_starts_[arr_i], this->ndim(),
+                                       shape.data(), this->strides().data());
+
+        std::copy(array_ptrs_[arr_i]->begin(state), array_ptrs_[arr_i]->end(state), view_it);
+    }
+
+    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
+}
+
+void StackNode::propagate(State& state) const {
+    auto ptr = data_ptr<ArrayNodeStateData>(state);
+
+    // Since stack adds a new dimension of size equal to the number
+    // of inputs, we need to do this for the strided iterator to work
+    std::vector<ssize_t> shape(this->shape().begin(), this->shape().end());
+    shape[this->axis_] = 1;
+
+    for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
+        auto view_it = Array::iterator(ptr->buff() + array_starts_[arr_i], this->ndim(),
+                                       shape.data(), this->strides().data());
+
+        for (auto diff : array_ptrs_[arr_i]->diff(state)) {
+            assert(!diff.placed() && !diff.removed() && "no dynamic support implemented");
+            auto update_it = view_it + diff.index;
+            ssize_t buffer_index = &*update_it - ptr->buffer.data();
+            assert(*update_it == diff.old);
+            ptr->updates.emplace_back(buffer_index, *view_it, diff.value);
+            *update_it = diff.value;
+        }
+    }
+}
+
+void StackNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
+
+StackNode::StackNode(std::span<ArrayNode*> array_ptrs, const ssize_t axis)
+        : ArrayOutputMixin(make_stack_shape(array_ptrs, axis)),
+          axis_(axis),
+          array_ptrs_(array_ptrs.begin(), array_ptrs.end()) {
+    array_starts_.reserve(array_ptrs.size());
+    array_starts_.emplace_back(0);
+
+    // Compute buffer start position for each input array
+    auto subshape = array_ptrs.front()->shape().last(this->ndim() - 1 - axis);
+    ssize_t offset = std::accumulate(subshape.begin(), subshape.end(), 1,
+                                     std::multiplies<ssize_t>());
+
+    // The first array starts at 0
+    for (ssize_t arr_i = 1, stop = array_ptrs.size(); arr_i < stop; ++arr_i) {
+        array_starts_.emplace_back(array_starts_[arr_i - 1] + offset);
+    }
+
+    for (auto it = array_ptrs.begin(), stop = array_ptrs.end(); it != stop; ++it) {
+        if ((*it)->dynamic()) {
+            throw std::invalid_argument("stack input arrays cannot be dynamic");
+        }
+
+        this->add_predecessor((*it));
+    }
+}
+
 }  // namespace dwave::optimization

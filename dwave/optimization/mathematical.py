@@ -36,6 +36,7 @@ from dwave.optimization.symbols import (
     Put,
     Rint,
     SquareRoot,
+    Stack,
     Where,
     Xor,
 )
@@ -683,13 +684,11 @@ def stack(arrays: collections.abc.Iterable[ArraySymbol], axis: int = 0) -> Array
         [[1. 3. 5.]
          [2. 4. 6.]]
     """
-    if all(isinstance(arr, ArraySymbol) for arr in arrays):
-        if not 0 <= axis <= arrays[0].ndim():
-            raise ValueError(f'axis {axis} is out of bounds for array'
-                             f' of dimension {arrays[0].ndim() + 1}')
+    if isinstance(arrays, ArraySymbol):
+        return arrays
 
-        make_shape = lambda x: (x.shape()[:axis]) + (1, ) + (x.shape()[axis:])
-        return concatenate([arr.reshape(make_shape(arr)) for arr in arrays], axis)
+    if all(isinstance(arr, ArraySymbol) for arr in arrays):
+        return Stack(tuple(arrays), axis)
 
     raise ValueError("stack takes an Iterable of ArraySymbols of same shape")
 

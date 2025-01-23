@@ -720,4 +720,206 @@ TEST_CASE("SizeNode") {
     }
 }
 
+TEST_CASE("StackNode") {
+    GIVEN("Three constant nodes with 10 elements each reshaped to (2,5)") {
+        auto a = ConstantNode(std::vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        auto b = ConstantNode(std::vector{11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
+        auto c = ConstantNode(std::vector{21, 22, 23, 24, 25, 26, 27, 28, 29, 30});
+        auto ra = ReshapeNode(&a, std::vector<ssize_t>({2, 5}));
+        auto rb = ReshapeNode(&b, std::vector<ssize_t>({2, 5}));
+        auto rc = ReshapeNode(&c, std::vector<ssize_t>({2, 5}));
+
+        WHEN("Stacked on axis 0") {
+            auto c = StackNode(std::vector<ArrayNode*>{&ra, &rb, &rc}, 0);
+
+            THEN("The stacked node has shape (2,2,5) and ndim 3") {
+                CHECK(std::ranges::equal(c.shape(), std::vector{3, 2, 5}));
+                CHECK(c.ndim() == 3);
+            }
+        }
+        WHEN("Stacked on axis 1") {
+            auto c = StackNode(std::vector<ArrayNode*>{&ra, &rb, &rc}, 1);
+
+            THEN("The stacked node has shape (2,2,5) and ndim 3") {
+                CHECK(std::ranges::equal(c.shape(), std::vector{2, 3, 5}));
+                CHECK(c.ndim() == 3);
+            }
+        }
+        WHEN("Stacked on axis 2") {
+            auto c = StackNode(std::vector<ArrayNode*>{&ra, &rb, &rc}, 2);
+
+            THEN("The stacked node has shape (2,5,2) and ndim 3") {
+                CHECK(std::ranges::equal(c.shape(), std::vector{2, 5, 3}));
+                CHECK(c.ndim() == 3);
+            }
+        }
+    }
+
+    GIVEN("Two constant nodes reshaped to (2,1,2,1)") {
+        auto graph = Graph();
+
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{1, 2, 3, 4});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{5, 6, 7, 8});
+
+        auto ra_ptr = graph.emplace_node<ReshapeNode>(a_ptr, std::vector<ssize_t>{2, 1, 2, 1});
+        auto rb_ptr = graph.emplace_node<ReshapeNode>(b_ptr, std::vector<ssize_t>{2, 1, 2, 1});
+
+        std::vector<ArrayNode*> v{ra_ptr, rb_ptr};
+
+        WHEN("Stacked on axis 0") {
+            auto c_ptr = graph.emplace_node<StackNode>(v, 0);
+
+            THEN("The stacked node has shape (2,2,1,2,1) and ndim 5") {
+                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2, 2, 1, 2, 1}));
+                CHECK(c_ptr->ndim() == 5);
+            }
+
+            AND_WHEN("The graph is initialized") {
+                auto state = graph.initialize_state();
+                auto expected = std::vector<ssize_t>{1, 2, 3, 4, 5, 6, 7, 8};
+                THEN("Buffer is initialized correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+
+        WHEN("Stacked on axis 1") {
+            auto c_ptr = graph.emplace_node<StackNode>(v, 1);
+
+            THEN("The concatenated node has shape (2,2,1,2,1) and ndim 5") {
+                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2, 2, 1, 2, 1}));
+                CHECK(c_ptr->ndim() == 5);
+            }
+
+            AND_WHEN("The graph is initialized") {
+                auto state = graph.initialize_state();
+                auto expected = std::vector<ssize_t>{1, 2, 5, 6, 3, 4, 7, 8};
+                THEN("Buffer is initialized correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+
+        WHEN("Stacked on axis 2") {
+            auto c_ptr = graph.emplace_node<StackNode>(v, 2);
+
+            THEN("The concatenated node has shape (2,1,2,2,1) and ndim 5") {
+                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2, 1, 2, 2, 1}));
+                CHECK(c_ptr->ndim() == 5);
+            }
+
+            AND_WHEN("The graph is initialized") {
+                auto state = graph.initialize_state();
+                auto expected = std::vector<ssize_t>{1, 2, 5, 6, 3, 4, 7, 8};
+                THEN("Buffer is initialized correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+
+        WHEN("Stacked on axis 3") {
+            auto c_ptr = graph.emplace_node<StackNode>(v, 3);
+
+            THEN("The concatenated node has shape (2,1,2,2,1) and ndim 5") {
+                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2, 1, 2, 2, 1}));
+                CHECK(c_ptr->ndim() == 5);
+            }
+
+            AND_WHEN("The graph is initialized") {
+                auto state = graph.initialize_state();
+                auto expected = std::vector<ssize_t>{1, 5, 2, 6, 3, 7, 4, 8};
+                THEN("Buffer is initialized correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+
+        WHEN("Stacked on axis 4") {
+            auto c_ptr = graph.emplace_node<StackNode>(v, 4);
+
+            THEN("The concatenated node has shape (2,1,2,1,2) and ndim 5") {
+                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2, 1, 2, 1, 2}));
+                CHECK(c_ptr->ndim() == 5);
+            }
+
+            AND_WHEN("The graph is initialized") {
+                auto state = graph.initialize_state();
+                auto expected = std::vector<ssize_t>{1, 5, 2, 6, 3, 7, 4, 8};
+                THEN("Buffer is initialized correctly") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), expected));
+                }
+            }
+        }
+    }
+
+    GIVEN("Three arrays with shapes (2,2)") {
+        auto graph = Graph();
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2, 2}, 0, 100);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2, 2}, 0, 100);
+        auto c_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2, 2}, 0, 100);
+
+        WHEN("Stacked on axis 0 and the arrays are updated") {
+            auto abc_ptr = graph.emplace_node<StackNode>(std::vector<ArrayNode*>{a_ptr, b_ptr, c_ptr}, 0);
+            auto state = graph.initialize_state();
+
+            THEN("shape and ndim are (2,2,3) and 3") {
+                CHECK(std::ranges::equal(abc_ptr->shape(), std::vector{3, 2, 2}));
+                CHECK(abc_ptr->ndim() == 3);
+            }
+
+            // Values 1-4, 5-8, 9-12
+            for (auto i : std::ranges::iota_view(0, 4)) a_ptr->set_value(state, i, i + 1);
+            for (auto i : std::ranges::iota_view(0, 4)) b_ptr->set_value(state, i, i + 5);
+            for (auto i : std::ranges::iota_view(0, 4)) c_ptr->set_value(state, i, i + 9);
+
+            graph.propose(state, {a_ptr, b_ptr, c_ptr}, [](const Graph&, State&) { return true; });
+            THEN("StackNode values are propagated correctly") {
+                CHECK(std::ranges::equal(abc_ptr->view(state), std::ranges::iota_view{1, 13}));
+            }
+        }
+
+        WHEN("Stacked on axis 1 and the arrays are updated") {
+            auto abc_ptr = graph.emplace_node<StackNode>(std::vector<ArrayNode*>{a_ptr, b_ptr, c_ptr}, 1);
+            auto state = graph.initialize_state();
+
+            THEN("shape and ndim are (2,2,3) and 3") {
+                CHECK(std::ranges::equal(abc_ptr->shape(), std::vector{2, 3, 2}));
+                CHECK(abc_ptr->ndim() == 3);
+            }
+
+            // Values 1-4, 5-8, 9-12
+            for (auto i : std::ranges::iota_view(0, 4)) a_ptr->set_value(state, i, i + 1);
+            for (auto i : std::ranges::iota_view(0, 4)) b_ptr->set_value(state, i, i + 5);
+            for (auto i : std::ranges::iota_view(0, 4)) c_ptr->set_value(state, i, i + 9);
+
+            graph.propose(state, {a_ptr, b_ptr, c_ptr}, [](const Graph&, State&) { return true; });
+            THEN("StackNode values are propagated correctly") {
+                std::vector<ssize_t> expected = { 1, 2, 5, 6, 9, 10, 3, 4, 7, 8, 11, 12 };
+                CHECK(std::ranges::equal(abc_ptr->view(state), expected));
+            }
+        }
+
+        WHEN("Stacked on axis 2 and the arrays are updated") {
+            auto abc_ptr = graph.emplace_node<StackNode>(std::vector<ArrayNode*>{a_ptr, b_ptr, c_ptr}, 2);
+            auto state = graph.initialize_state();
+
+            THEN("shape and ndim are (2,2,3) and 3") {
+                CHECK(std::ranges::equal(abc_ptr->shape(), std::vector{2, 2, 3}));
+                CHECK(abc_ptr->ndim() == 3);
+            }
+
+            // Values 1-4, 5-8, 9-12
+            for (auto i : std::ranges::iota_view(0, 4)) a_ptr->set_value(state, i, i + 1);
+            for (auto i : std::ranges::iota_view(0, 4)) b_ptr->set_value(state, i, i + 5);
+            for (auto i : std::ranges::iota_view(0, 4)) c_ptr->set_value(state, i, i + 9);
+
+            graph.propose(state, {a_ptr, b_ptr, c_ptr}, [](const Graph&, State&) { return true; });
+            THEN("StackNode values are propagated correctly") {
+                std::vector<ssize_t> expected = { 1, 5, 9, 2, 6, 10, 3, 7, 11, 4, 8, 12 };
+                CHECK(std::ranges::equal(abc_ptr->view(state), expected));
+            }
+        }
+    }
+}
+
 }  // namespace dwave::optimization

@@ -87,6 +87,9 @@ cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::o
     cdef cppclass SizeNode(ArrayNode):
         pass
 
+    cdef cppclass StackNode(ArrayNode):
+        Py_ssize_t axis()
+
 
 cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass AbsoluteNode(ArrayNode):

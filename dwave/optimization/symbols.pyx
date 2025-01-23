@@ -88,6 +88,7 @@ from dwave.optimization.libcpp.nodes cimport (
     ReshapeNode as cppReshapeNode,
     SetNode as cppSetNode,
     SizeNode as cppSizeNode,
+    StackNode as cppStackNode,
     SubtractNode as cppSubtractNode,
     RintNode as cppRintNode,
     SquareNode as cppSquareNode,
@@ -139,6 +140,7 @@ __all__ = [
     "Put",
     "QuadraticModel",
     "Reshape",
+    "Stack",
     "Subtract",
     "SetVariable",
     "Size",
@@ -3089,6 +3091,67 @@ cdef class SquareRoot(ArraySymbol):
     cdef cppSquareRootNode* ptr
 
 _register(SquareRoot, typeid(cppSquareRootNode))
+
+
+cdef class Stack(ArraySymbol):
+    """Joins a sequence of ArraySymbols by stacking them on a new axis.
+    Examples:
+        This examples stacks two constant nodes on the first axis.
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.symbols import Stack
+        >>> model = Model()
+        >>> a = model.constant([1,2])
+        >>> b = model.constant([3,4])
+        >>> a_b = Stack((a,b), axis=0)
+        >>> type(a_b)
+        <class 'dwave.optimization.symbols.Stack'>
+    """
+    def __init__(self, tuple inputs, int axis = 0):
+        if len(inputs) < 1:
+            raise ValueError("must have at least one predecessor node")
+
+        cdef _Graph model = inputs[0].model
+        cdef vector[cppArrayNode*] cppinputs
+
+        cdef ArraySymbol array
+        for node in inputs:
+            if node.model != model:
+                raise ValueError("all predecessors must be from the same model")
+            array = <ArraySymbol?>node
+            cppinputs.push_back(array.array_ptr)
+
+        self.ptr = model._graph.emplace_node[cppStackNode](cppinputs, axis)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppStackNode* ptr = dynamic_cast_ptr[cppStackNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Stack")
+
+        cdef Stack m = Stack.__new__(Stack)
+        m.ptr = ptr
+        m.initialize_arraynode(symbol.model, ptr)
+        return m
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        if len(predecessors) < 1:
+            raise ValueError("Stack must have at least one predecessor")
+
+        with zf.open(directory + "axis.json", "r") as f:
+            return Stack(tuple(predecessors), axis=json.load(f))
+
+    def _into_zipfile(self, zf, directory):
+        encoder = json.JSONEncoder(separators=(',', ':'))
+        zf.writestr(directory + "axis.json", encoder.encode(self.axis()))
+
+    def axis(self):
+        return self.ptr.axis()
+
+    cdef cppStackNode* ptr
+
+_register(Stack, typeid(cppStackNode))
 
 
 cdef class Subtract(ArraySymbol):

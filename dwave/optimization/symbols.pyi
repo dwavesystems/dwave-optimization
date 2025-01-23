@@ -210,6 +210,10 @@ class SquareRoot(ArraySymbol):
     ...
 
 
+class Stack(ArraySymbol):
+    ...
+
+
 class Subtract(ArraySymbol):
     ...
 
