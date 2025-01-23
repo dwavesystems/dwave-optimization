@@ -616,17 +616,20 @@ void StackNode::initialize_state(State& state) const {
 }
 
 bool StackNode::integral() const {
-    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(), array_ptrs_[0]->integral(),
+    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(),
+                            array_ptrs_[0]->integral(),
                             [](bool b, ArrayNode* node) { return b && node->integral(); });
 }
 
 double StackNode::max() const {
-    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(), array_ptrs_[0]->max(),
+    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(),
+                            array_ptrs_[0]->max(),
                             [](double m, ArrayNode* node) { return std::max(m, node->max()); });
 }
 
 double StackNode::min() const {
-    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(), array_ptrs_[0]->min(),
+    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(),
+                            array_ptrs_[0]->min(),
                             [](double m, ArrayNode* node) { return std::min(m, node->min()); });
 }
 
