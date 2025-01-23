@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add C++ ``StackNode``. ``StackNode``joins its array predecessors
+    along a new axis. Python symbol ``Stack`` now uses ``StackNode``.
