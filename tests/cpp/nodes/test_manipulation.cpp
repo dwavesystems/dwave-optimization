@@ -966,7 +966,7 @@ TEST_CASE("StackNode") {
         auto a = ConstantNode(std::vector{5.5});
         auto s = StackNode(std::vector<ArrayNode*>{&a}, 0);
 
-        THEN("THe stack node is not integral and we know the min and max") {
+        THEN("The stack node is not integral and we know the min and max") {
             CHECK(s.integral() == false);
             CHECK(s.min() == 5.5);
             CHECK(s.max() == 5.5);
