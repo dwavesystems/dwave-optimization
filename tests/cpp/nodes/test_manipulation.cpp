@@ -894,7 +894,7 @@ TEST_CASE("StackNode") {
 
             graph.propose(state, {a_ptr, b_ptr, c_ptr}, [](const Graph&, State&) { return true; });
             THEN("StackNode values are propagated correctly") {
-                std::vector<ssize_t> expected = { 1, 2, 5, 6, 9, 10, 3, 4, 7, 8, 11, 12 };
+                std::vector<ssize_t> expected = {1, 2, 5, 6, 9, 10, 3, 4, 7, 8, 11, 12};
                 CHECK(std::ranges::equal(abc_ptr->view(state), expected));
             }
         }
@@ -915,7 +915,7 @@ TEST_CASE("StackNode") {
 
             graph.propose(state, {a_ptr, b_ptr, c_ptr}, [](const Graph&, State&) { return true; });
             THEN("StackNode values are propagated correctly") {
-                std::vector<ssize_t> expected = { 1, 5, 9, 2, 6, 10, 3, 7, 11, 4, 8, 12 };
+                std::vector<ssize_t> expected = {1, 5, 9, 2, 6, 10, 3, 7, 11, 4, 8, 12};
                 CHECK(std::ranges::equal(abc_ptr->view(state), expected));
             }
         }
@@ -926,7 +926,7 @@ TEST_CASE("StackNode") {
         auto b = ConstantNode(std::vector{11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
 
         WHEN("When stacked") {
-            auto s = StackNode(std::vector<ArrayNode*>{&a,&b}, 0);
+            auto s = StackNode(std::vector<ArrayNode*>{&a, &b}, 0);
 
             THEN("The stack node is integral and we know the min and max") {
                 CHECK(s.integral());
@@ -941,7 +941,7 @@ TEST_CASE("StackNode") {
         auto b = ConstantNode(std::vector{7});
 
         WHEN("When stacked") {
-            auto s = StackNode(std::vector<ArrayNode*>{&a,&b}, 0);
+            auto s = StackNode(std::vector<ArrayNode*>{&a, &b}, 0);
 
             THEN("The stack node is integral and we know the min and max") {
                 CHECK(s.integral());

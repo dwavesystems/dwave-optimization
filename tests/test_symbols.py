@@ -2495,23 +2495,23 @@ class TestStack(utils.SymbolTests):
 
     def test_single_array_symbol(self):
         model = Model()
-        A = model.constant(np.arange(4).reshape(2,2))
+        A = model.constant(np.arange(4).reshape(2, 2))
         s = stack(A)
-        self.assertEqual(s.shape(), (2,2))
+        self.assertEqual(s.shape(), (2, 2))
         self.assertEqual(s.ndim(), 2)
         self.assertTrue(s is A)
         self.assertIsInstance(s, dwave.optimization.symbols.Constant)
 
     def test_single_array(self):
         model = Model()
-        A = model.constant(np.arange(4).reshape((2,2)))
-        s = stack((A,))
+        A = model.constant(np.arange(4).reshape((2, 2)))
+        s = stack((A, ))
         with model.lock():
             model.states.resize(1)
             self.assertIsInstance(s, dwave.optimization.symbols.Stack)
-            self.assertEqual(s.shape(), (1,2,2))
+            self.assertEqual(s.shape(), (1, 2, 2))
             self.assertEqual(s.ndim(), 3)
-            np.testing.assert_array_equal(s.state(0), np.stack((A,)))
+            np.testing.assert_array_equal(s.state(0), np.stack((A, )))
 
     def test_1d_arrays(self):
         model = Model()
@@ -2580,23 +2580,23 @@ class TestStack(utils.SymbolTests):
 
         with self.subTest("input arrays must have same shape"):
             model = Model()
-            A = model.constant(np.arange(4).reshape((2,2)))
-            B = model.constant(np.arange(8).reshape((4,2)))
+            A = model.constant(np.arange(4).reshape((2, 2)))
+            B = model.constant(np.arange(8).reshape((4, 2)))
             with self.assertRaisesRegex(
                 ValueError,
                 (r"all input arrays must have the same shape")
             ):
-                stack((A,B))
+                stack((A, B))
 
         with self.subTest("input arrays must have same shape and ndim"):
             model = Model()
-            A = model.constant(np.arange(4).reshape((2,2)))
-            B = model.constant(np.arange(4).reshape((2,1,2)))
+            A = model.constant(np.arange(4).reshape((2, 2)))
+            B = model.constant(np.arange(4).reshape((2, 1, 2)))
             with self.assertRaisesRegex(
                 ValueError,
                 (r"all input arrays must have the same shape")
             ):
-                stack((A,B))
+                stack((A, B))
 
         with self.subTest("at least one input array is required"):
             model = Model()

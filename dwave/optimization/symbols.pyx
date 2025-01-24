@@ -3100,9 +3100,9 @@ cdef class Stack(ArraySymbol):
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.symbols import Stack
         >>> model = Model()
-        >>> a = model.constant([1,2])
-        >>> b = model.constant([3,4])
-        >>> a_b = Stack((a,b), axis=0)
+        >>> a = model.constant([1, 2])
+        >>> b = model.constant([3, 4])
+        >>> a_b = Stack((a, b), axis=0)
         >>> type(a_b)
         <class 'dwave.optimization.symbols.Stack'>
     """
