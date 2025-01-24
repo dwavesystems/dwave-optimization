@@ -171,6 +171,7 @@ class StackNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t axis_;
     std::vector<ArrayNode*> array_ptrs_;
     std::vector<ssize_t> array_starts_;
+    std::vector<ssize_t> strided_iter_shape_;
 };
 
 }  // namespace dwave::optimization

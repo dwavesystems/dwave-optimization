@@ -598,16 +598,11 @@ void StackNode::initialize_state(State& state) const {
     std::vector<double> values;
     values.resize(this->size());
 
-    // Since stack adds a new dimension of size equal to the number
-    // of inputs, we need to do this for the strided iterator to work
-    std::vector<ssize_t> shape(this->shape().begin(), this->shape().end());
-    shape[this->axis_] = 1;
-
     for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
         // Create a view into our buffer with the same shape as
         // our input array starting at the correct place
         auto view_it = Array::iterator(values.data() + array_starts_[arr_i], this->ndim(),
-                                       shape.data(), this->strides().data());
+                                       strided_iter_shape_.data(), this->strides().data());
 
         std::copy(array_ptrs_[arr_i]->begin(state), array_ptrs_[arr_i]->end(state), view_it);
     }
@@ -636,14 +631,9 @@ double StackNode::min() const {
 void StackNode::propagate(State& state) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);
 
-    // Since stack adds a new dimension of size equal to the number
-    // of inputs, we need to do this for the strided iterator to work
-    std::vector<ssize_t> shape(this->shape().begin(), this->shape().end());
-    shape[this->axis_] = 1;
-
     for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
         auto view_it = Array::iterator(ptr->buff() + array_starts_[arr_i], this->ndim(),
-                                       shape.data(), this->strides().data());
+                                       strided_iter_shape_.data(), this->strides().data());
 
         for (auto diff : array_ptrs_[arr_i]->diff(state)) {
             assert(!diff.placed() && !diff.removed() && "no dynamic support implemented");
@@ -682,6 +672,10 @@ StackNode::StackNode(std::span<ArrayNode*> array_ptrs, const ssize_t axis)
 
         this->add_predecessor((*it));
     }
+
+    // The strided shape that will be used by ArrayIterator
+    strided_iter_shape_.assign(this->shape().begin(), this->shape().end());
+    strided_iter_shape_[axis] = 1;
 }
 
 }  // namespace dwave::optimization
