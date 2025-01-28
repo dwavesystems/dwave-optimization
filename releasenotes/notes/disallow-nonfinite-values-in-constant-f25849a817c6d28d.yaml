@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Previously, `Constant` symbols could be created from data that contained
+    NaNs or infinite float values. Since these values, especially NaN, can
+    cause issues during propagation when not expected, they could cause the
+    model to exhibit incorrect behavior. As such, providing these values to
+    initialize a `Constant` symbol is now disallowed.

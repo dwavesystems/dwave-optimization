@@ -943,6 +943,21 @@ class TestConstant(utils.SymbolTests):
         self.assertEqual(c.shape(), tuple())
         np.testing.assert_array_equal(c, 5)
 
+    def test_nonfinite_values(self):
+        model = Model()
+
+        with self.assertRaises(ValueError):
+            model.constant(float("nan"))
+
+        with self.assertRaises(ValueError):
+            model.constant(float("inf"))
+
+        with self.assertRaises(ValueError):
+            model.constant(-float("inf"))
+
+        with self.assertRaises(ValueError):
+            model.constant(np.array([0, 5, np.nan]))
+
 
 class TestDisjointBitSetsVariable(utils.SymbolTests):
     def test_inequality(self):

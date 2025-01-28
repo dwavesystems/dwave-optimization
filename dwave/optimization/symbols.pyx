@@ -865,7 +865,7 @@ cdef class Constant(ArraySymbol):
     """
     def __init__(self, _Graph model, array_like):
         # In the future we won't need to be contiguous, but we do need to be right now
-        array = np.asarray(array_like, dtype=np.double, order="C")
+        array = np.asarray_chkfinite(array_like, dtype=np.double, order="C")
 
         # Get the shape and strides
         cdef vector[Py_ssize_t] shape = array.shape
