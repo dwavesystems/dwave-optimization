@@ -549,6 +549,49 @@ TEST_CASE("ReshapeNode") {
             THEN("It has the shape/size/etc we expect") {
                 CHECK(B.ndim() == 1);
                 CHECK(std::ranges::equal(B.shape(), std::vector{12}));
+
+                CHECK(B.max() == A.max());
+                CHECK(B.min() == A.min());
+                CHECK(B.integral() == A.integral());
+            }
+        }
+
+        WHEN("It is reshaped without specifying the size of axis 0") {
+            auto B = ReshapeNode(&A, {-1});
+
+            THEN("It has the shape/size/etc we expect") {
+                CHECK(B.ndim() == 1);
+                CHECK(std::ranges::equal(B.shape(), std::vector{12}));
+
+                CHECK(B.max() == A.max());
+                CHECK(B.min() == A.min());
+                CHECK(B.integral() == A.integral());
+            }
+        }
+
+        WHEN("We reshape it into a 3x4 array explicitly") {
+            auto B = ReshapeNode(&A, {3, 4});
+
+            THEN("It has the shape/size/etc we expect") {
+                CHECK(B.ndim() == 2);
+                CHECK(std::ranges::equal(B.shape(), std::vector{3, 4}));
+
+                CHECK(B.max() == A.max());
+                CHECK(B.min() == A.min());
+                CHECK(B.integral() == A.integral());
+            }
+        }
+
+        WHEN("We reshape it into a 3x4 array implicitly") {
+            auto B = ReshapeNode(&A, {3, -1});
+
+            THEN("It has the shape/size/etc we expect") {
+                CHECK(B.ndim() == 2);
+                CHECK(std::ranges::equal(B.shape(), std::vector{3, 4}));
+
+                CHECK(B.max() == A.max());
+                CHECK(B.min() == A.min());
+                CHECK(B.integral() == A.integral());
             }
         }
     }

@@ -2232,6 +2232,24 @@ class TestReshape(utils.SymbolTests):
         model.lock()
         yield from syms
 
+    def test_implicit_reshape(self):
+        model = Model()
+        A = model.constant(np.arange(12).reshape(3, 4))
+        B = A.reshape(2, -1)
+        C = A.reshape(-1, 6)
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(B.state(), np.arange(12).reshape(2, 6))
+            np.testing.assert_array_equal(C.state(), np.arange(12).reshape(2, 6))
+
+    def test_flatten(self):
+        model = Model()
+        A = model.constant(np.arange(25).reshape(5, 5))
+        B = A.flatten()
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(B.state(), np.arange(25))
+
 
 class TestRint(utils.SymbolTests):
     rng = np.random.default_rng(1)

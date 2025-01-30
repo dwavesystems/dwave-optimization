@@ -196,13 +196,13 @@ cdef object symbol_from_ptr(_Graph model, cppNode* node_ptr):
     return cls._from_symbol(Symbol.from_ptr(model, node_ptr))
 
 
-cdef vector[Py_ssize_t] _as_cppshape(object shape):
+cdef vector[Py_ssize_t] _as_cppshape(object shape, bint nonnegative = True):
     """Convert a shape specified as a python object to a C++ vector."""
 
     # Use the same error messages as NumPy
 
     if isinstance(shape, numbers.Integral):
-        return _as_cppshape((shape,))
+        return _as_cppshape((shape,), nonnegative=nonnegative)
 
     if not isinstance(shape, collections.abc.Sequence):
         raise TypeError(f"expected a sequence of integers or a single integer, got '{repr(shape)}'")
@@ -212,7 +212,7 @@ cdef vector[Py_ssize_t] _as_cppshape(object shape):
     if not all(isinstance(x, numbers.Integral) for x in shape):
         raise ValueError(f"expected a sequence of integers or a single integer, got '{repr(shape)}'")
 
-    if any(x < 0 for x in shape):
+    if nonnegative and any(x < 0 for x in shape):
         raise ValueError("negative dimensions are not allowed")
 
     return shape
@@ -2829,7 +2829,7 @@ cdef class Reshape(ArraySymbol):
 
         self.ptr = model._graph.emplace_node[cppReshapeNode](
             node.array_ptr,
-            _as_cppshape(shape),
+            _as_cppshape(shape, nonnegative=False),
             )
 
         self.initialize_arraynode(model, self.ptr)

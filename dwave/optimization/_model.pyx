@@ -1280,6 +1280,13 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Any  # avoid circular import
         return Any(self)
 
+    def flatten(self):
+        """Return an array symbol collapsed into one dimension.
+
+        Equivalent to ``symbol.reshape(-1)``.
+        """
+        return self.reshape(-1)
+
     def max(self):
         """Create a :class:`~dwave.optimization.symbols.Max` symbol.
 

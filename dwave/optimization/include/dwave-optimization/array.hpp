@@ -915,10 +915,11 @@ class ArrayOutputMixin : public Base {
     explicit ArrayOutputMixin(ssize_t n) : ArrayOutputMixin({n}) {}
 
     explicit ArrayOutputMixin(std::initializer_list<ssize_t> shape)
-            : ndim_(shape.size()), shape_(make_shape(shape)) {}
+            : ArrayOutputMixin(std::span(shape)) {}
 
-    explicit ArrayOutputMixin(std::span<const ssize_t> shape)
-            : ndim_(shape.size()), shape_(make_shape(shape)) {}
+    template <std::ranges::sized_range Range>
+    explicit ArrayOutputMixin(Range&& shape)
+            : ndim_(shape.size()), shape_(make_shape(std::forward<Range>(shape))) {}
 
     ssize_t ndim() const noexcept final { return ndim_; }
 
@@ -941,7 +942,7 @@ class ArrayOutputMixin : public Base {
     constexpr bool contiguous() const noexcept final { return true; }
 
  private:
-    template <class Range>
+    template <std::ranges::sized_range Range>
     static std::unique_ptr<ssize_t[]> make_shape(Range&& shape) noexcept {
         if (shape.size() == 0) return nullptr;
         auto ptr = std::make_unique<ssize_t[]>(shape.size());

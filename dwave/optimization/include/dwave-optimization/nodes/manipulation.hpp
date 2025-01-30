@@ -104,14 +104,43 @@ class PutNode : public ArrayOutputMixin<ArrayNode> {
     const Array* values_ptr_;
 };
 
+
+/// Propagates the values of its predecessor, interpreted into a different shape.
 class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    ReshapeNode(ArrayNode* node_ptr, std::span<const ssize_t> shape);
+    /// Constructor for ReshapeNode.
+    ///
+    /// @param array_ptr The array to be reshaped. May not be dynamic.
+    /// @param shape The new shape. Must have the same size as the original shape.
     ReshapeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape);
 
+    /// Constructor for ReshapeNode.
+    ///
+    /// @param array_ptr The array to be reshaped. May not be dynamic.
+    /// @param shape The new shape. Must have the same size as the original shape.
+    template <std::ranges::range Range>
+    ReshapeNode(ArrayNode* node_ptr, Range&& shape)
+            : ReshapeNode(node_ptr, std::vector<ssize_t>(shape.begin(), shape.end())) {}
+
+    /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
     void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Node::revert()
     void revert(State& state) const override;
 
  private:
