@@ -77,6 +77,12 @@ void ConcatenateNode::initialize_state(State& state) const {
     state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
 }
 
+bool ConcatenateNode::integral() const {
+    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(),
+                            array_ptrs_[0]->integral(),
+                            [](bool b, ArrayNode* ptr){ return b && ptr->integral(); });
+}
+
 std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ssize_t axis) {
     // One or more arrays must be given
     if (array_ptrs.size() < 1) {
@@ -134,6 +140,18 @@ std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ss
     }
 
     return shape;
+}
+
+double ConcatenateNode::max() const {
+    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(),
+                            array_ptrs_[0]->max(),
+                            [](double m, ArrayNode* ptr){ return std::max(m, ptr->max()); });
+}
+
+double ConcatenateNode::min() const {
+    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(),
+                            array_ptrs_[0]->min(),
+                            [](double m, ArrayNode* ptr){ return std::min(m, ptr->min()); });
 }
 
 void ConcatenateNode::propagate(State& state) const {

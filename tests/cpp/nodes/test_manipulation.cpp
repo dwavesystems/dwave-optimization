@@ -276,6 +276,31 @@ TEST_CASE("ConcatenateNode") {
             }
         }
     }
+
+    GIVEN("Two constant nodes of integrals") {
+        auto a = ConstantNode(std::vector{-5, 10, 3});
+        auto b = ConstantNode(std::vector{1, 10, -6});
+
+        WHEN("both are concatenated") {
+            auto c = ConcatenateNode(std::vector<ArrayNode*>{&a, &b}, 0);
+
+            THEN("the concatenated node is integral and we know the min/max") {
+                CHECK(c.integral());
+                CHECK(c.min() == -6);
+                CHECK(c.max() == 10);
+            }
+        }
+
+        WHEN("only one is concatenated") {
+            auto c = ConcatenateNode(std::vector<ArrayNode*>{&a}, 0);
+
+            THEN("the concatenated node is integral and we know the min/max") {
+                CHECK(c.integral());
+                CHECK(c.min() == -5);
+                CHECK(c.max() == 10);
+            }
+        }
+    }
 }
 
 TEST_CASE("PutNode") {
