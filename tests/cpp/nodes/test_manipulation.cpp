@@ -698,6 +698,11 @@ TEST_CASE("ReshapeNode") {
                 CHECK(B.integral() == A.integral());
             }
         }
+
+        WHEN("We try to use more than one undefined axis") {
+            CHECK_THROWS_AS(ReshapeNode(&A, {2, -1, -1}), std::invalid_argument);
+            CHECK_THROWS_AS(ReshapeNode(&A, {-1, 2, -1}), std::invalid_argument);
+        }
     }
 
     GIVEN("Two paths through a DAG calculating the same thing") {
