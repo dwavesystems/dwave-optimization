@@ -538,6 +538,12 @@ ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::vector<ssize_t>&& shape)
         throw std::invalid_argument("cannot reshape to a dynamic array");
     }
 
+    // one -1 was already replaced by infer_shape
+    if (std::ranges::any_of(this->shape() | std::views::drop(1),
+                            [](const ssize_t& dim) { return dim < 0; })) {
+        throw std::invalid_argument("can only specify one unknown dimension");
+    }
+
     if (this->size() != array_ptr_->size()) {
         // Use the same error message as NumPy
         throw std::invalid_argument("cannot reshape array of size " +

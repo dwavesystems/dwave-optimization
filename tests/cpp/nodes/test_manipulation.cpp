@@ -702,6 +702,7 @@ TEST_CASE("ReshapeNode") {
         WHEN("We try to use more than one undefined axis") {
             CHECK_THROWS_AS(ReshapeNode(&A, {2, -1, -1}), std::invalid_argument);
             CHECK_THROWS_AS(ReshapeNode(&A, {-1, 2, -1}), std::invalid_argument);
+            CHECK_THROWS_AS(ReshapeNode(&A, {12, -1, -1}), std::invalid_argument);
         }
     }
 
