@@ -301,6 +301,19 @@ TEST_CASE("ConcatenateNode") {
             }
         }
     }
+
+    GIVEN("Constant nodes that contains at least one non-integral") {
+        auto a = ConstantNode(std::vector{1.0, 2.2, 3.0});
+        auto b = ConstantNode(std::vector{1, 2, 3});
+
+        WHEN("Concatenated") {
+            auto c = ConcatenateNode(std::vector<ArrayNode*>{&a, &b}, 0);
+
+            THEN("The concatenated node is not integral") {
+                CHECK(c.integral() == false);
+            }
+        }
+    }
 }
 
 TEST_CASE("PutNode") {
