@@ -581,11 +581,6 @@ void AdvancedIndexingNode::fill_subspace_recurse(const std::span<const ssize_t>&
 }
 
 void AdvancedIndexingNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     assert(array_ptr_->ndim() == static_cast<ssize_t>(indices_.size()));
     assert(array_ptr_->ndim() >= 1);
 
@@ -624,8 +619,8 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
 
     bool main_array_is_constant_node = dynamic_cast<const ConstantNode*>(array_ptr_) != nullptr;
 
-    state[index] = std::make_unique<AdvancedIndexingNodeData>(std::move(offsets), std::move(data),
-                                                              !main_array_is_constant_node);
+    emplace_data_ptr<AdvancedIndexingNodeData>(state, std::move(offsets), std::move(data),
+                                               !main_array_is_constant_node);
 }
 
 void AdvancedIndexingNode::commit(State& state) const {
@@ -1173,13 +1168,8 @@ std::vector<BasicIndexingNode::slice_or_int> BasicIndexingNode::infer_indices() 
 }
 
 void BasicIndexingNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     // we're a view, so we don't really need state other than for the updates
-    state[index] = std::make_unique<BasicIndexingNodeData>(this);
+    emplace_data_ptr<BasicIndexingNodeData>(state, this);
     if (this->dynamic()) {
         update_dynamic_shape(state);
         auto node_data = data_ptr<BasicIndexingNodeData>(state);
@@ -1646,11 +1636,6 @@ std::span<const Update> PermutationNode::diff(const State& state) const {
 }
 
 void PermutationNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     const std::span<const ssize_t> strides = array_ptr_->strides();
 
     const ssize_t n = this->shape()[0];
@@ -1693,7 +1678,7 @@ void PermutationNode::initialize_state(State& state) const {
         }
     }
 
-    state[index] = std::make_unique<IndexingNodeData>(std::move(offsets), std::move(values));
+    emplace_data_ptr<IndexingNodeData>(state, std::move(offsets), std::move(values));
 }
 
 void PermutationNode::propagate(State& state) const {

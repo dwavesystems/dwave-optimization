@@ -43,10 +43,6 @@ double NumberNode::upper_bound() const { return upper_bound_; }
 double NumberNode::max() const { return upper_bound_; }
 
 void NumberNode::initialize_state(State& state, std::vector<double>&& number_data) const {
-    assert(this->topological_index() >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > this->topological_index() && "unexpected state length");
-    assert(state[this->topological_index()] == nullptr && "already initialized state");
-
     if (number_data.size() != static_cast<size_t>(this->size())) {
         throw std::invalid_argument("Size of data provided does not match node size");
     }
@@ -56,16 +52,11 @@ void NumberNode::initialize_state(State& state, std::vector<double>&& number_dat
         throw std::invalid_argument("Invalid data provided for node");
     }
 
-    state[this->topological_index()] = new_data_ptr(std::move(number_data));
+    emplace_data_ptr<ArrayNodeStateData>(state, std::move(number_data));
 }
 
 void NumberNode::initialize_state(State& state) const {
-    assert(this->topological_index() >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > this->topological_index() && "unexpected state length");
-    assert(state[this->topological_index()] == nullptr && "already initialized state");
-
-    std::vector<double> number_data(this->size(), default_value());
-    initialize_state(state, std::move(number_data));
+    initialize_state(state, std::vector<double>(this->size(), default_value()));
 }
 
 // Specializations for the linear case
@@ -112,10 +103,6 @@ double IntegerNode::default_value() const {
     return (lower_bound() <= 0 && upper_bound() >= 0) ? 0 : lower_bound();
 }
 
-std::unique_ptr<NodeStateData> IntegerNode::new_data_ptr(std::vector<double>&& number_data) const {
-    return make_unique<ArrayNodeStateData>(std::move(number_data));
-}
-
 bool IntegerNode::set_value(State& state, ssize_t i, int value) const {
     if (!is_valid(value)) {
         throw std::invalid_argument("Invalid integer value provided");
@@ -124,10 +111,6 @@ bool IntegerNode::set_value(State& state, ssize_t i, int value) const {
 }
 
 // Binary Node
-
-std::unique_ptr<NodeStateData> BinaryNode::new_data_ptr(std::vector<double>&& number_data) const {
-    return make_unique<ArrayNodeStateData>(std::move(number_data));
-}
 
 void BinaryNode::flip(State& state, ssize_t i) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);

@@ -72,11 +72,6 @@ void BinaryOpNode<BinaryOp>::commit(State& state) const {
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
-    int index = topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     auto lhs_ptr = operands_[0];
     auto rhs_ptr = operands_[1];
 
@@ -117,7 +112,7 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
         unreachable();
     }
 
-    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
+    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
 }
 
 template <class BinaryOp>
@@ -662,11 +657,6 @@ void NaryOpNode<BinaryOp>::revert(State& state) const {
 
 template <class BinaryOp>
 void NaryOpNode<BinaryOp>::initialize_state(State& state) const {
-    int index = topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     auto func = op();
     std::vector<double> values;
 
@@ -693,7 +683,7 @@ void NaryOpNode<BinaryOp>::initialize_state(State& state) const {
         values.emplace_back(val);
     }
 
-    state[index] = std::make_unique<NaryOpNodeData>(std::move(values), std::move(iterators));
+    emplace_data_ptr<NaryOpNodeData>(state, std::move(values), std::move(iterators));
 }
 
 template <class BinaryOp>
@@ -878,11 +868,6 @@ std::span<const Update> PartialReduceNode<BinaryOp>::diff(const State& state) co
 
 template <class BinaryOp>
 void PartialReduceNode<BinaryOp>::initialize_state(State& state) const {
-    int index = topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     std::vector<double> values(size(state));
 
     for (ssize_t i = 0, stop = size(state); i < stop; ++i) {
@@ -890,7 +875,7 @@ void PartialReduceNode<BinaryOp>::initialize_state(State& state) const {
         values[i] = reduce(state, i);
     }
 
-    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
+    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
 }
 
 template <class BinaryOp>
@@ -1208,51 +1193,31 @@ std::span<const Update> ReduceNode<BinaryOp>::diff(const State& state) const {
 
 template <class BinaryOp>
 void ReduceNode<BinaryOp>::initialize_state(State& state) const {
-    int index = topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
-    state[index] = std::make_unique<ReduceNodeData<op>>(reduce(state));
+    emplace_data_ptr<ReduceNodeData<op>>(state, reduce(state));
 }
 
 template <>
 void ReduceNode<std::logical_and<double>>::initialize_state(State& state) const {
-    int index = topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     ssize_t num_zero = init.value_or(1) ? 0 : 1;
     for (const double& value : array_ptr_->view(state)) {
         num_zero += !value;
     }
 
-    state[index] = std::make_unique<ReduceNodeData<op>>(!num_zero, num_zero);
+    emplace_data_ptr<ReduceNodeData<op>>(state, !num_zero, num_zero);
 }
 
 template <>
 void ReduceNode<std::logical_or<double>>::initialize_state(State& state) const {
-    int index = topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     ssize_t num_nonzero = init.value_or(1) ? 1 : 0;
     for (const double& value : array_ptr_->view(state)) {
         num_nonzero += static_cast<bool>(value);
     }
 
-    state[index] = std::make_unique<ReduceNodeData<op>>(num_nonzero > 0, num_nonzero);
+    emplace_data_ptr<ReduceNodeData<op>>(state, num_nonzero > 0, num_nonzero);
 }
 
 template <>
 void ReduceNode<std::multiplies<double>>::initialize_state(State& state) const {
-    int index = topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     // there is an edge case here for init being 0, in that case the `nonzero`
     // component will always be 0, which is dumb but everything still works and
     // it's enough of an edge case that I don't think it makes sense to do
@@ -1273,7 +1238,7 @@ void ReduceNode<std::multiplies<double>>::initialize_state(State& state) const {
     double value = num_zero > 0 ? 0 : nonzero;
 
     // and then create the state
-    state[index] = std::make_unique<ReduceNodeData<op>>(value, nonzero, num_zero);
+    emplace_data_ptr<ReduceNodeData<op>>(state, value, nonzero, num_zero);
 }
 
 template <class BinaryOp>
@@ -1736,11 +1701,6 @@ std::span<const Update> UnaryOpNode<UnaryOp>::diff(const State& state) const {
 
 template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::initialize_state(State& state) const {
-    int index = topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     auto func = op();
     std::vector<double> values;
     values.reserve(array_ptr_->size(state));
@@ -1748,7 +1708,7 @@ void UnaryOpNode<UnaryOp>::initialize_state(State& state) const {
         values.emplace_back(func(val));
     }
 
-    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
+    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
 }
 
 template <>

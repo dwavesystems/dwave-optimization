@@ -149,11 +149,6 @@ void CollectionNode::grow(State& state) const {
 }
 
 void CollectionNode::initialize_state(State& state, std::vector<double> contents) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     if (static_cast<ssize_t>(contents.size()) < min_size_) {
         throw std::invalid_argument("contents is shorter than the List's minimum size");
     }
@@ -181,7 +176,7 @@ void CollectionNode::initialize_state(State& state, std::vector<double> contents
 
     assert(static_cast<ssize_t>(contents.size()) == max_value_);
 
-    state[index] = std::make_unique<CollectionStateData>(std::move(contents), set.size());
+    emplace_data_ptr<CollectionStateData>(state, std::move(contents), set.size());
 }
 
 void CollectionNode::revert(State& state) const { data_ptr<CollectionStateData>(state)->revert(); }
@@ -321,15 +316,13 @@ DisjointBitSetsNode::DisjointBitSetsNode(ssize_t primary_set_size, ssize_t num_d
 }
 
 void DisjointBitSetsNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    state[index] = std::make_unique<DisjointBitSetsNodeData>(primary_set_size_, num_disjoint_sets_);
+    emplace_data_ptr<DisjointBitSetsNodeData>(state, primary_set_size_, num_disjoint_sets_);
 }
 
 void DisjointBitSetsNode::initialize_state(State& state,
                                            const std::vector<std::vector<double>>& contents) const {
-    int index = this->topological_index();
-    state[index] = std::make_unique<DisjointBitSetsNodeData>(primary_set_size_, num_disjoint_sets_,
-                                                             contents);
+    emplace_data_ptr<DisjointBitSetsNodeData>(state, primary_set_size_, num_disjoint_sets_,
+                                              contents);
 }
 
 void DisjointBitSetsNode::commit(State& state) const {
@@ -580,20 +573,14 @@ DisjointListsNode::DisjointListsNode(ssize_t primary_set_size, ssize_t num_disjo
 }
 
 void DisjointListsNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    state[index] = std::make_unique<DisjointListStateData>(this->primary_set_size(),
-                                                           this->num_disjoint_lists());
+    emplace_data_ptr<DisjointListStateData>(state, this->primary_set_size(),
+                                            this->num_disjoint_lists());
 }
 
 void DisjointListsNode::initialize_state(State& state,
                                          std::vector<std::vector<double>> contents) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
-    state[index] = std::make_unique<DisjointListStateData>(
-            this->primary_set_size(), this->num_disjoint_lists(), std::move(contents));
+    emplace_data_ptr<DisjointListStateData>(state, this->primary_set_size(),
+                                            this->num_disjoint_lists(), std::move(contents));
 }
 
 void DisjointListsNode::commit(State& state) const {
@@ -704,22 +691,11 @@ ssize_t DisjointListNode::size_diff(const State& state) const {
 }
 
 void ListNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
-    state[index] = std::make_unique<CollectionStateData>(max_size_);
+    emplace_data_ptr<CollectionStateData>(state, max_size_);
 }
 
 void SetNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
-    // default to range(min_size_)
-    state[index] = std::make_unique<CollectionStateData>(max_value_, min_size_);
+    emplace_data_ptr<CollectionStateData>(state, max_value_, min_size_);
 }
 
 }  // namespace dwave::optimization

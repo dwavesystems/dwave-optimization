@@ -94,8 +94,6 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     virtual bool is_valid(double value) const = 0;
     virtual double default_value() const = 0;
-    virtual std::unique_ptr<NodeStateData> new_data_ptr(
-            std::vector<double>&& number_data) const = 0;
 
     double lower_bound_;
     double upper_bound_;
@@ -129,7 +127,6 @@ class IntegerNode : public NumberNode {
 
     bool is_valid(double value) const override;
     double default_value() const override;
-    std::unique_ptr<NodeStateData> new_data_ptr(std::vector<double>&& number_data) const override;
 
     // Specializations for the linear case
     bool set_value(State& state, ssize_t i, int value) const;
@@ -140,10 +137,6 @@ class BinaryNode : public IntegerNode {
  public:
     explicit BinaryNode(std::initializer_list<ssize_t> shape) : IntegerNode(shape, 0, 1) {}
     explicit BinaryNode(std::span<const ssize_t> shape) : IntegerNode(shape, 0, 1) {}
-
-    // Overloads needed by the NumberNode ABC **************************************
-
-    std::unique_ptr<NodeStateData> new_data_ptr(std::vector<double>&& number_data) const override;
 
     // Specializations for the linear case
     void flip(State& state, ssize_t i) const;

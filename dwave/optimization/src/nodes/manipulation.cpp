@@ -57,11 +57,6 @@ std::span<const Update> ConcatenateNode::diff(const State& state) const {
 }
 
 void ConcatenateNode::initialize_state(State& state) const {
-    int index = topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     std::vector<double> values;
     values.resize(size());
 
@@ -74,7 +69,7 @@ void ConcatenateNode::initialize_state(State& state) const {
         std::copy(array_ptrs_[arr_i]->begin(state), array_ptrs_[arr_i]->end(state), view_it);
     }
 
-    state[index] = std::make_unique<ArrayNodeStateData>(std::move(values));
+    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
 }
 
 std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ssize_t axis) {
@@ -174,12 +169,7 @@ std::span<const Update> CopyNode::diff(const State& state) const {
 bool CopyNode::integral() const { return array_ptr_->integral(); }
 
 void CopyNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
-    state[index] = std::make_unique<ArrayNodeStateData>(array_ptr_->view(state));
+    emplace_data_ptr<ArrayNodeStateData>(state, array_ptr_->view(state));
 }
 
 double CopyNode::max() const { return array_ptr_->max(); }
@@ -367,11 +357,6 @@ std::span<const Update> PutNode::diff(const State& state) const {
 }
 
 void PutNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     // Begin by copying the array
     std::vector<double> values(array_ptr_->begin(state), array_ptr_->end(state));
 
@@ -393,7 +378,7 @@ void PutNode::initialize_state(State& state) const {
         }
     }
 
-    state[index] = std::make_unique<PutNodeState>(std::move(values), std::move(mask));
+    emplace_data_ptr<PutNodeState>(state, std::move(values), std::move(mask));
 }
 
 bool PutNode::integral() const {
@@ -589,12 +574,7 @@ std::span<const Update> SizeNode::diff(const State& state) const {
 }
 
 void SizeNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
-    state[index] = std::make_unique<SizeNodeData>(array_ptr_->size(state));
+    emplace_data_ptr<SizeNodeData>(state, array_ptr_->size(state));
 }
 
 double SizeNode::max() const {
