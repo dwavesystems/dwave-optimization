@@ -156,6 +156,50 @@ void ConcatenateNode::propagate(State& state) const {
 
 void ConcatenateNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
 
+CopyNode::CopyNode(ArrayNode* array_ptr)
+        : ArrayOutputMixin(array_ptr->shape()), array_ptr_(array_ptr) {
+    this->add_predecessor(array_ptr);
+}
+
+double const* CopyNode::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+void CopyNode::commit(State& state) const { data_ptr<ArrayNodeStateData>(state)->commit(); }
+
+std::span<const Update> CopyNode::diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->diff();
+}
+
+bool CopyNode::integral() const { return array_ptr_->integral(); }
+
+void CopyNode::initialize_state(State& state) const {
+    int index = this->topological_index();
+    assert(index >= 0 && "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > index && "unexpected state length");
+    assert(state[index] == nullptr && "already initialized state");
+
+    state[index] = std::make_unique<ArrayNodeStateData>(array_ptr_->view(state));
+}
+
+double CopyNode::max() const { return array_ptr_->max(); }
+
+double CopyNode::min() const { return array_ptr_->min(); }
+
+void CopyNode::propagate(State& state) const {
+    data_ptr<ArrayNodeStateData>(state)->update(array_ptr_->diff(state));
+}
+
+void CopyNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
+
+std::span<const ssize_t> CopyNode::shape(const State& state) const {
+    return array_ptr_->shape(state);
+}
+
+ssize_t CopyNode::size(const State& state) const { return array_ptr_->size(state); }
+
+ssize_t CopyNode::size_diff(const State& state) const { return array_ptr_->size_diff(state); }
+
 // A PutNode needs to track its buffer as well as a mask of which elements in the
 // original array are currently overwritten.
 // We use ArrayStateData for the buffer

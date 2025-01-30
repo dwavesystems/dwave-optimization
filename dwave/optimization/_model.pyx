@@ -1280,6 +1280,17 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Any  # avoid circular import
         return Any(self)
 
+    def copy(self):
+        """Return an array symbol that is a copy of the array.
+
+        See Also:
+            :class:`~dwave.optimization.symbols.Copy` Equivalent class.
+
+        .. versionadded:: 0.5.1
+        """
+        from dwave.optimization.symbols import Copy  # avoid circular import
+        return Copy(self)
+
     def flatten(self):
         """Return an array symbol collapsed into one dimension.
 

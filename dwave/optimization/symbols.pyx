@@ -56,6 +56,7 @@ from dwave.optimization.libcpp.nodes cimport (
     BinaryNode as cppBinaryNode,
     ConcatenateNode as cppConcatenateNode,
     ConstantNode as cppConstantNode,
+    CopyNode as cppCopyNode,
     DisjointBitSetNode as cppDisjointBitSetNode,
     DisjointBitSetsNode as cppDisjointBitSetsNode,
     DisjointListNode as cppDisjointListNode,
@@ -110,6 +111,7 @@ __all__ = [
     "BinaryVariable",
     "Concatenate",
     "Constant",
+    "Copy",
     "DisjointBitSets",
     "DisjointBitSet",
     "DisjointLists",
@@ -1046,6 +1048,39 @@ cdef class Constant(ArraySymbol):
     cdef cppConstantNode* ptr
 
 _register(Constant, typeid(cppConstantNode))
+
+
+cdef class Copy(ArraySymbol):
+    """An array symbol that is a copy of another array symbol.
+
+    See Also:
+        :meth:`ArraySymbol.copy` Equivalent method.
+
+    .. versionadded:: 0.5.1
+    """
+    def __init__(self, ArraySymbol node):
+        cdef _Graph model = node.model
+
+        self.ptr = model._graph.emplace_node[cppCopyNode](
+            node.array_ptr,
+            )
+
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppCopyNode* ptr = dynamic_cast_ptr[cppCopyNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Copy")
+
+        cdef Copy m = Copy.__new__(Copy)
+        m.ptr = ptr
+        m.initialize_arraynode(symbol.model, ptr)
+        return m
+
+    cdef cppCopyNode* ptr
+
+_register(Copy, typeid(cppCopyNode))
 
 
 cdef class DisjointBitSets(Symbol):

@@ -278,6 +278,110 @@ TEST_CASE("ConcatenateNode") {
     }
 }
 
+TEST_CASE("CopyNode") {
+    GIVEN("x = IntegerNode({6}, 0, 10); y = x[::2]; c = CopyNode(y)") {
+        auto graph = Graph();
+
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{6}, 0, 10);
+        auto y_ptr = graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(0, 10, 2));
+        auto c_ptr = graph.emplace_node<CopyNode>(y_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(c_ptr);
+
+        auto state = graph.empty_state();
+        x_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5});
+        graph.initialize_state(state);
+
+        THEN("c has the same shape as y and the same values") {
+            CHECK(std::ranges::equal(c_ptr->shape(state), y_ptr->shape(state)));
+            CHECK(std::ranges::equal(c_ptr->view(state), y_ptr->view(state)));
+
+            CHECK(!y_ptr->contiguous());
+            CHECK(c_ptr->contiguous());
+
+            CHECK(c_ptr->max() == y_ptr->max());
+            CHECK(c_ptr->min() == y_ptr->min());
+            CHECK(c_ptr->integral() == y_ptr->integral());
+        }
+
+        WHEN("We mutate the state of x") {
+            x_ptr->set_value(state, 2, 10);
+            graph.propagate(state, graph.descendants(state, {x_ptr}));
+
+            THEN("c has the same shape as y and the same values") {
+                CHECK(std::ranges::equal(c_ptr->view(state), y_ptr->view(state)));
+            }
+
+            AND_WHEN("we commit") {
+                graph.commit(state, graph.descendants(state, {x_ptr}));
+
+                THEN("c has the same shape as y and the same values") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), y_ptr->view(state)));
+                }
+            }
+
+            AND_WHEN("we revert") {
+                graph.revert(state, graph.descendants(state, {x_ptr}));
+
+                THEN("c has the same shape as y and the same values") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), y_ptr->view(state)));
+                }
+            }
+        }
+    }
+
+    GIVEN("x = SetNode(6); y = x[::2]; c = CopyNode(y)") {
+        auto graph = Graph();
+
+        auto x_ptr = graph.emplace_node<SetNode>(6);
+        auto y_ptr = graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(0, 10, 2));
+        auto c_ptr = graph.emplace_node<CopyNode>(y_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(c_ptr);
+
+        auto state = graph.empty_state();
+        x_ptr->initialize_state(state, {0, 1, 2});
+        graph.initialize_state(state);
+
+        THEN("c has the same shape as y and the same values") {
+            CHECK(std::ranges::equal(c_ptr->shape(state), y_ptr->shape(state)));
+            CHECK(std::ranges::equal(c_ptr->view(state), y_ptr->view(state)));
+
+            CHECK(!y_ptr->contiguous());
+            CHECK(c_ptr->contiguous());
+
+            CHECK(c_ptr->max() == y_ptr->max());
+            CHECK(c_ptr->min() == y_ptr->min());
+            CHECK(c_ptr->integral() == y_ptr->integral());
+        }
+
+        WHEN("We mutate the state of x") {
+            x_ptr->grow(state);
+            graph.propagate(state, graph.descendants(state, {x_ptr}));
+
+            THEN("c has the same shape as y and the same values") {
+                CHECK(std::ranges::equal(c_ptr->view(state), y_ptr->view(state)));
+            }
+
+            AND_WHEN("we commit") {
+                graph.commit(state, graph.descendants(state, {x_ptr}));
+
+                THEN("c has the same shape as y and the same values") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), y_ptr->view(state)));
+                }
+            }
+
+            AND_WHEN("we revert") {
+                graph.revert(state, graph.descendants(state, {x_ptr}));
+
+                THEN("c has the same shape as y and the same values") {
+                    CHECK(std::ranges::equal(c_ptr->view(state), y_ptr->view(state)));
+                }
+            }
+        }
+    }
+}
+
 TEST_CASE("PutNode") {
     SECTION("a = [0, 1, 2, 3, 4], ind = [0, 2], v = [-44, -55], b = PutNode(a, ind, v)") {
         auto graph = Graph();

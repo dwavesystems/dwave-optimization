@@ -76,6 +76,10 @@ class Constant(ArraySymbol):
     def __le__(self, rhs: numpy.typing.ArrayLike) -> numpy.typing.NDArray[numpy.bool]: ...
 
 
+class Copy(ArraySymbol):
+    ...
+
+
 class DisjointBitSets(Symbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
 

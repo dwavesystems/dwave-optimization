@@ -959,6 +959,25 @@ class TestConstant(utils.SymbolTests):
             model.constant(np.array([0, 5, np.nan]))
 
 
+class TestCopy(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        c = model.constant(np.arange(25).reshape(5, 5))
+        c_copy = c.copy()
+        c_indexed_copy = c[::2, 1:4].copy()
+        with model.lock():
+            yield c_copy
+            yield c_indexed_copy
+
+    def test_simple(self):
+        model = Model()
+        c = model.constant(np.arange(25).reshape(5, 5))
+        copy = c[::2, 1:4].copy()
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(copy.state(), np.arange(25).reshape(5, 5)[::2, 1:4])
+
+
 class TestDisjointBitSetsVariable(utils.SymbolTests):
     def test_inequality(self):
         # TODO re-enable this once equality has been fixed
