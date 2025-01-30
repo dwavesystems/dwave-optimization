@@ -2269,6 +2269,18 @@ class TestReshape(utils.SymbolTests):
         with model.lock():
             np.testing.assert_array_equal(B.state(), np.arange(25))
 
+    def test_noncontiguous(self):
+        model = Model()
+        A = model.constant(np.arange(20).reshape(4, 5))
+        B = A[::2, :]  # 2x5 array
+        C = B.reshape(5, 2)
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(
+                C.state(),
+                np.arange(20).reshape(4, 5)[::2, :].reshape(5, 2),
+            )
+
 
 class TestRint(utils.SymbolTests):
     rng = np.random.default_rng(1)

@@ -1368,11 +1368,14 @@ cdef class ArraySymbol(Symbol):
             (1, 3)
         """
         from dwave.optimization.symbols import Reshape  # avoid circular import
-        if len(shape) > 1:
-            return Reshape(self, shape)
-        else:
-            return Reshape(self, shape[0])
+        if len(shape) <= 1:
+            shape = shape[0]
 
+        if not self.array_ptr.contiguous():
+            return Reshape(self.copy(), shape)
+
+        return Reshape(self, shape)
+    
     def shape(self):
         """Return the shape of the symbol.
 
