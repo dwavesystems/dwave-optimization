@@ -256,23 +256,33 @@ class Node {
         successor->predecessors_.emplace_back(this);
     }
 
-    template <class StateData>
+    template <std::derived_from<NodeStateData> StateData>
     StateData* data_ptr(State& state) const {
-        int index = topological_index();
+        const ssize_t index = topological_index();
         assert(index >= 0 && "must be topologically sorted");
-        assert(static_cast<int>(state.size()) > index && "unexpected state length");
+        assert(state.size() > static_cast<std::size_t>(index) && "unexpected state length");
         assert(state[index] != nullptr && "uninitialized state");
 
         return static_cast<StateData*>(state[index].get());
     }
-    template <class StateData>
+    template <std::derived_from<NodeStateData> StateData>
     const StateData* data_ptr(const State& state) const {
-        int index = topological_index();
+        const ssize_t index = topological_index();
         assert(index >= 0 && "must be topologically sorted");
-        assert(static_cast<int>(state.size()) > index && "unexpected state length");
+        assert(state.size() > static_cast<std::size_t>(index) && "unexpected state length");
         assert(state[index] != nullptr && "uninitialized state");
 
         return static_cast<const StateData*>(state[index].get());
+    }
+
+    template <std::derived_from<NodeStateData> StateData, class... Args>
+    void emplace_data_ptr(State& state, Args&&... args) const {
+        const ssize_t index = topological_index();
+        assert(index >= 0 && "must be topologically sorted");
+        assert(state.size() > static_cast<std::size_t>(index) && "unexpected state length");
+        assert(state[index] == nullptr && "already initialized state");
+
+        state[index] = std::make_unique<StateData>(std::forward<Args&&>(args)...);
     }
 
     // Whether this node type is elegible to be removed from the model

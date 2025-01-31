@@ -141,11 +141,6 @@ std::span<const Update> WhereNode::diff(const State& state) const {
 }
 
 void WhereNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     if (condition_ptr_->size() != 1) {
         // `condition` has the same shape as x/y and isn't a single value
         const Array::View condition = condition_ptr_->view(state);
@@ -161,15 +156,15 @@ void WhereNode::initialize_state(State& state) const {
             values.emplace_back((*cit) ? *xit : *yit);
         }
 
-        state[index] = std::make_unique<WhereNodeData>(std::move(values));
+        emplace_data_ptr<WhereNodeData>(state, std::move(values));
     } else if (condition_ptr_->buff(state)[0]) {
         // `condition` is a single value and is currently selecting x
         // so our state is just a copy of x's
-        state[index] = std::make_unique<WhereNodeData>(x_ptr_->view(state));
+        emplace_data_ptr<WhereNodeData>(state, x_ptr_->view(state));
     } else {
         // `condition` is a single value and is currently selecting y
         // so our state is just a copy of y's
-        state[index] = std::make_unique<WhereNodeData>(y_ptr_->view(state));
+        emplace_data_ptr<WhereNodeData>(state, y_ptr_->view(state));
     }
 }
 

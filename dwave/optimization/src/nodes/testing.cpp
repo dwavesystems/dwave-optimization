@@ -60,7 +60,7 @@ void ArrayValidationNode::commit(State& state) const {
 }
 
 void ArrayValidationNode::initialize_state(State& state) const {
-    state[topological_index()] = std::make_unique<ArrayValidationNodeData>(array_ptr->view(state));
+    emplace_data_ptr<ArrayValidationNodeData>(state, array_ptr->view(state));
     assert(array_ptr->diff(state).size() == 0);
     assert(array_ptr->size_diff(state) == 0);
     assert(array_ptr->view(state).size() == static_cast<ssize_t>(array_ptr->size(state)));
@@ -300,7 +300,7 @@ void DynamicArrayTestingNode::initialize_state(State& state, std::span<const dou
     assert(shape.size() > 0);
     shape[0] = values.size() / (strides()[0] / itemsize());
 
-    state[topological_index()] = std::make_unique<DynamicArrayTestingNodeData>(shape, values);
+    emplace_data_ptr<DynamicArrayTestingNodeData>(state, shape, values);
 }
 
 double const* DynamicArrayTestingNode::buff(const State& state) const noexcept {
