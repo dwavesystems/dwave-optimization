@@ -1280,6 +1280,24 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Any  # avoid circular import
         return Any(self)
 
+    def copy(self):
+        """Return an array symbol that is a copy of the array.
+
+        See Also:
+            :class:`~dwave.optimization.symbols.Copy` Equivalent class.
+
+        .. versionadded:: 0.5.1
+        """
+        from dwave.optimization.symbols import Copy  # avoid circular import
+        return Copy(self)
+
+    def flatten(self):
+        """Return an array symbol collapsed into one dimension.
+
+        Equivalent to ``symbol.reshape(-1)``.
+        """
+        return self.reshape(-1)
+
     def max(self):
         """Create a :class:`~dwave.optimization.symbols.Max` symbol.
 
@@ -1350,11 +1368,14 @@ cdef class ArraySymbol(Symbol):
             (1, 3)
         """
         from dwave.optimization.symbols import Reshape  # avoid circular import
-        if len(shape) > 1:
-            return Reshape(self, shape)
-        else:
-            return Reshape(self, shape[0])
+        if len(shape) <= 1:
+            shape = shape[0]
 
+        if not self.array_ptr.contiguous():
+            return Reshape(self.copy(), shape)
+
+        return Reshape(self, shape)
+    
     def shape(self):
         """Return the shape of the symbol.
 

@@ -959,6 +959,25 @@ class TestConstant(utils.SymbolTests):
             model.constant(np.array([0, 5, np.nan]))
 
 
+class TestCopy(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        c = model.constant(np.arange(25).reshape(5, 5))
+        c_copy = c.copy()
+        c_indexed_copy = c[::2, 1:4].copy()
+        with model.lock():
+            yield c_copy
+            yield c_indexed_copy
+
+    def test_simple(self):
+        model = Model()
+        c = model.constant(np.arange(25).reshape(5, 5))
+        copy = c[::2, 1:4].copy()
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(copy.state(), np.arange(25).reshape(5, 5)[::2, 1:4])
+
+
 class TestDisjointBitSetsVariable(utils.SymbolTests):
     def test_inequality(self):
         # TODO re-enable this once equality has been fixed
@@ -2231,6 +2250,36 @@ class TestReshape(utils.SymbolTests):
         syms = [A.reshape(12), A.reshape((2, 6)), A.reshape(3, 4)]
         model.lock()
         yield from syms
+
+    def test_implicit_reshape(self):
+        model = Model()
+        A = model.constant(np.arange(12).reshape(3, 4))
+        B = A.reshape(2, -1)
+        C = A.reshape(-1, 6)
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(B.state(), np.arange(12).reshape(2, 6))
+            np.testing.assert_array_equal(C.state(), np.arange(12).reshape(2, 6))
+
+    def test_flatten(self):
+        model = Model()
+        A = model.constant(np.arange(25).reshape(5, 5))
+        B = A.flatten()
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(B.state(), np.arange(25))
+
+    def test_noncontiguous(self):
+        model = Model()
+        A = model.constant(np.arange(20).reshape(4, 5))
+        B = A[::2, :]  # 2x5 array
+        C = B.reshape(5, 2)
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(
+                C.state(),
+                np.arange(20).reshape(4, 5)[::2, :].reshape(5, 2),
+            )
 
 
 class TestRint(utils.SymbolTests):

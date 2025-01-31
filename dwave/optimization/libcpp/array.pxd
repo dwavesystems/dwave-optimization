@@ -24,6 +24,7 @@ __all__ = ["Array"]
 cdef extern from "dwave-optimization/array.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass Array:
         double* buff(State&)
+        bint contiguous() const
         bint dynamic() const
         const string& format() const
         Py_ssize_t itemsize() const

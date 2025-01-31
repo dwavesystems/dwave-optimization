@@ -35,6 +35,10 @@ class ArrayStateData {
     explicit ArrayStateData(std::vector<double>&& values) noexcept
             : buffer(std::move(values)), previous_size_(buffer.size()) {}
 
+    template <std::ranges::range Range>
+    explicit ArrayStateData(Range&& values) noexcept
+            : ArrayStateData(std::vector<double>(values.begin(), values.end())) {}
+
     // Assign new values to the state, tracking the changes from the previous state to the new
     // one. Including resizes.
     bool assign(std::ranges::sized_range auto&& values) {
@@ -192,6 +196,10 @@ class ArrayNodeStateData: public ArrayStateData, public NodeStateData {
  public:
     explicit ArrayNodeStateData(std::vector<double>&& values) noexcept
             : ArrayStateData(std::move(values)), NodeStateData() {}
+
+    template <std::ranges::range Range>
+    explicit ArrayNodeStateData(Range&& values) noexcept
+            : ArrayNodeStateData(std::vector<double>(values.begin(), values.end())) {}
 
     std::unique_ptr<NodeStateData> copy() const override {
         return std::make_unique<ArrayNodeStateData>(*this);

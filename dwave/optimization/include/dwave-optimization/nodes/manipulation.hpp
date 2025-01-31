@@ -46,6 +46,55 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
     std::vector<ssize_t> array_starts_;
 };
 
+/// An array node that is a contiguous copy of its predecessor.
+class CopyNode : public ArrayOutputMixin<ArrayNode> {
+ public:
+    explicit CopyNode(ArrayNode* array_ptr);
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+    using ArrayOutputMixin::shape;
+
+    /// @copydoc Array::shape()
+    std::span<const ssize_t> shape(const State& state) const override;
+
+    using ArrayOutputMixin::size;
+
+    /// @copydoc Array::size()
+    ssize_t size(const State& state) const override;
+
+    /// @copydoc Array::size_diff()
+    ssize_t size_diff(const State& state) const override;
+
+ private:
+    const Array* array_ptr_;
+};
+
 /// Replaces specified elements of an array with the given values.
 ///
 /// The indexing works on the flattened array. Translated to NumPy, PutNode is
@@ -104,14 +153,43 @@ class PutNode : public ArrayOutputMixin<ArrayNode> {
     const Array* values_ptr_;
 };
 
+
+/// Propagates the values of its predecessor, interpreted into a different shape.
 class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    ReshapeNode(ArrayNode* node_ptr, std::span<const ssize_t> shape);
+    /// Constructor for ReshapeNode.
+    ///
+    /// @param array_ptr The array to be reshaped. May not be dynamic.
+    /// @param shape The new shape. Must have the same size as the original shape.
     ReshapeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape);
 
+    /// Constructor for ReshapeNode.
+    ///
+    /// @param array_ptr The array to be reshaped. May not be dynamic.
+    /// @param shape The new shape. Must have the same size as the original shape.
+    template <std::ranges::range Range>
+    ReshapeNode(ArrayNode* node_ptr, Range&& shape)
+            : ReshapeNode(node_ptr, std::vector<ssize_t>(shape.begin(), shape.end())) {}
+
+    /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
     void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Node::revert()
     void revert(State& state) const override;
 
  private:

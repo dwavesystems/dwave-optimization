@@ -78,6 +78,9 @@ cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::o
     cdef cppclass ConcatenateNode(ArrayNode):
         Py_ssize_t axis()
 
+    cdef cppclass CopyNode(ArrayNode):
+        pass
+
     cdef cppclass PutNode(ArrayNode):
         pass
 

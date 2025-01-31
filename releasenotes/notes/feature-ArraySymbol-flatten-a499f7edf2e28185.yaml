@@ -1,0 +1,16 @@
+---
+features:
+  - |
+    Support both lvalue and rvalue ranges in the constructor of the C++
+    ``ArrayOutputMixin`` class.
+  - Rework C++ ``ReshapeNode`` constructors to be more general.
+  - |
+    Support inferring the shape of one axis when reshaping array symbols by providing
+    ``-1`` for the dimension's shape.
+  - Support reshaping non-contiguous array symbols.
+  - Add C++ ``CopyNode``. See `#16 <https://github.com/dwavesystems/dwave-optimization/issues/16>`_.
+  - Add ``Copy`` symbol. See `#16 <https://github.com/dwavesystems/dwave-optimization/issues/16>`_.
+fixes:
+  - |
+    Add missing C++ ``ReshapeNode::max()``, ``::min()``, and ``::integral()`` methods.
+    Thereby allowing reshaped arrays to be used as indices.

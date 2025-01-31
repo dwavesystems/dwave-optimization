@@ -156,6 +156,50 @@ void ConcatenateNode::propagate(State& state) const {
 
 void ConcatenateNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
 
+CopyNode::CopyNode(ArrayNode* array_ptr)
+        : ArrayOutputMixin(array_ptr->shape()), array_ptr_(array_ptr) {
+    this->add_predecessor(array_ptr);
+}
+
+double const* CopyNode::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+void CopyNode::commit(State& state) const { data_ptr<ArrayNodeStateData>(state)->commit(); }
+
+std::span<const Update> CopyNode::diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->diff();
+}
+
+bool CopyNode::integral() const { return array_ptr_->integral(); }
+
+void CopyNode::initialize_state(State& state) const {
+    int index = this->topological_index();
+    assert(index >= 0 && "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > index && "unexpected state length");
+    assert(state[index] == nullptr && "already initialized state");
+
+    state[index] = std::make_unique<ArrayNodeStateData>(array_ptr_->view(state));
+}
+
+double CopyNode::max() const { return array_ptr_->max(); }
+
+double CopyNode::min() const { return array_ptr_->min(); }
+
+void CopyNode::propagate(State& state) const {
+    data_ptr<ArrayNodeStateData>(state)->update(array_ptr_->diff(state));
+}
+
+void CopyNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
+
+std::span<const ssize_t> CopyNode::shape(const State& state) const {
+    return array_ptr_->shape(state);
+}
+
+ssize_t CopyNode::size(const State& state) const { return array_ptr_->size(state); }
+
+ssize_t CopyNode::size_diff(const State& state) const { return array_ptr_->size_diff(state); }
+
 // A PutNode needs to track its buffer as well as a mask of which elements in the
 // original array are currently overwritten.
 // We use ArrayStateData for the buffer
@@ -442,8 +486,34 @@ void PutNode::propagate(State& state) const {
 
 void PutNode::revert(State& state) const { return data_ptr<PutNodeState>(state)->revert(); }
 
-ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::span<const ssize_t> shape)
-        : ArrayOutputMixin(shape), array_ptr_(node_ptr) {
+// Reshape allows one shape dimension to be -1. In that case the size is inferred.
+// We do that inference here.
+std::vector<ssize_t> infer_reshape(Array* array_ptr, std::vector<ssize_t>&& shape) {
+    // if the base array is dynamic, we might allow the first dimension to be negative
+    // 1. So let's defer to the various constructors.
+    if (array_ptr->dynamic()) return shape;
+
+    // Check if there are any -1s, and if not fallback to other input checking.
+    auto it = std::ranges::find(shape, -1);
+    if (it == shape.end()) return shape;
+
+    // Get the product of the shape and negate it (to exclude the -1)
+    auto prod = -std::reduce(shape.begin(), shape.end(), 1, std::multiplies<ssize_t>());
+
+    // If the product is <=0, then we have another negative number or a 0. In which
+    // case we just fall back to other error checking.
+    if (prod <= 0) return shape;
+
+    // Ok, we can officially overwrite the -1.
+    // Don't worry about the case that prod doesn't divide array_ptr->size(), other
+    // error checking will catch that case.
+    *it = array_ptr->size() / prod;
+
+    return shape;
+}
+
+ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::vector<ssize_t>&& shape)
+        : ArrayOutputMixin(infer_reshape(node_ptr, std::move(shape))), array_ptr_(node_ptr) {
     // Don't (yet) support non-contiguous predecessors.
     // In some cases with non-contiguous predecessors we need to make a copy.
     // See https://github.com/dwavesystems/dwave-optimization/issues/200
@@ -468,6 +538,12 @@ ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::span<const ssize_t> shape)
         throw std::invalid_argument("cannot reshape to a dynamic array");
     }
 
+    // one -1 was already replaced by infer_shape
+    if (std::ranges::any_of(this->shape() | std::views::drop(1),
+                            [](const ssize_t& dim) { return dim < 0; })) {
+        throw std::invalid_argument("can only specify one unknown dimension");
+    }
+
     if (this->size() != array_ptr_->size()) {
         // Use the same error message as NumPy
         throw std::invalid_argument("cannot reshape array of size " +
@@ -478,9 +554,6 @@ ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::span<const ssize_t> shape)
     this->add_predecessor(node_ptr);
 }
 
-ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::vector<ssize_t>&& shape)
-        : ReshapeNode(node_ptr, std::span(shape)) {}
-
 double const* ReshapeNode::buff(const State& state) const { return array_ptr_->buff(state); }
 
 void ReshapeNode::commit(State& state) const {}  // stateless node
@@ -488,6 +561,12 @@ void ReshapeNode::commit(State& state) const {}  // stateless node
 std::span<const Update> ReshapeNode::diff(const State& state) const {
     return array_ptr_->diff(state);
 }
+
+bool ReshapeNode::integral() const { return array_ptr_->integral(); }
+
+double ReshapeNode::max() const { return array_ptr_->max(); }
+
+double ReshapeNode::min() const { return array_ptr_->min(); }
 
 void ReshapeNode::revert(State& state) const {}  // stateless node
 
