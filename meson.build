@@ -36,6 +36,7 @@ dwave_optimization_src = [
     'dwave/optimization/src/nodes/testing.cpp',
     'dwave/optimization/src/array.cpp',
     'dwave/optimization/src/graph.cpp',
+    'dwave/optimization/src/simplex.cpp',
     'dwave/optimization/src/utils.cpp',
 ]
 
