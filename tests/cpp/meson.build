@@ -22,12 +22,14 @@ tests_all = executable(
         'nodes/test_quadratic_model.cpp',
         'test_array.cpp',
         'test_graph.cpp',
+        'test_simplex.cpp',
         'test_utils.cpp',
     ],
     dependencies: [
         catch2,
         libdwave_optimization,
     ],
+    include_directories: include_directories('../../dwave/optimization/src/'),
 )
 
 test('tests-all', tests_all, verbose: true)
