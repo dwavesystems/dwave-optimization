@@ -35,6 +35,9 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
     void commit(State& state) const override;
     std::span<const Update> diff(const State& state) const override;
     void initialize_state(State& state) const override;
+    bool integral() const override;
+    double max() const override;
+    double min() const override;
     void propagate(State& state) const override;
     void revert(State& state) const override;
 

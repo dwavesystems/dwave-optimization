@@ -72,6 +72,10 @@ void ConcatenateNode::initialize_state(State& state) const {
     emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
 }
 
+bool ConcatenateNode::integral() const {
+    return std::ranges::all_of(array_ptrs_, [](ArrayNode* ptr){ return ptr->integral(); });
+}
+
 std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ssize_t axis) {
     // One or more arrays must be given
     if (array_ptrs.size() < 1) {
@@ -129,6 +133,16 @@ std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ss
     }
 
     return shape;
+}
+
+double ConcatenateNode::max() const {
+    return std::ranges::max(
+              array_ptrs_ | std::views::transform([](ArrayNode* ptr) { return ptr->max(); }));
+}
+
+double ConcatenateNode::min() const {
+    return std::ranges::min(
+              array_ptrs_ | std::views::transform([](ArrayNode* ptr) { return ptr->min(); }));
 }
 
 void ConcatenateNode::propagate(State& state) const {

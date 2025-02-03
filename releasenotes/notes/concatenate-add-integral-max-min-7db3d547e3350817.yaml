@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add integral, max and min to ``ConcatenateNode``.
+    See `#192 <https://github.com/dwavesystems/dwave-optimization/issues/192>`_.
+
