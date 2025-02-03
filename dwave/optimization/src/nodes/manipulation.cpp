@@ -78,9 +78,7 @@ void ConcatenateNode::initialize_state(State& state) const {
 }
 
 bool ConcatenateNode::integral() const {
-    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(),
-                            array_ptrs_[0]->integral(),
-                            [](bool b, ArrayNode* ptr){ return b && ptr->integral(); });
+    return std::ranges::all_of(array_ptrs_, [](ArrayNode* ptr){ return ptr->integral(); });
 }
 
 std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ssize_t axis) {
@@ -143,15 +141,13 @@ std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ss
 }
 
 double ConcatenateNode::max() const {
-    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(),
-                            array_ptrs_[0]->max(),
-                            [](double m, ArrayNode* ptr){ return std::max(m, ptr->max()); });
+    return std::ranges::max(
+              array_ptrs_ | std::views::transform([](ArrayNode* ptr) { return ptr->max(); }));
 }
 
 double ConcatenateNode::min() const {
-    return std::accumulate(std::next(array_ptrs_.begin()), array_ptrs_.end(),
-                            array_ptrs_[0]->min(),
-                            [](double m, ArrayNode* ptr){ return std::min(m, ptr->min()); });
+    return std::ranges::min(
+              array_ptrs_ | std::views::transform([](ArrayNode* ptr) { return ptr->min(); }));
 }
 
 void ConcatenateNode::propagate(State& state) const {
