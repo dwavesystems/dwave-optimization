@@ -21,6 +21,56 @@
 
 namespace dwave::optimization {
 
+// A class that encodes the product of an array. Allows for incremental updates
+// without needing to recalculate the whole thing.
+struct RunningProduct {
+    RunningProduct() : nonzero(1), num_zero(0) {}
+    explicit RunningProduct(const double init) : nonzero(init ? init : 1), num_zero(init == 0) {}
+
+    // Get as a double. I.e., 0^num_zero * nonzero
+    explicit operator double() const noexcept { return (num_zero > 0) ? 0 : nonzero; }
+
+    // Multiply by a number, tracking the number of times it's been multiplied by 0
+    RunningProduct& operator*=(const double rhs) noexcept {
+        if (rhs) {
+            nonzero *= rhs;
+        } else {
+            num_zero += 1;
+        }
+        return *this;
+    }
+
+    // Divide by a number, tracking the number of times it's been divided by 0
+    RunningProduct& operator/=(const double rhs) {
+        if (rhs) {
+            nonzero /= rhs;
+        } else {
+            num_zero -= 1;
+
+            // the implementation is well-defined for num_zero < 0, but conceptually
+            // it's not really well defined.
+            assert(num_zero >= 0);
+        }
+        return *this;
+    }
+
+    // Multiply and divide
+    void multiply_divide(const double multiplier, const double divisor) {
+        // This function exists so that in the future we can be a bit more careful
+        // about numeric errors. For now we just delegate to other methods for
+        // simplicity
+
+        if (multiplier == divisor) return;  // nothing to do when they cancel out
+
+        *this *= multiplier;
+        *this /= divisor;
+    }
+
+    // The output value is 0^num_zero * nonzero
+    double nonzero;  // todo: consider float128 or other way of managing floating point errors
+    ssize_t num_zero;
+};
+
 // BinaryOpNode ************************************************************
 
 template <class BinaryOp>
@@ -1095,28 +1145,17 @@ struct ExtraData<std::logical_or<double>> {
 
 template <>
 struct ExtraData<std::multiplies<double>> {
-    ExtraData(double nonzero, ssize_t num_zero) : nonzero(nonzero), num_zero(num_zero) {}
+    explicit ExtraData(RunningProduct product) : product(product), old_product(product) {}
 
     virtual ~ExtraData() = default;
 
-    void commit() {
-        old_nonzero = nonzero;
-        old_num_zero = num_zero;
-    }
-    void revert() {
-        nonzero = old_nonzero;
-        num_zero = old_num_zero;
-    }
+    void commit() { old_product = product; }
+    void revert() { product = old_product; }
 
-    // Track all the non-zero stuff. That is, if we changes all of the 0s
-    // to 1s, this is the value we would see
-    double nonzero;
-    double old_nonzero = nonzero;
-
-    // For multiplies we want to track the number of 0s, because when this number
-    // is positive then the output is always 0 regardless of what changed.
-    ssize_t num_zero;
-    ssize_t old_num_zero = num_zero;
+    // RunningProduct tracks the multiplications by 0 separately, which means we
+    // don't need to recalculate everything when there's a 0 in there.
+    RunningProduct product;
+    RunningProduct old_product;
 };
 
 template <class BinaryOp>
@@ -1223,22 +1262,14 @@ void ReduceNode<std::multiplies<double>>::initialize_state(State& state) const {
     // it's enough of an edge case that I don't think it makes sense to do
     // anything-performance wise.
 
-    double nonzero = init.value_or(1);
-    ssize_t num_zero = 0;
+    RunningProduct product(init.value_or(1));
 
     for (const double& value : array_ptr_->view(state)) {
-        if (value == 0) {
-            num_zero += 1;
-        } else {
-            nonzero *= value;
-        }
+        product *= value;
     }
 
-    // finally get the value
-    double value = num_zero > 0 ? 0 : nonzero;
-
     // and then create the state
-    emplace_data_ptr<ReduceNodeData<op>>(state, value, nonzero, num_zero);
+    emplace_data_ptr<ReduceNodeData<op>>(state, static_cast<double>(product), product);
 }
 
 template <class BinaryOp>
@@ -1574,42 +1605,19 @@ template <>
 void ReduceNode<std::multiplies<double>>::propagate(State& state) const {
     auto ptr = data_ptr<ReduceNodeData<op>>(state);
 
-    auto& nonzero = ptr->extra.nonzero;
-    auto& num_zero = ptr->extra.num_zero;
+    RunningProduct& product = ptr->extra.product;
 
-    assert(num_zero == 0 || ptr->values.value == 0);
-
-    // count the change in the num_zero
     for (const Update& update : array_ptr_->diff(state)) {
-        if (update.placed() && update.value == 0) {
-            // added a zero
-            num_zero += 1;
-        } else if (update.placed()) {
-            assert(update.value != 0);
-            nonzero *= update.value;
-        } else if (update.removed() && update.old == 0) {
-            // removed a 0
-            num_zero -= 1;
+        if (update.placed()) {
+            product *= update.value;
         } else if (update.removed()) {
-            assert(update.old != 0);
-            nonzero /= update.old;
-        } else if (update.old == 0 && update.value == 0) {
-            // changed a 0 to a 0, nothing to do
-        } else if (update.old == 0) {
-            // changed a 0 to something else
-            nonzero *= update.value;
-            num_zero -= 1;
-        } else if (update.value == 0) {
-            // changed something else to a 0
-            nonzero /= update.old;
-            num_zero += 1;
+            product /= update.old;
         } else {
-            // something else to something else
-            nonzero *= (update.value / update.old);
+            product.multiply_divide(update.value, update.old);
         }
     }
 
-    ptr->values.value = num_zero > 0 ? 0 : nonzero;
+    ptr->values.value = static_cast<double>(product);
     if (ptr->values.value != ptr->values.old) Node::propagate(state);
 }
 
