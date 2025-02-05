@@ -170,6 +170,26 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
             CHECK(std::ranges::equal(std::vector{1, 1, -4}, result.solution()));
         }
     }
+
+    GIVEN("LP with no bounds or constraints") {
+        std::vector<double> c{1};
+
+        std::vector<double> A{};
+        std::vector<double> b_lb{};
+        std::vector<double> b_ub{};
+
+        std::vector<double> A_eq{};
+        std::vector<double> b_eq{};
+
+        std::vector<double> lb{-inf};
+        std::vector<double> ub{inf};
+
+        THEN("We return failure unbounded") {
+            SolveResult result = linprog(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
+            CHECK(result.solve_status == SolveResult::SolveStatus::FAILURE_UNBOUNDED);
+            CHECK(result.solution_status() == SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL);
+        }
+    }
 }
 
 }  // namespace dwave::optimization
