@@ -324,17 +324,16 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
 
     static double inf = std::numeric_limits<double>::infinity();
 
-    ssize_t lower_bounded_constraint_count = 0;
-    ssize_t upper_bounded_constraint_count = 0;
+    ssize_t A_constraint_count = 0;
     for (ssize_t i = 0; i < A.n(); i++) {
         // Unbounded constraint, can ignore
         if (b_lb[i] == -inf && b_ub[i] == inf) continue;
 
         if (b_lb[i] != -inf) {
-            lower_bounded_constraint_count++;
+            A_constraint_count++;
         }
         if (b_ub[i] != inf) {
-            upper_bounded_constraint_count++;
+            A_constraint_count++;
         }
     }
 
@@ -354,9 +353,8 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
         }
     }
 
-    ssize_t slack_var_count = lower_bounded_constraint_count + upper_bounded_constraint_count +
-                              upper_bounded_var_count;
-    Matrix A_(A_eq.n() + upper_bounded_constraint_count + upper_bounded_var_count,
+    ssize_t slack_var_count = A_constraint_count + upper_bounded_var_count;
+    Matrix A_(A_eq.n() + A_constraint_count + upper_bounded_var_count,
               num_vars + unbounded_var_count + slack_var_count);
     c_.resize(A_.m());
     std::vector<double> b(A_.n(), 0);
@@ -374,6 +372,7 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
             b[A_row] = -b_lb[i];
             A_row++;
         }
+
         if (b_ub[i] != inf) {
             // Copy the constraint
             for (ssize_t j = 0; j < A.m(); j++) {
@@ -387,7 +386,7 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
 
     // Copy A_eq and b_eq directly
     for (ssize_t i = 0; i < A_eq.n(); i++) {
-        ssize_t A_row = i + A.n() + upper_bounded_var_count;
+        ssize_t A_row = i + A_constraint_count + upper_bounded_var_count;
         for (ssize_t j = 0; j < A_eq.m(); j++) {
             A_(A_row, j) = A_eq(i, j);
         }
@@ -396,7 +395,7 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
 
     ssize_t free_variable_index = num_vars;
 
-    A_row = A.n();
+    A_row = A_constraint_count;
     for (ssize_t j = 0; j < num_vars; j++) {
         if (lb_[j] == -inf && ub_[j] == inf) {
             // Free variable, substitute xi = xi+ - xi-
@@ -424,7 +423,7 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
         }
     }
 
-    assert(A_row == A.n() + upper_bounded_var_count);
+    assert(A_row == A_constraint_count + upper_bounded_var_count);
     assert(free_variable_index == num_vars + unbounded_var_count);
 
     // Add slack variables for inequalities
