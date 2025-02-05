@@ -277,11 +277,9 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
 
     /// Convert linear index to indices for each dimension
     std::vector<ssize_t> parent_strides_c_;
-
-    // Calculate the output value based on the state of the predecessor
-    double reduce(const State& state, ssize_t index) const;
 };
 
+using PartialProdNode = PartialReduceNode<std::multiplies<double>>;
 using PartialSumNode = PartialReduceNode<std::plus<double>>;
 
 template <class BinaryOp>

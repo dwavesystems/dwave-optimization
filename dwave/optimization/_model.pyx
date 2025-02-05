@@ -1338,13 +1338,26 @@ cdef class ArraySymbol(Symbol):
         """Return the number of dimensions for a symbol."""
         return self.array_ptr.ndim()
 
-    def prod(self):
+    def prod(self, axis=None):
         """Create a :class:`~dwave.optimization.symbols.Prod` symbol.
 
         The new symbol returns the product of its elements.
+
+        .. versionadded:: 0.5.1
+            The ``axis`` keyword argument was added in version 0.5.1.
         """
-        from dwave.optimization.symbols import Prod  # avoid circular import
-        return Prod(self)
+        import dwave.optimization.symbols
+
+        if axis is not None:
+            if not isinstance(axis, numbers.Integral):
+                raise TypeError("axis of the prod should be an int")
+
+            if not (0 <= axis < self.ndim()):
+                raise ValueError("axis should be 0 <= axis < self.ndim()")
+
+            return dwave.optimization.symbols.PartialProd(self, axis)
+
+        return dwave.optimization.symbols.Prod(self)
 
     def reshape(self, *shape):
         """Create a :class:`~dwave.optimization.symbols.Reshape` symbol.

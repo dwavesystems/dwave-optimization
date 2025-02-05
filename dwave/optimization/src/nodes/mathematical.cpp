@@ -21,6 +21,79 @@
 
 namespace dwave::optimization {
 
+// A class that encodes the product of an array. Allows for incremental updates
+// without needing to recalculate the whole thing.
+struct RunningProduct {
+    RunningProduct() : nonzero(1), num_zero(0) {}
+    explicit RunningProduct(const double init) : nonzero(init ? init : 1), num_zero(init == 0) {}
+
+    // Get as a double. I.e., 0^num_zero * nonzero
+    explicit operator double() const noexcept { return (num_zero > 0) ? 0 : nonzero; }
+
+    // Multiply by a number, tracking the number of times it's been multiplied by 0
+    RunningProduct& operator*=(const double rhs) noexcept {
+        if (rhs) {
+            nonzero *= rhs;
+        } else {
+            num_zero += 1;
+        }
+        return *this;
+    }
+
+    // Divide by a number, tracking the number of times it's been divided by 0
+    RunningProduct& operator/=(const double rhs) {
+        if (rhs) {
+            nonzero /= rhs;
+        } else {
+            num_zero -= 1;
+
+            // the implementation is well-defined for num_zero < 0, but conceptually
+            // it's not really well defined.
+            assert(num_zero >= 0);
+        }
+        return *this;
+    }
+
+    // Multiply and divide
+    void multiply_divide(const double multiplier, const double divisor) {
+        // This function exists so that in the future we can be a bit more careful
+        // about numeric errors. For now we just delegate to other methods for
+        // simplicity
+
+        if (multiplier == divisor) return;  // nothing to do when they cancel out
+
+        *this *= multiplier;
+        *this /= divisor;
+    }
+
+    // The output value is 0^num_zero * nonzero
+    double nonzero;  // todo: consider float128 or other way of managing floating point errors
+    ssize_t num_zero;
+};
+
+// For a product reduction over n elements each taking values in [low, high]
+// and an initial value of init, what is the min it can take?
+double product_max(ssize_t n, double init, double low, double high) {
+    if (n <= 0) return init;
+    if (n == 1) return std::max<double>(init * low, init * high);
+    return std::max<double>({
+            init * std::pow(low, n),
+            init * std::pow(high, n),
+            init * low * std::pow(high, n - 1),
+            init * high * std::pow(low, n - 1),
+    });
+}
+double product_min(ssize_t n, double init, double low, double high) {
+    if (n <= 0) return init;
+    if (n == 1) return std::min<double>(init * low, init * high);
+    return std::min<double>({
+            init * std::pow(low, n),
+            init * std::pow(high, n),
+            init * low * std::pow(high, n - 1),
+            init * high * std::pow(low, n - 1),
+    });
+}
+
 // BinaryOpNode ************************************************************
 
 template <class BinaryOp>
@@ -757,6 +830,78 @@ template class NaryOpNode<std::multiplies<double>>;
 template class NaryOpNode<std::plus<double>>;
 
 // PartialReduceNode *****************************************************************
+
+// The state of the PartialReduceNode - not implemented by default
+template <class BinaryOp>
+class PartialReduceNodeData {};
+
+// The state of a PartialProdNode
+template <>
+class PartialReduceNodeData<std::multiplies<double>> : private ArrayStateData,
+                                                       public NodeStateData {
+ public:
+    explicit PartialReduceNodeData(std::vector<RunningProduct>&& values) noexcept
+            : ArrayStateData(running_to_double(values)),
+              NodeStateData(),
+              products_(std::move(values)) {}
+
+    using ArrayStateData::buff;
+
+    void commit() {
+        ArrayStateData::commit();
+        products_diff_.clear();
+    }
+
+    using ArrayStateData::diff;
+
+    void revert() {
+        ArrayStateData::revert();
+
+        for (const auto& [index, product] : products_diff_ | std::views::reverse) {
+            products_[index] = product;
+        }
+        products_diff_.clear();
+    }
+
+    // Incorporate a single update at the given index. I.e. one entry in
+    // the relevant axis has updated its value from old -> value.
+    void update(ssize_t index, double old, double value) {
+        products_diff_.emplace_back(index, products_[index]);               // save the old value
+        products_[index].multiply_divide(value, old);                       // update the accumlator
+        ArrayStateData::set(index, static_cast<double>(products_[index]));  // set our output
+    }
+
+    using ArrayStateData::size_diff;
+
+ private:
+    // convert a vector of running doubles to a vector of doubles via an explicit static_cast
+    static std::vector<double> running_to_double(const std::vector<RunningProduct>& values) {
+        std::vector<double> out;
+        out.reserve(values.size());
+        for (const auto& val : values) {
+            out.emplace_back(static_cast<double>(val));
+        }
+        return out;
+    }
+
+    std::vector<RunningProduct> products_;
+    std::vector<std::tuple<ssize_t, RunningProduct>> products_diff_;
+};
+
+// The state of a PartialSumNode
+template <>
+class PartialReduceNodeData<std::plus<double>> : public ArrayNodeStateData {
+ public:
+    explicit PartialReduceNodeData(std::vector<double>&& values) noexcept
+            : ArrayNodeStateData(std::move(values)) {}
+
+    // Incorporate a single update at the given index. I.e. one entry in
+    // the relevant axis has updated its value from old -> value.
+    void update(ssize_t index, double old, double value) {
+        ArrayStateData::set(index, ArrayStateData::get(index) - old + value);
+    }
+};
+
 std::vector<ssize_t> partial_reduce_shape(const std::span<const ssize_t> input_shape,
                                           const ssize_t axis) {
     std::vector<ssize_t> shape(input_shape.begin(), input_shape.end());
@@ -824,6 +969,20 @@ PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, const ssize_
         : PartialReduceNode(node_ptr, {axis}, init) {}
 
 template <>
+PartialReduceNode<std::multiplies<double>>::PartialReduceNode(ArrayNode* array_ptr,
+                                                              const ssize_t axis)
+        : PartialReduceNode(array_ptr, axis, 1) {}
+
+template <>
+PartialReduceNode<std::multiplies<double>>::PartialReduceNode(ArrayNode* array_ptr,
+                                                              std::span<const ssize_t> axes)
+        : PartialReduceNode(array_ptr, nonempty(axes)[0], 1) {
+    if (axes.size() != 1) {
+        throw std::invalid_argument("Partial product supports only one axis");
+    }
+}
+
+template <>
 PartialReduceNode<std::plus<double>>::PartialReduceNode(ArrayNode* array_ptr, const ssize_t axis)
         : PartialReduceNode(array_ptr, axis, 0) {}
 
@@ -847,35 +1006,99 @@ PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* array_ptr, const ssize
 
 template <class BinaryOp>
 std::span<const ssize_t> PartialReduceNode<BinaryOp>::axes() const {
-    // TODO: support multiple axes
+    // todo: support multiple axes
     return std::span(axes_.get(), 1);
 }
 
 template <class BinaryOp>
 double const* PartialReduceNode<BinaryOp>::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
+    return data_ptr<PartialReduceNodeData<op>>(state)->buff();
 }
 
 template <class BinaryOp>
 void PartialReduceNode<BinaryOp>::commit(State& state) const {
-    data_ptr<ArrayNodeStateData>(state)->commit();
+    data_ptr<PartialReduceNodeData<op>>(state)->commit();
 }
 
 template <class BinaryOp>
 std::span<const Update> PartialReduceNode<BinaryOp>::diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->diff();
+    return data_ptr<PartialReduceNodeData<op>>(state)->diff();
 }
 
 template <class BinaryOp>
 void PartialReduceNode<BinaryOp>::initialize_state(State& state) const {
-    std::vector<double> values(size(state));
+    // the type we use for the reduction depends on the node type
+    using accumulator_type = std::conditional<std::same_as<BinaryOp, std::multiplies<double>>,
+                                              RunningProduct, double>::type;
 
-    for (ssize_t i = 0, stop = size(state); i < stop; ++i) {
-        assert(i < static_cast<ssize_t>(values.size()));
-        values[i] = reduce(state, i);
+    std::vector<accumulator_type> values(size(state));
+
+    const ssize_t axis = axes_[0];
+
+    for (ssize_t index = 0, stop = size(state); index < stop; ++index) {
+        assert(index < static_cast<ssize_t>(values.size()));
+
+        /// We wish to fill `index` of the partial reduction, given the state of the parent.
+        /// We proceed as follows.
+        /// 1. We unravel the index. This will give us e.g. the indices i, k for
+        ///     R_ik = sum_j P_ijk
+        /// 2. Then we know we have to iterate through the parent starting from j=0 to its full
+        /// dimension. To do so, we first find the starting index in the parent.
+        /// 3. We then create an iterator through the parent array along the axis.
+        /// 4. We use the above iterators to perform the reduction.
+
+        // 1. Unravel the index we are trying to fill
+        std::vector<ssize_t> indices = unravel_index(this->strides(), index);
+        assert(static_cast<ssize_t>(indices.size()) == this->ndim());
+
+        // 2. Find the respective starting index in the parent
+        ssize_t start_idx = 0;
+        for (ssize_t ax = 0, stop = this->ndim(); ax < stop; ++ax) {
+            if (ax >= axis) {
+                start_idx += indices[ax] * array_ptr_->strides()[ax + 1] / array_ptr_->itemsize();
+            } else {
+                start_idx += indices[ax] * array_ptr_->strides()[ax] / array_ptr_->itemsize();
+            }
+        }
+        assert(start_idx >= 0 && index < this->size(state));
+
+        // 3. We create an iterator that starts from index just found and iterates through the axis
+        // we are reducing over
+        const_iterator begin =
+                const_iterator(array_ptr_->buff(state) + start_idx, 1, &array_ptr_->shape()[axis],
+                               &array_ptr_->strides()[axis]);
+
+        const_iterator end = begin + array_ptr_->shape(state)[axis];
+
+        // Get the initial value
+        double init;
+        if (this->init.has_value()) {
+            init = this->init.value();
+        } else {
+            // if there is no init, we use the first value in the array as the init
+            // we should only be here if the array is not dynamic and if it has at
+            // least one entry
+            assert(!array_ptr_->dynamic());
+            assert(array_ptr_->size(state) >= 1);
+            init = *begin;
+            ++begin;
+        }
+
+        if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
+            // we use accumulate rather than reduce so we have an easier lambda
+            // description
+            values[index] = std::accumulate(begin, end, accumulator_type(init),
+                                            [](const RunningProduct& lhs, const double& rhs) {
+                                                RunningProduct out = lhs;
+                                                out *= rhs;
+                                                return out;
+                                            });
+        } else {
+            values[index] = std::reduce(begin, end, init, BinaryOp());
+        }
     }
 
-    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
+    emplace_data_ptr<PartialReduceNodeData<op>>(state, std::move(values));
 }
 
 template <class BinaryOp>
@@ -885,10 +1108,10 @@ bool PartialReduceNode<BinaryOp>::integral() const {
     if constexpr (std::is_integral<result_type>::value) {
         return true;
     }
-
-    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
-        // the actual value of init doesn't matter, all of the above have no default
-        // or an integer default init
+    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
+        return array_ptr_->integral() && is_integer(init.value_or(1));
+    }
+    if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
         return array_ptr_->integral() && is_integer(init.value_or(0));
     }
 
@@ -938,11 +1161,17 @@ double PartialReduceNode<BinaryOp>::max() const {
         return true;
     }
 
-    ssize_t axis = axes_[0];
-    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
-        return this->init.value_or(0) + array_ptr_->shape()[axis] * array_ptr_->max();
-    }
+    assert(!this->dynamic());  // checked by constructor
 
+    // Get the size of the axis we're reducing on
+    const ssize_t size = array_ptr_->shape()[axes_[0]];
+
+    if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
+        return init.value_or(0) + size * array_ptr_->max();
+    }
+    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
+        return product_max(size, init.value_or(1), array_ptr_->min(), array_ptr_->max());
+    }
     assert(false && "not implemented yet");
     unreachable();
 }
@@ -955,89 +1184,37 @@ double PartialReduceNode<BinaryOp>::min() const {
         return false;
     }
 
-    ssize_t axis = axes_[0];
-    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
-        return this->init.value_or(0) + array_ptr_->shape()[axis] * array_ptr_->min();
+    assert(!this->dynamic());  // checked by constructor
+
+    // Get the size of the axis we're reducing on
+    const ssize_t size = array_ptr_->shape()[axes_[0]];
+
+    if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
+        return init.value_or(0) + size * array_ptr_->min();
+    }
+    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
+        return product_min(size, init.value_or(1), array_ptr_->min(), array_ptr_->max());
     }
 
     assert(false && "not implemented yet");
     unreachable();
 }
 
-template <>
-void PartialReduceNode<std::plus<double>>::propagate(State& state) const {
-    auto ptr = data_ptr<ArrayNodeStateData>(state);
-
-    auto& values = ptr->buffer;
-    auto& changes = ptr->updates;
+template <class BinaryOp>
+void PartialReduceNode<BinaryOp>::propagate(State& state) const {
+    auto ptr = data_ptr<PartialReduceNodeData<op>>(state);
 
     for (const auto& [p_index, old, value] : array_ptr_->diff(state)) {
         const ssize_t index = map_parent_index(state, p_index);
-        const double previous = values[index];
-        values[index] += (value - old);
-        changes.emplace_back(index, previous, values[index]);
+        ptr->update(index, old, value);
     }
 
-    if (ptr->updates.size()) Node::propagate(state);
-}
-
-template <class BinaryOp>
-double PartialReduceNode<BinaryOp>::reduce(const State& state, ssize_t index) const {
-    /// We wish to fill `index` of the partial reduction, given the state of the parent. We proceed
-    /// as follows.
-    /// 1. We unravel the index. This will give us e.g. the indices i, k for
-    ///     R_ik = sum_j P_ijk
-    /// 2. Then we know we have to iterate through the parent starting from j=0 to its full
-    /// dimension. To do so, we first find the starting index in the parent.
-    /// 3. We then create an iterator through the parent array along the axis.
-    /// 4. We use the above iterators to perform the reduction.
-    assert(index >= 0 && index < this->size(state));
-
-    // 1. Unravel the index we are trying to fill
-    std::vector<ssize_t> indices = unravel_index(this->strides(), index);
-    assert(static_cast<ssize_t>(indices.size()) == this->ndim());
-
-    // 2. Find the respective starting index in the parent
-    ssize_t axis = axes_[0];
-    ssize_t start_idx = 0;
-    for (ssize_t ax = 0; ax < this->ndim(); ++ax) {
-        if (ax >= axis) {
-            start_idx += indices[ax] * array_ptr_->strides()[ax + 1] / array_ptr_->itemsize();
-        } else {
-            start_idx += indices[ax] * array_ptr_->strides()[ax] / array_ptr_->itemsize();
-        }
-    }
-    assert(start_idx >= 0 && index < this->size(state));
-
-    // 3. We create an iterator that starts from index just found and iterates through the axis we
-    // are reducing over
-    const_iterator begin = const_iterator(array_ptr_->buff(state) + start_idx, 1,
-                                          &array_ptr_->shape()[axis], &array_ptr_->strides()[axis]);
-
-    const_iterator end = begin + array_ptr_->shape(state)[axis];
-
-    // Get the initial value
-    double init;
-    if (this->init.has_value()) {
-        init = this->init.value();
-    } else {
-        // if there is no init, we use the first value in the array as the init
-        // we should only be here if the array is not dynamic and if it has at
-        // least one entry
-        assert(!array_ptr_->dynamic());
-        assert(array_ptr_->size(state) >= 1);
-        init = *begin;
-        ;
-        ++begin;
-    }
-
-    /// 4. Iterate through the parent on the correct axis.
-    return std::reduce(begin, end, init, BinaryOp());
+    if (ptr->diff().size()) Node::propagate(state);
 }
 
 template <class BinaryOp>
 void PartialReduceNode<BinaryOp>::revert(State& state) const {
-    data_ptr<ArrayNodeStateData>(state)->revert();
+    data_ptr<PartialReduceNodeData<op>>(state)->revert();
 }
 
 template <class BinaryOp>
@@ -1052,10 +1229,11 @@ ssize_t PartialReduceNode<BinaryOp>::size(const State& state) const {
 
 template <class BinaryOp>
 ssize_t PartialReduceNode<BinaryOp>::size_diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->size_diff();
+    return data_ptr<PartialReduceNodeData<op>>(state)->size_diff();
 }
 
 // Uncommented are the tested specializations
+template class PartialReduceNode<std::multiplies<double>>;
 template class PartialReduceNode<std::plus<double>>;
 
 // ReduceNode *****************************************************************
@@ -1095,28 +1273,17 @@ struct ExtraData<std::logical_or<double>> {
 
 template <>
 struct ExtraData<std::multiplies<double>> {
-    ExtraData(double nonzero, ssize_t num_zero) : nonzero(nonzero), num_zero(num_zero) {}
+    explicit ExtraData(RunningProduct product) : product(product), old_product(product) {}
 
     virtual ~ExtraData() = default;
 
-    void commit() {
-        old_nonzero = nonzero;
-        old_num_zero = num_zero;
-    }
-    void revert() {
-        nonzero = old_nonzero;
-        num_zero = old_num_zero;
-    }
+    void commit() { old_product = product; }
+    void revert() { product = old_product; }
 
-    // Track all the non-zero stuff. That is, if we changes all of the 0s
-    // to 1s, this is the value we would see
-    double nonzero;
-    double old_nonzero = nonzero;
-
-    // For multiplies we want to track the number of 0s, because when this number
-    // is positive then the output is always 0 regardless of what changed.
-    ssize_t num_zero;
-    ssize_t old_num_zero = num_zero;
+    // RunningProduct tracks the multiplications by 0 separately, which means we
+    // don't need to recalculate everything when there's a 0 in there.
+    RunningProduct product;
+    RunningProduct old_product;
 };
 
 template <class BinaryOp>
@@ -1223,22 +1390,14 @@ void ReduceNode<std::multiplies<double>>::initialize_state(State& state) const {
     // it's enough of an edge case that I don't think it makes sense to do
     // anything-performance wise.
 
-    double nonzero = init.value_or(1);
-    ssize_t num_zero = 0;
+    RunningProduct product(init.value_or(1));
 
     for (const double& value : array_ptr_->view(state)) {
-        if (value == 0) {
-            num_zero += 1;
-        } else {
-            nonzero *= value;
-        }
+        product *= value;
     }
 
-    // finally get the value
-    double value = num_zero > 0 ? 0 : nonzero;
-
     // and then create the state
-    emplace_data_ptr<ReduceNodeData<op>>(state, value, nonzero, num_zero);
+    emplace_data_ptr<ReduceNodeData<op>>(state, static_cast<double>(product), product);
 }
 
 template <class BinaryOp>
@@ -1281,32 +1440,13 @@ double ReduceNode<BinaryOp>::max() const {
         return array_ptr_->max();
     }
     if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
-        // this is complicated...
-
         // the dynamic case. For now let's just fall back to Array's default
         // implementation because this gets even more complicated
         if (array_ptr_->dynamic()) return Array::max();
 
-        const double init = this->init.value_or(1);
-
-        // the empty case, so we're always just init
-        if (array_ptr_->size() == 0) return init;
-
-        const double low = array_ptr_->min();
-        const double high = array_ptr_->max();
-
-        // exactly one element, handle the sign of init
-        if (array_ptr_->size() == 1) return std::max(init * low, init * high);
-
-        const ssize_t size = array_ptr_->size();
-
-        // more than one element
-        return std::max({
-                init * std::pow(low, size),
-                init * std::pow(high, size),
-                init * low * std::pow(high, size - 1),
-                init * high * std::pow(low, size - 1),
-        });
+        // otherwise we can find some bounds.
+        return product_max(array_ptr_->size(), init.value_or(1), array_ptr_->min(),
+                           array_ptr_->max());
     }
     if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
         const double high = array_ptr_->max();
@@ -1368,32 +1508,13 @@ double ReduceNode<BinaryOp>::min() const {
         return array_ptr_->min();
     }
     if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
-        // this is complicated...
-
         // the dynamic case. For now let's just fall back to Array's default
         // implementation because this gets even more complicated
         if (array_ptr_->dynamic()) return Array::min();
 
-        const double init = this->init.value_or(1);
-
-        // the empty case, so we're always just init
-        if (array_ptr_->size() == 0) return init;
-
-        const double low = array_ptr_->min();
-        const double high = array_ptr_->max();
-
-        // exactly one element, handle the sign of init
-        if (array_ptr_->size() == 1) return std::min(init * low, init * high);
-
-        const ssize_t size = array_ptr_->size();
-
-        // more than one element
-        return std::min({
-                init * std::pow(low, size),
-                init * std::pow(high, size),
-                init * low * std::pow(high, size - 1),
-                init * high * std::pow(low, size - 1),
-        });
+        // otherwise we can find some bounds.
+        return product_min(array_ptr_->size(), init.value_or(1), array_ptr_->min(),
+                           array_ptr_->max());
     }
     if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
         const double low = array_ptr_->min();
@@ -1574,42 +1695,19 @@ template <>
 void ReduceNode<std::multiplies<double>>::propagate(State& state) const {
     auto ptr = data_ptr<ReduceNodeData<op>>(state);
 
-    auto& nonzero = ptr->extra.nonzero;
-    auto& num_zero = ptr->extra.num_zero;
+    RunningProduct& product = ptr->extra.product;
 
-    assert(num_zero == 0 || ptr->values.value == 0);
-
-    // count the change in the num_zero
     for (const Update& update : array_ptr_->diff(state)) {
-        if (update.placed() && update.value == 0) {
-            // added a zero
-            num_zero += 1;
-        } else if (update.placed()) {
-            assert(update.value != 0);
-            nonzero *= update.value;
-        } else if (update.removed() && update.old == 0) {
-            // removed a 0
-            num_zero -= 1;
+        if (update.placed()) {
+            product *= update.value;
         } else if (update.removed()) {
-            assert(update.old != 0);
-            nonzero /= update.old;
-        } else if (update.old == 0 && update.value == 0) {
-            // changed a 0 to a 0, nothing to do
-        } else if (update.old == 0) {
-            // changed a 0 to something else
-            nonzero *= update.value;
-            num_zero -= 1;
-        } else if (update.value == 0) {
-            // changed something else to a 0
-            nonzero /= update.old;
-            num_zero += 1;
+            product /= update.old;
         } else {
-            // something else to something else
-            nonzero *= (update.value / update.old);
+            product.multiply_divide(update.value, update.old);
         }
     }
 
-    ptr->values.value = num_zero > 0 ? 0 : nonzero;
+    ptr->values.value = static_cast<double>(product);
     if (ptr->values.value != ptr->values.old) Node::propagate(state);
 }
 

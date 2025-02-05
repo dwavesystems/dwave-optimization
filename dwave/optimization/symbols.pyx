@@ -80,6 +80,7 @@ from dwave.optimization.libcpp.nodes cimport (
     NegativeNode as cppNegativeNode,
     NotNode as cppNotNode,
     OrNode as cppOrNode,
+    PartialProdNode as cppPartialProdNode,
     PartialSumNode as cppPartialSumNode,
     PermutationNode as cppPermutationNode,
     ProdNode as cppProdNode,
@@ -135,6 +136,7 @@ __all__ = [
     "Negative",
     "Not",
     "Or",
+    "PartialProd",
     "PartialSum",
     "Permutation",
     "Prod",
@@ -2452,6 +2454,50 @@ cdef class Or(ArraySymbol):
     cdef cppOrNode* ptr
 
 _register(Or, typeid(cppOrNode))
+
+
+cdef class PartialProd(ArraySymbol):
+    """Multiply of the elements of a symbol along an axis.
+
+    See also:
+        :meth:`ArraySymbol.prod()`
+
+    .. versionadded:: 0.5.1
+    """
+    def __init__(self, ArraySymbol array, int axis):
+        cdef _Graph model = array.model
+        self.ptr = model._graph.emplace_node[cppPartialProdNode](array.array_ptr, axis)
+        self.initialize_arraynode(model, self.ptr)
+
+    def axes(self):
+        axes = self.ptr.axes()
+        return tuple(axes[i] for i in range(axes.size()))
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppPartialProdNode* ptr = dynamic_cast_ptr[cppPartialProdNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Partial Sum")
+        cdef PartialProd ps = PartialProd.__new__(PartialProd)
+        ps.ptr = ptr
+        ps.initialize_arraynode(symbol.model, ptr)
+        return ps
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        if len(predecessors) != 1:
+            raise ValueError("PartialProd must have exactly one predecessor")
+
+        with zf.open(directory + "axes.json", "r") as f:
+            return PartialProd(*predecessors, json.load(f)[0])
+
+    def _into_zipfile(self, zf, directory):
+        encoder = json.JSONEncoder(separators=(',', ':'))
+        zf.writestr(directory + "axes.json", encoder.encode(self.axes()))
+
+    cdef cppPartialProdNode* ptr
+
+_register(PartialProd, typeid(cppPartialProdNode))
 
 
 cdef class PartialSum(ArraySymbol):
