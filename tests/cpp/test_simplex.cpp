@@ -23,7 +23,7 @@ namespace dwave::optimization {
 
 using Catch::Matchers::WithinRel;
 
-TEST_CASE("LPNode") {
+TEST_CASE("LP solver (simplex)") {
     static const double inf = std::numeric_limits<double>::infinity();
 
     GIVEN("A simple LP with only upper bounds on A @ x") {
@@ -44,7 +44,9 @@ TEST_CASE("LPNode") {
 
         THEN("We find the correct solution") {
             SolveResult result = linprog(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
-            CHECK(result.status == solve_status_t::SUCCESS);
+            CHECK(result.solve_status == SolveResult::SolveStatus::SUCCESS);
+            CHECK(result.solution_status == SolveResult::SolutionStatus::OPTIMAL);
+
             CHECK(std::ranges::equal(std::vector{0, 0, 5}, result.solution));
         }
     }
@@ -70,7 +72,8 @@ TEST_CASE("LPNode") {
 
         THEN("We find the correct solution") {
             SolveResult result = linprog(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
-            CHECK(result.status == solve_status_t::SUCCESS);
+            CHECK(result.solve_status == SolveResult::SolveStatus::SUCCESS);
+            CHECK(result.solution_status == SolveResult::SolutionStatus::OPTIMAL);
 
             REQUIRE_THAT(result.solution[0], WithinRel(1.333333333333333, 1e-9));
             REQUIRE_THAT(result.solution[1], WithinRel(11.523809523809526, 1e-9));
@@ -98,7 +101,9 @@ TEST_CASE("LPNode") {
 
         THEN("We find the correct solution") {
             SolveResult result = linprog(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
-            CHECK(result.status == solve_status_t::SUCCESS);
+            CHECK(result.solve_status == SolveResult::SolveStatus::SUCCESS);
+            CHECK(result.solution_status == SolveResult::SolutionStatus::OPTIMAL);
+
             CHECK(std::ranges::equal(std::vector{-43, 53, 50}, result.solution));
         }
     }
