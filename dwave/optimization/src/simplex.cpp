@@ -18,13 +18,6 @@
 
 namespace dwave::optimization {
 
-template <class T>
-void print_vec(std::string name, const std::vector<T>& vec) {
-    std::cout << name << "(" << vec.size() << "): ";
-    for (const T& v : vec) std::cout << v << " ";
-    std::cout << std::endl;
-}
-
 class Matrix {
  public:
     Matrix(ssize_t n, ssize_t m) : n_(n), m_(m) { buffer_.resize(n_ * m_); }
@@ -36,10 +29,10 @@ class Matrix {
         }
     }
 
-    Matrix(const std::vector<double>& data, ssize_t n, ssize_t m)
-            : Matrix(std::vector<double>(data), n, m) {}
+    Matrix(std::span<const double> data, ssize_t n, ssize_t m)
+            : Matrix(std::vector<double>(data.begin(), data.end()), n, m) {}
 
-    double& at(ssize_t i, ssize_t j) {
+    double& operator()(ssize_t i, ssize_t j) {
         if (i < 0) i += n_;
         if (j < 0) j += m_;
         assert(i >= 0 && i < n_);
@@ -47,23 +40,12 @@ class Matrix {
         return buffer_[i * m_ + j];
     }
 
-    const double& at(ssize_t i, ssize_t j) const {
+    const double& operator()(ssize_t i, ssize_t j) const {
         if (i < 0) i += n_;
         if (j < 0) j += m_;
         assert(i >= 0 && i < n_);
         assert(j >= 0 && j < m_);
         return buffer_[i * m_ + j];
-    }
-
-    void print(std::string name) const {
-        std::cout << name << ": (" << n_ << ", " << m_ << ")" << std::endl;
-        for (ssize_t i = 0; i < n_; i++) {
-            for (ssize_t j = 0; j < m_; j++) {
-                std::cout << at(i, j) << " ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
     }
 
     ssize_t n() const { return n_; }
@@ -77,12 +59,13 @@ class Matrix {
     std::vector<double> buffer_;
 };
 
-ssize_t _pivot_col(Matrix& T, double tol, bool bland) {
+/// Find the pivot column. Will return -1 if no candidate column is found.
+ssize_t _pivot_col(Matrix& T, double tolerance, bool bland) {
     double min_val = std::numeric_limits<double>::infinity();
     ssize_t col = -1;
     for (ssize_t j = 0; j < T.m() - 1; j++) {
-        double val = T.at(-1, j);
-        if (val < -tol) {
+        double val = T(-1, j);
+        if (val < -tolerance) {
             // Bland's rule: return the first index with negative value
             if (bland) return j;
 
@@ -95,16 +78,17 @@ ssize_t _pivot_col(Matrix& T, double tol, bool bland) {
     return col;
 }
 
+/// Find the pivot row. Will return -1 if no candidate row is found.
 ssize_t _pivot_row(Matrix& T, const std::vector<ssize_t>& basis, ssize_t pivcol, ssize_t phase,
-                   double tol, bool bland) {
+                   double tolerance, bool bland) {
     ssize_t k = phase == 1 ? 2 : 1;
 
     double min_q = std::numeric_limits<double>::infinity();
     std::vector<ssize_t> min_rows;
     for (ssize_t i = 0; i < T.n() - k; i++) {
-        if (T.at(i, pivcol) <= tol) continue;
+        if (T(i, pivcol) <= tolerance) continue;
 
-        double q = T.at(i, -1) / T.at(i, pivcol);
+        double q = T(i, -1) / T(i, pivcol);
         if (q < min_q) {
             min_rows.clear();
             min_rows.push_back(i);
@@ -131,28 +115,29 @@ ssize_t _pivot_row(Matrix& T, const std::vector<ssize_t>& basis, ssize_t pivcol,
 }
 
 void _apply_pivot(Matrix& T, std::vector<ssize_t>& basis, ssize_t pivrow, ssize_t pivcol,
-                  double tol) {
+                  double tolerance) {
     basis[pivrow] = pivcol;
 
-    double pivval = T.at(pivrow, pivcol);
+    double pivval = T(pivrow, pivcol);
 
     for (ssize_t j = 0; j < T.m(); j++) {
-        T.at(pivrow, j) /= pivval;
+        T(pivrow, j) /= pivval;
     }
 
     for (ssize_t irow = 0; irow < T.n(); irow++) {
         if (irow == pivrow) continue;
 
-        double val = T.at(irow, pivcol);
+        double val = T(irow, pivcol);
         for (ssize_t j = 0; j < T.m(); j++) {
-            T.at(irow, j) -= T.at(pivrow, j) * val;
+            T(irow, j) -= T(pivrow, j) * val;
         }
     }
 }
 
-SolverStatus _solve_simplex(Matrix& T, ssize_t n, std::vector<ssize_t>& basis, ssize_t maxiter,
-                            double tol, ssize_t phase, bool bland, ssize_t nit0) {
-    SolverStatus status(0, solve_status_t::UNSET);
+SolveResult _solve_simplex(Matrix& T, ssize_t n, std::vector<ssize_t>& basis,
+                           ssize_t max_iterations, double tolerance, ssize_t phase, bool bland,
+                           ssize_t initial_num_iterations) {
+    SolveResult status(SolveResult::SolveStatus::UNSET, initial_num_iterations);
 
     ssize_t m = phase == 1 ? T.m() - 2 : T.m() - 1;
 
@@ -161,9 +146,9 @@ SolverStatus _solve_simplex(Matrix& T, ssize_t n, std::vector<ssize_t>& basis, s
             if (basis[pivrow] <= T.m() - 2) continue;
 
             for (ssize_t col = 0; col < T.m() - 1; col++) {
-                if (std::abs(T.at(pivrow, col)) > tol) {
-                    _apply_pivot(T, basis, pivrow, col, tol);
-                    status.nit++;
+                if (std::abs(T(pivrow, col)) > tolerance) {
+                    _apply_pivot(T, basis, pivrow, col, tolerance);
+                    status.num_iterations++;
                     break;
                 }
             }
@@ -183,34 +168,70 @@ SolverStatus _solve_simplex(Matrix& T, ssize_t n, std::vector<ssize_t>& basis, s
         solution.resize(size);
     }
 
-    while (status.status == solve_status_t::UNSET) {
-        ssize_t pivcol = _pivot_col(T, tol, bland);
+    while (status.solve_status == SolveResult::SolveStatus::UNSET) {
+        ssize_t pivcol = _pivot_col(T, tolerance, bland);
         ssize_t pivrow = -1;
         if (pivcol < 0) {
-            status.status = solve_status_t::SUCCESS;
+            status.solve_status = SolveResult::SolveStatus::SUCCESS;
         } else {
-            pivrow = _pivot_row(T, basis, pivcol, phase, tol, bland);
+            pivrow = _pivot_row(T, basis, pivcol, phase, tolerance, bland);
             if (pivrow < 0) {
-                status.status = solve_status_t::FAILURE_UNBOUNDED;
+                status.solve_status = SolveResult::SolveStatus::FAILURE_UNBOUNDED;
             }
         }
 
-        if (status.status == solve_status_t::UNSET) {
-            if (status.nit >= maxiter) {
-                status.status = solve_status_t::HIT_ITERATION_LIMIT;
+        if (status.solve_status == SolveResult::SolveStatus::UNSET) {
+            if (status.num_iterations >= max_iterations) {
+                status.solve_status = SolveResult::SolveStatus::HIT_ITERATION_LIMIT;
             } else {
                 assert(pivrow >= 0);
                 assert(pivcol >= 0);
-                _apply_pivot(T, basis, pivrow, pivcol, tol);
-                status.nit += 1;
+                _apply_pivot(T, basis, pivrow, pivcol, tolerance);
+                status.num_iterations += 1;
             }
         }
     }
     return status;
 }
 
-SolveResult _linprog_simplex(const std::vector<double>& c, double c0, const Matrix& A,
-                             const std::vector<double>& b, ssize_t maxiter, double tol,
+Matrix construct_T(std::span<const double> c, double c0, const Matrix& A,
+                   std::span<const double> b) {
+    Matrix T(A.n() + 2, A.m() + A.n() + 1);
+    // Copy in A to T[:n, :m] and b.T to A[:, -1]
+    for (ssize_t i = 0; i < A.n(); i++) {
+        double sign = b[i] < 0 ? -1.0 : 1.0;
+        T(i, -1) = sign * b[i];
+        for (ssize_t j = 0; j < A.m(); j++) {
+            T(i, j) = sign * A(i, j);
+        }
+    }
+
+    // T[:, m:m+n] = I
+    for (ssize_t i = 0; i < A.n(); i++) {
+        T(i, A.m() + i) = 1;
+    }
+
+    // Row objective
+    for (ssize_t i = 0; i < A.m(); i++) {
+        T(A.n(), i) = c[i];
+    }
+    T(A.n(), T.m() - 1) = c0;
+
+    // Row pseudo objective
+    for (ssize_t j = 0; j < A.m(); j++) {
+        for (ssize_t i = 0; i < A.n(); i++) {
+            T(A.n() + 1, j) -= T(i, j);
+        }
+    }
+    for (ssize_t i = 0; i < A.n(); i++) {
+        T(A.n() + 1, T.m() - 1) -= T(i, T.m() - 1);
+    }
+
+    return T;
+}
+
+SolveResult _linprog_simplex(std::span<const double> c, double c0, const Matrix& A,
+                             std::span<const double> b, ssize_t max_iterations, double tolerance,
                              bool bland) {
     assert(static_cast<ssize_t>(c.size()) == A.m());
 
@@ -219,73 +240,47 @@ SolveResult _linprog_simplex(const std::vector<double>& c, double c0, const Matr
         basis.push_back(i + A.m());
     }
 
-    Matrix T(A.n() + 2, A.m() + A.n() + 1);
-    // Copy in A to T[:n, :m]
-    for (ssize_t i = 0; i < A.n(); i++) {
-        for (ssize_t j = 0; j < A.m(); j++) {
-            T.at(i, j) = A.at(i, j);
-        }
-    }
-    // T[:, m:m+n] = I
-    for (ssize_t i = 0; i < A.n(); i++) {
-        T.at(i, A.m() + i) = 1;
-    }
-    // Copy b.T to A[:, m + n]
-    for (ssize_t i = 0; i < A.n(); i++) {
-        T.at(i, A.m() + A.n()) = b[i];
-    }
-
-    // Row objective
-    for (ssize_t i = 0; i < A.m(); i++) {
-        T.at(A.n(), i) = c[i];
-    }
-    T.at(A.n(), T.m() - 1) = c0;
-
-    // Row pseudo objective
-    for (ssize_t j = 0; j < A.m(); j++) {
-        for (ssize_t i = 0; i < A.n(); i++) {
-            T.at(A.n() + 1, j) -= T.at(i, j);
-        }
-    }
-    for (ssize_t i = 0; i < A.n(); i++) {
-        T.at(A.n() + 1, T.m() - 1) -= T.at(i, T.m() - 1);
-    }
+    Matrix T = construct_T(c, c0, A, b);
 
     ssize_t phase = 1;
-    SolverStatus status = _solve_simplex(T, A.n(), basis, maxiter, tol, phase, bland, 0);
+    SolveResult status =
+            _solve_simplex(T, A.n(), basis, max_iterations, tolerance, phase, bland, 0);
 
-    if (std::abs(T.at(-1, -1)) < tol) {
-        Matrix newT(T.n() - 1, A.m() + 1);
+    if (std::abs(T(-1, -1)) < tolerance) {
+        Matrix newT(A.n() + 1, A.m() + 1);
 
         // newT[:, :m] = T[:-1, :m]
         for (ssize_t i = 0; i < newT.n(); i++) {
             for (ssize_t j = 0; j < A.m(); j++) {
-                newT.at(i, j) = T.at(i, j);
+                newT(i, j) = T(i, j);
             }
         }
         // newT[:, -1] = T[:, -1]
         for (ssize_t i = 0; i < newT.n(); i++) {
-            newT.at(i, -1) = T.at(i, -1);
+            newT(i, -1) = T(i, -1);
         }
 
         std::swap(T, newT);
     } else {
-        status.status = solve_status_t::FAILURE_NO_FEASIBLE_START;
+        status.solve_status = SolveResult::SolveStatus::FAILURE_NO_FEASIBLE_START;
     }
 
-    if (status.status == solve_status_t::SUCCESS) {
+    if (status.solve_status == SolveResult::SolveStatus::SUCCESS) {
         phase = 2;
-        SolverStatus status2 =
-                _solve_simplex(T, A.n(), basis, maxiter, tol, phase, bland, status.nit);
+        assert(T.n() == A.n() + 1 && T.m() == A.m() + 1);
+        SolveResult status2 = _solve_simplex(T, A.n(), basis, max_iterations, tolerance, phase,
+                                             bland, status.num_iterations);
 
         std::swap(status, status2);
     }
 
     SolveResult result(status);
 
-    result.solution.resize(A.n() + A.m(), 0);
+    result.solution.resize(A.m(), 0.0);
     for (ssize_t i = 0; i < A.n(); i++) {
-        result.solution[basis[i]] = T.at(i, -1);
+        if (basis[i] < A.m()) {
+            result.solution[basis[i]] = T(i, -1);
+        }
     }
 
     return result;
@@ -301,10 +296,10 @@ struct LP {
     std::vector<double> b;
 };
 
-void check_LP_sizes(const std::vector<double>& c, const std::vector<double>& b_lb,
-                    const std::vector<double>& A_data, const std::vector<double>& b_ub,
-                    const std::vector<double>& A_eq_data, const std::vector<double>& b_eq,
-                    const std::vector<double>& lb, const std::vector<double>& ub) {
+void check_LP_sizes(std::span<const double> c, std::span<const double> b_lb,
+                    std::span<const double> A_data, std::span<const double> b_ub,
+                    std::span<const double> A_eq_data, std::span<const double> b_eq,
+                    std::span<const double> lb, std::span<const double> ub) {
     const ssize_t num_vars = c.size();
 
     if (b_lb.size() != b_ub.size()) {
@@ -324,10 +319,10 @@ void check_LP_sizes(const std::vector<double>& c, const std::vector<double>& b_l
     }
 }
 
-LP translate_LP_to_simple(const std::vector<double>& c, const std::vector<double>& b_lb,
-                          const std::vector<double>& A_data, const std::vector<double>& b_ub,
-                          const std::vector<double>& A_eq_data, const std::vector<double>& b_eq,
-                          const std::vector<double>& lb, const std::vector<double>& ub) {
+LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_lb,
+                          std::span<const double> A_data, std::span<const double> b_ub,
+                          std::span<const double> A_eq_data, std::span<const double> b_eq,
+                          std::span<const double> lb, std::span<const double> ub) {
     check_LP_sizes(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub);
 
     const ssize_t num_vars = c.size();
@@ -351,16 +346,18 @@ LP translate_LP_to_simple(const std::vector<double>& c, const std::vector<double
         }
     }
 
-    std::vector<double> c_(c);
-    std::vector<double> lb_(lb);
-    std::vector<double> ub_(ub);
+    std::vector<double> c_(c.begin(), c.end());
+    std::vector<double> lb_(lb.begin(), lb.end());
+    std::vector<double> ub_(ub.begin(), ub.end());
 
     ssize_t upper_bounded_var_count = 0;
     ssize_t unbounded_var_count = 0;
     for (ssize_t j = 0; j < num_vars; j++) {
         if (lb_[j] == -inf && ub_[j] == inf) {
             unbounded_var_count++;
-        } else if (ub_[j] != inf) {
+        }
+
+        if (ub_[j] != inf) {
             upper_bounded_var_count++;
         }
     }
@@ -374,21 +371,12 @@ LP translate_LP_to_simple(const std::vector<double>& c, const std::vector<double
 
     ssize_t A_row = 0;
 
-    // Copy A_eq and bound directly
-    for (; A_row < A_eq.n(); A_row++) {
-        for (ssize_t j = 0; j < A_eq.m(); j++) {
-            auto& val = A_eq.at(A_row, j);
-            A_.at(A_row, j) = val;
-        }
-        b[A_row] = b_eq[A_row];
-    }
-
     // Copy A to final A, adding extra flipped constraint for ones with lower bounds
     for (ssize_t i = 0; i < A.n(); i++) {
         if (b_lb[i] != -inf) {
             // Copy the flipped constraint
             for (ssize_t j = 0; j < A.m(); j++) {
-                A_.at(A_row, j) = -A.at(i, j);
+                A_(A_row, j) = -A(i, j);
             }
             // Copy the flipped bound
             b[A_row] = -b_lb[i];
@@ -397,7 +385,7 @@ LP translate_LP_to_simple(const std::vector<double>& c, const std::vector<double
         if (b_ub[i] != inf) {
             // Copy the constraint
             for (ssize_t j = 0; j < A.m(); j++) {
-                A_.at(A_row, j) = A.at(i, j);
+                A_(A_row, j) = A(i, j);
             }
             // Copy the bound
             b[A_row] = b_ub[i];
@@ -405,13 +393,23 @@ LP translate_LP_to_simple(const std::vector<double>& c, const std::vector<double
         }
     }
 
+    // Copy A_eq and b_eq directly
+    for (ssize_t i = 0; i < A_eq.n(); i++) {
+        ssize_t A_row = i + A.n() + upper_bounded_var_count;
+        for (ssize_t j = 0; j < A_eq.m(); j++) {
+            A_(A_row, j) = A_eq(i, j);
+        }
+        b[A_row] = b_eq[i];
+    }
+
     ssize_t free_variable_index = num_vars;
 
+    A_row = A.n();
     for (ssize_t j = 0; j < num_vars; j++) {
         if (lb_[j] == -inf && ub_[j] == inf) {
-            // Free variable, substitue xi = xi+ - xi-
+            // Free variable, substitute xi = xi+ - xi-
             for (ssize_t i = 0; i < A_.n(); i++) {
-                A_.at(i, free_variable_index) = -A_.at(i, j);
+                A_(i, free_variable_index) = -A_(i, j);
             }
             c_[free_variable_index] = -c[j];
             free_variable_index++;
@@ -423,23 +421,23 @@ LP translate_LP_to_simple(const std::vector<double>& c, const std::vector<double
             c_[j] = -c_[j];
 
             for (ssize_t i = 0; i < A_.n(); i++) {
-                A_.at(i, j) *= -1;
+                A_(i, j) *= -1;
             }
         }
 
         if (ub_[j] != inf) {
-            A_.at(A_row, j) = 1;
+            A_(A_row, j) = 1;
             b[A_row] = ub_[j];
             A_row++;
         }
     }
 
-    assert(A_row == A_.n());
+    assert(A_row == A.n() + upper_bounded_var_count);
     assert(free_variable_index == num_vars + unbounded_var_count);
 
     // Add slack variables for inequalities
     for (ssize_t i = 0; i < slack_var_count; i++) {
-        A_.at(A_eq.n() + i, free_variable_index + i) = 1;
+        A_(i, free_variable_index + i) = 1;
     }
 
     // Substitute the lower bounds
@@ -449,7 +447,7 @@ LP translate_LP_to_simple(const std::vector<double>& c, const std::vector<double
             c0 += lb_[j] * c[j];
 
             for (ssize_t i = 0; i < A_.n(); i++) {
-                b[i] -= A_.at(i, j) * lb_[j];
+                b[i] -= A_(i, j) * lb_[j];
             }
         }
     }
@@ -457,35 +455,109 @@ LP translate_LP_to_simple(const std::vector<double>& c, const std::vector<double
     return LP(std::move(c_), c0, std::move(A_), std::move(b));
 }
 
-void post_process_solution(ssize_t num_vars, std::vector<double>& solution,
-                           const std::vector<double>& lb, const std::vector<double>& ub) {
-    static double inf = std::numeric_limits<double>::infinity();
-    for (ssize_t j = 0; j < num_vars; j++) {
-        if (lb[j] != -inf) {
-            solution[j] += lb[j];
-        }
+void post_process_solution(std::vector<double>& solution, std::span<const double> lb,
+                           std::span<const double> ub) {
+    assert(lb.size() == ub.size());
+    ssize_t num_vars = lb.size();
 
+    static double inf = std::numeric_limits<double>::infinity();
+
+    ssize_t free_variable_index = 0;
+    for (ssize_t j = 0; j < num_vars; j++) {
         if (lb[j] == -inf && ub[j] == inf) {
-            solution[j] -= solution[j + num_vars];
+            assert(num_vars + free_variable_index < static_cast<ssize_t>(solution.size()));
+            solution[j] -= solution[num_vars + free_variable_index];
+            free_variable_index++;
+        } else {
+            if (lb[j] != -inf) {
+                solution[j] += lb[j];
+            } else if (ub[j] != inf) {
+                solution[j] = ub[j] - solution[j];
+            }
         }
     }
 
     solution.resize(num_vars);
 }
 
-SolveResult linprog(const std::vector<double>& c, const std::vector<double>& b_lb,
-                    const std::vector<double>& A_data, const std::vector<double>& b_ub,
-                    const std::vector<double>& A_eq_data, const std::vector<double>& b_eq,
-                    const std::vector<double>& lb, const std::vector<double>& ub) {
+void recompute_feasibility(std::span<const double> c, std::span<const double> b_lb,
+                           std::span<const double> A_data, std::span<const double> b_ub,
+                           std::span<const double> A_eq_data, std::span<const double> b_eq,
+                           std::span<const double> lb, std::span<const double> ub,
+                           SolveResult& result, double tolerance) {
+    assert(result.solution.size() == c.size());
+
+    double tol = std::sqrt(tolerance) * 10.0;
+
+    // Check b_lb <= A @ x <= b_ub
+    bool feasible = true;
+    for (ssize_t constraint = 0, stop = b_lb.size(); constraint < stop; constraint++) {
+        auto A_row = A_data.begin() + constraint * c.size();
+        double value =
+                std::inner_product(result.solution.begin(), result.solution.end(), A_row, 0.0);
+        if (value < b_lb[constraint] - tol || value > b_ub[constraint] + tol) {
+            feasible = false;
+            break;
+        }
+    }
+
+    // Check A_eq @ x == b_eq
+    if (feasible) {
+        for (ssize_t constraint = 0; constraint < static_cast<ssize_t>(b_eq.size()); constraint++) {
+            auto A_row = A_eq_data.begin() + constraint * c.size();
+            double value =
+                    std::inner_product(result.solution.begin(), result.solution.end(), A_row, 0.0);
+            if (std::abs(b_eq[constraint] - value) > tol) {
+                feasible = false;
+                break;
+            }
+        }
+    }
+
+    // Check variable bounds
+    if (feasible) {
+        for (ssize_t v = 0, stop = c.size(); v < stop; v++) {
+            if (result.solution[v] < lb[v] - tol || result.solution[v] > ub[v] + tol) {
+                feasible = false;
+                break;
+            }
+        }
+    }
+
+    result.feasible = feasible;
+    result.objective = std::inner_product(c.begin(), c.end(), result.solution.begin(), 0.0);
+
+    if (feasible) {
+        if (result.solve_status == SolveResult::SolveStatus::SUCCESS) {
+            result.solution_status = SolveResult::SolutionStatus::OPTIMAL;
+        } else {
+            result.solution_status = SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL;
+        }
+    } else {
+        result.solution_status = SolveResult::SolutionStatus::INFEASIBLE;
+    }
+}
+
+/// Solve a linear program using the Simplex method.
+///
+/// TODO: try again with Bland's rule?
+/// TODO: expose parameters or put them in a better place?
+SolveResult linprog(std::span<const double> c, std::span<const double> b_lb,
+                    std::span<const double> A_data, std::span<const double> b_ub,
+                    std::span<const double> A_eq_data, std::span<const double> b_eq,
+                    std::span<const double> lb, std::span<const double> ub) {
     const LP model = translate_LP_to_simple(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub);
 
-    ssize_t maxiter = 1000;
-    double tol = 1e-9;
+    ssize_t max_iterations = 1000;
+    double tolerance = 1e-9;
     bool bland = false;
 
-    SolveResult result = _linprog_simplex(model.c, model.c0, model.A, model.b, maxiter, tol, bland);
+    SolveResult result =
+            _linprog_simplex(model.c, model.c0, model.A, model.b, max_iterations, tolerance, bland);
 
-    post_process_solution(c.size(), result.solution, lb, ub);
+    post_process_solution(result.solution, lb, ub);
+
+    recompute_feasibility(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub, result, tolerance);
 
     return result;
 }

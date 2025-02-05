@@ -15,40 +15,47 @@
 #pragma once
 
 #include <cassert>
+#include <cmath>
+#include <span>
 #include <vector>
 
 #include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
 
-enum solve_status_t {
-    UNSET,
-    SUCCESS,
-    HIT_ITERATION_LIMIT,
-    FAILURE_NO_FEASIBLE_START,
-    FAILURE_UNBOUNDED,
-    FAILURE_SINGULAR_MATRIX,
-};
-
-struct SolverStatus {
-    SolverStatus(ssize_t nit, solve_status_t status) : nit(nit), status(status){};
-
-    ssize_t nit;
-    solve_status_t status;
-};
-
 struct SolveResult {
-    SolveResult(SolverStatus solver_status)
-            : status(solver_status.status), nit(solver_status.nit){};
+    enum SolveStatus {
+        UNSET,
+        SUCCESS,
+        HIT_ITERATION_LIMIT,
+        FAILURE_NO_FEASIBLE_START,
+        FAILURE_UNBOUNDED,
+        FAILURE_SINGULAR_MATRIX,
+    };
 
-    solve_status_t status;
-    ssize_t nit;
+    enum SolutionStatus {
+        SOLUTION_UNSET,
+        OPTIMAL,
+        INFEASIBLE,
+        FEASIBLE_BUT_NOT_OPTIMAL,
+    };
+
+    SolveResult() : solve_status(SolveStatus::UNSET), num_iterations(0) {}
+    SolveResult(SolveStatus solve_status, ssize_t num_iterations)
+            : solve_status(solve_status), num_iterations(num_iterations) {}
+
+    SolveStatus solve_status;
+    ssize_t num_iterations;
+
+    SolutionStatus solution_status = SolutionStatus::SOLUTION_UNSET;
     std::vector<double> solution;
+    double objective = NAN;
+    bool feasible = false;
 };
 
-SolveResult linprog(const std::vector<double>& c, const std::vector<double>& b_lb,
-                    const std::vector<double>& A_data, const std::vector<double>& b_ub,
-                    const std::vector<double>& A_eq_data, const std::vector<double>& b_eq,
-                    const std::vector<double>& lb, const std::vector<double>& ub);
+SolveResult linprog(std::span<const double> c, std::span<const double> b_lb,
+                    std::span<const double> A_data, std::span<const double> b_ub,
+                    std::span<const double> A_eq_data, std::span<const double> b_eq,
+                    std::span<const double> lb, std::span<const double> ub);
 
 }  // namespace dwave::optimization
