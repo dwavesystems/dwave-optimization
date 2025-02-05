@@ -24,9 +24,8 @@ class Matrix {
 
     Matrix(std::vector<double>&& data, ssize_t n, ssize_t m)
             : n_(n), m_(m), buffer_(std::move(data)) {
-        if (n_ * m_ != static_cast<ssize_t>(buffer_.size())) {
-            throw std::invalid_argument("shape does not match provided data");
-        }
+        assert(n_ * m_ == static_cast<ssize_t>(buffer_.size()) &&
+               "shape does not match provided data");
     }
 
     Matrix(std::span<const double> data, ssize_t n, ssize_t m)
@@ -276,12 +275,13 @@ SolveResult _linprog_simplex(std::span<const double> c, double c0, const Matrix&
 
     SolveResult result(status);
 
-    result.solution.resize(A.m(), 0.0);
+    std::vector<double> solution(A.m(), 0.0);
     for (ssize_t i = 0; i < A.n(); i++) {
         if (basis[i] < A.m()) {
-            result.solution[basis[i]] = T(i, -1);
+            solution[basis[i]] = T(i, -1);
         }
     }
+    result.set_partial_solution(std::move(solution));
 
     return result;
 }
@@ -302,23 +302,15 @@ void check_LP_sizes(std::span<const double> c, std::span<const double> b_lb,
                     std::span<const double> lb, std::span<const double> ub) {
     const ssize_t num_vars = c.size();
 
-    if (b_lb.size() != b_ub.size()) {
-        throw std::invalid_argument("b_lb length does not match b_ub length");
-    }
-    if (num_vars * b_lb.size() != A_data.size()) {
-        throw std::invalid_argument("A_data wrong size");
-    }
-    if (num_vars * b_eq.size() != A_eq_data.size()) {
-        throw std::invalid_argument("A_eq_data wrong size");
-    }
-    if (num_vars != static_cast<ssize_t>(lb.size())) {
-        throw std::invalid_argument("lower bounds length does not match c");
-    }
-    if (num_vars != static_cast<ssize_t>(ub.size())) {
-        throw std::invalid_argument("upper bounds length does not match c");
-    }
+    assert(b_lb.size() == b_ub.size() && "b_lb length does not match b_ub length");
+    assert(num_vars * b_lb.size() == A_data.size() && "A_data wrong size");
+    assert(num_vars * b_eq.size() == A_eq_data.size() && "A_eq_data wrong size");
+    assert(num_vars == static_cast<ssize_t>(lb.size()) && "lower bounds length does not match c");
+    assert(num_vars == static_cast<ssize_t>(ub.size()) && "upper bounds length does not match c");
 }
 
+/// Translate the general LP form to the simple:
+///     minimize(c @ x) subject to A @ x == b
 LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_lb,
                           std::span<const double> A_data, std::span<const double> b_ub,
                           std::span<const double> A_eq_data, std::span<const double> b_eq,
@@ -455,9 +447,12 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
     return LP(std::move(c_), c0, std::move(A_), std::move(b));
 }
 
-void post_process_solution(std::vector<double>& solution, std::span<const double> lb,
-                           std::span<const double> ub) {
+void SolveResult::_postprocess_solution_variables(std::span<const double> lb,
+                                                  std::span<const double> ub) {
+    assert(partial_solution_set &&
+           "postprocess_solution must be called after partial solution has been set");
     assert(lb.size() == ub.size());
+
     ssize_t num_vars = lb.size();
 
     static double inf = std::numeric_limits<double>::infinity();
@@ -465,27 +460,28 @@ void post_process_solution(std::vector<double>& solution, std::span<const double
     ssize_t free_variable_index = 0;
     for (ssize_t j = 0; j < num_vars; j++) {
         if (lb[j] == -inf && ub[j] == inf) {
-            assert(num_vars + free_variable_index < static_cast<ssize_t>(solution.size()));
-            solution[j] -= solution[num_vars + free_variable_index];
+            assert(num_vars + free_variable_index < static_cast<ssize_t>(solution_.size()));
+            solution_[j] -= solution_[num_vars + free_variable_index];
             free_variable_index++;
         } else {
             if (lb[j] != -inf) {
-                solution[j] += lb[j];
+                solution_[j] += lb[j];
             } else if (ub[j] != inf) {
-                solution[j] = ub[j] - solution[j];
+                solution_[j] = ub[j] - solution_[j];
             }
         }
     }
 
-    solution.resize(num_vars);
+    solution_.resize(num_vars);
 }
 
-void recompute_feasibility(std::span<const double> c, std::span<const double> b_lb,
-                           std::span<const double> A_data, std::span<const double> b_ub,
-                           std::span<const double> A_eq_data, std::span<const double> b_eq,
-                           std::span<const double> lb, std::span<const double> ub,
-                           SolveResult& result, double tolerance) {
-    assert(result.solution.size() == c.size());
+void SolveResult::recompute_feasibility(std::span<const double> c, std::span<const double> b_lb,
+                                        std::span<const double> A_data,
+                                        std::span<const double> b_ub,
+                                        std::span<const double> A_eq_data,
+                                        std::span<const double> b_eq, std::span<const double> lb,
+                                        std::span<const double> ub, double tolerance) {
+    assert(solution_.size() == c.size());
 
     double tol = std::sqrt(tolerance) * 10.0;
 
@@ -493,8 +489,7 @@ void recompute_feasibility(std::span<const double> c, std::span<const double> b_
     bool feasible = true;
     for (ssize_t constraint = 0, stop = b_lb.size(); constraint < stop; constraint++) {
         auto A_row = A_data.begin() + constraint * c.size();
-        double value =
-                std::inner_product(result.solution.begin(), result.solution.end(), A_row, 0.0);
+        double value = std::inner_product(solution_.begin(), solution_.end(), A_row, 0.0);
         if (value < b_lb[constraint] - tol || value > b_ub[constraint] + tol) {
             feasible = false;
             break;
@@ -505,8 +500,7 @@ void recompute_feasibility(std::span<const double> c, std::span<const double> b_
     if (feasible) {
         for (ssize_t constraint = 0; constraint < static_cast<ssize_t>(b_eq.size()); constraint++) {
             auto A_row = A_eq_data.begin() + constraint * c.size();
-            double value =
-                    std::inner_product(result.solution.begin(), result.solution.end(), A_row, 0.0);
+            double value = std::inner_product(solution_.begin(), solution_.end(), A_row, 0.0);
             if (std::abs(b_eq[constraint] - value) > tol) {
                 feasible = false;
                 break;
@@ -517,31 +511,38 @@ void recompute_feasibility(std::span<const double> c, std::span<const double> b_
     // Check variable bounds
     if (feasible) {
         for (ssize_t v = 0, stop = c.size(); v < stop; v++) {
-            if (result.solution[v] < lb[v] - tol || result.solution[v] > ub[v] + tol) {
+            if (solution_[v] < lb[v] - tol || solution_[v] > ub[v] + tol) {
                 feasible = false;
                 break;
             }
         }
     }
 
-    result.feasible = feasible;
-    result.objective = std::inner_product(c.begin(), c.end(), result.solution.begin(), 0.0);
+    feasible_ = feasible;
+    objective_ = std::inner_product(c.begin(), c.end(), solution_.begin(), 0.0);
 
     if (feasible) {
-        if (result.solve_status == SolveResult::SolveStatus::SUCCESS) {
-            result.solution_status = SolveResult::SolutionStatus::OPTIMAL;
+        if (solve_status == SolveResult::SolveStatus::SUCCESS) {
+            solution_status_ = SolveResult::SolutionStatus::OPTIMAL;
         } else {
-            result.solution_status = SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL;
+            solution_status_ = SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL;
         }
     } else {
-        result.solution_status = SolveResult::SolutionStatus::INFEASIBLE;
+        solution_status_ = SolveResult::SolutionStatus::INFEASIBLE;
     }
 }
 
+void SolveResult::postprocess_solution(std::span<const double> c, std::span<const double> b_lb,
+                                       std::span<const double> A_data, std::span<const double> b_ub,
+                                       std::span<const double> A_eq_data,
+                                       std::span<const double> b_eq, std::span<const double> lb,
+                                       std::span<const double> ub, double tolerance) {
+    _postprocess_solution_variables(lb, ub);
+    recompute_feasibility(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub, tolerance);
+    final_solution_set = true;
+}
+
 /// Solve a linear program using the Simplex method.
-///
-/// TODO: try again with Bland's rule?
-/// TODO: expose parameters or put them in a better place?
 SolveResult linprog(std::span<const double> c, std::span<const double> b_lb,
                     std::span<const double> A_data, std::span<const double> b_ub,
                     std::span<const double> A_eq_data, std::span<const double> b_eq,
@@ -555,9 +556,7 @@ SolveResult linprog(std::span<const double> c, std::span<const double> b_lb,
     SolveResult result =
             _linprog_simplex(model.c, model.c0, model.A, model.b, max_iterations, tolerance, bland);
 
-    post_process_solution(result.solution, lb, ub);
-
-    recompute_feasibility(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub, result, tolerance);
+    result.postprocess_solution(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub, tolerance);
 
     return result;
 }

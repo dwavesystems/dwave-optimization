@@ -45,9 +45,11 @@ TEST_CASE("LP solver (simplex)") {
         THEN("We find the correct solution") {
             SolveResult result = linprog(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
             CHECK(result.solve_status == SolveResult::SolveStatus::SUCCESS);
-            CHECK(result.solution_status == SolveResult::SolutionStatus::OPTIMAL);
+            CHECK(result.solution_status() == SolveResult::SolutionStatus::OPTIMAL);
+            CHECK(result.feasible());
+            CHECK(result.objective() == -20);
 
-            CHECK(std::ranges::equal(std::vector{0, 0, 5}, result.solution));
+            CHECK(std::ranges::equal(std::vector{0, 0, 5}, result.solution()));
         }
     }
 
@@ -73,12 +75,14 @@ TEST_CASE("LP solver (simplex)") {
         THEN("We find the correct solution") {
             SolveResult result = linprog(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
             CHECK(result.solve_status == SolveResult::SolveStatus::SUCCESS);
-            CHECK(result.solution_status == SolveResult::SolutionStatus::OPTIMAL);
+            CHECK(result.solution_status() == SolveResult::SolutionStatus::OPTIMAL);
+            CHECK(result.feasible());
+            CHECK_THAT(result.objective(), WithinRel(-117.52380952380958, 1e-9));
 
-            REQUIRE_THAT(result.solution[0], WithinRel(1.333333333333333, 1e-9));
-            REQUIRE_THAT(result.solution[1], WithinRel(11.523809523809526, 1e-9));
-            REQUIRE_THAT(result.solution[2], WithinRel(2.539682539682545, 1e-9));
-            REQUIRE_THAT(result.solution[3], WithinRel(-3.0, 1e-9));
+            CHECK_THAT(result.solution()[0], WithinRel(1.333333333333333, 1e-9));
+            CHECK_THAT(result.solution()[1], WithinRel(11.523809523809526, 1e-9));
+            CHECK_THAT(result.solution()[2], WithinRel(2.539682539682545, 1e-9));
+            CHECK_THAT(result.solution()[3], WithinRel(-3.0, 1e-9));
         }
     }
 
@@ -102,9 +106,11 @@ TEST_CASE("LP solver (simplex)") {
         THEN("We find the correct solution") {
             SolveResult result = linprog(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
             CHECK(result.solve_status == SolveResult::SolveStatus::SUCCESS);
-            CHECK(result.solution_status == SolveResult::SolutionStatus::OPTIMAL);
+            CHECK(result.solution_status() == SolveResult::SolutionStatus::OPTIMAL);
+            CHECK(result.feasible());
+            CHECK(result.objective() == -465);
 
-            CHECK(std::ranges::equal(std::vector{-43, 53, 50}, result.solution));
+            CHECK(std::ranges::equal(std::vector{-43, 53, 50}, result.solution()));
         }
     }
 }
