@@ -23,7 +23,8 @@
 
 namespace dwave::optimization {
 
-struct SolveResult {
+class SolveResult {
+ public:
     enum SolveStatus {
         UNSET,
         SUCCESS,
@@ -44,15 +45,89 @@ struct SolveResult {
     SolveResult(SolveStatus solve_status, ssize_t num_iterations)
             : solve_status(solve_status), num_iterations(num_iterations) {}
 
+    void set_partial_solution(std::vector<double>&& partial_solution) {
+        solution_ = std::move(partial_solution);
+        partial_solution_set = true;
+    }
+
+    void postprocess_solution(std::span<const double> c, std::span<const double> b_lb,
+                              std::span<const double> A_data, std::span<const double> b_ub,
+                              std::span<const double> A_eq_data, std::span<const double> b_eq,
+                              std::span<const double> lb, std::span<const double> ub,
+                              double tolerance);
+
+    const std::vector<double>& solution() const {
+        check_final_solution_set();
+        return solution_;
+    }
+
+    SolutionStatus solution_status() const {
+        check_final_solution_set();
+        return solution_status_;
+    }
+
+    double objective() const {
+        check_final_solution_set();
+        return objective_;
+    }
+
+    bool feasible() const {
+        check_final_solution_set();
+        return feasible_;
+    }
+
     SolveStatus solve_status;
     ssize_t num_iterations;
 
-    SolutionStatus solution_status = SolutionStatus::SOLUTION_UNSET;
-    std::vector<double> solution;
-    double objective = NAN;
-    bool feasible = false;
+ private:
+    void check_final_solution_set() const {
+        assert(final_solution_set && "solution has not yet been set");
+    }
+
+    void _postprocess_solution_variables(std::span<const double> lb, std::span<const double> ub);
+
+    void recompute_feasibility(std::span<const double> c, std::span<const double> b_lb,
+                               std::span<const double> A_data, std::span<const double> b_ub,
+                               std::span<const double> A_eq_data, std::span<const double> b_eq,
+                               std::span<const double> lb, std::span<const double> ub,
+                               double tolerance);
+
+    SolutionStatus solution_status_ = SolutionStatus::SOLUTION_UNSET;
+
+    bool partial_solution_set = false;
+    bool final_solution_set = false;
+
+    std::vector<double> solution_;
+    double objective_ = NAN;
+    bool feasible_ = false;
 };
 
+/// Solve the linear program defined by
+///
+/// mininize c @ x
+/// subject to
+///     b_lb <= A @ x <= b_ub
+///     A_eq @ x == b_eq
+///     lb <= x <= ub
+///
+/// where x is a length N vector of variables, c is length N, A is an MxN matrix,
+/// b_lb and b_ub are length M vectors, A_eq is a KxN matrix, b_eq is a length K
+/// vector, and lb and ub are length N vectors.
+///
+/// This uses a very basic and slow simplex method implementation, and may not
+/// find optimality on many problems.
+///
+/// TODO: try again with Bland's rule?
+/// TODO: expose parameters or put them in a better place?
+///
+/// @param c Length N vector representing the coefficients of the objective.
+/// @param b_lb Length M vector, lower bounds on A @ x.
+/// @param A_data The values of the A matrix (total size M * N).
+/// @param b_ub Length M vector, lower bounds on A @ x.
+/// @param A_eq_data The values of the A_eq matrix (total size K * N).
+/// @param b_ub Length K vector, bounds on A_eq @ x.
+/// @param lb Length N vector, lower bounds on the variables.
+/// @param ub Length N vector, upper bounds on the variables.
 SolveResult linprog(std::span<const double> c, std::span<const double> b_lb,
                     std::span<const double> A_data, std::span<const double> b_ub,
                     std::span<const double> A_eq_data, std::span<const double> b_eq,
