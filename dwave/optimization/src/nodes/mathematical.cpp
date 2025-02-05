@@ -1085,7 +1085,7 @@ void PartialReduceNode<BinaryOp>::initialize_state(State& state) const {
         }
 
         if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
-            // we use accumulate rather than reduce do we have an easier lambda
+            // we use accumulate rather than reduce so we have an easier lambda
             // description
             values[index] = std::accumulate(begin, end, accumulator_type(init),
                                             [](const RunningProduct& lhs, const double& rhs) {
