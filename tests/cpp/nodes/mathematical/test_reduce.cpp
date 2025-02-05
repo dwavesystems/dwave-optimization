@@ -14,6 +14,7 @@
 
 #include "catch2/catch_template_test_macros.hpp"
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/generators/catch_generators.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
@@ -23,6 +24,111 @@
 #include "dwave-optimization/nodes/testing.hpp"
 
 namespace dwave::optimization {
+
+TEMPLATE_TEST_CASE("PartialReduceNode", "",
+        std::multiplies<double>,
+        std::plus<double>) {
+    GIVEN("A 1D array of 5 integers, and a reduction over axis 0 and an explicit initial value") {
+        const double init = GENERATE(-1, 0, 1);
+
+        auto graph = Graph();
+        auto x_ptr = graph.emplace_node<IntegerNode>(5, 0, 10);  // 5 integers in [0, 10]
+        auto r_ptr = graph.emplace_node<PartialReduceNode<TestType>>(x_ptr, 0, init);
+        graph.emplace_node<ArrayValidationNode>(r_ptr);
+
+        // this is equivalent to a reduction, so the output is a scalar
+        CHECK(r_ptr->ndim() == 0);
+
+        auto values = std::vector{1, 2, 3, 4, 5};
+
+        auto state = graph.empty_state();
+        x_ptr->initialize_state(state, values);
+        graph.initialize_state(state);
+
+        // the output is consistent with a "by hand" reduction over x
+        auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
+        CHECK(r_ptr->view(state).front() == value);
+
+        WHEN("We make changes to x") {
+            // a few redundant changes
+            x_ptr->set_value(state, 0, 10);
+            x_ptr->set_value(state, 0, 5);
+            x_ptr->set_value(state, 0, 10);
+
+            // and one single
+            x_ptr->set_value(state, 4, 4);
+
+            graph.propagate(state, graph.descendants(state, {x_ptr}));
+
+            // the output is consistent with a "by hand" reduction over x
+            auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
+            CHECK(r_ptr->view(state).front() == value);
+
+            AND_WHEN("We commit") {
+                graph.commit(state, graph.descendants(state, {x_ptr}));
+
+                // the output is consistent with a "by hand" reduction over x
+                auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
+                CHECK(r_ptr->view(state).front() == value);
+            }
+
+            AND_WHEN("We revert") {
+                graph.revert(state, graph.descendants(state, {x_ptr}));
+
+                // the output is consistent with a "by hand" reduction over x
+                auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
+                CHECK(r_ptr->view(state).front() == value);
+            }
+        }
+    }
+}
+
+TEST_CASE("PartialReduceNode - PartialProdNode") {
+    auto graph = Graph();
+    GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes") {
+        std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
+        auto ptr =
+                graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 2, 2});
+        auto r_ptr_0 = graph.emplace_node<PartialProdNode>(ptr, 0);
+        auto r_ptr_1 = graph.emplace_node<PartialProdNode>(ptr, 1);
+        auto r_ptr_2 = graph.emplace_node<PartialProdNode>(ptr, 2);
+
+        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_2);
+
+        CHECK(r_ptr_0->ndim() == 2);
+        CHECK(r_ptr_1->ndim() == 2);
+        CHECK(r_ptr_2->ndim() == 2);
+
+        WHEN("We make a state") {
+            auto state = graph.initialize_state();
+
+            THEN("The partial reduction has the values and shapes we expect") {
+                CHECK(r_ptr_0->ndim() == 2);
+                CHECK(r_ptr_0->size(state) == 4);
+                CHECK(r_ptr_0->shape(state).size() == 2);
+
+                CHECK(r_ptr_1->ndim() == 2);
+                CHECK(r_ptr_1->size(state) == 4);
+                CHECK(r_ptr_1->shape(state).size() == 2);
+
+                CHECK(r_ptr_2->ndim() == 2);
+                CHECK(r_ptr_2->size(state) == 4);
+                CHECK(r_ptr_2->shape(state).size() == 2);
+
+                /// Check with
+                /// A = np.arange(8).reshape((2, 2, 2))
+                /// np.prod(A, axis=0)
+                CHECK(std::ranges::equal(r_ptr_0->view(state), std::vector{0, 5, 12, 21}));
+                /// np.prod(A, axis=1)
+                CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector{0, 3, 24, 35}));
+                /// np.prod(A, axis=2)
+                CHECK(std::ranges::equal(r_ptr_2->view(state), std::vector{0, 6, 20, 42}));
+            }
+        }
+    }
+}
 
 TEST_CASE("PartialReduceNode - PartialSumNode") {
     auto graph = Graph();

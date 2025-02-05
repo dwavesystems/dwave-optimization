@@ -118,6 +118,9 @@ class IntegerNode : public NumberNode {
     IntegerNode(std::initializer_list<ssize_t> shape,
                 std::optional<int> lower_bound = std::nullopt,   // inclusive
                 std::optional<int> upper_bound = std::nullopt);  // inclusive
+    IntegerNode(ssize_t size,
+                std::optional<int> lower_bound = std::nullopt,   // inclusive
+                std::optional<int> upper_bound = std::nullopt);  // inclusive
 
     // Overloads needed by the Node ABC **************************************
 

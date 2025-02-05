@@ -93,6 +93,10 @@ IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, std::optional<int
                          std::optional<int> upper_bound)
         : IntegerNode(std::span(shape), lower_bound, upper_bound) {}
 
+IntegerNode::IntegerNode(ssize_t size, std::optional<int> lower_bound,
+                         std::optional<int> upper_bound)
+        : IntegerNode({size}, lower_bound, upper_bound) {}
+
 bool IntegerNode::integral() const { return true; }
 
 bool IntegerNode::is_valid(double value) const {
