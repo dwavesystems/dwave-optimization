@@ -300,7 +300,7 @@ void check_LP_sizes(std::span<const double> c, std::span<const double> b_lb,
                     std::span<const double> A_data, std::span<const double> b_ub,
                     std::span<const double> A_eq_data, std::span<const double> b_eq,
                     std::span<const double> lb, std::span<const double> ub) {
-    const ssize_t num_vars = c.size();
+    [[maybe_unused]] const ssize_t num_vars = c.size();
 
     assert(b_lb.size() == b_ub.size() && "b_lb length does not match b_ub length");
     assert(num_vars * b_lb.size() == A_data.size() && "A_data wrong size");
