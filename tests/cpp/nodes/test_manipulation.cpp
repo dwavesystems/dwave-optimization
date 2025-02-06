@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
@@ -23,6 +24,8 @@
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -60,7 +63,7 @@ TEST_CASE("ConcatenateNode") {
             auto c_ptr = graph.emplace_node<ConcatenateNode>(v, 0);
 
             THEN("The concatenated node has shape (4,2,2,1)") {
-                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{4, 2, 2, 1}));
+                CHECK_THAT(c_ptr->shape(), RangeEquals({4, 2, 2, 1}));
             }
 
             AND_WHEN("The graph is initialized") {
@@ -77,7 +80,7 @@ TEST_CASE("ConcatenateNode") {
             auto c_ptr = graph.emplace_node<ConcatenateNode>(v, 1);
 
             THEN("The concatenated node has shape (2,4,2,1)") {
-                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2, 4, 2, 1}));
+                CHECK_THAT(c_ptr->shape(), RangeEquals({2, 4, 2, 1}));
             }
 
             AND_WHEN("The graph is initialized") {
@@ -94,7 +97,7 @@ TEST_CASE("ConcatenateNode") {
             auto c_ptr = graph.emplace_node<ConcatenateNode>(v, 2);
 
             THEN("The concatenated node has shape (2,2,4,1)") {
-                CHECK(std::ranges::equal(c_ptr->shape(), std::vector{2, 2, 4, 1}));
+                CHECK_THAT(c_ptr->shape(), RangeEquals({2, 2, 4, 1}));
             }
 
             AND_WHEN("The graph is initialized") {
@@ -123,7 +126,7 @@ TEST_CASE("ConcatenateNode") {
 
             graph.propose(state, {a_ptr, b_ptr}, [](const Graph&, State&) { return true; });
             THEN("ConcatenateNode values are propagated correctly") {
-                CHECK(std::ranges::equal(c_ptr->view(state), std::ranges::iota_view{1, 21}));
+                CHECK_THAT(c_ptr->view(state), RangeEquals(std::ranges::iota_view{1, 21}));
             }
         }
     }
@@ -434,7 +437,7 @@ TEST_CASE("PutNode") {
 
         auto state = graph.initialize_state();
 
-        CHECK(std::ranges::equal(put_ptr->view(state), std::vector{-44, 1, -55, 3, 4}));
+        CHECK_THAT(put_ptr->view(state), RangeEquals({-44, 1, -55, 3, 4}));
     }
 
     GIVEN("A 3x3 array of integers, and a set indexer, and a same-length array of values") {
@@ -456,8 +459,8 @@ TEST_CASE("PutNode") {
         ind_ptr->initialize_state(state, {1, 3});
         graph.initialize_state(state);
 
-        CHECK(std::ranges::equal(put_ptr->view(state), std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
-        CHECK(std::ranges::equal(put_ptr->mask(state), std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+        CHECK_THAT(put_ptr->view(state), RangeEquals({0, -1, 2, -3, 4, 5, 6, 7, 8}));
+        CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 1, 0, 1, 0, 0, 0, 0, 0}));
 
         WHEN("The base array is updated") {
             a_ptr->set_value(state, 2, 4);  // not overwritten by put
@@ -466,18 +469,14 @@ TEST_CASE("PutNode") {
 
             THEN("Commiting updates the output correctly") {
                 graph.commit(state, graph.descendants(state, {a_ptr}));
-                CHECK(std::ranges::equal(put_ptr->view(state),
-                                         std::vector{0, -1, 4, -3, 4, 5, 6, 7, 8}));
-                CHECK(std::ranges::equal(put_ptr->mask(state),
-                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({0, -1, 4, -3, 4, 5, 6, 7, 8}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 1, 0, 1, 0, 0, 0, 0, 0}));
             }
 
             THEN("Reverting results in no change") {
                 graph.revert(state, graph.descendants(state, {ind_ptr}));
-                CHECK(std::ranges::equal(put_ptr->view(state),
-                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
-                CHECK(std::ranges::equal(put_ptr->mask(state),
-                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 1, 0, 1, 0, 0, 0, 0, 0}));
             }
         }
 
@@ -489,21 +488,17 @@ TEST_CASE("PutNode") {
             THEN("Commiting updates the output correctly") {
                 graph.commit(state, graph.descendants(state, {ind_ptr}));
                 // implementation details but required for the final check
-                CHECK(std::ranges::equal(ind_ptr->view(state), std::vector{2, 3, 0}));
-                CHECK(std::ranges::equal(v_ptr->view(state), std::vector{-2, -3, -10}));
+                CHECK_THAT(ind_ptr->view(state), RangeEquals({2, 3, 0}));
+                CHECK_THAT(v_ptr->view(state), RangeEquals({-2, -3, -10}));
 
-                CHECK(std::ranges::equal(put_ptr->view(state),
-                                         std::vector{-10, 1, -2, -3, 4, 5, 6, 7, 8}));
-                CHECK(std::ranges::equal(put_ptr->mask(state),
-                                         std::vector{1, 0, 1, 1, 0, 0, 0, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({-10, 1, -2, -3, 4, 5, 6, 7, 8}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({1, 0, 1, 1, 0, 0, 0, 0, 0}));
             }
 
             THEN("Reverting results in no change") {
                 graph.revert(state, graph.descendants(state, {ind_ptr}));
-                CHECK(std::ranges::equal(put_ptr->view(state),
-                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
-                CHECK(std::ranges::equal(put_ptr->mask(state),
-                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 1, 0, 1, 0, 0, 0, 0, 0}));
             }
         }
 
@@ -514,21 +509,17 @@ TEST_CASE("PutNode") {
             THEN("Commiting updates the output correctly") {
                 graph.commit(state, graph.descendants(state, {ind_ptr}));
                 // implementation details but required for the final check
-                CHECK(std::ranges::equal(ind_ptr->view(state), std::vector{1}));
-                CHECK(std::ranges::equal(v_ptr->view(state), std::vector{-1}));
+                CHECK_THAT(ind_ptr->view(state), RangeEquals({1}));
+                CHECK_THAT(v_ptr->view(state), RangeEquals({-1}));
 
-                CHECK(std::ranges::equal(put_ptr->view(state),
-                                         std::vector{0, -1, 2, 3, 4, 5, 6, 7, 8}));
-                CHECK(std::ranges::equal(put_ptr->mask(state),
-                                         std::vector{0, 1, 0, 0, 0, 0, 0, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({0, -1, 2, 3, 4, 5, 6, 7, 8}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 1, 0, 0, 0, 0, 0, 0, 0}));
             }
 
             THEN("Reverting results in no change") {
                 graph.revert(state, graph.descendants(state, {ind_ptr}));
-                CHECK(std::ranges::equal(put_ptr->view(state),
-                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
-                CHECK(std::ranges::equal(put_ptr->mask(state),
-                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 1, 0, 1, 0, 0, 0, 0, 0}));
             }
         }
 
@@ -540,21 +531,17 @@ TEST_CASE("PutNode") {
             THEN("Commiting updates the output correctly") {
                 graph.commit(state, graph.descendants(state, {ind_ptr}));
                 // implementation details but required for the final check
-                CHECK(std::ranges::equal(ind_ptr->view(state), std::vector{1, 3}));
-                CHECK(std::ranges::equal(v_ptr->view(state), std::vector{-1, -3}));
+                CHECK_THAT(ind_ptr->view(state), RangeEquals({1, 3}));
+                CHECK_THAT(v_ptr->view(state), RangeEquals({-1, -3}));
 
-                CHECK(std::ranges::equal(put_ptr->view(state),
-                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
-                CHECK(std::ranges::equal(put_ptr->mask(state),
-                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 1, 0, 1, 0, 0, 0, 0, 0}));
             }
 
             THEN("Reverting results in no change") {
                 graph.revert(state, graph.descendants(state, {ind_ptr}));
-                CHECK(std::ranges::equal(put_ptr->view(state),
-                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
-                CHECK(std::ranges::equal(put_ptr->mask(state),
-                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 1, 0, 1, 0, 0, 0, 0, 0}));
             }
         }
 
@@ -567,22 +554,17 @@ TEST_CASE("PutNode") {
                 graph.commit(state, graph.descendants(state, {ind_ptr}));
 
                 // implementation details but required for the final check
-                CHECK(std::ranges::equal(ind_ptr->view(state), std::vector{1, 3}));
-                CHECK(std::ranges::equal(v_ptr->view(state), std::vector{-1, -3}));
+                CHECK_THAT(ind_ptr->view(state), RangeEquals({1, 3}));
+                CHECK_THAT(v_ptr->view(state), RangeEquals({-1, -3}));
 
-                CHECK(std::ranges::equal(put_ptr->view(state),
-                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
-                CHECK(std::ranges::equal(put_ptr->mask(state),
-                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 1, 0, 1, 0, 0, 0, 0, 0}));
             }
 
             THEN("Reverting results in no change") {
                 graph.revert(state, graph.descendants(state, {ind_ptr}));
-                CHECK(std::ranges::equal(put_ptr->view(state),
-                                         std::vector{0, -1, 2, -3, 4, 5, 6, 7, 8}));
-
-                CHECK(std::ranges::equal(put_ptr->mask(state),
-                                         std::vector{0, 1, 0, 1, 0, 0, 0, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({0, -1, 2, -3, 4, 5, 6, 7, 8}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 1, 0, 1, 0, 0, 0, 0, 0}));
             }
         }
     }
@@ -605,8 +587,8 @@ TEST_CASE("PutNode") {
         graph.initialize_state(state);
 
         // duplicate takes the "most recent", i.e. second, value
-        CHECK(std::ranges::equal(put_ptr->view(state), std::vector{0, 30, 2, 20, 4, 5}));
-        CHECK(std::ranges::equal(put_ptr->mask(state), std::vector{0, 2, 0, 1, 0, 0}));
+        CHECK_THAT(put_ptr->view(state), RangeEquals({0, 30, 2, 20, 4, 5}));
+        CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 2, 0, 1, 0, 0}));
 
         WHEN("One of the duplicate values is updated") {
             v_ptr->set_value(state, 0, 40);
@@ -614,14 +596,14 @@ TEST_CASE("PutNode") {
 
             THEN("Commiting keeps the change") {
                 graph.commit(state, graph.descendants(state, {v_ptr}));
-                CHECK(std::ranges::equal(put_ptr->view(state), std::vector{0, 40, 2, 20, 4, 5}));
-                CHECK(std::ranges::equal(put_ptr->mask(state), std::vector{0, 2, 0, 1, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({0, 40, 2, 20, 4, 5}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 2, 0, 1, 0, 0}));
             }
 
             THEN("Reverting results in no change") {
                 graph.revert(state, graph.descendants(state, {v_ptr}));
-                CHECK(std::ranges::equal(put_ptr->view(state), std::vector{0, 30, 2, 20, 4, 5}));
-                CHECK(std::ranges::equal(put_ptr->mask(state), std::vector{0, 2, 0, 1, 0, 0}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({0, 30, 2, 20, 4, 5}));
+                CHECK_THAT(put_ptr->mask(state), RangeEquals({0, 2, 0, 1, 0, 0}));
             }
         }
     }
@@ -661,7 +643,7 @@ TEST_CASE("PutNode") {
             graph.commit(state, graph.descendants(state, {val_ptr, ind_ptr, mask_ptr}));
 
             THEN("State is correct") {
-                CHECK(std::ranges::equal(put_ptr->view(state), std::vector{11, 1, 2, 3, 4, 5}));
+                CHECK_THAT(put_ptr->view(state), RangeEquals({11, 1, 2, 3, 4, 5}));
 
                 AND_WHEN("We shrink the mask, shrinking both effective indices and values") {
                     mask_ptr->shrink(state);
@@ -672,8 +654,7 @@ TEST_CASE("PutNode") {
                     graph.commit(state, graph.descendants(state, {val_ptr, ind_ptr, mask_ptr}));
 
                     THEN("First index goes to the other provided value") {
-                        CHECK(std::ranges::equal(put_ptr->view(state),
-                                                 std::vector{10, 1, 2, 3, 4, 5}));
+                        CHECK_THAT(put_ptr->view(state), RangeEquals({10, 1, 2, 3, 4, 5}));
                     }
                 }
             }

@@ -20,6 +20,8 @@
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/state.hpp"
 
+using Catch::Matchers::RangeEquals;
+
 namespace dwave::optimization {
 
 TEST_CASE("Array::View") {
@@ -168,7 +170,7 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
             }
 
             THEN("The vector is edited") {
-                CHECK(std::ranges::equal(values, std::vector{-5, 1, -5, 3, -5, 5, -5, 7, -5}));
+                CHECK_THAT(values, RangeEquals({-5, 1, -5, 3, -5, 5, -5, 7, -5}));
             }
         }
 
@@ -270,7 +272,7 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
             auto copy = std::vector<double>();
             copy.assign(std::reverse_iterator(ConstArrayIterator(values.data()) + 6),
                         std::reverse_iterator(ConstArrayIterator(values.data())));
-            CHECK(std::ranges::equal(copy, std::vector<double>{5, 4, 3, 2, 1, 0}));
+            CHECK_THAT(copy, RangeEquals({5, 4, 3, 2, 1, 0}));
         }
     }
 }

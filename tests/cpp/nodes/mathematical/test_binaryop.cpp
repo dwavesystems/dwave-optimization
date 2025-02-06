@@ -14,6 +14,7 @@
 
 #include "catch2/catch_template_test_macros.hpp"
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
@@ -21,6 +22,8 @@
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -222,8 +225,8 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
         auto ge_ptr = graph.emplace_node<LessEqualNode>(y_ptr, x_ptr);
 
         THEN("We have the shape we expect") {
-            CHECK(std::ranges::equal(le_ptr->shape(), std::vector{5}));
-            CHECK(std::ranges::equal(ge_ptr->shape(), std::vector{5}));
+            CHECK_THAT(le_ptr->shape(), RangeEquals({5}));
+            CHECK_THAT(ge_ptr->shape(), RangeEquals({5}));
         }
 
         // let's also toss an ArrayValidationNode on there to do most of the
@@ -238,11 +241,11 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
             graph.initialize_state(state);
 
             THEN("le == x <= y == [false, false, false, true, true]") {
-                CHECK(std::ranges::equal(le_ptr->view(state), std::vector{0, 0, 0, 1, 1}));
+                CHECK_THAT(le_ptr->view(state), RangeEquals({0, 0, 0, 1, 1}));
             }
 
             THEN("ge == y <= x == [true, true, true, true, false]") {
-                CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{1, 1, 1, 1, 0}));
+                CHECK_THAT(ge_ptr->view(state), RangeEquals({1, 1, 1, 1, 0}));
             }
 
             AND_WHEN("We then set x = 2") {
@@ -250,22 +253,22 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
 
                 THEN("le == x <= y == [false, false, true, true, true]") {
-                    CHECK(std::ranges::equal(le_ptr->view(state), std::vector{0, 0, 1, 1, 1}));
+                    CHECK_THAT(le_ptr->view(state), RangeEquals({0, 0, 1, 1, 1}));
                 }
 
                 THEN("ge == y <= x == [true, true, true, false, false]") {
-                    CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{1, 1, 1, 0, 0}));
+                    CHECK_THAT(ge_ptr->view(state), RangeEquals({1, 1, 1, 0, 0}));
                 }
 
                 AND_WHEN("We commit") {
                     graph.commit(state, graph.descendants(state, {x_ptr}));
 
                     THEN("le == x <= y == [false, false, true, true, true]") {
-                        CHECK(std::ranges::equal(le_ptr->view(state), std::vector{0, 0, 1, 1, 1}));
+                        CHECK_THAT(le_ptr->view(state), RangeEquals({0, 0, 1, 1, 1}));
                     }
 
                     THEN("ge == y <= x == [true, true, true, false, false]") {
-                        CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{1, 1, 1, 0, 0}));
+                        CHECK_THAT(ge_ptr->view(state), RangeEquals({1, 1, 1, 0, 0}));
                     }
                 }
 
@@ -273,11 +276,11 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
                     graph.revert(state, graph.descendants(state, {x_ptr}));
 
                     THEN("le == x <= y == [false, false, false, true, true]") {
-                        CHECK(std::ranges::equal(le_ptr->view(state), std::vector{0, 0, 0, 1, 1}));
+                        CHECK_THAT(le_ptr->view(state), RangeEquals({0, 0, 0, 1, 1}));
                     }
 
                     THEN("ge == y <= x == [true, true, true, true, false]") {
-                        CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{1, 1, 1, 1, 0}));
+                        CHECK_THAT(ge_ptr->view(state), RangeEquals({1, 1, 1, 1, 0}));
                     }
                 }
             }
@@ -291,8 +294,8 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
         auto ge_ptr = graph.emplace_node<LessEqualNode>(y_ptr, x_ptr);
 
         THEN("We have the shape we expect") {
-            CHECK(std::ranges::equal(le_ptr->shape(), std::vector{-1}));
-            CHECK(std::ranges::equal(ge_ptr->shape(), std::vector{-1}));
+            CHECK_THAT(le_ptr->shape(), RangeEquals({-1}));
+            CHECK_THAT(ge_ptr->shape(), RangeEquals({-1}));
 
             // derives its size from the dynamic node
             CHECK(le_ptr->sizeinfo() == SizeInfo(y_ptr));
@@ -313,11 +316,11 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
             graph.initialize_state(state);
 
             THEN("le == x <= y == [true, false, true]") {
-                CHECK(std::ranges::equal(le_ptr->view(state), std::vector{1, 0, 1}));
+                CHECK_THAT(le_ptr->view(state), RangeEquals({1, 0, 1}));
             }
 
             THEN("ge == y <= x == [false, true, true]") {
-                CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{0, 1, 1}));
+                CHECK_THAT(ge_ptr->view(state), RangeEquals({0, 1, 1}));
             }
 
             AND_WHEN("We mutate y to [4, 3, 0, 1]") {
@@ -329,25 +332,25 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
 
                 // the 1 is actually an implementation detail but let's make that
                 // assumption for the purpose of these tests
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{4, 3, 0, 1}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({4, 3, 0, 1}));
 
                 THEN("le == x <= y == [true, true, false, false]") {
-                    CHECK(std::ranges::equal(le_ptr->view(state), std::vector{1, 1, 0, 0}));
+                    CHECK_THAT(le_ptr->view(state), RangeEquals({1, 1, 0, 0}));
                 }
 
                 THEN("ge == y <= x == [false, true, true, true]") {
-                    CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{0, 1, 1, 1}));
+                    CHECK_THAT(ge_ptr->view(state), RangeEquals({0, 1, 1, 1}));
                 }
 
                 AND_WHEN("We commit") {
                     graph.commit(state, graph.descendants(state, {y_ptr}));
 
                     THEN("le == x <= y == [true, true, false, false]") {
-                        CHECK(std::ranges::equal(le_ptr->view(state), std::vector{1, 1, 0, 0}));
+                        CHECK_THAT(le_ptr->view(state), RangeEquals({1, 1, 0, 0}));
                     }
 
                     THEN("ge == y <= x == [false, true, true, true]") {
-                        CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{0, 1, 1, 1}));
+                        CHECK_THAT(ge_ptr->view(state), RangeEquals({0, 1, 1, 1}));
                     }
                 }
 
@@ -355,11 +358,11 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
                     graph.revert(state, graph.descendants(state, {y_ptr}));
 
                     THEN("le == x <= y == [true, false, true]") {
-                        CHECK(std::ranges::equal(le_ptr->view(state), std::vector{1, 0, 1}));
+                        CHECK_THAT(le_ptr->view(state), RangeEquals({1, 0, 1}));
                     }
 
                     THEN("ge == y <= x == [false, true, true]") {
-                        CHECK(std::ranges::equal(ge_ptr->view(state), std::vector{0, 1, 1}));
+                        CHECK_THAT(ge_ptr->view(state), RangeEquals({0, 1, 1}));
                     }
                 }
             }

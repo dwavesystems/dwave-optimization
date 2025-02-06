@@ -13,10 +13,13 @@
 //    limitations under the License.
 
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/quadratic_model.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -120,7 +123,7 @@ TEST_CASE("QuadraticModelNode") {
             graph.initialize_state(state);
 
             THEN("We can read the state of the quadratic model node") {
-                CHECK(std::ranges::equal(qnode_ptr->view(state), std::vector<double>{16}));
+                CHECK_THAT(qnode_ptr->view(state), RangeEquals({16}));
             }
 
             WHEN("We update the elements of the binary node and propagate") {
@@ -133,7 +136,7 @@ TEST_CASE("QuadraticModelNode") {
                 qnode_ptr->propagate(state);
 
                 THEN("The state of the quadratic node is changed accordingly") {
-                    CHECK(std::ranges::equal(qnode_ptr->view(state), std::vector<double>{70}));
+                    CHECK_THAT(qnode_ptr->view(state), RangeEquals({70}));
                 }
 
                 WHEN("We commit previous changes and stack more changes") {
@@ -147,7 +150,7 @@ TEST_CASE("QuadraticModelNode") {
                     qnode_ptr->propagate(state);
 
                     THEN("The state of the quadratic node is changed accordingly") {
-                        CHECK(std::ranges::equal(qnode_ptr->view(state), std::vector<double>{0}));
+                        CHECK_THAT(qnode_ptr->view(state), RangeEquals({0}));
                     }
                 }
             }
@@ -170,7 +173,7 @@ TEST_CASE("QuadraticModelNode") {
                 }
 
                 THEN("The state of the quadratic node is changed accordingly") {
-                    CHECK(std::ranges::equal(qnode_ptr->view(state), std::vector<double>{70}));
+                    CHECK_THAT(qnode_ptr->view(state), RangeEquals({70}));
                 }
             }
         }
@@ -186,7 +189,7 @@ TEST_CASE("QuadraticModelNode") {
             graph.initialize_state(state);
 
             THEN("We can read the state of the quadratic model node") {
-                CHECK(std::ranges::equal(qnode_ptr->view(state), std::vector<double>{430}));
+                CHECK_THAT(qnode_ptr->view(state), RangeEquals({430}));
             }
 
             WHEN("We update the elements of the list node and propagate") {
@@ -199,7 +202,7 @@ TEST_CASE("QuadraticModelNode") {
                 qnode_ptr->propagate(state);
 
                 THEN("The state of the quadratic node is changed accordingly") {
-                    CHECK(std::ranges::equal(qnode_ptr->view(state), std::vector<double>{290}));
+                    CHECK_THAT(qnode_ptr->view(state), RangeEquals({290}));
                 }
 
                 WHEN("We commit previous changes and stack more changes") {
@@ -214,7 +217,7 @@ TEST_CASE("QuadraticModelNode") {
                     qnode_ptr->propagate(state);
 
                     THEN("The state of the quadratic node is changed accordingly") {
-                        CHECK(std::ranges::equal(qnode_ptr->view(state), std::vector<double>{430}));
+                        CHECK_THAT(qnode_ptr->view(state), RangeEquals({430}));
                     }
                 }
             }
@@ -243,7 +246,7 @@ TEST_CASE("QuadraticModelNode") {
                 }
 
                 THEN("The state of the quadratic node is changed accordingly") {
-                    CHECK(std::ranges::equal(qnode_ptr->view(state), std::vector<double>{430}));
+                    CHECK_THAT(qnode_ptr->view(state), RangeEquals({430}));
                 }
             }
         }

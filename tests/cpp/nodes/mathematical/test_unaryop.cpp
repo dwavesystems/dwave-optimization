@@ -14,6 +14,7 @@
 
 #include "catch2/catch_template_test_macros.hpp"
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
@@ -21,6 +22,8 @@
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -77,7 +80,7 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
 
             THEN("The output has the value and shape we expect") {
                 CHECK(p_ptr->size(state) == 0);
-                CHECK(std::ranges::equal(p_ptr->view(state), std::vector<double>{}));
+                CHECK_THAT(p_ptr->view(state), RangeEquals(std::vector<double>{}));
             }
 
             AND_WHEN("We grow the array and then propagate") {
@@ -92,7 +95,7 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
                 THEN("The output is what we expect") {
                     REQUIRE(p_ptr->size(state) == 1);
                     double val = func(a_ptr->view(state).front());
-                    CHECK(std::ranges::equal(p_ptr->view(state), std::vector{val}));
+                    CHECK_THAT(p_ptr->view(state), RangeEquals({val}));
                 }
 
                 AND_WHEN("We commit") {
@@ -102,7 +105,7 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
                     THEN("The output is what we expect") {
                         REQUIRE(p_ptr->size(state) == 1);
                         double val = func(a_ptr->view(state).front());
-                        CHECK(std::ranges::equal(p_ptr->view(state), std::vector{val}));
+                        CHECK_THAT(p_ptr->view(state), RangeEquals({val}));
                     }
                 }
 
@@ -112,7 +115,7 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logic
 
                     THEN("The output is what we expect") {
                         CHECK(p_ptr->size(state) == 0);
-                        CHECK(std::ranges::equal(p_ptr->view(state), std::vector<double>{}));
+                        CHECK_THAT(p_ptr->view(state), RangeEquals(std::vector<double>{}));
                     }
                 }
             }
@@ -264,8 +267,8 @@ TEST_CASE("UnaryOpNode - LogicalNode") {
 
         THEN("The negation has the state we expect") {
             auto state = graph.initialize_state();
-            CHECK(std::ranges::equal(logical_ptr->view(state),
-                                     std::vector{true, true, false, true, true, true, true}));
+            CHECK_THAT(logical_ptr->view(state),
+                       RangeEquals({true, true, false, true, true, true, true}));
         }
     }
 }
@@ -302,8 +305,8 @@ TEST_CASE("UnaryOpNode - NotNode") {
 
         THEN("The negation has the state we expect") {
             auto state = graph.initialize_state();
-            CHECK(std::ranges::equal(nc_ptr->view(state),
-                                     std::vector{false, false, true, false, false, false, false}));
+            CHECK_THAT(nc_ptr->view(state),
+                       RangeEquals({false, false, true, false, false, false, false}));
         }
     }
 }
@@ -357,8 +360,8 @@ TEST_CASE("UnaryOpNode - RintNode") {
         auto state = graph.initialize_state();
 
         THEN("We get the value we expect") {
-            CHECK(std::ranges::equal(a0_ptr->view(state), std::vector{0}));
-            CHECK(std::ranges::equal(a3_ptr->view(state), std::vector{30}));
+            CHECK_THAT(a0_ptr->view(state), RangeEquals({0}));
+            CHECK_THAT(a3_ptr->view(state), RangeEquals({30}));
         }
     }
 }

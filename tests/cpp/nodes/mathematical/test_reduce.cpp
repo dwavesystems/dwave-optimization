@@ -15,6 +15,7 @@
 #include "catch2/catch_template_test_macros.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/generators/catch_generators.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
@@ -22,6 +23,8 @@
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -120,11 +123,11 @@ TEST_CASE("PartialReduceNode - PartialProdNode") {
                 /// Check with
                 /// A = np.arange(8).reshape((2, 2, 2))
                 /// np.prod(A, axis=0)
-                CHECK(std::ranges::equal(r_ptr_0->view(state), std::vector{0, 5, 12, 21}));
+                CHECK_THAT(r_ptr_0->view(state), RangeEquals({0, 5, 12, 21}));
                 /// np.prod(A, axis=1)
-                CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector{0, 3, 24, 35}));
+                CHECK_THAT(r_ptr_1->view(state), RangeEquals({0, 3, 24, 35}));
                 /// np.prod(A, axis=2)
-                CHECK(std::ranges::equal(r_ptr_2->view(state), std::vector{0, 6, 20, 42}));
+                CHECK_THAT(r_ptr_2->view(state), RangeEquals({0, 6, 20, 42}));
             }
         }
     }
@@ -165,11 +168,11 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
                 /// Check with
                 /// A = np.arange(8).reshape((2, 2, 2))
                 /// np.sum(A, axis=0)
-                CHECK(std::ranges::equal(r_ptr_0->view(state), std::vector{4, 6, 8, 10}));
+                CHECK_THAT(r_ptr_0->view(state), RangeEquals({4, 6, 8, 10}));
                 /// np.sum(A, axis=1)
-                CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector{2, 4, 10, 12}));
+                CHECK_THAT(r_ptr_1->view(state), RangeEquals({2, 4, 10, 12}));
                 /// np.sum(A, axis=2)
-                CHECK(std::ranges::equal(r_ptr_2->view(state), std::vector{1, 5, 9, 13}));
+                CHECK_THAT(r_ptr_2->view(state), RangeEquals({1, 5, 9, 13}));
             }
         }
     }
@@ -216,11 +219,9 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
                     r_ptr_2->propagate(state);
 
                     THEN("The partial reductions are updated correctly") {
-                        CHECK(std::ranges::equal(r_ptr_0->view(state),
-                                                 std::vector{0, 0, 0, 0, 1, 0}));
-                        CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector{1, 0, 0, 0}));
-                        CHECK(std::ranges::equal(r_ptr_2->view(state),
-                                                 std::vector{0, 0, 1, 0, 0, 0}));
+                        CHECK_THAT(r_ptr_0->view(state), RangeEquals({0, 0, 0, 0, 1, 0}));
+                        CHECK_THAT(r_ptr_1->view(state), RangeEquals({1, 0, 0, 0}));
+                        CHECK_THAT(r_ptr_2->view(state), RangeEquals({0, 0, 1, 0, 0, 0}));
                     }
 
                     AND_WHEN("We commit") {
@@ -230,12 +231,9 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
                         r_ptr_2->commit(state);
 
                         THEN("The values are maintained") {
-                            CHECK(std::ranges::equal(r_ptr_0->view(state),
-                                                     std::vector{0, 0, 0, 0, 1, 0}));
-                            CHECK(std::ranges::equal(r_ptr_1->view(state),
-                                                     std::vector{1, 0, 0, 0}));
-                            CHECK(std::ranges::equal(r_ptr_2->view(state),
-                                                     std::vector{0, 0, 1, 0, 0, 0}));
+                            CHECK_THAT(r_ptr_0->view(state), RangeEquals({0, 0, 0, 0, 1, 0}));
+                            CHECK_THAT(r_ptr_1->view(state), RangeEquals({1, 0, 0, 0}));
+                            CHECK_THAT(r_ptr_2->view(state), RangeEquals({0, 0, 1, 0, 0, 0}));
                         }
                     }
 
@@ -291,9 +289,9 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
                 /// A = np.arange(8).reshape((2, 2, 2))
                 /// B = A[:, 1, :]
                 /// np.sum(B, axis=0)
-                CHECK(std::ranges::equal(r_ptr_0->view(state), std::vector{8, 10}));
+                CHECK_THAT(r_ptr_0->view(state), RangeEquals({8, 10}));
                 /// np.sum(B, axis=1)
-                CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector{5, 13}));
+                CHECK_THAT(r_ptr_1->view(state), RangeEquals({5, 13}));
             }
         }
     }
@@ -486,8 +484,8 @@ TEST_CASE("ReduceNode - AllNode/AnyNode") {
             graph.initialize_state(state);
 
             THEN("y is false and z is false") {
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{false}));
-                CHECK(std::ranges::equal(z_ptr->view(state), std::vector{false}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({false}));
+                CHECK_THAT(z_ptr->view(state), RangeEquals({false}));
             }
 
             AND_WHEN("x is updated to [0, 0, 1, 0, 0]") {
@@ -495,8 +493,8 @@ TEST_CASE("ReduceNode - AllNode/AnyNode") {
                 graph.propagate(state, {x_ptr, y_ptr, z_ptr});
 
                 THEN("y is false and z is true") {
-                    CHECK(std::ranges::equal(y_ptr->view(state), std::vector{false}));
-                    CHECK(std::ranges::equal(z_ptr->view(state), std::vector{true}));
+                    CHECK_THAT(y_ptr->view(state), RangeEquals({false}));
+                    CHECK_THAT(z_ptr->view(state), RangeEquals({true}));
                 }
 
                 graph.commit(state, {x_ptr, y_ptr, z_ptr});
@@ -506,8 +504,8 @@ TEST_CASE("ReduceNode - AllNode/AnyNode") {
                     graph.propagate(state, {x_ptr, y_ptr, z_ptr});
 
                     THEN("y is false and z is false") {
-                        CHECK(std::ranges::equal(y_ptr->view(state), std::vector{false}));
-                        CHECK(std::ranges::equal(z_ptr->view(state), std::vector{false}));
+                        CHECK_THAT(y_ptr->view(state), RangeEquals({false}));
+                        CHECK_THAT(z_ptr->view(state), RangeEquals({false}));
                     }
                 }
             }
@@ -519,8 +517,8 @@ TEST_CASE("ReduceNode - AllNode/AnyNode") {
             graph.initialize_state(state);
 
             THEN("y is false and z is true") {
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{false}));
-                CHECK(std::ranges::equal(z_ptr->view(state), std::vector{true}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({false}));
+                CHECK_THAT(z_ptr->view(state), RangeEquals({true}));
             }
         }
     }
@@ -543,8 +541,8 @@ TEST_CASE("ReduceNode - AllNode/AnyNode") {
         auto state = graph.initialize_state();
 
         THEN("y and not z") {
-            CHECK(std::ranges::equal(y_ptr->view(state), std::vector{true}));
-            CHECK(std::ranges::equal(z_ptr->view(state), std::vector{false}));
+            CHECK_THAT(y_ptr->view(state), RangeEquals({true}));
+            CHECK_THAT(z_ptr->view(state), RangeEquals({false}));
         }
     }
 }

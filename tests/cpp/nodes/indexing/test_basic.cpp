@@ -14,6 +14,7 @@
 
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/generators/catch_generators.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
@@ -21,6 +22,8 @@
 #include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -226,7 +229,7 @@ TEST_CASE("BasicIndexingNode") {
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 1);
                     CHECK(std::ranges::equal(ptr->shape(state), std::vector<ssize_t>()));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{20}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({20}));
                 }
             }
         }
@@ -249,7 +252,7 @@ TEST_CASE("BasicIndexingNode") {
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 1);
                     CHECK(std::ranges::equal(ptr->shape(state), std::vector<ssize_t>()));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{40}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({40}));
                 }
             }
         }
@@ -260,8 +263,8 @@ TEST_CASE("BasicIndexingNode") {
             THEN("The resulting node has the shape we expect") {
                 CHECK(ptr->ndim() == 1);
                 CHECK(ptr->size() == 1);
-                CHECK(std::ranges::equal(ptr->shape(), std::vector{1}));
-                CHECK(std::ranges::equal(ptr->strides(), std::vector{sizeof(double)}));
+                CHECK_THAT(ptr->shape(), RangeEquals({1}));
+                CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
 
                 CHECK(ptr->contiguous());
             }
@@ -271,8 +274,8 @@ TEST_CASE("BasicIndexingNode") {
 
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 1);
-                    CHECK(std::ranges::equal(ptr->shape(state), std::vector{1}));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{10}));
+                    CHECK_THAT(ptr->shape(state), RangeEquals({1}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({10}));
                 }
             }
         }
@@ -283,8 +286,8 @@ TEST_CASE("BasicIndexingNode") {
             THEN("The resulting node has the shape we expect") {
                 CHECK(ptr->ndim() == 1);
                 CHECK(ptr->size() == 2);
-                CHECK(std::ranges::equal(ptr->shape(), std::vector{2}));
-                CHECK(std::ranges::equal(ptr->strides(), std::vector{sizeof(double)}));
+                CHECK_THAT(ptr->shape(), RangeEquals({2}));
+                CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
 
                 CHECK(ptr->contiguous());
             }
@@ -294,8 +297,8 @@ TEST_CASE("BasicIndexingNode") {
 
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 2);
-                    CHECK(std::ranges::equal(ptr->shape(state), std::vector{2}));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{10, 40}));
+                    CHECK_THAT(ptr->shape(state), RangeEquals({2}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({10, 40}));
                 }
             }
         }
@@ -323,8 +326,8 @@ TEST_CASE("BasicIndexingNode") {
 
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 1);
-                    CHECK(std::ranges::equal(ptr->shape(state), std::vector<int>{}));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{7}));
+                    CHECK_THAT(ptr->shape(state), RangeEquals(std::vector<ssize_t>{}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({7}));
                 }
             }
         }
@@ -335,9 +338,8 @@ TEST_CASE("BasicIndexingNode") {
             THEN("The resulting node has the shape we expect") {
                 CHECK(ptr->ndim() == 2);
                 CHECK(ptr->size() == 1);
-                CHECK(std::ranges::equal(ptr->shape(), std::vector{1, 1}));
-                CHECK(std::ranges::equal(ptr->strides(),
-                                         std::vector{3 * sizeof(double), sizeof(double)}));
+                CHECK_THAT(ptr->shape(), RangeEquals({1, 1}));
+                CHECK_THAT(ptr->strides(), RangeEquals({3 * sizeof(double), sizeof(double)}));
 
                 CHECK(ptr->contiguous());
             }
@@ -347,8 +349,8 @@ TEST_CASE("BasicIndexingNode") {
 
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 1);
-                    CHECK(std::ranges::equal(ptr->shape(state), std::vector{1, 1}));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{4}));
+                    CHECK_THAT(ptr->shape(state), RangeEquals({1, 1}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({4}));
                 }
             }
         }
@@ -359,9 +361,8 @@ TEST_CASE("BasicIndexingNode") {
             THEN("The resulting node has the shape we expect") {
                 CHECK(ptr->ndim() == 2);
                 CHECK(ptr->size() == 4);
-                CHECK(std::ranges::equal(ptr->shape(), std::vector{2, 2}));
-                CHECK(std::ranges::equal(ptr->strides(),
-                                         std::vector{3 * sizeof(double), sizeof(double)}));
+                CHECK_THAT(ptr->shape(), RangeEquals({2, 2}));
+                CHECK_THAT(ptr->strides(), RangeEquals({3 * sizeof(double), sizeof(double)}));
 
                 CHECK(!ptr->contiguous());
             }
@@ -371,8 +372,8 @@ TEST_CASE("BasicIndexingNode") {
 
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 4);
-                    CHECK(std::ranges::equal(ptr->shape(state), std::vector{2, 2}));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{1, 2, 4, 5}));
+                    CHECK_THAT(ptr->shape(state), RangeEquals({2, 2}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({1, 2, 4, 5}));
                 }
             }
         }
@@ -383,8 +384,8 @@ TEST_CASE("BasicIndexingNode") {
             THEN("The resulting node has the shape we expect") {
                 CHECK(ptr->ndim() == 1);
                 CHECK(ptr->size() == 2);
-                CHECK(std::ranges::equal(ptr->shape(), std::vector{2}));
-                CHECK(std::ranges::equal(ptr->strides(), std::vector{3 * sizeof(double)}));
+                CHECK_THAT(ptr->shape(), RangeEquals({2}));
+                CHECK_THAT(ptr->strides(), RangeEquals({3 * sizeof(double)}));
 
                 CHECK(!ptr->contiguous());
             }
@@ -394,8 +395,8 @@ TEST_CASE("BasicIndexingNode") {
 
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 2);
-                    CHECK(std::ranges::equal(ptr->shape(state), std::vector{2}));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{2, 5}));
+                    CHECK_THAT(ptr->shape(state), RangeEquals({2}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({2, 5}));
                 }
             }
         }
@@ -406,8 +407,8 @@ TEST_CASE("BasicIndexingNode") {
             THEN("The resulting node has the shape we expect") {
                 CHECK(ptr->ndim() == 1);
                 CHECK(ptr->size() == 3);
-                CHECK(std::ranges::equal(ptr->shape(), std::vector{3}));
-                CHECK(std::ranges::equal(ptr->strides(), std::vector{3 * sizeof(double)}));
+                CHECK_THAT(ptr->shape(), RangeEquals({3}));
+                CHECK_THAT(ptr->strides(), RangeEquals({3 * sizeof(double)}));
 
                 CHECK(!ptr->contiguous());
             }
@@ -417,8 +418,8 @@ TEST_CASE("BasicIndexingNode") {
 
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 3);
-                    CHECK(std::ranges::equal(ptr->shape(state), std::vector{3}));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{2, 5, 8}));
+                    CHECK_THAT(ptr->shape(state), RangeEquals({3}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({2, 5, 8}));
                 }
             }
         }
@@ -429,8 +430,8 @@ TEST_CASE("BasicIndexingNode") {
             THEN("The resulting node has the shape we expect") {
                 CHECK(ptr->ndim() == 1);
                 CHECK(ptr->size() == 2);
-                CHECK(std::ranges::equal(ptr->shape(), std::vector{2}));
-                CHECK(std::ranges::equal(ptr->strides(), std::vector{sizeof(double)}));
+                CHECK_THAT(ptr->shape(), RangeEquals({2}));
+                CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
 
                 CHECK(ptr->contiguous());
             }
@@ -440,8 +441,8 @@ TEST_CASE("BasicIndexingNode") {
 
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 2);
-                    CHECK(std::ranges::equal(ptr->shape(state), std::vector{2}));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{5, 6}));
+                    CHECK_THAT(ptr->shape(state), RangeEquals({2}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({5, 6}));
                 }
             }
         }
@@ -474,7 +475,7 @@ TEST_CASE("BasicIndexingNode") {
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 1);
                     CHECK(std::ranges::equal(ptr->shape(state), ptr->shape()));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{6}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({6}));
                 }
             }
         }
@@ -486,9 +487,8 @@ TEST_CASE("BasicIndexingNode") {
             THEN("The resulting node has the shape we expect") {
                 CHECK(ptr->ndim() == 2);
                 CHECK(ptr->size() == 2);
-                CHECK(std::ranges::equal(ptr->shape(), std::vector{1, 2}));
-                CHECK(std::ranges::equal(ptr->strides(),
-                                         std::vector{4 * sizeof(double), sizeof(double)}));
+                CHECK_THAT(ptr->shape(), RangeEquals({1, 2}));
+                CHECK_THAT(ptr->strides(), RangeEquals({4 * sizeof(double), sizeof(double)}));
             }
 
             AND_WHEN("We create and then read the state") {
@@ -497,7 +497,7 @@ TEST_CASE("BasicIndexingNode") {
                 THEN("It has the values and shape we expect") {
                     CHECK(ptr->size(state) == 2);
                     CHECK(std::ranges::equal(ptr->shape(state), ptr->shape()));
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{3, 4}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({3, 4}));
                 }
             }
         }
@@ -512,7 +512,7 @@ TEST_CASE("BasicIndexingNode") {
             auto y_ptr = graph.emplace_node<BasicIndexingNode>(x_ptr, Slice());
 
             THEN("y's shape is independent of state") {
-                CHECK(std::ranges::equal(y_ptr->shape(), std::vector{num_items}));
+                CHECK_THAT(y_ptr->shape(), RangeEquals({num_items}));
                 CHECK(y_ptr->size() == num_items);
                 CHECK(y_ptr->ndim() == 1);
             }
@@ -542,7 +542,7 @@ TEST_CASE("BasicIndexingNode") {
             THEN("We get the value we expect") {
                 CHECK(a_ptr->size(state) == 1);
                 CHECK(a_ptr->shape(state).size() == 0);
-                CHECK(std::ranges::equal(a_ptr->view(state), std::vector{30}));
+                CHECK_THAT(a_ptr->view(state), RangeEquals({30}));
             }
         }
     }
@@ -565,7 +565,7 @@ TEST_CASE("BasicIndexingNode") {
             THEN("We get the value we expect") {
                 CHECK(a_ptr->size(state) == 1);
                 CHECK(a_ptr->shape(state).size() == 0);
-                CHECK(std::ranges::equal(a_ptr->view(state), std::vector{40}));
+                CHECK_THAT(a_ptr->view(state), RangeEquals({40}));
             }
         }
     }
@@ -590,7 +590,7 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->shape(state).size() == 1);
                 CHECK(y_ptr->shape(state)[0] == y_ptr->size());
 
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0, 1, 2, 3}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0, 1, 2, 3}));
             }
         }
     }
@@ -615,7 +615,7 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->shape(state).size() == 1);
                 CHECK(y_ptr->shape(state)[0] == y_ptr->size());
 
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{1, 2, 3, 4}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({1, 2, 3, 4}));
             }
         }
     }
@@ -634,8 +634,8 @@ TEST_CASE("BasicIndexingNode") {
         auto state = graph.initialize_state();
 
         THEN("We get the default states we expect") {
-            CHECK(std::ranges::equal(x_ptr->view(state), std::vector{0, 1, 2, 3, 4}));
-            CHECK(std::ranges::equal(y_ptr->view(state), std::vector{1, 3}));
+            CHECK_THAT(x_ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
+            CHECK_THAT(y_ptr->view(state), RangeEquals({1, 3}));
         }
 
         WHEN("We do propagation") {
@@ -644,8 +644,8 @@ TEST_CASE("BasicIndexingNode") {
             graph.propagate(state, graph.descendants(state, {x_ptr}));
 
             THEN("The states are as expected") {
-                CHECK(std::ranges::equal(x_ptr->view(state), std::vector{0, 2, 1, 3, 4}));
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{2, 3}));
+                CHECK_THAT(x_ptr->view(state), RangeEquals({0, 2, 1, 3, 4}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({2, 3}));
             }
         }
     }
@@ -658,9 +658,9 @@ TEST_CASE("BasicIndexingNode") {
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
         THEN("y has the shape and strides we expect") {
-            CHECK(std::ranges::equal(y_ptr->shape(), std::vector{2, 2}));
+            CHECK_THAT(y_ptr->shape(), RangeEquals({2, 2}));
 
-            CHECK(std::ranges::equal(y_ptr->strides(), std::vector{48, 8}));
+            CHECK_THAT(y_ptr->strides(), RangeEquals({48, 8}));
         }
 
         auto state = graph.initialize_state();
@@ -677,9 +677,8 @@ TEST_CASE("BasicIndexingNode") {
             graph.propagate(state, graph.descendants(state, {x_ptr}));
 
             THEN("The states are as expected") {
-                CHECK(std::ranges::equal(x_ptr->view(state),
-                                         std::vector{1, 1, 0, 0, 0, 0, 0, 0, 0}));
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{1, 0, 0, 0}));
+                CHECK_THAT(x_ptr->view(state), RangeEquals({1, 1, 0, 0, 0, 0, 0, 0, 0}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({1, 0, 0, 0}));
             }
         }
     }
@@ -724,7 +723,7 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->size(state) == x_ptr->size(state) - 1);
                 CHECK(y_ptr->shape(state).size() == 1);
                 CHECK(y_ptr->shape(state)[0] == y_ptr->size(state));
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{1, 2}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({1, 2}));
             }
         }
     }
@@ -777,7 +776,7 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->size(state) == 1);
                 REQUIRE(y_ptr->shape(state).size() == 1);
                 CHECK(y_ptr->shape(state)[0] == y_ptr->size(state));
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0}));
 
                 graph.commit(state, graph.descendants(state, {x_ptr}));
 
@@ -785,7 +784,7 @@ TEST_CASE("BasicIndexingNode") {
 
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
 
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0, 1}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0, 1}));
             }
 
             AND_WHEN("We grow the dynamic array past the range") {
@@ -796,7 +795,7 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->size(state) == 2);
                 REQUIRE(y_ptr->shape(state).size() == 1);
                 CHECK(y_ptr->shape(state)[0] == y_ptr->size(state));
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0, 1}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0, 1}));
 
                 graph.commit(state, graph.descendants(state, {x_ptr}));
 
@@ -818,7 +817,7 @@ TEST_CASE("BasicIndexingNode") {
                 // Now shrink
                 x_ptr->shrink(state);
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0}));
 
                 graph.commit(state, graph.descendants(state, {x_ptr}));
 
@@ -855,7 +854,7 @@ TEST_CASE("BasicIndexingNode") {
                 x_ptr->shrink(state);          // [0, 1, 4, 3][:-2] = [0, 1]
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
 
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0, 1}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0, 1}));
             }
 
             AND_WHEN("We shrink and grow the dynamic array") {
@@ -868,7 +867,7 @@ TEST_CASE("BasicIndexingNode") {
 
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
 
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0}));
 
                 graph.commit(state, graph.descendants(state, {x_ptr}));
 
@@ -878,7 +877,7 @@ TEST_CASE("BasicIndexingNode") {
 
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
 
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0}));
             }
 
             AND_WHEN("We change the shape of the dynamic array, and then revert") {
@@ -930,7 +929,7 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->size(state) == 1);
                 CHECK(y_ptr->shape(state).size() == 1);
                 CHECK(y_ptr->shape(state)[0] == 1);
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0}));
             }
 
             AND_WHEN("We grow the dynamic array up to the range") {
@@ -942,7 +941,7 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->size(state) == 2);
                 REQUIRE(y_ptr->shape(state).size() == 1);
                 CHECK(y_ptr->shape(state)[0] == 2);
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0, 1}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0, 1}));
 
                 graph.commit(state, graph.descendants(state, {x_ptr}));
 
@@ -950,7 +949,7 @@ TEST_CASE("BasicIndexingNode") {
 
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
 
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{1, 2}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({1, 2}));
             }
 
             AND_WHEN("We grow the dynamic array past the range") {
@@ -961,7 +960,7 @@ TEST_CASE("BasicIndexingNode") {
                 CHECK(y_ptr->size(state) == 2);
                 REQUIRE(y_ptr->shape(state).size() == 1);
                 CHECK(y_ptr->shape(state)[0] == y_ptr->size(state));
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{2, 3}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({2, 3}));
 
                 graph.commit(state, graph.descendants(state, {x_ptr}));
 
@@ -983,7 +982,7 @@ TEST_CASE("BasicIndexingNode") {
                 // Now shrink
                 x_ptr->shrink(state);
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{1, 2}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({1, 2}));
 
                 graph.commit(state, graph.descendants(state, {x_ptr}));
 
@@ -991,7 +990,7 @@ TEST_CASE("BasicIndexingNode") {
                 x_ptr->shrink(state);
                 x_ptr->shrink(state);
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{0}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0}));
 
                 graph.commit(state, graph.descendants(state, {x_ptr}));
 
@@ -1011,7 +1010,7 @@ TEST_CASE("BasicIndexingNode") {
 
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
 
-                CHECK(std::ranges::equal(y_ptr->view(state), std::vector{2, 3}));
+                CHECK_THAT(y_ptr->view(state), RangeEquals({2, 3}));
             }
 
             AND_WHEN("We change the shape of the dynamic array, and then revert") {
