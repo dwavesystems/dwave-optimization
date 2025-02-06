@@ -99,9 +99,8 @@ py.extension_module(
 
 install_subdir('dwave', install_dir: py.get_install_dir(pure: false))
 
-# meson doesn't disable building tests by default, so we explicitly don't
-# build them when building for release
-# see https://github.com/mesonbuild/meson/issues/2518
-if get_option('buildtype') != 'release'
+# meson doesn't disable tests by default, so we let the user decide via the build-tests
+# option. If set to 'auto', then we build the tests for non-release builds.
+if get_option('build-tests').enabled() or (get_option('build-tests').auto() and get_option('buildtype') != 'release')
     subdir('tests/cpp/')
 endif
