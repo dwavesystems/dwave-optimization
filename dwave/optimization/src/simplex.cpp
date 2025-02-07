@@ -196,7 +196,7 @@ SolveResult _solve_simplex(Matrix& T, ssize_t n, std::vector<ssize_t>& basis,
 Matrix construct_T(std::span<const double> c, double c0, const Matrix& A,
                    std::span<const double> b) {
     Matrix T(A.n() + 2, A.m() + A.n() + 1);
-    // Copy in A to T[:n, :m] and b.T to A[:, -1]
+    // Copy in A to T[:n, :m] and b.T to T[:, -1]
     for (ssize_t i = 0; i < A.n(); i++) {
         double sign = b[i] < 0 ? -1.0 : 1.0;
         T(i, -1) = sign * b[i];
@@ -214,7 +214,7 @@ Matrix construct_T(std::span<const double> c, double c0, const Matrix& A,
     for (ssize_t i = 0; i < A.m(); i++) {
         T(A.n(), i) = c[i];
     }
-    T(A.n(), T.m() - 1) = c0;
+    T(A.n(), -1) = c0;
 
     // Row pseudo objective
     for (ssize_t j = 0; j < A.m(); j++) {
@@ -223,7 +223,7 @@ Matrix construct_T(std::span<const double> c, double c0, const Matrix& A,
         }
     }
     for (ssize_t i = 0; i < A.n(); i++) {
-        T(A.n() + 1, T.m() - 1) -= T(i, T.m() - 1);
+        T(-1, -1) -= T(i, -1);
     }
 
     return T;
@@ -310,7 +310,7 @@ void check_LP_sizes(std::span<const double> c, std::span<const double> b_lb,
 }
 
 /// Translate the general LP form to the simple:
-///     minimize(c @ x) subject to A @ x == b
+///     minimize(c @ x) subject to A @ x == b, x >= 0
 LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_lb,
                           std::span<const double> A_data, std::span<const double> b_ub,
                           std::span<const double> A_eq_data, std::span<const double> b_eq,

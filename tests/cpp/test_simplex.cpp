@@ -173,21 +173,25 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
 
     GIVEN("LP with no bounds or constraints") {
         std::vector<double> c{1};
-
-        std::vector<double> A{};
-        std::vector<double> b_lb{};
-        std::vector<double> b_ub{};
-
-        std::vector<double> A_eq{};
-        std::vector<double> b_eq{};
-
         std::vector<double> lb{-inf};
         std::vector<double> ub{inf};
 
         THEN("We return failure unbounded") {
-            SolveResult result = linprog(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
+            SolveResult result = linprog(c, {}, {}, {}, {}, {}, lb, ub);
             CHECK(result.solve_status == SolveResult::SolveStatus::FAILURE_UNBOUNDED);
             CHECK(result.solution_status() == SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL);
+        }
+    }
+
+    GIVEN("LP with overlapping bounds") {
+        std::vector<double> c{1};
+        std::vector<double> lb{5};
+        std::vector<double> ub{-inf};
+
+        THEN("We return infeasible") {
+            SolveResult result = linprog(c, {}, {}, {}, {}, {}, lb, ub);
+            CHECK(result.solve_status == SolveResult::SolveStatus::FAILURE_NO_FEASIBLE_START);
+            CHECK(result.solution_status() == SolveResult::SolutionStatus::INFEASIBLE);
         }
     }
 }
