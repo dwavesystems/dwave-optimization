@@ -110,6 +110,7 @@ cdef class _Graph:
     @classmethod
     def from_file(cls, file, *,
                   check_header = True,
+                  symbol_substitution = None,
                   ):
         """Construct a model from the given file.
 
@@ -128,9 +129,11 @@ cdef class _Graph:
 
         if isinstance(file, str):
             with open(file, "rb") as f:
-                return cls.from_file(f)
+                return cls.from_file(f, symbol_substitution=symbol_substitution)
 
         prefix = b"DWNL"
+
+        symbol_substitution = symbol_substitution or {}
 
         read_prefix = file.read(len(prefix))
         if read_prefix != prefix:
@@ -171,9 +174,11 @@ cdef class _Graph:
                     directory = f"nodes/{node_id}/"
                     classname = classname.decode("UTF-8").rstrip("\n")
 
-                    # take advanctage of the symbols all being in the same namespace
-                    # and the fact that we (currently) encode them all by name
-                    cls = getattr(symbols, classname, None)
+                    cls = symbol_substitution.get(classname)
+                    if cls is None:
+                        # take advanctage of the symbols all being in the same namespace
+                        # and the fact that we (currently) encode them all by name
+                        cls = getattr(symbols, classname, None)
 
                     if not issubclass(cls, Symbol):
                         raise ValueError("encoded model has an unsupported node type")
