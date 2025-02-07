@@ -16,9 +16,12 @@
 #include <unordered_set>
 
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -68,7 +71,7 @@ TEST_CASE("DisjointBitSetsNode") {
                         }
                     }
 
-                    CHECK(std::ranges::equal(bit_set, std::vector{1, 1, 1, 1, 1}));
+                    CHECK_THAT(bit_set, RangeEquals({1, 1, 1, 1, 1}));
                 }
 
                 AND_WHEN("We copy the state") {
@@ -85,7 +88,7 @@ TEST_CASE("DisjointBitSetsNode") {
                             }
                         }
 
-                        CHECK(std::ranges::equal(bit_set, std::vector{1, 1, 1, 1, 1}));
+                        CHECK_THAT(bit_set, RangeEquals({1, 1, 1, 1, 1}));
                     }
                 }
 
@@ -223,8 +226,7 @@ TEST_CASE("DisjointListsNode") {
                             set.insert(el);
                         }
                         num_elements += list->view(state).size();
-                        CHECK(std::ranges::equal(list->shape(state),
-                                                 std::vector{list->view(state).size()}));
+                        CHECK_THAT(list->shape(state), RangeEquals({list->view(state).size()}));
                     }
 
                     CHECK(num_elements == 5);
@@ -326,8 +328,8 @@ TEST_CASE("ListNode") {
 
         THEN("We already know a lot about the size etc") {
             CHECK(ptr->size() == 5);
-            CHECK(std::ranges::equal(ptr->shape(), std::vector{5}));
-            CHECK(std::ranges::equal(ptr->strides(), std::vector{sizeof(double)}));
+            CHECK_THAT(ptr->shape(), RangeEquals({5}));
+            CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
 
             CHECK(ptr->sizeinfo() == 5);
         }
@@ -342,9 +344,9 @@ TEST_CASE("ListNode") {
             auto state = graph.initialize_state();
 
             THEN("The node's state defaults to range(5)") {
-                CHECK(std::ranges::equal(ptr->view(state), std::vector{0, 1, 2, 3, 4}));
+                CHECK_THAT(ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
                 CHECK(ptr->size(state) == 5);
-                CHECK(std::ranges::equal(ptr->shape(state), std::vector{5}));
+                CHECK_THAT(ptr->shape(state), RangeEquals({5}));
             }
 
             AND_WHEN("We then mutate the node and propagate") {
@@ -356,7 +358,7 @@ TEST_CASE("ListNode") {
                 graph.propagate(state, graph.descendants(state, {ptr}));
 
                 THEN("The node's state reflects the relevant changes") {
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{0, 2, 3, 1, 4}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({0, 2, 3, 1, 4}));
 
                     // todo: check diff()
                 }
@@ -365,7 +367,7 @@ TEST_CASE("ListNode") {
                     graph.commit(state, graph.descendants(state, {ptr}));
 
                     THEN("The changes persist") {
-                        CHECK(std::ranges::equal(ptr->view(state), std::vector{0, 2, 3, 1, 4}));
+                        CHECK_THAT(ptr->view(state), RangeEquals({0, 2, 3, 1, 4}));
                         CHECK(ptr->diff(state).size() == 0);
                     }
                 }
@@ -374,7 +376,7 @@ TEST_CASE("ListNode") {
                     graph.revert(state, graph.descendants(state, {ptr}));
 
                     THEN("The changes are undone") {
-                        CHECK(std::ranges::equal(ptr->view(state), std::vector{0, 1, 2, 3, 4}));
+                        CHECK_THAT(ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
                         CHECK(ptr->diff(state).size() == 0);
                     }
                 }
@@ -396,8 +398,8 @@ TEST_CASE("SetNode") {
         THEN("The shape is dynamic") {
             CHECK(ptr->ndim() == 1);
             CHECK(ptr->size() == Array::DYNAMIC_SIZE);
-            CHECK(std::ranges::equal(ptr->shape(), std::vector{Array::DYNAMIC_SIZE}));
-            CHECK(std::ranges::equal(ptr->strides(), std::vector{sizeof(double)}));
+            CHECK_THAT(ptr->shape(), RangeEquals({Array::DYNAMIC_SIZE}));
+            CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
 
             auto sizeinfo = ptr->sizeinfo();
             CHECK(sizeinfo.min == 0);
@@ -412,8 +414,8 @@ TEST_CASE("SetNode") {
 
             THEN("We can read the state of the set") {
                 CHECK(ptr->size(state) == 0);
-                CHECK(std::ranges::equal(ptr->shape(state), std::vector{0}));
-                CHECK(std::ranges::equal(ptr->view(state), std::vector<double>{}));
+                CHECK_THAT(ptr->shape(state), RangeEquals({0}));
+                CHECK_THAT(ptr->view(state), RangeEquals(std::vector<double>{}));
             }
 
             AND_WHEN("We grow by one") {
@@ -422,7 +424,7 @@ TEST_CASE("SetNode") {
 
                 THEN("The diff has been updated") {
                     // the specific value added is implementation-dependant
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{0}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({0}));
 
                     CHECK(ptr->size_diff(state) == 1);
                 }
@@ -431,7 +433,7 @@ TEST_CASE("SetNode") {
                     graph.commit(state, graph.descendants(state, {ptr}));
 
                     THEN("The values are updated but the diff is cleared") {
-                        CHECK(std::ranges::equal(ptr->view(state), std::vector{0}));
+                        CHECK_THAT(ptr->view(state), RangeEquals({0}));
                         CHECK(ptr->size_diff(state) == 0);
                         CHECK(ptr->diff(state).size() == 0);
                     }
@@ -441,7 +443,7 @@ TEST_CASE("SetNode") {
                     graph.revert(state, graph.descendants(state, {ptr}));
 
                     THEN("We're back where we started") {
-                        CHECK(std::ranges::equal(ptr->view(state), std::vector<double>{}));
+                        CHECK_THAT(ptr->view(state), RangeEquals(std::vector<double>{}));
                         CHECK(ptr->size_diff(state) == 0);
                         CHECK(ptr->diff(state).size() == 0);
                     }
@@ -456,7 +458,7 @@ TEST_CASE("SetNode") {
 
             THEN("We can read the state") {
                 CHECK(ptr->size(state) == 3);
-                CHECK(std::ranges::equal(ptr->view(state), std::vector{2, 0, 3}));
+                CHECK_THAT(ptr->view(state), RangeEquals({2, 0, 3}));
             }
 
             AND_WHEN("We shrink by one") {
@@ -465,7 +467,7 @@ TEST_CASE("SetNode") {
 
                 THEN("The diff has been updated") {
                     // the specific value added is implementation-dependant
-                    CHECK(std::ranges::equal(ptr->view(state), std::vector{2, 0}));
+                    CHECK_THAT(ptr->view(state), RangeEquals({2, 0}));
 
                     CHECK(ptr->size_diff(state) == -1);
                 }
@@ -474,7 +476,7 @@ TEST_CASE("SetNode") {
                     graph.commit(state, graph.descendants(state, {ptr}));
 
                     THEN("The values are updated but the diff is cleared") {
-                        CHECK(std::ranges::equal(ptr->view(state), std::vector{2, 0}));
+                        CHECK_THAT(ptr->view(state), RangeEquals({2, 0}));
                         CHECK(ptr->size_diff(state) == 0);
                         CHECK(ptr->diff(state).size() == 0);
                     }
@@ -484,7 +486,7 @@ TEST_CASE("SetNode") {
                     graph.revert(state, graph.descendants(state, {ptr}));
 
                     THEN("We're back where we started") {
-                        CHECK(std::ranges::equal(ptr->view(state), std::vector<double>{2, 0, 3}));
+                        CHECK_THAT(ptr->view(state), RangeEquals({2, 0, 3}));
                         CHECK(ptr->size_diff(state) == 0);
                         CHECK(ptr->diff(state).size() == 0);
                     }

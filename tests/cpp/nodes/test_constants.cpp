@@ -13,8 +13,11 @@
 //    limitations under the License.
 
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -27,9 +30,9 @@ TEST_CASE("ConstantNode") {
         THEN("It defaults to an empty 1d array") {
             CHECK(ptr->ndim() == 1);
             CHECK(ptr->size() == 0);
-            CHECK(std::ranges::equal(ptr->data(), std::vector<double>()));
-            CHECK(std::ranges::equal(ptr->shape(), std::vector{0}));
-            CHECK(std::ranges::equal(ptr->strides(), std::vector{sizeof(double)}));
+            CHECK_THAT(ptr->data(), RangeEquals(std::vector<double>()));
+            CHECK_THAT(ptr->shape(), RangeEquals({0}));
+            CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
         }
 
         THEN("min/max/integral are all well-defined") {
@@ -47,8 +50,8 @@ TEST_CASE("ConstantNode") {
             CHECK(ptr->ndim() == 1);
             CHECK(ptr->size() == 4);
             CHECK(std::ranges::equal(ptr->data(), values));
-            CHECK(std::ranges::equal(ptr->shape(), std::vector{4}));
-            CHECK(std::ranges::equal(ptr->strides(), std::vector{sizeof(double)}));
+            CHECK_THAT(ptr->shape(), RangeEquals({4}));
+            CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
         }
 
         THEN("min/max/integral all match the vector") {
@@ -61,7 +64,7 @@ TEST_CASE("ConstantNode") {
             values[2] = -105;
 
             THEN("The ConstantNode is not affected because it's a copy") {
-                CHECK(std::ranges::equal(ptr->data(), std::vector{30, 10, 40, 20}));
+                CHECK_THAT(ptr->data(), RangeEquals({30, 10, 40, 20}));
             }
         }
     }
@@ -73,17 +76,16 @@ TEST_CASE("ConstantNode") {
         THEN("It acts as a 2d array") {
             CHECK(ptr->ndim() == 2);
             CHECK(ptr->size() == 4);  // shrunk to fit
-            CHECK(std::ranges::equal(ptr->data(), std::vector{30, 10, 40, 20}));
-            CHECK(std::ranges::equal(ptr->shape(), std::vector{2, 2}));
-            CHECK(std::ranges::equal(ptr->strides(),
-                                     std::vector<int>{2 * sizeof(double), sizeof(double)}));
+            CHECK_THAT(ptr->data(), RangeEquals({30, 10, 40, 20}));
+            CHECK_THAT(ptr->shape(), RangeEquals({2, 2}));
+            CHECK_THAT(ptr->strides(), RangeEquals({2 * sizeof(double), sizeof(double)}));
         }
 
         WHEN("We mutate the original vector") {
             values[2] = -105;
 
             THEN("The ConstantNode is not affected because it's a copy") {
-                CHECK(std::ranges::equal(ptr->data(), std::vector{30, 10, 40, 20}));
+                CHECK_THAT(ptr->data(), RangeEquals({30, 10, 40, 20}));
             }
         }
     }
@@ -94,9 +96,9 @@ TEST_CASE("ConstantNode") {
         THEN("It acts as a single value") {
             CHECK(ptr->ndim() == 0);
             CHECK(ptr->size() == 1);
-            CHECK(std::ranges::equal(ptr->data(), std::vector{6.5}));
-            CHECK(std::ranges::equal(ptr->shape(), std::vector<int>{}));
-            CHECK(std::ranges::equal(ptr->strides(), std::vector<int>{}));
+            CHECK_THAT(ptr->data(), RangeEquals({6.5}));
+            CHECK_THAT(ptr->shape(), RangeEquals(std::vector<int>{}));
+            CHECK_THAT(ptr->strides(), RangeEquals(std::vector<int>{}));
         }
 
         THEN("min/max/integral all match the value") {
@@ -114,17 +116,16 @@ TEST_CASE("ConstantNode") {
         THEN("It acts as a 2d array") {
             CHECK(ptr->ndim() == 2);
             CHECK(ptr->size() == 4);  // shrunk to fit
-            CHECK(std::ranges::equal(ptr->data(), std::vector{30, 10, 40, 20}));
-            CHECK(std::ranges::equal(ptr->shape(), std::vector{2, 2}));
-            CHECK(std::ranges::equal(ptr->strides(),
-                                     std::vector<int>{2 * sizeof(double), sizeof(double)}));
+            CHECK_THAT(ptr->data(), RangeEquals({30, 10, 40, 20}));
+            CHECK_THAT(ptr->shape(), RangeEquals({2, 2}));
+            CHECK_THAT(ptr->strides(), RangeEquals({2 * sizeof(double), sizeof(double)}));
         }
 
         WHEN("We mutate the original vector") {
             values[2] = -105;
 
             THEN("The ConstantNode is mutated accordingly") {
-                CHECK(std::ranges::equal(ptr->data(), std::vector{30, 10, -105, 20}));
+                CHECK_THAT(ptr->data(), RangeEquals({30, 10, -105, 20}));
             }
         }
     }

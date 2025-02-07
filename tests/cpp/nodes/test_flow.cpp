@@ -13,11 +13,14 @@
 //    limitations under the License.
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_all.hpp>
 #include <dwave-optimization/graph.hpp>
 #include <dwave-optimization/nodes/collections.hpp>
 #include <dwave-optimization/nodes/flow.hpp>
 #include <dwave-optimization/nodes/numbers.hpp>
 #include <dwave-optimization/nodes/testing.hpp>
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -213,7 +216,7 @@ TEST_CASE("WhereNode") {
         graph.initialize_state(state);
 
         THEN("`where` has the expected output") {
-            CHECK(std::ranges::equal(where_ptr->view(state), std::vector{1, 2, 1, 4}));
+            CHECK_THAT(where_ptr->view(state), RangeEquals({1, 2, 1, 4}));
         }
 
         WHEN("We update `condition`") {
@@ -222,7 +225,7 @@ TEST_CASE("WhereNode") {
             graph.propose(state, {condition_ptr});
 
             THEN("`where` has the expected output") {
-                CHECK(std::ranges::equal(where_ptr->view(state), std::vector{1, 2, 1, 1}));
+                CHECK_THAT(where_ptr->view(state), RangeEquals({1, 2, 1, 1}));
             }
         }
 
@@ -240,7 +243,7 @@ TEST_CASE("WhereNode") {
                 // condition = [4, 1, 0, 2]
                 // x = [4, 3, 3, 4]
                 // y = [3, 2, 2, 1]
-                CHECK(std::ranges::equal(where_ptr->view(state), std::vector{4, 3, 2, 4}));
+                CHECK_THAT(where_ptr->view(state), RangeEquals({4, 3, 2, 4}));
             }
         }
     }

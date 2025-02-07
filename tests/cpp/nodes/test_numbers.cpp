@@ -13,8 +13,11 @@
 //    limitations under the License.
 
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -27,8 +30,8 @@ TEST_CASE("BinaryNode") {
         THEN("The shape is fixed") {
             CHECK(ptr->ndim() == 1);
             CHECK(ptr->size() == 10);
-            CHECK(std::ranges::equal(ptr->shape(), std::vector{10}));
-            CHECK(std::ranges::equal(ptr->strides(), std::vector{sizeof(double)}));
+            CHECK_THAT(ptr->shape(), RangeEquals({10}));
+            CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
         }
 
         WHEN("We create a state using the default value") {
@@ -36,9 +39,8 @@ TEST_CASE("BinaryNode") {
 
             THEN("All elements are zero") {
                 CHECK(ptr->size(state) == 10);
-                CHECK(std::ranges::equal(ptr->shape(state), std::vector{10}));
-                CHECK(std::ranges::equal(ptr->view(state),
-                                         std::vector{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
+                CHECK_THAT(ptr->shape(state), RangeEquals({10}));
+                CHECK_THAT(ptr->view(state), RangeEquals({0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
             }
         }
 
@@ -62,10 +64,10 @@ TEST_CASE("BinaryNode") {
             graph.initialize_state(state);
 
             THEN("The passed in values are not modified") {
-                CHECK(std::ranges::equal(vec_d, std::vector{0, 1, 0, 1, 0, 1, 0, 1, 0, 1}));
+                CHECK_THAT(vec_d, RangeEquals({0, 1, 0, 1, 0, 1, 0, 1, 0, 1}));
             }
 
-            THEN("We can read the state") { CHECK(std::ranges::equal(ptr->view(state), vec_d)); }
+            THEN("We can read the state") { CHECK_THAT(ptr->view(state), RangeEquals(vec_d)); }
 
             WHEN("We flip the states") {
                 for (int i = 0; i < ptr->size(); i++) {
@@ -74,7 +76,7 @@ TEST_CASE("BinaryNode") {
                 }
 
                 THEN("Elments are flipped properly") {
-                    CHECK(std::ranges::equal(ptr->view(state), vec_d));
+                    CHECK_THAT(ptr->view(state), RangeEquals(vec_d));
                 }
             }
 
@@ -138,9 +140,8 @@ TEST_CASE("BinaryNode") {
         THEN("The shape is fixed") {
             CHECK(ptr->ndim() == 2);
             CHECK(ptr->size() == 25);
-            CHECK(std::ranges::equal(ptr->shape(), std::vector{5, 5}));
-            CHECK(std::ranges::equal(ptr->strides(),
-                                     std::vector<int>{5 * sizeof(double), sizeof(double)}));
+            CHECK_THAT(ptr->shape(), RangeEquals({5, 5}));
+            CHECK_THAT(ptr->strides(), RangeEquals({5 * sizeof(double), sizeof(double)}));
         }
 
         WHEN("We create a state using the default value") {
@@ -148,10 +149,9 @@ TEST_CASE("BinaryNode") {
 
             THEN("All elements are zero") {
                 CHECK(ptr->size(state) == 25);
-                CHECK(std::ranges::equal(ptr->shape(state), std::vector{5, 5}));
-                CHECK(std::ranges::equal(ptr->view(state),
-                                         std::vector{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
+                CHECK_THAT(ptr->shape(state), RangeEquals({5, 5}));
+                CHECK_THAT(ptr->view(state), RangeEquals({0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
             }
         }
 
@@ -176,8 +176,8 @@ TEST_CASE("BinaryNode") {
             graph.initialize_state(state);
 
             THEN("The passed in values are not modified") {
-                CHECK(std::ranges::equal(vec_d, std::vector{0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
-                                                            1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0}));
+                CHECK_THAT(vec_d, RangeEquals({0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+                                               1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0}));
             }
 
             THEN("We can read the state") { CHECK(std::ranges::equal(ptr->view(state), vec_d)); }
@@ -314,8 +314,8 @@ TEST_CASE("IntegerNode") {
         THEN("The shape is fixed") {
             CHECK(ptr->ndim() == 1);
             CHECK(ptr->size() == 10);
-            CHECK(std::ranges::equal(ptr->shape(), std::vector{10}));
-            CHECK(std::ranges::equal(ptr->strides(), std::vector{sizeof(double)}));
+            CHECK_THAT(ptr->shape(), RangeEquals({10}));
+            CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
         }
 
         WHEN("We create a state using the default value") {
@@ -323,9 +323,8 @@ TEST_CASE("IntegerNode") {
 
             THEN("All elements are zero") {
                 CHECK(ptr->size(state) == 10);
-                CHECK(std::ranges::equal(ptr->shape(state), std::vector{10}));
-                CHECK(std::ranges::equal(ptr->view(state),
-                                         std::vector{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
+                CHECK_THAT(ptr->shape(state), RangeEquals({10}));
+                CHECK_THAT(ptr->view(state), RangeEquals({0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
             }
         }
 
@@ -350,7 +349,7 @@ TEST_CASE("IntegerNode") {
             graph.initialize_state(state);
 
             THEN("The passed in values are not modified") {
-                CHECK(std::ranges::equal(vec_d, std::vector{-4, -4, -2, -2, 0, 0, 2, 2, 4, 4}));
+                CHECK_THAT(vec_d, RangeEquals({-4, -4, -2, -2, 0, 0, 2, 2, 4, 4}));
             }
 
             THEN("We can read the state") { CHECK(std::ranges::equal(ptr->view(state), vec_d)); }

@@ -13,8 +13,11 @@
 //    limitations under the License.
 
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/utils.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -159,8 +162,7 @@ TEST_CASE("Test deduplicate_diff") {
         WHEN("We call deduplicate_diff") {
             deduplicate_diff(updates);
             THEN("deduplicate_diff() sorts them and removes noops") {
-                CHECK(std::ranges::equal(updates,
-                                         std::vector<Update>{Update(2, 1, 0), Update(3, 0, 1)}));
+                CHECK_THAT(updates, RangeEquals({Update(2, 1, 0), Update(3, 0, 1)}));
             }
         }
     }
