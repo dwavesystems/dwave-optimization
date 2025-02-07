@@ -245,9 +245,11 @@ cdef class _Graph:
                     directory = f"nodes/{node_id}/"
                     classname = classname.decode("UTF-8").rstrip("\n")
 
-                    # take advanctage of the symbols all being in the same namespace
-                    # and the fact that we (currently) encode them all by name
-                    node_cls = substitute.get(classname, getattr(symbols, classname, None))
+                    node_cls = substitute.get(classname)
+                    if node_cls is None:
+                        # take advanctage of the symbols all being in the same namespace
+                        # and the fact that we (currently) encode them all by name
+                        node_cls = getattr(symbols, classname, None)
 
                     if not issubclass(node_cls, Symbol):
                         raise ValueError("encoded model has an unsupported node type")
