@@ -93,17 +93,39 @@ cdef class _Graph:
         return value
 
     def decision_state_size(self):
-        r"""An estimated size, in bytes, of the model's decision states.
+        """Return an estimate of the size, in bytes, of a model's decision states.
+
+        For more details, see :meth:`.state_size()`.
+        This method differs by only counting the state of the decision variables.
 
         Examples:
-            This example checks the size of a model with one
-            :math:`10 \times 10`-sized integer symbol.
+            This example estimates the size of a model state.
+            In this example a single value is added to a :math:`5\times4` array.
+            The output of the addition is also a :math:`5\times4` array.
+            Each element of each array requires :math:`8` bytes to represent
+            in memory.
+            The total state size is :math:`(5*4 + 1 + 5*4) * 8 = 328` bytes,
+            but the decision state size is only :math:`5*4*8 = 160`.
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> visit_site = model.integer((10, 10))
-            >>> model.decision_state_size()
-            800
+            >>> i = model.integer((5, 4))    # 5x4 array of integers
+            >>> c = model.constant(1)        # one scalar value, not a decision
+            >>> y = i + c                    # 5x4 array of values, not a decision
+            >>> model.state_size()           # (5*4 + 1 + 5*4) * 8 bytes
+            328
+            >>> model.decision_state_size()  # 5*4*8 bytes
+            160
+
+        See also:
+            :meth:`Symbol.state_size()` An estimate of the size of a symbol's
+            state.
+
+            :meth:`ArraySymbol.state_size()` An estimate of the size of an array
+            symbol's state.
+
+            :meth:`Model.state_size()` An estimate of the size of a model's
+            decision states.
         """
         return sum(sym.state_size() for sym in self.iter_decisions())
 
@@ -619,19 +641,46 @@ cdef class _Graph:
         return self._graph.remove_unused_nodes()
 
     def state_size(self):
-        """An estimate of the size, in bytes, of all states in the model.
+        r"""Return an estimate of the size, in bytes, of a model state.
 
-        Iterates over the model's states and totals the sizes of all.
+        For a model encoding several array operations, the state of each array
+        must be held in memory. This method returns an estimate of the total
+        memory needed to hold a state for every symbol in the model.
+
+        The number of bytes returned by this method is only an estimate. Some
+        symbols hold additional information that is not accounted for.
 
         Examples:
-            This example estimates the size of a model's states.
+            This example estimates the size of a model state.
+            In this example a single value is added to a :math:`5\times4` array.
+            The output of the addition is also a :math:`5\times4` array.
+            Each element of each array requires :math:`8` bytes to represent
+            in memory.
+            Therefore the total state size is :math:`(5*4 + 1 + 5*4) * 8 = 328`
+            bytes.
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> c = model.constant([1, 5, 8.4])
-            >>> i = model.integer(20, upper_bound=100)
-            >>> model.state_size()
-            184
+            >>> i = model.integer((5, 4))  # 5x4 array of integers
+            >>> c = model.constant(1)      # one scalar value
+            >>> y = i + c                  # 5x4 array of values
+            >>> model.state_size()         # (5*4 + 1 + 5*4) * 8 bytes
+            328
+
+        See also:
+            :meth:`Symbol.state_size()` An estimate of the size of a symbol's
+            state.
+
+            :meth:`ArraySymbol.state_size()` An estimate of the size of an array
+            symbol's state.
+
+            :meth:`Model.decision_state_size()` An estimate of the size of a
+            model's decision states.
+
+            :ref:`properties_solver_properties` The properties of the
+            `Leap <https://cloud.dwavesys.com/leap/>`_ service's
+            quantum-classical hybrid nonlinear solver. Including limits on
+            the maximum state of a model.
         """
         return sum(sym.state_size() for sym in self.iter_symbols())
 
@@ -1020,26 +1069,25 @@ cdef class Symbol:
         raise NotImplementedError(f"{type(self).__name__} has not implemented state serialization")
 
     def state_size(self):
-        """Return an estimated size, in bytes, of the symbol's state.
+        """Return an estimated size, in bytes, of a symbol's state.
 
-        The state size, set at construction of the symbol, accounts for the
-        largest possible size for symbols.
-        
-        The size of an instantiated state can be accessed with ``.state().size``
-        (for example, the size of a symbol ``num_routes`` is given by 
-        ``num_routes.state().size``).
+        The number of bytes returned by this method is only an estimate. Some
+        symbols hold additional information that is not accounted for.
 
-        .. note::
+        For most symbols, which are arrays, this method is
+        subclassed by the :class:`~dwave.optimization.model.ArraySymbol
+        class's :meth:`~dwave.optimization.model.ArraySymbol.state_size`
+        method.
 
-            For most symbols, which are arrays, this method is
-            subclassed by the :class:`~dwave.optimization.model.ArraySymbol
-            class's :meth:`~dwave.optimization.model.ArraySymbol.state_size`
-            method.
+        See also:
+            :meth:`ArraySymbol.state_size()` An estimate of the size of an array
+            symbol's state.
 
-        Returns:
-            Always returns zero (nodes do not have a state).
+            :meth:`Model.state_size()` An estimate of the size of a model's
+            state.
+
+            
         """
-        # Nodes by default have no state.
         return 0
 
     def topological_index(self):
@@ -1504,16 +1552,29 @@ cdef class ArraySymbol(Symbol):
             np.save(f, array, allow_pickle=False)
 
     def state_size(self):
-        """Return an estimated byte-size of the state.
+        r"""Return an estimate of the size, in bytes, of an array symbol's state.
+
+        For an array symbol, the estimate of the state size is exactly the
+        number of bytes needed to encode the array.
 
         Examples:
             This example returns the size of an integer symbol.
+            In this example, the symbol encodes a :math:`5\times4` of integers,
+            each represented by a :math`8` byte float.
+            Therefore the estimated state size is :math`5*4*8 = 160` bytes.
 
             >>> from dwave.optimization import Model
             >>> model = Model()
-            >>> i = model.integer(2, lower_bound=0, upper_bound=20)
-            >>> i.state_size()
-            16
+            >>> i = model.integer((5, 4))  # 5x4 array of integers
+            >>> i.state_size()             # 5*4*8 bytes
+            160
+
+        See also:
+            :meth:`Symbol.state_size()` An estimate of the size of a symbol's
+            state.
+
+            :meth:`Model.state_size()` An estimate of the size of a model's
+            state.
         """
         if not self.array_ptr.dynamic():
             # For fixed-length arrays, the state size is simply the size of the
