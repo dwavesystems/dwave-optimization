@@ -93,10 +93,10 @@ cdef class _Graph:
         return value
 
     def decision_state_size(self):
-        """Return an estimate of the size, in bytes, of a model's decision states.
+        r"""Return an estimate of the size, in bytes, of a model's decision states.
 
         For more details, see :meth:`.state_size()`.
-        This method differs by only counting the state of the decision variables.
+        This method differs by counting the state of only the decision variables.
 
         Examples:
             This example estimates the size of a model state.
@@ -680,7 +680,7 @@ cdef class _Graph:
             :ref:`properties_solver_properties` The properties of the
             `Leap <https://cloud.dwavesys.com/leap/>`_ service's
             quantum-classical hybrid nonlinear solver. Including limits on
-            the maximum state of a model.
+            the maximum state size of a model.
         """
         return sum(sym.state_size() for sym in self.iter_symbols())
 
