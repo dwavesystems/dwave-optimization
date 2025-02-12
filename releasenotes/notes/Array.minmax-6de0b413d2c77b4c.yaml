@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Add C++ ``Array::minmax()`` method that accepts a ``cache`` argument.
+    This method can avoid a potentially expensive depth first search through
+    the node graph.
+    See `#182 <https://github.com/dwavesystems/dwave-optimization/issues/182>`_.
+upgrade:
+  - |
+    The C++ ``Array::min()`` and ``Array::max()`` methods are no longer ``virtual``,
+    but instead call the more general ``Array::minmax()`` method. Subclasses of
+    ``Array`` should ``override`` the ``Array::minmax()`` method instead.

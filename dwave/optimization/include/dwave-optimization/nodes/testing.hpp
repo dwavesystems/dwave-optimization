@@ -68,8 +68,9 @@ class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decis
     // lie about min/max/integral for now. We lie in such a way as to create
     // maximum compatibility. In the future we might want to set these values
     // at construction time.
-    double max() const override;
-    double min() const override;
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+
     bool integral() const override;
     SizeInfo sizeinfo() const override;
 

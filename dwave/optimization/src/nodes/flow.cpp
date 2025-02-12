@@ -170,9 +170,13 @@ void WhereNode::initialize_state(State& state) const {
 
 bool WhereNode::integral() const { return x_ptr_->integral() && y_ptr_->integral(); }
 
-double WhereNode::max() const { return std::max(x_ptr_->max(), y_ptr_->max()); }
-
-double WhereNode::min() const { return std::min(x_ptr_->min(), y_ptr_->min()); }
+std::pair<double, double> WhereNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() {
+        const auto [x_min, x_max] = x_ptr_->minmax(cache);
+        const auto [y_min, y_max] = y_ptr_->minmax(cache);
+        return std::make_pair(std::min(x_min, y_min), std::max(x_max, y_max));});
+}
 
 // Given a list of updates on a single `conditional`, did we end up flipping?
 bool _flipped(std::span<const Update> diff) {

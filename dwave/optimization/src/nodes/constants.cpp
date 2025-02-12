@@ -58,18 +58,22 @@ bool ConstantNode::integral() const {
     return buffer_stats_->integral;
 }
 
-double ConstantNode::max() const {
+std::pair<double, double> ConstantNode::minmax(
+        optional_cache_type<std::pair<double, double>>) const {
+    // The ConstantNode does it's own min/max caching, so we just ignore the
+    // cached passed in and fall back to that.
+
     auto values = this->data();  // all of the values in the array
 
     // If we're empty we return 0.
     // We don't want undefined behavior because there are use cases e.g.
     // indexing by an empty array.
     // So 0 seems like a reasonable default.
-    if (values.empty()) return 0.0;
+    if (values.empty()) return {0.0, 0.0};
 
     // If we're a scalar (or a size-1 array) we can just calculate it in O(1) so let's
     // not bother caching.
-    if (values.size() == 1) return values[0];
+    if (values.size() == 1) return {values[0], values[0]};
 
     // Construct the cache if it's not already there.
     // This only ever happens once, so we do one check outside the mutex for
@@ -80,34 +84,7 @@ double ConstantNode::max() const {
         if (!buffer_stats_) buffer_stats_.emplace(values);
     }
 
-    // Return the cached value
-    return buffer_stats_->max;
-}
-
-double ConstantNode::min() const {
-    auto values = this->data();  // all of the values in the array
-
-    // If we're empty we return 0.
-    // We don't want undefined behavior because there are use cases e.g.
-    // indexing by an empty array.
-    // So 0 seems like a reasonable default.
-    if (values.empty()) return 0.0;
-
-    // If we're a scalar (or a size-1 array) we can just calculate it in O(1) so let's
-    // not bother caching.
-    if (values.size() == 1) return values[0];
-
-    // Construct the cache if it's not already there.
-    // This only ever happens once, so we do one check outside the mutex for
-    // speed, and then another within is to make sure someone else hasn't
-    // already constructed it. Subsequent reads are safe
-    if (!buffer_stats_) {
-        std::lock_guard<std::mutex> guard(buffer_stats_mutex);
-        if (!buffer_stats_) buffer_stats_.emplace(values);
-    }
-
-    // Return the cached value
-    return buffer_stats_->min;
+    return {buffer_stats_->min, buffer_stats_->max};
 }
 
 void ConstantNode::update(State& state, int index) const {

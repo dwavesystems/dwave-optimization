@@ -93,8 +93,8 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     // Returns ``0.0`` for an empty array.
     // Note that this is an O(size) function call, whereas for most other nodes it
     // is O(1).
-    double max() const override;
-    double min() const override;
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     // Overloads required by the Node ABC *************************************
 

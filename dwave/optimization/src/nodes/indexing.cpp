@@ -631,6 +631,11 @@ void AdvancedIndexingNode::revert(State& state) const {
     data_ptr<AdvancedIndexingNodeData>(state)->revert();
 }
 
+std::pair<double, double> AdvancedIndexingNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() { return array_ptr_->minmax(cache); });
+}
+
 ssize_t AdvancedIndexingNode::size(const State& state) const {
     return dynamic() ? data_ptr<AdvancedIndexingNodeData>(state)->data.size() : this->size();
 }
@@ -1200,6 +1205,11 @@ ssize_t get_smallest_size_during_diff(ssize_t initial_size, const std::span<cons
     }
 
     return minimum_size;
+}
+
+std::pair<double, double> BasicIndexingNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() { return array_ptr_->minmax(cache); });
 }
 
 void BasicIndexingNode::propagate(State& state) const {
