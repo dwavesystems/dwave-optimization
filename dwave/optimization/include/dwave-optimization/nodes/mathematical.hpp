@@ -110,6 +110,7 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const override;
     bool integral() const override;
 
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
@@ -179,6 +180,7 @@ class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const override;
     bool integral() const override;
 
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
@@ -233,6 +235,7 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
 
     bool integral() const override;
 
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
@@ -300,6 +303,7 @@ class ReduceNode : public ScalarOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const override;
     bool integral() const override;
 
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
@@ -350,6 +354,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const override;
     bool integral() const override;
 
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 

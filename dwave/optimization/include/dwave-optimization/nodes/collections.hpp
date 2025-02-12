@@ -40,10 +40,9 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     bool integral() const override { return true; }
 
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override {
-        return {0, max_value_ - 1};
-    }
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     using ArrayOutputMixin::size;  // for size()
     ssize_t size(const State& state) const override;
@@ -160,10 +159,9 @@ class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
 
     bool integral() const override { return true; };
 
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override {
-        return {0, 1};
-    }
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     // Overloads required by the Node ABC *************************************
 
@@ -237,10 +235,9 @@ class DisjointListNode : public ArrayOutputMixin<ArrayNode> {
 
     bool integral() const override { return true; }
 
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override {
-        return {0, primary_set_size_ - 1};
-    }
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     using ArrayOutputMixin::size;  // for size()
     ssize_t size(const State& state) const override;

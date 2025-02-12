@@ -39,6 +39,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     void commit(State&) const noexcept override;
     void revert(State&) const noexcept override;
 
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 

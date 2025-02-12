@@ -71,6 +71,8 @@ class AdvancedIndexingNode : public ArrayNode {
 
     // Information about the values are all inherited from the array
     bool integral() const override { return array_ptr_->integral(); }
+
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
@@ -176,6 +178,8 @@ class BasicIndexingNode : public ArrayNode {
 
     // Information about the values are all inherited from the array
     bool integral() const override { return array_ptr_->integral(); }
+
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 

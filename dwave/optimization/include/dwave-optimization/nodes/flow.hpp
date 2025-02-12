@@ -37,6 +37,7 @@ class WhereNode : public ArrayOutputMixin<ArrayNode> {
     void initialize_state(State& state) const override;
     bool integral() const override;
 
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 

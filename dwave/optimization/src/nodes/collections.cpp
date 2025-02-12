@@ -179,6 +179,11 @@ void CollectionNode::initialize_state(State& state, std::vector<double> contents
     emplace_data_ptr<CollectionStateData>(state, std::move(contents), set.size());
 }
 
+std::pair<double, double> CollectionNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return {0, max_value_ - 1};
+}
+
 void CollectionNode::revert(State& state) const { data_ptr<CollectionStateData>(state)->revert(); }
 
 std::span<const ssize_t> CollectionNode::shape(const State& state) const {
@@ -353,6 +358,11 @@ std::span<const Update> DisjointBitSetNode::diff(const State& state) const {
     int index = disjoint_bit_sets_node->topological_index();
     DisjointBitSetsNodeData* pred_data = static_cast<DisjointBitSetsNodeData*>(state[index].get());
     return pred_data->diffs[set_index_];
+}
+
+std::pair<double, double> DisjointBitSetNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return {0, 1};
 }
 
 struct DisjointListStateData : NodeStateData {
@@ -664,6 +674,11 @@ std::span<const Update> DisjointListNode::diff(const State& state) const {
     int index = disjoint_list_node_ptr->topological_index();
     DisjointListStateData* data = static_cast<DisjointListStateData*>(state[index].get());
     return data->all_list_updates[list_index_];
+}
+
+std::pair<double, double> DisjointListNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return {0, primary_set_size_ - 1};
 }
 
 ssize_t DisjointListNode::size(const State& state) const {
