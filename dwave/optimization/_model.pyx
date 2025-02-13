@@ -132,6 +132,7 @@ cdef class _Graph:
     @classmethod
     def from_file(cls, file, *,
                   check_header = True,
+                  symbol_substitution = None,
                   ):
         """Construct a model from the given file.
 
@@ -150,9 +151,11 @@ cdef class _Graph:
 
         if isinstance(file, str):
             with open(file, "rb") as f:
-                return cls.from_file(f)
+                return cls.from_file(f, symbol_substitution=symbol_substitution)
 
         prefix = b"DWNL"
+
+        symbol_substitution = symbol_substitution or {}
 
         read_prefix = file.read(len(prefix))
         if read_prefix != prefix:
@@ -193,9 +196,11 @@ cdef class _Graph:
                     directory = f"nodes/{node_id}/"
                     classname = classname.decode("UTF-8").rstrip("\n")
 
-                    # take advanctage of the symbols all being in the same namespace
-                    # and the fact that we (currently) encode them all by name
-                    cls = getattr(symbols, classname, None)
+                    cls = symbol_substitution.get(classname)
+                    if cls is None:
+                        # take advanctage of the symbols all being in the same namespace
+                        # and the fact that we (currently) encode them all by name
+                        cls = getattr(symbols, classname, None)
 
                     if not issubclass(cls, Symbol):
                         raise ValueError("encoded model has an unsupported node type")
@@ -207,7 +212,7 @@ cdef class _Graph:
                 objective_id = json.loads(objective_buff)
                 if not isinstance(objective_id, int) or objective_id >= model.num_nodes():
                     raise ValueError("objective must be an integer and a valid node id")
-                model.minimize(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
+                model._set_objective(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
 
             for cid in json.loads(zf.read("constraints.json")):
                 model.add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
@@ -281,8 +286,12 @@ cdef class _Graph:
         """
         if not self.is_locked():
             # lock for the duration of the method
-            with self.lock():
-                return self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
+            self.lock()
+            try:
+                self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
+            finally:
+                self.unlock()
+            return
 
         if isinstance(file, str):
             with open(file, "wb") as f:
@@ -361,8 +370,9 @@ cdef class _Graph:
                 node._into_zipfile(zf, directory)
 
             # Encode the objective and the constraints
-            if self.objective is not None and self.objective.topological_index() < stop:
-                zf.writestr("objective.json", encoder.encode(self.objective.topological_index()))
+            objective = self._objective_symbol()
+            if objective is not None and objective.topological_index() < stop:
+                zf.writestr("objective.json", encoder.encode(objective.topological_index()))
             else:
                 zf.writestr("objective.json", b"")
 
@@ -424,6 +434,23 @@ cdef class _Graph:
         for ptr in self._graph.decisions():
             yield symbol_from_ptr(self, ptr)
 
+    def iter_inputs(self):
+        """Iterate over all inputs in the model.
+
+        Examples:
+            This example iterates over a model's inputs.
+
+            >>> from dwave.optimization.model import Expression
+            >>> expr = Expression()
+            >>> i0, i1 = expr.input(), expr.input()
+            >>> c = expr.constant(7)
+            >>> inputs = list(expr.iter_inputs())
+            >>> len(inputs)
+            2
+        """
+        for ptr in self._graph.inputs():
+            yield symbol_from_ptr(self, ptr)
+
     def iter_symbols(self):
         """Iterate over all symbols in the model.
 
@@ -453,28 +480,12 @@ cdef class _Graph:
         # note that we do not initialize the nodes or resize the states!
         # We do it lazily for performance
 
-    def minimize(self, ArraySymbol value):
-        """Set the objective value to minimize.
+    def _set_objective(self, ArraySymbol value):
+        """Set the objective value on the ``dwave::optimization::Graph``.
 
-        Optimization problems have an objective and/or constraints. The objective
-        expresses one or more aspects of the problem that should be minimized
-        (equivalent to maximization when multiplied by a minus sign). For example,
-        an optimized itinerary might minimize the value of distance traveled or
-        cost of transportation or travel time.
-
-        Args:
-            value: Value for which to minimize the cost function.
-
-        Examples:
-            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
-            within bounds.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(lower_bound=-5, upper_bound=5)
-            >>> c = model.constant(4)
-            >>> y = i*i - c*i
-            >>> model.minimize(y)
+        Note that we use this term somewhat loosely, as this "objective" is used for
+        both for the proper objective of a :class:`~dwave.optimization.model.Model`
+        as well as the output of an :class:`~dwave.optimization.model.Expression`.
         """
         if value is None:
             raise ValueError("value cannot be None")
@@ -544,6 +555,26 @@ cdef class _Graph:
             num_edges += self._graph.nodes()[i].get().successors().size()
         return num_edges
 
+    cpdef Py_ssize_t num_inputs(self) noexcept:
+        """Number of input nodes on the model/expression.
+
+        See also:
+            :meth:`.num_symbols`
+            :class:`~dwave.optimization.symbols.Input`
+
+        Examples:
+            This example adds two inputs and a constant to an expression and
+            checks the number of inputs.
+
+            >>> from dwave.optimization.model import Expression
+            >>> expr = Expression()
+            >>> i0, i1 = expr.input(), expr.input()
+            >>> c = expr.constant(7)
+            >>> expr.num_inputs()
+            2
+        """
+        return self._graph.num_inputs()
+
     cpdef Py_ssize_t num_nodes(self) noexcept:
         """Number of nodes in the directed acyclic graph for the model.
 
@@ -586,6 +617,18 @@ cdef class _Graph:
             2
         """
         return self.num_nodes()
+
+    def _objective_symbol(self):
+        """Return the node set as the objective on the ``._graph`` as a symbol.
+        If the objective is not currently set, return ``None``.
+        """
+
+        cdef cppArrayNode* ptr = self._graph.objective()
+        if not ptr:
+            # nullptr, so objective is not set
+            return None
+
+        return symbol_from_ptr(self, ptr)
 
     def remove_unused_symbols(self):
         """Remove unused symbols from the model.
