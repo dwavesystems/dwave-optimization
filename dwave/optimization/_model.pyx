@@ -1560,8 +1560,8 @@ cdef class ArraySymbol(Symbol):
         Examples:
             This example returns the size of an integer symbol.
             In this example, the symbol encodes a :math:`5\times4` of integers,
-            each represented by a :math`8` byte float.
-            Therefore the estimated state size is :math`5*4*8 = 160` bytes.
+            each represented by a :math:`8` byte float.
+            Therefore the estimated state size is :math:`5*4*8 = 160` bytes.
 
             >>> from dwave.optimization import Model
             >>> model = Model()
