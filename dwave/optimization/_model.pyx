@@ -740,7 +740,7 @@ cdef class Symbol:
         Note that comparing symbols across models is expensive.
 
         See Also:
-            :meth:`.maybe_equals`: an alternative for equality testing
+            :meth:`Symbol.maybe_equals`: an alternative for equality testing
             that can return false positives but is faster.
         """
         cdef Py_ssize_t maybe = self.maybe_equals(other)

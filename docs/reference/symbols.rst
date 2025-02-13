@@ -4,64 +4,40 @@
 Symbols
 =======
 
+.. currentmodule:: dwave.optimization.model
+
 Symbols are a model's decision variables, intermediate variables, constants, 
 and mathematical operations.
 
 See :ref:`Symbols <intro_optimization_symbols>` for an introduction to
 working with symbols.
 
-Base Classes
-============
-
-.. currentmodule:: dwave.optimization.model
+All symbols listed in the :ref:`Model Symbols<symbols_model_symbols>`
+section below inherit from the :class:`Symbol` class and, for most mathematical
+symbols, the :class:`ArraySymbol` class.
 
 .. _symbols_base_symbols:
 
+Symbol
+======
+
+All symbols inherit from the :class:`Symbol` class and therefore inherit its
+methods.
+
 .. autoclass:: Symbol
+    :members:
+    :member-order: bysource
 
-The following :class:`~dwave.optimization.model.Symbol` methods
-are inherited by the :class:`~dwave.optimization.model.ArraySymbol`
-class and :ref:`model symbols <symbols_model_symbols>`.
+ArraySymbol
+===========
 
-.. autosummary::
-    :toctree: generated/
-
-    ~Symbol.equals
-    ~Symbol.has_state
-    ~Symbol.id
-    ~Symbol.iter_predecessors
-    ~Symbol.iter_successors
-    ~Symbol.maybe_equals
-    ~Symbol.reset_state
-    ~Symbol.shares_memory
-    ~Symbol.state_size
-    ~Symbol.topological_index
+Most mathematical symbols inherit from the :class:`ArraySymbol` class and
+therefore inherit its methods.
 
 .. autoclass:: ArraySymbol
-
-The following :class:`~dwave.optimization.model.ArraySymbol` methods
-are inherited by the :ref:`model symbols <symbols_model_symbols>`.
-
-.. autosummary::
-    :toctree: generated/
-
-    ~ArraySymbol.all
-    ~ArraySymbol.any
-    ~ArraySymbol.copy
-    ~ArraySymbol.flatten
-    ~ArraySymbol.has_state
-    ~ArraySymbol.max
-    ~ArraySymbol.maybe_equals
-    ~ArraySymbol.min
-    ~ArraySymbol.ndim
-    ~ArraySymbol.prod
-    ~ArraySymbol.reshape
-    ~ArraySymbol.sum
-    ~ArraySymbol.shape
-    ~ArraySymbol.size
-    ~ArraySymbol.state
-    ~ArraySymbol.state_size
-    ~ArraySymbol.strides
+    :members:
+    :show-inheritance:
+    :member-order: bysource
 
 .. _symbols_model_symbols:
 
