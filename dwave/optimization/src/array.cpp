@@ -66,6 +66,11 @@ ssize_t Array::View::size() const {
     return array_ptr_->size(*state_ptr_);
 }
 
+std::pair<double, double> Array::minmax(
+            optional_cache_type<std::pair<double, double>> cache) const {
+    return {std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max()};
+}
+
 SizeInfo::SizeInfo(const Array* array_ptr, std::optional<ssize_t> min, std::optional<ssize_t> max)
         : array_ptr(array_ptr), multiplier(1), offset(0), min(min), max(max) {
     assert(array_ptr->dynamic());

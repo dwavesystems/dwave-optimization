@@ -15,6 +15,7 @@
 #pragma once
 
 #include <span>
+#include <utility>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
@@ -35,8 +36,11 @@ class WhereNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const override;
     void initialize_state(State& state) const override;
     bool integral() const override;
-    double max() const override;
-    double min() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+
     void propagate(State& state) const override;
     void revert(State& state) const override;
     using Array::shape;

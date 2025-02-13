@@ -93,6 +93,9 @@ double product_min(ssize_t n, double init, double low, double high) {
             init * high * std::pow(low, n - 1),
     });
 }
+std::pair<double, double> product_minmax(ssize_t n, double init, double low, double high) {
+    return {product_min(n, init, low, high), product_max(n, init, low, high)};
+}
 
 // BinaryOpNode ************************************************************
 
@@ -218,108 +221,59 @@ bool BinaryOpNode<BinaryOp>::integral() const {
 }
 
 template <class BinaryOp>
-double BinaryOpNode<BinaryOp>::max() const {
+std::pair<double, double> BinaryOpNode<BinaryOp>::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    // If the output of the operation is boolean, then don't bother caching the result.
     using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_same<result_type, bool>::value) {
-        return true;
+    if constexpr (std::same_as<result_type, bool>) {
+        return {false, true};
     }
 
-    // The mathematical operations require a bit more fiddling.
+    // Otherwise the min and max depend on the predecessors, so we want to cache
+
+    // First check if we've already calculated it.
+    if (cache.has_value()) {
+        if (auto it = cache->get().find(this); it != cache->get().end()) {
+            return it->second;
+        }
+    }
 
     auto lhs_ptr = operands_[0];
     auto rhs_ptr = operands_[1];
 
-    // these can result in inf. If we update propagation/initialization to handle
-    // that case we should update these as well.
-    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value) {
-        double lhs_low = lhs_ptr->min();
-        double lhs_high = lhs_ptr->max();
-        double rhs_low = rhs_ptr->min();
-        double rhs_high = rhs_ptr->max();
+    const auto& [lhs_low, lhs_high] = lhs_ptr->minmax(cache);
+    const auto& [rhs_low, rhs_high] = rhs_ptr->minmax(cache);
 
-        assert(lhs_low != 0);
-        assert(lhs_high != 0);
-        assert(rhs_low != 0);
-        assert(rhs_high != 0);
-        return std::max(
-                {lhs_low / rhs_low, lhs_low / rhs_high, lhs_high / rhs_low, lhs_high / rhs_high});
-    }
-    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
-                  std::is_same<BinaryOp, functional::min<double>>::value ||
-                  std::is_same<BinaryOp, std::plus<double>>::value) {
-        return BinaryOp()(lhs_ptr->max(), rhs_ptr->max());
-    }
-    if constexpr (std::is_same<BinaryOp, std::minus<double>>::value) {
-        return lhs_ptr->max() - rhs_ptr->min();
-    }
-    if constexpr (std::is_same<BinaryOp, functional::modulus<double>>::value) {
-        // Upper bound is the greatest absolute value in the divisor (rhs)
-        double pos_max = rhs_ptr->max();
-        double neg_max = -(rhs_ptr->min());
-        return neg_max > pos_max ? neg_max : pos_max;
-    }
-    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
-        double lhs_low = lhs_ptr->min();
-        double lhs_high = lhs_ptr->max();
-        double rhs_low = rhs_ptr->min();
-        double rhs_high = rhs_ptr->max();
-
-        return std::max(
-                {lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low, lhs_high * rhs_high});
-    }
-
-    assert(false && "not implemeted yet");
-    unreachable();
-}
-
-template <class BinaryOp>
-double BinaryOpNode<BinaryOp>::min() const {
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_same<result_type, bool>::value) {
-        return false;
-    }
-
-    // The mathematical operations require a bit more fiddling.
-
-    auto lhs_ptr = operands_[0];
-    auto rhs_ptr = operands_[1];
+    auto op = BinaryOp();
 
     // these can result in inf. If we update propagation/initialization to handle
     // that case we should update these as well.
-    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value) {
-        double lhs_low = lhs_ptr->min();
-        double lhs_high = lhs_ptr->max();
-        double rhs_low = rhs_ptr->min();
-        double rhs_high = rhs_ptr->max();
+    if constexpr (std::same_as<BinaryOp, std::divides<double>> ||
+                  std::same_as<BinaryOp, std::multiplies<double>>) {
+        // The constructor should prevent us from getting here, but just in case...
+        assert((!std::same_as<BinaryOp, std::divides<double>> || lhs_low != 0));
+        assert((!std::same_as<BinaryOp, std::divides<double>> || lhs_high != 0));
+        assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_low != 0));
+        assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_high != 0));
 
-        // TODO: How do we want to handle cases where a denominator is zero?
-        return std::min(
-                {lhs_low / rhs_low, lhs_low / rhs_high, lhs_high / rhs_low, lhs_high / rhs_high});
+        // just get all possible combinations of values
+        std::array<double, 4> combos{op(lhs_low, rhs_low), op(lhs_low, rhs_high),
+                                     op(lhs_high, rhs_low), op(lhs_high, rhs_high)};
+
+        return memoize(cache, std::make_pair(std::ranges::min(combos), std::ranges::max(combos)));
     }
-    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
-                  std::is_same<BinaryOp, functional::min<double>>::value ||
-                  std::is_same<BinaryOp, std::plus<double>>::value) {
-        return BinaryOp()(lhs_ptr->min(), rhs_ptr->min());
+    if constexpr (std::same_as<BinaryOp, functional::max<double>> ||
+                  std::same_as<BinaryOp, functional::min<double>> ||
+                  std::same_as<BinaryOp, std::plus<double>>) {
+        return memoize(cache, std::make_pair(op(lhs_low, rhs_low), op(lhs_high, rhs_high)));
     }
-    if constexpr (std::is_same<BinaryOp, std::minus<double>>::value) {
-        return lhs_ptr->min() - rhs_ptr->max();
+    if constexpr (std::same_as<BinaryOp, std::minus<double>>) {
+        return memoize(cache, std::make_pair(lhs_low - rhs_high, lhs_high - rhs_low));
     }
-    if constexpr (std::is_same<BinaryOp, functional::modulus<double>>::value) {
+    if constexpr (std::same_as<BinaryOp, functional::modulus<double>>) {
         // Lower bound is the smallest negative absolute value
-        double neg_min = rhs_ptr->min();
-        double pos_min = -(rhs_ptr->max());
-        return pos_min < neg_min ? pos_min : neg_min;
-    }
-    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
-        double lhs_low = lhs_ptr->min();
-        double lhs_high = lhs_ptr->max();
-        double rhs_low = rhs_ptr->min();
-        double rhs_high = rhs_ptr->max();
-
-        return std::min(
-                {lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low, lhs_high * rhs_high});
+        return memoize(cache, std::make_pair(-rhs_high < rhs_low ? -rhs_high : rhs_low,
+                                             -rhs_low > rhs_high ? -rhs_low : rhs_high));
     }
 
     assert(false && "not implemeted yet");
@@ -617,101 +571,58 @@ bool NaryOpNode<BinaryOp>::integral() const {
 }
 
 template <class BinaryOp>
-double NaryOpNode<BinaryOp>::max() const {
+std::pair<double, double> NaryOpNode<BinaryOp>::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    // If the output of the operation is boolean, then don't bother caching the result.
     using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_same<result_type, bool>::value) {
-        return true;
+    if constexpr (std::same_as<result_type, bool>) {
+        return {false, true};
     }
+
+    // Otherwise the min and max depend on the predecessors, so we want to cache
+
+    // First check if we've already calculated it.
+    if (cache.has_value()) {
+        if (auto it = cache->get().find(this); it != cache->get().end()) {
+            return it->second;
+        }
+    }
+
+    auto op = BinaryOp();
 
     // these can result in inf. If we update propagation/initialization to handle
     // that case we should update these as well.
-    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
-        return std::accumulate(operands_.begin(), operands_.end(), 0.0,
-                               [](double lhs, const Array* rhs) { return lhs + rhs->max(); });
-    }
-    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
-                  std::is_same<BinaryOp, functional::min<double>>::value) {
+    if constexpr (std::same_as<BinaryOp, functional::max<double>> ||
+                  std::same_as<BinaryOp, functional::min<double>> ||
+                  std::same_as<BinaryOp, std::plus<double>>) {
         assert(operands_.size() >= 1);  // checked by constructor
-        auto cmp = op();
-        double lhs = operands_[0]->max();
+
+        auto [low, high] = operands_[0]->minmax(cache);
         for (const Array* rhs_ptr : operands_ | std::views::drop(1)) {
-            lhs = cmp(lhs, rhs_ptr->max());
-        }
-        return lhs;
-    }
-    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
-        // we need to be a bit careful with our signs
-        assert(operands_.size() > 0);
-
-        double lhs_low = operands_[0]->min();
-        double lhs_high = operands_[0]->max();
-
-        for (const Array* rhs_ptr : operands_ | std::views::drop(1)) {
-            double rhs_low = rhs_ptr->min();
-            double rhs_high = rhs_ptr->max();
-
-            double tmp = std::min({lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low,
-                                   lhs_high * rhs_high});
-
-            lhs_high = std::max({lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low,
-                                 lhs_high * rhs_high});
-
-            lhs_low = tmp;
+            const auto [rhs_low, rhs_high] = rhs_ptr->minmax(cache);
+            low = op(low, rhs_low);
+            high = op(high, rhs_high);
         }
 
-        return lhs_high;
+        assert(low <= high);
+        return memoize(cache, std::make_pair(low, high));
     }
-
-    assert(false && "not implemeted yet");
-    unreachable();
-}
-
-template <class BinaryOp>
-double NaryOpNode<BinaryOp>::min() const {
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_same<result_type, bool>::value) {
-        return false;
-    }
-
-    // these can result in inf. If we update propagation/initialization to handle
-    // that case we should update these as well.
-    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
-        return std::accumulate(operands_.begin(), operands_.end(), 0.0,
-                               [](double lhs, const Array* rhs) { return lhs + rhs->min(); });
-    }
-    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
-                  std::is_same<BinaryOp, functional::min<double>>::value) {
+    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
         assert(operands_.size() >= 1);  // checked by constructor
-        auto cmp = op();
-        double lhs = operands_[0]->min();
+
+        auto [low, high] = operands_[0]->minmax(cache);
         for (const Array* rhs_ptr : operands_ | std::views::drop(1)) {
-            lhs = cmp(lhs, rhs_ptr->min());
-        }
-        return lhs;
-    }
-    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
-        // we need to be a bit careful with our signs
-        assert(operands_.size() > 0);
+            const auto [rhs_low, rhs_high] = rhs_ptr->minmax(cache);
 
-        double lhs_low = operands_[0]->min();
-        double lhs_high = operands_[0]->max();
+            std::array<double, 4> combos{op(low, rhs_low), op(low, rhs_high), op(high, rhs_low),
+                                         op(high, rhs_high)};
 
-        for (const Array* rhs_ptr : operands_ | std::views::drop(1)) {
-            double rhs_low = rhs_ptr->min();
-            double rhs_high = rhs_ptr->max();
-
-            double tmp = std::min({lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low,
-                                   lhs_high * rhs_high});
-
-            lhs_high = std::max({lhs_low * rhs_low, lhs_low * rhs_high, lhs_high * rhs_low,
-                                 lhs_high * rhs_high});
-
-            lhs_low = tmp;
+            low = std::ranges::min(combos);
+            high = std::ranges::max(combos);
         }
 
-        return lhs_low;
+        assert(low <= high);
+        return memoize(cache, std::make_pair(low, high));
     }
 
     assert(false && "not implemeted yet");
@@ -1154,49 +1065,39 @@ ssize_t PartialReduceNode<BinaryOp>::map_parent_index(const State& state,
 }
 
 template <class BinaryOp>
-double PartialReduceNode<BinaryOp>::max() const {
+std::pair<double, double> PartialReduceNode<BinaryOp>::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    // If the output of the operation is boolean, then don't bother caching the result.
     using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+    if constexpr (std::same_as<result_type, bool>) {
+        return {false, true};
+    }
 
-    if constexpr (std::is_same<result_type, bool>::value) {
-        return true;
+    // Otherwise the min and max depend on the predecessors, so we want to cache
+
+    // First check if we've already calculated it.
+    if (cache.has_value()) {
+        if (auto it = cache->get().find(this); it != cache->get().end()) {
+            return it->second;
+        }
     }
 
     assert(!this->dynamic());  // checked by constructor
+
+    auto [low, high] = array_ptr_->minmax(cache);
 
     // Get the size of the axis we're reducing on
     const ssize_t size = array_ptr_->shape()[axes_[0]];
 
     if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
-        return init.value_or(0) + size * array_ptr_->max();
+        return memoize(cache, std::make_pair(init.value_or(0) + size * low,
+                                             init.value_or(0) + size * high));
     }
     if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
-        return product_max(size, init.value_or(1), array_ptr_->min(), array_ptr_->max());
-    }
-    assert(false && "not implemented yet");
-    unreachable();
-}
-
-template <class BinaryOp>
-double PartialReduceNode<BinaryOp>::min() const {
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_same<result_type, bool>::value) {
-        return false;
+        return memoize(cache, product_minmax(size, init.value_or(1), low, high));
     }
 
-    assert(!this->dynamic());  // checked by constructor
-
-    // Get the size of the axis we're reducing on
-    const ssize_t size = array_ptr_->shape()[axes_[0]];
-
-    if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
-        return init.value_or(0) + size * array_ptr_->min();
-    }
-    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
-        return product_min(size, init.value_or(1), array_ptr_->min(), array_ptr_->max());
-    }
-
-    assert(false && "not implemented yet");
+    assert(false && "not implemeted yet");
     unreachable();
 }
 
@@ -1422,43 +1323,53 @@ bool ReduceNode<BinaryOp>::integral() const {
 }
 
 template <class BinaryOp>
-double ReduceNode<BinaryOp>::max() const {
+std::pair<double, double> ReduceNode<BinaryOp>::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    // If the output of the operation is boolean, then don't bother caching the result.
     using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_same<result_type, bool>::value) {
-        return true;
+    if constexpr (std::same_as<result_type, bool>) {
+        return {false, true};
     }
+
+    // Otherwise the min and max depend on the predecessors, so we want to cache
+
+    // First check if we've already calculated it.
+    if (cache.has_value()) {
+        if (auto it = cache->get().find(this); it != cache->get().end()) {
+            return it->second;
+        }
+    }
+
+    auto op = BinaryOp();
+
+    auto [low, high] = array_ptr_->minmax(cache);
 
     // These can results in inf. If we fix that in initialization/propagation we
     // should also fix it here.
-    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value) {
-        if (init.has_value()) return std::max(init.value(), array_ptr_->max());
-        return array_ptr_->max();
+    if constexpr (std::same_as<BinaryOp, functional::max<double>> ||
+                  std::same_as<BinaryOp, functional::min<double>>) {
+        if (init.has_value()) {
+            low = op(low, init.value());
+            high = op(high, init.value());
+        }
+        return memoize(cache, std::make_pair(low, high));
     }
-    if constexpr (std::is_same<BinaryOp, functional::min<double>>::value) {
-        if (init.has_value()) return std::min(init.value(), array_ptr_->max());
-        return array_ptr_->max();
-    }
-    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
+    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
         // the dynamic case. For now let's just fall back to Array's default
         // implementation because this gets even more complicated
-        if (array_ptr_->dynamic()) return Array::max();
+        if (array_ptr_->dynamic()) {
+            return memoize(cache, Array::minmax());
+        }
 
-        // otherwise we can find some bounds.
-        return product_max(array_ptr_->size(), init.value_or(1), array_ptr_->min(),
-                           array_ptr_->max());
+        return memoize(cache, product_minmax(array_ptr_->size(), init.value_or(1), low, high));
     }
-    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
-        const double high = array_ptr_->max();
+    if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
         const double init = this->init.value_or(0);
 
-        // if high is 0, then it doesn't matter how many times we add it
-        if (high == 0) return init;
-
-        // if the array has a fixed size, then just multiply the largest value
+        // if the array has a finite fixed size, then just multuply the largest value
         // by that size
         if (const ssize_t size = array_ptr_->size(); size >= 0) {
-            return init + size * high;
+            return memoize(cache, std::make_pair(init + size * low, init + size * high));
         }
 
         // our predecessor array is dynamic. So there are a few more cases
@@ -1475,67 +1386,16 @@ double ReduceNode<BinaryOp>::max() const {
 
             // if the array is arbitrarily large, then just fall back to the
             // default max.
-            if (!sizeinfo.max.has_value()) return Array::max();
-
-            return init + sizeinfo.max.value() * high;
+            if (!sizeinfo.max.has_value()) {
+                high = Array::minmax().second;
+            } else {
+                high = init + sizeinfo.max.value() * high;
+            }
         } else {
             // if high is negative, then we're interested in the minimum size
             // of the array
-            return init + sizeinfo.min.value_or(0) * high;
+            high = init + sizeinfo.min.value_or(0) * high;
         }
-    }
-
-    assert(false && "not implemeted yet");
-    unreachable();
-}
-
-template <class BinaryOp>
-double ReduceNode<BinaryOp>::min() const {
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_same<result_type, bool>::value) {
-        return false;
-    }
-
-    // These can results in inf. If we fix that in initialization/propagation we
-    // should also fix it here.
-    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value) {
-        if (init.has_value()) return std::max(init.value(), array_ptr_->min());
-        return array_ptr_->min();
-    }
-    if constexpr (std::is_same<BinaryOp, functional::min<double>>::value) {
-        if (init.has_value()) return std::min(init.value(), array_ptr_->min());
-        return array_ptr_->min();
-    }
-    if constexpr (std::is_same<BinaryOp, std::multiplies<double>>::value) {
-        // the dynamic case. For now let's just fall back to Array's default
-        // implementation because this gets even more complicated
-        if (array_ptr_->dynamic()) return Array::min();
-
-        // otherwise we can find some bounds.
-        return product_min(array_ptr_->size(), init.value_or(1), array_ptr_->min(),
-                           array_ptr_->max());
-    }
-    if constexpr (std::is_same<BinaryOp, std::plus<double>>::value) {
-        const double low = array_ptr_->min();
-        const double init = this->init.value_or(0);
-
-        // if low is 0, then it doesn't matter how many times we add it
-        if (low == 0) return init;
-
-        // if the array has a fixed size, then just multiply the smallest value
-        // by that size
-        if (const ssize_t size = array_ptr_->size(); size >= 0) {
-            return init + size * low;
-        }
-
-        // our predecessor array is dynamic. So there are a few more cases
-        // we need to check
-
-        // 100 is a magic number. It's how far back in the predecessor
-        // chain to check to get good bounds on the size for the given array.
-        // This will exit early if it converges.
-        const SizeInfo sizeinfo = array_ptr_->sizeinfo().substitute(100);
 
         if (low < 0) {
             // if low is negative, then we're interested in the maximum size
@@ -1543,14 +1403,18 @@ double ReduceNode<BinaryOp>::min() const {
 
             // if the array is arbitrarily large, then just fall back to the
             // default min.
-            if (!sizeinfo.max.has_value()) return Array::min();
-
-            return init + sizeinfo.max.value() * low;
+            if (!sizeinfo.max.has_value()) {
+                low = Array::minmax().first;
+            } else {
+                low = init + sizeinfo.max.value() * low;
+            }
         } else {
             // if low is positive, then we're interested in the minimum size
             // of the array
-            return init + sizeinfo.min.value_or(0) * low;
+            low = init + sizeinfo.min.value_or(0) * low;
         }
+
+        return memoize(cache, std::make_pair(low, high));
     }
 
     assert(false && "not implemeted yet");
@@ -1836,114 +1700,58 @@ bool UnaryOpNode<UnaryOp>::integral() const {
     return Array::integral();
 }
 
-template <>
-double UnaryOpNode<functional::abs<double>>::max() const {
-    const double max = array_ptr_->max();
-    const double min = array_ptr_->min();
-    assert(min <= max && "min > max");
-
-    if (min >= 0 && max >= 0) {
-        return max;
-    } else if (min >= 0) {
-        assert(false && "min > max");
-        unreachable();
-    } else if (max >= 0) {
-        return std::max<double>(max, -min);
-    } else {
-        return -min;
-    }
-}
-template <>
-double UnaryOpNode<std::negate<double>>::max() const {
-    return -(array_ptr_->min());
-}
-
-template <>
-double UnaryOpNode<functional::rint<double>>::max() const {
-    const double max = array_ptr_->max();
-    return std::rint(max);
-}
-
-template <>
-double UnaryOpNode<functional::square<double>>::max() const {
-    const double max = array_ptr_->max();
-    if (std::abs(max) >= std::sqrt(Array::max())) {
-        // We could consider raising an error here but for now let's be
-        // permissive.
-        return Array::max();
-    }
-    return max * max;
-}
-
-template <>
-double UnaryOpNode<functional::square_root<double>>::max() const {
-    assert(array_ptr_->max() >= 0);
-    return std::sqrt(array_ptr_->max());
-}
-
 template <class UnaryOp>
-double UnaryOpNode<UnaryOp>::max() const {
+std::pair<double, double> UnaryOpNode<UnaryOp>::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    // If the output of the operation is boolean, then don't bother caching the result.
     using result_type = typename std::invoke_result<UnaryOp, double&>::type;
-
-    if constexpr (std::is_same<result_type, bool>::value) {
-        return true;
+    if constexpr (std::same_as<result_type, bool>) {
+        return {false, true};
     }
 
-    return Array::max();
-}
+    // Otherwise the min and max depend on the predecessor, so we want to cache
 
-template <>
-double UnaryOpNode<functional::abs<double>>::min() const {
-    const double max = array_ptr_->max();
-    const double min = array_ptr_->min();
-    assert(min <= max && "min > max");
-
-    if (min >= 0 && max >= 0) {
-        return min;
-    } else if (min >= 0) {
-        assert(false && "min > max");
-        unreachable();
-    } else if (max >= 0) {
-        return 0;
-    } else {
-        return -max;
-    }
-}
-template <>
-double UnaryOpNode<std::negate<double>>::min() const {
-    return -(array_ptr_->max());
-}
-
-template <>
-double UnaryOpNode<functional::rint<double>>::min() const {
-    const double min = array_ptr_->min();
-    return std::rint(min);
-}
-
-template <>
-double UnaryOpNode<functional::square<double>>::min() const {
-    const double min = array_ptr_->min();
-    if (std::abs(min) >= std::sqrt(Array::max())) {
-        // We could consider raising an error here but for now let's be
-        // permissive.
-        return Array::max();
-    }
-    return min * min;
-}
-template <>
-double UnaryOpNode<functional::square_root<double>>::min() const {
-    assert(array_ptr_->min() >= 0);
-    return std::sqrt(array_ptr_->min());
-}
-template <class UnaryOp>
-double UnaryOpNode<UnaryOp>::min() const {
-    using result_type = typename std::invoke_result<UnaryOp, double&>::type;
-
-    if constexpr (std::is_same<result_type, bool>::value) {
-        return false;
+    // First check if we've already calculated it.
+    if (cache.has_value()) {
+        if (auto it = cache->get().find(this); it != cache->get().end()) {
+            return it->second;
+        }
     }
 
-    return Array::min();
+    auto [low, high] = array_ptr_->minmax(cache);
+    assert(low <= high);
+
+    if constexpr (std::same_as<UnaryOp, functional::abs<double>>) {
+        if (low >= 0 && high >= 0) {
+            return memoize(cache, std::make_pair(low, high));
+        } else if (low >= 0) {
+            assert(false && "min > max");
+            unreachable();
+        } else if (high >= 0) {
+            return memoize(cache, std::pair<double, double>(0.0, std::max<double>(-low, high)));
+        } else {
+            return memoize(cache, std::make_pair(-high, -low));
+        }
+    }
+    if constexpr (std::same_as<UnaryOp, functional::rint<double>>) {
+        return memoize(cache, std::make_pair(std::rint(low), std::rint(high)));
+    }
+    if constexpr (std::same_as<UnaryOp, functional::square<double>>) {
+        const auto [_, highest] = Array::minmax();
+        return memoize(cache, std::make_pair(
+            std::min({low * low, high * high, highest}),
+            std::min(std::max({low * low, high * high}), highest)));  // prevent inf
+    }
+    if constexpr (std::same_as<UnaryOp, functional::square_root<double>>) {
+        assert(low >= 0);  // checked by constructor
+        return memoize(cache, std::make_pair(std::sqrt(low), std::sqrt(high)));
+    }
+    if constexpr (std::same_as<UnaryOp, std::negate<double>>) {
+        return memoize(cache, std::make_pair(-high, -low));
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
 }
 
 template <class UnaryOp>

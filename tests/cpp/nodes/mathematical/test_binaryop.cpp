@@ -383,6 +383,17 @@ TEST_CASE("BinaryOpNode - MultiplyNode") {
             CHECK(y_ptr->max() == 15);
             CHECK(y_ptr->min() == -15);
             CHECK(y_ptr->integral());
+
+            // check that the cache is populated with minmax
+            Array::cache_type<std::pair<double, double>> cache;
+            y_ptr->minmax(cache);
+            // the output of a node depends on the inputs, so it shows
+            // up in cache
+            CHECK(cache.contains(y_ptr));
+            // mutating the cache should also mutate the output
+            cache[y_ptr].first = -1000;
+            CHECK(y_ptr->minmax(cache).first == -1000);
+            CHECK(y_ptr->minmax().first == -15);  // ignores the cache
         }
     }
 

@@ -689,6 +689,12 @@ class Array {
     /// A std::random_access_iterator over the values in the array.
     using const_iterator = ArrayIteratorImpl_<true>;
 
+    template<class T>
+    using cache_type = std::unordered_map<const Array*, T>;
+
+    template<class T>
+    using optional_cache_type = std::optional<std::reference_wrapper<cache_type<T>>>;
+
     /// Container-like access to the Array's values as a flat array.
     ///
     /// Satisfies the requirements for std::ranges::random_access_range and
@@ -825,10 +831,14 @@ class Array {
     virtual SizeInfo sizeinfo() const { return dynamic() ? SizeInfo(this) : SizeInfo(size()); }
 
     /// The minimum value that elements in the array may take.
-    virtual double min() const { return std::numeric_limits<double>::lowest(); }
+    double min() const { return minmax().first; }
 
     /// The maximum value that elements in the array may take.
-    virtual double max() const { return std::numeric_limits<double>::max(); }
+    double max() const { return minmax().second; }
+
+    /// The smallest and largest values that elements in the array may take.
+    virtual std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const;
 
     /// Whether the values in the array can be interpreted as integers.
     virtual bool integral() const { return false; }
@@ -878,6 +888,35 @@ class Array {
         }
 
         return true;
+    }
+
+    // Return a cached value if available, and otherwise return the value returned
+    // by ``func()``.
+    // If the ``cache.has_value()`` returns ``false``, then the cache is ignored
+    // entirely.
+    template <class T, class Func>
+    requires (std::same_as<std::invoke_result_t<Func>, T>)
+    T memoize(optional_cache_type<T> cache, Func&& func) const {
+        // If there is no cache, then just evaluate the function
+        if (!cache.has_value()) return func();
+
+        cache_type<T>& cache_ = cache->get();
+
+        // Otherwise, check if we've already cached a value and return it if so
+        if (auto it = cache_.find(this); it != cache_.end()) {
+            return it->second;
+        }
+
+        // Finally, if we have a cache but we haven't already cached anything, call
+        // the function and cache the output.
+        auto [it, _] = cache_.emplace(this, func());
+        return it->second;
+    }
+    template <class T>
+    T memoize(optional_cache_type<T> cache, T value) const {
+        if (!cache.has_value()) return value;
+        auto [it, _] = cache->get().emplace(this, value);
+        return it->second;
     }
 
     // Determine the size by the shape. For a node with a fixed size, it is simply

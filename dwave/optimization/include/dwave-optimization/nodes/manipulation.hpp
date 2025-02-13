@@ -36,8 +36,11 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const override;
     void initialize_state(State& state) const override;
     bool integral() const override;
-    double max() const override;
-    double min() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+
     void propagate(State& state) const override;
     void revert(State& state) const override;
 
@@ -69,11 +72,9 @@ class CopyNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::max()
-    double max() const override;
-
-    /// @copydoc Array::min()
-    double min() const override;
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -138,11 +139,9 @@ class PutNode : public ArrayOutputMixin<ArrayNode> {
     /// Return the number of indices currently "covering" each element in the array.
     std::span<const ssize_t> mask(const State& state) const;
 
-    /// @copydoc Array::max()
-    double max() const override;
-
-    /// @copydoc Array::min()
-    double min() const override;
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -186,11 +185,9 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::max()
-    double max() const override;
-
-    /// @copydoc Array::min()
-    double min() const override;
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     /// @copydoc Node::revert()
     void revert(State& state) const override;
@@ -216,9 +213,9 @@ class SizeNode : public ScalarOutputMixin<ArrayNode> {
     // SizeNode's value is always a non-negative integer.
     bool integral() const override { return true; }
 
-    double max() const override;
-
-    double min() const override;
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     void propagate(State& state) const override;
 

@@ -71,8 +71,10 @@ class AdvancedIndexingNode : public ArrayNode {
 
     // Information about the values are all inherited from the array
     bool integral() const override { return array_ptr_->integral(); }
-    double min() const override { return array_ptr_->min(); }
-    double max() const override { return array_ptr_->max(); }
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     // Node overloads
     void commit(State& state) const override;
@@ -176,8 +178,10 @@ class BasicIndexingNode : public ArrayNode {
 
     // Information about the values are all inherited from the array
     bool integral() const override { return array_ptr_->integral(); }
-    double min() const override { return array_ptr_->min(); }
-    double max() const override { return array_ptr_->max(); }
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     double const* buff(const State& state) const override;
 

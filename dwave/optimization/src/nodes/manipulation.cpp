@@ -135,14 +135,15 @@ std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ss
     return shape;
 }
 
-double ConcatenateNode::max() const {
-    return std::ranges::max(
-              array_ptrs_ | std::views::transform([](ArrayNode* ptr) { return ptr->max(); }));
-}
-
-double ConcatenateNode::min() const {
-    return std::ranges::min(
-              array_ptrs_ | std::views::transform([](ArrayNode* ptr) { return ptr->min(); }));
+std::pair<double, double> ConcatenateNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() {
+        return std::make_pair(
+                std::ranges::min(array_ptrs_ |
+                                 std::views::transform([](ArrayNode* ptr) { return ptr->min(); })),
+                std::ranges::max(array_ptrs_ |
+                                 std::views::transform([](ArrayNode* ptr) { return ptr->max(); })));
+    });
 }
 
 void ConcatenateNode::propagate(State& state) const {
@@ -186,9 +187,10 @@ void CopyNode::initialize_state(State& state) const {
     emplace_data_ptr<ArrayNodeStateData>(state, array_ptr_->view(state));
 }
 
-double CopyNode::max() const { return array_ptr_->max(); }
-
-double CopyNode::min() const { return array_ptr_->min(); }
+std::pair<double, double> CopyNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() { return array_ptr_->minmax(cache); });
+}
 
 void CopyNode::propagate(State& state) const {
     data_ptr<ArrayNodeStateData>(state)->update(array_ptr_->diff(state));
@@ -406,9 +408,14 @@ std::span<const ssize_t> PutNode::mask(const State& state) const {
     return data_ptr<PutNodeState>(state)->mask();
 }
 
-double PutNode::max() const { return std::max<double>(array_ptr_->max(), values_ptr_->max()); }
-
-double PutNode::min() const { return std::min<double>(array_ptr_->min(), values_ptr_->min()); }
+std::pair<double, double> PutNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() {
+        auto [alow, ahigh] = array_ptr_->minmax(cache);
+        auto [vlow, vhigh] = values_ptr_->minmax(cache);
+        return std::make_pair(std::min<double>(alow, vlow), std::max<double>(ahigh, vhigh));
+    });
+}
 
 void PutNode::propagate(State& state) const {
     auto ptr = data_ptr<PutNodeState>(state);
@@ -563,9 +570,10 @@ std::span<const Update> ReshapeNode::diff(const State& state) const {
 
 bool ReshapeNode::integral() const { return array_ptr_->integral(); }
 
-double ReshapeNode::max() const { return array_ptr_->max(); }
-
-double ReshapeNode::min() const { return array_ptr_->min(); }
+std::pair<double, double> ReshapeNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() { return array_ptr_->minmax(cache); });
+}
 
 void ReshapeNode::revert(State& state) const {}  // stateless node
 
@@ -591,22 +599,17 @@ void SizeNode::initialize_state(State& state) const {
     emplace_data_ptr<SizeNodeData>(state, array_ptr_->size(state));
 }
 
-double SizeNode::max() const {
-    // exactly the size of fixed-length predecessors
-    if (!array_ptr_->dynamic()) return array_ptr_->size();
+std::pair<double, double> SizeNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() {
+        const ssize_t size = array_ptr_->size();
+        if (size >= 0) return std::pair<double, double>(size, size);
 
-    // Ask the predecessor for its size, though in some cases it doesn't know
-    // so fall back on max of ssize_t
-    return array_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max());
-}
+        double low = array_ptr_->sizeinfo().min.value_or(0);
+        double high = array_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max());
 
-double SizeNode::min() const {
-    // exactly the size of fixed-length predecessors
-    if (!array_ptr_->dynamic()) return array_ptr_->size();
-
-    // Ask the predecessor for its size, though in some cases it doesn't know
-    // so fall back on 0
-    return array_ptr_->sizeinfo().min.value_or(0);
+        return std::make_pair(low, high);
+    });
 }
 
 void SizeNode::propagate(State& state) const {

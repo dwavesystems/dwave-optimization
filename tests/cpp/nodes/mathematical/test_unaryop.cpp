@@ -231,12 +231,22 @@ TEST_CASE("UnaryOpNode - AbsoluteNode") {
         auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -3, 2);
         auto abs_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
 
-        THEN("It has the min/max we expect") {
+        THEN("It has the min/max/integrality we expect") {
             CHECK(abs_ptr->min() == 0);
             CHECK(abs_ptr->max() == 3);
-        }
+            CHECK(abs_ptr->integral());
 
-        THEN("abs(i) is integral") { CHECK(abs_ptr->integral()); }
+            // check that the cache is populated with minmax
+            Array::cache_type<std::pair<double, double>> cache;
+            abs_ptr->minmax(cache);
+            // the output of a node depends on the inputs, so it shows
+            // up in cache
+            CHECK(cache.contains(abs_ptr));
+            // mutating the cache should also mutate the output
+            cache[abs_ptr].first = -1000;
+            CHECK(abs_ptr->minmax(cache).first == -1000);
+            CHECK(abs_ptr->minmax().first == 0);  // ignores the cache
+        }
     }
 
     GIVEN("An integer variable with domain [-2, 4]") {

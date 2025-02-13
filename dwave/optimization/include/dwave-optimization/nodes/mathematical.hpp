@@ -19,6 +19,7 @@
 #include <cmath>
 #include <functional>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
@@ -108,8 +109,10 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
     bool integral() const override;
-    double max() const override;
-    double min() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     using ArrayOutputMixin::shape;
     std::span<const ssize_t> shape(const State& state) const override;
@@ -176,8 +179,10 @@ class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
     bool integral() const override;
-    double max() const override;
-    double min() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     void commit(State& state) const override;
     void revert(State& state) const override;
@@ -229,8 +234,10 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
     void initialize_state(State& state) const override;
 
     bool integral() const override;
-    double max() const override;
-    double min() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     // The predecessor of the reduction, as an Array*.
     std::span<Array* const> operands() {
@@ -295,8 +302,10 @@ class ReduceNode : public ScalarOutputMixin<ArrayNode> {
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
     bool integral() const override;
-    double max() const override;
-    double min() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     void commit(State& state) const override;
     void revert(State& state) const override;
@@ -344,8 +353,11 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
     bool integral() const override;
-    double max() const override;
-    double min() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+
     using ArrayOutputMixin::shape;
     std::span<const ssize_t> shape(const State& state) const override;
     using ArrayOutputMixin::size;

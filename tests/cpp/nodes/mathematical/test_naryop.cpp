@@ -202,6 +202,17 @@ TEST_CASE("NaryOpNode - NaryMaximumNode") {
             CHECK(x_ptr->max() == 5);
             CHECK(x_ptr->min() == 2);
             CHECK(x_ptr->integral());
+
+            // check that the cache is populated with minmax
+            Array::cache_type<std::pair<double, double>> cache;
+            x_ptr->minmax(cache);
+            // the output of a node depends on the inputs, so it shows
+            // up in cache
+            CHECK(cache.contains(x_ptr));
+            // mutating the cache should also mutate the output
+            cache[x_ptr].first = -1000;
+            CHECK(x_ptr->minmax(cache).first == -1000);
+            CHECK(x_ptr->minmax().first == 2);  // ignores the cache
         }
     }
 }
