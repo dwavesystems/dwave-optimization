@@ -895,6 +895,7 @@ class Array {
     // If the ``cache.has_value()`` returns ``false``, then the cache is ignored
     // entirely.
     template <class T, class Func>
+    requires (std::same_as<std::invoke_result_t<Func>, T>)
     T memoize(optional_cache_type<T> cache, Func&& func) const {
         // If there is no cache, then just evaluate the function
         if (!cache.has_value()) return func();
