@@ -15,6 +15,7 @@ tests_all = executable(
         'nodes/mathematical/test_unaryop.cpp',
         'nodes/test_collections.cpp',
         'nodes/test_constants.cpp',
+        'nodes/test_creation.cpp',
         'nodes/test_flow.cpp',
         'nodes/test_manipulation.cpp',
         'nodes/test_numbers.cpp',

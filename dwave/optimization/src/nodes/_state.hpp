@@ -33,7 +33,7 @@ namespace dwave::optimization {
 class ArrayStateData {
  public:
     explicit ArrayStateData(std::vector<double>&& values) noexcept
-            : buffer(std::move(values)), previous_size_(buffer.size()) {}
+            : buffer(std::move(values)), size_(buffer.size()), previous_size_(buffer.size()) {}
 
     template <std::ranges::range Range>
     explicit ArrayStateData(Range&& values) noexcept
@@ -76,6 +76,8 @@ class ArrayStateData {
             }
         }
 
+        size_ = buffer.size();
+
         return !updates.empty();
     }
 
@@ -85,6 +87,7 @@ class ArrayStateData {
     void commit() noexcept {
         updates.clear();
         previous_size_ = buffer.size();
+        assert(size_ >= 0 && static_cast<std::size_t>(size_) == buffer.size());
     }
 
     std::span<const Update> diff() const noexcept { return updates; }
@@ -94,6 +97,8 @@ class ArrayStateData {
     bool emplace_back(double value) {
         updates.emplace_back(Update::placement(buffer.size(), value));
         buffer.emplace_back(value);
+        size_ += 1;
+        assert(size_ >= 0 && static_cast<std::size_t>(size_) == buffer.size());
         return true;
     }
 
@@ -125,6 +130,8 @@ class ArrayStateData {
         assert(buffer.size() >= 1);
         updates.emplace_back(Update::removal(buffer.size() - 1, buffer.back()));
         buffer.pop_back();
+        size_ -= 1;
+        assert(size_ >= 0 && static_cast<std::size_t>(size_) == buffer.size());
         return true;
     }
 
@@ -138,6 +145,7 @@ class ArrayStateData {
             buffer[index] = old;
         }
         updates.clear();
+        size_ = buffer.size();
     }
 
     // Set the value at index, tracking the change in the diff.
@@ -153,8 +161,14 @@ class ArrayStateData {
         return true;
     }
 
+    const ssize_t& size() const {
+        assert(size_ >= 0 && static_cast<std::size_t>(size_) == buffer.size());
+        return size_;
+    }
+
     ssize_t size_diff() const noexcept {
-        return static_cast<ssize_t>(buffer.size()) - previous_size_;
+        assert(size_ >= 0 && static_cast<std::size_t>(size_) == buffer.size());
+        return size_ - previous_size_;
     }
 
     // Update the state according to the given updates. Includes resizing.
@@ -178,6 +192,8 @@ class ArrayStateData {
             }
         }
 
+        size_ = buffer.size();
+
         return !this->updates.empty();
     }
 
@@ -186,9 +202,11 @@ class ArrayStateData {
     std::vector<Update> updates;
 
  private:
-    // We use size_t to be consistent with the size of the buffer etc, but we
-    // need to be a bit careful with subtraction etc
-    std::size_t previous_size_ = 0;
+    // We need to be able to calculate a size diff, and to have a referencable
+    // size. So we keep an addition source of truth for the size and we assert
+    // it absolutely everywhere.
+    ssize_t size_;
+    ssize_t previous_size_;
 };
 
 
