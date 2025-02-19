@@ -23,7 +23,6 @@ import numpy as np
 
 import dwave.optimization
 import dwave.optimization.symbols
-from dwave.optimization.testing import symbol_testing_utils
 from dwave.optimization import (
     Model,
     logical,
@@ -37,6 +36,8 @@ from dwave.optimization import (
     sqrt,
     stack,
 )
+
+from .utils import symbol_testing_utils
 
 
 class TestAbsolute(symbol_testing_utils.UnaryOpTests):
