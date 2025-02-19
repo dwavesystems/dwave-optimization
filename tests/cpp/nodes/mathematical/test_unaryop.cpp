@@ -28,9 +28,9 @@ using Catch::Matchers::RangeEquals;
 namespace dwave::optimization {
 
 // NOTE: square_root should also be included but the templated tests need to be updated first.
-TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::logical<double>,
-                   functional::rint<double>, functional::square<double>, std::negate<double>,
-                   std::logical_not<double>) {
+TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::expit<double>,
+                   functional::logical<double>, functional::rint<double>, functional::square<double>,
+                   std::negate<double>, std::logical_not<double>) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -259,6 +259,49 @@ TEST_CASE("UnaryOpNode - AbsoluteNode") {
         }
 
         THEN("abs(i) is integral") { CHECK(abs_ptr->integral()); }
+    }
+}
+
+TEST_CASE("UnaryOpNode - ExpitNode") {
+    auto graph = Graph();
+    GIVEN("An arbitrary number") {
+        double c = 3.0;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        auto expit_ptr = graph.emplace_node<ExpitNode>(c_ptr);
+        auto state = graph.initialize_state();
+        CHECK(expit_ptr->min() == 1.0 / (1.0 + std::exp(-c)));
+        CHECK(expit_ptr->max() == 1.0 / (1.0 + std::exp(-c)));
+    }
+
+    GIVEN("A negative number") {
+        double c = -4.0;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        auto expit_ptr = graph.emplace_node<ExpitNode>(c_ptr);
+        auto state = graph.initialize_state();
+        CHECK(expit_ptr->min() == 1.0 / (1.0 + std::exp(-c)));
+        CHECK(expit_ptr->max() == 1.0 / (1.0 + std::exp(-c)));
+    }
+
+    GIVEN("A constant 1d array of doubles") {
+        auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{-6.0, -0.3, 0.0, 1.2, 5.6});
+        auto expit_ptr = graph.emplace_node<ExpitNode>(c_ptr);
+
+        THEN("The min/max are expected") {
+            THEN("expit(x) is not integral") { CHECK_FALSE(expit_ptr->integral()); }
+            CHECK(expit_ptr->min() == 1.0 / (1.0 + std::exp(-(-6.0))));
+            CHECK(expit_ptr->max() == 1.0 / (1.0 + std::exp(-5.6)));
+        }
+    }
+
+    GIVEN("An integer with max domain") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
+        auto expit_ptr = graph.emplace_node<ExpitNode>(i_ptr);
+        graph.emplace_node<ArrayValidationNode>(expit_ptr);
+
+        THEN("The min/max are expected") {
+            CHECK(expit_ptr->min() == 0.5);
+            CHECK(expit_ptr->max() == 1);
+        }
     }
 }
 
