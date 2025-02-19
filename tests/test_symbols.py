@@ -22,11 +22,13 @@ import unittest
 import warnings
 
 import numpy as np
+import scipy.special as sp
 
 import dwave.optimization
 import dwave.optimization.symbols
 from dwave.optimization import (
     Model,
+    expit,
     logical,
     logical_and,
     logical_or,
@@ -1275,6 +1277,33 @@ class TestDivide(utils.SymbolTests):
 
         with self.assertRaises(TypeError):
             a // b
+
+
+class TestExpit(utils.SymbolTests):
+    rng = np.random.default_rng(1)
+
+    def generate_symbols(self):
+        model = Model()
+        a = model.constant(1.3)
+        op_a = expit(a)
+        model.lock()
+        yield op_a
+
+    def test_simple_inputs(self):
+        model = Model()
+        empty = expit(model.constant(0))
+        model.lock()
+        model.states.resize(1)
+        self.assertEqual(empty.state(), sp.expit(0))  # confirm consistency with SciPy
+
+        simple_inputs = (self.rng.random(size=(100)) * 2 - 1) * 20
+        for si in simple_inputs:
+            model = Model()
+            expit_node = expit(model.constant(si))
+            model.lock()
+            model.states.resize(1)
+
+            self.assertEqual(expit_node.state(), sp.expit(si))  # confirm consistency with SciPy
 
 
 class TestIntegerVariable(utils.SymbolTests):
