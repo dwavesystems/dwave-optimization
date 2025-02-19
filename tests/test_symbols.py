@@ -37,7 +37,13 @@ from dwave.optimization import (
     stack,
 )
 
-from .utils import symbol_testing_utils
+# Try to import utils normally. If it fails, assume that we are running the
+# tests from the inside the `tests/` directory to avoid importing
+# dwave.optimization locally.
+try:
+    from .utils import symbol_testing_utils
+except ImportError:
+    from utils import symbol_testing_utils
 
 
 class TestAbsolute(symbol_testing_utils.UnaryOpTests):
