@@ -22,7 +22,6 @@ import unittest
 import warnings
 
 import numpy as np
-import scipy.special as sp
 
 import dwave.optimization
 import dwave.optimization.symbols
@@ -1294,16 +1293,17 @@ class TestExpit(utils.SymbolTests):
         empty = expit(model.constant(0))
         model.lock()
         model.states.resize(1)
-        self.assertEqual(empty.state(), sp.expit(0))  # confirm consistency with SciPy
+        self.assertEqual(empty.state(), 0.5)  # confirm consistency with SciPy expit
 
-        simple_inputs = (self.rng.random(size=(100)) * 2 - 1) * 20
-        for si in simple_inputs:
+        simple_inputs = [-4.233307123062264, 10.342474115374873, -5.365114707829095, 0.5642821364057298]
+        scipy_expit_output = [0.014296975254548053, 0.9999677665669093, 0.004655151939447702, 0.6374427639097291]
+        for i, si in enumerate(simple_inputs):
             model = Model()
             expit_node = expit(model.constant(si))
             model.lock()
             model.states.resize(1)
 
-            self.assertEqual(expit_node.state(), sp.expit(si))  # confirm consistency with SciPy
+            self.assertEqual(expit_node.state(), scipy_expit_output[i])  # confirm consistency with SciPy expit
 
 
 class TestIntegerVariable(utils.SymbolTests):
