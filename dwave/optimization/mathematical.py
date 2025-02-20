@@ -20,6 +20,7 @@ from dwave.optimization._model import ArraySymbol
 from dwave.optimization.symbols import (
     Add,
     And,
+    ARange,
     Concatenate,
     Divide,
     Expit,
@@ -44,6 +45,7 @@ from dwave.optimization.symbols import (
 
 __all__ = [
     "add",
+    "arange",
     "concatenate",
     "divide",
     "expit",
@@ -117,6 +119,38 @@ def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add,
         [10. 10.]
     """
     raise RuntimeError("implemented by the op() decorator")
+
+
+def arange(start: typing.Union[int, ArraySymbol, None] = None,
+           stop: typing.Union[int, ArraySymbol, None] = None,
+           step: typing.Union[int, ArraySymbol, None] = None,
+           ) -> ArraySymbol:
+    """Return an array symbol with evenly spaced values within a given interval.
+
+    Args:
+        start: Start of the interval. Unless only one argument is provided in
+            which it is interpreted as the ``stop``.
+        stop: End of the interval.
+        step: Spacing between values.
+
+    See Also:
+        :class:`~dwave.optimization.ARange`: equivalent symbol.
+
+    .. versionadded:: 0.5.2
+    """
+
+    if stop is None and step is None:
+        # then start is actually stop
+        start, stop = None, start
+
+    if start is None:
+        start = 0
+    if stop is None:
+        raise ValueError("stop cannot be None")
+    if step is None:
+        step = 1
+
+    return ARange(start, stop, step)
 
 
 def concatenate(array_likes: typing.Union[collections.abc.Iterable, ArraySymbol],

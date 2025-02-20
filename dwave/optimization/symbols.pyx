@@ -51,6 +51,7 @@ from dwave.optimization.libcpp.nodes cimport (
     AndNode as cppAndNode,
     AnyNode as cppAnyNode,
     AdvancedIndexingNode as cppAdvancedIndexingNode,
+    ARangeNode as cppARangeNode,
     ArrayValidationNode as cppArrayValidationNode,
     BasicIndexingNode as cppBasicIndexingNode,
     BinaryNode as cppBinaryNode,
@@ -109,6 +110,7 @@ __all__ = [
     "And",
     "Any",
     "AdvancedIndexing",
+    "ARange",
     "BasicIndexing",
     "BinaryVariable",
     "Concatenate",
@@ -427,6 +429,135 @@ cdef class _ArrayValidation(Symbol):
     cdef cppArrayValidationNode* ptr
 
 _register(_ArrayValidation, typeid(cppArrayValidationNode))
+
+
+ctypedef fused _start_type:
+    ArraySymbol
+    Py_ssize_t
+
+ctypedef fused _stop_type:
+    ArraySymbol
+    Py_ssize_t
+
+ctypedef fused _step_type:
+    ArraySymbol
+    Py_ssize_t
+
+
+cdef class ARange(ArraySymbol):
+    """Return evenly spaced integer values within a given interval.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.arange`: equivalent function.
+
+    .. versionadded:: 0.5.2
+    """
+    def __init__(self, start, stop, step):
+        ARange._init(self, start, stop, step)
+
+    # Cython does not like fused types in the __init__, so we make a redundant one.
+    # See https://github.com/cython/cython/issues/3758
+    @staticmethod
+    def _init(ARange self, _start_type start, _stop_type stop, _step_type step):
+        # There are eight possible combinations of inputs, and unfortunately we
+        # need to check them all
+        if _start_type is Py_ssize_t and _stop_type is Py_ssize_t and _step_type is Py_ssize_t:
+            raise ValueError(
+                "ARange requires at least one symbol as an input. "
+                f"Use model.constant(range({start}, {stop}, {step})) instead.")
+        elif _start_type is Py_ssize_t and _stop_type is Py_ssize_t and _step_type is ArraySymbol:
+            self.ptr = step.model._graph.emplace_node[cppARangeNode](start, stop, step.array_ptr)
+            self.initialize_arraynode(step.model, self.ptr)
+        elif _start_type is Py_ssize_t and _stop_type is ArraySymbol and _step_type is Py_ssize_t:
+            self.ptr = stop.model._graph.emplace_node[cppARangeNode](start, stop.array_ptr, step)
+            self.initialize_arraynode(stop.model, self.ptr)
+        elif _start_type is Py_ssize_t and _stop_type is ArraySymbol and _step_type is ArraySymbol:
+            if stop.model is not step.model:
+                raise ValueError("stop and step do not share the same underlying model")
+            self.ptr = stop.model._graph.emplace_node[cppARangeNode](start, stop.array_ptr, step.array_ptr)
+            self.initialize_arraynode(stop.model, self.ptr)
+        elif _start_type is ArraySymbol and _stop_type is Py_ssize_t and _step_type is Py_ssize_t:
+            self.ptr = start.model._graph.emplace_node[cppARangeNode](start.array_ptr, stop, step)
+            self.initialize_arraynode(start.model, self.ptr)
+        elif _start_type is ArraySymbol and _stop_type is Py_ssize_t and _step_type is ArraySymbol:
+            if start.model is not step.model:
+                raise ValueError("start and step do not share the same underlying model")
+            self.ptr = start.model._graph.emplace_node[cppARangeNode](start.array_ptr, stop, step.array_ptr)
+            self.initialize_arraynode(start.model, self.ptr)
+        elif _start_type is ArraySymbol and _stop_type is ArraySymbol and _step_type is Py_ssize_t:
+            if start.model is not stop.model:
+                raise ValueError("start and stop do not share the same underlying model")
+            self.ptr = start.model._graph.emplace_node[cppARangeNode](start.array_ptr, stop.array_ptr, step)
+            self.initialize_arraynode(start.model, self.ptr)
+        elif _start_type is ArraySymbol and _stop_type is ArraySymbol and _step_type is ArraySymbol:
+            if start.model is not stop.model or start.model is not step.model:
+                raise ValueError("start, stop, and step do not share the same underlying model")
+            self.ptr = start.model._graph.emplace_node[cppARangeNode](start.array_ptr, stop.array_ptr, step.array_ptr)
+            self.initialize_arraynode(start.model, self.ptr)   
+        else:
+            raise RuntimeError  # shouldn't be possible
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppARangeNode* ptr = dynamic_cast_ptr[cppARangeNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct an ARange")
+        cdef ARange sym = ARange.__new__(ARange)
+        sym.ptr = ptr
+        sym.initialize_arraynode(symbol.model, ptr)
+        return sym
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        with zf.open(directory + "args.json", "r") as f:
+            args = json.load(f)
+
+        if len(predecessors) + len(args) != 3:
+            raise RuntimeError("unexpected number of arguments")
+
+        predecessors = list(predecessors)  # just in case it's not pop-able
+
+        if "step" in args:
+            step = args["step"]
+        else:
+            step = predecessors.pop()
+        if "stop" in args:
+            stop = args["stop"]
+        else:
+            stop = predecessors.pop()
+        if "start" in args:
+            start = args["start"]
+        else:
+            start = predecessors.pop()
+
+        return cls(start, stop, step)
+
+
+    def _into_zipfile(self, zf, directory):
+        super()._into_zipfile(zf, directory)
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+
+        # get the non-array args
+        args = dict()
+
+        start = self.ptr.start()
+        if holds_alternative[Py_ssize_t](start):
+            args.update(start=int(get[Py_ssize_t](start)))
+
+        stop = self.ptr.stop()
+        if holds_alternative[Py_ssize_t](stop):
+            args.update(stop=int(get[Py_ssize_t](stop)))
+
+        step = self.ptr.step()
+        if holds_alternative[Py_ssize_t](step):
+            args.update(step=int(get[Py_ssize_t](step)))
+
+        zf.writestr(directory + "args.json", encoder.encode(args))
+
+    cdef cppARangeNode* ptr
+
+_register(ARange, typeid(cppARangeNode))
 
 
 cdef class AdvancedIndexing(ArraySymbol):

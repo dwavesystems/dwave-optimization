@@ -168,6 +168,14 @@ std::ostream& operator<<(std::ostream& os, const SizeInfo& sizeinfo) {
         os << " + " << sizeinfo.offset;
     }
 
+    if (sizeinfo.min && sizeinfo.max) {
+        os << " [min=" << *sizeinfo.min << " max=" << *sizeinfo.max << "]";
+    } else if (sizeinfo.min) {
+        os << " [min=" << *sizeinfo.min << "]";
+    } else if (sizeinfo.max) {
+        os << " [max=" << *sizeinfo.max << "]";
+    }
+
     return os;
 }
 
