@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add C++ ``ExpitNode`` and Python ``Expit`` symbol. ``Expit`` propagates the logistic sigmoid values of its
+    predecessor element-wise.

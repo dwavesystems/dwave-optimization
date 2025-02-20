@@ -1678,6 +1678,10 @@ bool UnaryOpNode<functional::abs<double>>::integral() const {
     return array_ptr_->integral();
 }
 template <>
+bool UnaryOpNode<functional::expit<double>>::integral() const {
+    return false;
+}
+template <>
 bool UnaryOpNode<std::negate<double>>::integral() const {
     return array_ptr_->integral();
 }
@@ -1732,6 +1736,11 @@ std::pair<double, double> UnaryOpNode<UnaryOp>::minmax(
         } else {
             return memoize(cache, std::make_pair(-high, -low));
         }
+    }
+    if constexpr (std::same_as<UnaryOp, functional::expit<double>>) {
+        double expit_low = 1.0 / (1.0 + std::exp(-low));
+        double expit_high = 1.0 / (1.0 + std::exp(-high));
+        return memoize(cache, std::make_pair(expit_low, expit_high));
     }
     if constexpr (std::same_as<UnaryOp, functional::rint<double>>) {
         return memoize(cache, std::make_pair(std::rint(low), std::rint(high)));
@@ -1797,6 +1806,7 @@ ssize_t UnaryOpNode<UnaryOp>::size_diff(const State& state) const {
 }
 
 template class UnaryOpNode<functional::abs<double>>;
+template class UnaryOpNode<functional::expit<double>>;
 template class UnaryOpNode<functional::logical<double>>;
 template class UnaryOpNode<functional::rint<double>>;
 template class UnaryOpNode<functional::square<double>>;

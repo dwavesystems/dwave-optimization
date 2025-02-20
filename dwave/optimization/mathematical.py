@@ -22,6 +22,7 @@ from dwave.optimization.symbols import (
     And,
     Concatenate,
     Divide,
+    Expit,
     Logical,
     Maximum,
     Minimum,
@@ -45,6 +46,7 @@ __all__ = [
     "add",
     "concatenate",
     "divide",
+    "expit",
     "logical",
     "logical_and",
     "logical_not",
@@ -198,6 +200,34 @@ def divide(x1: ArraySymbol, x2: ArraySymbol) -> Divide:
         [3. 5.]
     """
     return Divide(x1, x2)
+
+def expit(x: ArraySymbol) -> Expit:
+    """Return an element-wise logistic sigmoid on the given symbol.
+
+    Args:
+        x: Input symbol.
+
+    Returns:
+        A symbol that propagates the values of the logistic sigmoid of a given symbol.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import expit
+        ...
+        >>> model = Model()
+        >>> x = model.constant(1.0)
+        >>> expit_x = expit(x)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(expit_x.state())
+        0.7310585786300049
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Expit`: equivalent symbol.
+
+    .. versionadded:: 0.5.2
+    """
+    return Expit(x)
 
 
 def logical(x: ArraySymbol) -> Logical:
