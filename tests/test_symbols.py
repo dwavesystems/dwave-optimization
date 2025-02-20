@@ -41,9 +41,9 @@ from dwave.optimization import (
 # tests from the inside the `tests/` directory to avoid importing
 # dwave.optimization locally.
 try:
-    from .utils import symbol_testing_utils as utils
+    import tests.utils as utils
 except ImportError:
-    from utils import symbol_testing_utils as utils
+    import utils  # type: ignore
 
 
 class TestAbsolute(utils.UnaryOpTests):
