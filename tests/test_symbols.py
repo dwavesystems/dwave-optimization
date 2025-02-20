@@ -41,12 +41,12 @@ from dwave.optimization import (
 # tests from the inside the `tests/` directory to avoid importing
 # dwave.optimization locally.
 try:
-    from .utils import symbol_testing_utils
+    from .utils import symbol_testing_utils as utils
 except ImportError:
-    from utils import symbol_testing_utils
+    from utils import symbol_testing_utils as utils
 
 
-class TestAbsolute(symbol_testing_utils.UnaryOpTests):
+class TestAbsolute(utils.UnaryOpTests):
     def op(self, x):
         return abs(x)
 
@@ -60,7 +60,7 @@ class TestAbsolute(symbol_testing_utils.UnaryOpTests):
         self.assertEqual(model.num_symbols(), 2)
 
 
-class TestAdd(symbol_testing_utils.BinaryOpTests):
+class TestAdd(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(5)
@@ -177,7 +177,7 @@ class TestAdvancedIndexing(unittest.TestCase):
             constant[i2]
 
 
-class TestAll(symbol_testing_utils.SymbolTests):
+class TestAll(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         nodes = [
@@ -232,7 +232,7 @@ class TestAll(symbol_testing_utils.SymbolTests):
                 model.unlock()
 
 
-class TestAnd(symbol_testing_utils.BinaryOpTests):
+class TestAnd(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(1)
@@ -280,7 +280,7 @@ class TestAnd(symbol_testing_utils.BinaryOpTests):
             a.logical_and(b)
 
 
-class TestAny(symbol_testing_utils.SymbolTests):
+class TestAny(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         nodes = [
@@ -335,7 +335,7 @@ class TestAny(symbol_testing_utils.SymbolTests):
                 model.unlock()
 
 
-class TestArrayValidation(symbol_testing_utils.SymbolTests):
+class TestArrayValidation(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         x = model.binary(10)
@@ -347,7 +347,7 @@ class TestArrayValidation(symbol_testing_utils.SymbolTests):
         pass
 
 
-class TestBasicIndexing(symbol_testing_utils.SymbolTests):
+class TestBasicIndexing(utils.SymbolTests):
     def generate_symbols(self):
         symbols = []
 
@@ -427,7 +427,7 @@ class TestBasicIndexing(symbol_testing_utils.SymbolTests):
         self.assertEqual(model.set(10)[::2].state_size(), 5 * 8)
 
 
-class TestBinaryVariable(symbol_testing_utils.SymbolTests):
+class TestBinaryVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         x = model.binary(10)
@@ -525,7 +525,7 @@ class TestBinaryVariable(symbol_testing_utils.SymbolTests):
                 x.set_state(0, [0, 1, 2])
 
 
-class TestConcatenate(symbol_testing_utils.SymbolTests):
+class TestConcatenate(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         x = model.constant(np.arange(12)).reshape((2, 1, 2, 3))
@@ -597,7 +597,7 @@ class TestConcatenate(symbol_testing_utils.SymbolTests):
                 dwave.optimization.symbols.Concatenate((A, B), axis)
 
 
-class TestConstant(symbol_testing_utils.SymbolTests):
+class TestConstant(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(25, dtype=np.double).reshape((5, 5)))
@@ -713,7 +713,7 @@ class TestConstant(symbol_testing_utils.SymbolTests):
             model.constant(np.array([0, 5, np.nan]))
 
 
-class TestCopy(symbol_testing_utils.SymbolTests):
+class TestCopy(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         c = model.constant(np.arange(25).reshape(5, 5))
@@ -732,7 +732,7 @@ class TestCopy(symbol_testing_utils.SymbolTests):
             np.testing.assert_array_equal(copy.state(), np.arange(25).reshape(5, 5)[::2, 1:4])
 
 
-class TestDisjointBitSetsVariable(symbol_testing_utils.SymbolTests):
+class TestDisjointBitSetsVariable(utils.SymbolTests):
     def test_inequality(self):
         # TODO re-enable this once equality has been fixed
         pass
@@ -848,7 +848,7 @@ class TestDisjointBitSetsVariable(symbol_testing_utils.SymbolTests):
         np.testing.assert_array_equal(ys[2].state(), [0, 0, 0, 0, 1])
 
 
-class TestDisjointListsVariable(symbol_testing_utils.SymbolTests):
+class TestDisjointListsVariable(utils.SymbolTests):
     def test_inequality(self):
         # TODO re-enable this once equality has been fixed
         pass
@@ -965,7 +965,7 @@ class TestDisjointListsVariable(symbol_testing_utils.SymbolTests):
 
 
 # NOTE: Inheriting from BinaryOpTests causes runtime errors so just inheritting from SymbolTests
-class TestDivide(symbol_testing_utils.SymbolTests):
+class TestDivide(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(5)
@@ -1031,7 +1031,7 @@ class TestDivide(symbol_testing_utils.SymbolTests):
             a // b
 
 
-class TestIntegerVariable(symbol_testing_utils.SymbolTests):
+class TestIntegerVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         x = model.integer(10)
@@ -1175,7 +1175,7 @@ class TestIntegerVariable(symbol_testing_utils.SymbolTests):
             np.testing.assert_array_equal(x.state(), [0, 0, 0, -1, 0])
 
 
-class TestLessEqual(symbol_testing_utils.SymbolTests):
+class TestLessEqual(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(5)
@@ -1227,7 +1227,7 @@ class TestLessEqual(symbol_testing_utils.SymbolTests):
             a <= b
 
 
-class TestListVariable(symbol_testing_utils.SymbolTests):
+class TestListVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         x = model.list(10)
@@ -1311,7 +1311,7 @@ class TestListVariable(symbol_testing_utils.SymbolTests):
                 x.set_state(0, [0, 1, 2])
 
 
-class TestLogical(symbol_testing_utils.UnaryOpTests):
+class TestLogical(utils.UnaryOpTests):
     def op(self, x):
         return x != 0
 
@@ -1319,7 +1319,7 @@ class TestLogical(symbol_testing_utils.UnaryOpTests):
         return logical(x)
 
 
-class TestMax(symbol_testing_utils.SymbolTests):
+class TestMax(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
@@ -1349,7 +1349,7 @@ class TestMax(symbol_testing_utils.SymbolTests):
         self.assertEqual(b.state(0), 9)
 
 
-class TestMaximum(symbol_testing_utils.SymbolTests):
+class TestMaximum(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
@@ -1382,7 +1382,7 @@ class TestMaximum(symbol_testing_utils.SymbolTests):
         np.testing.assert_array_equal(m.state(0), np.arange(5, 10))
 
 
-class TestMin(symbol_testing_utils.SymbolTests):
+class TestMin(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
@@ -1412,7 +1412,7 @@ class TestMin(symbol_testing_utils.SymbolTests):
         self.assertEqual(b.state(0), 5)
 
 
-class TestMinimum(symbol_testing_utils.SymbolTests):
+class TestMinimum(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
@@ -1455,7 +1455,7 @@ class TestModule(unittest.TestCase):
             getattr(dwave.optimization.mathematical, name)
 
 
-class TestModulus(symbol_testing_utils.BinaryOpTests):
+class TestModulus(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(5)
@@ -1546,7 +1546,7 @@ class TestModulus(symbol_testing_utils.BinaryOpTests):
                 np.testing.assert_equal(np_result, result.state(0))
 
 
-class TestMultiply(symbol_testing_utils.SymbolTests):
+class TestMultiply(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(5)
@@ -1583,7 +1583,7 @@ class TestMultiply(symbol_testing_utils.SymbolTests):
             a * b
 
 
-class TestNaryAdd(symbol_testing_utils.NaryOpTests):
+class TestNaryAdd(utils.NaryOpTests):
     def op(self, *xs):
         return sum(xs)
 
@@ -1623,7 +1623,7 @@ class TestNaryAdd(symbol_testing_utils.NaryOpTests):
             x += b  # after promotion
 
 
-class TestNaryMaximum(symbol_testing_utils.NaryOpTests):
+class TestNaryMaximum(utils.NaryOpTests):
     def op(self, *xs):
         return max(xs)
 
@@ -1634,7 +1634,7 @@ class TestNaryMaximum(symbol_testing_utils.NaryOpTests):
         return dwave.optimization.symbols.NaryMaximum
 
 
-class TestNaryMinimum(symbol_testing_utils.NaryOpTests):
+class TestNaryMinimum(utils.NaryOpTests):
     def op(self, *xs):
         return min(xs)
 
@@ -1645,7 +1645,7 @@ class TestNaryMinimum(symbol_testing_utils.NaryOpTests):
         return dwave.optimization.symbols.NaryMinimum
 
 
-class TestNaryMultiply(symbol_testing_utils.NaryOpTests):
+class TestNaryMultiply(utils.NaryOpTests):
     def op(self, *xs):
         return math.prod(xs)
 
@@ -1685,12 +1685,12 @@ class TestNaryMultiply(symbol_testing_utils.NaryOpTests):
             x *= b  # after promotion
 
 
-class TestNegate(symbol_testing_utils.UnaryOpTests):
+class TestNegate(utils.UnaryOpTests):
     def op(self, x):
         return -x
 
 
-class TestNot(symbol_testing_utils.UnaryOpTests):
+class TestNot(utils.UnaryOpTests):
     def op(self, x):
         return np.logical_not(x)
 
@@ -1698,7 +1698,7 @@ class TestNot(symbol_testing_utils.UnaryOpTests):
         return logical_not(x)
 
 
-class TestOr(symbol_testing_utils.BinaryOpTests):
+class TestOr(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(1)
@@ -1757,7 +1757,7 @@ class TestOr(symbol_testing_utils.BinaryOpTests):
         np.testing.assert_array_equal(ac.state(0), [1, 0, 1, 0])
 
 
-class TestPartialProd(symbol_testing_utils.SymbolTests):
+class TestPartialProd(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(8).reshape((2, 2, 2)))
@@ -1794,7 +1794,7 @@ class TestPartialProd(symbol_testing_utils.SymbolTests):
         )
 
 
-class TestPartialSum(symbol_testing_utils.SymbolTests):
+class TestPartialSum(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(8).reshape((2, 2, 2)))
@@ -1831,7 +1831,7 @@ class TestPartialSum(symbol_testing_utils.SymbolTests):
         )
 
 
-class TestPermutation(symbol_testing_utils.SymbolTests):
+class TestPermutation(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(25).reshape((5, 5)))
@@ -1857,7 +1857,7 @@ class TestPermutation(symbol_testing_utils.SymbolTests):
         self.assertNotIsInstance(b[:, x][x, :], Permutation)
 
 
-class TestProd(symbol_testing_utils.SymbolTests):
+class TestProd(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
@@ -1891,7 +1891,7 @@ class TestProd(symbol_testing_utils.SymbolTests):
         self.assertEqual(b.state(0), 5*6*7*8*9)
 
 
-class TestPut(symbol_testing_utils.SymbolTests):
+class TestPut(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
 
@@ -1946,7 +1946,7 @@ class TestPut(symbol_testing_utils.SymbolTests):
             put(array, indices, values)
 
 
-class TestQuadraticModel(symbol_testing_utils.SymbolTests):
+class TestQuadraticModel(utils.SymbolTests):
     def generate_symbols(self):
         num_variables = 5
         model = Model()
@@ -2035,7 +2035,7 @@ class TestQuadraticModel(symbol_testing_utils.SymbolTests):
         self.assertEqual(model.num_nodes(), 2)
 
 
-class TestReshape(symbol_testing_utils.SymbolTests):
+class TestReshape(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(12))
@@ -2074,7 +2074,7 @@ class TestReshape(symbol_testing_utils.SymbolTests):
             )
 
 
-class TestRint(symbol_testing_utils.SymbolTests):
+class TestRint(utils.SymbolTests):
     rng = np.random.default_rng(1)
 
     def generate_symbols(self):
@@ -2118,12 +2118,12 @@ class TestRint(symbol_testing_utils.SymbolTests):
         self.assertEqual(sixteen.state(0), 16)
 
 
-class TestSquare(symbol_testing_utils.UnaryOpTests):
+class TestSquare(utils.UnaryOpTests):
     def op(self, x):
         return x ** 2
 
 
-class TestSquareRoot(symbol_testing_utils.SymbolTests):
+class TestSquareRoot(utils.SymbolTests):
     rng = np.random.default_rng(1)
 
     def generate_symbols(self):
@@ -2156,7 +2156,7 @@ class TestSquareRoot(symbol_testing_utils.SymbolTests):
         self.assertRaises(ValueError, sqrt, neg_one)
 
 
-class TestSetVariable(symbol_testing_utils.SymbolTests):
+class TestSetVariable(utils.SymbolTests):
     def generate_symbols(self) -> collections.abc.Iterator[dwave.optimization.symbols.SetVariable]:
         # Typical
         model = Model()
@@ -2253,7 +2253,7 @@ class TestSetVariable(symbol_testing_utils.SymbolTests):
         self.assertEqual(model.set(10, max_size=5).state_size(), 5 * 8)
 
 
-class TestSize(symbol_testing_utils.SymbolTests):
+class TestSize(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
 
@@ -2290,7 +2290,7 @@ class TestSize(symbol_testing_utils.SymbolTests):
             self.assertEqual(length.state(), 1)
 
 
-class TestSubtract(symbol_testing_utils.BinaryOpTests):
+class TestSubtract(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(5)
@@ -2330,7 +2330,7 @@ class TestSubtract(symbol_testing_utils.BinaryOpTests):
             a - b
 
 
-class TestStack(symbol_testing_utils.SymbolTests):
+class TestStack(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(6).reshape((3, 2)))
@@ -2415,7 +2415,7 @@ class TestStack(symbol_testing_utils.SymbolTests):
                 stack((A, B), axis=4)
 
 
-class TestSum(symbol_testing_utils.SymbolTests):
+class TestSum(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         A = model.constant(np.arange(5))
@@ -2449,7 +2449,7 @@ class TestSum(symbol_testing_utils.SymbolTests):
         self.assertEqual(b.state(0), np.arange(5, 10).sum())
 
 
-class TestWhere(symbol_testing_utils.SymbolTests):
+class TestWhere(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         condition = model.binary()
@@ -2479,7 +2479,7 @@ class TestWhere(symbol_testing_utils.SymbolTests):
             dwave.optimization.where(model.binary(3), x, y)
 
 
-class TestXor(symbol_testing_utils.BinaryOpTests):
+class TestXor(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(1)
