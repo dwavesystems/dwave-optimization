@@ -12,14 +12,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import abc
 import collections.abc
 import itertools
 import math
 import operator
 import typing
 import unittest
-import warnings
 
 import numpy as np
 
@@ -39,257 +37,13 @@ from dwave.optimization import (
     stack,
 )
 
-
-class utils:
-    """We want to add subclasses of unittest.TestCase that implement universal
-    tests for different symbols. But they get executed as tests if they
-    are in the main namspace. So we nest them in this "namespace".
-    """
-    class SymbolTests(abc.ABC, unittest.TestCase):
-        @abc.abstractmethod
-        def generate_symbols(self):
-            """Yield symbol(s) for testing.
-
-            The model must be topologically sorted before returning.
-            The symbols must all be unique from eachother.
-            """
-
-        def test_equality(self):
-            DEFINITELY = 2
-            for x in self.generate_symbols():
-                self.assertEqual(DEFINITELY, x.maybe_equals(x))
-                self.assertTrue(x.equals(x))
-
-            for x, y in zip(self.generate_symbols(), self.generate_symbols()):
-                self.assertTrue(DEFINITELY, x.maybe_equals(y))
-                self.assertTrue(x.equals(y))
-
-        def test_inequality(self):
-            MAYBE = 1
-            for x, y in itertools.combinations(self.generate_symbols(), 2):
-                self.assertLessEqual(x.maybe_equals(y), MAYBE)
-                self.assertFalse(x.equals(y))
-
-        def test_iter_symbols(self):
-            for x in self.generate_symbols():
-                model = x.model
-                index = x.topological_index()
-
-                # Get the symbol back
-                y, = itertools.islice(model.iter_symbols(), index, index+1)
-
-                self.assertTrue(x.shares_memory(y))
-                self.assertIs(type(x), type(y))
-                self.assertTrue(x.equals(y))
-
-        def test_namespace(self):
-            x = next(self.generate_symbols())
-            self.assertIn(type(x).__name__, dwave.optimization.symbols.__all__)
-
-        def test_serialization(self):
-            for x in self.generate_symbols():
-                model = x.model
-                index = x.topological_index()
-
-                with model.to_file() as f:
-                    new = Model.from_file(f)
-
-                # Get the symbol back
-                y, = itertools.islice(new.iter_symbols(), index, index+1)
-
-                self.assertFalse(x.shares_memory(y))
-                self.assertIs(type(x), type(y))
-                self.assertTrue(x.equals(y))
-
-        def test_state_serialization(self):
-            for x in self.generate_symbols():
-                model = x.model
-
-                # without some way to randomly initialize states this is really just
-                # smoke test
-                model.states.resize(1)
-
-                # get the states before serialization
-                states = []
-                for sym in model.iter_symbols():
-                    if hasattr(sym, "state"):
-                        states.append(sym.state())
-                    else:
-                        states.append(None)
-
-                with model.states.to_file() as f:
-                    new = Model.from_file(f)
-
-                for i, sym in enumerate(model.iter_symbols()):
-                    if hasattr(sym, "state"):
-                        np.testing.assert_equal(sym.state(), states[i])
-
-        def test_state_size_smoke(self):
-            for x in self.generate_symbols():
-                self.assertGreaterEqual(x.state_size(), 0)
-
-    class BinaryOpTests(SymbolTests):
-        @abc.abstractmethod
-        def op(self, lhs, rhs):
-            pass
-
-        def symbol_op(self, lhs, rhs):
-            # if the op is different for symbols, allow the override
-            return self.op(lhs, rhs)
-
-        def test_numpy_equivalence(self):
-            lhs_array = np.arange(10)
-            rhs_array = np.arange(1, 11)
-
-            model = Model()
-            lhs_symbol = model.constant(lhs_array)
-            rhs_symbol = model.constant(rhs_array)
-
-            op_array = self.op(lhs_array, rhs_array)
-            op_symbol = self.symbol_op(lhs_symbol, rhs_symbol)
-
-            model.states.resize(1)
-            with model.lock():
-                np.testing.assert_array_equal(op_array, op_symbol.state())
-
-        def test_scalar_broadcasting(self):
-            lhs_array = 5
-            rhs_array = np.asarray([-10, 100, 16])
-
-            model = Model()
-            lhs_symbol = model.constant(lhs_array)
-            rhs_symbol = model.constant(rhs_array)
-
-            op_array = self.op(lhs_array, rhs_array)
-            op_symbol = self.symbol_op(lhs_symbol, rhs_symbol)
-
-            model.states.resize(1)
-            with model.lock():
-                np.testing.assert_array_equal(op_array, op_symbol.state())
-
-        def test_size1_broadcasting(self):
-            lhs_array = np.asarray([5])
-            rhs_array = np.asarray([-10, 100, 16])
-
-            model = Model()
-            lhs_symbol = model.constant(lhs_array)
-            rhs_symbol = model.constant(rhs_array)
-
-            op_array = self.op(lhs_array, rhs_array)
-            op_symbol = self.symbol_op(lhs_symbol, rhs_symbol)
-
-            model.states.resize(1)
-            with model.lock():
-                np.testing.assert_array_equal(op_array, op_symbol.state())
-
-    class NaryOpTests(SymbolTests):
-        @abc.abstractmethod
-        def op(self, *xs):
-            pass
-
-        @abc.abstractmethod
-        def node_op(self, *xs):
-            pass
-
-        @abc.abstractmethod
-        def node_class(self):
-            pass
-
-        def generate_symbols(self):
-            model = Model()
-            a, b, c = model.constant(-5), model.constant(7), model.constant(0)
-            op_abc = self.node_op(a, b, c)
-            model.lock()
-            yield op_abc
-
-        def test_scalar_input(self):
-            model = Model()
-            a, b, c = model.constant(-5), model.constant(7), model.constant(0)
-            op_abc = self.node_op(a, b, c)
-            self.assertEqual(model.num_symbols(), 4)
-
-            # Make sure we got the right type of node
-            self.assertIsInstance(op_abc, self.node_class())
-
-            # Should be a scalar
-            self.assertEqual(op_abc.shape(), ())
-            self.assertEqual(op_abc.size(), 1)
-
-            model.lock()
-            model.states.resize(1)
-            self.assertEqual(op_abc.state(0), self.op(-5, 7, 0))
-
-        def test_1d_input(self):
-            model = Model()
-            x, y, z = [model.integer(10, -5, 5) for _ in range(3)]
-            op_xyz = self.node_op(x, y, z)
-
-            # Make sure we got the right type of node
-            self.assertIsInstance(op_xyz, self.node_class())
-
-            # Make sure the shape is correct
-            self.assertEqual(op_xyz.shape(), (10,))
-            self.assertEqual(op_xyz.size(), 10)
-
-            model.lock()
-
-            model.states.resize(1)
-
-            data_x = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4]
-            x.set_state(0, data_x)
-            data_y = [5, 4, 3, 2, 1, 0, -1, -2, -3, -4]
-            y.set_state(0, data_y)
-            data_z = [5, -5, 4, -4, 3, -3, 2, -2, 1, 0]
-            z.set_state(0, data_z)
-
-            np.testing.assert_equal(
-                op_xyz.state(0),
-                [self.op(*vs) for vs in zip(data_x, data_y, data_z)]
-            )
-
-    class UnaryOpTests(SymbolTests):
-        @abc.abstractmethod
-        def op(self, x):
-            pass
-
-        def symbol_op(self, x):
-            # if the op is different for symbols, allow the override
-            return self.op(x)
-
-        def generate_symbols(self):
-            model = Model()
-            a = model.constant(-5)
-            op_a = self.symbol_op(a)
-            model.lock()
-            yield op_a
-
-        def test_scalar_input(self):
-            for scalar in [-5, -.5, 0, 1, 1.5]:
-                with self.subTest(f"a = {scalar}"):
-                    model = Model()
-                    a = model.constant(scalar)
-                    op_a = self.symbol_op(a)
-                    self.assertEqual(model.num_symbols(), 2)
-
-                    # Should be a scalar
-                    self.assertEqual(op_a.shape(), ())
-                    self.assertEqual(op_a.size(), 1)
-
-                    model.lock()
-                    model.states.resize(1)
-                    self.assertEqual(op_a.state(0), self.op(scalar))
-
-        def test_1d_input(self):
-            model = Model()
-            x = model.integer(10, -5, 5)
-            op_x = self.symbol_op(x)
-            model.lock()
-
-            model.states.resize(1)
-            data = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4]
-            x.set_state(0, data)
-
-            np.testing.assert_equal(op_x.state(0), [self.op(v) for v in data])
+# Try to import utils normally. If it fails, assume that we are running the
+# tests from the inside the `tests/` directory to avoid importing
+# dwave.optimization locally.
+try:
+    import tests.utils as utils
+except ImportError:
+    import utils  # type: ignore
 
 
 class TestAbsolute(utils.UnaryOpTests):
@@ -521,9 +275,9 @@ class TestAnd(utils.BinaryOpTests):
         self.assertEqual(cb.state(0), 0)
 
         with self.assertRaises(TypeError):
-            x = a & b
+            a & b
         with self.assertRaises(AttributeError):
-            x = a.logical_and(b)
+            a.logical_and(b)
 
 
 class TestAny(utils.SymbolTests):
@@ -690,7 +444,7 @@ class TestBinaryVariable(utils.SymbolTests):
     def test(self):
         model = Model()
 
-        x = model.binary([10])
+        model.binary([10])
 
     def test_no_shape(self):
         model = Model()
@@ -774,10 +528,10 @@ class TestBinaryVariable(utils.SymbolTests):
 class TestConcatenate(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
-        x = model.constant(np.arange(12)).reshape((2,1,2,3))
-        y = model.constant(np.arange(24)).reshape((2,2,2,3))
-        z = model.constant(np.arange(36)).reshape((2,3,2,3))
-        c = dwave.optimization.symbols.Concatenate((x,y,z), axis=1)
+        x = model.constant(np.arange(12)).reshape((2, 1, 2, 3))
+        y = model.constant(np.arange(24)).reshape((2, 2, 2, 3))
+        z = model.constant(np.arange(36)).reshape((2, 3, 2, 3))
+        c = dwave.optimization.symbols.Concatenate((x, y, z), axis=1)
         model.lock()
         yield c
 
@@ -811,19 +565,19 @@ class TestConcatenate(utils.SymbolTests):
     def test_errors(self):
         model = Model()
         with self.subTest("same number of dimensions"):
-            A = model.constant(np.arange(6)).reshape((1,2,3))
-            B = model.constant(np.arange(24)).reshape((1,2,3,4))
+            A = model.constant(np.arange(6)).reshape((1, 2, 3))
+            B = model.constant(np.arange(24)).reshape((1, 2, 3, 4))
             with self.assertRaisesRegex(
                 ValueError, (r"^all the input arrays must have the same "
                              r"number of dimensions, but the array at index 0 "
                              r"has 3 dimension\(s\) and the array at index 1 "
                              r"has 4 dimension\(s\)")
             ):
-                dwave.optimization.symbols.Concatenate((A,B))
+                dwave.optimization.symbols.Concatenate((A, B))
 
         with self.subTest("array shapes are the same"):
-            A = model.constant(np.arange(6)).reshape((1,2,3))
-            B = model.constant(np.arange(6)).reshape((3,2,1))
+            A = model.constant(np.arange(6)).reshape((1, 2, 3))
+            B = model.constant(np.arange(6)).reshape((3, 2, 1))
             axis = 1
             with self.assertRaisesRegex(
                 ValueError, (r"^all the input array dimensions except for the "
@@ -831,16 +585,16 @@ class TestConcatenate(utils.SymbolTests):
                              r"along dimension 0, the array at index 0 has "
                              r"size 1 and the array at index 1 has size 3")
             ):
-                dwave.optimization.symbols.Concatenate((A,B), axis)
+                dwave.optimization.symbols.Concatenate((A, B), axis)
 
         with self.subTest("axis out of bounds"):
-            A = model.constant(np.arange(6)).reshape((1,2,3))
-            B = model.constant(np.arange(6)).reshape((1,2,3))
+            A = model.constant(np.arange(6)).reshape((1, 2, 3))
+            B = model.constant(np.arange(6)).reshape((1, 2, 3))
             axis = 3
             with self.assertRaisesRegex(
                 ValueError, r"^axis 3 is out of bounds for array of dimension 3"
             ):
-                dwave.optimization.symbols.Concatenate((A,B), axis)
+                dwave.optimization.symbols.Concatenate((A, B), axis)
 
 
 class TestConstant(utils.SymbolTests):
@@ -848,8 +602,8 @@ class TestConstant(utils.SymbolTests):
         model = Model()
         A = model.constant(np.arange(25, dtype=np.double).reshape((5, 5)))
         B = model.constant([0, 1, 2, 3, 4])
-        C = model.constant(np.arange(25, dtype=np.double))
-        D = model.constant(np.arange(1, 26, dtype=np.double).reshape((5, 5)))
+        model.constant(np.arange(25, dtype=np.double))
+        model.constant(np.arange(1, 26, dtype=np.double).reshape((5, 5)))
         model.lock()
         yield A
         yield B
@@ -1224,8 +978,8 @@ class TestDivide(utils.SymbolTests):
 
     def test_doc_example(self):
         model = Model()
-        i = model.integer(2,lower_bound=1)
-        j = model.integer(2,lower_bound=1)
+        i = model.integer(2, lower_bound=1)
+        j = model.integer(2, lower_bound=1)
         k = i / j
         with model.lock():
             model.states.resize(1)
@@ -1294,7 +1048,7 @@ class TestIntegerVariable(utils.SymbolTests):
     def test(self):
         model = Model()
 
-        x = model.integer([10])
+        model.integer([10])
 
     def test_subscript(self):
         model = Model()
@@ -1984,23 +1738,23 @@ class TestOr(utils.BinaryOpTests):
         self.assertEqual(cb.state(0), 1)
 
         with self.assertRaises(TypeError):
-            x = a | b
+            a | b
         with self.assertRaises(AttributeError):
-            x = a.logical_or(b)
+            a.logical_or(b)
 
     def test_array_or(self):
         model = Model()
-        a = model.constant([ 1, 0, 1, 0 ])
-        b = model.constant([ 1, 1, 1, 1 ])
-        c = model.constant([ 0, 0, 0, 0 ])
+        a = model.constant([1, 0, 1, 0])
+        b = model.constant([1, 1, 1, 1])
+        c = model.constant([0, 0, 0, 0])
         ab = logical_or(a, b)
         ac = logical_or(a, c)
 
         model.lock()
         model.states.resize(1)
 
-        np.testing.assert_array_equal(ab.state(0), [ 1, 1, 1, 1 ])
-        np.testing.assert_array_equal(ac.state(0), [ 1, 0, 1, 0 ])
+        np.testing.assert_array_equal(ab.state(0), [1, 1, 1, 1])
+        np.testing.assert_array_equal(ac.state(0), [1, 0, 1, 0])
 
 
 class TestPartialProd(utils.SymbolTests):
@@ -2034,9 +1788,10 @@ class TestPartialProd(utils.SymbolTests):
         model.lock()
         model.states.resize(1)
         x.set_state(0, [0, 4, 1, 3, 2])
-        np.testing.assert_array_equal(ax.state(0),
-                                      np.prod(np.arange(125).reshape((5, 5, 5))[:, [0, 4, 1, 3, 2], :],
-                                              axis=1))
+        np.testing.assert_array_equal(
+            ax.state(0),
+            np.prod(np.arange(125).reshape((5, 5, 5))[:, [0, 4, 1, 3, 2], :], axis=1)
+        )
 
 
 class TestPartialSum(utils.SymbolTests):
@@ -2070,9 +1825,10 @@ class TestPartialSum(utils.SymbolTests):
         model.lock()
         model.states.resize(1)
         x.set_state(0, [0, 4, 1, 3, 2])
-        np.testing.assert_array_equal(ax.state(0),
-                                      np.sum(np.arange(125).reshape((5, 5, 5))[:, [0, 4, 1, 3, 2], :],
-                                             axis=1))
+        np.testing.assert_array_equal(
+            ax.state(0),
+            np.sum(np.arange(125).reshape((5, 5, 5))[:, [0, 4, 1, 3, 2], :], axis=1)
+        )
 
 
 class TestPermutation(utils.SymbolTests):
@@ -2350,7 +2106,7 @@ class TestRint(utils.SymbolTests):
         rint_node_idx6 = rint(model.constant(5.8))
         rint_node_idx8 = rint(model.constant(8))
 
-        arr = model.constant(2 * np.arange(10)) # value at each index is (index * 2)
+        arr = model.constant(2 * np.arange(10))  # value at each index is (index * 2)
         six = arr[rint_node_idx3]
         twelve = arr[rint_node_idx6]
         sixteen = arr[rint_node_idx8]
@@ -2722,6 +2478,7 @@ class TestWhere(utils.SymbolTests):
             # wrong shape
             dwave.optimization.where(model.binary(3), x, y)
 
+
 class TestXor(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
@@ -2762,20 +2519,20 @@ class TestXor(utils.BinaryOpTests):
         self.assertEqual(cb.state(0), 1)
 
         with self.assertRaises(TypeError):
-            x = a ^ b
+            a ^ b
         with self.assertRaises(AttributeError):
-            x = a.logical_xor(b)
+            a.logical_xor(b)
 
     def test_array_xor(self):
         model = Model()
-        a = model.constant([ 1, 0, 1, 0 ])
-        b = model.constant([ 1, 1, 1, 1 ])
-        c = model.constant([ 0, 0, 0, 0 ])
+        a = model.constant([1, 0, 1, 0])
+        b = model.constant([1, 1, 1, 1])
+        c = model.constant([0, 0, 0, 0])
         ab = logical_xor(a, b)
         ac = logical_xor(a, c)
 
         model.lock()
         model.states.resize(1)
 
-        np.testing.assert_array_equal(ab.state(0), [ 0, 1, 0, 1 ])
-        np.testing.assert_array_equal(ac.state(0), [ 1, 0, 1, 0 ])
+        np.testing.assert_array_equal(ab.state(0), [0, 1, 0, 1])
+        np.testing.assert_array_equal(ac.state(0), [1, 0, 1, 0])
