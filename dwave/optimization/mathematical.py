@@ -146,7 +146,7 @@ def arange(start: typing.Union[int, ArraySymbol, None] = None,
     if start is None:
         start = 0
     if stop is None:
-        raise ValueError  # todo: error message
+        raise ValueError("stop cannot be None")
     if step is None:
         step = 1
 
