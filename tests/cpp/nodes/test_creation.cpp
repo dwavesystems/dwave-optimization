@@ -46,6 +46,19 @@ TEST_CASE("ARangeNode") {
         CHECK(arange_ptr->minmax() == std::pair<double, double>(0, 4));
     }
 
+    GIVEN("arange = ARangeNode(-2, -5, -1)") {
+        auto graph = Graph();
+        auto arange_ptr = graph.emplace_node<ARangeNode>(-2, -5, -1);
+        CHECK_THAT(arange_ptr->shape(), RangeEquals({3}));
+        CHECK_THAT(arange_ptr->predecessors(), RangeEquals(std::vector<Node*>{}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(arange_ptr->view(state), RangeEquals({-2, -3, -4}));
+
+        CHECK(arange_ptr->sizeinfo() == SizeInfo(3));
+        CHECK(arange_ptr->minmax() == std::pair<double, double>(-4, -2));
+    }
+
     GIVEN("i = IntegerNode({}, -5, 5), arange = ARangeNode(i)") {
         // arange(-5) => []
         // arange(5) => [0, 1, 2, 3, 4]
@@ -57,15 +70,14 @@ TEST_CASE("ARangeNode") {
 
         CHECK_THAT(arange_ptr->shape(), RangeEquals({-1}));
         CHECK_THAT(arange_ptr->predecessors(), RangeEquals(std::vector<Node*>{i_ptr}));
+        CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 0, 5));
+        CHECK(arange_ptr->minmax() == std::pair<double, double>(0, 4));
 
         auto state = graph.empty_state();
         i_ptr->initialize_state(state, {3});
         graph.initialize_state(state);
         CHECK_THAT(arange_ptr->shape(state), RangeEquals({3}));
         CHECK_THAT(arange_ptr->view(state), RangeEquals({0, 1, 2}));
-
-        CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 0, 5));
-        CHECK(arange_ptr->minmax() == std::pair<double, double>(0, 4));
 
         WHEN("We change i to be a larger value") {
             i_ptr->set_value(state, 0, 5);
@@ -314,6 +326,68 @@ TEST_CASE("ARangeNode") {
                 CHECK_THAT(arange_ptr->shape(state), RangeEquals({5}));
                 CHECK_THAT(arange_ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
             }
+        }
+    }
+
+    GIVEN("start in {0, 1}, arange = ARangeNode(start, 15, 7)") {
+        // arange(0, 15, 7) => [0, 7, 14]
+        // arange(1, 15, 7) => [1, 8]
+        auto graph = Graph();
+        auto start_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 1);
+
+        auto arange_ptr = graph.emplace_node<ARangeNode>(start_ptr, 15, 7);
+
+        THEN("The min/max are correct") {
+            const auto [low, high] = arange_ptr->minmax();
+            CHECK(low == 0);
+            CHECK(high == 14);
+        }
+    }
+
+    GIVEN("start in {0, 1}, arange = ARangeNode(start, 15, 10)") {
+        // arange(0, 15, 10) => [1, 11]
+        // arange(1, 15, 10) => [0, 10]
+
+        auto graph = Graph();
+        auto start_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 1);
+
+        auto arange_ptr = graph.emplace_node<ARangeNode>(start_ptr, 15, 10);
+
+        THEN("The min/max are correct") {
+            const auto [low, high] = arange_ptr->minmax();
+            CHECK(low == 0);
+            CHECK(high == 11);
+        }
+    }
+
+    GIVEN("step in {3, 14}, arange = ARangeNode(0, 15, step)") {
+        // arange(0, 15, 3) => [0, 3, 6, 9, 12]
+        // arange(0, 15, 14) => [0, 14]
+
+        auto graph = Graph();
+        auto step_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 3, 14);
+
+        auto arange_ptr = graph.emplace_node<ARangeNode>(0, 15, step_ptr);
+
+        THEN("The min/max are correct") {
+            const auto [low, high] = arange_ptr->minmax();
+            CHECK(low == 0);
+            CHECK(high == 14);
+        }
+    }
+
+    GIVEN("start in {0, -1}, arange = ARangeNode(start, -15, -7)") {
+        // arange(0, -15, -7) => [0, -7, -14]
+        // arange(-1, -15, -7) => [-1, -8]
+        auto graph = Graph();
+        auto start_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -1, 0);
+
+        auto arange_ptr = graph.emplace_node<ARangeNode>(start_ptr, -15, -7);
+
+        THEN("The min/max are correct") {
+            const auto [low, high] = arange_ptr->minmax();
+            CHECK(low == -14);
+            CHECK(high == 0);
         }
     }
 }

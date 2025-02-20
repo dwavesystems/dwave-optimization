@@ -216,21 +216,42 @@ std::pair<double, double> ARangeNode::minmax(
         const auto [stop_low, stop_high] = std::visit(visitor, stop_);
         const auto [step_low, step_high] = std::visit(visitor, step_);
 
+        // just sanity check because we can't specify in the structured binding
+        // and it matters later that we're integral when calculating max
+        static_assert(std::same_as<decltype(start_low), const ssize_t>);
+        static_assert(std::same_as<decltype(start_high), const ssize_t>);
+
         // checked on construction.
         assert(!(step_low <= 0 && step_high >= 0));
 
         // The direction that we're stepping determines the min/max
         if (step_low > 0) {
-            const double low = start_low;
-            const double high = stop_high - step_low;
-            if (low > high) return std::pair<double, double>(0, 0);
-            return std::make_pair(low, high);
+            if (start_low >= stop_high) return std::pair<double, double>(0, 0);
+
+            // Our max value will always use the largest stop, but we do need
+            // to check several combinations of start/step.
+            const double high = std::max({
+                    start_low + ((stop_high - start_low - 1) / step_low) * step_low,
+                    start_low + ((stop_high - start_low - 1) / step_high) * step_high,
+                    start_high + ((stop_high - start_high - 1) / step_low) * step_low,
+                    start_high + ((stop_high - start_high - 1) / step_high) * step_high,
+            });
+
+            return std::pair<double, double>{start_low, high};
         }
         if (step_high < 0) {
-            const double low = stop_low - step_high;
-            const double high = start_high;
-            if (low > high) return std::pair<double, double>(0, 0);
-            return std::make_pair(low, high);
+            if (start_high <= stop_low) return std::pair<double, double>(0, 0);
+
+            // Our min value will always use the smallest stop, but we do need
+            // to check several combinations of start/step.
+            const double low = std::min({
+                    start_low + ((start_low - stop_low - 1) / -step_low) * step_low,
+                    start_low + ((start_low - stop_low - 1) / -step_high) * step_high,
+                    start_high + ((start_high - stop_low - 1) / -step_low) * step_low,
+                    start_high + ((start_high - stop_low - 1) / -step_high) * step_high,
+            });
+
+            return std::pair<double, double>{low, start_high};
         }
 
         assert(false && "zero step not allowed");
