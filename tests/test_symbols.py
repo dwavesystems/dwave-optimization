@@ -1279,8 +1279,6 @@ class TestDivide(utils.SymbolTests):
 
 
 class TestExpit(utils.SymbolTests):
-    rng = np.random.default_rng(1)
-
     def generate_symbols(self):
         model = Model()
         a = model.constant(1.3)
