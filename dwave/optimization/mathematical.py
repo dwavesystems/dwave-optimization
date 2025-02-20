@@ -224,6 +224,8 @@ def expit(x: ArraySymbol) -> Expit:
 
     See Also:
         :class:`~dwave.optimization.symbols.Expit`: equivalent symbol.
+
+    .. versionadded:: 0.5.2
     """
     return Expit(x)
 

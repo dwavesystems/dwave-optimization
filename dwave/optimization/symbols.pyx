@@ -1675,17 +1675,10 @@ _register(Equal, typeid(cppEqualNode))
 cdef class Expit(ArraySymbol):
     """Takes the values of a symbol and returns the corresponding logistic sigmoid (expit).
 
-    Examples:
-        This example adds the expit of a decision
-        variable to a model.
+    See Also:
+        :func:`~dwave.optimization.mathematical.expit`: equivalent function.
 
-        >>> from dwave.optimization.model import Model
-        >>> from dwave.optimization.mathematical import expit
-        >>> model = Model()
-        >>> i = model.constant(1.6)
-        >>> ii = expit(i)
-        >>> type(ii)
-        <class 'dwave.optimization.symbols.Expit'>
+    .. versionadded:: 0.5.2
     """
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
