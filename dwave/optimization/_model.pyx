@@ -39,6 +39,12 @@ from dwave.optimization.symbols cimport symbol_from_ptr
 __all__ = []
 
 
+_SUPPORTED_SERIALIZATION_VERSIONS = [
+    (0, 1),  # dwave-optimization <= X.Y.Z
+    (1, 0),  # test version
+]
+
+
 cdef class _Graph:
     """A ``_Graph`` is a class that manages a C++ ``dwave::optimization::Graph``.
 
@@ -162,6 +168,10 @@ cdef class _Graph:
 
         version = tuple(file.read(2))
 
+        if version not in _SUPPORTED_SERIALIZATION_VERSIONS:
+            # todo: better error checking.
+            raise ValueError("unsupported version")
+
         if check_header:
             # we'll need the header values to check later
             header_len = struct.unpack('<I', file.read(4))[0]
@@ -258,6 +268,7 @@ cdef class _Graph:
     def into_file(self, file, *,
                   Py_ssize_t max_num_states = 0,
                   bool only_decision = False,
+                  object version = None,
                   ):
         """Serialize the model into an existing file.
 
@@ -273,6 +284,9 @@ cdef class _Graph:
             only_decision:
                 If ``True``, only decision variables are serialized.
                 If ``False``, all symbols are serialized.
+            version:
+                The serialization version to target. If the target version
+                is incompatible, this method will raise an error.
 
         See also:
             :meth:`.from_file`, :meth:`.to_file`
@@ -282,7 +296,12 @@ cdef class _Graph:
         if not self.is_locked():
             # lock for the duration of the method
             with self.lock():
-                return self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
+                return self.into_file(
+                    file,
+                    max_num_states=max_num_states,
+                    only_decision=only_decision,
+                    version=version,
+                    )
 
         if isinstance(file, str):
             with open(file, "wb") as f:
@@ -290,9 +309,17 @@ cdef class _Graph:
                     f,
                     max_num_states=max_num_states,
                     only_decision=only_decision,
+                    version=version,
                     )
 
-        version = (0, 1)
+        if version is None:
+            version = (1, 0)
+        else:
+            version = tuple(map(int, version))
+
+            if version not in _SUPPORTED_SERIALIZATION_VERSIONS:
+                # TODO: better error message
+                raise ValueError("unsupported serialization version")
 
         model_info = self._header_data(max_num_states=max_num_states, only_decision=only_decision)
         num_states = model_info["num_states"]
