@@ -27,6 +27,8 @@ namespace dwave::optimization {
 /// A node encoding evenly spaced values within a given interval.
 class ARangeNode : public ArrayOutputMixin<ArrayNode> {
  public:
+    using array_or_int = std::variant<const Array*, ssize_t>;
+
     // We can avoid having so many constructors with a lot of fiddling with
     // concepts and templates. But this is more explicit and lets us put more
     // behind the compilation barrier. So let's live with the pile of
@@ -108,12 +110,17 @@ class ARangeNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::size()
     ssize_t size(const State& state) const override;
 
+    /// @copydoc Array::sizeinfo()
+    SizeInfo sizeinfo() const override;
+
     /// @copydoc Array::size_diff()
     ssize_t size_diff(const State& state) const override;
 
- private:
-    using array_or_int = std::variant<const Array*, ssize_t>;
+    array_or_int start() const { return start_; }
+    array_or_int stop() const { return stop_; }
+    array_or_int step() const { return step_; }
 
+ private:
     array_or_int start_;
     array_or_int stop_;
     array_or_int step_;

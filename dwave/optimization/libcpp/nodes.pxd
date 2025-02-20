@@ -19,8 +19,9 @@ from dwave.optimization.libcpp.array cimport Array, Slice
 from dwave.optimization.libcpp.graph cimport ArrayNode, Node
 from dwave.optimization.libcpp.state cimport State
 
-
-ctypedef ArrayNode* ArrayNodePtr  # Cython gets confused when templating pointers
+# Cython gets confused when templating pointers
+ctypedef const Array* ArrayPtr
+ctypedef ArrayNode* ArrayNodePtr
 
 
 cdef extern from "dwave-optimization/nodes/collections.hpp" namespace "dwave::optimization" nogil:
@@ -52,6 +53,15 @@ cdef extern from "dwave-optimization/nodes/collections.hpp" namespace "dwave::op
 cdef extern from "dwave-optimization/nodes/constants.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ConstantNode(ArrayNode):
         const double* buff() const
+
+
+cdef extern from "dwave-optimization/nodes/creation.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass ARangeNode(ArrayNode):
+        ctypedef variant[ArrayPtr, Py_ssize_t] array_or_int
+
+        array_or_int start() const
+        array_or_int stop() const
+        array_or_int step() const
 
 
 cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:

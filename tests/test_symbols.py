@@ -25,6 +25,7 @@ import dwave.optimization
 import dwave.optimization.symbols
 from dwave.optimization import (
     Model,
+    arange,
     expit,
     logical,
     logical_and,
@@ -346,6 +347,57 @@ class TestArrayValidation(utils.SymbolTests):
 
     def test_namespace(self):
         pass
+
+
+class TestARange(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        nodes = [
+            arange(0, model.integer(lower_bound=0, upper_bound=5)),
+            # arange(model.integer())
+        ]
+
+        with model.lock():
+            yield from nodes
+
+    def test_construction_three_arg(self):
+        model = Model()
+        model.states.resize(1)
+
+        # there are lots of combos for construction to test
+        for start in [1, model.constant(1)]:
+            for stop in [5, model.constant(5)]:
+                for step in [2, model.constant(2)]:
+                    if all(isinstance(v, int) for v in (start, stop, step)):
+                        with self.assertRaises(ValueError):
+                            arange(start, stop, step)
+                        continue
+                    ar = arange(start, stop, step)
+                    with model.lock():
+                        np.testing.assert_array_equal(ar.state(), np.arange(1, 5, 2))
+
+                    ar = arange(start, step=step, stop=stop)
+                    with model.lock():
+                        np.testing.assert_array_equal(ar.state(), np.arange(1, 5, 2))
+
+    def test_construction_two_arg(self):
+        model = Model()
+        model.states.resize(1)
+
+        # there are lots of combos for construction to test
+        for start in [1, model.constant(1)]:
+            for stop in [5, model.constant(5)]:
+                if all(isinstance(v, int) for v in (start, stop)):
+                    with self.assertRaises(ValueError):
+                        arange(start, stop)
+                    continue
+                ar = arange(start, stop)
+                with model.lock():
+                    np.testing.assert_array_equal(ar.state(), np.arange(1, 5, 1))
+
+                ar = arange(stop=stop, start=start)
+                with model.lock():
+                    np.testing.assert_array_equal(ar.state(), np.arange(1, 5, 1))
 
 
 class TestBasicIndexing(utils.SymbolTests):

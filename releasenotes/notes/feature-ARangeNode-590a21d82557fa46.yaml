@@ -1,4 +1,3 @@
 ---
 features:
-  - |
-    Add C++ ``ARangeNode``.
+  - Add C++ ``ARangeNode`` and Python `ARange` symbol and `arange()` function.

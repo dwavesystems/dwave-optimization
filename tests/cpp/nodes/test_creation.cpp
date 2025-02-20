@@ -28,6 +28,9 @@ TEST_CASE("ARangeNode") {
         auto arange = ARangeNode();
         CHECK_THAT(arange.shape(), RangeEquals({0}));
         CHECK_THAT(arange.predecessors(), RangeEquals(std::vector<Node*>{}));
+
+        CHECK(arange.sizeinfo() == SizeInfo(0));
+        CHECK(arange.minmax() == std::pair<double, double>(0, 0));
     }
 
     GIVEN("arange = ARangeNode(5)") {
@@ -38,9 +41,14 @@ TEST_CASE("ARangeNode") {
 
         auto state = graph.initialize_state();
         CHECK_THAT(arange_ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
+
+        CHECK(arange_ptr->sizeinfo() == SizeInfo(5));
+        CHECK(arange_ptr->minmax() == std::pair<double, double>(0, 4));
     }
 
     GIVEN("i = IntegerNode({}, -5, 5), arange = ARangeNode(i)") {
+        // arange(-5) => []
+        // arange(5) => [0, 1, 2, 3, 4]
         auto graph = Graph();
         auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -5, 5);
         auto arange_ptr = graph.emplace_node<ARangeNode>(i_ptr);
@@ -55,6 +63,9 @@ TEST_CASE("ARangeNode") {
         graph.initialize_state(state);
         CHECK_THAT(arange_ptr->shape(state), RangeEquals({3}));
         CHECK_THAT(arange_ptr->view(state), RangeEquals({0, 1, 2}));
+
+        CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 0, 5));
+        CHECK(arange_ptr->minmax() == std::pair<double, double>(0, 4));
 
         WHEN("We change i to be a larger value") {
             i_ptr->set_value(state, 0, 5);
@@ -104,6 +115,8 @@ TEST_CASE("ARangeNode") {
     }
 
     GIVEN("i = IntegerNode({}, -7, 5), arange = ARangeNode(0, i, -1)") {
+        // arange(0, -7, -1) => [0, -1, -2, -3, -4, -5, -6]
+        // arange(0, 5, -1) => []
         auto graph = Graph();
         auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -7, 5);
         auto arange_ptr = graph.emplace_node<ARangeNode>(0, i_ptr, -1);
@@ -112,6 +125,9 @@ TEST_CASE("ARangeNode") {
 
         CHECK_THAT(arange_ptr->shape(), RangeEquals({-1}));
         CHECK_THAT(arange_ptr->predecessors(), RangeEquals(std::vector<Node*>{i_ptr}));
+
+        CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 0, 7));
+        CHECK(arange_ptr->minmax() == std::pair<double, double>(-6, 0));
 
         auto state = graph.empty_state();
         i_ptr->initialize_state(state, {-5});
@@ -187,6 +203,8 @@ TEST_CASE("ARangeNode") {
     }
 
     GIVEN("i = IntegerNode({}, -5, 5), arange = ARangeNode(i, 5)") {
+        // arange(-5, 5) => [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4]
+        // arange(5, 5) => []
         auto graph = Graph();
         auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -5, 5);
         auto arange_ptr = graph.emplace_node<ARangeNode>(i_ptr, 5);
@@ -195,6 +213,9 @@ TEST_CASE("ARangeNode") {
 
         CHECK_THAT(arange_ptr->shape(), RangeEquals({-1}));
         CHECK_THAT(arange_ptr->predecessors(), RangeEquals(std::vector<Node*>{i_ptr}));
+
+        CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 0, 10));
+        CHECK(arange_ptr->minmax() == std::pair<double, double>(-5, 4));
 
         auto state = graph.empty_state();
         i_ptr->initialize_state(state, {3});
@@ -249,6 +270,10 @@ TEST_CASE("ARangeNode") {
     }
 
     GIVEN("stop = IntegerNode(-5, 5), step = IntegerNode(1, 2), arange=ARangeNode(0, i, j)") {
+        // arange(0, -5, 1) => []
+        // arange(0, 5, 1) => [0, 1, 2, 3, 4]
+        // arange(0, -5, 2) => []
+        // arange(0, 5, 2) => [0, 2, 4]
         auto graph = Graph();
         auto stop_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -5, 5);
         auto step_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 1, 2);
@@ -258,6 +283,9 @@ TEST_CASE("ARangeNode") {
 
         CHECK_THAT(arange_ptr->shape(), RangeEquals({-1}));
         CHECK_THAT(arange_ptr->predecessors(), RangeEquals(std::vector<Node*>{stop_ptr, step_ptr}));
+
+        CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 0, 5));
+        CHECK(arange_ptr->minmax() == std::pair<double, double>(0, 4));
 
         auto state = graph.empty_state();
         stop_ptr->initialize_state(state, {5});

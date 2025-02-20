@@ -35,10 +35,15 @@ struct get_diff {
 };
 
 struct get_minmax {
+    explicit get_minmax(Array::optional_cache_type<std::pair<double, double>> cache = std::nullopt)
+            : cache(cache) {}
+
     std::pair<ssize_t, ssize_t> operator()(ssize_t value) const { return {value, value}; }
     std::pair<ssize_t, ssize_t> operator()(const Array* array_ptr) const {
-        return array_ptr->minmax();
+        return array_ptr->minmax(cache);
     }
+
+    Array::optional_cache_type<std::pair<double, double>> cache;
 };
 
 struct get_value {
@@ -206,7 +211,7 @@ void ARangeNode::initialize_state(State& state) const {
 std::pair<double, double> ARangeNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return memoize(cache, [&]() {
-        auto visitor = get_minmax();
+        auto visitor = get_minmax(cache);
         const auto [start_low, start_high] = std::visit(visitor, start_);
         const auto [stop_low, stop_high] = std::visit(visitor, stop_);
         const auto [step_low, step_high] = std::visit(visitor, step_);
@@ -217,12 +222,12 @@ std::pair<double, double> ARangeNode::minmax(
         // The direction that we're stepping determines the min/max
         if (step_low > 0) {
             const double low = start_low;
-            const double high = stop_high;
+            const double high = stop_high - step_low;
             if (low > high) return std::pair<double, double>(0, 0);
             return std::make_pair(low, high);
         }
-        if (step_low < 0) {
-            const double low = stop_low;
+        if (step_high < 0) {
+            const double low = stop_low - step_high;
             const double high = start_high;
             if (low > high) return std::pair<double, double>(0, 0);
             return std::make_pair(low, high);
@@ -300,6 +305,36 @@ std::span<const ssize_t> ARangeNode::shape(const State& state) const {
 
 ssize_t ARangeNode::size(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->size();
+}
+
+// There is a special case here that we're not considering, which is where
+// there is exactly one stop predecessor, and it's a SizeNode.
+SizeInfo ARangeNode::sizeinfo() const {
+    if (!dynamic()) return SizeInfo(size());
+
+    auto visitor = get_minmax();
+    const auto [start_low, start_high] = std::visit(visitor, start_);
+    const auto [stop_low, stop_high] = std::visit(visitor, stop_);
+    const auto [step_low, step_high] = std::visit(visitor, step_);
+
+    // checked on construction.
+    assert(!(step_low <= 0 && step_high >= 0));
+
+    // The direction that we're stepping determines the largest/smallest
+    // we can be
+    if (step_low > 0) {
+        const ssize_t min_ = std::max<ssize_t>((stop_low - start_high) / step_high, 0);
+        const ssize_t max_ = std::max<ssize_t>((stop_high - start_low) / step_low, min_);
+        return SizeInfo(this, min_, max_);
+    }
+    if (step_high < 0) {
+        const ssize_t min_ = std::max<ssize_t>((stop_high - start_low) / step_high, 0);
+        const ssize_t max_ = std::max<ssize_t>((stop_low - start_high) / step_low, min_);
+        return SizeInfo(this, min_, max_);
+    }
+
+    assert(false && "unreachable");
+    unreachable();
 }
 
 ssize_t ARangeNode::size_diff(const State& state) const {
