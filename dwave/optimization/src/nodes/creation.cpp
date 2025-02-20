@@ -258,7 +258,7 @@ void ARangeNode::propagate(State& state) const {
     // if the stop has also not changed, then nothing to do
     if (stop_old == stop_new) return;
 
-    // only the stop has changed, and it has actually changed
+    // only the stop has changed
     const ssize_t step = step_old;
     assert(step == step_new);
 
@@ -279,7 +279,7 @@ void ARangeNode::propagate(State& state) const {
         }
     } else if (step < 0) {
         if (stop_old < stop_new) {
-            // we shank
+            // we shrank
             while (buffer.size() && buffer.back() <= stop_new) {
                 ptr->pop_back();
             }

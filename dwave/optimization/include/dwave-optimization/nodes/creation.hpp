@@ -116,8 +116,13 @@ class ARangeNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::size_diff()
     ssize_t size_diff(const State& state) const override;
 
+    /// The value or array defining the start of the range.
     array_or_int start() const { return start_; }
+
+    /// The value or array defining the stop (not inclusive) of the range.
     array_or_int stop() const { return stop_; }
+
+    /// The value or array defining the spacing between values.
     array_or_int step() const { return step_; }
 
  private:
