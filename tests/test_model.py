@@ -470,7 +470,7 @@ class TestModelSerialization(unittest.TestCase):
         for n0, n1 in zip(model.iter_symbols(), new.iter_symbols()):
             self.assertIs(type(n0), type(n1))
 
-    def test_invalid_version(self):
+    def test_invalid_version_from_file(self):
         from dwave.optimization._model import DEFAULT_SERIALIZATION_VERSION
 
         model = Model()
@@ -490,6 +490,16 @@ class TestModelSerialization(unittest.TestCase):
             # one being thrown
             with self.assertRaisesRegex(ValueError, "Unknown serialization format"):
                 Model.from_file(f)
+
+    def test_invalid_version_into_file(self):
+        model = Model()
+        with io.BytesIO() as f:
+            with self.assertRaisesRegex(ValueError, "Unknown serialization format"):
+                model.into_file(f, version=(255, 255))
+
+        with self.assertRaisesRegex(ValueError, "Unknown serialization format"):
+            with model.to_file(version=(255, 255)) as f:
+                pass
 
     def test_max_num_states(self):
         model = Model()

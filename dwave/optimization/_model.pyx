@@ -166,14 +166,14 @@ cdef class _Graph:
         read_prefix = file.read(len(prefix))
         if read_prefix != prefix:
             raise ValueError("Unknown file type. Expected magic string "
-                             f"{prefix!r} but recieved {read_prefix!r} "
+                             f"{prefix!r} but received {read_prefix!r} "
                              "instead")
 
         version = tuple(file.read(2))
 
         if version not in KNOWN_SERIALIZATION_VERSIONS:
             raise ValueError("Unknown serialization format. Expected one of "
-                             f"{KNOWN_SERIALIZATION_VERSIONS} but recieved {version} "
+                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
                              "instead. Upgrading your dwave-optimization version may help.")
 
         if check_header:
@@ -288,6 +288,8 @@ cdef class _Graph:
             only_decision:
                 If ``True``, only decision variables are serialized.
                 If ``False``, all symbols are serialized.
+            version:
+                A 2-tuple indicating which serialization version to use.
 
         See also:
             :meth:`.from_file`, :meth:`.to_file`
@@ -317,7 +319,7 @@ cdef class _Graph:
             version = DEFAULT_SERIALIZATION_VERSION
         elif version not in KNOWN_SERIALIZATION_VERSIONS:
             raise ValueError("Unknown serialization format. Expected one of "
-                             f"{KNOWN_SERIALIZATION_VERSIONS} but recieved {version} "
+                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
                              "instead. Upgrading your dwave-optimization version may help.")
 
         model_info = self._header_data(

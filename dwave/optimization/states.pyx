@@ -210,6 +210,8 @@ cdef class States:
                 File pointer to an existing writeable, seekable file-like
                 object encoding a model. Strings are interpreted as a file
                 name.
+            version:
+                A 2-tuple indicating which serialization version to use.
 
         TODO: describe the format
         """
