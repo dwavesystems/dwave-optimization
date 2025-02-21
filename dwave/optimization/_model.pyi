@@ -28,6 +28,10 @@ _ShapeLike: typing.TypeAlias = typing.Union[int, collections.abc.Sequence[int]]
 _GraphSubclass = typing.TypeVar("_GraphSubclass", bound="_Graph")
 
 
+DEFAULT_SERIALIZATION_VERSION: tuple[int, int]
+KNOWN_SERIALIZATION_VERSIONS: tuple[tuple[int, int], ...]
+
+
 class _Graph:
     def __init__(self, *args, **kwargs) -> typing.NoReturn: ...
 
@@ -48,6 +52,7 @@ class _Graph:
         *,
         max_num_states: int = 0,
         only_decision: bool = False,
+        version: typing.Optional[tuple[int, int]] = None
         ): ...
 
     def is_locked(self) -> bool: ...

@@ -137,7 +137,9 @@ class TestStates(unittest.TestCase):
         model.states.resize(10)
         self.assertEqual(model.states.size(), 10)
 
-    def test_serialization(self):
+
+class TestStatesSerialization(unittest.TestCase):
+    def test(self):
         model = Model()
         x = model.list(10)
         model.states.resize(3)
@@ -158,7 +160,7 @@ class TestStates(unittest.TestCase):
         self.assertFalse(a.has_state(1))
         np.testing.assert_array_equal(a.state(2), x.state(2))
 
-    def test_serialization_bad(self):
+    def test_bad(self):
         model = Model()
         x = model.list(10)
         model.states.resize(1)

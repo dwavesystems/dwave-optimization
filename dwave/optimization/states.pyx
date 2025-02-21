@@ -200,7 +200,9 @@ cdef class States:
             self._states[i].resize(model.num_nodes())
             model._graph.initialize_state(self._states[i])
 
-    def into_file(self, file):
+    def into_file(self, file, *,
+                  version = None,
+                  ):
         """Serialize the states into an existing  file.
 
         Args:
@@ -212,7 +214,12 @@ cdef class States:
         TODO: describe the format
         """
         self.resolve()
-        return self._model().into_file(file, only_decision=True, max_num_states=self.size())
+        return self._model().into_file(
+            file,
+            only_decision=True,
+            max_num_states=self.size(),
+            version=version,
+            )
 
 
     cdef _Graph _model(self):

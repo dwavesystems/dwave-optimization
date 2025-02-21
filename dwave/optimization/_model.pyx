@@ -39,6 +39,15 @@ from dwave.optimization.symbols cimport symbol_from_ptr
 __all__ = []
 
 
+DEFAULT_SERIALIZATION_VERSION = (0, 1)
+"""A 2-tuple encoding the default serialization format used for serializing models."""
+
+KNOWN_SERIALIZATION_VERSIONS = (
+    (0, 1),
+)
+"""A tuple of 2-tuples listing all serialization versions supported."""
+
+
 cdef class _Graph:
     """A ``_Graph`` is a class that manages a C++ ``dwave::optimization::Graph``.
 
@@ -156,11 +165,16 @@ cdef class _Graph:
 
         read_prefix = file.read(len(prefix))
         if read_prefix != prefix:
-            raise ValueError("unknown file type, expected magic string "
-                             f"{prefix!r} but got {read_prefix!r} "
+            raise ValueError("Unknown file type. Expected magic string "
+                             f"{prefix!r} but recieved {read_prefix!r} "
                              "instead")
 
         version = tuple(file.read(2))
+
+        if version not in KNOWN_SERIALIZATION_VERSIONS:
+            raise ValueError("Unknown serialization format. Expected one of "
+                             f"{KNOWN_SERIALIZATION_VERSIONS} but recieved {version} "
+                             "instead. Upgrading your dwave-optimization version may help.")
 
         if check_header:
             # we'll need the header values to check later
@@ -258,6 +272,7 @@ cdef class _Graph:
     def into_file(self, file, *,
                   Py_ssize_t max_num_states = 0,
                   bool only_decision = False,
+                  object version = None,
                   ):
         """Serialize the model into an existing file.
 
@@ -282,7 +297,12 @@ cdef class _Graph:
         if not self.is_locked():
             # lock for the duration of the method
             with self.lock():
-                return self.into_file(file, max_num_states=max_num_states, only_decision=only_decision)
+                return self.into_file(
+                    file,
+                    max_num_states=max_num_states,
+                    only_decision=only_decision,
+                    version=version,
+                    )
 
         if isinstance(file, str):
             with open(file, "wb") as f:
@@ -290,11 +310,20 @@ cdef class _Graph:
                     f,
                     max_num_states=max_num_states,
                     only_decision=only_decision,
+                    version=version,
                     )
 
-        version = (0, 1)
+        if version is None:
+            version = DEFAULT_SERIALIZATION_VERSION
+        elif version not in KNOWN_SERIALIZATION_VERSIONS:
+            raise ValueError("Unknown serialization format. Expected one of "
+                             f"{KNOWN_SERIALIZATION_VERSIONS} but recieved {version} "
+                             "instead. Upgrading your dwave-optimization version may help.")
 
-        model_info = self._header_data(max_num_states=max_num_states, only_decision=only_decision)
+        model_info = self._header_data(
+            max_num_states=max_num_states,
+            only_decision=only_decision,
+        )
         num_states = model_info["num_states"]
 
         encoder = json.JSONEncoder(separators=(',', ':'))
