@@ -37,6 +37,7 @@ class States:
     def into_file(
         self,
         file: typing.Union[typing.BinaryIO, collections.abc.ByteString, str],
+        version: typing.Optional[tuple[int, int]] = None,
         ): ...
 
     def _reset_intermediate_states(self): ...

@@ -412,7 +412,15 @@ class Model(_Graph):
             :meth:`.into_file`, :meth:`.from_file`
         """
         file = tempfile.TemporaryFile(mode="w+b")
-        self.into_file(file, **kwargs)
+
+        # into_file can raise an exception, in which case we close off the
+        # tempfile before returning
+        try:
+            self.into_file(file, **kwargs)
+        except Exception:
+            file.close()
+            raise
+
         file.seek(0)
         return file
 
