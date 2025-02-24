@@ -427,6 +427,19 @@ TEST_CASE("BinaryOpNode - DivideNode") {
         }
     }
 
+    GIVEN("a = 0, x = IntegerNode(1, 5), y = a / x") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(0);
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 1, 5);
+
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, x_ptr);
+
+        THEN("y's max/min/integral are as expected") {
+            CHECK(y_ptr->max() == 0);
+            CHECK(y_ptr->min() == 0);
+            CHECK_FALSE(y_ptr->integral());
+        }
+    }
+
     GIVEN("x = IntegerNode(-5, 5), a = -3, y = x / a") {
         auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
         auto a_ptr = graph.emplace_node<ConstantNode>(-3);
