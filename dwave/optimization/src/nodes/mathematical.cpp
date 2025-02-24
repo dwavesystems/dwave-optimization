@@ -251,8 +251,6 @@ std::pair<double, double> BinaryOpNode<BinaryOp>::minmax(
     if constexpr (std::same_as<BinaryOp, std::divides<double>> ||
                   std::same_as<BinaryOp, std::multiplies<double>>) {
         // The constructor should prevent us from getting here, but just in case...
-        assert((!std::same_as<BinaryOp, std::divides<double>> || lhs_low != 0));
-        assert((!std::same_as<BinaryOp, std::divides<double>> || lhs_high != 0));
         assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_low != 0));
         assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_high != 0));
 
