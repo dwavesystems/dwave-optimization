@@ -158,7 +158,7 @@ void ConcatenateNode::propagate(State& state) const {
             auto update_it = view_it + diff.index;
             ssize_t buffer_index = &*update_it - ptr->buffer.data();
             assert(*update_it == diff.old);
-            ptr->updates.emplace_back(buffer_index, *view_it, diff.value);
+            ptr->updates.emplace_back(buffer_index, *update_it, diff.value);
             *update_it = diff.value;
         }
     }

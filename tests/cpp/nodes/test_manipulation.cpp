@@ -111,6 +111,30 @@ TEST_CASE("ConcatenateNode") {
         }
     }
 
+    GIVEN("Two flat integer arrays: a = [0, 1, 2], b = [3, 4, 5], c = concatenate(a, b)") {
+        auto graph = Graph();
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, 0, 100);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, 0, 100);
+        auto c_ptr = graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_ptr, b_ptr}, 0);
+
+        graph.emplace_node<ArrayValidationNode>(c_ptr);
+
+        auto state = graph.empty_state();
+        a_ptr->initialize_state(state, {0, 1, 2});
+        b_ptr->initialize_state(state, {3, 4, 5});
+        graph.initialize_state(state);
+
+        CHECK_THAT(c_ptr->view(state), RangeEquals({0, 1, 2, 3, 4, 5}));
+
+        WHEN("b is updated to [3, 40, 5]") {
+            b_ptr->set_value(state, 1, 40);
+            graph.propagate(state, graph.descendants(state, {b_ptr}));
+
+            CHECK_THAT(c_ptr->view(state), RangeEquals({0, 1, 2, 3, 40, 5}));
+            CHECK_THAT(c_ptr->diff(state), RangeEquals({Update(4, 4, 40)}));
+        }
+    }
+
     GIVEN("Two arrays with shapes (2,2,2) and (3,2,2) that are concatenated on axis 0") {
         auto graph = Graph();
         auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2, 2, 2}, 0, 100);
