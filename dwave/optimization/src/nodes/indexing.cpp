@@ -1450,7 +1450,7 @@ void BasicIndexingNode::propagate(State& state) const {
         // distance between pointers in the parent array. Relies on parent
         // being contiguous
         assert(array_ptr_->contiguous());
-        const ssize_t stop = &*this->end(state) - &*this->begin(state);
+        const ssize_t stop = &*this->end(state) - &*array_ptr_->begin(state);
 
         // A few sanity checks...
         assert(start >= 0);

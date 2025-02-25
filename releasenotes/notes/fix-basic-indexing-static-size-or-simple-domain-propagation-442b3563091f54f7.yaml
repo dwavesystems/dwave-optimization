@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Fix bug in basic indexing propagation that may have caused some updates
+    from the predecessor array to not get propagated when the start of the
+    indexing operation was offset from the start of the predecessor array.
+    This would happen only when the predecessor array is statically sized or
+    the start and stop of the domain are both positive.
