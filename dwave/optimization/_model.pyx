@@ -190,6 +190,13 @@ cdef class _Graph:
             if not isinstance(num_nodes, int) or num_nodes < 0:
                 raise ValueError("expected num_nodes to be a positive integer")
 
+            # Read any states that have been encoded
+            num_states = model_info.get("num_states")
+            if not isinstance(num_states, int) or num_states < 0:
+                raise ValueError("expected num_states to be a positive integer")
+            if num_states > 0:
+                model.states.resize(num_states)
+
             with zf.open("nodetypes.txt", "r") as fcls, zf.open("adj.adjlist", "r") as fadj:
                 for lineno, (classname, adjlist) in enumerate(zip(fcls, fadj)):
                     # get the predecessors
@@ -209,12 +216,17 @@ cdef class _Graph:
 
                     # take advanctage of the symbols all being in the same namespace
                     # and the fact that we (currently) encode them all by name
-                    cls = getattr(symbols, classname, None)
+                    node_cls = getattr(symbols, classname, None)
 
-                    if not issubclass(cls, Symbol):
+                    if not issubclass(node_cls, Symbol):
                         raise ValueError("encoded model has an unsupported node type")
 
-                    cls._from_zipfile(zf, directory, model, predecessors=predecessors)
+                    node = node_cls._from_zipfile(zf, directory, model, predecessors=predecessors)
+
+                    # Load the states if requested.
+                    # The num_states > 0 is check is a redundant shortcut for performance
+                    if num_states > 0 and not node._deterministic_state():
+                        node._states_from_zipfile(zf, directory, num_states, version)
 
             objective_buff = zf.read("objective.json")
             if objective_buff:
@@ -225,20 +237,6 @@ cdef class _Graph:
 
             for cid in json.loads(zf.read("constraints.json")):
                 model.add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
-
-            # Read any states that have been encoded
-            num_states = model_info.get("num_states")
-            if not isinstance(num_states, int) or num_states < 0:
-                raise ValueError("expected num_states to be a positive integer")
-
-            if num_states > 0:
-                model.states.resize(num_states)
-
-                # now read the states of the decision variables
-                num_decisions = model.num_decisions()  # use the model not the serialization
-                for node in itertools.islice(model.iter_symbols(), 0, num_decisions):
-                    for i in range(num_states):
-                        node._state_from_zipfile(zf, f"nodes/{node.topological_index()}/states/{i}/", i)
 
         if check_header:
             expected = model._header_data(only_decision=False)
@@ -391,6 +389,16 @@ cdef class _Graph:
                 directory = f"nodes/{node.topological_index()}/"
                 node._into_zipfile(zf, directory)
 
+                # Encode the states if requested.
+                # The num_states > 0 is check is a redundant shortcut for performance
+                if num_states > 0 and not node._deterministic_state():
+                    node._states_into_zipfile(
+                        zf,
+                        directory=directory,
+                        num_states=num_states,
+                        version=version,
+                    )
+
             # Encode the objective and the constraints
             if self.objective is not None and self.objective.topological_index() < stop:
                 zf.writestr("objective.json", encoder.encode(self.objective.topological_index()))
@@ -402,14 +410,6 @@ cdef class _Graph:
                 if c is not None and c.topological_index() < stop:
                     constraints.append(c.topological_index())
             zf.writestr("constraints.json", encoder.encode(constraints))
-
-            # Encode the states if requested
-            if num_states > 0:  # redundant, but good short circuit
-                for node in itertools.islice(self.iter_symbols(), self.num_decisions()):
-                    # only save states that have been initialized
-                    for i in filter(node.has_state, range(num_states)):
-                        directory = f"nodes/{node.topological_index()}/states/{i}/"
-                        node._state_into_zipfile(zf, directory, i)
 
     cpdef bool is_locked(self) noexcept:
         """Lock status of the model.
@@ -760,6 +760,12 @@ cdef class Symbol:
         self.node_ptr = node_ptr
         self.expired_ptr = node_ptr.expired_ptr()
 
+    def _deterministic_state(self):
+        """Return ``True`` if the symbol's state is uniquely determined by its
+        predecessors.
+        """
+        return self.node_ptr.deterministic_state()
+
     def equals(self, other):
         """Compare whether two symbols are identical.
 
@@ -1089,12 +1095,12 @@ cdef class Symbol:
             return False
         return not self.expired() and self.id() == other_.id()
 
-    def _state_from_zipfile(self, zf, directory, Py_ssize_t state_index):
+    def _states_from_zipfile(self, zf, directory, num_states, version):
         # unlike node serialization, by default we raise an error because if
         # this is being called, it must have a state
         raise NotImplementedError(f"{type(self).__name__} has not implemented state deserialization")
 
-    def _state_into_zipfile(self, zf, directory, Py_ssize_t state_index):
+    def _states_into_zipfile(self, zf, directory, num_states, version):
         # unlike node serialization, by default we raise an error because if
         # this is being called, it must have a state
         raise NotImplementedError(f"{type(self).__name__} has not implemented state serialization")
@@ -1553,6 +1559,10 @@ cdef class ArraySymbol(Symbol):
 
         return np.array(StateView(self, index), copy=copy)
 
+    def _states_from_zipfile(self, zf, directory, num_states, version):
+        for i in range(num_states):
+            self._state_from_zipfile(zf, f"{directory}states/{i}/", i)
+
     def _state_from_zipfile(self, zf, directory, Py_ssize_t state_index):
         fname = directory + "array.npy"
 
@@ -1581,6 +1591,14 @@ cdef class ArraySymbol(Symbol):
         # then save into the state directory
         with zf.open(directory + "array.npy", mode="w", force_zip64=True) as f:
             np.save(f, array, allow_pickle=False)
+
+    def _states_into_zipfile(self, zf, directory, num_states, version):
+        for i in filter(self.has_state, range(num_states)):
+            self._state_into_zipfile(
+                zf,
+                directory=f"{directory}states/{i}/",
+                state_index=i,
+                )
 
     def state_size(self):
         r"""Return an estimate of the size, in bytes, of an array symbol's state.
