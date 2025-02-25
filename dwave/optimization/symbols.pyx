@@ -1352,6 +1352,10 @@ cdef class DisjointBitSets(Symbol):
 
         self.set_state(state_index, arrays)
 
+    def _states_from_zipfile(self, zf, directory, num_states, version):
+        for i in range(num_states):
+            self._state_from_zipfile(zf, f"{directory}states/{i}/", i)
+
     def _state_into_zipfile(self, zf, directory, Py_ssize_t state_index):
         # do this first to get any potential error messages out of the way
         # todo: use a view not a copy
@@ -1360,6 +1364,14 @@ cdef class DisjointBitSets(Symbol):
         for i, arr in enumerate(arrays):
             with zf.open(directory+f"set{i}", mode="w", force_zip64=True) as f:
                 np.save(f, arr, allow_pickle=False)
+
+    def _states_into_zipfile(self, zf, directory, num_states, version):
+        for i in filter(self.has_state, range(num_states)):
+            self._state_into_zipfile(
+                zf,
+                directory=f"{directory}states/{i}/",
+                state_index=i,
+                )
 
     def num_disjoint_sets(self):
         """Return the number of disjoint sets in the symbol."""
@@ -1605,6 +1617,10 @@ cdef class DisjointLists(Symbol):
 
         self.set_state(state_index, arrays)
 
+    def _states_from_zipfile(self, zf, directory, num_states, version):
+        for i in range(num_states):
+            self._state_from_zipfile(zf, f"{directory}states/{i}/", i)
+
     def _state_into_zipfile(self, zf, directory, Py_ssize_t state_index):
         # do this first to get any potential error messages out of the way
         # todo: use a view not a copy
@@ -1613,6 +1629,14 @@ cdef class DisjointLists(Symbol):
         for i, arr in enumerate(arrays):
             with zf.open(directory+f"list{i}", mode="w", force_zip64=True) as f:
                 np.save(f, arr, allow_pickle=False)
+
+    def _states_into_zipfile(self, zf, directory, num_states, version):
+        for i in filter(self.has_state, range(num_states)):
+            self._state_into_zipfile(
+                zf,
+                directory=f"{directory}states/{i}/",
+                state_index=i,
+                )
 
     def num_disjoint_lists(self):
         """Return the number of disjoint lists in the symbol."""
