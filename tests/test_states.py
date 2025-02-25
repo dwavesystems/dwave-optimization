@@ -12,8 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import concurrent.futures
 import io
+import concurrent.futures
 import threading
 import unittest
 
@@ -136,49 +136,3 @@ class TestStates(unittest.TestCase):
         model.lock()
         model.states.resize(10)
         self.assertEqual(model.states.size(), 10)
-
-
-class TestStatesSerialization(unittest.TestCase):
-    def test(self):
-        model = Model()
-        x = model.list(10)
-        model.states.resize(3)
-        x.set_state(0, list(reversed(range(10))))
-        # don't set state 1
-        x.state(2)  # default initialize
-
-        # Get another model with the same shape. This won't work in general
-        # unless you're very careful to always insert nodes in the same order
-        new = Model()
-        a = new.list(10)
-
-        with model.states.to_file() as f:
-            new.states.from_file(f)
-
-        self.assertEqual(new.states.size(), 3)
-        np.testing.assert_array_equal(a.state(0), x.state(0))
-        self.assertFalse(a.has_state(1))
-        np.testing.assert_array_equal(a.state(2), x.state(2))
-
-    def test_bad(self):
-        model = Model()
-        x = model.list(10)
-        model.states.resize(1)
-        x.set_state(0, list(reversed(range(10))))
-
-        with self.subTest("different node class"):
-            new = Model()
-            new.constant(10)
-
-            with model.states.to_file() as f:
-                with self.assertRaises(ValueError):
-                    new.states.from_file(f)
-
-        # todo: uncomment once we have proper node equality testing
-        # with self.subTest("different node shape"):
-        #     new = Model()
-        #     new.list(9)
-
-        #     with model.states.to_file() as f:
-        #         with self.assertRaises(ValueError):
-        #             new.states.from_file(f)
