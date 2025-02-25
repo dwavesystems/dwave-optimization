@@ -138,11 +138,10 @@ std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ss
 std::pair<double, double> ConcatenateNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return memoize(cache, [&]() {
-        return std::make_pair(
-                std::ranges::min(array_ptrs_ |
-                                 std::views::transform([](ArrayNode* ptr) { return ptr->min(); })),
-                std::ranges::max(array_ptrs_ |
-                                 std::views::transform([](ArrayNode* ptr) { return ptr->max(); })));
+        auto min = [&cache](const ArrayNode* ptr) { return ptr->minmax(cache).first; };
+        auto max = [&cache](const ArrayNode* ptr) { return ptr->minmax(cache).second; };
+        return std::make_pair(std::ranges::min(array_ptrs_ | std::views::transform(min)),
+                              std::ranges::max(array_ptrs_ | std::views::transform(max)));
     });
 }
 

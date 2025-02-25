@@ -1,0 +1,3 @@
+---
+fixes:
+  - Fix the C++ ``ConcatenateNode::minmax()`` method. Previously it would not pass the ``cache`` argument to its predecessors.

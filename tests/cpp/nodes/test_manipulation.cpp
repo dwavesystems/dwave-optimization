@@ -135,6 +135,30 @@ TEST_CASE("ConcatenateNode") {
         }
     }
 
+    GIVEN("Two flat integer arrays: a = [0, 1, 2], b = [3, 4, 5], c = concatenate(a.copy(), b)") {
+        auto graph = Graph();
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, 0, 50);
+        auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -10, 100);
+        auto a_copy_ptr = graph.emplace_node<CopyNode>(a_ptr);
+        auto c_ptr = graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_copy_ptr, b_ptr}, 0);
+
+        THEN("We can get the minmax() and integral() as expected") {
+            CHECK(c_ptr->integral());
+            CHECK(c_ptr->minmax() == std::pair<double, double>{-10, 100});
+
+            auto cache = Array::cache_type<std::pair<double, double>>();
+            CHECK(c_ptr->minmax(cache) == std::pair<double, double>{-10, 100});
+
+            CHECK(cache.contains(c_ptr));
+            // mutating the cache should also mutate the output
+            cache[c_ptr].first = -1000;
+            CHECK(c_ptr->minmax(cache).first == -1000);
+            CHECK(c_ptr->minmax().first == -10);  // ignores the cache
+
+            CHECK(cache.contains(a_copy_ptr));
+        }
+    }
+
     GIVEN("Two arrays with shapes (2,2,2) and (3,2,2) that are concatenated on axis 0") {
         auto graph = Graph();
         auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2, 2, 2}, 0, 100);
