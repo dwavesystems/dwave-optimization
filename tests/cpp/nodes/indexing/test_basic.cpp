@@ -658,8 +658,8 @@ TEST_CASE("BasicIndexingNode") {
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
         THEN("y has the shape and strides we expect") {
+            CHECK(y_ptr->size() == 4);
             CHECK_THAT(y_ptr->shape(), RangeEquals({2, 2}));
-
             CHECK_THAT(y_ptr->strides(), RangeEquals({48, 8}));
         }
 
@@ -679,6 +679,37 @@ TEST_CASE("BasicIndexingNode") {
             THEN("The states are as expected") {
                 CHECK_THAT(x_ptr->view(state), RangeEquals({1, 1, 0, 0, 0, 0, 0, 0, 0}));
                 CHECK_THAT(y_ptr->view(state), RangeEquals({1, 0, 0, 0}));
+            }
+        }
+    }
+
+    GIVEN("x = Binary((10, 3)); y = x[5:7, 1]") {
+        auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{10, 3});
+        auto y_ptr = graph.emplace_node<BasicIndexingNode>(
+                x_ptr, Slice(5, 7), 1);
+
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+
+        THEN("y has the shape and strides we expect") {
+            CHECK(y_ptr->size() == 2);
+            CHECK_THAT(y_ptr->shape(), RangeEquals({2}));
+            CHECK_THAT(y_ptr->strides(), RangeEquals({24}));
+        }
+
+        auto state = graph.initialize_state();
+
+        THEN("We get the default states we expect") {
+            CHECK(std::ranges::equal(x_ptr->view(state), std::vector<ssize_t>(30)));
+            CHECK(std::ranges::equal(y_ptr->view(state), std::vector<ssize_t>(2)));
+        }
+
+        WHEN("We do propagation") {
+            x_ptr->flip(state, 19);
+
+            graph.propagate(state, graph.descendants(state, {x_ptr}));
+
+            THEN("The states are as expected") {
+                CHECK_THAT(y_ptr->view(state), RangeEquals({0, 1}));
             }
         }
     }
