@@ -39,11 +39,12 @@ from dwave.optimization.symbols cimport symbol_from_ptr
 __all__ = []
 
 
-DEFAULT_SERIALIZATION_VERSION = (0, 1)
+DEFAULT_SERIALIZATION_VERSION = (1, 0)
 """A 2-tuple encoding the default serialization format used for serializing models."""
 
 KNOWN_SERIALIZATION_VERSIONS = (
     (0, 1),
+    (1, 0),
 )
 """A tuple of 2-tuples listing all serialization versions supported."""
 
@@ -141,6 +142,7 @@ cdef class _Graph:
     @classmethod
     def from_file(cls, file, *,
                   check_header = True,
+                  substitute = None,
                   ):
         """Construct a model from the given file.
 
@@ -159,7 +161,12 @@ cdef class _Graph:
 
         if isinstance(file, str):
             with open(file, "rb") as f:
-                return cls.from_file(f)
+                return cls.from_file(f, check_header=check_header, substitute=substitute)
+
+        if substitute is None:
+            substitute = dict()
+        elif not isinstance(substitute, collections.abc.Mapping):
+            raise TypeError("expected substitute to be a mapping of node names to classes")
 
         prefix = b"DWNL"
 
@@ -216,7 +223,7 @@ cdef class _Graph:
 
                     # take advanctage of the symbols all being in the same namespace
                     # and the fact that we (currently) encode them all by name
-                    node_cls = getattr(symbols, classname, None)
+                    node_cls = substitute.get(classname, getattr(symbols, classname, None))
 
                     if not issubclass(node_cls, Symbol):
                         raise ValueError("encoded model has an unsupported node type")
@@ -1560,45 +1567,60 @@ cdef class ArraySymbol(Symbol):
         return np.array(StateView(self, index), copy=copy)
 
     def _states_from_zipfile(self, zf, directory, num_states, version):
-        for i in range(num_states):
-            self._state_from_zipfile(zf, f"{directory}states/{i}/", i)
-
-    def _state_from_zipfile(self, zf, directory, Py_ssize_t state_index):
-        fname = directory + "array.npy"
-
-        # check if there is any state data saved (it can be sparse)
-        # todo: test for performance, there may be better ways to check
-        # for a file's existence
+        # Test whether we saved all of the state together. We can detect it
+        # based on the existance of an arrays.npy file.
         try:
-            zipinfo = zf.getinfo(fname)
+            states_info = zf.getinfo(f"{directory}states.npy")
         except KeyError:
-            # no state data encoded
-            return
+            states_info = None
 
-        with zf.open(zipinfo, mode="r") as f:
-            # todo: consider memmap here if possible
-            state = np.load(f, allow_pickle=False)
+        if states_info is None:
+            for i in range(num_states):            
+                try:
+                    state_info = zf.getinfo(f"{directory}states/{i}/array.npy")
+                except KeyError:
+                    # states can be missing, in which case just skip this
+                    # index
+                    continue
 
-        # only decisions actually have this method. In the future we should
-        # do better error checking etc to handle it
-        self.set_state(state_index, state)
+                with zf.open(state_info, mode="r") as f:
+                    state = np.load(f, allow_pickle=False)
 
-    def _state_into_zipfile(self, zf, directory, Py_ssize_t state_index):
-        # do this first to get any potential error messages out of the way
-        # todo: use a view not a copy
-        array = self.state(state_index)
+                self.set_state(i, state)
+        else:
+            with zf.open(states_info, mode="r") as f:
+                states = np.load(f, allow_pickle=False)
 
-        # then save into the state directory
-        with zf.open(directory + "array.npy", mode="w", force_zip64=True) as f:
-            np.save(f, array, allow_pickle=False)
+            # iterate over axis 0, each "row" is then its own state
+            for i, state in enumerate(states):
+                self.set_state(i, state)
 
     def _states_into_zipfile(self, zf, directory, num_states, version):
-        for i in filter(self.has_state, range(num_states)):
-            self._state_into_zipfile(
-                zf,
-                directory=f"{directory}states/{i}/",
-                state_index=i,
-                )
+        states = [self.state(i) if self.has_state(i) else None for i in range(num_states)]
+
+        # If we have any missing states, or if the states don't all have the
+        # same shape then we save each state in a separate directory.
+        # Also, before serialization version 1.0 we always saved in a ragged format.
+        save_ragged = (
+            not states  # implicit to other conditions, but no harm being explicit
+            or version < (1, 0)
+            or any(state is None for state in states)
+            or len(set(state.shape for state in states)) != 1
+        )
+
+        if save_ragged:
+            # each state gets its own sub-directory
+            for i, state in enumerate(states):
+                if state is None:
+                    continue
+                with zf.open(f"{directory}states/{i}/array.npy", mode="w", force_zip64=True) as f:
+                    np.save(f, state, allow_pickle=False)
+
+        else:
+            # the states are all saved in one file
+            states = np.asarray(states)  # stacks them along axis 0
+            with zf.open(f"{directory}states.npy", mode="w", force_zip64=True) as f:
+                np.save(f, states, allow_pickle=False)
 
     def state_size(self):
         r"""Return an estimate of the size, in bytes, of an array symbol's state.

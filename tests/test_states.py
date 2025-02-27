@@ -152,13 +152,15 @@ class TestStatesSerialization(unittest.TestCase):
         new = Model()
         a = new.list(10)
 
-        with model.states.to_file() as f:
-            new.states.from_file(f)
+        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+            with self.subTest(version=version):
+                with model.states.to_file() as f:
+                    new.states.from_file(f)
 
-        self.assertEqual(new.states.size(), 3)
-        np.testing.assert_array_equal(a.state(0), x.state(0))
-        self.assertFalse(a.has_state(1))
-        np.testing.assert_array_equal(a.state(2), x.state(2))
+                self.assertEqual(new.states.size(), 3)
+                np.testing.assert_array_equal(a.state(0), x.state(0))
+                self.assertFalse(a.has_state(1))
+                np.testing.assert_array_equal(a.state(2), x.state(2))
 
     def test_bad(self):
         model = Model()
@@ -174,11 +176,20 @@ class TestStatesSerialization(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     new.states.from_file(f)
 
-        # todo: uncomment once we have proper node equality testing
-        # with self.subTest("different node shape"):
-        #     new = Model()
-        #     new.list(9)
+    def test_efficiency(self):
+        # This is really just a smoke test, but it's the ultimate goal of
+        # serialization v1 so let's check we've achieved it for a simple model
+        model = Model()
+        x = model.binary()
+        model.states.resize(1000)
+        for i in range(1000):
+            x.set_state(i, i % 2)
 
-        #     with model.states.to_file() as f:
-        #         with self.assertRaises(ValueError):
-        #             new.states.from_file(f)
+        with io.BytesIO() as fold, io.BytesIO() as fnew:
+            model.into_file(fold, version=(0, 1), max_num_states=1000)
+            model.into_file(fnew, version=(1, 0), max_num_states=1000)
+
+            fold.seek(0)
+            fnew.seek(0)
+
+            self.assertLess(len(fnew.read()), len(fold.read()))
