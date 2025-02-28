@@ -14,6 +14,8 @@
 
 import concurrent.futures
 import io
+import os.path
+import tempfile
 import threading
 import unittest
 
@@ -164,17 +166,24 @@ class TestStatesSerialization(unittest.TestCase):
 
     def test_bad(self):
         model = Model()
-        x = model.list(10)
+        x = model.integer(10, upper_bound=100)
         model.states.resize(1)
-        x.set_state(0, list(reversed(range(10))))
+        x.set_state(0, np.ones(10))
 
-        with self.subTest("different node class"):
+        with self.subTest("incompatible state values"):
             new = Model()
-            new.constant(10)
+            new.integer(10, lower_bound=101)  # value range incompatible with x
 
             with model.states.to_file() as f:
                 with self.assertRaises(ValueError):
                     new.states.from_file(f)
+
+        with self.subTest("deterministic state"):
+            new = Model()
+            new.constant(range(10))  # doesn't try to load the state, so will pass
+
+            with model.states.to_file() as f:
+                new.states.from_file(f)
 
     def test_efficiency(self):
         # This is really just a smoke test, but it's the ultimate goal of
@@ -193,3 +202,21 @@ class TestStatesSerialization(unittest.TestCase):
             fnew.seek(0)
 
             self.assertLess(len(fnew.read()), len(fold.read()))
+
+    def test_filename(self):
+        model = Model()
+        c = model.constant([0, 1, 2, 3, 4])
+        x = model.list(5)
+        model.minimize(c[x].sum())
+
+        model.states.resize(1)
+        x.set_state(0, range(5))
+
+        with tempfile.TemporaryDirectory() as dirname:
+            fname = os.path.join(dirname, "temp.nl")
+            model.states.into_file(fname)
+
+            model.states.clear()
+            model.states.from_file(fname)
+
+        np.testing.assert_array_equal(x.state(), range(5))

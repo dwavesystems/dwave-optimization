@@ -551,6 +551,21 @@ class TestModelSerialization(unittest.TestCase):
                 self.assertFalse(a.has_state(1))
                 np.testing.assert_array_equal(a.state(2), x.state(2))
 
+    def test_substitute(self):
+        model = Model()
+        x = model.constant(range(10))
+        y = model.constant(range(10, 20))
+        z = x + y
+
+        self.assertIsInstance(z, dwave.optimization.symbols.Add)
+
+        with model.to_file() as f:
+            new = Model.from_file(f, substitute=dict(Add=dwave.optimization.symbols.Multiply))
+
+        _, _, new_z = new.iter_symbols()
+
+        self.assertIsInstance(new_z, dwave.optimization.symbols.Multiply)
+
 
 class TestSymbol(unittest.TestCase):
     def test_abstract(self):

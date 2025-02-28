@@ -12,13 +12,16 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import json
 import weakref
+import zipfile
 
 from libcpp.utility cimport move
 
 from dwave.optimization.libcpp.array cimport Array as cppArray
 from dwave.optimization.model cimport ArraySymbol, _Graph
 from dwave.optimization.model import Model
+from dwave.optimization.utilities import _file_object_arg
 
 __all__ = ["States"]
 
@@ -137,39 +140,65 @@ cdef class States:
         self._states.swap(states)
         return move(states)
 
-    def from_file(self, file, *, replace = True, check_header = True):
+    @_file_object_arg("rb")  # translate str/bytes file inputs into file objects
+    def from_file(self, file, *,
+                  replace = True,       # undoc until supported
+                  check_header = True,  # undocumented until fixed, see
+                                        # https://github.com/dwavesystems/dwave-optimization/issues/22
+                  ):
         """Construct states from the given file.
 
         Args:
             file:
                 File pointer to a readable, seekable file-like object encoding
                 the states. Strings are interpreted as a file name.
-            replace:
-                If ``True``, any held states are replaced with those from the file.
-                If ``False``, the states are appended.
-            check_header:
-                Set to ``False`` to skip file-header check.
 
         Returns:
             A model.
         """
-        self.resolve()
-
         if not replace:
             raise NotImplementedError("appending states is not (yet) implemented")
 
-        # todo: we don't need to actually construct a model, but this is nice and
-        # abstract. We should performance test and then potentially re-implement
-        cdef _Graph model = Model.from_file(file, check_header=check_header)
-        cdef States states = model.states
+        # Validate the header, and get the serialization version.
+        version, _ = _Graph._from_file_header_data(file)
 
-        # Check that the model is compatible
-        for n0, n1 in zip(model.iter_symbols(), self._model().iter_symbols()):
-            # todo: replace with proper node quality testing once we have it
-            if not isinstance(n0, type(n1)):
-                raise ValueError("cannot load states into a model with mismatched decisions")
+        with zipfile.ZipFile(file, mode="r") as zf:
+            self._from_zipfile(zf, version=version)
 
-        self.attach_states(move(states.detach_states()))
+    def _from_zipfile(self, zf, *, version):
+        """Given a zipfile containing a serialized model, attempt to extract the
+        state(s) associated with any node types that might save them.
+        """
+        self.resolve()
+
+        model_info = json.loads(zf.read("info.json"))
+
+        # Read any states that have been encoded
+        num_states = model_info.get("num_states")
+        if not isinstance(num_states, int) or num_states < 0:
+            raise ValueError("expected num_states to be a positive integer")
+        elif not num_states:
+            return  # no states to load, so just return early
+
+        # Get a refcounted model for the duration of this function.
+        cdef _Graph model = self._model()
+
+        # We'll be overwriting the states, so clear everything that's in there
+        model.states.resize(0)
+        model.states.resize(num_states)
+
+        for symbol in model.iter_symbols():
+            # we don't load the state of any nodes that uniquely determine
+            # their state from their predecessors
+            if symbol._deterministic_state():
+                continue
+
+            symbol._states_from_zipfile(
+                zf,
+                directory=f"nodes/{symbol.topological_index()}/",
+                num_states=num_states,
+                version=version,
+            )
 
     def from_future(self, future, result_hook):
         """Populate the states from the result of a future computation.

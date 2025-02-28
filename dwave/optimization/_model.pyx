@@ -35,6 +35,7 @@ from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
 from dwave.optimization.symbols cimport symbol_from_ptr
+from dwave.optimization.utilities import _file_object_arg
 
 __all__ = []
 
@@ -140,8 +141,10 @@ cdef class _Graph:
         return sum(sym.state_size() for sym in self.iter_decisions())
 
     @classmethod
+    @_file_object_arg("rb")  # translate str/bytes file inputs into file objects
     def from_file(cls, file, *,
-                  check_header = True,
+                  check_header = True,  # undocumented until fixed, see
+                                        # https://github.com/dwavesystems/dwave-optimization/issues/22
                   substitute = None,
                   ):
         """Construct a model from the given file.
@@ -150,43 +153,31 @@ cdef class _Graph:
             file:
                 File pointer to a readable, seekable file-like object encoding
                 a model. Strings are interpreted as a file name.
+            substitute:
+                A mapping of symbol substitutions to make when loading the file.
+                The keys are strings giving the node class name to be substituted.
+                The values are callables to create a different node.
+                The callable should have the same signature as the substituted
+                symbol's constructor.
 
         Returns:
             A model.
 
         See also:
             :meth:`.into_file`, :meth:`.to_file`
+
+        .. versionchanged:: 0.6.0
+            The ``substitute`` keyword-only argument was added.
+
         """
         import dwave.optimization.symbols as symbols
-
-        if isinstance(file, str):
-            with open(file, "rb") as f:
-                return cls.from_file(f, check_header=check_header, substitute=substitute)
 
         if substitute is None:
             substitute = dict()
         elif not isinstance(substitute, collections.abc.Mapping):
             raise TypeError("expected substitute to be a mapping of node names to classes")
 
-        prefix = b"DWNL"
-
-        read_prefix = file.read(len(prefix))
-        if read_prefix != prefix:
-            raise ValueError("Unknown file type. Expected magic string "
-                             f"{prefix!r} but received {read_prefix!r} "
-                             "instead")
-
-        version = tuple(file.read(2))
-
-        if version not in KNOWN_SERIALIZATION_VERSIONS:
-            raise ValueError("Unknown serialization format. Expected one of "
-                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
-                             "instead. Upgrading your dwave-optimization version may help.")
-
-        if check_header:
-            # we'll need the header values to check later
-            header_len = struct.unpack('<I', file.read(4))[0]
-            header_data = json.loads(file.read(header_len).decode('ascii'))
+        version, header_data = _Graph._from_file_header_data(file)
 
         cdef _Graph model = cls()
 
@@ -196,13 +187,6 @@ cdef class _Graph:
             num_nodes = model_info.get("num_nodes")
             if not isinstance(num_nodes, int) or num_nodes < 0:
                 raise ValueError("expected num_nodes to be a positive integer")
-
-            # Read any states that have been encoded
-            num_states = model_info.get("num_states")
-            if not isinstance(num_states, int) or num_states < 0:
-                raise ValueError("expected num_states to be a positive integer")
-            if num_states > 0:
-                model.states.resize(num_states)
 
             with zf.open("nodetypes.txt", "r") as fcls, zf.open("adj.adjlist", "r") as fadj:
                 for lineno, (classname, adjlist) in enumerate(zip(fcls, fadj)):
@@ -228,12 +212,7 @@ cdef class _Graph:
                     if not issubclass(node_cls, Symbol):
                         raise ValueError("encoded model has an unsupported node type")
 
-                    node = node_cls._from_zipfile(zf, directory, model, predecessors=predecessors)
-
-                    # Load the states if requested.
-                    # The num_states > 0 is check is a redundant shortcut for performance
-                    if num_states > 0 and not node._deterministic_state():
-                        node._states_from_zipfile(zf, directory, num_states, version)
+                    node_cls._from_zipfile(zf, directory, model, predecessors=predecessors)
 
             objective_buff = zf.read("objective.json")
             if objective_buff:
@@ -245,6 +224,9 @@ cdef class _Graph:
             for cid in json.loads(zf.read("constraints.json")):
                 model.add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
 
+            # Finally load any states from the file.
+            model.states._from_zipfile(zf, version=version)
+
         if check_header:
             expected = model._header_data(only_decision=False)
 
@@ -255,6 +237,37 @@ cdef class _Graph:
                     )
 
         return model
+
+    @staticmethod
+    def _from_file_header_data(file):
+        """Read/validate the header from a model file.
+
+        Advances the stream position to the end of the header.
+
+        Returns:
+            The serialization version as a 2-tuple.
+
+            The header data as a dict.
+        """
+        prefix = b"DWNL"
+
+        read_prefix = file.read(len(prefix))
+        if read_prefix != prefix:
+            raise ValueError("Unknown file type. Expected magic string "
+                             f"{prefix!r} but received {read_prefix!r} "
+                             "instead")
+
+        version = tuple(file.read(2))
+
+        if version not in KNOWN_SERIALIZATION_VERSIONS:
+            raise ValueError("Unknown serialization format. Expected one of "
+                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
+                             "instead. Upgrading your dwave-optimization version may help.")
+
+        header_len = struct.unpack('<I', file.read(4))[0]
+        header_data = json.loads(file.read(header_len).decode('ascii'))
+
+        return version, header_data
 
     def _header_data(self, *, only_decision, max_num_states=float('inf')):
         """The header data associated with the model (but not the states)."""
@@ -274,6 +287,7 @@ cdef class _Graph:
             num_states=num_states,
         )
 
+    @_file_object_arg("wb")  # translate str/bytes file inputs into file objects
     def into_file(self, file, *,
                   Py_ssize_t max_num_states = 0,
                   bool only_decision = False,
@@ -306,15 +320,6 @@ cdef class _Graph:
             with self.lock():
                 return self.into_file(
                     file,
-                    max_num_states=max_num_states,
-                    only_decision=only_decision,
-                    version=version,
-                    )
-
-        if isinstance(file, str):
-            with open(file, "wb") as f:
-                return self.into_file(
-                    f,
                     max_num_states=max_num_states,
                     only_decision=only_decision,
                     version=version,
