@@ -27,6 +27,7 @@ from dwave.optimization import (
     Model,
     arange,
     expit,
+    log,
     logical,
     logical_and,
     logical_or,
@@ -1388,6 +1389,34 @@ class TestListVariable(utils.SymbolTests):
             # wrong size
             with self.assertRaises(ValueError):
                 x.set_state(0, [0, 1, 2])
+
+
+class TestLog(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        a = model.constant(1.3)
+        op_a = log(a)
+        model.lock()
+        yield op_a
+
+    def test_simple_inputs(self):
+        model = Model()
+        empty = log(model.constant(1))
+        model.lock()
+        model.states.resize(1)
+        self.assertEqual(empty.state(), 0.0)
+
+        simple_inputs = [1.0077188, 0.74163411, 5.06644204, 2.92553724]
+        numpy_log_output = [
+            0.007689162476326917, -0.29889927064260485, 1.6226388039908046, 1.0734781356130927
+        ]
+        for i, si in enumerate(simple_inputs):
+            model = Model()
+            log_node = log(model.constant(si))
+            model.lock()
+            model.states.resize(1)
+            # confirm consistency with numpy log
+            self.assertEqual(log_node.state(), numpy_log_output[i])
 
 
 class TestLogical(utils.UnaryOpTests):

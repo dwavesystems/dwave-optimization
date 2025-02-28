@@ -27,7 +27,7 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
-// NOTE: square_root should also be included but the templated tests need to be updated first.
+// NOTE: square_root and log should also be included but the templated tests need to be updated first.
 TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::expit<double>,
                    functional::logical<double>, functional::rint<double>, functional::square<double>,
                    std::negate<double>, std::logical_not<double>) {
@@ -302,6 +302,33 @@ TEST_CASE("UnaryOpNode - ExpitNode") {
             CHECK(expit_ptr->min() == 0.5);
             CHECK(expit_ptr->max() == 1);
         }
+    }
+}
+
+TEST_CASE("UnaryOpNode - LogNode") {
+    auto graph = Graph();
+    GIVEN("A constant 1d array of doubles") {
+        auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{6.0, 0.3, 1.0, 1.2, 5.6});
+        auto log_ptr = graph.emplace_node<LogNode>(c_ptr);
+
+        THEN("The min/max are expected") {
+            THEN("log(x) is not integral") { CHECK_FALSE(log_ptr->integral()); }
+            CHECK(log_ptr->min() == std::log(0.3));
+            CHECK(log_ptr->max() == std::log(6.0));
+        }
+    }
+    GIVEN("An arbitrary number") {
+        double c = 10.0;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        auto log_ptr = graph.emplace_node<LogNode>(c_ptr);
+        auto state = graph.initialize_state();
+        CHECK(log_ptr->min() == std::log(c));
+        CHECK(log_ptr->max() == std::log(c));
+    }
+    GIVEN("A negative number") {
+        double c = -10.0;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        CHECK_THROWS(graph.emplace_node<LogNode>(c_ptr));
     }
 }
 
