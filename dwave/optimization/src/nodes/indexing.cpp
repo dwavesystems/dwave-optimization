@@ -1463,9 +1463,9 @@ void BasicIndexingNode::propagate(State& state) const {
 
         // Compute simple strides based on the shape
         std::vector<ssize_t> shape_strides;
-        for (ssize_t i = 0; i < this->ndim(); i++) {
+        for (ssize_t i = 0, ndim = this->ndim(); i < ndim; i++) {
             ssize_t a = 1;
-            for (ssize_t j = i + 1; j < this->ndim(); j++) {
+            for (ssize_t j = i + 1, ndim = this->ndim(); j < ndim; j++) {
                 a *= max_shape[j];
             }
             shape_strides.push_back(a);
@@ -1473,17 +1473,11 @@ void BasicIndexingNode::propagate(State& state) const {
         assert(static_cast<ssize_t>(shape_strides.size()) == this->ndim());
 
         const ssize_t start = this->start_;
-        // distance between pointers in the parent array. Relies on parent
-        // being contiguous
         assert(array_ptr_->contiguous());
-        const ssize_t stop = &*this->end(state) - &*array_ptr_->begin(state);
 
         // A few sanity checks...
         assert(start >= 0);
-        assert(stop >= start);
         assert(this->ndim() > 0);  // if we're not contiguous we cannot be a scalar
-        // some strided stop after the end to make the math work out.
-        assert(stop <= array_ptr_->size(state) + this->strides()[0] / this->itemsize());
 
         // Filter out the updates that are not in the relevant domain of indices
         // Also compute the translated index using our own shape
@@ -1493,7 +1487,7 @@ void BasicIndexingNode::propagate(State& state) const {
             ssize_t new_index = 0;
 
             bool skip = false;
-            for (ssize_t axis = 0; axis < this->ndim(); axis++) {
+            for (ssize_t axis = 0, ndim = this->ndim(); axis < ndim; axis++) {
                 ssize_t item_stride = this->strides()[axis] / this->itemsize();
                 ssize_t axis_idx = (index / item_stride);
                 if ((index < 0) || (axis_idx >= max_shape[axis])) {
