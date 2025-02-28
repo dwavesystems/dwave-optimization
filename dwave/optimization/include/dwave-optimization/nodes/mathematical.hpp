@@ -43,6 +43,14 @@ struct expit<double> {
 };
 
 template <class T>
+struct log {};
+
+template <>
+struct log<double> {
+    double operator()(const double& x) const { return std::log(x); }
+};
+
+template <class T>
 struct logical {
     constexpr bool operator()(const T& x) const { return x; }
 };
@@ -397,6 +405,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
 
 using AbsoluteNode = UnaryOpNode<functional::abs<double>>;
 using ExpitNode = UnaryOpNode<functional::expit<double>>;
+using LogNode = UnaryOpNode<functional::log<double>>;
 using LogicalNode = UnaryOpNode<functional::logical<double>>;
 using NegativeNode = UnaryOpNode<std::negate<double>>;
 using NotNode = UnaryOpNode<std::logical_not<double>>;

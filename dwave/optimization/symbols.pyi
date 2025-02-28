@@ -122,6 +122,10 @@ class ListVariable(ArraySymbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
 
 
+class Log(ArraySymbol):
+    ...
+
+
 class Logical(ArraySymbol):
     ...
 

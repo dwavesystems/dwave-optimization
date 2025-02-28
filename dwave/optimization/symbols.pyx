@@ -68,6 +68,7 @@ from dwave.optimization.libcpp.nodes cimport (
     IntegerNode as cppIntegerNode,
     LessEqualNode as cppLessEqualNode,
     ListNode as cppListNode,
+    LogNode as cppLogNode,
     LogicalNode as cppLogicalNode,
     MaxNode as cppMaxNode,
     MaximumNode as cppMaximumNode,
@@ -126,6 +127,7 @@ __all__ = [
     "IntegerVariable",
     "LessEqual",
     "ListVariable",
+    "Log",
     "Logical",
     "Max",
     "Maximum",
@@ -2053,6 +2055,36 @@ cdef class ListVariable(ArraySymbol):
     cdef cppListNode* ptr
 
 _register(ListVariable, typeid(cppListNode))
+
+
+cdef class Log(ArraySymbol):
+    """Takes the values of a symbol and returns the corresponding natural logarithm (log).
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.log`: equivalent function.
+
+    .. versionadded:: 0.5.2
+    """
+    def __init__(self, ArraySymbol x):
+        cdef _Graph model = x.model
+
+        self.ptr = model._graph.emplace_node[cppLogNode](x.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppLogNode* ptr = dynamic_cast_ptr[cppLogNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Log")
+
+        cdef Log x = Log.__new__(Log)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppLogNode* ptr
+
+_register(Log, typeid(cppLogNode))
 
 
 cdef class Logical(ArraySymbol):
