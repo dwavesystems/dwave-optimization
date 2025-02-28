@@ -1444,7 +1444,33 @@ void BasicIndexingNode::propagate(State& state) const {
         assert(!this->contiguous());
         assert(array_ptr_->contiguous() && "doesn't support non-contiguous arrays");
 
+        // Copy a shape that is the "maximum" between our old and new shape
+        // (relevant in the case of a dynamic predecessor)
+        // We'll use this shape to compute the relevant domain of updates
+        // coming from the predecessor array
+        //
+        // Copy the old shape
+        std::vector<ssize_t> max_shape;
+        max_shape.assign(this->shape(state).begin(), this->shape(state).end());
+
+        // Update the shape
         if (dynamic()) update_dynamic_shape(state);
+
+        // Reset the first dimension if it has grown
+        if (this->ndim() && this->shape(state)[0] > max_shape[0]) {
+            max_shape[0] = this->shape(state)[0];
+        }
+
+        // Compute simple strides based on the shape
+        std::vector<ssize_t> shape_strides;
+        for (ssize_t i = 0; i < this->ndim(); i++) {
+            ssize_t a = 1;
+            for (ssize_t j = i + 1; j < this->ndim(); j++) {
+                a *= max_shape[j];
+            }
+            shape_strides.push_back(a);
+        }
+        assert(static_cast<ssize_t>(shape_strides.size()) == this->ndim());
 
         const ssize_t start = this->start_;
         // distance between pointers in the parent array. Relies on parent
@@ -1459,32 +1485,31 @@ void BasicIndexingNode::propagate(State& state) const {
         // some strided stop after the end to make the math work out.
         assert(stop <= array_ptr_->size(state) + this->strides()[0] / this->itemsize());
 
+        // Filter out the updates that are not in the relevant domain of indices
+        // Also compute the translated index using our own shape
         for (auto [index, old, value] : array_ptr_->diff(state)) {
-            if (index < start) continue;  // before the range we care about
-            if (index >= stop) continue;  // after the range we care about
-
             index -= start;
 
-            bool skip = false;
-            for (ssize_t stride : this->strides()) {
-                assert(stride % this->itemsize() == 0);
-                // again, we rely on the parent being contiguous!
-                assert(array_ptr_->contiguous());
-                const ssize_t div = stride / this->itemsize();
+            ssize_t new_index = 0;
 
-                if (index % div) {
-                    // we are "between" steps
+            bool skip = false;
+            for (ssize_t axis = 0; axis < this->ndim(); axis++) {
+                ssize_t item_stride = this->strides()[axis] / this->itemsize();
+                ssize_t axis_idx = (index / item_stride);
+                if ((index < 0) || (axis_idx >= max_shape[axis])) {
                     skip = true;
                     break;
                 }
-
-                index /= div;
+                new_index += axis_idx * shape_strides[axis];
+                index = index % item_stride;
             }
+            if (index != 0) {
+                skip = true;
+            }
+
             if (skip) continue;
 
-            assert(index >= 0 && index < this->size(state));
-
-            diff.emplace_back(index, old, value);
+            diff.emplace_back(new_index, old, value);
         }
     } else {
         assert(false && "not yet implemented");
