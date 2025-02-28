@@ -1,60 +1,35 @@
-..  -*- coding: utf-8 -*-
-
 .. _index_optimization:
 
+==================
 dwave-optimization
 ==================
 
+.. toctree::
+    :caption: Reference documentation for dwave-optimization:
+    :maxdepth: 1
+
+    reference/api_ref
+
+About dwave-optimization
+========================
+
 .. include:: README.rst
-  :start-after: index-start-marker1
-  :end-before: index-end-marker1
+  :start-after: start_optimization_about
+  :end-before: end_optimization_about
 
-Documentation
--------------
+For explanations of the terminology, see the
+:ref:`Concepts <dwave:index_concepts>` section.
 
-.. only:: html
+Usage Information
+=================
 
-  :Date: |today|
+.. todo:: add the intersphinx prefix to enable these links for self builds
 
-.. sdk-start-marker
-
-.. toctree::
-  :maxdepth: 1
-
-  intro
-  reference/index
-  release_notes
-
-.. sdk-end-marker
-
-.. toctree::
-  :caption: Code
-  :maxdepth: 1
-
-  Source <https://github.com/dwavesystems/dwave-cloud-client>
-  installation
-  license
-
-.. toctree::
-  :caption: Ocean Software
-  :maxdepth: 1
-
-  Ocean Home <https://ocean.dwavesys.com/>
-  Ocean Documentation <https://docs.ocean.dwavesys.com>
-  Ocean Glossary <https://docs.ocean.dwavesys.com/en/stable/concepts/index.html>
-
-.. toctree::
-  :caption: D-Wave
-  :maxdepth: 1
-
-  D-Wave <https://www.dwavesys.com>
-  Leap <https://cloud.dwavesys.com/leap/>
-  D-Wave System Documentation <https://docs.dwavesys.com/docs/latest/index.html>
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-* :ref:`glossary`
+*   :ref:`index_concepts` for terminology
+*   :ref:`opt_model_construction_nl` for an introduction to using this package
+    to model problems.
+*   :ref:`opt_index_get_started` for an introduction to optimizing with
+    :term:`hybrid` :term:`solvers <solver>`.
+*   :ref:`opt_solver_nl_properties` and :ref:`opt_solver_nl_parameters` for the
+    solver's properties and parameters.
+*   :ref:`opt_index_using` for best practices and examples.
