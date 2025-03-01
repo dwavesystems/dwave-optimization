@@ -714,6 +714,41 @@ TEST_CASE("BasicIndexingNode") {
         }
     }
 
+    GIVEN("x = Binary((3, 10, 5)); y = x[1, 5:8, ::2]") {
+        auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{3, 10, 5});
+        auto y_ptr = graph.emplace_node<BasicIndexingNode>(
+                x_ptr, 1, Slice(5, 8), Slice(std::nullopt, std::nullopt, 2));
+
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+
+        THEN("y has the shape and strides we expect") {
+            CHECK(y_ptr->size() == 9);
+            CHECK_THAT(y_ptr->shape(), RangeEquals({3, 3}));
+            CHECK_THAT(y_ptr->strides(), RangeEquals({40, 16}));
+        }
+
+        auto state = graph.initialize_state();
+
+        THEN("We get the default states we expect") {
+            CHECK(std::ranges::equal(x_ptr->view(state), std::vector<ssize_t>(150)));
+            CHECK(std::ranges::equal(y_ptr->view(state), std::vector<ssize_t>(9)));
+        }
+
+        WHEN("We do propagation") {
+            x_ptr->flip(state, 87);
+
+            graph.propagate(state, graph.descendants(state, {x_ptr}));
+
+            THEN("The states are as expected") {
+                CHECK_THAT(y_ptr->view(state), RangeEquals({
+                            0, 0, 0,
+                            0, 0, 0,
+                            0, 1, 0,
+                            }));
+            }
+        }
+    }
+
     WHEN("We access a dynamic length 1d array by a slice to the end") {
         auto x_ptr = graph.emplace_node<SetNode>(5);
         auto y_ptr = graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(1, std::nullopt));  // x[1:]
