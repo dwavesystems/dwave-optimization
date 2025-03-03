@@ -19,6 +19,7 @@ from libcpp.utility cimport move
 from dwave.optimization.libcpp.array cimport Array as cppArray
 from dwave.optimization.model cimport ArraySymbol, _Graph
 from dwave.optimization.model import Model
+from dwave.optimization.utilities import _file_object_arg
 
 __all__ = ["States"]
 
@@ -137,6 +138,7 @@ cdef class States:
         self._states.swap(states)
         return move(states)
 
+    @_file_object_arg("rb")  # translate str/bytes file inputs into file objects
     def from_file(self, file, *, replace = True, check_header = True):
         """Construct states from the given file.
 
@@ -200,6 +202,7 @@ cdef class States:
             self._states[i].resize(model.num_nodes())
             model._graph.initialize_state(self._states[i])
 
+    @_file_object_arg("wb")  # translate str/bytes file inputs into file objects
     def into_file(self, file, *,
                   version = None,
                   ):

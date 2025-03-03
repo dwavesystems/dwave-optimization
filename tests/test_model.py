@@ -15,6 +15,7 @@
 import io
 import operator
 import os.path
+import pathlib
 import tempfile
 import unittest
 
@@ -454,21 +455,56 @@ class TestModelSerialization(unittest.TestCase):
         np.testing.assert_array_equal(a.state(2), range(5))
 
     def test_by_filename(self):
-        model = Model()
-        c = model.constant([0, 1, 2, 3, 4])
-        x = model.list(5)
-        model.minimize(c[x].sum())
+        with self.subTest("bytes"):
+            model = Model()
+            c = model.constant([0, 1, 2, 3, 4])
+            x = model.list(5)
+            model.minimize(c[x].sum())
 
-        with tempfile.TemporaryDirectory() as dirname:
-            fname = os.path.join(dirname, "temp.nl")
+            with tempfile.TemporaryDirectory() as dirname:
+                fname = os.path.join(dirname, "temp.nl")
 
-            model.into_file(fname)
+                model.into_file(fname.encode("ascii"))
 
-            new = Model.from_file(fname)
+                new = Model.from_file(fname)
 
-        # todo: use a model equality test function once we have it
-        for n0, n1 in zip(model.iter_symbols(), new.iter_symbols()):
-            self.assertIs(type(n0), type(n1))
+            # todo: use a model equality test function once we have it
+            for n0, n1 in zip(model.iter_symbols(), new.iter_symbols()):
+                self.assertIs(type(n0), type(n1))
+
+        with self.subTest("path-like"):
+            model = Model()
+            c = model.constant([0, 1, 2, 3, 4])
+            x = model.list(5)
+            model.minimize(c[x].sum())
+
+            with tempfile.TemporaryDirectory() as dirname:
+                fname = pathlib.PurePath(os.path.join(dirname, "temp.nl"))
+
+                model.into_file(fname)
+
+                new = Model.from_file(fname)
+
+            # todo: use a model equality test function once we have it
+            for n0, n1 in zip(model.iter_symbols(), new.iter_symbols()):
+                self.assertIs(type(n0), type(n1))
+
+        with self.subTest("str"):
+            model = Model()
+            c = model.constant([0, 1, 2, 3, 4])
+            x = model.list(5)
+            model.minimize(c[x].sum())
+
+            with tempfile.TemporaryDirectory() as dirname:
+                fname = os.path.join(dirname, "temp.nl")
+
+                model.into_file(fname)
+
+                new = Model.from_file(fname)
+
+            # todo: use a model equality test function once we have it
+            for n0, n1 in zip(model.iter_symbols(), new.iter_symbols()):
+                self.assertIs(type(n0), type(n1))
 
     def test_invalid_version_from_file(self):
         from dwave.optimization._model import DEFAULT_SERIALIZATION_VERSION

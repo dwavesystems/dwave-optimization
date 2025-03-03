@@ -14,6 +14,7 @@
 
 import collections.abc
 import contextlib
+import os
 import tempfile
 import typing
 
@@ -41,14 +42,14 @@ class _Graph:
     @classmethod
     def from_file(
         cls: typing.Type[_GraphSubclass],
-        file: typing.Union[typing.BinaryIO, collections.abc.ByteString, str],
+        file: typing.Union[bytes, os.PathLike, str, typing.BinaryIO],
         *,
         check_header: bool = True,
         ) -> _GraphSubclass: ...
 
     def into_file(
         self,
-        file: typing.Union[typing.BinaryIO, collections.abc.ByteString, str],
+        file: typing.Union[bytes, os.PathLike, str, typing.BinaryIO],
         *,
         max_num_states: int = 0,
         only_decision: bool = False,
