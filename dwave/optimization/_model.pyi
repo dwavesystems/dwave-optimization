@@ -41,14 +41,14 @@ class _Graph:
     @classmethod
     def from_file(
         cls: typing.Type[_GraphSubclass],
-        file: typing.Union[typing.BinaryIO, collections.abc.ByteString, str],
+        file: typing.Union[typing.BinaryIO, str],
         *,
-        check_header: bool = True,
+        substitute: typing.Optional[collections.abc.Mapping[str, collections.abc.Callable]],
         ) -> _GraphSubclass: ...
 
     def into_file(
         self,
-        file: typing.Union[typing.BinaryIO, collections.abc.ByteString, str],
+        file: typing.Union[typing.BinaryIO, str],
         *,
         max_num_states: int = 0,
         only_decision: bool = False,

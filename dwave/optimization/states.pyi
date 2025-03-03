@@ -25,10 +25,7 @@ class States:
 
     def from_file(
         self,
-        file: typing.Union[typing.BinaryIO, collections.abc.ByteString, str],
-        *,
-        replace: bool = True,
-        check_header: bool = True,
+        file: typing.Union[typing.BinaryIO, str],
         ) -> Model: ...
 
     def from_future(self, future: object, result_hook: collections.abc.Callable): ...
@@ -36,7 +33,8 @@ class States:
 
     def into_file(
         self,
-        file: typing.Union[typing.BinaryIO, collections.abc.ByteString, str],
+        file: typing.Union[typing.BinaryIO, str],
+        *,
         version: typing.Optional[tuple[int, int]] = None,
         ): ...
 

@@ -14,6 +14,8 @@
 
 import concurrent.futures
 import io
+import os.path
+import tempfile
 import threading
 import unittest
 
@@ -152,33 +154,69 @@ class TestStatesSerialization(unittest.TestCase):
         new = Model()
         a = new.list(10)
 
-        with model.states.to_file() as f:
-            new.states.from_file(f)
+        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+            with self.subTest(version=version):
+                with model.states.to_file() as f:
+                    new.states.from_file(f)
 
-        self.assertEqual(new.states.size(), 3)
-        np.testing.assert_array_equal(a.state(0), x.state(0))
-        self.assertFalse(a.has_state(1))
-        np.testing.assert_array_equal(a.state(2), x.state(2))
+                self.assertEqual(new.states.size(), 3)
+                np.testing.assert_array_equal(a.state(0), x.state(0))
+                self.assertFalse(a.has_state(1))
+                np.testing.assert_array_equal(a.state(2), x.state(2))
 
     def test_bad(self):
         model = Model()
-        x = model.list(10)
+        x = model.integer(10, upper_bound=100)
         model.states.resize(1)
-        x.set_state(0, list(reversed(range(10))))
+        x.set_state(0, np.ones(10))
 
-        with self.subTest("different node class"):
+        with self.subTest("incompatible state values"):
             new = Model()
-            new.constant(10)
+            new.integer(10, lower_bound=101)  # value range incompatible with x
 
             with model.states.to_file() as f:
                 with self.assertRaises(ValueError):
                     new.states.from_file(f)
 
-        # todo: uncomment once we have proper node equality testing
-        # with self.subTest("different node shape"):
-        #     new = Model()
-        #     new.list(9)
+        with self.subTest("deterministic state"):
+            new = Model()
+            new.constant(range(10))  # doesn't try to load the state, so will pass
 
-        #     with model.states.to_file() as f:
-        #         with self.assertRaises(ValueError):
-        #             new.states.from_file(f)
+            with model.states.to_file() as f:
+                new.states.from_file(f)
+
+    def test_efficiency(self):
+        # This is really just a smoke test, but it's the ultimate goal of
+        # serialization v1 so let's check we've achieved it for a simple model
+        model = Model()
+        x = model.binary()
+        model.states.resize(1000)
+        for i in range(1000):
+            x.set_state(i, i % 2)
+
+        with io.BytesIO() as fold, io.BytesIO() as fnew:
+            model.into_file(fold, version=(0, 1), max_num_states=1000)
+            model.into_file(fnew, version=(1, 0), max_num_states=1000)
+
+            fold.seek(0)
+            fnew.seek(0)
+
+            self.assertLess(len(fnew.read()), len(fold.read()))
+
+    def test_filename(self):
+        model = Model()
+        c = model.constant([0, 1, 2, 3, 4])
+        x = model.list(5)
+        model.minimize(c[x].sum())
+
+        model.states.resize(1)
+        x.set_state(0, range(5))
+
+        with tempfile.TemporaryDirectory() as dirname:
+            fname = os.path.join(dirname, "temp.nl")
+            model.states.into_file(fname)
+
+            model.states.clear()
+            model.states.from_file(fname)
+
+        np.testing.assert_array_equal(x.state(), range(5))
