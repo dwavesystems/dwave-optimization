@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Add support for serialization format version 1.0. This format is more
+    efficient for storing the states of fixed-size array symbols. It also
+    supports saving the states of nondeterministic intermediate array symbols.
+    The default serialzation format is not yet changed.
+  - Add ``substitute`` keyword argument to ``Model.from_file()``.
