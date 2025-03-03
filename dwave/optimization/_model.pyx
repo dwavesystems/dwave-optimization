@@ -35,6 +35,7 @@ from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
 from dwave.optimization.symbols cimport symbol_from_ptr
+from dwave.optimization.utilities import _file_object_arg, _lock
 
 __all__ = []
 
@@ -139,6 +140,7 @@ cdef class _Graph:
         return sum(sym.state_size() for sym in self.iter_decisions())
 
     @classmethod
+    @_file_object_arg("rb")  # translate str/bytes file inputs into file objects
     def from_file(cls, file, *,
                   check_header = True,
                   ):
@@ -156,10 +158,6 @@ cdef class _Graph:
             :meth:`.into_file`, :meth:`.to_file`
         """
         import dwave.optimization.symbols as symbols
-
-        if isinstance(file, str):
-            with open(file, "rb") as f:
-                return cls.from_file(f)
 
         version, header_data = _Graph._from_file_header(file)
 
@@ -282,6 +280,8 @@ cdef class _Graph:
             num_states=num_states,
         )
 
+    @_file_object_arg("wb")  # translate str/bytes file inputs into file objects
+    @_lock
     def into_file(self, file, *,
                   Py_ssize_t max_num_states = 0,
                   bool only_decision = False,
@@ -309,25 +309,6 @@ cdef class _Graph:
 
         TODO: describe the format
         """
-        if not self.is_locked():
-            # lock for the duration of the method
-            with self.lock():
-                return self.into_file(
-                    file,
-                    max_num_states=max_num_states,
-                    only_decision=only_decision,
-                    version=version,
-                    )
-
-        if isinstance(file, str):
-            with open(file, "wb") as f:
-                return self.into_file(
-                    f,
-                    max_num_states=max_num_states,
-                    only_decision=only_decision,
-                    version=version,
-                    )
-
         version, model_info = self._into_file_header(
             file,
             version=version,
