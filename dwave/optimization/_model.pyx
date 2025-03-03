@@ -325,45 +325,16 @@ cdef class _Graph:
                     version=version,
                     )
 
-        if version is None:
-            version = DEFAULT_SERIALIZATION_VERSION
-        elif version not in KNOWN_SERIALIZATION_VERSIONS:
-            raise ValueError("Unknown serialization format. Expected one of "
-                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
-                             "instead. Upgrading your dwave-optimization version may help.")
-
-        model_info = self._header_data(
+        version, model_info = self._into_file_header_data(
+            file,
+            version=version,
             max_num_states=max_num_states,
             only_decision=only_decision,
         )
+
         num_states = model_info["num_states"]
 
         encoder = json.JSONEncoder(separators=(',', ':'))
-
-        # First prepend the header
-
-        # The first 4 bytes are DWNL
-        file.write(b"DWNL")
-
-        # The next 1 byte is an unsigned byte encoding the major version of the
-        # file format
-        # The next 1 byte is an unsigned byte encoding the minor version of the
-        # file format
-        file.write(bytes(version))
-
-        # The next 4 bytes form a little-endian unsigned int, the length of
-        # the header data `HEADER_LEN`.
-
-        # The next `HEADER_LEN` bytes form the header data. This will be `data`
-        # json-serialized and encoded with 'ascii'.
-        header_data = encoder.encode(model_info).encode("ascii")
-
-        # Now pad to make the entire header divisible by 64
-        padding = b' '*(64 - (len(header_data) + 4 + 2 + 4)  % 64)
-
-        file.write(struct.pack('<I', len(header_data) + len(padding)))  # header length
-        file.write(header_data)
-        file.write(padding)
 
         # The rest of it is a zipfile
         with zipfile.ZipFile(file, mode="w") as zf:
@@ -401,15 +372,9 @@ cdef class _Graph:
                 directory = f"nodes/{node.topological_index()}/"
                 node._into_zipfile(zf, directory)
 
-                # Encode the states if requested.
-                # The num_states > 0 is check is a redundant shortcut for performance
-                if num_states > 0 and not node._deterministic_state():
-                    node._states_into_zipfile(
-                        zf,
-                        directory=directory,
-                        num_states=num_states,
-                        version=version,
-                    )
+            # If we're saving states, do a fourth pass saving the states.
+            if num_states > 0:
+                self.states._into_zipfile(zf, num_states=num_states, version=version)
 
             # Encode the objective and the constraints
             if self.objective is not None and self.objective.topological_index() < stop:
@@ -422,6 +387,46 @@ cdef class _Graph:
                 if c is not None and c.topological_index() < stop:
                     constraints.append(c.topological_index())
             zf.writestr("constraints.json", encoder.encode(constraints))
+
+    def _into_file_header_data(self, file, *, version, max_num_states, only_decision):
+        if version is None:
+            version = DEFAULT_SERIALIZATION_VERSION
+        elif version not in KNOWN_SERIALIZATION_VERSIONS:
+            raise ValueError("Unknown serialization format. Expected one of "
+                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
+                             "instead. Upgrading your dwave-optimization version may help.")
+
+        model_info = self._header_data(
+            max_num_states=max_num_states,
+            only_decision=only_decision,
+        )
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+
+        # The first 4 bytes are DWNL
+        file.write(b"DWNL")
+
+        # The next 1 byte is an unsigned byte encoding the major version of the
+        # file format
+        # The next 1 byte is an unsigned byte encoding the minor version of the
+        # file format
+        file.write(bytes(version))
+
+        # The next 4 bytes form a little-endian unsigned int, the length of
+        # the header data `HEADER_LEN`.
+
+        # The next `HEADER_LEN` bytes form the header data. This will be `data`
+        # json-serialized and encoded with 'ascii'.
+        header_data = encoder.encode(model_info).encode("ascii")
+
+        # Now pad to make the entire header divisible by 64
+        padding = b' '*(64 - (len(header_data) + 4 + 2 + 4)  % 64)
+
+        file.write(struct.pack('<I', len(header_data) + len(padding)))  # header length
+        file.write(header_data)
+        file.write(padding)
+
+        return version, model_info
 
     cpdef bool is_locked(self) noexcept:
         """Lock status of the model.
@@ -1571,7 +1576,10 @@ cdef class ArraySymbol(Symbol):
 
         return np.array(StateView(self, index), copy=copy)
 
-    def _states_from_zipfile(self, zf, directory, num_states, version):
+    def _states_from_zipfile(self, zf, *, num_states, version):
+
+        directory = f"nodes/{self.topological_index()}/"
+
         # Test whether we saved all of the state together. We can detect it
         # based on the existance of an arrays.npy file.
         try:
@@ -1600,7 +1608,7 @@ cdef class ArraySymbol(Symbol):
             for i, state in enumerate(states):
                 self.set_state(i, state)
 
-    def _states_into_zipfile(self, zf, directory, num_states, version):
+    def _states_into_zipfile(self, zf, *, num_states, version):
         states = [self.state(i) if self.has_state(i) else None for i in range(num_states)]
 
         # If we have any missing states, or if the states don't all have the
@@ -1612,6 +1620,8 @@ cdef class ArraySymbol(Symbol):
             or any(state is None for state in states)
             or len(set(state.shape for state in states)) != 1
         )
+
+        directory = f"nodes/{self.topological_index()}/"
 
         if save_ragged:
             # each state gets its own sub-directory

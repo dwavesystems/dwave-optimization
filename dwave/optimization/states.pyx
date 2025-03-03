@@ -168,6 +168,8 @@ cdef class States:
     def _from_zipfile(self, zf, *, version):
         """Given a zipfile containing a serialized model, attempt to extract the
         state(s) associated with any node types that might save them.
+
+        ``zf`` must be a :class:`zipfile.ZipFile`.
         """
         self.resolve()
 
@@ -195,7 +197,6 @@ cdef class States:
 
             symbol._states_from_zipfile(
                 zf,
-                directory=f"nodes/{symbol.topological_index()}/",
                 num_states=num_states,
                 version=version,
             )
@@ -229,6 +230,7 @@ cdef class States:
             self._states[i].resize(model.num_nodes())
             model._graph.initialize_state(self._states[i])
 
+    @_file_object_arg("wb")  # translate str/bytes file inputs into file objects
     def into_file(self, file, *,
                   version = None,
                   ):
@@ -245,13 +247,57 @@ cdef class States:
         TODO: describe the format
         """
         self.resolve()
-        return self._model().into_file(
-            file,
-            only_decision=True,
-            max_num_states=self.size(),
-            version=version,
-            )
 
+        if isinstance(version, tuple) and version < (1, 0):
+            # In serialization version 0.1, we saved a model with only
+            # decisions encoding the states.
+            return self._model().into_file(
+                file,
+                only_decision=True,
+                max_num_states=self.size(),
+                version=version,
+                )
+
+        model = self._model()  # get a ref-counted model
+
+        version, model_info = model._into_file_header_data(
+            file,
+            version=version,
+            max_num_states=len(self),
+            only_decision=False,
+        )
+
+        num_states = model_info["num_states"]
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+
+        with zipfile.ZipFile(file, mode="w") as zf:
+            zf.writestr("info.json", encoder.encode(model_info))
+            zf.writestr("version.txt", ".".join(map(str, version)))
+
+            self._into_zipfile(zf, num_states=num_states, version=version)
+
+    def _into_zipfile(self, zf, *, num_states, version):
+        """Given a zipfile containing a serialized model, attempt to save the
+        state(s) associated with any node types that might save them.
+
+        ``zf`` must be a :class:`zipfile.ZipFile`.
+        """
+        if num_states <= 0:
+            # nothing so save, so shortcut
+            return
+
+        model = self._model()  # get a ref-counted model
+
+        for symbol in model.iter_symbols():
+            if symbol._deterministic_state():
+                continue
+
+            symbol._states_into_zipfile(
+                zf,
+                num_states=num_states,
+                version=version,
+            )
 
     cdef _Graph _model(self):
         """Get a ref-counted Model object."""

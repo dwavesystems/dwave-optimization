@@ -1352,7 +1352,8 @@ cdef class DisjointBitSets(Symbol):
 
         self.set_state(state_index, arrays)
 
-    def _states_from_zipfile(self, zf, directory, num_states, version):
+    def _states_from_zipfile(self, zf, *, num_states, version):
+        directory = f"nodes/{self.topological_index()}/"
         for i in range(num_states):
             self._state_from_zipfile(zf, f"{directory}states/{i}/", i)
 
@@ -1365,7 +1366,8 @@ cdef class DisjointBitSets(Symbol):
             with zf.open(directory+f"set{i}", mode="w", force_zip64=True) as f:
                 np.save(f, arr, allow_pickle=False)
 
-    def _states_into_zipfile(self, zf, directory, num_states, version):
+    def _states_into_zipfile(self, zf, *, num_states, version):
+        directory = f"nodes/{self.topological_index()}/"
         for i in filter(self.has_state, range(num_states)):
             self._state_into_zipfile(
                 zf,
@@ -1617,7 +1619,8 @@ cdef class DisjointLists(Symbol):
 
         self.set_state(state_index, arrays)
 
-    def _states_from_zipfile(self, zf, directory, num_states, version):
+    def _states_from_zipfile(self, zf, num_states, version):
+        directory = f"nodes/{self.topological_index()}/"
         for i in range(num_states):
             self._state_from_zipfile(zf, f"{directory}states/{i}/", i)
 
@@ -1630,7 +1633,8 @@ cdef class DisjointLists(Symbol):
             with zf.open(directory+f"list{i}", mode="w", force_zip64=True) as f:
                 np.save(f, arr, allow_pickle=False)
 
-    def _states_into_zipfile(self, zf, directory, num_states, version):
+    def _states_into_zipfile(self, zf, num_states, version):
+        directory = f"nodes/{self.topological_index()}/"
         for i in filter(self.has_state, range(num_states)):
             self._state_into_zipfile(
                 zf,
