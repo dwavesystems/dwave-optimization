@@ -40,7 +40,7 @@ from dwave.optimization.utilities import _file_object_arg, _lock
 __all__ = []
 
 
-DEFAULT_SERIALIZATION_VERSION = (1, 0)
+DEFAULT_SERIALIZATION_VERSION = (0, 1)
 """A 2-tuple encoding the default serialization format used for serializing models."""
 
 KNOWN_SERIALIZATION_VERSIONS = (
@@ -167,7 +167,7 @@ cdef class _Graph:
             :meth:`.into_file`, :meth:`.to_file`
 
         .. versionchanged:: 0.6.0
-            The ``substitute`` keyword-only argument was added.
+            Added the ``substitute`` keyword-only argument.
 
         """
         import dwave.optimization.symbols as symbols
@@ -311,10 +311,79 @@ cdef class _Graph:
             version:
                 A 2-tuple indicating which serialization version to use.
 
+        Format Specification (Version 1.0):
+
+            This format is inspired by the `NPY format`_
+
+            The first 4 bytes are a magic string: exactly "DWNL".
+
+            The next 1 byte is an unsigned byte: the major version of the file
+            format.
+
+            The next 1 byte is an unsigned byte: the minor version of the file
+            format.
+
+            The next 4 bytes form a little-endian unsigned int, the length of
+            the header data HEADER_LEN.
+
+            The next HEADER_LEN bytes form the header data. This is a
+            json-serialized dictionary. The dictionary contains the following
+            key/values: ``decision_state_size``, ``num_nodes``, ``num_states``,
+            and ``state_size``. It is terminated by a newline character and
+            padded with spaces to make the entire length of the entire header
+            divisible by 64.
+
+            Following the header, the remaining data is encoded as a zip file.
+            All arrays are saved using the NumPy serialization format, see
+            :func:`numpy.save()`.
+
+            The information in the header is also saved in a json-formatted
+            file ``info.json``.
+
+            The serialization version is saved in a file ``version.txt``.
+
+            Each node is listed by type in a file ``nodetypes.txt``.
+
+            The adjacency of the nodes is saved in an adjacency format file,
+            ``adj.adjlist``. E.g., a graph with edges `a->b`, `a->c`, `b->d`
+            would be saved as
+
+            .. code-block::
+
+                a b c
+                b d
+                c
+                d
+
+            The id of the object is stored in ``objective.json``, and the list
+            of constraint symbols are stored by id in ``constraints.json``.
+
+            Finally each symbol has symbol-specific storage in a directory.
+
+            .. code-block::
+
+                nodes/
+                    <symbol id>/
+                        <symbol-specific storage>
+                    ...
+
+            The states, if also saved, are saved according to
+            :meth:`States.into_file()`.
+
+        Format Specification (Version 0.1):
+
+            Prior to version 1.0, states were saved differently.
+            See :meth:`States.into_file()`.
+
         See also:
             :meth:`.from_file`, :meth:`.to_file`
 
-        TODO: describe the format
+        .. versionchanged:: 0.5.2
+            Added the ``version`` keyword-only argument.
+        .. versionchanged:: 0.6.0
+            Added support for serialization format version 1.0.
+
+        .. _NPY format: https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html
         """
         version, model_info = self._into_file_header(
             file,

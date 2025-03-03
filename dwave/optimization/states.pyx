@@ -155,6 +155,9 @@ cdef class States:
 
         Returns:
             A model.
+
+        See Also:
+            :meth:`States.from_file()`.
         """
         if not replace:
             raise NotImplementedError("appending states is not (yet) implemented")
@@ -244,7 +247,59 @@ cdef class States:
             version:
                 A 2-tuple indicating which serialization version to use.
 
-        TODO: describe the format
+        Format Specification (Version 1.0):
+
+            The first section of the file is the header, as described in
+            :meth:`Model.into_file()`.
+
+            Following the header, the remaining data is encoded as a zip file.
+            All arrays are saved using the NumPy serialization format, see
+            :func:`numpy.save()`.
+
+            The information in the header is also saved in a json-formatted
+            file ``info.json``.
+
+            The serialization version is saved in a file ``version.txt``.
+
+            The states have the following structure.
+
+            For symbols with a fixed shape and which have all states initialized,
+            the states are stored as a ``(num_states, *symbol.shape())`` array.
+
+            .. code-block::
+
+                nodes/
+                    <symbol id>/
+                        states.npy
+                    ...
+
+            For symbols without a fixed shape, or for which not all states are
+            initialized, the states are each saved in a separate array.
+
+            .. code-block::
+
+                nodes/
+                    <node id>/
+                        states/
+                            <state index>/
+                                array.npy
+                            ...
+                    ...
+
+            This format allows the states and the model to be saved in the same
+            file, sharing the header.
+
+        Format Specification (Version 0.1):
+
+            Saved as a :class:`Model` encoding only the decision symbols.
+
+        See Also:
+            :meth:`States.from_file()`.
+
+        .. versionchanged:: 0.5.2
+            Added the ``version`` keyword-only argument.
+        .. versionchanged:: 0.6.0
+            Added support for serialization format version 1.0.
         """
         self.resolve()
 
