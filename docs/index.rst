@@ -8,7 +8,7 @@ dwave-optimization
     :caption: Reference documentation for dwave-optimization:
     :maxdepth: 1
 
-    reference/api_ref
+    api_ref
 
 About dwave-optimization
 ========================
