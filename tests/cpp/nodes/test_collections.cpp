@@ -38,6 +38,10 @@ TEST_CASE("DisjointBitSetsNode") {
             CHECK(ptr->num_disjoint_sets() == 3);
         }
 
+        THEN("The state is not deterministic") {
+            CHECK(!ptr->deterministic_state());
+        }
+
         WHEN("We add three array output successors") {
             std::vector<DisjointBitSetNode*> sets;
             for (int i = 0; i < 3; ++i) {
@@ -178,6 +182,10 @@ TEST_CASE("DisjointListsNode") {
         const ssize_t primary_set_size = 5;
         const ssize_t num_disjoint_lists = 3;
         auto ptr = graph.emplace_node<DisjointListsNode>(primary_set_size, num_disjoint_lists);
+
+        THEN("The state is not deterministic") {
+            CHECK(!ptr->deterministic_state());
+        }
 
         THEN("We already know a lot about the size etc") {
             CHECK(ptr->primary_set_size() == 5);
@@ -326,6 +334,10 @@ TEST_CASE("ListNode") {
         const int num_elements = 5;
         auto ptr = graph.emplace_node<ListNode>(num_elements);
 
+        THEN("The state is not deterministic") {
+            CHECK(!ptr->deterministic_state());
+        }
+
         THEN("We already know a lot about the size etc") {
             CHECK(ptr->size() == 5);
             CHECK_THAT(ptr->shape(), RangeEquals({5}));
@@ -394,6 +406,10 @@ TEST_CASE("SetNode") {
         auto ptr = graph.emplace_node<SetNode>(num_elements);
 
         graph.emplace_node<ArrayValidationNode>(ptr);
+
+        THEN("The state is not deterministic") {
+            CHECK(!ptr->deterministic_state());
+        }
 
         THEN("The shape is dynamic") {
             CHECK(ptr->ndim() == 1);

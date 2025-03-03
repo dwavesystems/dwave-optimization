@@ -194,6 +194,10 @@ class Node {
 
     virtual void initialize_state(State& state) const;
 
+    /// Return true if the node's state is deterministic - that is it's uniquely
+    /// derived from its predecessors. Defaults to `true`, except for decisions.
+    virtual bool deterministic_state() const { return true; }
+
     // The current topological index. Will be negative if unsorted.
     ssize_t topological_index() const { return topological_index_; }
 
@@ -329,6 +333,9 @@ NodeType* Graph::emplace_node(Args&&... args) {
 class ArrayNode : public Array, public virtual Node {};
 class DecisionNode : public Decision, public virtual Node {
  public:
+    /// Decision nodes by definition do not have a deterministic state.
+    bool deterministic_state() const final { return false; }
+
     // Decisions don't have predecessors so no one should be calling update().
     // Always throws a logic_error.
     [[noreturn]] void update(State& state, int index) const override;
