@@ -161,25 +161,7 @@ cdef class _Graph:
             with open(file, "rb") as f:
                 return cls.from_file(f)
 
-        prefix = b"DWNL"
-
-        read_prefix = file.read(len(prefix))
-        if read_prefix != prefix:
-            raise ValueError("Unknown file type. Expected magic string "
-                             f"{prefix!r} but received {read_prefix!r} "
-                             "instead")
-
-        version = tuple(file.read(2))
-
-        if version not in KNOWN_SERIALIZATION_VERSIONS:
-            raise ValueError("Unknown serialization format. Expected one of "
-                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
-                             "instead. Upgrading your dwave-optimization version may help.")
-
-        if check_header:
-            # we'll need the header values to check later
-            header_len = struct.unpack('<I', file.read(4))[0]
-            header_data = json.loads(file.read(header_len).decode('ascii'))
+        version, header_data = _Graph._from_file_header(file)
 
         cdef _Graph model = cls()
 
@@ -251,6 +233,37 @@ cdef class _Graph:
 
         return model
 
+    @staticmethod
+    def _from_file_header(file):
+        """Read/validate the header from a model file.
+
+        Advances the stream position to the end of the header.
+
+        Returns:
+            The serialization version as a 2-tuple.
+
+            The header data as a dict.
+        """
+        prefix = b"DWNL"
+
+        read_prefix = file.read(len(prefix))
+        if read_prefix != prefix:
+            raise ValueError("Unknown file type. Expected magic string "
+                             f"{prefix!r} but received {read_prefix!r} "
+                             "instead")
+
+        version = tuple(file.read(2))
+
+        if version not in KNOWN_SERIALIZATION_VERSIONS:
+            raise ValueError("Unknown serialization format. Expected one of "
+                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
+                             "instead. Upgrading your dwave-optimization version may help.")
+
+        header_len = struct.unpack('<I', file.read(4))[0]
+        header_data = json.loads(file.read(header_len).decode('ascii'))
+
+        return version, header_data
+
     def _header_data(self, *, only_decision, max_num_states=float('inf')):
         """The header data associated with the model (but not the states)."""
         num_nodes = self.num_decisions() if only_decision else self.num_nodes()
@@ -315,45 +328,16 @@ cdef class _Graph:
                     version=version,
                     )
 
-        if version is None:
-            version = DEFAULT_SERIALIZATION_VERSION
-        elif version not in KNOWN_SERIALIZATION_VERSIONS:
-            raise ValueError("Unknown serialization format. Expected one of "
-                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
-                             "instead. Upgrading your dwave-optimization version may help.")
-
-        model_info = self._header_data(
+        version, model_info = self._into_file_header(
+            file,
+            version=version,
             max_num_states=max_num_states,
             only_decision=only_decision,
         )
+
         num_states = model_info["num_states"]
 
         encoder = json.JSONEncoder(separators=(',', ':'))
-
-        # First prepend the header
-
-        # The first 4 bytes are DWNL
-        file.write(b"DWNL")
-
-        # The next 1 byte is an unsigned byte encoding the major version of the
-        # file format
-        # The next 1 byte is an unsigned byte encoding the minor version of the
-        # file format
-        file.write(bytes(version))
-
-        # The next 4 bytes form a little-endian unsigned int, the length of
-        # the header data `HEADER_LEN`.
-
-        # The next `HEADER_LEN` bytes form the header data. This will be `data`
-        # json-serialized and encoded with 'ascii'.
-        header_data = encoder.encode(model_info).encode("ascii")
-
-        # Now pad to make the entire header divisible by 64
-        padding = b' '*(64 - (len(header_data) + 4 + 2 + 4)  % 64)
-
-        file.write(struct.pack('<I', len(header_data) + len(padding)))  # header length
-        file.write(header_data)
-        file.write(padding)
 
         # The rest of it is a zipfile
         with zipfile.ZipFile(file, mode="w") as zf:
@@ -410,6 +394,50 @@ cdef class _Graph:
                     for i in filter(node.has_state, range(num_states)):
                         directory = f"nodes/{node.topological_index()}/states/{i}/"
                         node._state_into_zipfile(zf, directory, i)
+
+    def _into_file_header(self, file, *, version, max_num_states, only_decision):
+        """Write the header that precedes the zipfile part of the serialization.
+
+        Also handles some input checking.
+        """
+        if version is None:
+            version = DEFAULT_SERIALIZATION_VERSION
+        elif version not in KNOWN_SERIALIZATION_VERSIONS:
+            raise ValueError("Unknown serialization format. Expected one of "
+                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
+                             "instead. Upgrading your dwave-optimization version may help.")
+
+        model_info = self._header_data(
+            max_num_states=max_num_states,
+            only_decision=only_decision,
+        )
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+
+        # The first 4 bytes are DWNL
+        file.write(b"DWNL")
+
+        # The next 1 byte is an unsigned byte encoding the major version of the
+        # file format
+        # The next 1 byte is an unsigned byte encoding the minor version of the
+        # file format
+        file.write(bytes(version))
+
+        # The next 4 bytes form a little-endian unsigned int, the length of
+        # the header data `HEADER_LEN`.
+
+        # The next `HEADER_LEN` bytes form the header data. This will be `data`
+        # json-serialized and encoded with 'ascii'.
+        header_data = encoder.encode(model_info).encode("ascii")
+
+        # Now pad to make the entire header divisible by 64
+        padding = b' '*(64 - (len(header_data) + 4 + 2 + 4)  % 64)
+
+        file.write(struct.pack('<I', len(header_data) + len(padding)))  # header length
+        file.write(header_data)
+        file.write(padding)
+
+        return version, model_info
 
     cpdef bool is_locked(self) noexcept:
         """Lock status of the model.
