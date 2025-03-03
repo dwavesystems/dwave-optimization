@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 import collections.abc
+import os
 import typing
 
 from dwave.optimization.model import Model
@@ -25,7 +26,7 @@ class States:
 
     def from_file(
         self,
-        file: typing.Union[typing.BinaryIO, str],
+        file: typing.Union[bytes, os.PathLike, str, typing.BinaryIO],
         *,
         replace: bool = True,
         check_header: bool = True,
@@ -36,7 +37,7 @@ class States:
 
     def into_file(
         self,
-        file: typing.Union[typing.BinaryIO, str],
+        file: typing.Union[bytes, os.PathLike, str, typing.BinaryIO],
         version: typing.Optional[tuple[int, int]] = None,
         ): ...
 
