@@ -708,6 +708,53 @@ TEST_CASE("PutNode") {
             }
         }
     }
+
+    GIVEN("a = [0, 0, 0, 0], indices = integer(2), values = [2, 2]") {
+        auto graph = Graph();
+
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 0, 0, 0});
+        auto indices_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2}, 0, 3);
+        auto values_ptr = graph.emplace_node<ConstantNode>(std::vector{2, 2});
+
+        auto put_ptr = graph.emplace_node<PutNode>(a_ptr, indices_ptr, values_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(put_ptr);
+
+        auto state = graph.empty_state();
+        indices_ptr->initialize_state(state, {0, 1});
+        graph.initialize_state(state);
+
+        CHECK_THAT(put_ptr->view(state), RangeEquals({2, 2, 0, 0}));
+
+        WHEN("We change indices and then revert and commit a few times") {
+            indices_ptr->set_value(state, 1, 0);
+            graph.propagate(state, graph.descendants(state, {indices_ptr}));
+            CHECK_THAT(put_ptr->view(state), RangeEquals({2, 0, 0, 0}));
+            CHECK_THAT(put_ptr->mask(state), RangeEquals({2, 0, 0, 0}));
+
+            graph.revert(state, graph.descendants(state, {indices_ptr}));
+            CHECK_THAT(put_ptr->view(state), RangeEquals({2, 2, 0, 0}));
+            CHECK_THAT(put_ptr->mask(state), RangeEquals({1, 1, 0, 0}));
+
+            indices_ptr->set_value(state, 1, 0);
+            graph.propagate(state, graph.descendants(state, {indices_ptr}));
+            CHECK_THAT(put_ptr->view(state), RangeEquals({2, 0, 0, 0}));
+            CHECK_THAT(put_ptr->mask(state), RangeEquals({2, 0, 0, 0}));
+
+            graph.revert(state, graph.descendants(state, {indices_ptr}));
+            CHECK_THAT(put_ptr->view(state), RangeEquals({2, 2, 0, 0}));
+            CHECK_THAT(put_ptr->mask(state), RangeEquals({1, 1, 0, 0}));
+
+            indices_ptr->set_value(state, 1, 0);
+            graph.propagate(state, graph.descendants(state, {indices_ptr}));
+            CHECK_THAT(put_ptr->view(state), RangeEquals({2, 0, 0, 0}));
+            CHECK_THAT(put_ptr->mask(state), RangeEquals({2, 0, 0, 0}));
+
+            graph.commit(state, graph.descendants(state, {indices_ptr}));
+            CHECK_THAT(put_ptr->view(state), RangeEquals({2, 0, 0, 0}));
+            CHECK_THAT(put_ptr->mask(state), RangeEquals({2, 0, 0, 0}));
+        }
+    }
 }
 
 TEST_CASE("ReshapeNode") {

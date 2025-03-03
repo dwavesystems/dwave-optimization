@@ -288,6 +288,7 @@ class PutNodeState : private ArrayStateData, public NodeStateData {
         for (const auto& [index, change] : mask_diff_ | std::views::reverse) {
             mask_[index] -= change;
         }
+        mask_diff_.clear();
     }
 
     // Incorporate an update to the base array, ignoring it if the value is

@@ -160,7 +160,7 @@ cdef class States:
             raise NotImplementedError("appending states is not (yet) implemented")
 
         # Validate the header, and get the serialization version.
-        version, _ = _Graph._from_file_header_data(file)
+        version, _ = _Graph._from_file_header(file)
 
         with zipfile.ZipFile(file, mode="r") as zf:
             self._from_zipfile(zf, version=version)
@@ -260,7 +260,7 @@ cdef class States:
 
         model = self._model()  # get a ref-counted model
 
-        version, model_info = model._into_file_header_data(
+        version, model_info = model._into_file_header(
             file,
             version=version,
             max_num_states=len(self),

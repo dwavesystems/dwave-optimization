@@ -1640,6 +1640,10 @@ UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
         if (node_ptr->min() < 0) {
             throw std::invalid_argument("SquareRoot's predecessors cannot take a negative value");
         }
+    } else if constexpr (std::is_same<UnaryOp, functional::log<double>>::value) {
+        if (node_ptr->min() <= 0) {
+            throw std::invalid_argument("Log's predecessors cannot take a negative or zero value");
+        }
     }
     add_predecessor(node_ptr);
 }
@@ -1677,6 +1681,10 @@ bool UnaryOpNode<functional::abs<double>>::integral() const {
 }
 template <>
 bool UnaryOpNode<functional::expit<double>>::integral() const {
+    return false;
+}
+template <>
+bool UnaryOpNode<functional::log<double>>::integral() const {
     return false;
 }
 template <>
@@ -1739,6 +1747,10 @@ std::pair<double, double> UnaryOpNode<UnaryOp>::minmax(
         double expit_low = 1.0 / (1.0 + std::exp(-low));
         double expit_high = 1.0 / (1.0 + std::exp(-high));
         return memoize(cache, std::make_pair(expit_low, expit_high));
+    }
+    if constexpr (std::same_as<UnaryOp, functional::log<double>>) {
+        assert(low > 0);  // checked by constructor
+        return memoize(cache, std::make_pair(std::log(low), std::log(high)));
     }
     if constexpr (std::same_as<UnaryOp, functional::rint<double>>) {
         return memoize(cache, std::make_pair(std::rint(low), std::rint(high)));
@@ -1805,6 +1817,7 @@ ssize_t UnaryOpNode<UnaryOp>::size_diff(const State& state) const {
 
 template class UnaryOpNode<functional::abs<double>>;
 template class UnaryOpNode<functional::expit<double>>;
+template class UnaryOpNode<functional::log<double>>;
 template class UnaryOpNode<functional::logical<double>>;
 template class UnaryOpNode<functional::rint<double>>;
 template class UnaryOpNode<functional::square<double>>;

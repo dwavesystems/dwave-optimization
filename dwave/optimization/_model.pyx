@@ -35,7 +35,7 @@ from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
 from dwave.optimization.symbols cimport symbol_from_ptr
-from dwave.optimization.utilities import _file_object_arg
+from dwave.optimization.utilities import _file_object_arg, _lock
 
 __all__ = []
 
@@ -177,7 +177,7 @@ cdef class _Graph:
         elif not isinstance(substitute, collections.abc.Mapping):
             raise TypeError("expected substitute to be a mapping of node names to classes")
 
-        version, header_data = _Graph._from_file_header_data(file)
+        version, header_data = _Graph._from_file_header(file)
 
         cdef _Graph model = cls()
 
@@ -239,7 +239,7 @@ cdef class _Graph:
         return model
 
     @staticmethod
-    def _from_file_header_data(file):
+    def _from_file_header(file):
         """Read/validate the header from a model file.
 
         Advances the stream position to the end of the header.
@@ -288,6 +288,7 @@ cdef class _Graph:
         )
 
     @_file_object_arg("wb")  # translate str/bytes file inputs into file objects
+    @_lock
     def into_file(self, file, *,
                   Py_ssize_t max_num_states = 0,
                   bool only_decision = False,
@@ -315,17 +316,7 @@ cdef class _Graph:
 
         TODO: describe the format
         """
-        if not self.is_locked():
-            # lock for the duration of the method
-            with self.lock():
-                return self.into_file(
-                    file,
-                    max_num_states=max_num_states,
-                    only_decision=only_decision,
-                    version=version,
-                    )
-
-        version, model_info = self._into_file_header_data(
+        version, model_info = self._into_file_header(
             file,
             version=version,
             max_num_states=max_num_states,
@@ -388,7 +379,11 @@ cdef class _Graph:
                     constraints.append(c.topological_index())
             zf.writestr("constraints.json", encoder.encode(constraints))
 
-    def _into_file_header_data(self, file, *, version, max_num_states, only_decision):
+    def _into_file_header(self, file, *, version, max_num_states, only_decision):
+        """Write the header that precedes the zipfile part of the serialization.
+
+        Also handles some input checking.
+        """
         if version is None:
             version = DEFAULT_SERIALIZATION_VERSION
         elif version not in KNOWN_SERIALIZATION_VERSIONS:

@@ -12,29 +12,39 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import os
 import functools
 
+__all__ = []
 
-def _file_object_arg(mode):
-    """In several methods we want to accept a string giving a file name and
-    interpret it as a file object.
 
-    This handles that case by passing through non-strings, but calling open()
-    on strings.
+def _file_object_arg(mode: str):
+    """In several methods we want to accept a file name or a file-like object.
+
+    The ``mode`` argument is the same as for ``open()``.
 
     This method assumes that the file argument is the first one. We could
     generalize if we need to.
-
-    Before adding this method we were frequently forgetting to pass all other
-    args/kwargs through which was a source of bugs.
     """
     def decorator(method):
         @functools.wraps(method)
         def _method(cls_or_self, file, *args, **kwargs):
-            if isinstance(file, str):
-                with open(file, mode) as fobj:
+            if isinstance(file, (str, bytes, os.PathLike)):
+                with open(os.fspath(file), mode) as fobj:
                     return method(cls_or_self, fobj, *args, **kwargs)
             else:
                 return method(cls_or_self, file, *args, **kwargs)
         return _method
     return decorator
+
+
+def _lock(method):
+    """Decorator for Model methods that lock the model for the duration."""
+    @functools.wraps(method)
+    def _method(obj, *args, **kwargs):
+        if not obj.is_locked():
+            with obj.lock():
+                return method(obj, *args, **kwargs)
+        else:
+            return method(obj, *args, **kwargs)
+    return _method

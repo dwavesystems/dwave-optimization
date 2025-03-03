@@ -333,12 +333,12 @@ NodeType* Graph::emplace_node(Args&&... args) {
 class ArrayNode : public Array, public virtual Node {};
 class DecisionNode : public Decision, public virtual Node {
  public:
+    /// Decision nodes by definition do not have a deterministic state.
+    bool deterministic_state() const final { return false; }
+
     // Decisions don't have predecessors so no one should be calling update().
     // Always throws a logic_error.
     [[noreturn]] void update(State& state, int index) const override;
-
-    /// Decision nodes by definition do not have a deterministic state.
-    bool deterministic_state() const final { return false; }
 
  protected:
     // In general we do not allow decisions to be removed from models.

@@ -24,6 +24,7 @@ from dwave.optimization.symbols import (
     Concatenate,
     Divide,
     Expit,
+    Log,
     Logical,
     Maximum,
     Minimum,
@@ -49,6 +50,7 @@ __all__ = [
     "concatenate",
     "divide",
     "expit",
+    "log",
     "logical",
     "logical_and",
     "logical_not",
@@ -262,6 +264,35 @@ def expit(x: ArraySymbol) -> Expit:
     .. versionadded:: 0.5.2
     """
     return Expit(x)
+
+
+def log(x: ArraySymbol) -> Log:
+    """Return an element-wise natural logarithm on the given symbol.
+
+    Args:
+        x: Input symbol.
+
+    Returns:
+        A symbol that propagates the values of the natural logarithm of a given symbol.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import log
+        ...
+        >>> model = Model()
+        >>> x = model.constant(1.0)
+        >>> log_x = log(x)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(log_x.state())
+        0.0
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Log`: equivalent symbol.
+
+    .. versionadded:: 0.5.2
+    """
+    return Log(x)
 
 
 def logical(x: ArraySymbol) -> Logical:

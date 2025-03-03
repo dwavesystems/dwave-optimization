@@ -330,7 +330,9 @@ TEST_CASE("AdvancedIndexingNode") {
                 std::initializer_list<ssize_t>{-1, 2}, 0, 2, true);
 
         auto i_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
+        graph.emplace_node<ArrayValidationNode>(i_ptr);
         auto j_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 1);
+        graph.emplace_node<ArrayValidationNode>(j_ptr);
 
         auto B_ptr = graph.emplace_node<AdvancedIndexingNode>(A_ptr, i_ptr, j_ptr);
 

@@ -103,6 +103,10 @@ class BinaryOpTests(SymbolTests):
         # if the op is different for symbols, allow the override
         return self.op(lhs, rhs)
 
+    def test_deterministic(self):
+        x = next(self.generate_symbols())
+        self.assertTrue(x._deterministic_state())
+
     def test_numpy_equivalence(self):
         lhs_array = np.arange(10)
         rhs_array = np.arange(1, 11)
