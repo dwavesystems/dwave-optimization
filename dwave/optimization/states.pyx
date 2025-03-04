@@ -263,6 +263,10 @@ cdef class States:
 
             The states have the following structure.
 
+            Symbols with a state that's uniquely determined by their predecessor's
+            states and :class:`~dwave.optimization.symbols.Constant` symbols do
+            not have their states serialized.
+
             For symbols with a fixed shape and which have all states initialized,
             the states are stored as a ``(num_states, *symbol.shape())`` array.
 
