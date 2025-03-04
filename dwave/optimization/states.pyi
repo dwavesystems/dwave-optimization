@@ -38,6 +38,7 @@ class States:
     def into_file(
         self,
         file: typing.Union[bytes, os.PathLike, str, typing.BinaryIO],
+        *,
         version: typing.Optional[tuple[int, int]] = None,
         ): ...
 

@@ -45,6 +45,7 @@ DEFAULT_SERIALIZATION_VERSION = (0, 1)
 
 KNOWN_SERIALIZATION_VERSIONS = (
     (0, 1),
+    (1, 0),
 )
 """A tuple of 2-tuples listing all serialization versions supported."""
 
@@ -142,7 +143,9 @@ cdef class _Graph:
     @classmethod
     @_file_object_arg("rb")  # translate str/bytes file inputs into file objects
     def from_file(cls, file, *,
-                  check_header = True,
+                  check_header = True,  # undocumented until fixed, see
+                                        # https://github.com/dwavesystems/dwave-optimization/issues/22
+                  substitute = None,
                   ):
         """Construct a model from the given file.
 
@@ -150,14 +153,29 @@ cdef class _Graph:
             file:
                 File pointer to a readable, seekable file-like object encoding
                 a model. Strings are interpreted as a file name.
+            substitute:
+                A mapping of symbol substitutions to make when loading the file.
+                The keys are strings giving the node class name to be substituted.
+                The values are callables to create a different node.
+                The callable should have the same signature as the substituted
+                symbol's constructor.
 
         Returns:
             A model.
 
         See also:
             :meth:`.into_file`, :meth:`.to_file`
+
+        .. versionchanged:: 0.6.0
+            Added the ``substitute`` keyword-only argument.
+
         """
         import dwave.optimization.symbols as symbols
+
+        if substitute is None:
+            substitute = dict()
+        elif not isinstance(substitute, collections.abc.Mapping):
+            raise TypeError("expected substitute to be a mapping of node names to classes")
 
         version, header_data = _Graph._from_file_header(file)
 
@@ -189,12 +207,12 @@ cdef class _Graph:
 
                     # take advanctage of the symbols all being in the same namespace
                     # and the fact that we (currently) encode them all by name
-                    cls = getattr(symbols, classname, None)
+                    node_cls = substitute.get(classname, getattr(symbols, classname, None))
 
-                    if not issubclass(cls, Symbol):
+                    if not issubclass(node_cls, Symbol):
                         raise ValueError("encoded model has an unsupported node type")
 
-                    cls._from_zipfile(zf, directory, model, predecessors=predecessors)
+                    node_cls._from_zipfile(zf, directory, model, predecessors=predecessors)
 
             objective_buff = zf.read("objective.json")
             if objective_buff:
@@ -206,19 +224,8 @@ cdef class _Graph:
             for cid in json.loads(zf.read("constraints.json")):
                 model.add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
 
-            # Read any states that have been encoded
-            num_states = model_info.get("num_states")
-            if not isinstance(num_states, int) or num_states < 0:
-                raise ValueError("expected num_states to be a positive integer")
-
-            if num_states > 0:
-                model.states.resize(num_states)
-
-                # now read the states of the decision variables
-                num_decisions = model.num_decisions()  # use the model not the serialization
-                for node in itertools.islice(model.iter_symbols(), 0, num_decisions):
-                    for i in range(num_states):
-                        node._state_from_zipfile(zf, f"nodes/{node.topological_index()}/states/{i}/", i)
+            # Finally load any states from the file.
+            model.states._from_zipfile(zf, version=version)
 
         if check_header:
             expected = model._header_data(only_decision=False)
@@ -304,10 +311,79 @@ cdef class _Graph:
             version:
                 A 2-tuple indicating which serialization version to use.
 
+        Format Specification (Version 1.0):
+
+            This format is inspired by the `NPY format`_
+
+            The first 4 bytes are a magic string: exactly "DWNL".
+
+            The next 1 byte is an unsigned byte: the major version of the file
+            format.
+
+            The next 1 byte is an unsigned byte: the minor version of the file
+            format.
+
+            The next 4 bytes form a little-endian unsigned int, the length of
+            the header data HEADER_LEN.
+
+            The next HEADER_LEN bytes form the header data. This is a
+            json-serialized dictionary. The dictionary contains the following
+            key/values: ``decision_state_size``, ``num_nodes``, ``num_states``,
+            and ``state_size``. It is terminated by a newline character and
+            padded with spaces to make the entire length of the entire header
+            divisible by 64.
+
+            Following the header, the remaining data is encoded as a zip file.
+            All arrays are saved using the NumPy serialization format, see
+            :func:`numpy.save()`.
+
+            The information in the header is also saved in a json-formatted
+            file ``info.json``.
+
+            The serialization version is saved in a file ``version.txt``.
+
+            Each node is listed by type in a file ``nodetypes.txt``.
+
+            The adjacency of the nodes is saved in an adjacency format file,
+            ``adj.adjlist``. E.g., a graph with edges `a->b`, `a->c`, `b->d`
+            would be saved as
+
+            .. code-block::
+
+                a b c
+                b d
+                c
+                d
+
+            The id of the object is stored in ``objective.json``, and the list
+            of constraint symbols are stored by id in ``constraints.json``.
+
+            Finally each symbol has symbol-specific storage in a directory.
+
+            .. code-block::
+
+                nodes/
+                    <symbol id>/
+                        <symbol-specific storage>
+                    ...
+
+            The states, if also saved, are saved according to
+            :meth:`States.into_file()`.
+
+        Format Specification (Version 0.1):
+
+            Prior to version 1.0, states were saved differently.
+            See :meth:`States.into_file()`.
+
         See also:
             :meth:`.from_file`, :meth:`.to_file`
 
-        TODO: describe the format
+        .. versionchanged:: 0.5.2
+            Added the ``version`` keyword-only argument.
+        .. versionchanged:: 0.6.0
+            Added support for serialization format version 1.0.
+
+        .. _NPY format: https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html
         """
         version, model_info = self._into_file_header(
             file,
@@ -356,6 +432,10 @@ cdef class _Graph:
                 directory = f"nodes/{node.topological_index()}/"
                 node._into_zipfile(zf, directory)
 
+            # If we're saving states, do a fourth pass saving the states.
+            if num_states > 0:
+                self.states._into_zipfile(zf, num_states=num_states, version=version)
+
             # Encode the objective and the constraints
             if self.objective is not None and self.objective.topological_index() < stop:
                 zf.writestr("objective.json", encoder.encode(self.objective.topological_index()))
@@ -367,14 +447,6 @@ cdef class _Graph:
                 if c is not None and c.topological_index() < stop:
                     constraints.append(c.topological_index())
             zf.writestr("constraints.json", encoder.encode(constraints))
-
-            # Encode the states if requested
-            if num_states > 0:  # redundant, but good short circuit
-                for node in itertools.islice(self.iter_symbols(), self.num_decisions()):
-                    # only save states that have been initialized
-                    for i in filter(node.has_state, range(num_states)):
-                        directory = f"nodes/{node.topological_index()}/states/{i}/"
-                        node._state_into_zipfile(zf, directory, i)
 
     def _into_file_header(self, file, *, version, max_num_states, only_decision):
         """Write the header that precedes the zipfile part of the serialization.
@@ -1104,12 +1176,12 @@ cdef class Symbol:
             return False
         return not self.expired() and self.id() == other_.id()
 
-    def _state_from_zipfile(self, zf, directory, Py_ssize_t state_index):
+    def _states_from_zipfile(self, zf, directory, num_states, version):
         # unlike node serialization, by default we raise an error because if
         # this is being called, it must have a state
         raise NotImplementedError(f"{type(self).__name__} has not implemented state deserialization")
 
-    def _state_into_zipfile(self, zf, directory, Py_ssize_t state_index):
+    def _states_into_zipfile(self, zf, directory, num_states, version):
         # unlike node serialization, by default we raise an error because if
         # this is being called, it must have a state
         raise NotImplementedError(f"{type(self).__name__} has not implemented state serialization")
@@ -1568,34 +1640,66 @@ cdef class ArraySymbol(Symbol):
 
         return np.array(StateView(self, index), copy=copy)
 
-    def _state_from_zipfile(self, zf, directory, Py_ssize_t state_index):
-        fname = directory + "array.npy"
+    def _states_from_zipfile(self, zf, *, num_states, version):
 
-        # check if there is any state data saved (it can be sparse)
-        # todo: test for performance, there may be better ways to check
-        # for a file's existence
+        directory = f"nodes/{self.topological_index()}/"
+
+        # Test whether we saved all of the state together. We can detect it
+        # based on the existance of an arrays.npy file.
         try:
-            zipinfo = zf.getinfo(fname)
+            states_info = zf.getinfo(f"{directory}states.npy")
         except KeyError:
-            # no state data encoded
-            return
+            states_info = None
 
-        with zf.open(zipinfo, mode="r") as f:
-            # todo: consider memmap here if possible
-            state = np.load(f, allow_pickle=False)
+        if states_info is None:
+            for i in range(num_states):            
+                try:
+                    state_info = zf.getinfo(f"{directory}states/{i}/array.npy")
+                except KeyError:
+                    # states can be missing, in which case just skip this
+                    # index
+                    continue
 
-        # only decisions actually have this method. In the future we should
-        # do better error checking etc to handle it
-        self.set_state(state_index, state)
+                with zf.open(state_info, mode="r") as f:
+                    state = np.load(f, allow_pickle=False)
 
-    def _state_into_zipfile(self, zf, directory, Py_ssize_t state_index):
-        # do this first to get any potential error messages out of the way
-        # todo: use a view not a copy
-        array = self.state(state_index)
+                self.set_state(i, state)
+        else:
+            with zf.open(states_info, mode="r") as f:
+                states = np.load(f, allow_pickle=False)
 
-        # then save into the state directory
-        with zf.open(directory + "array.npy", mode="w", force_zip64=True) as f:
-            np.save(f, array, allow_pickle=False)
+            # iterate over axis 0, each "row" is then its own state
+            for i, state in enumerate(states):
+                self.set_state(i, state)
+
+    def _states_into_zipfile(self, zf, *, num_states, version):
+        states = [self.state(i) if self.has_state(i) else None for i in range(num_states)]
+
+        # If we have any missing states, or if the states don't all have the
+        # same shape then we save each state in a separate directory.
+        # Also, before serialization version 1.0 we always saved in a ragged format.
+        save_ragged = (
+            not states  # implicit to other conditions, but no harm being explicit
+            or version < (1, 0)
+            or any(state is None for state in states)
+            or len(set(state.shape for state in states)) != 1
+        )
+
+        directory = f"nodes/{self.topological_index()}/"
+
+        if save_ragged:
+            # each state gets its own sub-directory
+            for i, state in enumerate(states):
+                if state is None:
+                    continue
+                with zf.open(f"{directory}states/{i}/array.npy", mode="w", force_zip64=True) as f:
+                    np.save(f, state, allow_pickle=False)
+
+        else:
+            # the states are all saved in one file
+            states = np.asarray(states)  # stacks them along axis 0
+            with zf.open(f"{directory}states.npy", mode="w", force_zip64=True) as f:
+                np.save(f, states, allow_pickle=False)
 
     def state_size(self):
         r"""Return an estimate of the size, in bytes, of an array symbol's state.

@@ -12,7 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import json
+import tempfile
 import weakref
+import zipfile
 
 from libcpp.utility cimport move
 
@@ -139,39 +142,68 @@ cdef class States:
         return move(states)
 
     @_file_object_arg("rb")  # translate str/bytes file inputs into file objects
-    def from_file(self, file, *, replace = True, check_header = True):
+    def from_file(self, file, *,
+                  replace = True,       # undoc until supported
+                  check_header = True,  # undocumented until fixed, see
+                                        # https://github.com/dwavesystems/dwave-optimization/issues/22
+                  ):
         """Construct states from the given file.
 
         Args:
             file:
                 File pointer to a readable, seekable file-like object encoding
                 the states. Strings are interpreted as a file name.
-            replace:
-                If ``True``, any held states are replaced with those from the file.
-                If ``False``, the states are appended.
-            check_header:
-                Set to ``False`` to skip file-header check.
 
         Returns:
             A model.
-        """
-        self.resolve()
 
+        See Also:
+            :meth:`States.from_file()`.
+        """
         if not replace:
             raise NotImplementedError("appending states is not (yet) implemented")
 
-        # todo: we don't need to actually construct a model, but this is nice and
-        # abstract. We should performance test and then potentially re-implement
-        cdef _Graph model = Model.from_file(file, check_header=check_header)
-        cdef States states = model.states
+        # Validate the header, and get the serialization version.
+        version, _ = _Graph._from_file_header(file)
 
-        # Check that the model is compatible
-        for n0, n1 in zip(model.iter_symbols(), self._model().iter_symbols()):
-            # todo: replace with proper node quality testing once we have it
-            if not isinstance(n0, type(n1)):
-                raise ValueError("cannot load states into a model with mismatched decisions")
+        with zipfile.ZipFile(file, mode="r") as zf:
+            self._from_zipfile(zf, version=version)
 
-        self.attach_states(move(states.detach_states()))
+    def _from_zipfile(self, zf, *, version):
+        """Given a zipfile containing a serialized model, attempt to extract the
+        state(s) associated with any node types that might save them.
+
+        ``zf`` must be a :class:`zipfile.ZipFile`.
+        """
+        self.resolve()
+
+        model_info = json.loads(zf.read("info.json"))
+
+        # Read any states that have been encoded
+        num_states = model_info.get("num_states")
+        if not isinstance(num_states, int) or num_states < 0:
+            raise ValueError("expected num_states to be a positive integer")
+        elif not num_states:
+            return  # no states to load, so just return early
+
+        # Get a refcounted model for the duration of this function.
+        cdef _Graph model = self._model()
+
+        # We'll be overwriting the states, so clear everything that's in there
+        model.states.resize(0)
+        model.states.resize(num_states)
+
+        for symbol in model.iter_symbols():
+            # we don't load the state of any nodes that uniquely determine
+            # their state from their predecessors
+            if symbol._deterministic_state():
+                continue
+
+            symbol._states_from_zipfile(
+                zf,
+                num_states=num_states,
+                version=version,
+            )
 
     def from_future(self, future, result_hook):
         """Populate the states from the result of a future computation.
@@ -216,16 +248,116 @@ cdef class States:
             version:
                 A 2-tuple indicating which serialization version to use.
 
-        TODO: describe the format
+        Format Specification (Version 1.0):
+
+            The first section of the file is the header, as described in
+            :meth:`Model.into_file()`.
+
+            Following the header, the remaining data is encoded as a zip file.
+            All arrays are saved using the NumPy serialization format, see
+            :func:`numpy.save()`.
+
+            The information in the header is also saved in a json-formatted
+            file ``info.json``.
+
+            The serialization version is saved in a file ``version.txt``.
+
+            The states have the following structure.
+
+            Symbols with a state that's uniquely determined by their predecessor's
+            states and :class:`~dwave.optimization.symbols.Constant` symbols do
+            not have their states serialized.
+
+            For symbols with a fixed shape and which have all states initialized,
+            the states are stored as a ``(num_states, *symbol.shape())`` array.
+
+            .. code-block::
+
+                nodes/
+                    <symbol id>/
+                        states.npy
+                    ...
+
+            For symbols without a fixed shape, or for which not all states are
+            initialized, the states are each saved in a separate array.
+
+            .. code-block::
+
+                nodes/
+                    <node id>/
+                        states/
+                            <state index>/
+                                array.npy
+                            ...
+                    ...
+
+            This format allows the states and the model to be saved in the same
+            file, sharing the header.
+
+        Format Specification (Version 0.1):
+
+            Saved as a :class:`Model` encoding only the decision symbols.
+
+        See Also:
+            :meth:`States.from_file()`.
+
+        .. versionchanged:: 0.5.2
+            Added the ``version`` keyword-only argument.
+        .. versionchanged:: 0.6.0
+            Added support for serialization format version 1.0.
         """
         self.resolve()
-        return self._model().into_file(
-            file,
-            only_decision=True,
-            max_num_states=self.size(),
-            version=version,
-            )
 
+        if isinstance(version, tuple) and version < (1, 0):
+            # In serialization version 0.1, we saved a model with only
+            # decisions encoding the states.
+            return self._model().into_file(
+                file,
+                only_decision=True,
+                max_num_states=self.size(),
+                version=version,
+                )
+
+        model = self._model()  # get a ref-counted model
+
+        version, model_info = model._into_file_header(
+            file,
+            version=version,
+            max_num_states=self.size(),
+            only_decision=False,
+        )
+
+        num_states = model_info["num_states"]
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+
+        with zipfile.ZipFile(file, mode="w") as zf:
+            zf.writestr("info.json", encoder.encode(model_info))
+            zf.writestr("version.txt", ".".join(map(str, version)))
+
+            self._into_zipfile(zf, num_states=num_states, version=version)
+
+    def _into_zipfile(self, zf, *, num_states, version):
+        """Given a zipfile containing a serialized model, attempt to save the
+        state(s) associated with any node types that might save them.
+
+        ``zf`` must be a :class:`zipfile.ZipFile`.
+        """
+        if num_states <= 0:
+            # nothing so save, so shortcut
+            return
+
+        model = self._model()  # get a ref-counted model
+
+        for symbol in model.iter_symbols():
+            if symbol._deterministic_state():
+                continue
+
+            symbol._states_into_zipfile(
+                zf,
+                num_states=num_states,
+                version=version,
+            )
 
     cdef _Graph _model(self):
         """Get a ref-counted Model object."""
@@ -303,10 +435,20 @@ cdef class States:
         self.resolve()
         return self._states.size()
 
-    def to_file(self):
+    def to_file(self, **kwargs):
         """Serialize the states to a new file-like object."""
-        self.resolve()
-        return self._model().to_file(only_decision=True, max_num_states=self.size())
+        file = tempfile.TemporaryFile(mode="w+b")
+
+        # into_file can raise an exception, in which case we close off the
+        # tempfile before returning
+        try:
+            self.into_file(file, **kwargs)
+        except Exception:
+            file.close()
+            raise
+
+        file.seek(0)
+        return file
 
 
 cdef class StateView:

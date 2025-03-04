@@ -21,7 +21,7 @@ import unittest
 
 import numpy as np
 
-import dwave.optimization.symbols
+import dwave.optimization
 from dwave.optimization import Model
 
 
@@ -434,25 +434,27 @@ class TestModelSerialization(unittest.TestCase):
         W = model.constant(np.arange(25).reshape((5, 5)))
         model.minimize(W[x, :][:, x].sum())
 
-        # Serialize, then deserialize the model
-        with model.to_file() as f:
-            new = Model.from_file(f)
+        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+            with self.subTest(version=version):
+                # Serialize, then deserialize the model
+                with model.to_file(version=version) as f:
+                    new = Model.from_file(f)
 
-        new.lock()
-        new.states.resize(3)
-        a, *_ = new.iter_symbols()
-        a.set_state(0, [2, 4, 3, 1, 0])
-        # don't set state 1
-        a.state(2)  # default initialize
+                new.lock()
+                new.states.resize(3)
+                a, *_ = new.iter_symbols()
+                a.set_state(0, [2, 4, 3, 1, 0])
+                # don't set state 1
+                a.state(2)  # default initialize
 
-        # Attach the new states to the original model
-        with new.states.to_file() as f:
-            model.states.from_file(f)
+                # Attach the new states to the original model
+                with new.states.to_file() as f:
+                    model.states.from_file(f)
 
-        self.assertEqual(model.states.size(), 3)
-        np.testing.assert_array_equal(x.state(0), [2, 4, 3, 1, 0])
-        self.assertFalse(a.has_state(1))
-        np.testing.assert_array_equal(a.state(2), range(5))
+                self.assertEqual(model.states.size(), 3)
+                np.testing.assert_array_equal(x.state(0), [2, 4, 3, 1, 0])
+                self.assertFalse(a.has_state(1))
+                np.testing.assert_array_equal(a.state(2), range(5))
 
     def test_by_filename(self):
         with self.subTest("bytes"):
@@ -574,14 +576,31 @@ class TestModelSerialization(unittest.TestCase):
         # don't set state 1
         x.state(2)  # default initialize
 
-        with model.to_file(max_num_states=model.states.size()) as f:
-            new = Model.from_file(f)
+        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+            with self.subTest(version=version):
+                with model.to_file(max_num_states=model.states.size()) as f:
+                    new = Model.from_file(f)
 
-        a, = new.iter_symbols()
-        self.assertEqual(new.states.size(), 3)
-        np.testing.assert_array_equal(a.state(0), x.state(0))
-        self.assertFalse(a.has_state(1))
-        np.testing.assert_array_equal(a.state(2), x.state(2))
+                a, = new.iter_symbols()
+                self.assertEqual(new.states.size(), 3)
+                np.testing.assert_array_equal(a.state(0), x.state(0))
+                self.assertFalse(a.has_state(1))
+                np.testing.assert_array_equal(a.state(2), x.state(2))
+
+    def test_substitute(self):
+        model = Model()
+        x = model.constant(range(10))
+        y = model.constant(range(10, 20))
+        z = x + y
+
+        self.assertIsInstance(z, dwave.optimization.symbols.Add)
+
+        with model.to_file() as f:
+            new = Model.from_file(f, substitute=dict(Add=dwave.optimization.symbols.Multiply))
+
+        _, _, new_z = new.iter_symbols()
+
+        self.assertIsInstance(new_z, dwave.optimization.symbols.Multiply)
 
 
 class TestSymbol(unittest.TestCase):

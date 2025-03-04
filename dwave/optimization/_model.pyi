@@ -44,7 +44,7 @@ class _Graph:
         cls: typing.Type[_GraphSubclass],
         file: typing.Union[bytes, os.PathLike, str, typing.BinaryIO],
         *,
-        check_header: bool = True,
+        substitute: typing.Optional[collections.abc.Mapping[str, collections.abc.Callable]],
         ) -> _GraphSubclass: ...
 
     def into_file(
