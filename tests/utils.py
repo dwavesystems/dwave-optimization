@@ -52,42 +52,47 @@ class SymbolTests(abc.ABC, unittest.TestCase):
         self.assertIn(type(x).__name__, dwave.optimization.symbols.__all__)
 
     def test_serialization(self):
-        for x in self.generate_symbols():
-            model = x.model
-            index = x.topological_index()
+        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+            with self.subTest(version=version):
+                for x in self.generate_symbols():
+                    model = x.model
+                    index = x.topological_index()
 
-            with model.to_file() as f:
-                new = Model.from_file(f)
+                    with model.to_file(version=version) as f:
+                        new = Model.from_file(f)
 
-            # Get the symbol back
-            y, = itertools.islice(new.iter_symbols(), index, index+1)
+                    # Get the symbol back
+                    y, = itertools.islice(new.iter_symbols(), index, index+1)
 
-            self.assertFalse(x.shares_memory(y))
-            self.assertIs(type(x), type(y))
-            self.assertTrue(x.equals(y))
+                    self.assertFalse(x.shares_memory(y))
+                    self.assertIs(type(x), type(y))
+                    self.assertTrue(x.equals(y))
 
     def test_state_serialization(self):
-        for x in self.generate_symbols():
-            model = x.model
+        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+            with self.subTest(version=version):
+                for x in self.generate_symbols():
+                    model = x.model
 
-            # without some way to randomly initialize states this is really just
-            # smoke test
-            model.states.resize(1)
+                    # without some way to randomly initialize states this is really just
+                    # smoke test
+                    model.states.resize(1)
 
-            # get the states before serialization
-            states = []
-            for sym in model.iter_symbols():
-                if hasattr(sym, "state"):
-                    states.append(sym.state())
-                else:
-                    states.append(None)
+                    # get the states before serialization
+                    states = []
+                    for sym in model.iter_symbols():
+                        if hasattr(sym, "state"):
+                            states.append(sym.state())
+                        else:
+                            states.append(None)
 
-            with model.states.to_file() as f:
-                Model.from_file(f)
+                    with model.states.to_file(version=version) as f:
+                        model.states.clear()
+                        model.states.from_file(f)
 
-            for i, sym in enumerate(model.iter_symbols()):
-                if hasattr(sym, "state"):
-                    np.testing.assert_equal(sym.state(), states[i])
+                    for i, sym in enumerate(model.iter_symbols()):
+                        if hasattr(sym, "state"):
+                            np.testing.assert_equal(sym.state(), states[i])
 
     def test_state_size_smoke(self):
         for x in self.generate_symbols():

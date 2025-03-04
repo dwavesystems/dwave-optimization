@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 import json
+import tempfile
 import weakref
 import zipfile
 
@@ -322,7 +323,7 @@ cdef class States:
         version, model_info = model._into_file_header(
             file,
             version=version,
-            max_num_states=len(self),
+            max_num_states=self.size(),
             only_decision=False,
         )
 
@@ -434,10 +435,20 @@ cdef class States:
         self.resolve()
         return self._states.size()
 
-    def to_file(self):
+    def to_file(self, **kwargs):
         """Serialize the states to a new file-like object."""
-        self.resolve()
-        return self._model().to_file(only_decision=True, max_num_states=self.size())
+        file = tempfile.TemporaryFile(mode="w+b")
+
+        # into_file can raise an exception, in which case we close off the
+        # tempfile before returning
+        try:
+            self.into_file(file, **kwargs)
+        except Exception:
+            file.close()
+            raise
+
+        file.seek(0)
+        return file
 
 
 cdef class StateView:
