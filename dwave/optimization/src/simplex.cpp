@@ -549,7 +549,7 @@ SolveResult linprog(std::span<const double> c, std::span<const double> b_lb,
     const LP model = translate_LP_to_simple(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub);
 
     ssize_t max_iterations = 1000;
-    double tolerance = 1e-9;
+    double tolerance = 1e-7;
     bool bland = false;
 
     SolveResult result =
