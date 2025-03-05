@@ -309,6 +309,10 @@ void check_LP_sizes(std::span<const double> c, std::span<const double> b_lb,
     assert(num_vars == static_cast<ssize_t>(ub.size()) && "upper bounds length does not match c");
 }
 
+bool lb_is_unbounded(double lb) { return lb <= -LP_INFINITY; }
+
+bool ub_is_unbounded(double ub) { return ub >= LP_INFINITY; }
+
 /// Translate the general LP form to the simple:
 ///     minimize(c @ x) subject to A @ x == b, x >= 0
 LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_lb,
@@ -322,17 +326,15 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
     const Matrix A(A_data, b_lb.size(), num_vars);
     const Matrix A_eq(A_eq_data, b_eq.size(), num_vars);
 
-    static double inf = std::numeric_limits<double>::infinity();
-
     ssize_t A_constraint_count = 0;
     for (ssize_t i = 0; i < A.n(); i++) {
         // Unbounded constraint, can ignore
-        if (b_lb[i] == -inf && b_ub[i] == inf) continue;
+        if (lb_is_unbounded(b_lb[i]) && ub_is_unbounded(b_ub[i])) continue;
 
-        if (b_lb[i] != -inf) {
+        if (!lb_is_unbounded(b_lb[i])) {
             A_constraint_count++;
         }
-        if (b_ub[i] != inf) {
+        if (!ub_is_unbounded(b_ub[i])) {
             A_constraint_count++;
         }
     }
@@ -344,11 +346,11 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
     ssize_t upper_bounded_var_count = 0;
     ssize_t unbounded_var_count = 0;
     for (ssize_t j = 0; j < num_vars; j++) {
-        if (lb_[j] == -inf && ub_[j] == inf) {
+        if (lb_is_unbounded(lb_[j]) && ub_is_unbounded(ub_[j])) {
             unbounded_var_count++;
         }
 
-        if (ub_[j] != inf) {
+        if (!ub_is_unbounded(ub_[j])) {
             upper_bounded_var_count++;
         }
     }
@@ -363,7 +365,7 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
 
     // Copy A to final A, adding extra flipped constraint for ones with lower bounds
     for (ssize_t i = 0; i < A.n(); i++) {
-        if (b_lb[i] != -inf) {
+        if (!lb_is_unbounded(b_lb[i])) {
             // Copy the flipped constraint
             for (ssize_t j = 0; j < A.m(); j++) {
                 A_(A_row, j) = -A(i, j);
@@ -373,7 +375,7 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
             A_row++;
         }
 
-        if (b_ub[i] != inf) {
+        if (!ub_is_unbounded(b_ub[i])) {
             // Copy the constraint
             for (ssize_t j = 0; j < A.m(); j++) {
                 A_(A_row, j) = A(i, j);
@@ -397,7 +399,7 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
 
     A_row = A_constraint_count;
     for (ssize_t j = 0; j < num_vars; j++) {
-        if (lb_[j] == -inf && ub_[j] == inf) {
+        if (lb_is_unbounded(lb_[j]) && ub_is_unbounded(ub_[j])) {
             // Free variable, substitute xi = xi+ - xi-
             for (ssize_t i = 0; i < A_.n(); i++) {
                 A_(i, free_variable_index) = -A_(i, j);
@@ -405,7 +407,7 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
             c_[free_variable_index] = -c[j];
             free_variable_index++;
 
-        } else if (lb_[j] == -inf && ub_[j] != inf) {
+        } else if (lb_is_unbounded(lb_[j]) && !ub_is_unbounded(ub_[j])) {
             // Substitute any variables xi that are unbounded below (i.e. -inf <= xi <= C) with -xi
             lb_[j] = -ub_[j];
             ub_[j] = -lb_[j];
@@ -416,7 +418,7 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
             }
         }
 
-        if (ub_[j] != inf) {
+        if (!ub_is_unbounded(ub_[j])) {
             A_(A_row, j) = 1;
             b[A_row] = ub_[j];
             A_row++;
@@ -434,7 +436,7 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
     // Substitute the lower bounds
     double c0 = 0.0;
     for (ssize_t j = 0; j < num_vars; j++) {
-        if (lb_[j] != -inf) {
+        if (!lb_is_unbounded(lb_[j])) {
             c0 += lb_[j] * c[j];
 
             for (ssize_t i = 0; i < A_.n(); i++) {
@@ -454,18 +456,16 @@ void SolveResult::_postprocess_solution_variables(std::span<const double> lb,
 
     ssize_t num_vars = lb.size();
 
-    static double inf = std::numeric_limits<double>::infinity();
-
     ssize_t free_variable_index = 0;
     for (ssize_t j = 0; j < num_vars; j++) {
-        if (lb[j] == -inf && ub[j] == inf) {
+        if (lb_is_unbounded(lb[j]) && ub_is_unbounded(ub[j])) {
             assert(num_vars + free_variable_index < static_cast<ssize_t>(solution_.size()));
             solution_[j] -= solution_[num_vars + free_variable_index];
             free_variable_index++;
         } else {
-            if (lb[j] != -inf) {
+            if (!lb_is_unbounded(lb[j])) {
                 solution_[j] += lb[j];
-            } else if (ub[j] != inf) {
+            } else if (!ub_is_unbounded(ub[j])) {
                 solution_[j] = ub[j] - solution_[j];
             }
         }
@@ -545,11 +545,10 @@ void SolveResult::postprocess_solution(std::span<const double> c, std::span<cons
 SolveResult linprog(std::span<const double> c, std::span<const double> b_lb,
                     std::span<const double> A_data, std::span<const double> b_ub,
                     std::span<const double> A_eq_data, std::span<const double> b_eq,
-                    std::span<const double> lb, std::span<const double> ub) {
+                    std::span<const double> lb, std::span<const double> ub, double tolerance) {
     const LP model = translate_LP_to_simple(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub);
 
     ssize_t max_iterations = 1000;
-    double tolerance = 1e-7;
     bool bland = false;
 
     SolveResult result =

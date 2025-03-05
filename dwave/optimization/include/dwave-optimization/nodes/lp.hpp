@@ -80,11 +80,21 @@ class LPNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Node::commit()
     void commit(State& state) const override;
 
+    /// The default lower bound for variables
+    static const double default_lower_bound();
+
+    /// The default lower bound for variables
+    static const double default_upper_bound();
+
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
 
     /// Return whether the state is feasible for the LP model.
     bool feasible(const State& state) const;
+
+    /// Any upper bound equal to or greater (or lower bound less to or equal)
+    /// to this will be treated as unbounded.
+    static const double infinity();
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;

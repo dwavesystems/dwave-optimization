@@ -21,7 +21,6 @@
 using namespace Catch::Matchers;
 
 const double FEASIBILITY_TOLERANCE = 1e-07;
-const double NO_BOUND = std::numeric_limits<double>::infinity();
 
 namespace dwave::optimization {
 
@@ -46,7 +45,7 @@ TEST_CASE("LPNode") {
         auto b_ub_ptr = graph.emplace_node<ConstantNode>(std::vector{6, 4});
 
         // lb = [-inf, -3]
-        auto lb_ptr = graph.emplace_node<ConstantNode>(std::vector{-NO_BOUND, -3.0});
+        auto lb_ptr = graph.emplace_node<ConstantNode>(std::vector{-LPNode::infinity(), -3.0});
 
         auto lp_ptr = graph.emplace_node<LPNode>(c_ptr, nullptr, A_ub_ptr, b_ub_ptr, nullptr,
                                                  nullptr, lb_ptr, nullptr);
@@ -67,7 +66,8 @@ TEST_CASE("LPNode") {
                 CHECK_THAT(lp_ptr->view(state)[1], WithinAbs(-3, FEASIBILITY_TOLERANCE));
 
                 CHECK(lp_ptr->feasible(state));
-                CHECK_THAT(obj_ptr->view(state).front(), WithinAbs(-1 * 10 + 4 * -3, FEASIBILITY_TOLERANCE));
+                CHECK_THAT(obj_ptr->view(state).front(),
+                           WithinAbs(-1 * 10 + 4 * -3, FEASIBILITY_TOLERANCE));
                 CHECK(feas_ptr->view(state).front());
             }
         }
@@ -134,7 +134,8 @@ TEST_CASE("LPNode") {
 
                     CHECK(lp_ptr->feasible(state));
                     CHECK(feas_ptr->view(state).front());
-                    CHECK_THAT(obj_ptr->view(state).front(), WithinAbs(10 + 10, FEASIBILITY_TOLERANCE));
+                    CHECK_THAT(obj_ptr->view(state).front(),
+                               WithinAbs(10 + 10, FEASIBILITY_TOLERANCE));
                 }
 
                 AND_WHEN("We commit") {
@@ -147,7 +148,8 @@ TEST_CASE("LPNode") {
 
                         CHECK(lp_ptr->feasible(state));
                         CHECK(feas_ptr->view(state).front());
-                        CHECK_THAT(obj_ptr->view(state).front(), WithinAbs(10 + 10, FEASIBILITY_TOLERANCE));
+                        CHECK_THAT(obj_ptr->view(state).front(),
+                                   WithinAbs(10 + 10, FEASIBILITY_TOLERANCE));
                     }
 
                     AND_WHEN("We update A_ub to make the problem infeasible again") {
@@ -200,14 +202,16 @@ TEST_CASE("LPNode") {
         auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
 
         // b_lb = [-inf, 5, 6], A = [[0, 1], [1, 2], [3, 2]], b_ub = [7, 15, inf]
-        auto b_lb_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{-NO_BOUND, 5, 6});
+        auto b_lb_ptr =
+                graph.emplace_node<ConstantNode>(std::vector<double>{-LPNode::infinity(), 5, 6});
         auto A = std::vector<double>{0, 1, 1, 2, 3, 2};
         auto A_ptr = graph.emplace_node<ConstantNode>(A.data(), std::vector<ssize_t>{3, 2});
-        auto b_ub_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{7, 15, NO_BOUND});
+        auto b_ub_ptr =
+                graph.emplace_node<ConstantNode>(std::vector<double>{7, 15, LPNode::infinity()});
 
         // lb = [0, 1], ub = [4, inf]
         auto lb_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1});
-        auto ub_ptr = graph.emplace_node<ConstantNode>(std::vector{4, NO_BOUND});
+        auto ub_ptr = graph.emplace_node<ConstantNode>(std::vector{4, LPNode::infinity()});
 
         auto lp_ptr = graph.emplace_node<LPNode>(c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, nullptr, nullptr,
                                                  lb_ptr, ub_ptr);
@@ -220,7 +224,7 @@ TEST_CASE("LPNode") {
         THEN("The integrality, min, and max are as expected") {
             CHECK(!lp_ptr->integral());
             CHECK(lp_ptr->min() == 0);
-            CHECK(lp_ptr->max() == NO_BOUND);
+            CHECK(lp_ptr->max() == LPNode::infinity());
         }
 
         WHEN("We initialize the state") {
