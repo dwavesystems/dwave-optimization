@@ -23,20 +23,18 @@ namespace dwave::optimization {
 using Catch::Matchers::WithinRel;
 
 TEST_CASE("LP solver (simplex)", "[simplex]") {
-    static const double inf = std::numeric_limits<double>::infinity();
-
     GIVEN("A simple LP with only upper bounds on A @ x") {
         std::vector<double> c{-2, -3, -4};
 
         std::vector<double> A{3, 2, 1, 2, 5, 3};
 
-        std::vector<double> b_lb{-inf, -inf};
+        std::vector<double> b_lb{-LP_INFINITY, -LP_INFINITY};
         std::vector<double> b_ub{10, 15};
 
         std::vector<double> A_eq;
         std::vector<double> b_eq;
         std::vector<double> lb{0, 0, 0};
-        std::vector<double> ub{inf, inf, inf};
+        std::vector<double> ub{LP_INFINITY, LP_INFINITY, LP_INFINITY};
 
         THEN("We find the correct solution") {
             SolveResult result = linprog(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
@@ -55,7 +53,7 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
         std::vector<double> A{
                 1, 1, 1, 1, 0, 5, -3, 0, 1, 2, 3, 4,
         };
-        std::vector<double> b_lb{-inf, -inf, -inf};
+        std::vector<double> b_lb{-LP_INFINITY, -LP_INFINITY, -LP_INFINITY};
         std::vector<double> b_ub{100, 50, 20};
 
         std::vector<double> A_eq{
@@ -66,8 +64,8 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
         };
         std::vector<double> b_eq{7};
 
-        std::vector<double> lb{-inf, -5, -50, -3};
-        std::vector<double> ub{inf, 500, 50, 7};
+        std::vector<double> lb{-LP_INFINITY, -5, -50, -3};
+        std::vector<double> ub{LP_INFINITY, 500, 50, 7};
 
         THEN("We find the correct solution") {
             SolveResult result = linprog(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
@@ -91,7 +89,7 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
                 1,
                 0,
         };
-        std::vector<double> b_lb{-inf};
+        std::vector<double> b_lb{-LP_INFINITY};
         std::vector<double> b_ub{10};
 
         std::vector<double> A_eq{
@@ -101,8 +99,8 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
         };
         std::vector<double> b_eq{7};
 
-        std::vector<double> lb{-inf, -inf, -503};
-        std::vector<double> ub{inf, inf, 50};
+        std::vector<double> lb{-LP_INFINITY, -LP_INFINITY, -503};
+        std::vector<double> ub{LP_INFINITY, LP_INFINITY, 50};
 
         THEN("We find the correct solution") {
             SolveResult result = linprog(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
@@ -124,7 +122,7 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
                 1,
         };
         std::vector<double> b_lb{-2};
-        std::vector<double> b_ub{inf};
+        std::vector<double> b_ub{LP_INFINITY};
 
         std::vector<double> A_eq{};
         std::vector<double> b_eq{};
@@ -173,20 +171,21 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
 
     GIVEN("LP with no bounds or constraints") {
         std::vector<double> c{1};
-        std::vector<double> lb{-inf};
-        std::vector<double> ub{inf};
+        std::vector<double> lb{-LP_INFINITY};
+        std::vector<double> ub{LP_INFINITY};
 
         THEN("We return failure unbounded") {
             SolveResult result = linprog(c, {}, {}, {}, {}, {}, lb, ub);
             CHECK(result.solve_status == SolveResult::SolveStatus::FAILURE_UNBOUNDED);
-            CHECK(result.solution_status() == SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL);
+            CHECK(result.solution_status() ==
+                  SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL);
         }
     }
 
     GIVEN("LP with overlapping bounds") {
         std::vector<double> c{1};
         std::vector<double> lb{5};
-        std::vector<double> ub{-inf};
+        std::vector<double> ub{-LP_INFINITY};
 
         THEN("We return infeasible") {
             SolveResult result = linprog(c, {}, {}, {}, {}, {}, lb, ub);

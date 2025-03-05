@@ -23,6 +23,10 @@
 
 namespace dwave::optimization {
 
+/// Any upper bound equal to or greater (or lower bound less to or equal)
+/// to this will be treated as unbounded.
+static constexpr double LP_INFINITY = 1e30;
+
 class SolveResult {
  public:
     enum SolveStatus {
@@ -128,9 +132,11 @@ class SolveResult {
 /// @param b_ub Length K vector, bounds on A_eq @ x.
 /// @param lb Length N vector, lower bounds on the variables.
 /// @param ub Length N vector, upper bounds on the variables.
+/// @param tolerance The absolute tolerance allowed for bounds.
 SolveResult linprog(std::span<const double> c, std::span<const double> b_lb,
                     std::span<const double> A_data, std::span<const double> b_ub,
                     std::span<const double> A_eq_data, std::span<const double> b_eq,
-                    std::span<const double> lb, std::span<const double> ub);
+                    std::span<const double> lb, std::span<const double> ub,
+                    double tolerance = 1e-7);
 
 }  // namespace dwave::optimization

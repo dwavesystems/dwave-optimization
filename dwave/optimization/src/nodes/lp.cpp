@@ -22,10 +22,7 @@
 
 namespace dwave::optimization {
 
-// Default bounds for the variables
-const double DEFAULT_LOWER_BOUND = 0;
-const double DEFAULT_UPPER_BOUND = std::numeric_limits<double>::infinity();  // TODO:
-// const double FEASIBILITY_TOLERANCE = 1e-07;
+static constexpr double FEASIBILITY_TOLERANCE = 1e-07;
 
 struct LPData {
     std::vector<double> c;
@@ -189,6 +186,10 @@ double const* LPNode::buff(const State& state) const { return data_ptr<LPNodeDat
 
 void LPNode::commit(State& state) const { return data_ptr<LPNodeData>(state)->commit(); }
 
+const double LPNode::default_lower_bound() { return 0.0; }
+
+const double LPNode::default_upper_bound() { return LP_INFINITY; }
+
 std::span<const Update> LPNode::diff(const State& state) const {
     return data_ptr<LPNodeData>(state)->diff();
 }
@@ -231,18 +232,20 @@ void LPNode::copy_to_node_data(const State& state, LPData& lp) const {
     if (lb_ptr_) {
         lp.lb.assign(lb_ptr_->view(state).begin(), lb_ptr_->view(state).end());
     } else {
-        lp.lb.assign(c_ptr_->size(state), DEFAULT_LOWER_BOUND);
+        lp.lb.assign(c_ptr_->size(state), LPNode::default_lower_bound());
     }
 
     if (ub_ptr_) {
         lp.ub.assign(ub_ptr_->view(state).begin(), ub_ptr_->view(state).end());
     } else {
-        lp.ub.assign(c_ptr_->size(state), DEFAULT_UPPER_BOUND);
+        lp.ub.assign(c_ptr_->size(state), LPNode::default_upper_bound());
     }
 
     assert(lp.c.size() == lp.lb.size() && "c and lower bound sizes do not match");
     assert(lp.lb.size() == lp.ub.size() && "lower and upper bound sizes do not match");
 }
+
+const double LPNode::infinity() { return LP_INFINITY; }
 
 void LPNode::initialize_state(State& state) const {
     int index = this->topological_index();
@@ -252,7 +255,8 @@ void LPNode::initialize_state(State& state) const {
 
     LPData lp;
     copy_to_node_data(state, lp);
-    SolveResult result = linprog(lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub);
+    SolveResult result = linprog(lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub,
+                                 FEASIBILITY_TOLERANCE);
 
     state[index] = std::make_unique<LPNodeData>(std::vector(result.solution()), result.feasible(),
                                                 result.objective());
@@ -263,8 +267,8 @@ bool LPNode::integral() const { return false; }
 std::pair<double, double> LPNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return memoize(cache, [&]() {
-        return std::make_pair(lb_ptr_ ? lb_ptr_->min() : DEFAULT_LOWER_BOUND,
-                              ub_ptr_ ? ub_ptr_->max() : DEFAULT_UPPER_BOUND);
+        return std::make_pair(lb_ptr_ ? lb_ptr_->min() : LPNode::default_lower_bound(),
+                              ub_ptr_ ? ub_ptr_->max() : LPNode::default_upper_bound());
     });
 }
 
@@ -276,8 +280,9 @@ void LPNode::propagate(State& state) const {
     auto data = data_ptr<LPNodeData>(state);
 
     copy_to_node_data(state, data->lp);
-    SolveResult result = linprog(data->lp.c, data->lp.b_lb, data->lp.A, data->lp.b_ub,
-                                 data->lp.A_eq, data->lp.b_eq, data->lp.lb, data->lp.ub);
+    SolveResult result =
+            linprog(data->lp.c, data->lp.b_lb, data->lp.A, data->lp.b_ub, data->lp.A_eq,
+                    data->lp.b_eq, data->lp.lb, data->lp.ub, FEASIBILITY_TOLERANCE);
 
     data->assign(result.solution());
 
