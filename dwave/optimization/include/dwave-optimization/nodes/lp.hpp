@@ -120,8 +120,10 @@ class LPNode : public ArrayOutputMixin<ArrayNode> {
     using ArrayOutputMixin::size;
 
  private:
+    /// Read out each of the predecessor arrays and copy the data to `lp`, where
+    /// it can be easily passed in to linprog (which expects (contiguous) vectors).
     template <class LPData>
-    void copy_to_node_data(const State& state, LPData& lp) const;
+    void readout_predecessor_data(const State& state, LPData& lp) const;
 
     // The coefficients of the linear objective function to be minimized.
     // minimize c @ x
@@ -156,10 +158,6 @@ class ObjectiveValueNode
     void initialize_state(dwave::optimization::State& state) const override;
     void propagate(dwave::optimization::State& state) const override;
     void revert(dwave::optimization::State& state) const override;
-
-    // todo: find a bound on the min/max
-    // double max() const override;
-    // double min() const override;
 
  private:
     const LPNode* lp_ptr_;
