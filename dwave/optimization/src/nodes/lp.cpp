@@ -14,7 +14,6 @@
 
 #include "dwave-optimization/nodes/lp.hpp"
 
-#include <sstream>
 #include <string>
 
 #include "../simplex.hpp"
@@ -197,7 +196,7 @@ std::span<const Update> LPNode::diff(const State& state) const {
 bool LPNode::feasible(const State& state) const { return data_ptr<LPNodeData>(state)->is_feasible; }
 
 template <class LPData>
-void LPNode::copy_to_node_data(const State& state, LPData& lp) const {
+void LPNode::readout_predecessor_data(const State& state, LPData& lp) const {
     assert(c_ptr_ && "c should always have been provided");
     lp.c.assign(c_ptr_->view(state).begin(), c_ptr_->view(state).end());
 
@@ -254,7 +253,7 @@ void LPNode::initialize_state(State& state) const {
     assert(state[index] == nullptr && "already initialized state");
 
     LPData lp;
-    copy_to_node_data(state, lp);
+    readout_predecessor_data(state, lp);
     SolveResult result = linprog(lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub,
                                  FEASIBILITY_TOLERANCE);
 
@@ -279,7 +278,7 @@ double LPNode::objective_value(const dwave::optimization::State& state) const {
 void LPNode::propagate(State& state) const {
     auto data = data_ptr<LPNodeData>(state);
 
-    copy_to_node_data(state, data->lp);
+    readout_predecessor_data(state, data->lp);
     SolveResult result =
             linprog(data->lp.c, data->lp.b_lb, data->lp.A, data->lp.b_ub, data->lp.A_eq,
                     data->lp.b_eq, data->lp.lb, data->lp.ub, FEASIBILITY_TOLERANCE);
