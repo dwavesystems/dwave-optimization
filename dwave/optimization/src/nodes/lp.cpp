@@ -80,22 +80,22 @@ void check_Ab_consistency(const ssize_t num_variables, const Array* const A_ptr,
     }
 }
 
-FeasibleNode::FeasibleNode(LPNodeBase* lp_ptr) : lp_ptr_(lp_ptr) { add_predecessor(lp_ptr); }
+LPFeasibleNode::LPFeasibleNode(LPNodeBase* lp_ptr) : lp_ptr_(lp_ptr) { add_predecessor(lp_ptr); }
 
-double const* FeasibleNode::buff(const State& state) const {
+double const* LPFeasibleNode::buff(const State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->buff();
 }
 
 // no state to manage so nothing to do
-void FeasibleNode::commit(State& state) const {
+void LPFeasibleNode::commit(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->commit();
 }
 
-std::span<const Update> FeasibleNode::diff(const State& state) const {
+std::span<const Update> LPFeasibleNode::diff(const State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->diff();
 }
 
-void FeasibleNode::initialize_state(State& state) const {
+void LPFeasibleNode::initialize_state(State& state) const {
     int index = this->topological_index();
     assert(index >= 0 && "must be topologically sorted");
     assert(static_cast<int>(state.size()) > index && "unexpected state length");
@@ -104,19 +104,19 @@ void FeasibleNode::initialize_state(State& state) const {
     state[index] = std::make_unique<ScalarNodeStateData>(lp_ptr_->feasible(state));
 }
 
-bool FeasibleNode::integral() const { return true; }
+bool LPFeasibleNode::integral() const { return true; }
 
-std::pair<double, double> FeasibleNode::minmax(
+std::pair<double, double> LPFeasibleNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return {0, 1};
 }
 
-void FeasibleNode::propagate(State& state) const {
+void LPFeasibleNode::propagate(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->set(lp_ptr_->feasible(state));
 }
 
 // no state to manage so nothing to do
-void FeasibleNode::revert(State& state) const {
+void LPFeasibleNode::revert(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->revert();
 }
 
@@ -294,24 +294,24 @@ std::pair<double, double> LPNode::variables_minmax() const {
 
 std::span<const ssize_t> LPNode::variables_shape() const { return c_ptr_->shape(); }
 
-ObjectiveValueNode::ObjectiveValueNode(LPNodeBase* lp_ptr) : lp_ptr_(lp_ptr) {
+LPObjectiveValueNode::LPObjectiveValueNode(LPNodeBase* lp_ptr) : lp_ptr_(lp_ptr) {
     add_predecessor(lp_ptr);
 }
 
-double const* ObjectiveValueNode::buff(const State& state) const {
+double const* LPObjectiveValueNode::buff(const State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->buff();
 }
 
 // no state to manage so nothing to do
-void ObjectiveValueNode::commit(State& state) const {
+void LPObjectiveValueNode::commit(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->commit();
 }
 
-std::span<const Update> ObjectiveValueNode::diff(const State& state) const {
+std::span<const Update> LPObjectiveValueNode::diff(const State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->diff();
 }
 
-void ObjectiveValueNode::initialize_state(State& state) const {
+void LPObjectiveValueNode::initialize_state(State& state) const {
     int index = this->topological_index();
     assert(index >= 0 && "must be topologically sorted");
     assert(static_cast<int>(state.size()) > index && "unexpected state length");
@@ -324,7 +324,7 @@ void ObjectiveValueNode::initialize_state(State& state) const {
     state[index] = std::make_unique<ScalarNodeStateData>(value);
 }
 
-void ObjectiveValueNode::propagate(State& state) const {
+void LPObjectiveValueNode::propagate(State& state) const {
     if (lp_ptr_->feasible(state)) {
         data_ptr<ScalarNodeStateData>(state)->set(lp_ptr_->objective_value(state));
     }
@@ -333,7 +333,7 @@ void ObjectiveValueNode::propagate(State& state) const {
 }
 
 // no state to manage so nothing to do
-void ObjectiveValueNode::revert(State& state) const {
+void LPObjectiveValueNode::revert(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->revert();
 }
 

@@ -50,8 +50,8 @@ TEST_CASE("LPNode") {
         auto lp_ptr = graph.emplace_node<LPNode>(c_ptr, nullptr, A_ub_ptr, b_ub_ptr, nullptr,
                                                  nullptr, lb_ptr, nullptr);
 
-        auto feas_ptr = graph.emplace_node<FeasibleNode>(lp_ptr);
-        auto obj_ptr = graph.emplace_node<ObjectiveValueNode>(lp_ptr);
+        auto feas_ptr = graph.emplace_node<LPFeasibleNode>(lp_ptr);
+        auto obj_ptr = graph.emplace_node<LPObjectiveValueNode>(lp_ptr);
         auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
 
         graph.emplace_node<ArrayValidationNode>(feas_ptr);
@@ -100,8 +100,8 @@ TEST_CASE("LPNode") {
         auto lp_ptr = graph.emplace_node<LPNode>(c_ptr, nullptr, A_ub_ptr, b_ub_ptr, nullptr,
                                                  nullptr, lb_ptr, nullptr);
 
-        auto feas_ptr = graph.emplace_node<FeasibleNode>(lp_ptr);
-        auto obj_ptr = graph.emplace_node<ObjectiveValueNode>(lp_ptr);
+        auto feas_ptr = graph.emplace_node<LPFeasibleNode>(lp_ptr);
+        auto obj_ptr = graph.emplace_node<LPObjectiveValueNode>(lp_ptr);
         auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
 
         graph.emplace_node<ArrayValidationNode>(feas_ptr);
@@ -219,7 +219,7 @@ TEST_CASE("LPNode") {
         auto lp_ptr = graph.emplace_node<LPNode>(c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, nullptr, nullptr,
                                                  lb_ptr, ub_ptr);
 
-        auto feas_ptr = graph.emplace_node<FeasibleNode>(lp_ptr);
+        auto feas_ptr = graph.emplace_node<LPFeasibleNode>(lp_ptr);
         auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
 
         graph.emplace_node<ArrayValidationNode>(feas_ptr);
@@ -269,7 +269,7 @@ TEST_CASE("LPNode") {
 
         auto lp_ptr = graph.emplace_node<LPNode>(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
 
-        auto feas_ptr = graph.emplace_node<FeasibleNode>(lp_ptr);
+        auto feas_ptr = graph.emplace_node<LPFeasibleNode>(lp_ptr);
         auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
 
         graph.emplace_node<ArrayValidationNode>(feas_ptr);

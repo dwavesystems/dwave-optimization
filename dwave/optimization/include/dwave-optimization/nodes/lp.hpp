@@ -25,10 +25,9 @@ namespace dwave::optimization {
 class LPNodeBase;
 
 /// A logical node that propagates whether or not its predecessor LP is feasible.
-/// dev note: maybe call OptimalNode or SuccessNode? to match scipy
-class FeasibleNode : public ScalarOutputMixin<ArrayNode> {
+class LPFeasibleNode : public ScalarOutputMixin<ArrayNode> {
  public:
-    explicit FeasibleNode(LPNodeBase* lp_ptr);
+    explicit LPFeasibleNode(LPNodeBase* lp_ptr);
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -156,9 +155,9 @@ class LPNode : public LPNodeBase {
 
 /// A scalar node that propagates the objective value of the solution found by the LPNode.
 /// Note that the output is undefined if the solution is not feasible.
-class ObjectiveValueNode : public ScalarOutputMixin<ArrayNode> {
+class LPObjectiveValueNode : public ScalarOutputMixin<ArrayNode> {
  public:
-    explicit ObjectiveValueNode(LPNodeBase* lp_ptr);
+    explicit LPObjectiveValueNode(LPNodeBase* lp_ptr);
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
