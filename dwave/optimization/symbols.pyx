@@ -2152,10 +2152,6 @@ cdef class Logical(ArraySymbol):
 _register(Logical, typeid(cppLogicalNode))
 
 
-cdef class LPBase(Symbol):
-    cdef cppLPNodeBase* base_ptr
-
-
 cdef class LP(LPBase):
     def __init__(self, ArraySymbol c,
                  ArraySymbol b_lb = None,
