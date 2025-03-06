@@ -952,14 +952,14 @@ cdef class BSpline(ArraySymbol):
         This example creates a BSpline symbol.
 
         >>> from dwave.optimization.model import Model
-        >>> from dwave.optimization.symbols import BSpline
+        >>> from dwave.optimization.mathematical import bspline
         >>> model = Model()
         >>> x = model.integer(lower_bound=3, upper_bound=4)
-        >>> k = model.constant(2)
-        >>> t = model.constant([0, 1, 2, 3, 4, 5, 6])
-        >>> c = model.constant([-1, 2, 0, -1])
-        >>> bspline = BSpline(x, k, t, c)
-        >>> type(bspline)
+        >>> k = 2
+        >>> t = [0, 1, 2, 3, 4, 5, 6]
+        >>> c = [-1, 2, 0, -1]
+        >>> bspline_node = bspline(x, k, t, c)
+        >>> type(bspline_node)
         <class 'dwave.optimization.symbols.BSpline'>
     """
     def __init__(self, ArraySymbol x, k, t, c):
