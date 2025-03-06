@@ -1,4 +1,4 @@
-# Copyright 2025
+# Copyright 2025 D-Wave
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -48,6 +48,8 @@ class TestSerialization(unittest.TestCase):
                 self.assertTrue(ls.maybe_equals(rs))
 
                 # If the nodes have states, check that they are all equal
+                # If all are maybe_equal then this amounts to a full equality
+                # check for the model as a whole.
                 if isinstance(ls, dwave.optimization.model.ArraySymbol):
                     for i in range(lhs.states.size()):
                         self.assertEqual(ls.has_state(i), rs.has_state(i))
@@ -55,7 +57,7 @@ class TestSerialization(unittest.TestCase):
                             np.testing.assert_array_equal(ls.state(i), rs.state(i))
 
     @classmethod
-    def iter_descriptors(cls) -> typing.Iterator[str]:
+    def iter_names(cls) -> typing.Iterator[str]:
         """Iterate over the model names."""
         for method_name in dir(cls):
             if method_name.startswith("make_"):
@@ -63,7 +65,7 @@ class TestSerialization(unittest.TestCase):
 
     def load(self, directory: str):
         """Load & test all models in the given directory"""
-        for name in self.iter_descriptors():
+        for name in self.iter_names():
             print("loading", name)  # could add a verbose flag to toggle
 
             base_model = getattr(self, "make_" + name)()
@@ -82,12 +84,10 @@ class TestSerialization(unittest.TestCase):
 
     def save(self, directory: str, version: typing.Optional[tuple[int, int]]):
         """Save all models to the given directory with the given serialization version."""
-        if not os.path.isdir(os.path.join(directory, "model")):
-            os.mkdir(os.path.join(directory, "model"))
-        if not os.path.isdir(os.path.join(directory, "states")):
-            os.mkdir(os.path.join(directory, "states"))
+        os.makedirs(os.path.join(directory, "model"), exist_ok=True)
+        os.makedirs(os.path.join(directory, "states"), exist_ok=True)
 
-        for name in self.iter_descriptors():
+        for name in self.iter_names():
             print("saving", name)  # could add a verbose flag to toggle
             model = getattr(self, "make_" + name)()
             with open(os.path.join(directory, "model", name + ".nl"), "wb") as f:
@@ -98,7 +98,7 @@ class TestSerialization(unittest.TestCase):
     def test_model(self):
         """For all models, test the serializing and deserializing results in the same model."""
         for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
-            for name in self.iter_descriptors():
+            for name in self.iter_names():
                 with self.subTest(version=version, model=name):
                     base_model = getattr(self, "make_" + name)()
                     with base_model.to_file(version=version, max_num_states=100) as f:
@@ -108,7 +108,7 @@ class TestSerialization(unittest.TestCase):
     def test_states(self):
         """For all models, test the serializing and deserializing results in the same states."""
         for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
-            for name in self.iter_descriptors():
+            for name in self.iter_names():
                 make = getattr(self, "make_" + name)
 
                 with self.subTest(version=version, model=name):
@@ -199,4 +199,4 @@ if __name__ == "__main__":
     elif args.saveload == "load":
         tests.load(args.directory)
     else:
-        raise RuntimeError
+        raise RuntimeError("unexpected saveload option")
