@@ -183,7 +183,7 @@ LPNode::LPNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNod
     if (ub_ptr) add_predecessor(ub_ptr);
 }
 
-void LPNode::commit(State& state) const {};  // return data_ptr<LPNodeData>(state)->commit(); }
+void LPNode::commit(State& state) const {};
 
 bool LPNode::feasible(const State& state) const { return data_ptr<LPNodeData>(state)->is_feasible; }
 
@@ -287,12 +287,12 @@ std::span<const double> LPNode::solution(const State& state) const {
     return data_ptr<LPNodeData>(state)->solution;
 }
 
-std::span<const ssize_t> LPNode::variables_shape() const { return c_ptr_->shape(); }
-
-std::pair<double, double> LPNode::_minmax() const {
+std::pair<double, double> LPNode::variables_minmax() const {
     return std::make_pair(lb_ptr_ ? lb_ptr_->min() : LPNode::default_lower_bound(),
                           ub_ptr_ ? ub_ptr_->max() : LPNode::default_upper_bound());
 }
+
+std::span<const ssize_t> LPNode::variables_shape() const { return c_ptr_->shape(); }
 
 ObjectiveValueNode::ObjectiveValueNode(LPNodeBase* lp_ptr) : lp_ptr_(lp_ptr) {
     add_predecessor(lp_ptr);
@@ -369,7 +369,7 @@ bool LPSolutionNode::integral() const { return false; }
 
 std::pair<double, double> LPSolutionNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() { return lp_ptr_->_minmax(); });
+    return memoize(cache, [&]() { return lp_ptr_->variables_minmax(); });
 }
 
 void LPSolutionNode::propagate(State& state) const {

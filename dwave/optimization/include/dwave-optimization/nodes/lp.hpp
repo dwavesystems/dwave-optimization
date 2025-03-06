@@ -79,9 +79,9 @@ class LPNodeBase : public Node {
 
     virtual std::span<const double> solution(const State& state) const = 0;
 
-    virtual std::span<const ssize_t> variables_shape() const = 0;
+    virtual std::pair<double, double> variables_minmax() const = 0;
 
-    virtual std::pair<double, double> _minmax() const = 0;
+    virtual std::span<const ssize_t> variables_shape() const = 0;
 };
 
 /// Node that solves a given LP defined by its predecessors, and outputs the optimal solution
@@ -121,10 +121,11 @@ class LPNode : public LPNodeBase {
     /// @copydoc LPNodeBase::solution()
     std::span<const double> solution(const State& state) const override;
 
+    /// @copydoc LPNodeBase::variables_minmax()
+    std::pair<double, double> variables_minmax() const override;
+
     /// @copydoc LPNodeBase::variables_shape()
     std::span<const ssize_t> variables_shape() const override;
-
-    std::pair<double, double> _minmax() const override;
 
  private:
     /// Read out each of the predecessor arrays and copy the data to `lp`, where
