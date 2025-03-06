@@ -35,24 +35,10 @@ struct LPData {
 };
 
 struct LPNodeData : NodeStateData {
-    explicit LPNodeData(std::vector<double>&& solution, bool is_feasible,
-                        double objective_value) noexcept
-            : solution(std::move(solution)),
-              is_feasible(is_feasible),
-              old_is_feasible(is_feasible),
-              objective_value(objective_value),
-              old_objective_value(objective_value) {}
-
-    std::vector<double> solution;
-    std::vector<double> old_solution;
-
-    bool is_feasible;
-    bool old_is_feasible;
-
-    double objective_value;
-    double old_objective_value;
+    explicit LPNodeData(SolveResult&& result) : result(std::move(result)) {}
 
     LPData lp;
+    SolveResult result;
 };
 
 void check_Ab_consistency(const ssize_t num_variables, const Array* const A_ptr,
@@ -185,7 +171,9 @@ LPNode::LPNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNod
 
 void LPNode::commit(State& state) const {};
 
-bool LPNode::feasible(const State& state) const { return data_ptr<LPNodeData>(state)->is_feasible; }
+bool LPNode::feasible(const State& state) const {
+    return data_ptr<LPNodeData>(state)->result.feasible();
+}
 
 template <class LPData>
 void LPNode::readout_predecessor_data(const State& state, LPData& lp) const {
@@ -247,44 +235,29 @@ void LPNode::initialize_state(State& state) const {
     SolveResult result = linprog(lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub,
                                  FEASIBILITY_TOLERANCE);
 
-    state[index] = std::make_unique<LPNodeData>(std::vector(result.solution()), result.feasible(),
-                                                result.objective());
+    state[index] = std::make_unique<LPNodeData>(std::move(result));
 }
 
 double LPNode::objective_value(const dwave::optimization::State& state) const {
-    return data_ptr<LPNodeData>(state)->objective_value;
+    return data_ptr<LPNodeData>(state)->result.objective();
 }
 
 void LPNode::propagate(State& state) const {
     auto data = data_ptr<LPNodeData>(state);
 
     readout_predecessor_data(state, data->lp);
-    SolveResult result =
-            linprog(data->lp.c, data->lp.b_lb, data->lp.A, data->lp.b_ub, data->lp.A_eq,
-                    data->lp.b_eq, data->lp.lb, data->lp.ub, FEASIBILITY_TOLERANCE);
-
-    data->old_solution = data->solution;
-    data->solution = result.solution();
-
-    data->old_is_feasible = data->is_feasible;
-    data->is_feasible = result.feasible();
-
-    data->old_objective_value = data->objective_value;
-    data->objective_value = result.objective();
+    data->result = linprog(data->lp.c, data->lp.b_lb, data->lp.A, data->lp.b_ub, data->lp.A_eq,
+                           data->lp.b_eq, data->lp.lb, data->lp.ub, FEASIBILITY_TOLERANCE);
 
     Node::propagate(state);
 }
 
 void LPNode::revert(State& state) const {
-    auto data = data_ptr<LPNodeData>(state);
-
-    data->solution = data->old_solution;
-    data->is_feasible = data->old_is_feasible;
-    data->objective_value = data->old_objective_value;
+    // Nothing to do on revert as all changes are tracked by successor nodes
 }
 
 std::span<const double> LPNode::solution(const State& state) const {
-    return data_ptr<LPNodeData>(state)->solution;
+    return data_ptr<LPNodeData>(state)->result.solution();
 }
 
 std::pair<double, double> LPNode::variables_minmax() const {
