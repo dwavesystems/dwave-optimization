@@ -88,14 +88,14 @@ cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimizatio
     cdef cppclass LPFeasibleNode(ArrayNode):
         pass
 
-
     cdef cppclass LPNode(Node):
         pass
 
+    cdef cppclass LPNodeBase(Node):
+        pass
 
     cdef cppclass LPObjectiveValueNode(ArrayNode):
         pass
-
 
     cdef cppclass LPSolutionNode(ArrayNode):
         pass
