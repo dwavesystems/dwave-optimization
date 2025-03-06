@@ -290,9 +290,9 @@ cdef class _Graph:
     @_file_object_arg("wb")  # translate str/bytes file inputs into file objects
     @_lock
     def into_file(self, file, *,
-                  Py_ssize_t max_num_states = 0,
-                  bool only_decision = False,
-                  object version = None,
+                  max_num_states = 0,
+                  only_decision = False,
+                  version = None,
                   ):
         """Serialize the model into an existing file.
 
