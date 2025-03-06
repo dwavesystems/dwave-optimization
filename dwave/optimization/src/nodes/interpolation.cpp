@@ -93,6 +93,9 @@ std::span<const Update> BSplineNode::diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->diff();
 }
 
+bool BSplineNode::integral() const { return false; }
+
+
 void BSplineNode::revert(State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->revert();
 }
