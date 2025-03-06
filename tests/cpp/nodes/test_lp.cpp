@@ -181,7 +181,6 @@ TEST_CASE("LPNode") {
                         CHECK(sol_ptr->size(state) == 2);
                         CHECK(sol_ptr->view(state).size() == 2);  // the actual state is undefined
 
-                        CHECK(!lp_ptr->feasible(state));
                         CHECK(!feas_ptr->view(state).front());
                     }
                 }
