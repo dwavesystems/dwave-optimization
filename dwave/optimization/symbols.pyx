@@ -72,6 +72,7 @@ from dwave.optimization.libcpp.nodes cimport (
     LogicalNode as cppLogicalNode,
     LPFeasibleNode as cppLPFeasibleNode,
     LPNode as cppLPNode,
+    LPNodeBase as cppLPNodeBase,
     LPObjectiveValueNode as cppLPObjectiveValueNode,
     LPSolutionNode as cppLPSolutionNode,
     MaxNode as cppMaxNode,
@@ -133,8 +134,9 @@ __all__ = [
     "ListVariable",
     "Log",
     "Logical",
-    "LPFeasible",
     "LP",
+    "LPBase",
+    "LPFeasible",
     "LPObjectiveValue",
     "LPSolution",
     "Max",
@@ -2150,7 +2152,11 @@ cdef class Logical(ArraySymbol):
 _register(Logical, typeid(cppLogicalNode))
 
 
-cdef class LP(Symbol):
+cdef class LPBase(Symbol):
+    cdef cppLPNodeBase* base_ptr
+
+
+cdef class LP(LPBase):
     def __init__(self, ArraySymbol c,
                  ArraySymbol b_lb = None,
                  ArraySymbol A = None,
@@ -2175,6 +2181,7 @@ cdef class LP(Symbol):
 
         self.ptr = model._graph.emplace_node[cppLPNode](
             c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, A_eq_ptr, b_eq_ptr, lb_ptr, ub_ptr)
+        self.base_ptr = dynamic_cast_ptr[cppLPNodeBase](self.ptr)
         self.initialize_node(model, self.ptr)
 
     @staticmethod
@@ -2206,16 +2213,16 @@ cdef class LP(Symbol):
         return self._objective_value
 
     # the name is chosen to match SciPy's OptimizeResult
-    def x(self):
-        if self._solution is None:
-            self._solution = LPSolution(self)
-        return self._solution
-
-    # the name is chosen to match SciPy's OptimizeResult
     def success(self):
         if self._feasible is None:
             self._feasible = LPFeasible(self)
         return self._feasible
+
+    # the name is chosen to match SciPy's OptimizeResult
+    def x(self):
+        if self._solution is None:
+            self._solution = LPSolution(self)
+        return self._solution
 
     cdef cppLPNode* ptr
 
@@ -2227,10 +2234,10 @@ _register(LP, typeid(cppLPNode))
 
 
 cdef class LPFeasible(ArraySymbol):
-    def __init__(self, LP lp):
+    def __init__(self, LPBase lp):
         cdef _Graph model = lp.model
 
-        self.ptr = model._graph.emplace_node[cppLPFeasibleNode](lp.ptr)
+        self.ptr = model._graph.emplace_node[cppLPFeasibleNode](lp.base_ptr)
         self.initialize_arraynode(model, self.ptr)
 
     @staticmethod
@@ -2249,10 +2256,10 @@ _register(LPFeasible, typeid(cppLPFeasibleNode))
 
 
 cdef class LPObjectiveValue(ArraySymbol):
-    def __init__(self, LP lp):
+    def __init__(self, LPBase lp):
         cdef _Graph model = lp.model
 
-        self.ptr = model._graph.emplace_node[cppLPObjectiveValueNode](lp.ptr)
+        self.ptr = model._graph.emplace_node[cppLPObjectiveValueNode](lp.base_ptr)
         self.initialize_arraynode(model, self.ptr)
 
     @staticmethod
@@ -2272,10 +2279,10 @@ _register(LPObjectiveValue, typeid(cppLPObjectiveValueNode))
 
 
 cdef class LPSolution(ArraySymbol):
-    def __init__(self, LP lp):
+    def __init__(self, LPBase lp):
         cdef _Graph model = lp.model
 
-        self.ptr = model._graph.emplace_node[cppLPSolutionNode](lp.ptr)
+        self.ptr = model._graph.emplace_node[cppLPSolutionNode](lp.base_ptr)
         self.initialize_arraynode(model, self.ptr)
 
     @staticmethod
