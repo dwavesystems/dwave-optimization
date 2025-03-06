@@ -34,14 +34,17 @@ struct LPData {
     std::vector<double> ub;
 };
 
-struct LPNodeData : ArrayNodeStateData {
-    explicit LPNodeData(std::vector<double>&& values, bool is_feasible,
+struct LPNodeData : NodeStateData {
+    explicit LPNodeData(std::vector<double>&& solution, bool is_feasible,
                         double objective_value) noexcept
-            : ArrayNodeStateData(std::move(values)),
+            : solution(std::move(solution)),
               is_feasible(is_feasible),
               old_is_feasible(is_feasible),
               objective_value(objective_value),
               old_objective_value(objective_value) {}
+
+    std::vector<double> solution;
+    std::vector<double> old_solution;
 
     bool is_feasible;
     bool old_is_feasible;
@@ -51,11 +54,6 @@ struct LPNodeData : ArrayNodeStateData {
 
     LPData lp;
 };
-
-Array* c_is_1d(Array* array_ptr) {
-    if (array_ptr->ndim() != 1) throw std::invalid_argument("c must be a 1d array");
-    return array_ptr;
-}
 
 void check_Ab_consistency(const ssize_t num_variables, const Array* const A_ptr,
                           const Array* const b_ptr, const std::string str) {
@@ -82,7 +80,7 @@ void check_Ab_consistency(const ssize_t num_variables, const Array* const A_ptr,
     }
 }
 
-FeasibleNode::FeasibleNode(LPNode* lp_ptr) : lp_ptr_(lp_ptr) { add_predecessor(lp_ptr); }
+FeasibleNode::FeasibleNode(LPNodeBase* lp_ptr) : lp_ptr_(lp_ptr) { add_predecessor(lp_ptr); }
 
 double const* FeasibleNode::buff(const State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->buff();
@@ -122,10 +120,15 @@ void FeasibleNode::revert(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->revert();
 }
 
+const double LPNodeBase::default_lower_bound() { return 0.0; }
+
+const double LPNodeBase::default_upper_bound() { return LP_INFINITY; }
+
+const double LPNodeBase::infinity() { return LP_INFINITY; }
+
 LPNode::LPNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,
                ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr, ArrayNode* lb_ptr, ArrayNode* ub_ptr)
-        : ArrayOutputMixin(c_is_1d(c_ptr)->shape()[0]),
-          c_ptr_(c_ptr),
+        : c_ptr_(c_ptr),
           b_lb_ptr_(b_lb_ptr),
           A_ptr_(A_ptr),
           b_ub_ptr_(b_ub_ptr),
@@ -133,8 +136,7 @@ LPNode::LPNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNod
           b_eq_ptr_(b_eq_ptr),
           lb_ptr_(lb_ptr),
           ub_ptr_(ub_ptr) {
-    // c is a 1d matrix of length num_variables. The 1d-ness has already been checked on
-    // initialization
+    if (c_ptr_->ndim() != 1) throw std::invalid_argument("c must be 1d array");
     if (c_ptr_->dynamic()) throw std::invalid_argument("c cannot be dynamic");
 
     const ssize_t num_variables = c_ptr_->size();
@@ -181,17 +183,7 @@ LPNode::LPNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNod
     if (ub_ptr) add_predecessor(ub_ptr);
 }
 
-double const* LPNode::buff(const State& state) const { return data_ptr<LPNodeData>(state)->buff(); }
-
-void LPNode::commit(State& state) const { return data_ptr<LPNodeData>(state)->commit(); }
-
-const double LPNode::default_lower_bound() { return 0.0; }
-
-const double LPNode::default_upper_bound() { return LP_INFINITY; }
-
-std::span<const Update> LPNode::diff(const State& state) const {
-    return data_ptr<LPNodeData>(state)->diff();
-}
+void LPNode::commit(State& state) const {};  // return data_ptr<LPNodeData>(state)->commit(); }
 
 bool LPNode::feasible(const State& state) const { return data_ptr<LPNodeData>(state)->is_feasible; }
 
@@ -231,20 +223,18 @@ void LPNode::readout_predecessor_data(const State& state, LPData& lp) const {
     if (lb_ptr_) {
         lp.lb.assign(lb_ptr_->view(state).begin(), lb_ptr_->view(state).end());
     } else {
-        lp.lb.assign(c_ptr_->size(state), LPNode::default_lower_bound());
+        lp.lb.assign(c_ptr_->size(state), LPNodeBase::default_lower_bound());
     }
 
     if (ub_ptr_) {
         lp.ub.assign(ub_ptr_->view(state).begin(), ub_ptr_->view(state).end());
     } else {
-        lp.ub.assign(c_ptr_->size(state), LPNode::default_upper_bound());
+        lp.ub.assign(c_ptr_->size(state), LPNodeBase::default_upper_bound());
     }
 
     assert(lp.c.size() == lp.lb.size() && "c and lower bound sizes do not match");
     assert(lp.lb.size() == lp.ub.size() && "lower and upper bound sizes do not match");
 }
-
-const double LPNode::infinity() { return LP_INFINITY; }
 
 void LPNode::initialize_state(State& state) const {
     int index = this->topological_index();
@@ -261,16 +251,6 @@ void LPNode::initialize_state(State& state) const {
                                                 result.objective());
 }
 
-bool LPNode::integral() const { return false; }
-
-std::pair<double, double> LPNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        return std::make_pair(lb_ptr_ ? lb_ptr_->min() : LPNode::default_lower_bound(),
-                              ub_ptr_ ? ub_ptr_->max() : LPNode::default_upper_bound());
-    });
-}
-
 double LPNode::objective_value(const dwave::optimization::State& state) const {
     return data_ptr<LPNodeData>(state)->objective_value;
 }
@@ -283,7 +263,8 @@ void LPNode::propagate(State& state) const {
             linprog(data->lp.c, data->lp.b_lb, data->lp.A, data->lp.b_ub, data->lp.A_eq,
                     data->lp.b_eq, data->lp.lb, data->lp.ub, FEASIBILITY_TOLERANCE);
 
-    data->assign(result.solution());
+    data->old_solution = data->solution;
+    data->solution = result.solution();
 
     data->old_is_feasible = data->is_feasible;
     data->is_feasible = result.feasible();
@@ -291,19 +272,29 @@ void LPNode::propagate(State& state) const {
     data->old_objective_value = data->objective_value;
     data->objective_value = result.objective();
 
-    // update successors if there is anything to update about
-    if (data->updates.size()) Node::propagate(state);
+    Node::propagate(state);
 }
 
 void LPNode::revert(State& state) const {
     auto data = data_ptr<LPNodeData>(state);
+
+    data->solution = data->old_solution;
     data->is_feasible = data->old_is_feasible;
     data->objective_value = data->old_objective_value;
-
-    return data->revert();
 }
 
-ObjectiveValueNode::ObjectiveValueNode(LPNode* lp_ptr) : lp_ptr_(lp_ptr) {
+std::span<const double> LPNode::solution(const State& state) const {
+    return data_ptr<LPNodeData>(state)->solution;
+}
+
+std::span<const ssize_t> LPNode::variables_shape() const { return c_ptr_->shape(); }
+
+std::pair<double, double> LPNode::_minmax() const {
+    return std::make_pair(lb_ptr_ ? lb_ptr_->min() : LPNode::default_lower_bound(),
+                          ub_ptr_ ? ub_ptr_->max() : LPNode::default_upper_bound());
+}
+
+ObjectiveValueNode::ObjectiveValueNode(LPNodeBase* lp_ptr) : lp_ptr_(lp_ptr) {
     add_predecessor(lp_ptr);
 }
 
@@ -345,5 +336,46 @@ void ObjectiveValueNode::propagate(State& state) const {
 void ObjectiveValueNode::revert(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->revert();
 }
+
+LPSolutionNode::LPSolutionNode(LPNodeBase* lp_ptr)
+        : ArrayOutputMixin(lp_ptr->variables_shape()), lp_ptr_(lp_ptr) {
+    add_predecessor(lp_ptr);
+}
+
+double const* LPSolutionNode::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+void LPSolutionNode::commit(State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->commit();
+}
+
+std::span<const Update> LPSolutionNode::diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->diff();
+}
+
+void LPSolutionNode::initialize_state(State& state) const {
+    int index = this->topological_index();
+    assert(index >= 0 && "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > index && "unexpected state length");
+    assert(state[index] == nullptr && "already initialized state");
+
+    std::vector<double> tmp;
+    tmp.assign(lp_ptr_->solution(state).begin(), lp_ptr_->solution(state).end());
+    state[index] = std::make_unique<ArrayNodeStateData>(tmp);
+}
+
+bool LPSolutionNode::integral() const { return false; }
+
+std::pair<double, double> LPSolutionNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() { return lp_ptr_->_minmax(); });
+}
+
+void LPSolutionNode::propagate(State& state) const {
+    data_ptr<ArrayNodeStateData>(state)->assign(lp_ptr_->solution(state));
+}
+
+void LPSolutionNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
 
 }  // namespace dwave::optimization

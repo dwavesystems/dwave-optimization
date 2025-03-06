@@ -22,13 +22,13 @@
 
 namespace dwave::optimization {
 
-class LPNode;
+class LPNodeBase;
 
 /// A logical node that propagates whether or not its predecessor LP is feasible.
 /// dev note: maybe call OptimalNode or SuccessNode? to match scipy
 class FeasibleNode : public ScalarOutputMixin<ArrayNode> {
  public:
-    explicit FeasibleNode(LPNode* lp_ptr);
+    explicit FeasibleNode(LPNodeBase* lp_ptr);
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -56,7 +56,32 @@ class FeasibleNode : public ScalarOutputMixin<ArrayNode> {
     void revert(State& state) const override;
 
  private:
-    const LPNode* lp_ptr_;
+    const LPNodeBase* lp_ptr_;
+};
+
+class LPNodeBase : public Node {
+ public:
+    /// The default lower bound for variables
+    static const double default_lower_bound();
+
+    /// The default lower bound for variables
+    static const double default_upper_bound();
+
+    /// Return whether the state is feasible for the LP model.
+    virtual bool feasible(const State& state) const = 0;
+
+    /// Any upper bound equal to or greater (or lower bound less to or equal)
+    /// to this will be treated as unbounded.
+    static const double infinity();
+
+    /// Return the objective value. Undefined when the LP is not feasible.
+    virtual double objective_value(const State& state) const = 0;
+
+    virtual std::span<const double> solution(const State& state) const = 0;
+
+    virtual std::span<const ssize_t> variables_shape() const = 0;
+
+    virtual std::pair<double, double> _minmax() const = 0;
 };
 
 /// Node that solves a given LP defined by its predecessors, and outputs the optimal solution
@@ -65,49 +90,27 @@ class FeasibleNode : public ScalarOutputMixin<ArrayNode> {
 /// Following https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.linprog.html
 /// linprog(c, A_ub=None, b_ub=None, A_eq=None, b_eq=None, bounds=(0, None),
 ///         callback=None, options=None, x0=None, integrality=None)
-class LPNode : public ArrayOutputMixin<ArrayNode> {
+class LPNode : public LPNodeBase {
  public:
     // Parameter names are chosen to match scipy.optimize.lingprog()
-    // for now bounds are always -inf,inf
     LPNode(ArrayNode* c_ptr,                                            // required
            ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,  // can be nullptr
            ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr,  // nullptr or must match size
            ArrayNode* lb_ptr, ArrayNode* ub_ptr);     // can be nullptr, both have size 1, or size n
 
-    /// @copydoc Array::buff()
-    double const* buff(const State& state) const override;
+    double const* _buff(const State& state) const;
 
     /// @copydoc Node::commit()
     void commit(State& state) const override;
 
-    /// The default lower bound for variables
-    static const double default_lower_bound();
-
-    /// The default lower bound for variables
-    static const double default_upper_bound();
-
-    /// @copydoc Array::diff()
-    std::span<const Update> diff(const State& state) const override;
-
-    /// Return whether the state is feasible for the LP model.
-    bool feasible(const State& state) const;
-
-    /// Any upper bound equal to or greater (or lower bound less to or equal)
-    /// to this will be treated as unbounded.
-    static const double infinity();
+    /// @copydoc LPNodeBase::feasible()
+    bool feasible(const State& state) const override;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
 
-    /// @copydoc Array::integral()
-    bool integral() const override;
-
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
-
-    /// Return the objective value. Undefined when the LP is not feasible.
-    double objective_value(const dwave::optimization::State& state) const;
+    /// @copydoc LPNodeBase::objective_value()
+    double objective_value(const State& state) const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -115,9 +118,13 @@ class LPNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Node::revert()
     void revert(State& state) const override;
 
-    using ArrayOutputMixin::shape;
+    /// @copydoc LPNodeBase::solution()
+    std::span<const double> solution(const State& state) const override;
 
-    using ArrayOutputMixin::size;
+    /// @copydoc LPNodeBase::variables_shape()
+    std::span<const ssize_t> variables_shape() const override;
+
+    std::pair<double, double> _minmax() const override;
 
  private:
     /// Read out each of the predecessor arrays and copy the data to `lp`, where
@@ -146,21 +153,71 @@ class LPNode : public ArrayOutputMixin<ArrayNode> {
     const ArrayNode* ub_ptr_;
 };
 
-class ObjectiveValueNode
-        : public dwave::optimization::ScalarOutputMixin<dwave::optimization::ArrayNode> {
+/// A scalar node that propagates the objective value of the solution found by the LPNode.
+/// Note that the output is undefined if the solution is not feasible.
+class ObjectiveValueNode : public ScalarOutputMixin<ArrayNode> {
  public:
-    explicit ObjectiveValueNode(LPNode* lp_ptr);
+    explicit ObjectiveValueNode(LPNodeBase* lp_ptr);
 
-    double const* buff(const dwave::optimization::State& state) const override;
-    void commit(dwave::optimization::State& state) const override;
-    std::span<const dwave::optimization::Update> diff(
-            const dwave::optimization::State& state) const override;
-    void initialize_state(dwave::optimization::State& state) const override;
-    void propagate(dwave::optimization::State& state) const override;
-    void revert(dwave::optimization::State& state) const override;
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
 
  private:
-    const LPNode* lp_ptr_;
+    const LPNodeBase* lp_ptr_;
+};
+
+/// An array node that propagates the solution found by the LPNode. Note that the solution
+/// may not be feasible or optimial.
+class LPSolutionNode : public ArrayOutputMixin<ArrayNode> {
+ public:
+    explicit LPSolutionNode(LPNodeBase* lp_ptr);
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+    using ArrayOutputMixin::shape;
+
+    using ArrayOutputMixin::size;
+
+ private:
+    const LPNodeBase* lp_ptr_;
 };
 
 }  // namespace dwave::optimization
