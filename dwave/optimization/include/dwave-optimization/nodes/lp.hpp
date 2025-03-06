@@ -76,6 +76,8 @@ class LPNodeBase : public Node {
     /// Return the objective value. Undefined when the LP is not feasible.
     virtual double objective_value(const State& state) const = 0;
 
+    /// Return the solution found by the LP solver. May return an empty span in the case
+    /// that the solver did not succeed or the solution is unchanged.
     virtual std::span<const double> solution(const State& state) const = 0;
 
     virtual std::pair<double, double> variables_minmax() const = 0;
@@ -96,8 +98,6 @@ class LPNode : public LPNodeBase {
            ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,  // can be nullptr
            ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr,  // nullptr or must match size
            ArrayNode* lb_ptr, ArrayNode* ub_ptr);     // can be nullptr, both have size 1, or size n
-
-    double const* _buff(const State& state) const;
 
     /// @copydoc Node::commit()
     void commit(State& state) const override;

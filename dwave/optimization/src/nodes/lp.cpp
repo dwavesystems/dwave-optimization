@@ -333,9 +333,20 @@ void LPSolutionNode::initialize_state(State& state) const {
     assert(static_cast<int>(state.size()) > index && "unexpected state length");
     assert(state[index] == nullptr && "already initialized state");
 
-    std::vector<double> tmp;
-    tmp.assign(lp_ptr_->solution(state).begin(), lp_ptr_->solution(state).end());
-    state[index] = std::make_unique<ArrayNodeStateData>(tmp);
+    std::span<const double> sol = lp_ptr_->solution(state);
+    if (!sol.size()) {
+        state[index] = std::make_unique<ArrayNodeStateData>(std::vector<double>(this->size()));
+    } else {
+        assert(sol.data() != nullptr);
+        assert(static_cast<ssize_t>(sol.size()) == this->size());
+
+        double min_lb = this->min();
+        double max_ub = this->max();
+        auto clipped_view = std::views::transform(sol, [&min_lb, &max_ub](double v) {
+            return std::clamp(v, min_lb, max_ub);
+        });
+        state[index] = std::make_unique<ArrayNodeStateData>(clipped_view);
+    }
 }
 
 bool LPSolutionNode::integral() const { return false; }
@@ -346,7 +357,20 @@ std::pair<double, double> LPSolutionNode::minmax(
 }
 
 void LPSolutionNode::propagate(State& state) const {
-    data_ptr<ArrayNodeStateData>(state)->assign(lp_ptr_->solution(state));
+    std::span<const double> sol = lp_ptr_->solution(state);
+    if (sol.size()) {
+        assert(sol.data() != nullptr);
+        assert(static_cast<ssize_t>(sol.size()) == this->size());
+
+        double min_lb = this->min();
+        double max_ub = this->max();
+        auto clipped_view = std::views::transform(sol, [&min_lb, &max_ub](double v) {
+            return std::clamp(v, min_lb, max_ub);
+        });
+        data_ptr<ArrayNodeStateData>(state)->assign(clipped_view);
+
+        Node::propagate(state);
+    }
 }
 
 void LPSolutionNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
