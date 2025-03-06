@@ -53,6 +53,10 @@ class BinaryVariable(ArraySymbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
 
 
+class BSpline(ArraySymbol):
+    ...
+
+
 class Concatenate(ArraySymbol):
     ...
 

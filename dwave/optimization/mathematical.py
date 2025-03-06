@@ -21,6 +21,7 @@ from dwave.optimization.symbols import (
     Add,
     And,
     ARange,
+    BSpline,
     Concatenate,
     Divide,
     Expit,
@@ -47,6 +48,7 @@ from dwave.optimization.symbols import (
 __all__ = [
     "add",
     "arange",
+    "bspline",
     "concatenate",
     "divide",
     "expit",
@@ -153,6 +155,22 @@ def arange(start: typing.Union[int, ArraySymbol, None] = None,
         step = 1
 
     return ARange(start, stop, step)
+
+
+def bspline(x: ArraySymbol, k: int, t: list, c: list) -> ArraySymbol:
+    """Return an array symbol with bspline values corresponding to x.
+
+    Args:
+        k: degree
+        t: knots
+        c: coefficients
+
+    See Also:
+        :class:`~dwave.optimization.BSpline`: equivalent symbol.
+
+    .. versionadded:: 0.5.4
+    """
+    return BSpline(x, k, t, c)
 
 
 def concatenate(array_likes: typing.Union[collections.abc.Iterable, ArraySymbol],

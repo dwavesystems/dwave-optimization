@@ -26,6 +26,7 @@ import dwave.optimization.symbols
 from dwave.optimization import (
     Model,
     arange,
+    bspline,
     expit,
     log,
     logical,
@@ -578,6 +579,69 @@ class TestBinaryVariable(utils.SymbolTests):
             with self.assertRaises(ValueError):
                 x.set_state(0, [0, 1, 2])
 
+
+class TestBSpline(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        x = model.constant([2])
+        k = 2
+        t = [0, 1, 2, 3, 4, 5, 6]
+        c = [-1, 2, 0, -1]
+        bspline_node = bspline(x, k, t, c)
+        model.lock()
+        yield bspline_node
+
+    def test_simple(self):
+        model = Model()
+        x = model.constant([0, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0])
+        k = 2
+        t = [0, 1, 2, 3, 4, 5, 6]
+        c = [-1, 2, 0, -1]
+        bspline_node = bspline(x, k, t, c)
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(bspline_node.state(),
+                                          [float('nan'), 0.5, 1.375, 1.0, 0.125, -0.5, float('nan')])
+
+    def test_errors(self):
+        model = Model()
+        with self.subTest("node pointer does not accept multi-d arrays"):
+            x = model.constant([[0, 2.0], [2.5, 3.0]])
+            k = 2
+            t = [0, 1, 2, 3, 4, 5, 6]
+            c = [-1, 2, 0, -1]
+            with self.assertRaisesRegex(
+                    ValueError, ("node pointer can only point to 1-d array")
+            ):
+                bspline(x, k, t, c)
+        with self.subTest("degree is less than 5"):
+            x = model.constant([2.0, 2.5, 3.0, 3.5, 4.0])
+            k = 5
+            t = [0, 1, 2, 3, 4, 5, 6]
+            c = [-1, 2, 0, -1]
+            with self.assertRaisesRegex(
+                    ValueError, ("bspline degree should be smaller than 5")
+            ):
+                bspline(x, k, t, c)
+        with self.subTest("number of knots is smaller than 20"):
+            x = model.constant([2.0, 2.5, 3.0, 3.5, 4.0])
+            k = 4
+            t = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 12, 15, 16, 17, 18, 19]
+            c = [-1, 2, 0, -1]
+            with self.assertRaisesRegex(
+                    ValueError, ("number of knots should be smaller than 20")
+            ):
+                bspline(x, k, t, c)
+        with self.subTest("degree, len(knots) and len(coefficients)"):
+            x = model.constant([2.0, 2.5, 3.0, 3.5, 4.0])
+            k = 2
+            t = [0, 1, 2, 3, 4, 5]
+            c = [-1, 2, 0, -1]
+            with self.assertRaisesRegex(
+                    ValueError, ("number of knots should be equal to sum of"
+                                 "degree, number of coefficients and 1")
+            ):
+                bspline(x, k, t, c)
 
 class TestConcatenate(utils.SymbolTests):
     def generate_symbols(self):
