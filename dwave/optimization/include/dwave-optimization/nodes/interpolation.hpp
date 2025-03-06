@@ -35,7 +35,7 @@ class BSplineNode : public ArrayOutputMixin<ArrayNode> {
     void commit(State& state) const override;
     std::span<const Update> diff(const State&) const override;
     void initialize_state(State& state) const override;
-    bool integral() const { return false; }
+    bool integral() const override;
 
     /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
