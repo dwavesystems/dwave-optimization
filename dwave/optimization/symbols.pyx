@@ -70,6 +70,10 @@ from dwave.optimization.libcpp.nodes cimport (
     ListNode as cppListNode,
     LogNode as cppLogNode,
     LogicalNode as cppLogicalNode,
+    LPFeasibleNode as cppLPFeasibleNode,
+    LPNode as cppLPNode,
+    LPObjectiveValueNode as cppLPObjectiveValueNode,
+    LPSolutionNode as cppLPSolutionNode,
     MaxNode as cppMaxNode,
     MaximumNode as cppMaximumNode,
     MinNode as cppMinNode,
@@ -129,6 +133,10 @@ __all__ = [
     "ListVariable",
     "Log",
     "Logical",
+    "LPFeasible",
+    "LP",
+    "LPObjectiveValue",
+    "LPSolution",
     "Max",
     "Maximum",
     "Min",
@@ -2140,6 +2148,150 @@ cdef class Logical(ArraySymbol):
     cdef cppLogicalNode* ptr
 
 _register(Logical, typeid(cppLogicalNode))
+
+
+cdef class LP(Symbol):
+    def __init__(self, ArraySymbol c,
+                 ArraySymbol b_lb = None,
+                 ArraySymbol A = None,
+                 ArraySymbol b_ub = None,
+                 ArraySymbol A_eq = None,
+                 ArraySymbol b_eq = None,
+                 ArraySymbol lb = None,
+                 ArraySymbol ub = None):
+        cdef _Graph model = c.model
+
+        cdef cppArrayNode* c_ptr = c.array_ptr
+
+        cdef cppArrayNode* b_lb_ptr = LP.as_arraynodeptr(model, b_lb)
+        cdef cppArrayNode* A_ptr = LP.as_arraynodeptr(model, A)
+        cdef cppArrayNode* b_ub_ptr = LP.as_arraynodeptr(model, b_ub)
+
+        cdef cppArrayNode* A_eq_ptr = LP.as_arraynodeptr(model, A_eq)
+        cdef cppArrayNode* b_eq_ptr = LP.as_arraynodeptr(model, b_eq)
+
+        cdef cppArrayNode* lb_ptr = LP.as_arraynodeptr(model, lb)
+        cdef cppArrayNode* ub_ptr = LP.as_arraynodeptr(model, ub)
+
+        self.ptr = model._graph.emplace_node[cppLPNode](
+            c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, A_eq_ptr, b_eq_ptr, lb_ptr, ub_ptr)
+        self.initialize_node(model, self.ptr)
+
+    @staticmethod
+    cdef cppArrayNode* as_arraynodeptr(_Graph model, ArraySymbol x) except? NULL:
+        # alias for nullptr if x is None else x.array_ptr, but Cython gets confused
+        # about that
+        # also checks that the model is correct
+        if x is None:
+            return NULL
+        if x.model is not model:
+            raise ValueError("all symbols must share the same underlying model")
+        return x.array_ptr
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppLPNode* ptr = dynamic_cast_ptr[cppLPNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct an LP")
+        cdef LP x = LP.__new__(LP)
+        x.ptr = ptr
+        x.initialize_node(symbol.model, ptr)
+        return x
+
+    # the name is chosen to match SciPy's OptimizeResult. Not sure if it's
+    # a good name though. Should work for now though.
+    def fun(self):
+        if self._objective_value is None:
+            self._objective_value = LPObjectiveValue(self)
+        return self._objective_value
+
+    # the name is chosen to match SciPy's OptimizeResult
+    def x(self):
+        if self._solution is None:
+            self._solution = LPSolution(self)
+        return self._solution
+
+    # the name is chosen to match SciPy's OptimizeResult
+    def success(self):
+        if self._feasible is None:
+            self._feasible = LPFeasible(self)
+        return self._feasible
+
+    cdef cppLPNode* ptr
+
+    cdef object _feasible
+    cdef object _objective_value
+    cdef object _solution
+
+_register(LP, typeid(cppLPNode))
+
+
+cdef class LPFeasible(ArraySymbol):
+    def __init__(self, LP lp):
+        cdef _Graph model = lp.model
+
+        self.ptr = model._graph.emplace_node[cppLPFeasibleNode](lp.ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppLPFeasibleNode* ptr = dynamic_cast_ptr[cppLPFeasibleNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a LPFeasible")
+        cdef LPFeasible x = LPFeasible.__new__(LPFeasible)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppLPFeasibleNode* ptr
+
+_register(LPFeasible, typeid(cppLPFeasibleNode))
+
+
+cdef class LPObjectiveValue(ArraySymbol):
+    def __init__(self, LP lp):
+        cdef _Graph model = lp.model
+
+        self.ptr = model._graph.emplace_node[cppLPObjectiveValueNode](lp.ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppLPObjectiveValueNode* ptr = dynamic_cast_ptr[cppLPObjectiveValueNode](
+            symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a LPObjectiveValue")
+        cdef LPObjectiveValue x = LPObjectiveValue.__new__(LPObjectiveValue)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppLPObjectiveValueNode* ptr
+
+_register(LPObjectiveValue, typeid(cppLPObjectiveValueNode))
+
+
+cdef class LPSolution(ArraySymbol):
+    def __init__(self, LP lp):
+        cdef _Graph model = lp.model
+
+        self.ptr = model._graph.emplace_node[cppLPSolutionNode](lp.ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppLPSolutionNode* ptr = dynamic_cast_ptr[cppLPSolutionNode](
+            symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a LPSolution")
+        cdef LPSolution x = LPSolution.__new__(LPSolution)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppLPSolutionNode* ptr
+
+_register(LPSolution, typeid(cppLPSolutionNode))
 
 
 cdef class Max(ArraySymbol):

@@ -84,6 +84,23 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
         pass
 
 
+cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass LPFeasibleNode(ArrayNode):
+        pass
+
+
+    cdef cppclass LPNode(Node):
+        pass
+
+
+    cdef cppclass LPObjectiveValueNode(ArrayNode):
+        pass
+
+
+    cdef cppclass LPSolutionNode(ArrayNode):
+        pass
+
+
 cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ConcatenateNode(ArrayNode):
         Py_ssize_t axis()

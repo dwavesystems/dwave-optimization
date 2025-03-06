@@ -1427,6 +1427,70 @@ class TestLogical(utils.UnaryOpTests):
         return logical(x)
 
 
+class TestLP(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        lp = dwave.optimization.symbols.LP(c)
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+        model.lock()
+
+        yield lp
+        yield feasible
+        yield obj
+        yield sol
+
+    def test_unconstrained(self):
+        model = Model()
+        model.states.resize(1)
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        lp = dwave.optimization.symbols.LP(c)
+        sol = lp.x()
+        with model.lock():
+            c.set_state(0, [5, 5])
+            np.testing.assert_array_equal(sol.state(), [0, 0])
+
+    def test_two_variable_two_row(self):
+        # min: -x0 + 4x1
+        # such that:
+        #      -3x0 + x1 <= 6
+        #      -x0 - 2x1 >= -4
+        #      x1 >= -3
+
+        model = Model()
+        model.states.resize(1)
+
+        c = model.integer(2, lower_bound=-10)
+        A_ub = model.integer((2, 2), lower_bound=-10)
+        b_ub = model.integer(2, lower_bound=-10)
+        lb = model.constant([-1e30, -3])
+
+        lp = dwave.optimization.symbols.LP(c, A=A_ub, b_ub=b_ub, lb=lb)
+
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+
+        with model.lock():
+            c.set_state(0, [-1, 4])
+            A_ub.set_state(0, [[-3, 1], [1, 2]])
+            b_ub.set_state(0, [6, 4])
+
+            np.testing.assert_allclose(sol.state(), [10, -3])
+            np.testing.assert_allclose(feasible.state(), 1)
+            np.testing.assert_allclose(obj.state(), -1 * 10 + 4 * -3)
+
+    @unittest.skip("not yet implemented")
+    def test_serialization(self):
+        pass
+
+    @unittest.skip("not yet implemented")
+    def test_state_serialization(self):
+        pass
+
+
 class TestMax(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
