@@ -21,6 +21,7 @@ from dwave.optimization.symbols import (
     Add,
     And,
     ARange,
+    BSpline,
     Concatenate,
     Divide,
     Expit,
@@ -53,6 +54,7 @@ __all__ = [
     "arange",
     "atleast_1d",
     "atleast_2d",
+    "bspline",
     "concatenate",
     "divide",
     "expit",
@@ -269,6 +271,22 @@ def atleast_2d(*arrays):
     if len(result) == 1:
         return result[0]
     return tuple(result)
+
+
+def bspline(x: ArraySymbol, k: int, t: list, c: list) -> ArraySymbol:
+    """Return an array symbol with bspline values corresponding to x.
+
+    Args:
+        k: degree
+        t: knots
+        c: coefficients
+
+    See Also:
+        :class:`~dwave.optimization.BSpline`: equivalent symbol.
+
+    .. versionadded:: 0.5.4
+    """
+    return BSpline(x, k, t, c)
 
 
 def concatenate(arrays: typing.Sequence[ArraySymbol],
