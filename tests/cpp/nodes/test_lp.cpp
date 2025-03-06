@@ -52,20 +52,22 @@ TEST_CASE("LPNode") {
 
         auto feas_ptr = graph.emplace_node<FeasibleNode>(lp_ptr);
         auto obj_ptr = graph.emplace_node<ObjectiveValueNode>(lp_ptr);
+        auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
 
-        graph.emplace_node<ArrayValidationNode>(lp_ptr);
         graph.emplace_node<ArrayValidationNode>(feas_ptr);
         graph.emplace_node<ArrayValidationNode>(obj_ptr);
+        graph.emplace_node<ArrayValidationNode>(sol_ptr);
 
         WHEN("We initialize the state") {
             auto state = graph.initialize_state();
 
             THEN("x0 = 10, x1 = -3") {
-                CHECK(lp_ptr->size(state) == 2);
-                CHECK_THAT(lp_ptr->view(state)[0], WithinAbs(10, FEASIBILITY_TOLERANCE));
-                CHECK_THAT(lp_ptr->view(state)[1], WithinAbs(-3, FEASIBILITY_TOLERANCE));
+                CHECK(sol_ptr->size(state) == 2);
+                CHECK_THAT(sol_ptr->view(state)[0], WithinAbs(10, FEASIBILITY_TOLERANCE));
+                CHECK_THAT(sol_ptr->view(state)[1], WithinAbs(-3, FEASIBILITY_TOLERANCE));
 
                 CHECK(lp_ptr->feasible(state));
+                CHECK(feas_ptr->view(state).front());
                 CHECK_THAT(obj_ptr->view(state).front(),
                            WithinAbs(-1 * 10 + 4 * -3, FEASIBILITY_TOLERANCE));
                 CHECK(feas_ptr->view(state).front());
@@ -100,10 +102,11 @@ TEST_CASE("LPNode") {
 
         auto feas_ptr = graph.emplace_node<FeasibleNode>(lp_ptr);
         auto obj_ptr = graph.emplace_node<ObjectiveValueNode>(lp_ptr);
+        auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
 
-        graph.emplace_node<ArrayValidationNode>(lp_ptr);
         graph.emplace_node<ArrayValidationNode>(feas_ptr);
         graph.emplace_node<ArrayValidationNode>(obj_ptr);
+        graph.emplace_node<ArrayValidationNode>(sol_ptr);
 
         WHEN("We initialize the state") {
             auto state = graph.empty_state();
@@ -111,8 +114,8 @@ TEST_CASE("LPNode") {
             graph.initialize_state(state);
 
             THEN("the model is infeasible") {
-                CHECK(lp_ptr->size(state) == 2);
-                CHECK(lp_ptr->view(state).size() == 2);  // the actual state is undefined
+                CHECK(sol_ptr->size(state) == 2);
+                CHECK(sol_ptr->view(state).size() == 2);  // the actual state is undefined
 
                 CHECK(!lp_ptr->feasible(state));
                 CHECK(!feas_ptr->view(state).front());
@@ -128,9 +131,9 @@ TEST_CASE("LPNode") {
                 graph.propagate(state, graph.descendants(state, {A_ub_ptr}));
 
                 THEN("the model is feasible") {
-                    CHECK(lp_ptr->size(state) == 2);
-                    CHECK_THAT(lp_ptr->view(state)[0], WithinAbs(10, FEASIBILITY_TOLERANCE));
-                    CHECK_THAT(lp_ptr->view(state)[1], WithinAbs(10, FEASIBILITY_TOLERANCE));
+                    CHECK(sol_ptr->size(state) == 2);
+                    CHECK_THAT(sol_ptr->view(state)[0], WithinAbs(10, FEASIBILITY_TOLERANCE));
+                    CHECK_THAT(sol_ptr->view(state)[1], WithinAbs(10, FEASIBILITY_TOLERANCE));
 
                     CHECK(lp_ptr->feasible(state));
                     CHECK(feas_ptr->view(state).front());
@@ -142,9 +145,9 @@ TEST_CASE("LPNode") {
                     graph.commit(state, graph.descendants(state, {A_ub_ptr}));
 
                     THEN("the model is feasible") {
-                        CHECK(lp_ptr->size(state) == 2);
-                        CHECK_THAT(lp_ptr->view(state)[0], WithinAbs(10, FEASIBILITY_TOLERANCE));
-                        CHECK_THAT(lp_ptr->view(state)[1], WithinAbs(10, FEASIBILITY_TOLERANCE));
+                        CHECK(sol_ptr->size(state) == 2);
+                        CHECK_THAT(sol_ptr->view(state)[0], WithinAbs(10, FEASIBILITY_TOLERANCE));
+                        CHECK_THAT(sol_ptr->view(state)[1], WithinAbs(10, FEASIBILITY_TOLERANCE));
 
                         CHECK(lp_ptr->feasible(state));
                         CHECK(feas_ptr->view(state).front());
@@ -162,8 +165,8 @@ TEST_CASE("LPNode") {
                         graph.propagate(state, graph.descendants(state, {A_ub_ptr}));
 
                         THEN("the model is infeasible") {
-                            CHECK(lp_ptr->size(state) == 2);
-                            CHECK(lp_ptr->view(state).size() == 2);
+                            CHECK(sol_ptr->size(state) == 2);
+                            CHECK(sol_ptr->view(state).size() == 2);
 
                             CHECK(!lp_ptr->feasible(state));
                             CHECK(!feas_ptr->view(state).front());
@@ -175,8 +178,8 @@ TEST_CASE("LPNode") {
                     graph.revert(state, graph.descendants(state, {A_ub_ptr}));
 
                     THEN("the model is infeasible") {
-                        CHECK(lp_ptr->size(state) == 2);
-                        CHECK(lp_ptr->view(state).size() == 2);  // the actual state is undefined
+                        CHECK(sol_ptr->size(state) == 2);
+                        CHECK(sol_ptr->view(state).size() == 2);  // the actual state is undefined
 
                         CHECK(!lp_ptr->feasible(state));
                         CHECK(!feas_ptr->view(state).front());
@@ -217,23 +220,24 @@ TEST_CASE("LPNode") {
                                                  lb_ptr, ub_ptr);
 
         auto feas_ptr = graph.emplace_node<FeasibleNode>(lp_ptr);
+        auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
 
-        graph.emplace_node<ArrayValidationNode>(lp_ptr);
         graph.emplace_node<ArrayValidationNode>(feas_ptr);
+        graph.emplace_node<ArrayValidationNode>(sol_ptr);
 
         THEN("The integrality, min, and max are as expected") {
-            CHECK(!lp_ptr->integral());
-            CHECK(lp_ptr->min() == 0);
-            CHECK(lp_ptr->max() == LPNode::infinity());
+            CHECK(!sol_ptr->integral());
+            CHECK(sol_ptr->min() == 0);
+            CHECK(sol_ptr->max() == LPNode::infinity());
         }
 
         WHEN("We initialize the state") {
             auto state = graph.initialize_state();
 
             THEN("x0 = .5, x1 = 2.25") {
-                CHECK(lp_ptr->size(state) == 2);
-                CHECK_THAT(lp_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
-                CHECK_THAT(lp_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
+                CHECK(sol_ptr->size(state) == 2);
+                CHECK_THAT(sol_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
+                CHECK_THAT(sol_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
 
                 CHECK(lp_ptr->feasible(state));
                 CHECK(feas_ptr->view(state).front());
@@ -266,9 +270,10 @@ TEST_CASE("LPNode") {
         auto lp_ptr = graph.emplace_node<LPNode>(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
 
         auto feas_ptr = graph.emplace_node<FeasibleNode>(lp_ptr);
+        auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
 
-        graph.emplace_node<ArrayValidationNode>(lp_ptr);
         graph.emplace_node<ArrayValidationNode>(feas_ptr);
+        graph.emplace_node<ArrayValidationNode>(sol_ptr);
 
         WHEN("We instatiate an LP problem") {
             // min: x0 + x1 + x2
@@ -298,10 +303,10 @@ TEST_CASE("LPNode") {
             graph.initialize_state(state);
 
             THEN("x0 = .5, x1 = 2.25") {
-                CHECK(lp_ptr->size(state) == 3);
-                CHECK_THAT(lp_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
-                CHECK_THAT(lp_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
-                CHECK_THAT(lp_ptr->view(state)[2], WithinAbs(1.3125, FEASIBILITY_TOLERANCE));
+                CHECK(sol_ptr->size(state) == 3);
+                CHECK_THAT(sol_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
+                CHECK_THAT(sol_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
+                CHECK_THAT(sol_ptr->view(state)[2], WithinAbs(1.3125, FEASIBILITY_TOLERANCE));
             }
 
             AND_WHEN("We change the c vector and then propagate") {
@@ -320,10 +325,10 @@ TEST_CASE("LPNode") {
                 graph.propagate(state, graph.descendants(state, {c}));
 
                 THEN("x0 = .5, x1 = 2.25, x2 = 1.3125") {
-                    CHECK(lp_ptr->size(state) == 3);
-                    CHECK_THAT(lp_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
-                    CHECK_THAT(lp_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
-                    CHECK_THAT(lp_ptr->view(state)[2],
+                    CHECK(sol_ptr->size(state) == 3);
+                    CHECK_THAT(sol_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
+                    CHECK_THAT(sol_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
+                    CHECK_THAT(sol_ptr->view(state)[2],
                                WithinAbs(1.3125, FEASIBILITY_TOLERANCE));  // this halved
                 }
 
@@ -331,10 +336,10 @@ TEST_CASE("LPNode") {
                     graph.revert(state, graph.descendants(state, {c}));
 
                     THEN("x0 = .5, x1 = 2.25, x2 = 1.3125") {
-                        CHECK(lp_ptr->size(state) == 3);
-                        CHECK_THAT(lp_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
-                        CHECK_THAT(lp_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
-                        CHECK_THAT(lp_ptr->view(state)[2],
+                        CHECK(sol_ptr->size(state) == 3);
+                        CHECK_THAT(sol_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
+                        CHECK_THAT(sol_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
+                        CHECK_THAT(sol_ptr->view(state)[2],
                                    WithinAbs(1.3125, FEASIBILITY_TOLERANCE));
                     }
                 }
@@ -356,20 +361,20 @@ TEST_CASE("LPNode") {
                 graph.propagate(state, graph.descendants(state, {A_eq}));
 
                 THEN("x0 = .5, x1 = 2.25, x2 = 2.625") {
-                    CHECK(lp_ptr->size(state) == 3);
-                    CHECK(lp_ptr->view(state)[0] == .5);
-                    CHECK(lp_ptr->view(state)[1] == 2.25);
-                    CHECK(lp_ptr->view(state)[2] == 2.625);  // this doubled
+                    CHECK(sol_ptr->size(state) == 3);
+                    CHECK(sol_ptr->view(state)[0] == .5);
+                    CHECK(sol_ptr->view(state)[1] == 2.25);
+                    CHECK(sol_ptr->view(state)[2] == 2.625);  // this doubled
                 }
 
                 AND_WHEN("We then revert") {
                     graph.revert(state, graph.descendants(state, {A_eq}));
 
                     THEN("x0 = .5, x1 = 2.25, x2 = 1.3125") {
-                        CHECK(lp_ptr->size(state) == 3);
-                        CHECK_THAT(lp_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
-                        CHECK_THAT(lp_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
-                        CHECK_THAT(lp_ptr->view(state)[2],
+                        CHECK(sol_ptr->size(state) == 3);
+                        CHECK_THAT(sol_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
+                        CHECK_THAT(sol_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
+                        CHECK_THAT(sol_ptr->view(state)[2],
                                    WithinAbs(1.3125, FEASIBILITY_TOLERANCE));
                     }
 
@@ -389,12 +394,12 @@ TEST_CASE("LPNode") {
                         graph.propagate(state, graph.descendants(state, {A_eq}));
 
                         THEN("x0 = .5, x1 = 2.25, x2 = 1.1875") {
-                            REQUIRE(lp_ptr->size(state) == 3);
-                            CHECK_THAT(lp_ptr->view(state)[0],
+                            REQUIRE(sol_ptr->size(state) == 3);
+                            CHECK_THAT(sol_ptr->view(state)[0],
                                        WithinAbs(.5, FEASIBILITY_TOLERANCE));
-                            CHECK_THAT(lp_ptr->view(state)[1],
+                            CHECK_THAT(sol_ptr->view(state)[1],
                                        WithinAbs(2.25, FEASIBILITY_TOLERANCE));
-                            CHECK_THAT(lp_ptr->view(state)[2],
+                            CHECK_THAT(sol_ptr->view(state)[2],
                                        WithinAbs(1.1875, FEASIBILITY_TOLERANCE));
                         }
                     }
@@ -404,10 +409,10 @@ TEST_CASE("LPNode") {
                     graph.commit(state, graph.descendants(state, {A_eq}));
 
                     THEN("x0 = .5, x1 = 2.25, x2 = 2.625") {
-                        CHECK(lp_ptr->size(state) == 3);
-                        CHECK_THAT(lp_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
-                        CHECK_THAT(lp_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
-                        CHECK_THAT(lp_ptr->view(state)[2],
+                        CHECK(sol_ptr->size(state) == 3);
+                        CHECK_THAT(sol_ptr->view(state)[0], WithinAbs(.5, FEASIBILITY_TOLERANCE));
+                        CHECK_THAT(sol_ptr->view(state)[1], WithinAbs(2.25, FEASIBILITY_TOLERANCE));
+                        CHECK_THAT(sol_ptr->view(state)[2],
                                    WithinAbs(2.625, FEASIBILITY_TOLERANCE));  // this doubled
                     }
 
@@ -427,22 +432,17 @@ TEST_CASE("LPNode") {
 
                         graph.propagate(state, graph.descendants(state, {A_eq}));
 
-                        // THEN("x0 = 3.0, x1 = 1.0, x2 = 0.5") {
-                        //     CHECK(lp_ptr->size(state) == 3);
-                        //     CHECK_THAT(lp_ptr->view(state)[0],
-                        //                WithinAbs(3.0, FEASIBILITY_TOLERANCE));
-                        //     CHECK_THAT(lp_ptr->view(state)[1],
-                        //                WithinAbs(1.0, FEASIBILITY_TOLERANCE));
-                        //     CHECK_THAT(lp_ptr->view(state)[2],
-                        //                WithinAbs(0.5, FEASIBILITY_TOLERANCE));
-                        // }
+                        // TODO: this test originally only set A_eq[3] = 2 and then checked for
+                        // the solution x0 = 3.0, x1 = 1.0, x2 = 0.5, but it appears that the
+                        // simplex implementation is not finding the optimal on this problem.
+                        // Probably worth investigating.
                         THEN("x0 = .5, x1 = 2.25, x2 = 1.1875") {
-                            REQUIRE(lp_ptr->size(state) == 3);
-                            CHECK_THAT(lp_ptr->view(state)[0],
+                            REQUIRE(sol_ptr->size(state) == 3);
+                            CHECK_THAT(sol_ptr->view(state)[0],
                                        WithinAbs(.5, FEASIBILITY_TOLERANCE));
-                            CHECK_THAT(lp_ptr->view(state)[1],
+                            CHECK_THAT(sol_ptr->view(state)[1],
                                        WithinAbs(2.25, FEASIBILITY_TOLERANCE));
-                            CHECK_THAT(lp_ptr->view(state)[2],
+                            CHECK_THAT(sol_ptr->view(state)[2],
                                        WithinAbs(1.1875, FEASIBILITY_TOLERANCE));
                         }
                     }
@@ -466,11 +466,11 @@ TEST_CASE("LPNode") {
                 graph.propagate(state, graph.descendants(state, {b_eq}));
 
                 THEN("The new LP is satisfied") {
-                    CHECK(lp_ptr->size(state) == 3);
+                    CHECK(sol_ptr->size(state) == 3);
 
-                    const double x0 = lp_ptr->view(state)[0];
-                    const double x1 = lp_ptr->view(state)[1];
-                    const double x2 = lp_ptr->view(state)[2];
+                    const double x0 = sol_ptr->view(state)[0];
+                    const double x1 = sol_ptr->view(state)[1];
+                    const double x2 = sol_ptr->view(state)[2];
 
                     CHECK(x1 <= 7 + FEASIBILITY_TOLERANCE);
                     CHECK(6 <= 3 * x0 + 2 * x1 + FEASIBILITY_TOLERANCE);
@@ -496,11 +496,11 @@ TEST_CASE("LPNode") {
                     graph.revert(state, graph.descendants(state, {b_eq}));
 
                     THEN("The original LP is satisfied") {
-                        CHECK(lp_ptr->size(state) == 3);
+                        CHECK(sol_ptr->size(state) == 3);
 
-                        const double x0 = lp_ptr->view(state)[0];
-                        const double x1 = lp_ptr->view(state)[1];
-                        const double x2 = lp_ptr->view(state)[2];
+                        const double x0 = sol_ptr->view(state)[0];
+                        const double x1 = sol_ptr->view(state)[1];
+                        const double x2 = sol_ptr->view(state)[2];
 
                         CHECK(x1 <= 7 + FEASIBILITY_TOLERANCE);
                         CHECK(6 <= 3 * x0 + 2 * x1 + FEASIBILITY_TOLERANCE);
@@ -529,11 +529,11 @@ TEST_CASE("LPNode") {
                         graph.propagate(state, graph.descendants(state, {b_eq}));
 
                         THEN("The new LP is satisfied") {
-                            CHECK(lp_ptr->size(state) == 3);
+                            CHECK(sol_ptr->size(state) == 3);
 
-                            const double x0 = lp_ptr->view(state)[0];
-                            const double x1 = lp_ptr->view(state)[1];
-                            const double x2 = lp_ptr->view(state)[2];
+                            const double x0 = sol_ptr->view(state)[0];
+                            const double x1 = sol_ptr->view(state)[1];
+                            const double x2 = sol_ptr->view(state)[2];
 
                             CHECK(x1 <= 7 + FEASIBILITY_TOLERANCE);
                             CHECK(6 <= 3 * x0 + 2 * x1 + FEASIBILITY_TOLERANCE);
@@ -561,11 +561,11 @@ TEST_CASE("LPNode") {
                     graph.commit(state, graph.descendants(state, {b_eq}));
 
                     THEN("The new LP is satisfied") {
-                        CHECK(lp_ptr->size(state) == 3);
+                        CHECK(sol_ptr->size(state) == 3);
 
-                        const double x0 = lp_ptr->view(state)[0];
-                        const double x1 = lp_ptr->view(state)[1];
-                        const double x2 = lp_ptr->view(state)[2];
+                        const double x0 = sol_ptr->view(state)[0];
+                        const double x1 = sol_ptr->view(state)[1];
+                        const double x2 = sol_ptr->view(state)[2];
 
                         CHECK(x1 <= 7 + FEASIBILITY_TOLERANCE);
                         CHECK(6 <= 3 * x0 + 2 * x1 + FEASIBILITY_TOLERANCE);
@@ -594,11 +594,11 @@ TEST_CASE("LPNode") {
                         graph.propagate(state, graph.descendants(state, {b_eq}));
 
                         THEN("The new LP is satisfied") {
-                            CHECK(lp_ptr->size(state) == 3);
+                            CHECK(sol_ptr->size(state) == 3);
 
-                            const double x0 = lp_ptr->view(state)[0];
-                            const double x1 = lp_ptr->view(state)[1];
-                            const double x2 = lp_ptr->view(state)[2];
+                            const double x0 = sol_ptr->view(state)[0];
+                            const double x1 = sol_ptr->view(state)[1];
+                            const double x2 = sol_ptr->view(state)[2];
 
                             CHECK(x1 <= 7 + FEASIBILITY_TOLERANCE);
                             CHECK(6 <= 3 * x0 + 2 * x1 + FEASIBILITY_TOLERANCE);
@@ -632,11 +632,11 @@ TEST_CASE("LPNode") {
                 graph.propagate(state, graph.descendants(state, {b_lb, b_ub}));
 
                 THEN("The new LP is satisfied") {
-                    CHECK(lp_ptr->size(state) == 3);
+                    CHECK(sol_ptr->size(state) == 3);
 
-                    const double x0 = lp_ptr->view(state)[0];
-                    const double x1 = lp_ptr->view(state)[1];
-                    const double x2 = lp_ptr->view(state)[2];
+                    const double x0 = sol_ptr->view(state)[0];
+                    const double x1 = sol_ptr->view(state)[1];
+                    const double x2 = sol_ptr->view(state)[2];
 
                     CHECK(x1 <= 8 + FEASIBILITY_TOLERANCE);
                     CHECK(5 <= 3 * x0 + 2 * x1 + FEASIBILITY_TOLERANCE);
@@ -662,11 +662,11 @@ TEST_CASE("LPNode") {
                     graph.revert(state, graph.descendants(state, {b_lb, b_ub}));
 
                     THEN("The original LP is satisfied") {
-                        CHECK(lp_ptr->size(state) == 3);
+                        CHECK(sol_ptr->size(state) == 3);
 
-                        const double x0 = lp_ptr->view(state)[0];
-                        const double x1 = lp_ptr->view(state)[1];
-                        const double x2 = lp_ptr->view(state)[2];
+                        const double x0 = sol_ptr->view(state)[0];
+                        const double x1 = sol_ptr->view(state)[1];
+                        const double x2 = sol_ptr->view(state)[2];
 
                         CHECK(x1 <= 7 + FEASIBILITY_TOLERANCE);
                         CHECK(6 <= 3 * x0 + 2 * x1 + FEASIBILITY_TOLERANCE);
@@ -695,11 +695,11 @@ TEST_CASE("LPNode") {
                         graph.propagate(state, graph.descendants(state, {b_ub}));
 
                         THEN("The new LP is satisfied") {
-                            CHECK(lp_ptr->size(state) == 3);
+                            CHECK(sol_ptr->size(state) == 3);
 
-                            const double x0 = lp_ptr->view(state)[0];
-                            const double x1 = lp_ptr->view(state)[1];
-                            const double x2 = lp_ptr->view(state)[2];
+                            const double x0 = sol_ptr->view(state)[0];
+                            const double x1 = sol_ptr->view(state)[1];
+                            const double x2 = sol_ptr->view(state)[2];
 
                             CHECK(lp_ptr->feasible(state));
 
