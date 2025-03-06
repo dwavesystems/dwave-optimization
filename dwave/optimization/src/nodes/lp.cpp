@@ -335,16 +335,16 @@ void LPSolutionNode::initialize_state(State& state) const {
 
     std::span<const double> sol = lp_ptr_->solution(state);
     if (!sol.size()) {
-        state[index] = std::make_unique<ArrayNodeStateData>(std::vector<double>(this->size()));
+        state[index] = std::make_unique<ArrayNodeStateData>(
+                std::vector<double>(this->size(), this->min()));
     } else {
         assert(sol.data() != nullptr);
         assert(static_cast<ssize_t>(sol.size()) == this->size());
 
         double min_lb = this->min();
         double max_ub = this->max();
-        auto clipped_view = std::views::transform(sol, [&min_lb, &max_ub](double v) {
-            return std::clamp(v, min_lb, max_ub);
-        });
+        auto clipped_view = std::views::transform(
+                sol, [&min_lb, &max_ub](double v) { return std::clamp(v, min_lb, max_ub); });
         state[index] = std::make_unique<ArrayNodeStateData>(clipped_view);
     }
 }
@@ -364,9 +364,8 @@ void LPSolutionNode::propagate(State& state) const {
 
         double min_lb = this->min();
         double max_ub = this->max();
-        auto clipped_view = std::views::transform(sol, [&min_lb, &max_ub](double v) {
-            return std::clamp(v, min_lb, max_ub);
-        });
+        auto clipped_view = std::views::transform(
+                sol, [&min_lb, &max_ub](double v) { return std::clamp(v, min_lb, max_ub); });
         data_ptr<ArrayNodeStateData>(state)->assign(clipped_view);
 
         Node::propagate(state);
