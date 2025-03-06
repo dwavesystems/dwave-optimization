@@ -611,7 +611,7 @@ class TestBSpline(utils.SymbolTests):
             t = [0, 1, 2, 3, 4, 5, 6]
             c = [-1, 2, 0, -1]
             with self.assertRaisesRegex(
-                    ValueError, ("node pointer can only point to 1-d array")
+                    ValueError, ("node pointer cannot be multi-d array")
             ):
                 bspline(x, k, t, c)
         with self.subTest("degree is less than 5"):

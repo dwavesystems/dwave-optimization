@@ -22,7 +22,7 @@ namespace dwave::optimization {
 BSplineNode::BSplineNode(ArrayNode* array_ptr, const int k, const std::vector<double> t, const std::vector<double> c)
             :ArrayOutputMixin(array_ptr->size()), array_ptr_(array_ptr), k_(k), t_(std::move(t)), c_(std::move(c)) {
                 if (!array_ptr) throw std::invalid_argument("node pointer cannot be nullptr");
-                if (array_ptr->ndim() != 1) throw std::invalid_argument("node pointer can only point to 1-d array");
+                if (array_ptr->ndim() > 1) throw std::invalid_argument("node pointer cannot be multi-d array");
                 // conservative upper limits to avoid expensive calculations
                 if (k >= 5) throw std::invalid_argument("bspline degree should be smaller than 5");
                 if (t.size() >= 20) throw std::invalid_argument("number of knots should be smaller than 20");
