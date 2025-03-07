@@ -16,7 +16,10 @@ from libcpp.typeinfo cimport type_info
 
 from dwave.optimization.libcpp.graph cimport Array as cppArray
 from dwave.optimization.libcpp.graph cimport Node as cppNode
-from dwave.optimization.model cimport _Graph
+from dwave.optimization.model cimport _Graph, Symbol
+
+from dwave.optimization.libcpp.nodes cimport LPNodeBase as cppLPNodeBase
+
 
 cdef void _register(object cls, const type_info& typeinfo)
 

@@ -1427,6 +1427,104 @@ class TestLogical(utils.UnaryOpTests):
         return logical(x)
 
 
+class TestLP(utils.SymbolTests):
+    def generate_symbols(self):
+        # test serialization on a few different scenarios of different arguments
+        # to the LP symbol
+
+        # just c
+        model = Model()
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        lp = dwave.optimization.symbols.LP(c)
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+        model.lock()
+
+        yield lp
+        yield feasible
+        yield obj
+        yield sol
+
+        # provide c, A, b_ub, and ub
+        model = Model()
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        A = model.integer((3, 2), lower_bound=-10, upper_bound=10)
+        b_ub = model.integer(3, lower_bound=-10, upper_bound=10)
+        ub = model.integer(2, lower_bound=0, upper_bound=1)
+        lp = dwave.optimization.symbols.LP(c, A=A, b_ub=b_ub, ub=ub)
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+        model.lock()
+
+        yield lp
+        yield feasible
+        yield obj
+        yield sol
+
+        # provide all arguments
+        model = Model()
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        b_lb = model.integer(3, lower_bound=-10, upper_bound=10)
+        A = model.integer((3, 2), lower_bound=-10, upper_bound=10)
+        b_ub = model.integer(3, lower_bound=-10, upper_bound=10)
+        A_eq = model.integer((4, 2), lower_bound=-10, upper_bound=10)
+        b_eq = model.integer(4, lower_bound=-10, upper_bound=10)
+        lb = model.integer(2, lower_bound=0, upper_bound=1)
+        ub = model.integer(2, lower_bound=0, upper_bound=1)
+        lp = dwave.optimization.symbols.LP(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub)
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+        model.lock()
+
+        yield lp
+        yield feasible
+        yield obj
+        yield sol
+
+    def test_unconstrained(self):
+        model = Model()
+        model.states.resize(1)
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        lp = dwave.optimization.symbols.LP(c)
+        sol = lp.x()
+        with model.lock():
+            c.set_state(0, [5, 5])
+            np.testing.assert_array_equal(sol.state(), [0, 0])
+
+    def test_two_variable_two_row(self):
+        # min: -x0 + 4x1
+        # such that:
+        #      -3x0 + x1 <= 6
+        #      -x0 - 2x1 >= -4
+        #      x1 >= -3
+
+        model = Model()
+        model.states.resize(1)
+
+        c = model.integer(2, lower_bound=-10)
+        A_ub = model.integer((2, 2), lower_bound=-10)
+        b_ub = model.integer(2, lower_bound=-10)
+        lb = model.constant([-1e30, -3])
+
+        lp = dwave.optimization.symbols.LP(c, A=A_ub, b_ub=b_ub, lb=lb)
+
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+
+        with model.lock():
+            c.set_state(0, [-1, 4])
+            A_ub.set_state(0, [[-3, 1], [1, 2]])
+            b_ub.set_state(0, [6, 4])
+
+            np.testing.assert_allclose(sol.state(), [10, -3])
+            np.testing.assert_allclose(feasible.state(), 1)
+            np.testing.assert_allclose(obj.state(), -1 * 10 + 4 * -3)
+
+
 class TestMax(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

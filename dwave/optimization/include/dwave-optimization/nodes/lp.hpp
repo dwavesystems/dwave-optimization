@@ -69,6 +69,9 @@ class LPNodeBase : public Node {
     /// Return whether the state is feasible for the LP model.
     virtual bool feasible(const State& state) const = 0;
 
+    /// Return the arguments mapped to predecessor indices
+    virtual std::unordered_map<std::string, ssize_t> get_arguments() const = 0;
+
     /// Any upper bound equal to or greater (or lower bound less to or equal)
     /// to this will be treated as unbounded.
     static const double infinity();
@@ -104,6 +107,9 @@ class LPNode : public LPNodeBase {
 
     /// @copydoc LPNodeBase::feasible()
     bool feasible(const State& state) const override;
+
+    /// @copydoc LPNodeBase::get_arguments()
+    std::unordered_map<std::string, ssize_t> get_arguments() const override;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
