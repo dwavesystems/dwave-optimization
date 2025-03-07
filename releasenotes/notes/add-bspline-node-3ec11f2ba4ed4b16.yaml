@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add C++ ``BSplineNode`` and Python ``BSpline`` symbol. ``BSpline`` propagates the bspline interpolation values of 
+    its predecessor element-wise given the bspline constants (degree, knots and coefficients).

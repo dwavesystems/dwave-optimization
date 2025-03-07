@@ -84,6 +84,13 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
         pass
 
 
+cdef extern from "dwave-optimization/nodes/interpolation.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass BSplineNode(ArrayNode):
+        int k()
+        vector[double] t()
+        vector[double] c()
+
+
 cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ConcatenateNode(ArrayNode):
         Py_ssize_t axis()
