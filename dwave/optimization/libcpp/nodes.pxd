@@ -88,9 +88,9 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
 
 cdef extern from "dwave-optimization/nodes/interpolation.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass BSplineNode(ArrayNode):
-        int get_k()
-        vector[double] get_t()
-        vector[double] get_c()
+        int k()
+        vector[double] t()
+        vector[double] c()
 
 
 cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimization" nogil:

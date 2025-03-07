@@ -44,9 +44,10 @@ class BSplineNode : public ArrayOutputMixin<ArrayNode> {
     void propagate(State& state) const override;
     void revert(State& state) const override;
 
-    int get_k() const;
-    const std::vector<double>& get_t() const;
-    const std::vector<double>& get_c() const;
+    // return the values of bspline constants: degree (k), knots (t) and coefficients (c)
+    int k() const;
+    const std::vector<double>& t() const;
+    const std::vector<double>& c() const;
 
     using Array::size;
     ssize_t size(const State& state) const override;

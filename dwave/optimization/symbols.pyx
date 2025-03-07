@@ -1013,14 +1013,14 @@ cdef class BSpline(ArraySymbol):
 
     def _into_zipfile(self, zf, directory):
         """Save the BSpline constants into a zipfile"""
-        cdef vector[double] tvalues = self.ptr.get_t()
-        cdef vector[double] cvalues = self.ptr.get_c()
+        cdef vector[double] tvalues = self.ptr.t()
+        cdef vector[double] cvalues = self.ptr.c()
 
         t_array = np.array([tvalues[i] for i in range(tvalues.size())], dtype=np.double)
         c_array = np.array([cvalues[i] for i in range(cvalues.size())], dtype=np.double)
 
         encoder = json.JSONEncoder(separators=(',', ':'))
-        zf.writestr(directory + "k.json", encoder.encode(self.ptr.get_k()))
+        zf.writestr(directory + "k.json", encoder.encode(self.ptr.k()))
 
         with zf.open(directory + "t.npy", mode="w", force_zip64=True) as f:
             np.save(f, t_array, allow_pickle=False)
