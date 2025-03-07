@@ -593,7 +593,7 @@ class TestBSpline(utils.SymbolTests):
 
     def test_simple(self):
         model = Model()
-        x = model.constant([0, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0])
+        x = model.constant([2.0, 2.5, 3.0, 3.5, 4.0])
         k = 2
         t = [0, 1, 2, 3, 4, 5, 6]
         c = [-1, 2, 0, -1]
@@ -601,7 +601,7 @@ class TestBSpline(utils.SymbolTests):
         model.states.resize(1)
         with model.lock():
             np.testing.assert_array_equal(bspline_node.state(),
-                                          [float('nan'), 0.5, 1.375, 1.0, 0.125, -0.5, float('nan')])
+                                          [0.5, 1.375, 1.0, 0.125, -0.5])
 
     def test_errors(self):
         model = Model()
@@ -640,6 +640,16 @@ class TestBSpline(utils.SymbolTests):
             with self.assertRaisesRegex(
                     ValueError, ("number of knots should be equal to sum of"
                                  "degree, number of coefficients and 1")
+            ):
+                bspline(x, k, t, c)
+        with self.subTest("bspline node only interpolates inside the base interval"):
+            x = model.constant([0, 5])
+            k = 2
+            t = [0, 1, 2, 3, 4, 5, 6]
+            c = [-1, 2, 0, -1]
+            with self.assertRaisesRegex(
+                    ValueError, ("bspline node only interpolates inside the base interval: "
+                                 "2.000000 to 4.000000")
             ):
                 bspline(x, k, t, c)
 

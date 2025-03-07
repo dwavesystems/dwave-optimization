@@ -78,7 +78,7 @@ TEST_CASE("BSpline") {
         std::vector<double> t = {0, 1, 2, 3, 4, 5, 6};
         std::vector<double> c = {-1, 2, 0, -1};
 
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::span<const ssize_t>{}, 2, 5);
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::span<const ssize_t>{}, 2, 4);
         auto bspline_ptr = graph.emplace_node<BSplineNode>(x_ptr, k, t,  c);
 
         auto state = graph.empty_state();
