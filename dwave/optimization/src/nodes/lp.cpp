@@ -175,6 +175,23 @@ bool LPNode::feasible(const State& state) const {
     return data_ptr<LPNodeData>(state)->result.feasible();
 }
 
+std::unordered_map<std::string, ssize_t> LPNode::get_arguments() const {
+    ssize_t pred_index = 0;
+    std::unordered_map<std::string, ssize_t> args;
+    args["c"] = pred_index++;
+    if (b_lb_ptr_) args["b_lb"] = pred_index++;
+    if (A_ptr_) args["A"] = pred_index++;
+    if (b_ub_ptr_) args["b_ub"] = pred_index++;
+    if (A_eq_ptr_) args["A_eq"] = pred_index++;
+    if (b_eq_ptr_) args["b_eq"] = pred_index++;
+    if (lb_ptr_) args["lb"] = pred_index++;
+    if (ub_ptr_) args["ub"] = pred_index++;
+
+    assert(args.size() == this->predecessors().size());
+
+    return args;
+}
+
 template <class LPData>
 void LPNode::readout_predecessor_data(const State& state, LPData& lp) const {
     assert(c_ptr_ && "c should always have been provided");
