@@ -23,6 +23,7 @@ BSplineNode::BSplineNode(ArrayNode* array_ptr, const int k, const std::vector<do
             :ArrayOutputMixin(array_ptr->size()), array_ptr_(array_ptr), k_(k), t_(std::move(t)), c_(std::move(c)) {
                 if (!array_ptr) throw std::invalid_argument("node pointer cannot be nullptr");
                 if (array_ptr->ndim() > 1) throw std::invalid_argument("node pointer cannot be multi-d array");
+
                 // conservative upper limits to avoid expensive calculations
                 if (k >= 5) throw std::invalid_argument("bspline degree should be smaller than 5");
                 if (t.size() >= 20) throw std::invalid_argument("number of knots should be smaller than 20");
@@ -30,7 +31,20 @@ BSplineNode::BSplineNode(ArrayNode* array_ptr, const int k, const std::vector<do
                     throw std::invalid_argument("number of knots should be equal to sum of"
                                                 "degree, number of coefficients and 1");
                 }
-            this->add_predecessor(array_ptr);
+
+                // bspline node does not extrapolate outside of the base interval
+                double pred_min = array_ptr->minmax().first;
+                double pred_max = array_ptr->minmax().second;
+                double base_interval_min = t[k];
+                double base_interval_max = t[c.size()];
+                if (pred_min < base_interval_min || pred_max > base_interval_max) {
+                    throw std::invalid_argument("bspline node only interpolates inside the base interval: "
+                                                + std::to_string(base_interval_min)
+                                                + " to "
+                                                + std::to_string(base_interval_max));
+                }
+
+                this->add_predecessor(array_ptr);
             }
 
 std::vector<double> BSplineNode::bspline_basis(double state) const {
@@ -61,8 +75,6 @@ std::vector<double> BSplineNode::bspline_basis(double state) const {
 
 double BSplineNode::compute_value(double state) const {
     int m = c_.size();
-    // return nans outside of the base interval, no extrapolation.
-    if (state < t_[k_] || state > t_[m]) { return std::numeric_limits<double>::quiet_NaN(); }
     std::vector<double> B_k = bspline_basis(state);
 
     double sum = 0.0;
