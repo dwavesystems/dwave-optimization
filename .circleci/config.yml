@@ -236,6 +236,49 @@ jobs:
       - run: *install-requirements
       - run: *run-cpp-tests
 
+  serialization:
+    docker:
+      - image: cimg/python:3.13
+
+    steps:
+      - checkout
+      - attach_workspace:
+          at: dist
+      - run:
+          name: install dwave-optimization 0.5.2  # oldest that doesn't support serialization v1
+          command: |
+            python -m venv env_0.5.2
+            . env_0.5.2/bin/activate
+            pip install dwave-optimization==0.5.2
+      - run:
+          name: install latest dwave-optimization
+          command: |
+            python -m venv env_latest
+            . env_latest/bin/activate
+            pip install dist/*optimization*cp313*.whl
+      - run:
+          name: save models with latest and load with 0.5.2
+          command: |
+            cd tests/
+            mkdir models
+            . ../env_latest/bin/activate
+            python test_serialization.py save models --version=0.1
+            deactivate
+            . ../env_0.5.2/bin/activate
+            python test_serialization.py load models
+            rm -r models
+      - run:
+          name: save models with 0.5.2 and load with latest
+          command: |
+            cd tests/
+            mkdir models
+            . ../env_0.5.2/bin/activate
+            python test_serialization.py save models
+            deactivate
+            . ../env_latest/bin/activate
+            python test_serialization.py load models
+            rm -r models
+
   docs:
     docker:
       - image: cimg/python:3.10  # As of July 2024, RTD uses 3.10
@@ -338,6 +381,9 @@ workflows:
             parameters:
               gcc-version: ["11", "12", "13", "14"]
       - cpp-macOS
+      - serialization:
+          requires:
+            - python-linux
       - docs:
           requires:
             - python-linux
