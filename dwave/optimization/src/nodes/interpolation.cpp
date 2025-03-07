@@ -1,4 +1,4 @@
-// Copyright 2024 D-Wave
+// Copyright 2025 D-Wave
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -92,7 +92,6 @@ void BSplineNode::commit(State& state) const {
 std::span<const Update> BSplineNode::diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->diff();
 }
-
 bool BSplineNode::integral() const { return false; }
 
 
