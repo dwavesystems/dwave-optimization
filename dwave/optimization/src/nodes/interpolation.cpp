@@ -72,11 +72,11 @@ double BSplineNode::compute_value(double state) const {
     return sum;
 }
 
-int BSplineNode::get_k() const { return k_; }
+int BSplineNode::k() const { return k_; }
 
-const std::vector<double>& BSplineNode::get_t() const { return t_; }
+const std::vector<double>& BSplineNode::t() const { return t_; }
 
-const std::vector<double>& BSplineNode::get_c() const { return c_; }
+const std::vector<double>& BSplineNode::c() const { return c_; }
 
 
 ssize_t BSplineNode::size(const State& state) const { return array_ptr_->size(state); }

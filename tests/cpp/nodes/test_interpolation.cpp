@@ -43,9 +43,9 @@ TEST_CASE("BSpline") {
                     CHECK(!bspline.integral());
                     CHECK(bspline.min() == -1);
                     CHECK(bspline.max() == 2);
-                    CHECK(bspline.get_k() == k);
-                    CHECK(bspline.get_t() == t);
-                    CHECK(bspline.get_c() == c);
+                    CHECK(bspline.k() == k);
+                    CHECK(bspline.t() == t);
+                    CHECK(bspline.c() == c);
             }
         }
     }
