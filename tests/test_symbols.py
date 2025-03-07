@@ -1429,9 +1429,51 @@ class TestLogical(utils.UnaryOpTests):
 
 class TestLP(utils.SymbolTests):
     def generate_symbols(self):
+        # test serialization on a few different scenarios of different arguments
+        # to the LP symbol
+
+        # just c
         model = Model()
         c = model.integer(2, lower_bound=-10, upper_bound=10)
         lp = dwave.optimization.symbols.LP(c)
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+        model.lock()
+
+        yield lp
+        yield feasible
+        yield obj
+        yield sol
+
+        # provide c, A, b_ub, and ub
+        model = Model()
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        A = model.integer((3, 2), lower_bound=-10, upper_bound=10)
+        b_ub = model.integer(3, lower_bound=-10, upper_bound=10)
+        ub = model.integer(2, lower_bound=0, upper_bound=1)
+        lp = dwave.optimization.symbols.LP(c, A=A, b_ub=b_ub, ub=ub)
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+        model.lock()
+
+        yield lp
+        yield feasible
+        yield obj
+        yield sol
+
+        # provide all arguments
+        model = Model()
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        b_lb = model.integer(3, lower_bound=-10, upper_bound=10)
+        A = model.integer((3, 2), lower_bound=-10, upper_bound=10)
+        b_ub = model.integer(3, lower_bound=-10, upper_bound=10)
+        A_eq = model.integer((4, 2), lower_bound=-10, upper_bound=10)
+        b_eq = model.integer(4, lower_bound=-10, upper_bound=10)
+        lb = model.integer(2, lower_bound=0, upper_bound=1)
+        ub = model.integer(2, lower_bound=0, upper_bound=1)
+        lp = dwave.optimization.symbols.LP(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub)
         feasible = lp.success()
         obj = lp.fun()
         sol = lp.x()
@@ -1481,14 +1523,6 @@ class TestLP(utils.SymbolTests):
             np.testing.assert_allclose(sol.state(), [10, -3])
             np.testing.assert_allclose(feasible.state(), 1)
             np.testing.assert_allclose(obj.state(), -1 * 10 + 4 * -3)
-
-    @unittest.skip("not yet implemented")
-    def test_serialization(self):
-        pass
-
-    @unittest.skip("not yet implemented")
-    def test_state_serialization(self):
-        pass
 
 
 class TestMax(utils.SymbolTests):

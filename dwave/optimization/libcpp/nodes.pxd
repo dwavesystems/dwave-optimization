@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from libcpp.string cimport string
+from libcpp.unordered_map cimport unordered_map
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp cimport span, variant
@@ -89,7 +91,7 @@ cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimizatio
         pass
 
     cdef cppclass LPNode(Node):
-        pass
+        unordered_map[string, ssize_t] get_arguments()
 
     cdef cppclass LPNodeBase(Node):
         pass

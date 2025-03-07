@@ -135,7 +135,6 @@ __all__ = [
     "Log",
     "Logical",
     "LP",
-    "LPBase",
     "LPFeasible",
     "LPObjectiveValue",
     "LPSolution",
@@ -2152,7 +2151,7 @@ cdef class Logical(ArraySymbol):
 _register(Logical, typeid(cppLogicalNode))
 
 
-cdef class LP(LPBase):
+cdef class LP(Symbol):
     def __init__(self, ArraySymbol c,
                  ArraySymbol b_lb = None,
                  ArraySymbol A = None,
@@ -2177,7 +2176,6 @@ cdef class LP(LPBase):
 
         self.ptr = model._graph.emplace_node[cppLPNode](
             c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, A_eq_ptr, b_eq_ptr, lb_ptr, ub_ptr)
-        self.base_ptr = dynamic_cast_ptr[cppLPNodeBase](self.ptr)
         self.initialize_node(model, self.ptr)
 
     @staticmethod
@@ -2220,6 +2218,19 @@ cdef class LP(LPBase):
             self._solution = LPSolution(self)
         return self._solution
 
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        with zf.open(directory + "arguments.json", "r") as f:
+            args = json.load(f)
+            return LP(**{arg: predecessors[index] for arg, index in args.items()})
+
+    def _into_zipfile(self, zf, directory):
+        encoder = json.JSONEncoder(separators=(',', ':'))
+        zf.writestr(
+            directory + "arguments.json",
+            encoder.encode({arg.decode(): val for arg, val in self.ptr.get_arguments()})
+        )
+
     cdef cppLPNode* ptr
 
     cdef object _feasible
@@ -2230,10 +2241,14 @@ _register(LP, typeid(cppLPNode))
 
 
 cdef class LPFeasible(ArraySymbol):
-    def __init__(self, LPBase lp):
+    def __init__(self, Symbol lp):
         cdef _Graph model = lp.model
 
-        self.ptr = model._graph.emplace_node[cppLPFeasibleNode](lp.base_ptr)
+        cdef cppLPNodeBase* base_ptr = dynamic_cast_ptr[cppLPNodeBase](lp.node_ptr)
+        if not base_ptr:
+            raise TypeError("Provided symbol must be derived from the LP base class")
+
+        self.ptr = model._graph.emplace_node[cppLPFeasibleNode](base_ptr)
         self.initialize_arraynode(model, self.ptr)
 
     @staticmethod
@@ -2252,10 +2267,14 @@ _register(LPFeasible, typeid(cppLPFeasibleNode))
 
 
 cdef class LPObjectiveValue(ArraySymbol):
-    def __init__(self, LPBase lp):
+    def __init__(self, Symbol lp):
         cdef _Graph model = lp.model
 
-        self.ptr = model._graph.emplace_node[cppLPObjectiveValueNode](lp.base_ptr)
+        cdef cppLPNodeBase* base_ptr = dynamic_cast_ptr[cppLPNodeBase](lp.node_ptr)
+        if not base_ptr:
+            raise TypeError("Provided symbol must be derived from the LP base class")
+
+        self.ptr = model._graph.emplace_node[cppLPObjectiveValueNode](base_ptr)
         self.initialize_arraynode(model, self.ptr)
 
     @staticmethod
@@ -2275,10 +2294,14 @@ _register(LPObjectiveValue, typeid(cppLPObjectiveValueNode))
 
 
 cdef class LPSolution(ArraySymbol):
-    def __init__(self, LPBase lp):
+    def __init__(self, Symbol lp):
         cdef _Graph model = lp.model
 
-        self.ptr = model._graph.emplace_node[cppLPSolutionNode](lp.base_ptr)
+        cdef cppLPNodeBase* base_ptr = dynamic_cast_ptr[cppLPNodeBase](lp.node_ptr)
+        if not base_ptr:
+            raise TypeError("Provided symbol must be derived from the LP base class")
+
+        self.ptr = model._graph.emplace_node[cppLPSolutionNode](base_ptr)
         self.initialize_arraynode(model, self.ptr)
 
     @staticmethod

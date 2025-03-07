@@ -24,6 +24,3 @@ from dwave.optimization.libcpp.nodes cimport LPNodeBase as cppLPNodeBase
 cdef void _register(object cls, const type_info& typeinfo)
 
 cdef object symbol_from_ptr(_Graph model, cppNode* ptr)
-
-cdef class LPBase(Symbol):
-    cdef cppLPNodeBase* base_ptr

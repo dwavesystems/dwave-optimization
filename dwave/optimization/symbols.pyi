@@ -130,7 +130,7 @@ class Logical(ArraySymbol):
     ...
 
 
-class LP(ArraySymbol):
+class LP(Symbol):
     ...
 
 
