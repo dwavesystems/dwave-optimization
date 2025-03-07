@@ -103,8 +103,8 @@ std::pair<double, double> BSplineNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return memoize(cache, [&]() {
 
-        double low = std::reduce(c_.begin(), c_.end(), c_[0], [](int a, int b) { return std::min(a, b); });
-        double high = std::reduce(c_.begin(), c_.end(), c_[0], [](int a, int b) { return std::max(a, b); });
+        double low = *std::min_element(c_.begin(), c_.end());
+        double high = *std::max_element(c_.begin(), c_.end());
 
         return std::make_pair(low, high);
     });
@@ -125,12 +125,9 @@ void BSplineNode::propagate(State& state) const {
     auto diff = node_data_ptr->diff(state);
     auto state_data = node_data_ptr->view(state);
 
-    if (diff.size()) {
-        for (auto& update : diff) {
-            auto index = update.index;
+    for (const auto& [index, _, __] : diff) {
             data_ptr<ArrayNodeStateData>(state)->set(index, compute_value(state_data[index]));
         }
-    }
 }
 
 }  // namespace dwave::optimization
