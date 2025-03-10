@@ -732,7 +732,7 @@ def sqrt(x: ArraySymbol) -> SquareRoot:
     return SquareRoot(x)
 
 
-def stack(arrays: collections.abc.Iterable[ArraySymbol], axis: int = 0) -> ArraySymbol:
+def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> ArraySymbol:
     r"""Joins a sequence of ArraySymbols along a new axis.
 
     Args:
@@ -778,15 +778,27 @@ def stack(arrays: collections.abc.Iterable[ArraySymbol], axis: int = 0) -> Array
         [[1. 3. 5.]
          [2. 4. 6.]]
     """
-    if all(isinstance(arr, ArraySymbol) for arr in arrays):
-        if not 0 <= axis <= arrays[0].ndim():
-            raise ValueError(f'axis {axis} is out of bounds for array'
-                             f' of dimension {arrays[0].ndim() + 1}')
+    # A silly case, but support for consistency with NumPy
+    if isinstance(arrays, ArraySymbol):
+        return arrays
 
-        make_shape = lambda x: (x.shape()[:axis]) + (1, ) + (x.shape()[axis:])
-        return concatenate([arr.reshape(make_shape(arr)) for arr in arrays], axis)
+    if not all(isinstance(arr, ArraySymbol) for arr in arrays):
+        raise ValueError("stack() takes a sequence of array symbols of the same shape")
 
-    raise ValueError("stack takes an Iterable of ArraySymbols of same shape")
+    if len(arrays) == 0:
+        raise ValueError("need at least one array symbol to stack")
+
+    shape = arrays[0].shape()
+
+    if not all(arr.shape() == shape for arr in arrays):
+        raise ValueError("all input array symbols must have the same shape")
+
+    if not 0 <= axis <= len(shape):
+        raise ValueError(f'axis {axis} is out of bounds for array'
+                         f' of dimension {len(shape) + 1}')
+
+    new_shape = tuple(shape[:axis]) + (1,) + (shape[axis:])  # add the axis and then concatenate
+    return concatenate([arr.reshape(new_shape) for arr in arrays], axis)
 
 
 def where(condition: ArraySymbol, x: ArraySymbol, y: ArraySymbol) -> Where:
