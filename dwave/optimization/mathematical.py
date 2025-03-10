@@ -47,9 +47,12 @@ from dwave.optimization.symbols import (
 __all__ = [
     "add",
     "arange",
+    "atleast_1d",
+    "atleast_2d",
     "concatenate",
     "divide",
     "expit",
+    "hstack",
     "log",
     "logical",
     "logical_and",
@@ -64,6 +67,7 @@ __all__ = [
     "rint",
     "sqrt",
     "stack",
+    "vstack",
     "where",
 ]
 
@@ -155,13 +159,120 @@ def arange(start: typing.Union[int, ArraySymbol, None] = None,
     return ARange(start, stop, step)
 
 
-def concatenate(array_likes: typing.Union[collections.abc.Iterable, ArraySymbol],
-                axis: int = 0,
-                ) -> ArraySymbol:
-    r"""Return the concatenation of one or more symbols on the given axis.
+@typing.overload
+def atleast_1d(array: ArraySymbol) -> ArraySymbol: ...
+@typing.overload
+def atleast_1d(*arrays: ArraySymbol) -> tuple[ArraySymbol, ...]: ...
+
+
+def atleast_1d(*arrays):
+    """Convert array symbols to array symbols with at least one dimension.
 
     Args:
-        array_like: Array symbols to concatenate.
+        arrays: One or more array symbols.
+    Returns:
+        An array symbol, or a tuple of array symbols.
+
+    Examples:
+        >>> from dwave.optimization import atleast_1d, Model
+        ...
+        >>> model = Model()
+        >>> a = model.constant(1)
+        >>> b = model.constant([2])
+        >>> c, d = atleast_1d(a, b)
+        >>> c.shape()  # a is converted into a 1d array
+        (1,)
+        >>> d.shape()  # b is not changed
+        (1,)
+        >>> d is b
+        True
+        >>> e = model.constant([[0, 1, 2], [3, 4, 5]])
+        >>> f = atleast_1d(e)  # e is not changed
+        >>> f.shape()
+        (2, 3)
+        >>> f is e
+        True
+
+    See Also:
+        :func:`atleast_2d()`
+
+    .. versionadded:: 0.6.0
+    """
+    result: list[ArraySymbol] = []
+    for array in arrays:
+        if not isinstance(array, ArraySymbol):
+            raise TypeError(f"{array!r} is not an array symbol")
+        if array.ndim() == 0:
+            result.append(array.reshape(1))
+        else:
+            result.append(array)
+    if len(result) == 1:
+        return result[0]
+    return tuple(result)
+
+
+@typing.overload
+def atleast_2d(array: ArraySymbol) -> ArraySymbol: ...
+@typing.overload
+def atleast_2d(*arrays: ArraySymbol) -> tuple[ArraySymbol, ...]: ...
+
+
+def atleast_2d(*arrays):
+    """Convert array symbols to array symbols with at least two dimensions.
+
+    Args:
+        arrays: One or more array symbols.
+    Returns:
+        An array symbol, or a tuple of array symbols.
+
+    Examples:
+        >>> from dwave.optimization import atleast_2d, Model
+        ...
+        >>> model = Model()
+        >>> a = model.constant(1)
+        >>> b = model.constant([[2]])
+        >>> c, d = atleast_2d(a, b)
+        >>> c.shape()  # a is converted into a 2d array
+        (1, 1)
+        >>> d.shape()  # c is not changed
+        (1, 1)
+        >>> d is b
+        True
+        >>> e = model.constant([[0, 1, 2], [3, 4, 5]])
+        >>> f = atleast_2d(e)  # e is not changed
+        >>> f.shape()
+        (2, 3)
+        >>> f is e
+        True
+
+    See Also:
+        :func:`atleast_1d()`
+
+    .. versionadded:: 0.6.0
+    """
+    result: list[ArraySymbol] = []
+    for array in arrays:
+        if not isinstance(array, ArraySymbol):
+            raise TypeError(f"{array!r} is not an array symbol")
+        shape = array.shape()
+        if len(shape) == 0:
+            result.append(array.reshape(1, 1))
+        elif len(shape) == 1:
+            result.append(array.reshape(1, *shape))
+        else:
+            result.append(array)
+    if len(result) == 1:
+        return result[0]
+    return tuple(result)
+
+
+def concatenate(arrays: typing.Sequence[ArraySymbol],
+                axis: int = 0,
+                ) -> ArraySymbol:
+    """Return the concatenation of one or more symbols on the given axis.
+
+    Args:
+        arrays: Array symbols to concatenate.
         axis: The concatenation axis.
 
     Returns:
@@ -187,20 +298,17 @@ def concatenate(array_likes: typing.Union[collections.abc.Iterable, ArraySymbol]
         [[0. 1.]
          [2. 3.]
          [4. 5.]]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Concatenate`: equivalent symbol.
+
+        :func:`~dwave.optimization.mathematical.hstack`,
+        :func:`~dwave.optimization.mathematical.stack`,
+        :func:`~dwave.optimization.mathematical.vstack`
+
+    .. versionadded:: 0.4.3
     """
-    if isinstance(array_likes, ArraySymbol):
-        return array_likes
-
-    if (isinstance(array_likes, collections.abc.Iterable)
-            and isinstance(array_likes, collections.abc.Sized)
-            and (0 < len(array_likes))):
-
-        if len(array_likes) == 1:
-            return array_likes[0]
-
-        return Concatenate(tuple(array_likes), axis)
-
-    raise TypeError("concatenate takes one or more ArraySymbol as input")
+    return Concatenate(arrays, axis=axis)
 
 
 def divide(x1: ArraySymbol, x2: ArraySymbol) -> Divide:
@@ -264,6 +372,60 @@ def expit(x: ArraySymbol) -> Expit:
     .. versionadded:: 0.5.2
     """
     return Expit(x)
+
+
+def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
+    """Stack a sequence of array symbols horizontally.
+
+    This is equivalent to concatenation along the second axis, except for 1-D
+    array symbols where it concatenates along the first axis.
+
+    Args:
+        arrays: Array symbols to be concatenated. Arrays must have the same
+            shape along all but the second axis unless they are 1d arrays.
+
+    Returns:
+        An array symbol.
+
+    Examples:
+
+        >>> from dwave.optimization import hstack, Model
+
+        >>> model = Model()
+        >>> model.states.resize(1)
+        ...
+        >>> a = model.constant([0])
+        >>> b = model.constant([1, 2, 3])
+        >>> h = hstack((a, b))
+        >>> with model.lock():
+        ...     h.state()
+        array([0., 1., 2., 3.])
+
+        >>> model = Model()
+        >>> model.states.resize(1)
+        ...
+        >>> a = model.constant([[0], [3]])
+        >>> b = model.constant([[1, 2], [4, 5]])
+        >>> h = hstack((a, b))
+        >>> with model.lock():
+        ...     h.state()
+        array([[0., 1., 2.],
+               [3., 4., 5.]])
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.concatenate`,
+        :func:`~dwave.optimization.mathematical.stack`,
+        :func:`~dwave.optimization.mathematical.vstack`
+
+    .. versionadded:: 0.6.0
+    """
+    arrays = atleast_1d(*arrays)
+    if not isinstance(arrays, tuple):
+        arrays = (arrays,)
+    if arrays and arrays[0].ndim() == 1:
+        return concatenate(arrays, 0)
+    else:
+        return concatenate(arrays, 1)
 
 
 def log(x: ArraySymbol) -> Log:
@@ -733,7 +895,7 @@ def sqrt(x: ArraySymbol) -> SquareRoot:
 
 
 def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> ArraySymbol:
-    r"""Joins a sequence of ArraySymbols along a new axis.
+    """Joins a sequence of ArraySymbols along a new axis.
 
     Args:
         arrays: sequence of ArraySymbol
@@ -777,13 +939,17 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
          [5. 6.]]
         [[1. 3. 5.]
          [2. 4. 6.]]
-    """
-    # A silly case, but support for consistency with NumPy
-    if isinstance(arrays, ArraySymbol):
-        return arrays
 
-    if not all(isinstance(arr, ArraySymbol) for arr in arrays):
-        raise ValueError("stack() takes a sequence of array symbols of the same shape")
+    See Also:
+        :func:`~dwave.optimization.mathematical.concatenate`,
+        :func:`~dwave.optimization.mathematical.hstack`,
+        :func:`~dwave.optimization.mathematical.vstack`
+
+    .. versionadded:: 0.5.0
+    """
+    if (not isinstance(arrays, collections.abc.Sequence) or
+            not all(isinstance(arr, ArraySymbol) for arr in arrays)):
+        raise TypeError("stack() takes a sequence of array symbols of the same shape")
 
     if len(arrays) == 0:
         raise ValueError("need at least one array symbol to stack")
@@ -799,6 +965,58 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
 
     new_shape = tuple(shape[:axis]) + (1,) + (shape[axis:])  # add the axis and then concatenate
     return concatenate([arr.reshape(new_shape) for arr in arrays], axis)
+
+
+def vstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
+    """Stack a sequence of array symbols vertically.
+
+    This is equivalent to concatenation along the first axis.
+
+    Args:
+        arrays: Array symbols to be concatenated. Arrays must have the same
+            shape along all but the first axis unless they are 0d or 1d arrays.
+
+    Returns:
+        An array symbol.
+
+    Examples:
+
+        >>> from dwave.optimization import vstack, Model
+
+        >>> model = Model()
+        >>> model.states.resize(1)
+        ...
+        >>> a = model.constant([0])
+        >>> b = model.constant([1])
+        >>> h = stack((a, b))
+        >>> with model.lock():
+        ...     h.state()
+        array([[0.],
+               [1.]])
+
+        >>> model = Model()
+        >>> model.states.resize(1)
+        ...
+        >>> a = model.constant([0, 1, 2])
+        >>> b = model.constant([[3, 4, 5], [6, 7, 8]])
+        >>> h = vstack((a, b))
+        >>> with model.lock():
+        ...     h.state()
+        array([[0., 1., 2.],
+               [3., 4., 5.],
+               [6., 7., 8.]])
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.concatenate`,
+        :func:`~dwave.optimization.mathematical.stack`,
+        :func:`~dwave.optimization.mathematical.vstack`
+
+    .. versionadded:: 0.6.0
+    """
+    arrays = atleast_2d(*arrays)
+    if not isinstance(arrays, tuple):
+        arrays = (arrays,)
+    return concatenate(arrays, 0)
 
 
 def where(condition: ArraySymbol, x: ArraySymbol, y: ArraySymbol) -> Where:

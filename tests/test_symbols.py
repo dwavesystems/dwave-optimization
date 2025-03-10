@@ -594,30 +594,25 @@ class TestConcatenate(utils.SymbolTests):
         with self.subTest("Concatenate ndarray of binary returns Concatenate"):
             A = [model.binary(5), model.binary(5)]
             self.assertIsInstance(
-                dwave.optimization.concatenate(np.asarray(tuple(A), dtype=object)),
+                dwave.optimization.concatenate(tuple(A)),
                 dwave.optimization.symbols.Concatenate
-            )
-        with self.subTest("Concatenate ArraySymbol returns ArraySymbol"):
-            self.assertIsInstance(
-                dwave.optimization.concatenate(model.constant(5)),
-                dwave.optimization.model.ArraySymbol
-            )
-            self.assertIsInstance(
-                dwave.optimization.concatenate(model.binary(5)),
-                dwave.optimization.model.ArraySymbol
             )
         with self.subTest("Concatenate Iterable and Sized of length 1 returns ArraySymbol"):
             self.assertIsInstance(
-                dwave.optimization.concatenate((model.binary(5), )),
-                dwave.optimization.model.ArraySymbol
-            )
-            self.assertIsInstance(
-                dwave.optimization.concatenate((model.constant(5),)),
+                dwave.optimization.concatenate((model.binary(5),)),
                 dwave.optimization.model.ArraySymbol
             )
 
     def test_errors(self):
         model = Model()
+        with self.subTest("zero dimensions"):
+            a = model.constant(1)
+            with self.assertRaisesRegex(
+                ValueError,
+                "axis 0 is out of bounds for array of dimension 0",
+            ):
+                dwave.optimization.concatenate((a,))
+
         with self.subTest("same number of dimensions"):
             A = model.constant(np.arange(6)).reshape((1, 2, 3))
             B = model.constant(np.arange(24)).reshape((1, 2, 3, 4))

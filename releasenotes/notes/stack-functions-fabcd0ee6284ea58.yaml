@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Add ``atleast_1d()``, ``atleast_2d()``, ``hstack()``, and ``vstack()`` functions.
+    See `#240 <https://github.com/dwavesystems/dwave-optimization/issues/240>`_.
+upgrade:
+  - |
+    Change ``stack()`` and ``concatenate()`` functions handling of single array inputs.
+    They are no longer passed through; the functions now raise an error instead.

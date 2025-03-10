@@ -25,6 +25,138 @@ import dwave.optimization
 from dwave.optimization import Model
 
 
+class Test_atleast_1d(unittest.TestCase):
+    def test_0d(self):
+        model = Model()
+        model.states.resize(1)
+
+        a = model.constant(1)
+        out = dwave.optimization.atleast_1d(a)
+        with model.lock():
+            np.testing.assert_array_equal(out.state(), [1])
+
+        b = model.constant(2)
+        out1, out2 = dwave.optimization.atleast_1d(a, b)
+        with model.lock():
+            np.testing.assert_array_equal(out1.state(), [1])
+            np.testing.assert_array_equal(out2.state(), [2])
+
+    def test_1d(self):
+        model = Model()
+        model.states.resize(1)
+
+        a = model.constant([1, 2, 3])
+        out = dwave.optimization.atleast_1d(a)
+        with model.lock():
+            np.testing.assert_array_equal(out.state(), [1, 2, 3])
+
+    def test_2d(self):
+        model = Model()
+        model.states.resize(1)
+
+        a = model.constant([[1, 2], [3, 4]])
+        out = dwave.optimization.atleast_1d(a)
+        with model.lock():
+            np.testing.assert_array_equal(out.state(), [[1, 2], [3, 4]])
+
+
+class Test_atleast_2d(unittest.TestCase):
+    def test_0d(self):
+        model = Model()
+        model.states.resize(1)
+
+        a = model.constant(1)
+        out = dwave.optimization.atleast_2d(a)
+        with model.lock():
+            np.testing.assert_array_equal(out.state(), [[1]])
+
+        b = model.constant(2)
+        out1, out2 = dwave.optimization.atleast_2d(a, b)
+        with model.lock():
+            np.testing.assert_array_equal(out1.state(), [[1]])
+            np.testing.assert_array_equal(out2.state(), [[2]])
+
+    def test_1d(self):
+        model = Model()
+        model.states.resize(1)
+
+        a = model.constant([1, 2, 3])
+        out = dwave.optimization.atleast_2d(a)
+        with model.lock():
+            np.testing.assert_array_equal(out.state(), [[1, 2, 3]])
+
+    def test_2d(self):
+        model = Model()
+        model.states.resize(1)
+
+        a = model.constant([[1, 2], [3, 4]])
+        out = dwave.optimization.atleast_2d(a)
+        with model.lock():
+            np.testing.assert_array_equal(out.state(), [[1, 2], [3, 4]])
+
+
+class TestHStack(unittest.TestCase):
+    def test_0d(self):
+        model = Model()
+        a = model.constant(0)
+        b = model.constant(1)
+        c = model.constant(2)
+        s = dwave.optimization.hstack((a, b, c))
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(s.state(), [0, 1, 2])
+
+    def test_1d(self):
+        # The shape needs to match outside of the first dimension
+        model = Model()
+        a = model.constant([0, 1, 2])
+        b = model.constant([3, 4, 5])
+        s = dwave.optimization.hstack((a, b))
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(s.state(), [0, 1, 2, 3, 4, 5])
+
+    def test_2d(self):
+        # The shape needs to match outside of the first dimension
+        model = Model()
+        a = model.constant([[0], [1]])
+        b = model.constant([[3, 4, 5], [6, 7, 8]])
+        s = dwave.optimization.hstack((a, b))
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(s.state(), [[0, 3, 4, 5], [1, 6, 7, 8]])
+
+    def test_columns(self):
+        model = Model()
+        a = model.constant([[1], [2], [3]])
+        b = model.constant([[4], [5], [6]])
+        s = dwave.optimization.hstack((a, b))
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(s.state(), [[1, 4], [2, 5], [3, 6]])
+
+    def test_exceptions(self):
+        with self.subTest("mismatched 2d"):
+            model = Model()
+            a = model.constant([[0], [1], [2]])
+            b = model.constant([[3], [4]])
+            with self.assertRaises(ValueError):
+                dwave.optimization.hstack((a, b))
+
+        with self.subTest("mismatched 3d"):
+            model = Model()
+            a = model.constant(0)
+            b = model.constant([1])
+            c = model.constant([[2]])
+            d = model.constant([[[3]]])
+            with self.assertRaises(ValueError):
+                dwave.optimization.hstack((a, b, c, d))
+
+
 class TestStack(unittest.TestCase):
     def test_scalars(self):
         model = Model()
@@ -125,11 +257,11 @@ class TestStack(unittest.TestCase):
     def test_single_array_symbol(self):
         model = Model()
         A = model.constant(np.arange(4).reshape(2, 2))
-        s = dwave.optimization.stack(A)
-        self.assertEqual(s.shape(), (2, 2))
-        self.assertEqual(s.ndim(), 2)
-        self.assertTrue(s is A)
-        self.assertIsInstance(s, dwave.optimization.symbols.Constant)
+        with self.assertRaises(TypeError):
+            s = dwave.optimization.stack(A)
+        s = dwave.optimization.stack((A,))
+        self.assertEqual(s.shape(), (1, 2, 2))
+        self.assertEqual(s.ndim(), 3)
 
     def test_single_array(self):
         model = Model()
@@ -140,3 +272,76 @@ class TestStack(unittest.TestCase):
             self.assertEqual(s.shape(), (1, 2, 2))
             self.assertEqual(s.ndim(), 3)
             np.testing.assert_array_equal(s.state(0), np.stack((A,)))
+
+
+class TestVStack(unittest.TestCase):
+    def test_0d(self):
+        model = Model()
+        a = model.constant(0)
+        b = model.constant(1)
+        c = model.constant(2)
+        s = dwave.optimization.vstack((a, b, c))
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(s.state(), [[0], [1], [2]])
+
+    def test_1d(self):
+        # The shape needs to match outside of the first dimension
+        model = Model()
+        a = model.constant([0, 1, 2])
+        b = model.constant([3, 4, 5])
+        s = dwave.optimization.vstack((a, b))
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(s.state(), [[0, 1, 2], [3, 4, 5]])
+
+    def test_2d(self):
+        # The shape needs to match outside of the first dimension
+        model = Model()
+        a = model.constant([[0, 1, 2]])
+        b = model.constant([[3, 4, 5], [6, 7, 8]])
+        s = dwave.optimization.vstack((a, b))
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(s.state(), [[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+
+    def test_0d_1d_2d(self):
+        model = Model()
+        a = model.constant(0)
+        b = model.constant([1])
+        c = model.constant([[2]])
+        s = dwave.optimization.vstack((a, b, c))
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(s.state(), [[0], [1], [2]])
+
+    def test_columns(self):
+        model = Model()
+        a = model.constant([[1], [2], [3]])
+        b = model.constant([[4], [5], [6]])
+        s = dwave.optimization.vstack((a, b))
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(s.state(), [[1], [2], [3], [4], [5], [6]])
+
+    def test_exceptions(self):
+        with self.subTest("mismatched 1d"):
+            model = Model()
+            a = model.constant([0, 1, 2])
+            b = model.constant([3, 4])
+            with self.assertRaises(ValueError):
+                dwave.optimization.vstack((a, b))
+
+        with self.subTest("mismatched 3d"):
+            model = Model()
+            a = model.constant(0)
+            b = model.constant([1])
+            c = model.constant([[2]])
+            d = model.constant([[[3]]])
+            with self.assertRaises(ValueError):
+                dwave.optimization.vstack((a, b, c, d))
