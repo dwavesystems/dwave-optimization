@@ -13,13 +13,14 @@
 //    limitations under the License.
 
 #include <algorithm>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
 #include "simplex.hpp"
 
 namespace dwave::optimization {
 
+using Catch::Matchers::RangeEquals;
 using Catch::Matchers::WithinRel;
 
 TEST_CASE("LP solver (simplex)", "[simplex]") {
@@ -44,6 +45,58 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
             CHECK(result.objective() == -20);
 
             CHECK(std::ranges::equal(std::vector{0, 0, 5}, result.solution()));
+        }
+
+        WHEN("We explicitly set the optimal solution") {
+            SolveResult result;
+            result.set_solution({0, 0, 5}, c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
+
+            CHECK(result.solve_status == SolveResult::SolveStatus::UNSET);
+            CHECK(result.feasible());
+            CHECK(result.objective() == -20);
+            CHECK_THAT(result.solution(), RangeEquals({0, 0, 5}));
+
+            // even though it's optimal, the SolveResult does not know that
+            CHECK(result.solution_status() ==
+                  SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL);
+        }
+
+        WHEN("We explicitly set the solution to a feasible but not optimal value") {
+            SolveResult result;
+            result.set_solution({0, 0, 4}, c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
+
+            CHECK(result.solve_status == SolveResult::SolveStatus::UNSET);
+            CHECK(result.solution_status() ==
+                  SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL);
+            CHECK(result.feasible());
+            CHECK(result.objective() == -16);
+            CHECK_THAT(result.solution(), RangeEquals({0, 0, 4}));
+        }
+
+        WHEN("We explicitly set the solution to an infeasible value") {
+            SolveResult result;
+            result.set_solution({5, 0, 4}, c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
+
+            CHECK(result.solve_status == SolveResult::SolveStatus::UNSET);
+            CHECK(result.solution_status() == SolveResult::SolutionStatus::INFEASIBLE);
+            CHECK(!result.feasible());
+            CHECK_THAT(result.solution(), RangeEquals({5, 0, 4}));
+        }
+
+        WHEN("We explicitly set the solution to an out of bounds value") {
+            SolveResult result;
+            result.set_solution({-1, 0, 4}, c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
+
+            CHECK(result.solve_status == SolveResult::SolveStatus::UNSET);
+            CHECK(result.solution_status() == SolveResult::SolutionStatus::INFEASIBLE);
+            CHECK(!result.feasible());
+            CHECK_THAT(result.solution(), RangeEquals({-1, 0, 4}));
+        }
+
+        WHEN("We explicitly set the solution to something with the wrong shape") {
+            SolveResult result;
+            CHECK_THROWS_AS(result.set_solution({-1, 0}, c, b_lb, A, b_ub, A_eq, b_eq, lb, ub),
+                            std::invalid_argument);
         }
     }
 

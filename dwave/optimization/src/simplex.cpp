@@ -15,6 +15,7 @@
 #include "simplex.hpp"
 
 #include <algorithm>
+#include <string>
 
 namespace dwave::optimization {
 
@@ -529,6 +530,33 @@ void SolveResult::recompute_feasibility(std::span<const double> c, std::span<con
     } else {
         solution_status_ = SolveResult::SolutionStatus::INFEASIBLE;
     }
+}
+
+void SolveResult::set_solution(std::vector<double>&& solution, std::span<const double> c,
+                               std::span<const double> b_lb, std::span<const double> A_data,
+                               std::span<const double> b_ub, std::span<const double> A_eq_data,
+                               std::span<const double> b_eq, std::span<const double> lb,
+                               std::span<const double> ub, double tolerance) {
+    // check shape of solution relative to the other values.
+    // we do not check the LP values amoung themselves for consistency
+    if (solution.size() != c.size()) {
+        throw std::invalid_argument("expected a solution of size " + std::to_string(c.size()) +
+                                    ", given a solution of size " +
+                                    std::to_string(solution.size()));
+    }
+
+    // In the case that we're currently holding an optimal solution, we could
+    // check whether the new solution has the same energy (up to tolerance) and
+    // in that case mark ourselves as optimal. For now though let's just reset
+    // everything
+    {
+        SolveResult tmp;
+        std::swap(*this, tmp);
+    }
+
+    solution_ = std::move(solution);
+    recompute_feasibility(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub, tolerance);
+    final_solution_set = true;
 }
 
 void SolveResult::postprocess_solution(std::span<const double> c, std::span<const double> b_lb,
