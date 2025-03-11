@@ -929,34 +929,28 @@ _register(BinaryVariable, typeid(cppBinaryNode))
 cdef class Concatenate(ArraySymbol):
     """Concatenate symbol.
 
-    Examples:
-        This example creates a Concatenate symbol.
+    See Also:
+        :func:`~dwave.optimization.mathematical.concatenate()` equivalent function.
 
-        >>> from dwave.optimization.model import Model
-        >>> from dwave.optimization.symbols import Concatenate
-        >>> model = Model()
-        >>> a = model.constant([[1, 2], [3, 4]])
-        >>> b = model.constant([[5, 6]])
-        >>> a_b = Concatenate((a, b), axis=0)
-        >>> type(a_b)
-        <class 'dwave.optimization.symbols.Concatenate'>
+    .. versionadded:: 0.4.3
     """
-    def __init__(self, tuple inputs, int axis = 0):
+    def __init__(self, object inputs, Py_ssize_t axis = 0):
+        if (not isinstance(inputs, collections.abc.Sequence) or
+                not all(isinstance(arr, ArraySymbol) for arr in inputs)):
+            raise TypeError("concatenate takes a sequence of array symbols")
+
         if len(inputs) < 1:
-            raise TypeError("must have at least one predecessor node")
+            raise ValueError("need at least one array symbol to concatenate")
 
         cdef _Graph model = inputs[0].model
         cdef vector[cppArrayNode*] cppinputs
 
-        cdef ArraySymbol array
-        for node in inputs:
-            if node.model != model:
+        for symbol in inputs:
+            if symbol.model is not model:
                 raise ValueError("all predecessors must be from the same model")
-            array = <ArraySymbol?>node
-            cppinputs.push_back(array.array_ptr)
+            cppinputs.push_back((<ArraySymbol?>symbol).array_ptr)
 
-        self.ptr = model._graph.emplace_node[cppConcatenateNode](
-            cppinputs, axis)
+        self.ptr = model._graph.emplace_node[cppConcatenateNode](cppinputs, axis)
         self.initialize_arraynode(model, self.ptr)
 
     @staticmethod
