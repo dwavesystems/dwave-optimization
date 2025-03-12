@@ -1566,12 +1566,13 @@ class TestLP(utils.SymbolTests):
         b = model.constant([1, 0, 0])
         lp = dwave.optimization.symbols.LP(c, A=A, b_ub=b)
 
-        model.states.resize(3)
+        model.states.resize(4)
         model.lock()
 
         lp._set_state(0, [0, 1])
         lp._set_state(1, [1, 0])
-        lp._set_state(2, [1, 1])
+        # no states for 2
+        lp._set_state(3, [1, 1])
 
         with self.subTest("model; lock=False"):
             with model.to_file(max_num_states=float("inf")) as f:
@@ -1585,6 +1586,7 @@ class TestLP(utils.SymbolTests):
                 self.assertEqual(lp_copy.state(0).sum(), 1)
                 self.assertEqual(lp_copy.state(1).sum(), 1)
                 self.assertEqual(lp_copy.state(2).sum(), 1)
+                self.assertEqual(lp_copy.state(3).sum(), 1)
 
         with self.subTest("model; lock=True"):
             with model.to_file(max_num_states=float("inf")) as f:
@@ -1595,7 +1597,8 @@ class TestLP(utils.SymbolTests):
             self.assertTrue(copy.is_locked())
             np.testing.assert_array_equal(lp_copy.state(0), [0, 1])
             np.testing.assert_array_equal(lp_copy.state(1), [1, 0])
-            np.testing.assert_array_equal(lp_copy.state(2), [1, 1])
+            self.assertFalse(lp_copy.has_state(2))
+            np.testing.assert_array_equal(lp_copy.state(3), [1, 1])
 
         with self.subTest("states"):
             with model.states.to_file() as f:
@@ -1604,7 +1607,8 @@ class TestLP(utils.SymbolTests):
 
             np.testing.assert_array_equal(lp.state(0), [0, 1])
             np.testing.assert_array_equal(lp.state(1), [1, 0])
-            np.testing.assert_array_equal(lp.state(2), [1, 1])
+            self.assertFalse(lp.has_state(2))
+            np.testing.assert_array_equal(lp.state(3), [1, 1])
 
 
 class TestMax(utils.SymbolTests):

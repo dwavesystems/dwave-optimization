@@ -2333,7 +2333,7 @@ cdef class LP(Symbol):
                 # In the future we could choose to ignore infeasible states.
                 states[state_index, :] = self.state(state_index)
             else:
-                raise NotImplementedError
+                states[state_index, :] = np.nan
 
         # Ok, we have the states, now we just save them into our directory as a NumPy array
         fname = f"nodes/{self.topological_index()}/states.npy"
