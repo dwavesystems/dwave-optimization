@@ -15,6 +15,7 @@
 #pragma once
 
 #include <span>
+#include <vector>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
@@ -105,6 +106,9 @@ class LPNode : public LPNodeBase {
     /// @copydoc Node::commit()
     void commit(State& state) const override;
 
+    /// The LP node's state is potentially degenerate, and therefore not deterministic.
+    bool deterministic_state() const override;
+
     /// @copydoc LPNodeBase::feasible()
     bool feasible(const State& state) const override;
 
@@ -113,6 +117,9 @@ class LPNode : public LPNodeBase {
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
+
+    /// Initialize the state with the given solution
+    void initialize_state(State& state, const std::span<const double> solution) const;
 
     /// @copydoc LPNodeBase::objective_value()
     double objective_value(const State& state) const override;

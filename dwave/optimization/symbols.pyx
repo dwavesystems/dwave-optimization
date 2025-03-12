@@ -20,6 +20,7 @@ import numbers
 
 cimport cpython.object
 import cython
+cimport cython
 import numpy as np
 
 from cpython.ref cimport PyObject
@@ -235,6 +236,13 @@ cdef vector[Py_ssize_t] _as_cppshape(object shape, bint nonnegative = True):
         raise ValueError("negative dimensions are not allowed")
 
     return shape
+
+
+cdef span[cython.numeric] _as_span(cython.numeric[::1] array):
+    """Convert a Cython memoryview over contiguous memory into a C++ span"""
+    if array.size:
+        return span[cython.numeric](&array[0], array.size)
+    return span[cython.numeric]()
 
 
 cdef bool _empty_slice(object slice_) noexcept:
@@ -2200,6 +2208,42 @@ cdef class LP(Symbol):
             self._objective_value = LPObjectiveValue(self)
         return self._objective_value
 
+    def state(self, Py_ssize_t index = 0):
+        """Return the current solution to the LP.
+
+        If the LP is not feasible, the solution is not meaningful.
+        """
+
+        # While LP is not an ArraySymbol, we nonetheless can access the state
+
+        cdef Py_ssize_t num_states = self.model.states.size()
+        if not -num_states <= index < num_states:
+            raise ValueError(f"index out of range: {index}")
+        elif index < 0:  # allow negative indexing
+            index += num_states
+
+        if not self.model.is_locked() and self.node_ptr.topological_index() < 0:
+            raise TypeError("the state of an intermediate variable cannot be accessed without "
+                            "locking the model first. See model.lock().")
+
+        # Rather than using a StateView, let's just do an explicit copy here
+
+        cdef States states = self.model.states  # for Cython access
+        states.resolve()
+        self.model._graph.recursive_initialize(states._states.at(index), self.node_ptr)
+
+        solution = self.ptr.solution(states._states.at(index))
+
+        cdef double[::1] state = np.empty(self._num_columns(), dtype=np.double)
+
+        if <Py_ssize_t>solution.size() != state.shape[0]:
+            raise RuntimeError  # should never happen, but avoid the segfault just in case
+
+        for i in range(state.shape[0]):
+            state[i] = solution[i]
+
+        return np.asarray(state)
+
     # the name is chosen to match SciPy's OptimizeResult
     def success(self):
         if self._feasible is None:
@@ -2224,6 +2268,77 @@ cdef class LP(Symbol):
             directory + "arguments.json",
             encoder.encode({arg.decode(): val for arg, val in self.ptr.get_arguments()})
         )
+
+    cdef Py_ssize_t _num_columns(self) except -1:
+        """The number of columns in the LP."""
+        if self.ptr.variables_shape().size() != 1:
+            raise RuntimeError  # should never happen, but avoid the segfault just in case
+        return self.ptr.variables_shape()[0]
+
+    def _set_state(self, Py_ssize_t index, state):
+        """Set the output of the LP."""
+        if not self.model.is_locked() and self.node_ptr.topological_index() < 0:
+            raise TypeError("the state of an intermediate variable cannot be set without "
+                            "locking the model first. See model.lock().")
+
+        # Convert the state into something we can handle in C++.
+        # This also does some type checking etc
+        cdef double[::1] arr = np.ascontiguousarray(state, dtype=np.double)
+
+        # Reset our state, and check whether that's possible
+        self.reset_state(index)
+
+        # Also make sure our predecessors all have states
+        cdef States states = self.model.states  # for Cython access
+        for pred in self.iter_predecessors():
+            self.model._graph.recursive_initialize(states._states.at(index), (<Symbol>pred).node_ptr)
+
+        # The validity of the state is checked in C++
+        self.ptr.initialize_state(states._states.at(index), _as_span(arr))
+
+    def _states_from_zipfile(self, zf, *, num_states, version):
+        if version < (1, 0):
+            raise ValueError("LP symbol serialization requires serialization version 1.0 or newer")
+
+        # Test whether we have any states saved.
+        try:
+            states_info = zf.getinfo(f"nodes/{self.topological_index()}/states.npy")
+        except KeyError:
+            # No states, so nothing to load
+            return
+
+        # If we have states to load, then go ahead and do so.
+        with zf.open(states_info, mode="r") as f:
+            states = np.load(f, allow_pickle=False)
+
+        for state_index, state in enumerate(states):
+            if np.isnan(state).any():  # we saved missing states with nan
+                continue
+            self._set_state(state_index, state)
+
+    def _states_into_zipfile(self, zf, *, num_states, version):
+        if version < (1, 0):
+            raise ValueError("LP symbol serialization requires serialization version 1.0 or newer")
+
+        # check if there is anything to save, if no then just go ahead and return
+        if not any(self.has_state(i) for i in range(num_states)):
+            return
+
+        # We'll save our states into a dense array. And use NaN to signal when no state
+        # is present.
+        states = np.empty((num_states, self._num_columns()), dtype=np.double)
+        for state_index in range(num_states):
+            if self.has_state(state_index):
+                # we save the state regardless of whether it is feasible or not
+                # In the future we could choose to ignore infeasible states.
+                states[state_index, :] = self.state(state_index)
+            else:
+                raise NotImplementedError
+
+        # Ok, we have the states, now we just save them into our directory as a NumPy array
+        fname = f"nodes/{self.topological_index()}/states.npy"
+        with zf.open(fname, mode="w", force_zip64=True) as f:
+            np.save(f, states, allow_pickle=False)
 
     cdef cppLPNode* ptr
 
