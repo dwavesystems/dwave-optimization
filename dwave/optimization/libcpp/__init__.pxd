@@ -46,6 +46,7 @@ cdef extern from "<span>" namespace "std" nogil:
 
         span()
         span(T* ptr)
+        span(T*, size_type) except +  # span[It](It, size_type)
 
         T& operator[](ssize_t)
 

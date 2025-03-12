@@ -171,6 +171,8 @@ LPNode::LPNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNod
 
 void LPNode::commit(State& state) const {};
 
+bool LPNode::deterministic_state() const { return false; }
+
 bool LPNode::feasible(const State& state) const {
     return data_ptr<LPNodeData>(state)->result.feasible();
 }
@@ -242,17 +244,23 @@ void LPNode::readout_predecessor_data(const State& state, LPData& lp) const {
 }
 
 void LPNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     LPData lp;
     readout_predecessor_data(state, lp);
     SolveResult result = linprog(lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub,
                                  FEASIBILITY_TOLERANCE);
 
-    state[index] = std::make_unique<LPNodeData>(std::move(result));
+    emplace_data_ptr<LPNodeData>(state, std::move(result));
+}
+
+void LPNode::initialize_state(State& state, const std::span<const double> solution) const {
+    LPData lp;
+    readout_predecessor_data(state, lp);
+
+    SolveResult result;
+    result.set_solution(std::vector(solution.begin(), solution.end()), lp.c, lp.b_lb, lp.A, lp.b_ub,
+                        lp.A_eq, lp.b_eq, lp.lb, lp.ub, FEASIBILITY_TOLERANCE);
+
+    emplace_data_ptr<LPNodeData>(state, std::move(result));
 }
 
 double LPNode::objective_value(const dwave::optimization::State& state) const {
