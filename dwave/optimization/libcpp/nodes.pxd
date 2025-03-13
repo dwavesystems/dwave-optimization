@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from libcpp.string cimport string
+from libcpp.unordered_map cimport unordered_map
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp cimport span, variant
@@ -81,6 +83,27 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
         vector[slice_or_int] infer_indices() except +
 
     cdef cppclass PermutationNode(ArrayNode):
+        pass
+
+
+cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass LPFeasibleNode(ArrayNode):
+        pass
+
+    cdef cppclass LPNode(Node):
+        unordered_map[string, ssize_t] get_arguments()
+        void initialize_state(State&, const span[double]) except + # for Cython
+        void initialize_state(State&, const span[const double]) except +
+        span[const double] solution(const State&) const
+        span[const Py_ssize_t] variables_shape() const
+
+    cdef cppclass LPNodeBase(Node):
+        pass
+
+    cdef cppclass LPObjectiveValueNode(ArrayNode):
+        pass
+
+    cdef cppclass LPSolutionNode(ArrayNode):
         pass
 
 

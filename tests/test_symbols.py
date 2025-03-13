@@ -1422,6 +1422,195 @@ class TestLogical(utils.UnaryOpTests):
         return logical(x)
 
 
+class TestLP(utils.SymbolTests):
+    MIN_SERIALIZATION_VERSION = (1, 0)
+
+    def generate_symbols(self):
+        # test serialization on a few different scenarios of different arguments
+        # to the LP symbol
+
+        # just c
+        model = Model()
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        lp = dwave.optimization.symbols.LP(c)
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+        model.lock()
+
+        yield lp
+        yield feasible
+        yield obj
+        yield sol
+
+        # provide c, A, b_ub, and ub
+        model = Model()
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        A = model.integer((3, 2), lower_bound=-10, upper_bound=10)
+        b_ub = model.integer(3, lower_bound=-10, upper_bound=10)
+        ub = model.integer(2, lower_bound=0, upper_bound=1)
+        lp = dwave.optimization.symbols.LP(c, A=A, b_ub=b_ub, ub=ub)
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+        model.lock()
+
+        yield lp
+        yield feasible
+        yield obj
+        yield sol
+
+        # provide all arguments
+        model = Model()
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        b_lb = model.integer(3, lower_bound=-10, upper_bound=10)
+        A = model.integer((3, 2), lower_bound=-10, upper_bound=10)
+        b_ub = model.integer(3, lower_bound=-10, upper_bound=10)
+        A_eq = model.integer((4, 2), lower_bound=-10, upper_bound=10)
+        b_eq = model.integer(4, lower_bound=-10, upper_bound=10)
+        lb = model.integer(2, lower_bound=0, upper_bound=1)
+        ub = model.integer(2, lower_bound=0, upper_bound=1)
+        lp = dwave.optimization.symbols.LP(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub)
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+        model.lock()
+
+        yield lp
+        yield feasible
+        yield obj
+        yield sol
+
+    def test_unconstrained(self):
+        model = Model()
+        model.states.resize(1)
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        lp = dwave.optimization.symbols.LP(c)
+        sol = lp.x()
+        with model.lock():
+            c.set_state(0, [5, 5])
+            np.testing.assert_array_equal(sol.state(), [0, 0])
+
+    def test_two_variable_two_row(self):
+        # min: -x0 + 4x1
+        # such that:
+        #      -3x0 + x1 <= 6
+        #      -x0 - 2x1 >= -4
+        #      x1 >= -3
+
+        model = Model()
+        model.states.resize(1)
+
+        c = model.integer(2, lower_bound=-10)
+        A_ub = model.integer((2, 2), lower_bound=-10)
+        b_ub = model.integer(2, lower_bound=-10)
+        lb = model.constant([-1e30, -3])
+
+        lp = dwave.optimization.symbols.LP(c, A=A_ub, b_ub=b_ub, lb=lb)
+
+        feasible = lp.success()
+        obj = lp.fun()
+        sol = lp.x()
+
+        with model.lock():
+            c.set_state(0, [-1, 4])
+            A_ub.set_state(0, [[-3, 1], [1, 2]])
+            b_ub.set_state(0, [6, 4])
+
+            np.testing.assert_allclose(sol.state(), [10, -3])
+            np.testing.assert_allclose(feasible.state(), 1)
+            np.testing.assert_allclose(obj.state(), -1 * 10 + 4 * -3)
+
+    def test_set_state(self):
+        # min:
+        #   -x0 - x1
+        # such that:
+        #   x0 + x1 <= 1
+        #       -x0 <= 0
+        #       -x1 <= 0
+        model = Model()
+        model.states.resize(1)
+
+        c = model.constant([-1, -1])
+        A = model.constant([[1, 1], [0, -1], [-1, 0]])
+        b = model.constant([1, 0, 0])
+        lp = dwave.optimization.symbols.LP(c, A=A, b_ub=b)
+
+        feas = lp.success()
+
+        model.lock()
+
+        lp._set_state(0, [0, 1])
+        np.testing.assert_array_equal(lp.state(), [0, 1])
+        self.assertEqual(feas.state(), True)
+
+        lp._set_state(0, [1, 0])
+        np.testing.assert_array_equal(lp.state(), [1, 0])
+        self.assertEqual(feas.state(), True)
+
+        lp._set_state(0, [1, 1])
+        np.testing.assert_array_equal(lp.state(), [1, 1])
+        self.assertEqual(feas.state(), False)
+
+    def test_serialization_with_states(self):
+        # min:
+        #   -x0 - x1
+        # such that:
+        #   x0 + x1 <= 1
+        #       -x0 <= 0
+        #       -x1 <= 0
+        model = Model()
+
+        c = model.constant([-1, -1])
+        A = model.constant([[1, 1], [0, -1], [-1, 0]])
+        b = model.constant([1, 0, 0])
+        lp = dwave.optimization.symbols.LP(c, A=A, b_ub=b)
+
+        model.states.resize(4)
+        model.lock()
+
+        lp._set_state(0, [0, 1])
+        lp._set_state(1, [1, 0])
+        # no states for 2
+        lp._set_state(3, [1, 1])
+
+        with self.subTest("model; lock=False"):
+            with model.to_file(max_num_states=float("inf")) as f:
+                copy = Model.from_file(f)  # lock=False by default
+
+            _, _, _, lp_copy = copy.iter_symbols()
+
+            self.assertFalse(copy.is_locked())
+            with copy.lock():
+                # these are all freshly calculated
+                self.assertEqual(lp_copy.state(0).sum(), 1)
+                self.assertEqual(lp_copy.state(1).sum(), 1)
+                self.assertEqual(lp_copy.state(2).sum(), 1)
+                self.assertEqual(lp_copy.state(3).sum(), 1)
+
+        with self.subTest("model; lock=True"):
+            with model.to_file(max_num_states=float("inf")) as f:
+                copy = Model.from_file(f, lock=True)
+
+            _, _, _, lp_copy = copy.iter_symbols()
+
+            self.assertTrue(copy.is_locked())
+            np.testing.assert_array_equal(lp_copy.state(0), [0, 1])
+            np.testing.assert_array_equal(lp_copy.state(1), [1, 0])
+            self.assertFalse(lp_copy.has_state(2))
+            np.testing.assert_array_equal(lp_copy.state(3), [1, 1])
+
+        with self.subTest("states"):
+            with model.states.to_file() as f:
+                model.states.clear()
+                model.states.from_file(f)
+
+            np.testing.assert_array_equal(lp.state(0), [0, 1])
+            np.testing.assert_array_equal(lp.state(1), [1, 0])
+            self.assertFalse(lp.has_state(2))
+            np.testing.assert_array_equal(lp.state(3), [1, 1])
+
+
 class TestMax(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

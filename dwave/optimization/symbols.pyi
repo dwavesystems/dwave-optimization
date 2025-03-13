@@ -130,6 +130,22 @@ class Logical(ArraySymbol):
     ...
 
 
+class LP(Symbol):
+    ...
+
+
+class LPFeasible(ArraySymbol):
+    ...
+
+
+class LPObjectiveValue(ArraySymbol):
+    ...
+
+
+class LPSolution(ArraySymbol):
+    ...
+
+
 class Max(ArraySymbol):
     ...
 

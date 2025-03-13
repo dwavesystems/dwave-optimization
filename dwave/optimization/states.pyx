@@ -193,7 +193,15 @@ cdef class States:
         model.states.resize(0)
         model.states.resize(num_states)
 
-        for symbol in model.iter_symbols():
+        if model.is_locked():
+            # if the model is locked, it makes sense to potentially load intermediate
+            # states
+            itersymbols = model.iter_symbols()
+        else:
+            # otherwise we only both loading the decision
+            itersymbols = model.iter_decisions()
+
+        for symbol in itersymbols:
             # we don't load the state of any nodes that uniquely determine
             # their state from their predecessors
             if symbol._deterministic_state():

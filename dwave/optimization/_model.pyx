@@ -40,7 +40,7 @@ from dwave.optimization.utilities import _file_object_arg, _lock
 __all__ = []
 
 
-DEFAULT_SERIALIZATION_VERSION = (0, 1)
+DEFAULT_SERIALIZATION_VERSION = (1, 0)
 """A 2-tuple encoding the default serialization format used for serializing models."""
 
 KNOWN_SERIALIZATION_VERSIONS = (
@@ -146,6 +146,8 @@ cdef class _Graph:
                   check_header = True,  # undocumented until fixed, see
                                         # https://github.com/dwavesystems/dwave-optimization/issues/22
                   substitute = None,
+                  lock = False,         # maybe want to change default in the future? But for now
+                                        # maintain backwards compatibility pre 0.6.0
                   ):
         """Construct a model from the given file.
 
@@ -159,6 +161,9 @@ cdef class _Graph:
                 The values are callables to create a different node.
                 The callable should have the same signature as the substituted
                 symbol's constructor.
+            lock:
+                Whether to return a locked model. Only locked models will include
+                any saved intermediate states.
 
         Returns:
             A model.
@@ -167,7 +172,7 @@ cdef class _Graph:
             :meth:`.into_file`, :meth:`.to_file`
 
         .. versionchanged:: 0.6.0
-            Added the ``substitute`` keyword-only argument.
+            Add the ``substitute`` and ``lock`` keyword-only arguments.
 
         """
         import dwave.optimization.symbols as symbols
@@ -223,6 +228,9 @@ cdef class _Graph:
 
             for cid in json.loads(zf.read("constraints.json")):
                 model.add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
+
+            if lock:
+                model.lock()
 
             # Finally load any states from the file.
             model.states._from_zipfile(zf, version=version)

@@ -30,6 +30,7 @@ dwave_optimization_src = [
     'dwave/optimization/src/nodes/creation.cpp',
     'dwave/optimization/src/nodes/flow.cpp',
     'dwave/optimization/src/nodes/indexing.cpp',
+    'dwave/optimization/src/nodes/lp.cpp',
     'dwave/optimization/src/nodes/manipulation.cpp',
     'dwave/optimization/src/nodes/mathematical.cpp',
     'dwave/optimization/src/nodes/numbers.cpp',
@@ -37,6 +38,7 @@ dwave_optimization_src = [
     'dwave/optimization/src/nodes/testing.cpp',
     'dwave/optimization/src/array.cpp',
     'dwave/optimization/src/graph.cpp',
+    'dwave/optimization/src/simplex.cpp',
     'dwave/optimization/src/utils.cpp',
 ]
 

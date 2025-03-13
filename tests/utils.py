@@ -11,6 +11,8 @@ from dwave.optimization import (
 
 
 class SymbolTests(abc.ABC, unittest.TestCase):
+    MIN_SERIALIZATION_VERSION = (0, 0)
+
     @abc.abstractmethod
     def generate_symbols(self):
         """Yield symbol(s) for testing.
@@ -53,6 +55,8 @@ class SymbolTests(abc.ABC, unittest.TestCase):
 
     def test_serialization(self):
         for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+            if version < self.MIN_SERIALIZATION_VERSION:
+                continue
             with self.subTest(version=version):
                 for x in self.generate_symbols():
                     model = x.model
@@ -70,6 +74,8 @@ class SymbolTests(abc.ABC, unittest.TestCase):
 
     def test_state_serialization(self):
         for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+            if version < self.MIN_SERIALIZATION_VERSION:
+                continue
             with self.subTest(version=version):
                 for x in self.generate_symbols():
                     model = x.model
