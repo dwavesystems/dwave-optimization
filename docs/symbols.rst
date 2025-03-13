@@ -6,15 +6,15 @@ Symbols
 
 .. currentmodule:: dwave.optimization.model
 
-Symbols are a model's decision variables, intermediate variables, constants, 
+Symbols are a model's decision variables, intermediate variables, constants,
 and mathematical operations.
 
-See :ref:`Symbols <intro_optimization_symbols>` for an introduction to
-working with symbols.
+See the :ref:`Symbols <opt_model_construction_nl_symbols>` section for an
+introduction to working with symbols.
 
-All symbols listed in the :ref:`Model Symbols<symbols_model_symbols>`
-section below inherit from the :class:`Symbol` class and, for most mathematical
-symbols, the :class:`ArraySymbol` class.
+All symbols listed in the :ref:`Model Symbols <symbols_model_symbols>`
+subsection below inherit from the :class:`Symbol` class and, for most
+mathematical symbols, the :class:`ArraySymbol` class.
 
 .. _symbols_base_symbols:
 

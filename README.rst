@@ -46,12 +46,10 @@ two jobs on three machines.
 
 .. end_optimization_about
 
-.. todo:: update these links
-
 For explanations of the terminology, see the
-`Ocean glossary <https://docs.ocean.dwavesys.com/en/stable/concepts/index.html>`_.)
+`Ocean glossary <https://docs.dwavequantum.com/en/latest/concepts/index_concepts.html>`_.
 
-See the `documentation <https://docs.ocean.dwavesys.com/en/stable/docs_optimization/>`_
+See the `documentation <https://docs.dwavequantum.com/en/latest/index.html>`_
 for more examples.
 
 Installation
@@ -110,9 +108,7 @@ Released under the Apache License 2.0. See LICENSE file.
 Contributing
 ============
 
-.. todo: update link
-
-Ocean's `contributing guide <https://docs.ocean.dwavesys.com/en/stable/contributing.html>`_
+Ocean's `contributing guide <https://docs.dwavequantum.com/en/latest/ocean/index_ocean_sdk.html>`_
 has guidelines for contributing to Ocean packages.
 
 ``dwave-optimization`` includes some formatting customization in the

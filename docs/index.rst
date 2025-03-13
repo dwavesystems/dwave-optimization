@@ -18,7 +18,7 @@ About dwave-optimization
   :end-before: end_optimization_about
 
 For explanations of the terminology, see the
-:ref:`Concepts <dwave:index_concepts>` section.
+:ref:`Concepts <index_concepts>` section.
 
 Usage Information
 =================
