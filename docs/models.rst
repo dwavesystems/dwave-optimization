@@ -1,14 +1,13 @@
 .. _optimization_models:
 
 ================
-Nonlinear Models 
+Nonlinear Models
 ================
 
 This page describes the `dwave-optimization` package's nonlinear model: classes,
 attributes, and methods.
 
-For examples, see
-`Ocean's Getting Started examples <https://docs.ocean.dwavesys.com/en/stable/getting_started.html#examples>`_.
+For examples, see the :ref:`opt_index_examples_beginner` section.
 
 .. currentmodule:: dwave.optimization
 
@@ -21,7 +20,7 @@ Model Class
     :members:
     :inherited-members:
     :member-order: bysource
-   
+
 States Class
 ------------
 

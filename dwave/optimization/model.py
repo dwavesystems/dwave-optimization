@@ -98,8 +98,8 @@ class Model(_Graph):
     states: States
     """States of the model.
 
-    :ref:`States <intro_optimization_states>` represent assignments of values
-    to a symbol.
+    :ref:`States <opt_model_construction_nl_states>` represent assignments of
+    values to a symbol.
 
     See also:
         :ref:`States methods <optimization_models>` such as
