@@ -2154,6 +2154,9 @@ _register(Logical, typeid(cppLogicalNode))
 
 
 cdef class LP(Symbol):
+    """Finds a solution to the linear program (LP) defined by the predecessors.
+    """
+
     def __init__(self, ArraySymbol c,
                  ArraySymbol b_lb = None,
                  ArraySymbol A = None,
@@ -2350,6 +2353,9 @@ _register(LP, typeid(cppLPNode))
 
 
 cdef class LPFeasible(ArraySymbol):
+    """Returns whether the parent LP symbol's current solution is feasible.
+    """
+
     def __init__(self, Symbol lp):
         cdef _Graph model = lp.model
 
@@ -2376,6 +2382,9 @@ _register(LPFeasible, typeid(cppLPFeasibleNode))
 
 
 cdef class LPObjectiveValue(ArraySymbol):
+    """Returns the objective value of the parent LP symbol's current solution.
+    """
+
     def __init__(self, Symbol lp):
         cdef _Graph model = lp.model
 
@@ -2403,6 +2412,9 @@ _register(LPObjectiveValue, typeid(cppLPObjectiveValueNode))
 
 
 cdef class LPSolution(ArraySymbol):
+    """Returns the current solution of the parent LP symbol as an array.
+    """
+
     def __init__(self, Symbol lp):
         cdef _Graph model = lp.model
 
