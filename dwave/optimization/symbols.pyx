@@ -2154,7 +2154,12 @@ _register(Logical, typeid(cppLogicalNode))
 
 
 cdef class LP(Symbol):
-    """Finds a solution to the linear program (LP) defined by the predecessors.
+    """Find a solution to the linear program (LP) defined by the predecessors.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.linprog`
+
+    .. versionadded:: 0.6.0
     """
 
     def __init__(self, ArraySymbol c,
@@ -2204,13 +2209,6 @@ cdef class LP(Symbol):
         x.initialize_node(symbol.model, ptr)
         return x
 
-    # the name is chosen to match SciPy's OptimizeResult. Not sure if it's
-    # a good name though. Should work for now though.
-    def fun(self):
-        if self._objective_value is None:
-            self._objective_value = LPObjectiveValue(self)
-        return self._objective_value
-
     def state(self, Py_ssize_t index = 0):
         """Return the current solution to the LP.
 
@@ -2246,18 +2244,6 @@ cdef class LP(Symbol):
             state[i] = solution[i]
 
         return np.asarray(state)
-
-    # the name is chosen to match SciPy's OptimizeResult
-    def success(self):
-        if self._feasible is None:
-            self._feasible = LPFeasible(self)
-        return self._feasible
-
-    # the name is chosen to match SciPy's OptimizeResult
-    def x(self):
-        if self._solution is None:
-            self._solution = LPSolution(self)
-        return self._solution
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -2345,15 +2331,16 @@ cdef class LP(Symbol):
 
     cdef cppLPNode* ptr
 
-    cdef object _feasible
-    cdef object _objective_value
-    cdef object _solution
-
 _register(LP, typeid(cppLPNode))
 
 
 cdef class LPFeasible(ArraySymbol):
-    """Returns whether the parent LP symbol's current solution is feasible.
+    """Return whether the parent LP symbol's current solution is feasible.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.linprog`
+
+    .. versionadded:: 0.6.0
     """
 
     def __init__(self, Symbol lp):
@@ -2382,7 +2369,12 @@ _register(LPFeasible, typeid(cppLPFeasibleNode))
 
 
 cdef class LPObjectiveValue(ArraySymbol):
-    """Returns the objective value of the parent LP symbol's current solution.
+    """Return the objective value of the parent LP symbol's current solution.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.linprog`
+
+    .. versionadded:: 0.6.0
     """
 
     def __init__(self, Symbol lp):
@@ -2412,7 +2404,12 @@ _register(LPObjectiveValue, typeid(cppLPObjectiveValueNode))
 
 
 cdef class LPSolution(ArraySymbol):
-    """Returns the current solution of the parent LP symbol as an array.
+    """Return the current solution of the parent LP symbol as an array.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.linprog`
+
+    .. versionadded:: 0.6.0
     """
 
     def __init__(self, Symbol lp):
