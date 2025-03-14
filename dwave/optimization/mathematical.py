@@ -449,7 +449,7 @@ class LPResult:
 
     @functools.cached_property
     def success(self) -> LPFeasible:
-        """``True`` is the linear program found the optimal value as an array symbol."""
+        """``True`` if the linear program found the optimal value as an array symbol."""
         return LPFeasible(self.lp)
 
     @functools.cached_property
