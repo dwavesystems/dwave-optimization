@@ -1422,12 +1422,12 @@ class TestLogical(utils.UnaryOpTests):
         return logical(x)
 
 
-class TestLP(utils.SymbolTests):
+class TestLinearProgram(utils.SymbolTests):
     MIN_SERIALIZATION_VERSION = (1, 0)
 
     def generate_symbols(self):
         # test serialization on a few different scenarios of different arguments
-        # to the LP symbol
+        # to the LinearProgram symbol
 
         # just c
         model = Model()

@@ -118,6 +118,22 @@ class LessEqual(ArraySymbol):
     ...
 
 
+class LinearProgram(Symbol):
+    ...
+
+
+class LinearProgramFeasible(ArraySymbol):
+    ...
+
+
+class LinearProgramObjectiveValue(ArraySymbol):
+    ...
+
+
+class LinearProgramSolution(ArraySymbol):
+    ...
+
+
 class ListVariable(ArraySymbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
 
@@ -127,22 +143,6 @@ class Log(ArraySymbol):
 
 
 class Logical(ArraySymbol):
-    ...
-
-
-class LP(Symbol):
-    ...
-
-
-class LPFeasible(ArraySymbol):
-    ...
-
-
-class LPObjectiveValue(ArraySymbol):
-    ...
-
-
-class LPSolution(ArraySymbol):
     ...
 
 

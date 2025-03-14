@@ -24,12 +24,12 @@ from dwave.optimization.symbols import (
     Concatenate,
     Divide,
     Expit,
+    LinearProgram,
+    LinearProgramFeasible,
+    LinearProgramObjectiveValue,
+    LinearProgramSolution,
     Log,
     Logical,
-    LP,
-    LPFeasible,
-    LPObjectiveValue,
-    LPSolution,
     Maximum,
     Minimum,
     Modulus,
@@ -436,26 +436,26 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
 class LPResult:
     """The outputs of a linear program run."""
 
-    lp: LP
-    """The LP symbol."""
+    lp: LinearProgram
+    """The LinearProgram symbol."""
 
-    def __init__(self, lp: LP):
+    def __init__(self, lp: LinearProgram):
         self.lp = lp
 
     @functools.cached_property
-    def fun(self) -> LPObjectiveValue:
+    def fun(self) -> LinearProgramObjectiveValue:
         """The value of the objective as an array symbol."""
-        return LPObjectiveValue(self.lp)
+        return LinearProgramObjectiveValue(self.lp)
 
     @functools.cached_property
-    def success(self) -> LPFeasible:
+    def success(self) -> LinearProgramFeasible:
         """``True`` if the linear program found the optimal value as an array symbol."""
-        return LPFeasible(self.lp)
+        return LinearProgramFeasible(self.lp)
 
     @functools.cached_property
-    def x(self) -> LPSolution:
+    def x(self) -> LinearProgramSolution:
         """The assignments to the decision variables as an array symbol."""
-        return LPSolution(self.lp)
+        return LinearProgramSolution(self.lp)
 
 
 def linprog(
@@ -509,17 +509,17 @@ def linprog(
         following attributes:
 
         * **fun** - The value of the objective as a
-          :class:`~dwave.optimization.symbols.LPObjectiveValue`.
+          :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`.
         * **success** - Whether the linear program found an optimial value as a
-          :class:`~dwave.optimization.symbols.LPFeasible`.
+          :class:`~dwave.optimization.symbols.LinearProgramFeasible`.
         * **x** - The assignments to the decision variables as a
-          :class:`~dwave.optimization.symbols.LPSolution`.
+          :class:`~dwave.optimization.symbols.LinearProgramSolution`.
 
     See Also:
-        :class:`~dwave.optimization.symbols.LP`,
-        :class:`~dwave.optimization.symbols.LPFeasible`,
-        :class:`~dwave.optimization.symbols.LPObjectiveValue`,
-        :class:`~dwave.optimization.symbols.LPSolution`: The associated symbols.
+        :class:`~dwave.optimization.symbols.LinearProgram`,
+        :class:`~dwave.optimization.symbols.LinearProgramFeasible`,
+        :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`,
+        :class:`~dwave.optimization.symbols.LinearProgramSolution`: The associated symbols.
 
         :func:`scipy.optimize.linprog()`: A function in SciPy that this function
         is designed to mimic.
@@ -555,7 +555,7 @@ def linprog(
     elif A_ub is not None:
         A = A_ub
 
-    return LPResult(LP(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub))
+    return LPResult(LinearProgram(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub))
 
 
 def log(x: ArraySymbol) -> Log:

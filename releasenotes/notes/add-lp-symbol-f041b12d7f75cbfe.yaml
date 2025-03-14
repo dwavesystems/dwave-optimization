@@ -1,4 +1,4 @@
 ---
 features:
   - |
-    Add LP (linear program) symbol and related derivative symbols.
+    Add ``LinearProgram`` (linear program) symbol and related derivative symbols.

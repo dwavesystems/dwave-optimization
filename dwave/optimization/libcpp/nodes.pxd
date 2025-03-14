@@ -87,23 +87,23 @@ cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optim
 
 
 cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass LPFeasibleNode(ArrayNode):
+    cdef cppclass LinearProgramFeasibleNode(ArrayNode):
         pass
 
-    cdef cppclass LPNode(Node):
+    cdef cppclass LinearProgramNode(Node):
         unordered_map[string, ssize_t] get_arguments()
         void initialize_state(State&, const span[double]) except + # for Cython
         void initialize_state(State&, const span[const double]) except +
         span[const double] solution(const State&) const
         span[const Py_ssize_t] variables_shape() const
 
-    cdef cppclass LPNodeBase(Node):
+    cdef cppclass LinearProgramNodeBase(Node):
         pass
 
-    cdef cppclass LPObjectiveValueNode(ArrayNode):
+    cdef cppclass LinearProgramObjectiveValueNode(ArrayNode):
         pass
 
-    cdef cppclass LPSolutionNode(ArrayNode):
+    cdef cppclass LinearProgramSolutionNode(ArrayNode):
         pass
 
 
