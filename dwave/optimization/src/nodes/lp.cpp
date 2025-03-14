@@ -34,8 +34,8 @@ struct LPData {
     std::vector<double> ub;
 };
 
-struct LPNodeData : NodeStateData {
-    explicit LPNodeData(SolveResult&& result) : result(std::move(result)) {}
+struct LinearProgramNodeData : NodeStateData {
+    explicit LinearProgramNodeData(SolveResult&& result) : result(std::move(result)) {}
 
     LPData lp;
     SolveResult result;
@@ -66,22 +66,25 @@ void check_Ab_consistency(const ssize_t num_variables, const Array* const A_ptr,
     }
 }
 
-LPFeasibleNode::LPFeasibleNode(LPNodeBase* lp_ptr) : lp_ptr_(lp_ptr) { add_predecessor(lp_ptr); }
+LinearProgramFeasibleNode::LinearProgramFeasibleNode(LinearProgramNodeBase* lp_ptr)
+        : lp_ptr_(lp_ptr) {
+    add_predecessor(lp_ptr);
+}
 
-double const* LPFeasibleNode::buff(const State& state) const {
+double const* LinearProgramFeasibleNode::buff(const State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->buff();
 }
 
 // no state to manage so nothing to do
-void LPFeasibleNode::commit(State& state) const {
+void LinearProgramFeasibleNode::commit(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->commit();
 }
 
-std::span<const Update> LPFeasibleNode::diff(const State& state) const {
+std::span<const Update> LinearProgramFeasibleNode::diff(const State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->diff();
 }
 
-void LPFeasibleNode::initialize_state(State& state) const {
+void LinearProgramFeasibleNode::initialize_state(State& state) const {
     int index = this->topological_index();
     assert(index >= 0 && "must be topologically sorted");
     assert(static_cast<int>(state.size()) > index && "unexpected state length");
@@ -90,30 +93,31 @@ void LPFeasibleNode::initialize_state(State& state) const {
     state[index] = std::make_unique<ScalarNodeStateData>(lp_ptr_->feasible(state));
 }
 
-bool LPFeasibleNode::integral() const { return true; }
+bool LinearProgramFeasibleNode::integral() const { return true; }
 
-std::pair<double, double> LPFeasibleNode::minmax(
+std::pair<double, double> LinearProgramFeasibleNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return {0, 1};
 }
 
-void LPFeasibleNode::propagate(State& state) const {
+void LinearProgramFeasibleNode::propagate(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->set(lp_ptr_->feasible(state));
 }
 
 // no state to manage so nothing to do
-void LPFeasibleNode::revert(State& state) const {
+void LinearProgramFeasibleNode::revert(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->revert();
 }
 
-const double LPNodeBase::default_lower_bound() { return 0.0; }
+const double LinearProgramNodeBase::default_lower_bound() { return 0.0; }
 
-const double LPNodeBase::default_upper_bound() { return LP_INFINITY; }
+const double LinearProgramNodeBase::default_upper_bound() { return LP_INFINITY; }
 
-const double LPNodeBase::infinity() { return LP_INFINITY; }
+const double LinearProgramNodeBase::infinity() { return LP_INFINITY; }
 
-LPNode::LPNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,
-               ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr, ArrayNode* lb_ptr, ArrayNode* ub_ptr)
+LinearProgramNode::LinearProgramNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr,
+                                     ArrayNode* b_ub_ptr, ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr,
+                                     ArrayNode* lb_ptr, ArrayNode* ub_ptr)
         : c_ptr_(c_ptr),
           b_lb_ptr_(b_lb_ptr),
           A_ptr_(A_ptr),
@@ -169,15 +173,15 @@ LPNode::LPNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNod
     if (ub_ptr) add_predecessor(ub_ptr);
 }
 
-void LPNode::commit(State& state) const {};
+void LinearProgramNode::commit(State& state) const {};
 
-bool LPNode::deterministic_state() const { return false; }
+bool LinearProgramNode::deterministic_state() const { return false; }
 
-bool LPNode::feasible(const State& state) const {
-    return data_ptr<LPNodeData>(state)->result.feasible();
+bool LinearProgramNode::feasible(const State& state) const {
+    return data_ptr<LinearProgramNodeData>(state)->result.feasible();
 }
 
-std::unordered_map<std::string, ssize_t> LPNode::get_arguments() const {
+std::unordered_map<std::string, ssize_t> LinearProgramNode::get_arguments() const {
     ssize_t pred_index = 0;
     std::unordered_map<std::string, ssize_t> args;
     args["c"] = pred_index++;
@@ -195,7 +199,7 @@ std::unordered_map<std::string, ssize_t> LPNode::get_arguments() const {
 }
 
 template <class LPData>
-void LPNode::readout_predecessor_data(const State& state, LPData& lp) const {
+void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp) const {
     assert(c_ptr_ && "c should always have been provided");
     lp.c.assign(c_ptr_->view(state).begin(), c_ptr_->view(state).end());
 
@@ -230,29 +234,30 @@ void LPNode::readout_predecessor_data(const State& state, LPData& lp) const {
     if (lb_ptr_) {
         lp.lb.assign(lb_ptr_->view(state).begin(), lb_ptr_->view(state).end());
     } else {
-        lp.lb.assign(c_ptr_->size(state), LPNodeBase::default_lower_bound());
+        lp.lb.assign(c_ptr_->size(state), LinearProgramNodeBase::default_lower_bound());
     }
 
     if (ub_ptr_) {
         lp.ub.assign(ub_ptr_->view(state).begin(), ub_ptr_->view(state).end());
     } else {
-        lp.ub.assign(c_ptr_->size(state), LPNodeBase::default_upper_bound());
+        lp.ub.assign(c_ptr_->size(state), LinearProgramNodeBase::default_upper_bound());
     }
 
     assert(lp.c.size() == lp.lb.size() && "c and lower bound sizes do not match");
     assert(lp.lb.size() == lp.ub.size() && "lower and upper bound sizes do not match");
 }
 
-void LPNode::initialize_state(State& state) const {
+void LinearProgramNode::initialize_state(State& state) const {
     LPData lp;
     readout_predecessor_data(state, lp);
     SolveResult result = linprog(lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub,
                                  FEASIBILITY_TOLERANCE);
 
-    emplace_data_ptr<LPNodeData>(state, std::move(result));
+    emplace_data_ptr<LinearProgramNodeData>(state, std::move(result));
 }
 
-void LPNode::initialize_state(State& state, const std::span<const double> solution) const {
+void LinearProgramNode::initialize_state(State& state,
+                                         const std::span<const double> solution) const {
     LPData lp;
     readout_predecessor_data(state, lp);
 
@@ -260,15 +265,15 @@ void LPNode::initialize_state(State& state, const std::span<const double> soluti
     result.set_solution(std::vector(solution.begin(), solution.end()), lp.c, lp.b_lb, lp.A, lp.b_ub,
                         lp.A_eq, lp.b_eq, lp.lb, lp.ub, FEASIBILITY_TOLERANCE);
 
-    emplace_data_ptr<LPNodeData>(state, std::move(result));
+    emplace_data_ptr<LinearProgramNodeData>(state, std::move(result));
 }
 
-double LPNode::objective_value(const dwave::optimization::State& state) const {
-    return data_ptr<LPNodeData>(state)->result.objective();
+double LinearProgramNode::objective_value(const dwave::optimization::State& state) const {
+    return data_ptr<LinearProgramNodeData>(state)->result.objective();
 }
 
-void LPNode::propagate(State& state) const {
-    auto data = data_ptr<LPNodeData>(state);
+void LinearProgramNode::propagate(State& state) const {
+    auto data = data_ptr<LinearProgramNodeData>(state);
 
     readout_predecessor_data(state, data->lp);
     data->result = linprog(data->lp.c, data->lp.b_lb, data->lp.A, data->lp.b_ub, data->lp.A_eq,
@@ -277,39 +282,40 @@ void LPNode::propagate(State& state) const {
     Node::propagate(state);
 }
 
-void LPNode::revert(State& state) const {
+void LinearProgramNode::revert(State& state) const {
     // Nothing to do on revert as all changes are tracked by successor nodes
 }
 
-std::span<const double> LPNode::solution(const State& state) const {
-    return data_ptr<LPNodeData>(state)->result.solution();
+std::span<const double> LinearProgramNode::solution(const State& state) const {
+    return data_ptr<LinearProgramNodeData>(state)->result.solution();
 }
 
-std::pair<double, double> LPNode::variables_minmax() const {
-    return std::make_pair(lb_ptr_ ? lb_ptr_->min() : LPNode::default_lower_bound(),
-                          ub_ptr_ ? ub_ptr_->max() : LPNode::default_upper_bound());
+std::pair<double, double> LinearProgramNode::variables_minmax() const {
+    return std::make_pair(lb_ptr_ ? lb_ptr_->min() : LinearProgramNode::default_lower_bound(),
+                          ub_ptr_ ? ub_ptr_->max() : LinearProgramNode::default_upper_bound());
 }
 
-std::span<const ssize_t> LPNode::variables_shape() const { return c_ptr_->shape(); }
+std::span<const ssize_t> LinearProgramNode::variables_shape() const { return c_ptr_->shape(); }
 
-LPObjectiveValueNode::LPObjectiveValueNode(LPNodeBase* lp_ptr) : lp_ptr_(lp_ptr) {
+LinearProgramObjectiveValueNode::LinearProgramObjectiveValueNode(LinearProgramNodeBase* lp_ptr)
+        : lp_ptr_(lp_ptr) {
     add_predecessor(lp_ptr);
 }
 
-double const* LPObjectiveValueNode::buff(const State& state) const {
+double const* LinearProgramObjectiveValueNode::buff(const State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->buff();
 }
 
 // no state to manage so nothing to do
-void LPObjectiveValueNode::commit(State& state) const {
+void LinearProgramObjectiveValueNode::commit(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->commit();
 }
 
-std::span<const Update> LPObjectiveValueNode::diff(const State& state) const {
+std::span<const Update> LinearProgramObjectiveValueNode::diff(const State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->diff();
 }
 
-void LPObjectiveValueNode::initialize_state(State& state) const {
+void LinearProgramObjectiveValueNode::initialize_state(State& state) const {
     int index = this->topological_index();
     assert(index >= 0 && "must be topologically sorted");
     assert(static_cast<int>(state.size()) > index && "unexpected state length");
@@ -322,7 +328,7 @@ void LPObjectiveValueNode::initialize_state(State& state) const {
     state[index] = std::make_unique<ScalarNodeStateData>(value);
 }
 
-void LPObjectiveValueNode::propagate(State& state) const {
+void LinearProgramObjectiveValueNode::propagate(State& state) const {
     if (lp_ptr_->feasible(state)) {
         data_ptr<ScalarNodeStateData>(state)->set(lp_ptr_->objective_value(state));
     }
@@ -331,28 +337,28 @@ void LPObjectiveValueNode::propagate(State& state) const {
 }
 
 // no state to manage so nothing to do
-void LPObjectiveValueNode::revert(State& state) const {
+void LinearProgramObjectiveValueNode::revert(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->revert();
 }
 
-LPSolutionNode::LPSolutionNode(LPNodeBase* lp_ptr)
+LinearProgramSolutionNode::LinearProgramSolutionNode(LinearProgramNodeBase* lp_ptr)
         : ArrayOutputMixin(lp_ptr->variables_shape()), lp_ptr_(lp_ptr) {
     add_predecessor(lp_ptr);
 }
 
-double const* LPSolutionNode::buff(const State& state) const {
+double const* LinearProgramSolutionNode::buff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->buff();
 }
 
-void LPSolutionNode::commit(State& state) const {
+void LinearProgramSolutionNode::commit(State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->commit();
 }
 
-std::span<const Update> LPSolutionNode::diff(const State& state) const {
+std::span<const Update> LinearProgramSolutionNode::diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->diff();
 }
 
-void LPSolutionNode::initialize_state(State& state) const {
+void LinearProgramSolutionNode::initialize_state(State& state) const {
     int index = this->topological_index();
     assert(index >= 0 && "must be topologically sorted");
     assert(static_cast<int>(state.size()) > index && "unexpected state length");
@@ -374,14 +380,14 @@ void LPSolutionNode::initialize_state(State& state) const {
     }
 }
 
-bool LPSolutionNode::integral() const { return false; }
+bool LinearProgramSolutionNode::integral() const { return false; }
 
-std::pair<double, double> LPSolutionNode::minmax(
+std::pair<double, double> LinearProgramSolutionNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return memoize(cache, [&]() { return lp_ptr_->variables_minmax(); });
 }
 
-void LPSolutionNode::propagate(State& state) const {
+void LinearProgramSolutionNode::propagate(State& state) const {
     std::span<const double> sol = lp_ptr_->solution(state);
     if (sol.size()) {
         assert(sol.data() != nullptr);
@@ -397,6 +403,8 @@ void LPSolutionNode::propagate(State& state) const {
     }
 }
 
-void LPSolutionNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
+void LinearProgramSolutionNode::revert(State& state) const {
+    data_ptr<ArrayNodeStateData>(state)->revert();
+}
 
 }  // namespace dwave::optimization

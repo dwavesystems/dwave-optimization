@@ -23,12 +23,12 @@
 
 namespace dwave::optimization {
 
-class LPNodeBase;
+class LinearProgramNodeBase;
 
-/// A logical node that propagates whether or not its predecessor LP is feasible.
-class LPFeasibleNode : public ScalarOutputMixin<ArrayNode> {
+/// A logical node that propagates whether or not its predecessor LinearProgram is feasible.
+class LinearProgramFeasibleNode : public ScalarOutputMixin<ArrayNode> {
  public:
-    explicit LPFeasibleNode(LPNodeBase* lp_ptr);
+    explicit LinearProgramFeasibleNode(LinearProgramNodeBase* lp_ptr);
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -56,10 +56,10 @@ class LPFeasibleNode : public ScalarOutputMixin<ArrayNode> {
     void revert(State& state) const override;
 
  private:
-    const LPNodeBase* lp_ptr_;
+    const LinearProgramNodeBase* lp_ptr_;
 };
 
-class LPNodeBase : public Node {
+class LinearProgramNodeBase : public Node {
  public:
     /// The default lower bound for variables
     static const double default_lower_bound();
@@ -95,13 +95,14 @@ class LPNodeBase : public Node {
 /// Following https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.linprog.html
 /// linprog(c, A_ub=None, b_ub=None, A_eq=None, b_eq=None, bounds=(0, None),
 ///         callback=None, options=None, x0=None, integrality=None)
-class LPNode : public LPNodeBase {
+class LinearProgramNode : public LinearProgramNodeBase {
  public:
     // Parameter names are chosen to match scipy.optimize.lingprog()
-    LPNode(ArrayNode* c_ptr,                                            // required
-           ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,  // can be nullptr
-           ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr,  // nullptr or must match size
-           ArrayNode* lb_ptr, ArrayNode* ub_ptr);     // can be nullptr, both have size 1, or size n
+    LinearProgramNode(ArrayNode* c_ptr,                                            // required
+                      ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,  // can be nullptr
+                      ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr,  // nullptr or must match size
+                      ArrayNode* lb_ptr,
+                      ArrayNode* ub_ptr);  // can be nullptr, both have size 1, or size n
 
     /// @copydoc Node::commit()
     void commit(State& state) const override;
@@ -109,10 +110,10 @@ class LPNode : public LPNodeBase {
     /// The LP node's state is potentially degenerate, and therefore not deterministic.
     bool deterministic_state() const override;
 
-    /// @copydoc LPNodeBase::feasible()
+    /// @copydoc LinearProgramNodeBase::feasible()
     bool feasible(const State& state) const override;
 
-    /// @copydoc LPNodeBase::get_arguments()
+    /// @copydoc LinearProgramNodeBase::get_arguments()
     std::unordered_map<std::string, ssize_t> get_arguments() const override;
 
     /// @copydoc Node::initialize_state()
@@ -121,7 +122,7 @@ class LPNode : public LPNodeBase {
     /// Initialize the state with the given solution
     void initialize_state(State& state, const std::span<const double> solution) const;
 
-    /// @copydoc LPNodeBase::objective_value()
+    /// @copydoc LinearProgramNodeBase::objective_value()
     double objective_value(const State& state) const override;
 
     /// @copydoc Node::propagate()
@@ -130,13 +131,13 @@ class LPNode : public LPNodeBase {
     /// @copydoc Node::revert()
     void revert(State& state) const override;
 
-    /// @copydoc LPNodeBase::solution()
+    /// @copydoc LinearProgramNodeBase::solution()
     std::span<const double> solution(const State& state) const override;
 
-    /// @copydoc LPNodeBase::variables_minmax()
+    /// @copydoc LinearProgramNodeBase::variables_minmax()
     std::pair<double, double> variables_minmax() const override;
 
-    /// @copydoc LPNodeBase::variables_shape()
+    /// @copydoc LinearProgramNodeBase::variables_shape()
     std::span<const ssize_t> variables_shape() const override;
 
  private:
@@ -166,11 +167,11 @@ class LPNode : public LPNodeBase {
     const ArrayNode* ub_ptr_;
 };
 
-/// A scalar node that propagates the objective value of the solution found by the LPNode.
-/// Note that the output is undefined if the solution is not feasible.
-class LPObjectiveValueNode : public ScalarOutputMixin<ArrayNode> {
+/// A scalar node that propagates the objective value of the solution found by the
+/// LinearProgramNode. Note that the output is undefined if the solution is not feasible.
+class LinearProgramObjectiveValueNode : public ScalarOutputMixin<ArrayNode> {
  public:
-    explicit LPObjectiveValueNode(LPNodeBase* lp_ptr);
+    explicit LinearProgramObjectiveValueNode(LinearProgramNodeBase* lp_ptr);
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -191,14 +192,14 @@ class LPObjectiveValueNode : public ScalarOutputMixin<ArrayNode> {
     void revert(State& state) const override;
 
  private:
-    const LPNodeBase* lp_ptr_;
+    const LinearProgramNodeBase* lp_ptr_;
 };
 
-/// An array node that propagates the solution found by the LPNode. Note that the solution
-/// may not be feasible or optimial.
-class LPSolutionNode : public ArrayOutputMixin<ArrayNode> {
+/// An array node that propagates the solution found by the LinearProgramNode. Note that the
+/// solution may not be feasible or optimial.
+class LinearProgramSolutionNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    explicit LPSolutionNode(LPNodeBase* lp_ptr);
+    explicit LinearProgramSolutionNode(LinearProgramNodeBase* lp_ptr);
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -230,7 +231,7 @@ class LPSolutionNode : public ArrayOutputMixin<ArrayNode> {
     using ArrayOutputMixin::size;
 
  private:
-    const LPNodeBase* lp_ptr_;
+    const LinearProgramNodeBase* lp_ptr_;
 };
 
 }  // namespace dwave::optimization

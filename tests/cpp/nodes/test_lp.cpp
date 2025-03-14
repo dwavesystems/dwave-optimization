@@ -24,7 +24,7 @@ const double FEASIBILITY_TOLERANCE = 1e-07;
 
 namespace dwave::optimization {
 
-TEST_CASE("LPNode") {
+TEST_CASE("LinearProgramNode") {
     GIVEN("A two variable, two row LP") {
         // min: -x0 + 4x1
         // such that:
@@ -45,14 +45,15 @@ TEST_CASE("LPNode") {
         auto b_ub_ptr = graph.emplace_node<ConstantNode>(std::vector{6, 4});
 
         // lb = [-inf, -3]
-        auto lb_ptr = graph.emplace_node<ConstantNode>(std::vector{-LPNode::infinity(), -3.0});
+        auto lb_ptr =
+                graph.emplace_node<ConstantNode>(std::vector{-LinearProgramNode::infinity(), -3.0});
 
-        auto lp_ptr = graph.emplace_node<LPNode>(c_ptr, nullptr, A_ub_ptr, b_ub_ptr, nullptr,
-                                                 nullptr, lb_ptr, nullptr);
+        auto lp_ptr = graph.emplace_node<LinearProgramNode>(c_ptr, nullptr, A_ub_ptr, b_ub_ptr,
+                                                            nullptr, nullptr, lb_ptr, nullptr);
 
-        auto feas_ptr = graph.emplace_node<LPFeasibleNode>(lp_ptr);
-        auto obj_ptr = graph.emplace_node<LPObjectiveValueNode>(lp_ptr);
-        auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
+        auto feas_ptr = graph.emplace_node<LinearProgramFeasibleNode>(lp_ptr);
+        auto obj_ptr = graph.emplace_node<LinearProgramObjectiveValueNode>(lp_ptr);
+        auto sol_ptr = graph.emplace_node<LinearProgramSolutionNode>(lp_ptr);
 
         graph.emplace_node<ArrayValidationNode>(feas_ptr);
         graph.emplace_node<ArrayValidationNode>(obj_ptr);
@@ -97,12 +98,12 @@ TEST_CASE("LPNode") {
         // lb = [10, 10]
         auto lb_ptr = graph.emplace_node<ConstantNode>(std::vector{10, 10});
 
-        auto lp_ptr = graph.emplace_node<LPNode>(c_ptr, nullptr, A_ub_ptr, b_ub_ptr, nullptr,
-                                                 nullptr, lb_ptr, nullptr);
+        auto lp_ptr = graph.emplace_node<LinearProgramNode>(c_ptr, nullptr, A_ub_ptr, b_ub_ptr,
+                                                            nullptr, nullptr, lb_ptr, nullptr);
 
-        auto feas_ptr = graph.emplace_node<LPFeasibleNode>(lp_ptr);
-        auto obj_ptr = graph.emplace_node<LPObjectiveValueNode>(lp_ptr);
-        auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
+        auto feas_ptr = graph.emplace_node<LinearProgramFeasibleNode>(lp_ptr);
+        auto obj_ptr = graph.emplace_node<LinearProgramObjectiveValueNode>(lp_ptr);
+        auto sol_ptr = graph.emplace_node<LinearProgramSolutionNode>(lp_ptr);
 
         graph.emplace_node<ArrayValidationNode>(feas_ptr);
         graph.emplace_node<ArrayValidationNode>(obj_ptr);
@@ -204,22 +205,23 @@ TEST_CASE("LPNode") {
         auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
 
         // b_lb = [-inf, 5, 6], A = [[0, 1], [1, 2], [3, 2]], b_ub = [7, 15, inf]
-        auto b_lb_ptr =
-                graph.emplace_node<ConstantNode>(std::vector<double>{-LPNode::infinity(), 5, 6});
+        auto b_lb_ptr = graph.emplace_node<ConstantNode>(
+                std::vector<double>{-LinearProgramNode::infinity(), 5, 6});
         auto A = std::vector<double>{0, 1, 1, 2, 3, 2};
         auto A_ptr = graph.emplace_node<ConstantNode>(A.data(), std::vector<ssize_t>{3, 2});
-        auto b_ub_ptr =
-                graph.emplace_node<ConstantNode>(std::vector<double>{7, 15, LPNode::infinity()});
+        auto b_ub_ptr = graph.emplace_node<ConstantNode>(
+                std::vector<double>{7, 15, LinearProgramNode::infinity()});
 
         // lb = [0, 1], ub = [4, inf]
         auto lb_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1});
-        auto ub_ptr = graph.emplace_node<ConstantNode>(std::vector{4, LPNode::infinity()});
+        auto ub_ptr =
+                graph.emplace_node<ConstantNode>(std::vector{4, LinearProgramNode::infinity()});
 
-        auto lp_ptr = graph.emplace_node<LPNode>(c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, nullptr, nullptr,
-                                                 lb_ptr, ub_ptr);
+        auto lp_ptr = graph.emplace_node<LinearProgramNode>(c_ptr, b_lb_ptr, A_ptr, b_ub_ptr,
+                                                            nullptr, nullptr, lb_ptr, ub_ptr);
 
-        auto feas_ptr = graph.emplace_node<LPFeasibleNode>(lp_ptr);
-        auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
+        auto feas_ptr = graph.emplace_node<LinearProgramFeasibleNode>(lp_ptr);
+        auto sol_ptr = graph.emplace_node<LinearProgramSolutionNode>(lp_ptr);
 
         graph.emplace_node<ArrayValidationNode>(feas_ptr);
         graph.emplace_node<ArrayValidationNode>(sol_ptr);
@@ -227,7 +229,7 @@ TEST_CASE("LPNode") {
         THEN("The integrality, min, and max are as expected") {
             CHECK(!sol_ptr->integral());
             CHECK(sol_ptr->min() == 0);
-            CHECK(sol_ptr->max() == LPNode::infinity());
+            CHECK(sol_ptr->max() == LinearProgramNode::infinity());
         }
 
         WHEN("We initialize the state") {
@@ -266,10 +268,10 @@ TEST_CASE("LPNode") {
         auto lb = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
         auto ub = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
 
-        auto lp_ptr = graph.emplace_node<LPNode>(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
+        auto lp_ptr = graph.emplace_node<LinearProgramNode>(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
 
-        auto feas_ptr = graph.emplace_node<LPFeasibleNode>(lp_ptr);
-        auto sol_ptr = graph.emplace_node<LPSolutionNode>(lp_ptr);
+        auto feas_ptr = graph.emplace_node<LinearProgramFeasibleNode>(lp_ptr);
+        auto sol_ptr = graph.emplace_node<LinearProgramSolutionNode>(lp_ptr);
 
         graph.emplace_node<ArrayValidationNode>(feas_ptr);
         graph.emplace_node<ArrayValidationNode>(sol_ptr);
