@@ -797,7 +797,7 @@ cdef class _Graph:
             :meth:`Model.decision_state_size()` An estimate of the size of a
             model's decision states.
 
-            :ref:`properties_solver_properties` The properties of the
+            :ref:`opt_solver_nl_properties` The properties of the
             `Leap <https://cloud.dwavesys.com/leap/>`_ service's
             quantum-classical hybrid nonlinear solver. Including limits on
             the maximum state size of a model.
