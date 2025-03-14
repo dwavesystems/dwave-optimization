@@ -26,6 +26,10 @@ from dwave.optimization.symbols import (
     Expit,
     Log,
     Logical,
+    LP,
+    LPFeasible,
+    LPObjectiveValue,
+    LPSolution,
     Maximum,
     Minimum,
     Modulus,
@@ -53,6 +57,7 @@ __all__ = [
     "divide",
     "expit",
     "hstack",
+    "linprog",
     "log",
     "logical",
     "logical_and",
@@ -426,6 +431,131 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
         return concatenate(arrays, 0)
     else:
         return concatenate(arrays, 1)
+
+
+class LPResult:
+    """The outputs of a linear program run."""
+
+    lp: LP
+    """The LP symbol."""
+
+    def __init__(self, lp: LP):
+        self.lp = lp
+
+    @functools.cached_property
+    def fun(self) -> LPObjectiveValue:
+        """The value of the objective as an array symbol."""
+        return LPObjectiveValue(self.lp)
+
+    @functools.cached_property
+    def success(self) -> LPFeasible:
+        """``True`` if the linear program found the optimal value as an array symbol."""
+        return LPFeasible(self.lp)
+
+    @functools.cached_property
+    def x(self) -> LPSolution:
+        """The assignments to the decision variables as an array symbol."""
+        return LPSolution(self.lp)
+
+
+def linprog(
+        c: ArraySymbol,
+        A_ub: typing.Optional[ArraySymbol] = None,  # alias for A
+        b_ub: typing.Optional[ArraySymbol] = None,
+        A_eq: typing.Optional[ArraySymbol] = None,
+        b_eq: typing.Optional[ArraySymbol] = None,
+        *,  # the args up until here match SciPy's linprog() which accepts them positionally
+        b_lb: typing.Optional[ArraySymbol] = None,
+        A: typing.Optional[ArraySymbol] = None,
+        lb: typing.Optional[ArraySymbol] = None,
+        ub: typing.Optional[ArraySymbol] = None,
+        ) -> LPResult:
+    r"""Solve a :term:`linear program` defined by the input array symbol(s).
+
+    Linear programs solve problems of the form:
+
+    .. math::
+        \text{minimize:} \\
+        & c^T x \\
+        \text{subject to:} \\
+        b_{lb} &\leq A x &\leq b_{ub} \\
+        b_{eq} &= A_{eq} x \\
+        l &\leq x &\leq u
+
+    Or, equivalently:
+
+    .. math::
+        \text{minimize:} \\
+        & c^T x \\
+        \text{subject to:} \\
+        A_{ub} x &\leq b_{ub} \\
+        A_{eq} x &= b_{eq} \\
+        l &\leq x &\leq u
+
+    Args:
+        c: A 1D array symbol giving the coefficients of the linear objective.
+        b_lb: A 1D array symbol giving the linear inequality lower bounds.
+        A: A 2D array symbol giving the linear inequality matrix. At most one
+            of ``A_ub`` and ``A`` may be provided.
+        b_ub: A 1D array symbol giving the linear inequality upper bounds.
+        A_eq: A 2D array symbol giving the linear equality matrix.
+        b_eq: A 1D array symbol giving the linear equality bounds.
+        A_ub: An alias of ``A``.
+        lb: A 1D array symbol giving the lower bounds on ``x``.
+        ub: A 1D array symbol giving the upper bounds on ``x``.
+
+    Returns:
+        An ``LPResult`` class containing the results of the LP. It has the
+        following attributes:
+
+        * **fun** - The value of the objective as a
+          :class:`~dwave.optimization.symbols.LPObjectiveValue`.
+        * **success** - Whether the linear program found an optimial value as a
+          :class:`~dwave.optimization.symbols.LPFeasible`.
+        * **x** - The assignments to the decision variables as a
+          :class:`~dwave.optimization.symbols.LPSolution`.
+
+    See Also:
+        :class:`~dwave.optimization.symbols.LP`,
+        :class:`~dwave.optimization.symbols.LPFeasible`,
+        :class:`~dwave.optimization.symbols.LPObjectiveValue`,
+        :class:`~dwave.optimization.symbols.LPSolution`: The associated symbols.
+
+        :func:`scipy.optimize.linprog()`: A function in SciPy that this function
+        is designed to mimic.
+
+    Examples:
+        The linear program
+
+        .. math::
+            \text{minimize: } & -x_0 - 2x_1 \\
+            \text{subject to: } & x_0 + x_1 &<= 1
+
+        can be represented with symbols
+
+        >>> from dwave.optimization import linprog, Model
+
+        >>> model = Model()
+        >>> c = model.constant([-1, -2])
+        >>> A_ub = model.constant([[1, 1]])
+        >>> b_ub = model.constant([1])
+        >>> res = linprog(c, A_ub=A_ub, b_ub=b_ub)
+        >>> _ = model.add_constraint(res.success)  # tell the model you want feasible solutions
+        ...
+        >>> model.states.resize(1)
+        >>> x = res.x
+        >>> with model.lock():
+        ...     x.state()
+        array([0., 1.])
+
+    .. versionadded:: 0.6.0
+    """
+    if A is not None and A_ub is not None:
+        raise ValueError("can provide A or A_ub, but not both")
+    elif A_ub is not None:
+        A = A_ub
+
+    return LPResult(LP(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub))
 
 
 def log(x: ArraySymbol) -> Log:

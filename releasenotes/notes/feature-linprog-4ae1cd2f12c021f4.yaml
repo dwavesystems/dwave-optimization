@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add ``linprog()`` function. This function accepts array symbols
+    representing a linear program and returns array symbols giving the
+    result.

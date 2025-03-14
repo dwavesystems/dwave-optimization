@@ -1432,13 +1432,13 @@ class TestLP(utils.SymbolTests):
         # just c
         model = Model()
         c = model.integer(2, lower_bound=-10, upper_bound=10)
-        lp = dwave.optimization.symbols.LP(c)
-        feasible = lp.success()
-        obj = lp.fun()
-        sol = lp.x()
+        res = dwave.optimization.linprog(c)
+        feasible = res.success
+        obj = res.fun
+        sol = res.x
         model.lock()
 
-        yield lp
+        yield res.lp
         yield feasible
         yield obj
         yield sol
@@ -1449,13 +1449,13 @@ class TestLP(utils.SymbolTests):
         A = model.integer((3, 2), lower_bound=-10, upper_bound=10)
         b_ub = model.integer(3, lower_bound=-10, upper_bound=10)
         ub = model.integer(2, lower_bound=0, upper_bound=1)
-        lp = dwave.optimization.symbols.LP(c, A=A, b_ub=b_ub, ub=ub)
-        feasible = lp.success()
-        obj = lp.fun()
-        sol = lp.x()
+        res = dwave.optimization.linprog(c, A=A, b_ub=b_ub, ub=ub)
+        feasible = res.success
+        obj = res.fun
+        sol = res.x
         model.lock()
 
-        yield lp
+        yield res.lp
         yield feasible
         yield obj
         yield sol
@@ -1470,13 +1470,14 @@ class TestLP(utils.SymbolTests):
         b_eq = model.integer(4, lower_bound=-10, upper_bound=10)
         lb = model.integer(2, lower_bound=0, upper_bound=1)
         ub = model.integer(2, lower_bound=0, upper_bound=1)
-        lp = dwave.optimization.symbols.LP(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub)
-        feasible = lp.success()
-        obj = lp.fun()
-        sol = lp.x()
+        res = dwave.optimization.linprog(
+            c, b_lb=b_lb, A=A, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, lb=lb, ub=ub)
+        feasible = res.success
+        obj = res.fun
+        sol = res.x
         model.lock()
 
-        yield lp
+        yield res.lp
         yield feasible
         yield obj
         yield sol
@@ -1485,8 +1486,8 @@ class TestLP(utils.SymbolTests):
         model = Model()
         model.states.resize(1)
         c = model.integer(2, lower_bound=-10, upper_bound=10)
-        lp = dwave.optimization.symbols.LP(c)
-        sol = lp.x()
+        res = dwave.optimization.linprog(c)
+        sol = res.x
         with model.lock():
             c.set_state(0, [5, 5])
             np.testing.assert_array_equal(sol.state(), [0, 0])
@@ -1506,11 +1507,11 @@ class TestLP(utils.SymbolTests):
         b_ub = model.integer(2, lower_bound=-10)
         lb = model.constant([-1e30, -3])
 
-        lp = dwave.optimization.symbols.LP(c, A=A_ub, b_ub=b_ub, lb=lb)
+        res = dwave.optimization.linprog(c, A=A_ub, b_ub=b_ub, lb=lb)
 
-        feasible = lp.success()
-        obj = lp.fun()
-        sol = lp.x()
+        feasible = res.success
+        obj = res.fun
+        sol = res.x
 
         with model.lock():
             c.set_state(0, [-1, 4])
@@ -1534,9 +1535,10 @@ class TestLP(utils.SymbolTests):
         c = model.constant([-1, -1])
         A = model.constant([[1, 1], [0, -1], [-1, 0]])
         b = model.constant([1, 0, 0])
-        lp = dwave.optimization.symbols.LP(c, A=A, b_ub=b)
+        res = dwave.optimization.linprog(c, A=A, b_ub=b)
 
-        feas = lp.success()
+        feas = res.success
+        lp = res.lp
 
         model.lock()
 
@@ -1564,7 +1566,9 @@ class TestLP(utils.SymbolTests):
         c = model.constant([-1, -1])
         A = model.constant([[1, 1], [0, -1], [-1, 0]])
         b = model.constant([1, 0, 0])
-        lp = dwave.optimization.symbols.LP(c, A=A, b_ub=b)
+        res = dwave.optimization.linprog(c, A=A, b_ub=b)
+
+        lp = res.lp
 
         model.states.resize(4)
         model.lock()
