@@ -1,13 +1,156 @@
+# Copyright 2025 D-Wave
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
 import abc
 import itertools
+import typing
 import unittest
 
 import numpy as np
 
 import dwave.optimization
-from dwave.optimization import (
-    Model,
-)
+from dwave.optimization import Model
+from dwave.optimization.model import ArraySymbol
+
+
+def iter_invalid_lp_kwargs() -> typing.Iterator[tuple[str, dict[str, ArraySymbol], str]]:
+    # we could test not providing c at all, but that's handled by Python
+    # yield dict(), "c must be a nonempty 1D array with a fixed size"
+
+    model = Model()
+
+    N = 5
+
+    empty = model.constant([])
+    scalar = model.constant(5)
+    oneD = model.constant(np.arange(N))
+    oneD_wrong = model.constant(np.arange(N + 1))
+    twoD = model.constant(np.arange(N*N).reshape(N, N))
+    dynamic = model.set(N)
+
+    # C correctness
+    yield "empty c", dict(c=empty), "c must be a nonempty 1D array with a fixed size"
+    yield "2D c", dict(c=twoD), "c must be a nonempty 1D array with a fixed size"
+    yield "dynamic c", dict(c=dynamic), "c must be a nonempty 1D array with a fixed size"
+    yield "scalar c", dict(c=scalar), "c must be a nonempty 1D array with a fixed size"
+
+    # b_lb/A/b_ub correctness
+    yield (
+        "A wrong shape",
+        dict(c=oneD, A=oneD, b_ub=oneD),
+        "A must have exactly two dimensions",
+        )
+    yield (
+        "missing b_lb, b_ub",
+        dict(c=oneD, A=twoD),
+        "if A is given then b_lb and/or b_ub must also be given and vice versa",
+        )
+    yield (
+        "b_lb given, missing A",
+        dict(c=oneD, b_lb=oneD),
+        "if A is given then b_lb and/or b_ub must also be given and vice versa",
+        )
+    yield (
+        "b_ub given, missing A",
+        dict(c=oneD, b_ub=oneD),
+        "if A is given then b_lb and/or b_ub must also be given and vice versa",
+        )
+
+    # A_eq/b_eq correctness
+    yield (
+        "A_eq wrong shape",
+        dict(c=oneD, A_eq=oneD, b_eq=oneD),
+        "A_eq must have exactly two dimensions",
+        )
+    yield (
+        "b_eq given, missing A_eq",
+        dict(c=oneD, b_eq=oneD),
+        "if A_eq is given then b_eq must also be given and vice versa",
+        )
+    yield (
+        "A_eq given, missing b_eq",
+        dict(c=oneD, A_eq=oneD),
+        "if A_eq is given then b_eq must also be given and vice versa",
+        )
+    yield (
+        "A_eq given, b_eq wrong length",
+        dict(c=oneD, A_eq=twoD, b_eq=oneD_wrong),
+        "b_eq must be a 1D array and the number of rows in A_eq",
+        )
+
+    # lb/ub correctness
+    yield (
+        "2D lb",
+        dict(c=oneD, lb=twoD),
+        "lb must be a scalar or a 1D array with a number of values equal to the size of c",
+        )
+    yield (
+        "lb wrong length",
+        dict(c=oneD, lb=oneD_wrong),
+        "lb must be a scalar or a 1D array with a number of values equal to the size of c",
+        )
+    yield (
+        "2D ub",
+        dict(c=oneD, ub=twoD),
+        "ub must be a scalar or a 1D array with a number of values equal to the size of c",
+        )
+    yield (
+        "ub wrong length",
+        dict(c=oneD, ub=oneD_wrong),
+        "ub must be a scalar or a 1D array with a number of values equal to the size of c",
+        )
+
+
+def iter_valid_lp_kwargs() -> typing.Iterator[tuple[str, dict[str, ArraySymbol]]]:
+    N = 5
+
+    # C correctness
+    yield "only c", dict(c=Model().integer(N, upper_bound=N))
+
+    # b_lb/A/b_ub correctness
+    model = Model()
+    c = model.integer(N, upper_bound=N)
+    b_lb = model.integer(N, upper_bound=N)
+    A = model.integer((N, N), upper_bound=N)
+    b_ub = model.integer(N, upper_bound=N)
+    yield "b_lb, A, and b_ub", dict(c=c, b_lb=b_lb, A=A, b_ub=b_ub)
+    yield "b_lb and A", dict(c=c, b_lb=b_lb, A=A)
+    yield "A and b_ub", dict(c=c, A=A, b_ub=b_ub)
+
+    # A_eq/b_eq correctness
+    model = Model()
+    c = model.integer(N, upper_bound=N)
+    b_eq = model.integer(N, upper_bound=N)
+    A_eq = model.integer((N, N), upper_bound=N)
+    yield "b_eq and A_eq", dict(c=c, b_eq=b_eq, A_eq=A_eq)
+
+    # lb/ub correctness
+    model = Model()
+    c = model.integer(N, upper_bound=N)
+    lb = model.integer(N, upper_bound=N)
+    lb_scalar = model.integer(upper_bound=N)
+    ub = model.integer(N, upper_bound=N)
+    ub_scalar = model.integer(upper_bound=N)
+    yield "scalar lb", dict(c=c, lb=lb_scalar)
+    yield "scalar ub", dict(c=c, ub=ub_scalar)
+    yield "1D lb", dict(c=c, lb=lb)
+    yield "1D ub", dict(c=c, ub=ub)
+
+    yield "scalar lb, scalar ub", dict(c=c, lb=lb_scalar, ub=ub_scalar)
+    yield "scalar lb, 1D ub", dict(c=c, lb=lb_scalar, ub=ub)
+    yield "1D lb, scalar ub", dict(c=c, lb=lb, ub=ub_scalar)
+    yield "1D lb, 1D ub", dict(c=c, lb=lb, ub=ub)
 
 
 class SymbolTests(abc.ABC, unittest.TestCase):

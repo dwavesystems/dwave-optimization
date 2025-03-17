@@ -1482,6 +1482,34 @@ class TestLinearProgram(utils.SymbolTests):
         yield obj
         yield sol
 
+    def test_inputs_valid(self):
+        from dwave.optimization.symbols import (
+            LinearProgram,
+            LinearProgramFeasible,
+            LinearProgramObjectiveValue,
+            LinearProgramSolution,
+        )
+
+        for name, kwargs in utils.iter_valid_lp_kwargs():
+            with self.subTest(name):
+                lp = LinearProgram(**kwargs)
+                feas = LinearProgramFeasible(lp)
+                res = LinearProgramObjectiveValue(lp)
+                sol = LinearProgramSolution(lp)
+
+                # smoke test that we can access the state in various ways without errors
+                lp.model.states.resize(1)
+                with lp.model.lock():
+                    lp.state()
+                    feas.state()
+                    res.state()
+                    sol.state()
+
+    def test_inputs_invalid(self):
+        for name, kwargs, msg in utils.iter_invalid_lp_kwargs():
+            with self.subTest(name), self.assertRaisesRegex(ValueError, msg):
+                dwave.optimization.symbols.LinearProgram(**kwargs)
+
     def test_unconstrained(self):
         model = Model()
         model.states.resize(1)

@@ -87,6 +87,13 @@ class LinearProgramNodeBase : public Node {
     virtual std::pair<double, double> variables_minmax() const = 0;
 
     virtual std::span<const ssize_t> variables_shape() const = 0;
+
+ protected:
+    /// Enforce the rules on the input node(s).
+    static void check_input_arguments(const ArrayNode* c_ptr, const ArrayNode* b_lb_ptr,
+                                      const ArrayNode* A_ptr, const ArrayNode* b_ub_ptr,
+                                      const ArrayNode* A_eq_ptr, const ArrayNode* b_eq_ptr,
+                                      const ArrayNode* lb_ptr, const ArrayNode* ub_ptr);
 };
 
 /// Node that solves a given LP defined by its predecessors, and outputs the optimal solution
@@ -97,12 +104,14 @@ class LinearProgramNodeBase : public Node {
 ///         callback=None, options=None, x0=None, integrality=None)
 class LinearProgramNode : public LinearProgramNodeBase {
  public:
-    // Parameter names are chosen to match scipy.optimize.lingprog()
-    LinearProgramNode(ArrayNode* c_ptr,                                            // required
-                      ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,  // can be nullptr
-                      ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr,  // nullptr or must match size
+    /// Construct a LinearProgramNode
+    ///
+    /// Note: parameter names are chosen to match scipy.optimize.lingprog()
+    LinearProgramNode(ArrayNode* c_ptr,
+                      ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,
+                      ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr,
                       ArrayNode* lb_ptr,
-                      ArrayNode* ub_ptr);  // can be nullptr, both have size 1, or size n
+                      ArrayNode* ub_ptr);
 
     /// @copydoc Node::commit()
     void commit(State& state) const override;
