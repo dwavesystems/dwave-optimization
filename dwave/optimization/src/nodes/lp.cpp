@@ -41,31 +41,6 @@ struct LinearProgramNodeData : NodeStateData {
     SolveResult result;
 };
 
-void check_Ab_consistency(const ssize_t num_variables, const Array* const A_ptr,
-                          const Array* const b_ptr, const std::string str) {
-    if (A_ptr != nullptr && b_ptr != nullptr) {
-        // they are both given, so they need to have consistent shape
-        auto shape = A_ptr->shape();
-
-        if (shape.size() != 2 || shape[1] != num_variables) {
-            throw std::invalid_argument(
-                    "A_" + str +
-                    " must have exactly two dimensions, and the number of columns in A_" + str +
-                    " must be equal to the size of c");
-        }
-
-        if (b_ptr->ndim() != 1 || b_ptr->size() != shape[0]) {
-            throw std::invalid_argument("b_" + str +
-                                        " must be a 1-D array and the number of rows in A_ub must "
-                                        "equal the number of values in b_" +
-                                        str);
-        }
-    } else if (A_ptr != nullptr || b_ptr != nullptr) {
-        // we can't have one without the other
-        throw std::invalid_argument("Must provide both A_" + str + " and b_" + str + " or neither");
-    }
-}
-
 LinearProgramFeasibleNode::LinearProgramFeasibleNode(LinearProgramNodeBase* lp_ptr)
         : lp_ptr_(lp_ptr) {
     add_predecessor(lp_ptr);
@@ -109,6 +84,95 @@ void LinearProgramFeasibleNode::revert(State& state) const {
     return data_ptr<ScalarNodeStateData>(state)->revert();
 }
 
+void LinearProgramNodeBase::check_input_arguments(const ArrayNode* c_ptr, const ArrayNode* b_lb_ptr,
+                                                  const ArrayNode* A_ptr, const ArrayNode* b_ub_ptr,
+                                                  const ArrayNode* A_eq_ptr,
+                                                  const ArrayNode* b_eq_ptr,
+                                                  const ArrayNode* lb_ptr,
+                                                  const ArrayNode* ub_ptr) {
+    // c must exist and be a fixed-length 1D array
+    if (c_ptr == nullptr || c_ptr->ndim() != 1 || c_ptr->dynamic() || c_ptr->size() < 1) {
+        throw std::invalid_argument("c must be a nonempty 1D array with a fixed size");
+    }
+    const ssize_t num_columns = c_ptr->size();
+
+    // For refernce: SciPy's error messages:
+    // * Invalid input for linprog: A_ub must have exactly two dimensions, and
+    //   the number of columns in A_ub must be equal to the size of c
+    // * Invalid input for linprog: b_ub must be a 1-D array; b_ub must not have
+    //   more than one non-singleton dimension and the number of rows in A_ub
+    //   must equal the number of values in b_ub
+    auto check_Ab = [&num_columns](const Array* A_ptr, const Array* b_ptr, const std::string A,
+                                   const std::string b) -> void {
+        if (A_ptr->dynamic() || b_ptr->dynamic()) {
+            throw std::invalid_argument(A + " and " + b + " must not be dynamic");
+        }
+
+        const auto A_shape = A_ptr->shape();
+        const auto b_shape = b_ptr->shape();
+
+        if (A_shape.size() != 2) {
+            throw std::invalid_argument(A + " must have exactly two dimensions");
+        }
+        if (A_shape[1] != num_columns) {
+            throw std::invalid_argument(
+                    A + " must have exactly two dimensions, and the number of columns in " + A +
+                    " (" + std::to_string(A_shape[1]) + ") must be equal to the size of c (" +
+                    std::to_string(num_columns) + ")");
+        }
+        if (b_shape.size() != 1) {
+            throw std::invalid_argument(b + " must be a 1D array");
+        }
+        if (A_shape[0] != b_shape[0]) {
+            throw std::invalid_argument(b + " must be a 1D array and the number of rows in " + A +
+                                        " (" + std::to_string(A_shape[0]) +
+                                        ") must equal the size of " + b + " (" +
+                                        std::to_string(b_shape[0]) + ")");
+        }
+    };
+
+    // b_lb, A, b_ub
+    if (b_lb_ptr != nullptr && A_ptr != nullptr && b_ub_ptr != nullptr) {
+        check_Ab(A_ptr, b_lb_ptr, "A", "b_lb");
+        check_Ab(A_ptr, b_ub_ptr, "A", "b_ub");
+    } else if (b_lb_ptr != nullptr && A_ptr != nullptr) {
+        check_Ab(A_ptr, b_lb_ptr, "A", "b_lb");
+    } else if (A_ptr != nullptr && b_ub_ptr != nullptr) {
+        check_Ab(A_ptr, b_ub_ptr, "A", "b_ub");
+    } else if (b_lb_ptr == nullptr && A_ptr == nullptr && b_ub_ptr == nullptr) {
+        // none provided, this is OK
+    } else {
+        throw std::invalid_argument(
+                "if A is given then b_lb and/or b_ub must also be given ""and vice versa");
+    }
+
+    // A_eq, b_eq
+    if (A_eq_ptr != nullptr && b_eq_ptr != nullptr) {
+        check_Ab(A_eq_ptr, b_eq_ptr, "A_eq", "b_eq");
+    } else if (A_eq_ptr == nullptr && b_eq_ptr == nullptr) {
+        // neither provided, this is OK
+    } else {
+        throw std::invalid_argument("if A_eq is given then b_eq must also be given and vice versa");
+    }
+
+
+    // lb/ub can be null, scalar, or 1d of length num_variables
+    if (lb_ptr == nullptr) {
+    } else if (lb_ptr->ndim() == 0) {
+    } else if (lb_ptr->ndim() == 1 && lb_ptr->size() == num_columns) {
+    } else {
+        throw std::invalid_argument(
+                "lb must be a scalar or a 1D array with a number of values equal to the size of c");
+    }
+    if (ub_ptr == nullptr) {
+    } else if (ub_ptr->ndim() == 0) {
+    } else if (ub_ptr->ndim() == 1 && ub_ptr->size() == num_columns) {
+    } else {
+        throw std::invalid_argument(
+                "ub must be a scalar or a 1D array with a number of values equal to the size of c");
+    }
+}
+
 const double LinearProgramNodeBase::default_lower_bound() { return 0.0; }
 
 const double LinearProgramNodeBase::default_upper_bound() { return LP_INFINITY; }
@@ -126,39 +190,7 @@ LinearProgramNode::LinearProgramNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, Arra
           b_eq_ptr_(b_eq_ptr),
           lb_ptr_(lb_ptr),
           ub_ptr_(ub_ptr) {
-    if (c_ptr_->ndim() != 1) throw std::invalid_argument("c must be 1d array");
-    if (c_ptr_->dynamic()) throw std::invalid_argument("c cannot be dynamic");
-
-    const ssize_t num_variables = c_ptr_->size();
-
-    if (num_variables <= 0) throw std::invalid_argument("c must not be empty");
-
-    // check_Ab_consistency(num_variables, A_ub_ptr_, b_ub_ptr_, "ub");
-    // todo: fix error message for A not A_ub
-    if (A_ptr != nullptr && b_lb_ptr == nullptr && b_ub_ptr == nullptr) {
-        throw std::invalid_argument("if A is provided, so must b_lb or b_ub");
-    }
-    if (b_lb_ptr != nullptr) check_Ab_consistency(num_variables, A_ptr, b_lb_ptr, "ub");
-    if (b_ub_ptr != nullptr) check_Ab_consistency(num_variables, A_ptr, b_ub_ptr, "ub");
-    check_Ab_consistency(num_variables, A_eq_ptr_, b_eq_ptr_, "eq");
-
-    // lb/ub can be null, scalar, or 1d of length num_variables
-    if (lb_ptr_ == nullptr) {
-    } else if (lb_ptr_->ndim() == 0) {
-    } else if (lb_ptr_->ndim() == 1 && lb_ptr_->size() == num_variables) {
-    } else {
-        throw std::invalid_argument(
-                "lb must be a scalar or a 1-D array with a number of values equal to the size of "
-                "c");
-    }
-    if (ub_ptr_ == nullptr) {
-    } else if (ub_ptr_->ndim() == 0) {
-    } else if (ub_ptr_->ndim() == 1 && ub_ptr_->size() == num_variables) {
-    } else {
-        throw std::invalid_argument(
-                "lb must be a scalar or a 1-D array with a number of values equal to the size of "
-                "c");
-    }
+    check_input_arguments(c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, A_eq_ptr, b_eq_ptr, lb_ptr, ub_ptr);
 
     // Finally, add the nodes (if they were passed in) as predecessors. This does
     // mean that we can't access them by index within the predecessor list, so
@@ -231,13 +263,19 @@ void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp)
     }
     assert(lp.A_eq.size() == lp.b_eq.size() * lp.c.size() && "A_eq and b_eq sizes don't match");
 
-    if (lb_ptr_) {
+    if (lb_ptr_ && lb_ptr_->ndim() == 0) {
+        lp.lb.assign(c_ptr_->size(), lb_ptr_->view(state).front());
+    } else if (lb_ptr_) {
+        assert(lb_ptr_->ndim() == 1);
         lp.lb.assign(lb_ptr_->view(state).begin(), lb_ptr_->view(state).end());
     } else {
         lp.lb.assign(c_ptr_->size(state), LinearProgramNodeBase::default_lower_bound());
     }
 
-    if (ub_ptr_) {
+    if (ub_ptr_ && ub_ptr_->ndim() == 0) {
+        lp.ub.assign(c_ptr_->size(), ub_ptr_->view(state).front());
+    } else if (ub_ptr_) {
+        assert(ub_ptr_->ndim() == 1);
         lp.ub.assign(ub_ptr_->view(state).begin(), ub_ptr_->view(state).end());
     } else {
         lp.ub.assign(c_ptr_->size(state), LinearProgramNodeBase::default_upper_bound());
