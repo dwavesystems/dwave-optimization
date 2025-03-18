@@ -22,8 +22,6 @@ extensions = [
     'sphinx.ext.ifconfig',
 
     # other extensions
-    'reno.sphinxext',
-    'sphinx_design',
     'breathe',
 ]
 
