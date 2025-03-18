@@ -216,7 +216,7 @@ cdef class States:
     def from_future(self, future, result_hook):
         """Populate the states from the result of a future computation.
 
-        A :doc:`Future <oceandocs:docs_cloud/reference/computation>` object is
+        A :ref:`Future <cloud_computation>` object is
         returned by the solver to which your problem model is submitted. This
         enables asynchronous problem submission.
 
@@ -413,7 +413,7 @@ cdef class States:
     cpdef resolve(self):
         """Block until states are retrieved from any pending future computations.
 
-        A :doc:`Future <oceandocs:docs_cloud/reference/computation>` object is
+        A :ref:`Future <cloud_computation>` object is
         returned by the solver to which your problem model is submitted. This
         enables asynchronous problem submission.
         """
