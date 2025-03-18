@@ -23,8 +23,6 @@ For explanations of the terminology, see the
 Usage Information
 =================
 
-.. todo:: add the intersphinx prefix to enable these links for self builds
-
 *   :ref:`index_concepts` for terminology
 *   :ref:`opt_model_construction_nl` for an introduction to using this package
     to model problems.
@@ -32,4 +30,4 @@ Usage Information
     :term:`hybrid` :term:`solvers <solver>`.
 *   :ref:`opt_solver_nl_properties` and :ref:`opt_solver_nl_parameters` for the
     solver's properties and parameters.
-*   :ref:`opt_index_using` for best practices and examples.
+*   :ref:`opt_index_improving_solutions` for best practices and examples.
