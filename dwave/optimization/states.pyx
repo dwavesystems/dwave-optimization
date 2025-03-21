@@ -22,6 +22,7 @@ from libcpp.utility cimport move
 from dwave.optimization.libcpp.array cimport Array as cppArray
 from dwave.optimization.model cimport ArraySymbol, _Graph
 from dwave.optimization.model import Model
+from dwave.optimization.symbols cimport symbol_from_ptr
 from dwave.optimization.utilities import _file_object_arg
 
 __all__ = ["States"]
@@ -355,11 +356,16 @@ cdef class States:
             # nothing so save, so shortcut
             return
 
-        model = self._model()  # get a ref-counted model
+        cdef _Graph model = self._model()  # get a ref-counted model
 
-        for symbol in model.iter_symbols():
-            if symbol._deterministic_state():
+        nodes = model._graph.nodes()
+        for i in range(nodes.size()):
+            # just in case we don't recognize the symbol, ask the node for its
+            # state before making one
+            if nodes[i].get().deterministic_state():
                 continue
+
+            symbol = symbol_from_ptr(model, nodes[i].get())
 
             symbol._states_into_zipfile(
                 zf,
