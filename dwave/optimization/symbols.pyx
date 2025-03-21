@@ -56,6 +56,7 @@ from dwave.optimization.libcpp.nodes cimport (
     ArrayValidationNode as cppArrayValidationNode,
     BasicIndexingNode as cppBasicIndexingNode,
     BinaryNode as cppBinaryNode,
+    BSplineNode as cppBSplineNode,
     ConcatenateNode as cppConcatenateNode,
     ConstantNode as cppConstantNode,
     CopyNode as cppCopyNode,
@@ -120,6 +121,7 @@ __all__ = [
     "ARange",
     "BasicIndexing",
     "BinaryVariable",
+    "BSpline",
     "Concatenate",
     "Constant",
     "Copy",
@@ -941,6 +943,94 @@ cdef class BinaryVariable(ArraySymbol):
     cdef cppBinaryNode* ptr
 
 _register(BinaryVariable, typeid(cppBinaryNode))
+
+
+cdef class BSpline(ArraySymbol):
+    """Bspline node that takes in an array pointer, an integer degree and two vectors for knots and coefficients.
+
+    Examples:
+        This example creates a BSpline symbol.
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import bspline
+        >>> model = Model()
+        >>> x = model.integer(lower_bound=3, upper_bound=4)
+        >>> k = 2
+        >>> t = [0, 1, 2, 3, 4, 5, 6]
+        >>> c = [-1, 2, 0, -1]
+        >>> bspline_node = bspline(x, k, t, c)
+        >>> type(bspline_node)
+        <class 'dwave.optimization.symbols.BSpline'>
+    """
+    def __init__(self, ArraySymbol x, k, t, c):
+
+        if not isinstance(k, int):
+            raise TypeError("expected an int for k")
+
+        cdef _Graph model = x.model
+
+        val_k = <Py_ssize_t> k
+
+        cdef vector[double] vec_t
+        for value_t in t:
+            vec_t.push_back(<double> value_t)
+
+        cdef vector[double] vec_c
+        for value_c in c:
+            vec_c.push_back(<double> value_c)
+
+        self.ptr = model._graph.emplace_node[cppBSplineNode](x.array_ptr, val_k, vec_t, vec_c)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppBSplineNode * ptr = dynamic_cast_ptr[cppBSplineNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a BSpline")
+        cdef BSpline m = BSpline.__new__(BSpline)
+        m.ptr = ptr
+        m.initialize_arraynode(symbol.model, ptr)
+        return m
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        """Construct a BSpline from a zipfile."""
+        if len(predecessors) != 1:
+            raise ValueError("BSpline must have exactly one predecessor")
+
+        # get the constant values
+        with zf.open(directory + "k.json", mode="r") as f:
+            kvalue = json.load(f)
+
+        with zf.open(directory + "t.npy", mode="r") as f:
+            tvalues = np.load(f, allow_pickle=False)
+
+        with zf.open(directory + "c.npy", mode="r") as f:
+            cvalues = np.load(f, allow_pickle=False)
+
+        # pass to the constructor
+        return cls(predecessors[0], kvalue, tvalues, cvalues)
+
+    def _into_zipfile(self, zf, directory):
+        """Save the BSpline constants into a zipfile"""
+        cdef vector[double] tvalues = self.ptr.t()
+        cdef vector[double] cvalues = self.ptr.c()
+
+        t_array = np.array([tvalues[i] for i in range(tvalues.size())], dtype=np.double)
+        c_array = np.array([cvalues[i] for i in range(cvalues.size())], dtype=np.double)
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+        zf.writestr(directory + "k.json", encoder.encode(self.ptr.k()))
+
+        with zf.open(directory + "t.npy", mode="w", force_zip64=True) as f:
+            np.save(f, t_array, allow_pickle=False)
+
+        with zf.open(directory + "c.npy", mode="w", force_zip64=True) as f:
+            np.save(f, c_array, allow_pickle=False)
+
+    cdef cppBSplineNode * ptr
+
+_register(BSpline, typeid(cppBSplineNode))
 
 
 cdef class Concatenate(ArraySymbol):
