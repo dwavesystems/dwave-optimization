@@ -75,7 +75,7 @@ struct FormatInfo<To, From> {
         return *static_cast<const From*>(ptr);
     }
 
-    static constexpr size_t itemsize() noexcept { return sizeof(From); }
+    static constexpr std::ptrdiff_t itemsize() noexcept { return sizeof(From); }
 };
 
 // Specialization for FormatInfo when we only want to specify the type we want
@@ -120,7 +120,7 @@ struct FormatInfo<To, void> {
         }
     }
 
-    size_t itemsize() const {
+    std::ptrdiff_t itemsize() const {
         switch (format) {
             case FormatCharacter::f:
                 return sizeof(float);
@@ -160,6 +160,13 @@ struct ShapeInfo {
     // Move Constructor
     ShapeInfo(ShapeInfo&& other) = default;
 
+    ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
+            : ndim(ndim), shape(shape), strides(strides), loc(std::make_unique<ssize_t[]>(ndim)) {
+        for (ssize_t i = 0; i < ndim; ++i) {
+            loc[i] = 0;
+        }
+    }
+
     // Copy and move assignment operators
     ShapeInfo& operator=(ShapeInfo other) noexcept {
         std::swap(ndim, other.ndim);
@@ -170,6 +177,85 @@ struct ShapeInfo {
     }
 
     ~ShapeInfo() = default;
+
+    // Check if another ShapeInfo is in the same location. For performance we
+    // only check the location when debug symbols are off.
+    bool operator==(const ShapeInfo& other) const {
+        assert(this->ndim == other.ndim);
+        assert(this->shape == other.shape);
+        assert(this->strides == other.strides);
+
+        for (ssize_t axis = 0; axis < ndim; ++axis) {
+            if (this->loc[axis] != other.loc[axis]) return false;
+        }
+        return true;
+    }
+
+    // Return the pointer offset (in bytes) relative to the current
+    // position in order to increment the iterator n times.
+    // n can be negative.
+    std::ptrdiff_t increment(const ssize_t n = 1) {
+        // handle a few simple cases with faster implementations
+        if (n == 0) return 0;
+        // if (n == +1) return increment1();
+        // if (n == -1) return decrement1();
+
+        assert(ndim > 0);  // we shouldn't be here if we're a scalar.
+
+        // working from right-to-left, figure out how many steps in each
+        // axis. We handle axis 0 as a special case
+
+        ssize_t offset = 0;  // the number of bytes we need to move
+
+        // We'll be using std::div() over ssize_t, so we'll store our
+        // current location in the struct returned by it.
+        // Unfortunately std::div() is not templated, but overloaded,
+        // so we use decltype instead.
+        decltype(std::div(ssize_t(), ssize_t())) qr{.quot = n, .rem = 0};
+
+        ssize_t axis = this->ndim - 1;
+        for (; axis >= 1; --axis) {
+            // A bit of sanity checking on our location
+            // We can go "beyond" the relevant memory on the 0th axis, but
+            // otherwise the location must be nonnegative and strictly less
+            // than the size in that dimension.
+            assert(0 <= loc[axis]);
+            assert(axis == 0 || loc[axis] < shape[axis]);
+
+            // if we're partway through the axis, we shift to
+            // the beginning by adding the number of steps to the total
+            // that we want to go, and updating the offset accordingly
+            if (loc[axis]) {
+                qr.quot += loc[axis];
+                offset -= loc[axis] * strides[axis];
+                // loc[axis] = 0;  // overwritten later, so skip resetting the loc
+            }
+
+            // now, the number of steps might be more than our axis
+            // can support, so we do a div
+            qr = std::div(qr.quot, shape[axis]);
+
+            // adjust so that the remainder is positive
+            if (qr.rem < 0) {
+                qr.quot -= 1;
+                qr.rem += shape[axis];
+            }
+
+            // finally adjust our location and offset
+            loc[axis] = qr.rem;
+            offset += qr.rem * strides[axis];
+            // qr.rem = 0;  // overwritten later, so skip resetting the .rem
+
+            // if there's nothing left to do then exit early
+            if (qr.quot == 0) break;
+        }
+        if (axis == 0) {
+            offset += qr.quot * strides[0];
+            loc[0] += qr.quot;
+        }
+
+        return offset;
+    }
 
     // Information about the shape/strides of the parent array. Note
     // the pointers are non-owning!
@@ -218,6 +304,15 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
     explicit BufferIterator(From* ptr) noexcept requires(DType<From> && !IsConst)
             : ptr_(ptr), format_(), shape_() {}
 
+    // Construct a non-contiguous iterator from a shape/strides defined as ranges
+    template <DType T>
+    BufferIterator(const T* ptr,
+                   ssize_t ndim,            // number of dimensions in the array
+                   const ssize_t* shape,    // shape of the array
+                   const ssize_t* strides)  // strides for each dimension of the array
+            noexcept requires(std::is_void_v<From>)
+            : ptr_(ptr), format_(ptr), shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
+
     // Copy and move assignment operators
     BufferIterator& operator=(BufferIterator other) noexcept {
         std::swap(*this, other);
@@ -238,7 +333,7 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         using ptr_type = std::conditional<IsConst, const char*, char*>::type;
 
         if (shape_) {
-            assert(false && "not yet implemented");
+            ptr_ = static_cast<ptr_type>(ptr_) + shape_->increment();
         } else {
             ptr_ = static_cast<ptr_type>(ptr_) + format_.itemsize();
         }
@@ -256,7 +351,7 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         using ptr_type = std::conditional<IsConst, const char*, char*>::type;
 
         if (shape_) {
-            assert(false && "not yet implemented");
+            ptr_ = static_cast<ptr_type>(ptr_) + shape_->increment(rhs);
         } else {
             ptr_ = static_cast<ptr_type>(ptr_) + rhs * format_.itemsize();
         }
@@ -268,7 +363,7 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
 
     friend bool operator==(const BufferIterator& lhs, const BufferIterator& rhs) {
         if (lhs.shape_ && rhs.shape_) {
-            assert(false);
+            return *lhs.shape_ == *rhs.shape_;
         } else if (lhs.shape_ || rhs.shape_) {
             // one is shaped and the other isn't, so definitionally they are not
             // equal, though probably no one should be comparing them so we go

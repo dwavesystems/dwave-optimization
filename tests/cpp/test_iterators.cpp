@@ -15,11 +15,12 @@
 // #include <sstream>
 #include <numeric>
 
+#include "catch2/benchmark/catch_benchmark_all.hpp"
 #include "catch2/catch_template_test_macros.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/matchers/catch_matchers_all.hpp"
 
-// #include "dwave-optimization/array.hpp"
+#include "dwave-optimization/array.hpp"
 // #include "dwave-optimization/state.hpp"
 
 #include "dwave-optimization/iterators.hpp"
@@ -27,6 +28,123 @@
 using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
+
+TEST_CASE("BufferIterator vs ArrayIterator") {
+    // for benchmarking we don't really care about the non-const case
+    using ArrayIterator = Array::const_iterator;
+
+    // get a large buffer of doubles
+    std::vector<double> buffer(1000);
+    std::iota(buffer.begin(), buffer.end(), 0);
+
+    BENCHMARK("BufferIterator<double, void>, contiguous") {
+        // for the moment let's cheat and not do the random access thing
+        auto it = exp::BufferIterator<double>(buffer.data());
+        double val = 0;
+        for (size_t i = 0, stop = buffer.size(); i < stop; ++i, ++it) {
+            val += *it;
+        }
+        return val;
+    };
+
+    BENCHMARK("BufferIterator<int, void>, contiguous") {
+        // for the moment let's cheat and not do the random access thing
+        auto it = exp::BufferIterator<int>(buffer.data());
+        int val = 0;
+        for (size_t i = 0, stop = buffer.size(); i < stop; ++i, ++it) {
+            val += *it;
+        }
+        return val;
+    };
+
+    BENCHMARK("BufferIterator<double, double> contiguous") {
+        // for the moment let's cheat and not do the random access thing
+        auto it = exp::BufferIterator<double, double>(buffer.data());
+        double val = 0;
+        for (size_t i = 0, stop = buffer.size(); i < stop; ++i, ++it) {
+            val += *it;
+        }
+        return val;
+    };
+
+    BENCHMARK("BufferIterator<int, double>, contiguous") {
+        // for the moment let's cheat and not do the random access thing
+        auto it = exp::BufferIterator<int, double>(buffer.data());
+        int val = 0;
+        for (size_t i = 0, stop = buffer.size(); i < stop; ++i, ++it) {
+            val += *it;
+        }
+        return val;
+    };
+
+    BENCHMARK("ArrayIterator contiguous") {
+        // for the moment let's cheat and not do the random access thing
+        auto it = ArrayIterator(buffer.data());
+        double val = 0;
+        for (size_t i = 0, stop = buffer.size(); i < stop; ++i, ++it) {
+            val += *it;
+        }
+        return val;
+    };
+
+    BENCHMARK("for-loop contiguous") {
+        double val = 0;
+        for (const double& v : buffer) {
+            val += v;
+        }
+        return val;
+    };
+
+    BENCHMARK("for-loop (int) contiguous") {
+        int val = 0;
+        for (const int v : buffer) {
+            val += v;
+        }
+        return val;
+    };
+
+    const ssize_t shape = buffer.size() / 2;
+    const ssize_t stride = 2 * sizeof(double);
+
+    BENCHMARK("BufferIterator<double, void>, strided") {
+        // for the moment let's cheat and not do the random access thing
+        auto it = exp::BufferIterator<double>(buffer.data(), 1, &shape, &stride);
+        double val = 0;
+        for (ssize_t i = 0; i < shape; ++i, ++it) {
+            val += *it;
+        }
+        return val;
+    };
+
+    // BENCHMARK("BufferIterator<double, double>, strided") {
+    //     // for the moment let's cheat and not do the random access thing
+    //     auto it = exp::BufferIterator<double, double>(buffer.data(), 1, &shape, &stride);
+    //     double val = 0;
+    //     for (ssize_t i = 0; i < shape; ++i, ++it) {
+    //         val += *it;
+    //     }
+    //     return val;
+    // };
+
+    BENCHMARK("ArrayIterator strided") {
+        // for the moment let's cheat and not do the random access thing
+        auto it = ArrayIterator(buffer.data(), 1, &shape, &stride);
+        double val = 0;
+        for (ssize_t i = 0; i < shape; ++i, ++it) {
+            val += *it;
+        }
+        return val;
+    };
+
+    BENCHMARK("for-loop strided") {
+        auto it = buffer.begin();
+        double val = 0;
+        for (size_t i = 0, stop = buffer.size() / 2; i < stop; ++i, ++it, ++it) {
+            val += *it;
+        }
+        return val;
+    };
+}
 
 TEMPLATE_TEST_CASE("BufferIterator", "",  //
                    float, double, std::int8_t, std::int16_t, std::int32_t, std::int64_t) {
@@ -80,6 +198,14 @@ TEMPLATE_TEST_CASE("BufferIterator", "",  //
             static_assert(std::same_as<decltype(*it), TestType>);
 
             CHECK_THAT(std::ranges::subrange(it, it + buffer.size()), RangeEquals(buffer));
+        }
+
+        THEN("We can construct a strided 1D iterator equivalent to buffer[::2]") {
+            const ssize_t size = 5;
+            const ssize_t stride = 2 * sizeof(double);
+            auto it = exp::BufferIterator<TestType>(buffer.data(), 1, &size, &stride);
+
+            CHECK_THAT(std::ranges::subrange(it, it + 5), RangeEquals({0, 2, 4, 6, 8}));
         }
     }
 }
