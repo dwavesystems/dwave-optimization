@@ -154,7 +154,7 @@ struct ShapeInfo {
               shape(other.shape),
               strides(other.strides),
               loc(std::make_unique<ssize_t[]>(ndim)) {
-        if (ndim > 0) std::copy(other.loc.get(), other.loc.get() + ndim, loc.get());
+        std::copy(other.loc.get(), other.loc.get() + ndim, loc.get());
     }
 
     // Move Constructor
@@ -162,9 +162,7 @@ struct ShapeInfo {
 
     ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
             : ndim(ndim), shape(shape), strides(strides), loc(std::make_unique<ssize_t[]>(ndim)) {
-        for (ssize_t i = 0; i < ndim; ++i) {
-            loc[i] = 0;
-        }
+        std::fill(loc.get(), loc.get() + ndim, 0);
     }
 
     // Copy and move assignment operators
@@ -185,10 +183,7 @@ struct ShapeInfo {
         assert(this->shape == other.shape);
         assert(this->strides == other.strides);
 
-        for (ssize_t axis = 0; axis < ndim; ++axis) {
-            if (this->loc[axis] != other.loc[axis]) return false;
-        }
-        return true;
+        return std::equal(loc.get(), loc.get() + ndim, other.loc.get());
     }
 
     // Return the pointer offset (in bytes) relative to the current
@@ -213,8 +208,7 @@ struct ShapeInfo {
         // so we use decltype instead.
         decltype(std::div(ssize_t(), ssize_t())) qr{.quot = n, .rem = 0};
 
-        ssize_t axis = this->ndim - 1;
-        for (; axis >= 1; --axis) {
+        for (ssize_t axis = this->ndim - 1; axis >= 1; --axis) {
             // A bit of sanity checking on our location
             // We can go "beyond" the relevant memory on the 0th axis, but
             // otherwise the location must be nonnegative and strictly less
@@ -247,12 +241,11 @@ struct ShapeInfo {
             // qr.rem = 0;  // overwritten later, so skip resetting the .rem
 
             // if there's nothing left to do then exit early
-            if (qr.quot == 0) break;
+            if (qr.quot == 0) return offset;
         }
-        if (axis == 0) {
-            offset += qr.quot * strides[0];
-            loc[0] += qr.quot;
-        }
+
+        offset += qr.quot * strides[0];
+        loc[0] += qr.quot;
 
         return offset;
     }
