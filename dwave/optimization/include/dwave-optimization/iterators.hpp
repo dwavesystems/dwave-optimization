@@ -28,17 +28,15 @@ namespace dwave::optimization {
 namespace exp {
 
 template <typename T>
-concept DType = std::same_as<T, float> ||  //
-        std::same_as<T, double> ||         //
-        std::same_as<T, std::int8_t> ||    //
-        std::same_as<T, std::int16_t> ||   //
-        std::same_as<T, std::int32_t> ||   //
-        std::same_as<T, std::int64_t>;
+concept DType = std::same_as<T, float> ||  // np.float32
+        std::same_as<T, double> ||         // np.float64
+        std::same_as<T, std::int8_t> ||    // np.int8
+        std::same_as<T, std::int16_t> ||   // np.int16
+        std::same_as<T, std::int32_t> ||   // np.int32
+        std::same_as<T, std::int64_t>;     // np int64
 
 template <typename T>
 concept OptionalDType = DType<T> || std::same_as<T, void>;
-
-namespace {
 
 // We need to be able to go back and forth between DTypes and Python format
 // characters, see https://docs.python.org/3/library/struct.html, because
@@ -55,95 +53,7 @@ enum class FormatCharacter : char {
     Q = 'Q',  // signed long long
 };
 
-// The FormatInfo class tracks information about the type of the buffer
-// the iterator will iterate over.
-// That information can either be specified at runtime or at compile-time.
-template <DType To, OptionalDType From>
-struct FormatInfo {};
-
-// Specialization for FormatInfo when want to specify both the type of the
-// underlying buffer and the type we want to read at compile-time.
-template <DType To, DType From>
-struct FormatInfo<To, From> {
-    To dereference(const void* ptr) const noexcept requires(!std::same_as<To, From>) {
-        return *static_cast<const From*>(ptr);
-    }
-    To& dereference(void* ptr) const requires(std::same_as<To, From>) {
-        return *static_cast<From*>(ptr);
-    }
-    const To& dereference(const void* ptr) const noexcept requires(std::same_as<To, From>) {
-        return *static_cast<const From*>(ptr);
-    }
-
-    static constexpr std::ptrdiff_t itemsize() noexcept { return sizeof(From); }
-};
-
-// Specialization for FormatInfo when we only want to specify the type we want
-// to read the buffer as at compile-time.
-template <DType To>
-struct FormatInfo<To, void> {
-    // somewhat arbitrarily default to double
-    FormatInfo() noexcept : format(FormatCharacter::d) {}
-
-    // For these we use C-style type names rather than fixed width because that's
-    // how they're defined for the buffer protocol.
-    // See https://docs.python.org/3/library/struct.html
-    explicit FormatInfo(const float*) noexcept : format(FormatCharacter::f) {}
-    explicit FormatInfo(const double*) noexcept : format(FormatCharacter::d) {}
-
-    explicit FormatInfo(const signed int*) noexcept : format(FormatCharacter::i) {}
-
-    explicit FormatInfo(const signed char*) noexcept : format(FormatCharacter::b) {}
-    explicit FormatInfo(const signed short*) noexcept : format(FormatCharacter::h) {}
-    explicit FormatInfo(const signed long*) noexcept : format(FormatCharacter::l) {}
-    explicit FormatInfo(const signed long long*) noexcept : format(FormatCharacter::Q) {}
-
-    To dereference(const void* ptr) const {
-        switch (format) {
-            case FormatCharacter::f:
-                return *static_cast<const float*>(ptr);
-            case FormatCharacter::d:
-                return *static_cast<const double*>(ptr);
-            case FormatCharacter::i:
-                return *static_cast<const signed int*>(ptr);
-            case FormatCharacter::b:
-                return *static_cast<const signed char*>(ptr);
-            case FormatCharacter::h:
-                return *static_cast<const signed short*>(ptr);
-            case FormatCharacter::l:
-                return *static_cast<const signed long*>(ptr);
-            case FormatCharacter::Q:
-                return *static_cast<const signed long long*>(ptr);
-            default:
-                assert(false && "unexpected format character");
-                unreachable();
-        }
-    }
-
-    std::ptrdiff_t itemsize() const {
-        switch (format) {
-            case FormatCharacter::f:
-                return sizeof(float);
-            case FormatCharacter::d:
-                return sizeof(double);
-            case FormatCharacter::i:
-                return sizeof(signed int);
-            case FormatCharacter::b:
-                return sizeof(signed char);
-            case FormatCharacter::h:
-                return sizeof(signed short);
-            case FormatCharacter::l:
-                return sizeof(signed long);
-            case FormatCharacter::Q:
-                return sizeof(signed long long);
-            default:
-                assert(false && "unexpected format character");
-                unreachable();
-        }
-    }
-
-    FormatCharacter format;
-};
+namespace {
 
 struct ShapeInfo {
     ShapeInfo() = default;
@@ -266,7 +176,8 @@ struct ShapeInfo {
 // case that To and From are both known at compile-time and the same. Otherwise
 // we must be const.
 template <DType To, OptionalDType From = void, bool IsConst = true>
-requires(IsConst || std::same_as<To, From>) class BufferIterator {
+requires(IsConst || std::same_as<To, From>)  //
+class BufferIterator {
  public:
     using difference_type = std::ptrdiff_t;
     using value_type = To;
@@ -280,6 +191,7 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
     BufferIterator(const BufferIterator& other) noexcept
             : ptr_(other.ptr_),
               format_(other.format_),
+              // format2_(other.format2_),
               shape_(other.shape_ ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
 
     // Move Constructor
@@ -288,7 +200,7 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
     // Construct a contiguous iterator pointing to `ptr`.
     template <DType T>
     explicit BufferIterator(const T* ptr) noexcept requires(std::is_void_v<From>)
-            : ptr_(ptr), format_(ptr), shape_() {}
+            : ptr_(ptr), format_(format_of(ptr)), shape_() {}
 
     // Construct a contiguous iterator pointing to ptr when the type of ptr is
     // known at compile-time.
@@ -304,7 +216,9 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
                    const ssize_t* shape,    // shape of the array
                    const ssize_t* strides)  // strides for each dimension of the array
             noexcept requires(std::is_void_v<From>)
-            : ptr_(ptr), format_(ptr), shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
+            : ptr_(ptr),
+              format_(format_of(ptr)),
+              shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
 
     // Copy and move assignment operators
     BufferIterator& operator=(BufferIterator other) noexcept {
@@ -315,8 +229,34 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
     // Destructor
     ~BufferIterator() = default;
 
-    value_type operator*() const requires(IsConst) { return format_.dereference(ptr_); }
-    value_type& operator*() const requires(!IsConst) { return format_.dereference(ptr_); }
+    value_type& operator*() const noexcept requires(std::same_as<To, From> && !IsConst) {
+        return *static_cast<From*>(ptr_);
+    }
+    value_type operator*() const noexcept requires(IsConst) {
+        if constexpr (DType<From>) {
+            // In this case we know at compile-time what type we're converting from
+            return *static_cast<const From*>(ptr_);
+        } else {
+            // In this case we need to do some switch behavior at runtime
+            switch (format_) {
+                case FormatCharacter::f:
+                    return *static_cast<const float*>(ptr_);
+                case FormatCharacter::d:
+                    return *static_cast<const double*>(ptr_);
+                case FormatCharacter::i:
+                    return *static_cast<const int*>(ptr_);
+                case FormatCharacter::b:
+                    return *static_cast<const signed char*>(ptr_);
+                case FormatCharacter::h:
+                    return *static_cast<const signed short*>(ptr_);
+                case FormatCharacter::l:
+                    return *static_cast<const signed long*>(ptr_);
+                case FormatCharacter::Q:
+                    return *static_cast<const signed long long*>(ptr_);
+            }
+            unreachable();
+        }
+    }
 
     BufferIterator& operator++() {
         // todo: test replacing with just `return *this += 1;` for performance
@@ -328,7 +268,7 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         if (shape_) {
             ptr_ = static_cast<ptr_type>(ptr_) + shape_->increment();
         } else {
-            ptr_ = static_cast<ptr_type>(ptr_) + format_.itemsize();
+            ptr_ = static_cast<ptr_type>(ptr_) + itemsize();
         }
         return *this;
     }
@@ -346,7 +286,7 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         if (shape_) {
             ptr_ = static_cast<ptr_type>(ptr_) + shape_->increment(rhs);
         } else {
-            ptr_ = static_cast<ptr_type>(ptr_) + rhs * format_.itemsize();
+            ptr_ = static_cast<ptr_type>(ptr_) + rhs * itemsize();
         }
         return *this;
     }
@@ -369,13 +309,61 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         }
     }
 
+    std::ptrdiff_t itemsize() const noexcept {
+        if constexpr (DType<From>) {
+            // If we know the type of From at compiletime, then this is easy
+            return sizeof(From);
+        } else {
+            // Otherwise we do a runtime check
+            switch (format_) {
+                case FormatCharacter::f:
+                    return sizeof(float);
+                case FormatCharacter::d:
+                    return sizeof(double);
+                case FormatCharacter::i:
+                    return sizeof(int);
+                case FormatCharacter::b:
+                    return sizeof(signed char);
+                case FormatCharacter::h:
+                    return sizeof(signed short);
+                case FormatCharacter::l:
+                    return sizeof(signed long);
+                case FormatCharacter::Q:
+                    return sizeof(signed long long);
+            }
+        }
+        unreachable();
+    }
+
  private:
     // If we're const, then hold a cost void*, else hold void*
     std::conditional<IsConst, const void*, void*>::type ptr_ = nullptr;
 
-    FormatInfo<To, From> format_;
+    // If we know the type of the buffer at compile-time, we don't need to
+    // store any information about it. Otherwise we keep a FormatCharacter
+    // indicating what type is it.
+    struct empty {};  // no information stored
+    std::conditional<DType<From>, empty, FormatCharacter>::type format_;
 
     std::unique_ptr<ShapeInfo> shape_ = nullptr;
+
+    // Convenience functions for getting the format character from a compile-time type.
+    // todo: move into the outer namespace.
+    static constexpr FormatCharacter format_of(const float* const) { return FormatCharacter::f; }
+    static constexpr FormatCharacter format_of(const double* const) { return FormatCharacter::d; }
+    static constexpr FormatCharacter format_of(const int* const) { return FormatCharacter::i; }
+    static constexpr FormatCharacter format_of(const signed char* const) {
+        return FormatCharacter::b;
+    }
+    static constexpr FormatCharacter format_of(const signed short* const) {
+        return FormatCharacter::h;
+    }
+    static constexpr FormatCharacter format_of(const signed long* const) {
+        return FormatCharacter::l;
+    }
+    static constexpr FormatCharacter format_of(const signed long long* const) {
+        return FormatCharacter::Q;
+    }
 };
 
 }  // namespace exp
