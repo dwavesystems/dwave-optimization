@@ -18,6 +18,7 @@
 #include <cassert>
 #include <iostream>  // todo: remove
 #include <memory>
+#include <span>
 #include <utility>
 
 #include "dwave-optimization/utils.hpp"
@@ -71,7 +72,6 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
     BufferIterator(const BufferIterator& other) noexcept
             : ptr_(other.ptr_),
               format_(other.format_),
-              // format2_(other.format2_),
               shape_(other.shape_ ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
 
     // Move Constructor
@@ -99,6 +99,30 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
             : ptr_(ptr),
               format_(format_of(ptr)),
               shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
+    template <DType T>
+    BufferIterator(const T* ptr,
+                   const std::span<const ssize_t> shape,    // shape of the array
+                   const std::span<const ssize_t> strides)  // strides of the array
+            requires(std::is_void_v<From>)
+            : BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
+        assert(shape.size() == strides.size());
+    }
+
+    BufferIterator(pointer ptr,
+                   ssize_t ndim,            // number of dimensions in the array
+                   const ssize_t* shape,    // shape of the array
+                   const ssize_t* strides)  // strides for each dimension of the array
+            noexcept requires(DType<From>)
+            : ptr_(ptr),
+              format_(),
+              shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
+    BufferIterator(pointer ptr,
+                   const std::span<const ssize_t> shape,    // shape of the array
+                   const std::span<const ssize_t> strides)  // strides of the array
+            requires(DType<From>)
+            : BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
+        assert(shape.size() == strides.size());
+    }
 
     // Copy and move assignment operators
     BufferIterator& operator=(BufferIterator other) noexcept {
@@ -138,23 +162,29 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         }
     }
 
+    value_type& operator[](difference_type index) const noexcept
+            requires(std::same_as<To, From> && !IsConst) {
+        return *(*this + index);
+    }
+    value_type operator[](difference_type index) const noexcept requires(IsConst) {
+        return *(*this + index);
+    }
+
     BufferIterator& operator++() {
-        // todo: test replacing with just `return *this += 1;` for performance
-
-        // We want to increment the pointer by a number of bytes, so we cast
-        // void* to char*. But we also need to respect the const-correctness.
-        using ptr_type = std::conditional<IsConst, const char*, char*>::type;
-
-        if (shape_) {
-            ptr_ = static_cast<ptr_type>(ptr_) + shape_->increment();
-        } else {
-            ptr_ = static_cast<ptr_type>(ptr_) + itemsize();
-        }
-        return *this;
+        return *this += 1;
     }
     BufferIterator operator++(int) {
         BufferIterator tmp = *this;
         ++(*this);
+        return tmp;
+    }
+
+    BufferIterator& operator--() {
+        return *this -= 1;
+    }
+    BufferIterator operator--(int) {
+        BufferIterator tmp = *this;
+        --(*this);
         return tmp;
     }
 
@@ -170,22 +200,62 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         }
         return *this;
     }
-
-    friend BufferIterator operator+(BufferIterator lhs, difference_type rhs) { return lhs += rhs; }
-    friend BufferIterator operator+(difference_type lhs, BufferIterator rhs) { return rhs += lhs; }
+    BufferIterator& operator-=(difference_type rhs) {
+        return *this += -rhs;
+    }
 
     friend bool operator==(const BufferIterator& lhs, const BufferIterator& rhs) {
         if (lhs.shape_ && rhs.shape_) {
             return *lhs.shape_ == *rhs.shape_;
         } else if (lhs.shape_ || rhs.shape_) {
-            // one is shaped and the other isn't, so definitionally they are not
-            // equal, though probably no one should be comparing them so we go
-            // ahead and assert
-            assert(false && "comparing a strided iterator to a non-strided one");
-            return false;
+            // when one is shaped and the other is not (or they have different
+            // shapes/strides) then they are not mutually reachable and this
+            // method is not defined.
+            assert(false && "rhs must be reachable from lhs");
+            unreachable();
         } else {
             // both are contiguous, so they are equal if their pointers match.
             return lhs.ptr_ == rhs.ptr_;
+        }
+    }
+    friend std::strong_ordering operator<=>(const BufferIterator& lhs, const BufferIterator& rhs) {
+        if (lhs.shape_ && rhs.shape_) {
+            return *lhs.shape_ <=> *rhs.shape_;
+        } else if (lhs.shape_ || rhs.shape_) {
+            // when one is shaped and the other is not (or they have different
+            // shapes/strides) then they are not mutually reachable and this
+            // method is not defined.
+            assert(false && "rhs must be reachable from lhs");
+            unreachable();
+        } else {
+            // both are contiguous, so they are equal if their pointers match.
+            return lhs.ptr_ <=> rhs.ptr_;
+        }
+    }
+
+    friend BufferIterator operator+(BufferIterator lhs, difference_type rhs) { return lhs += rhs; }
+    friend BufferIterator operator+(difference_type lhs, BufferIterator rhs) { return rhs += lhs; }
+
+    friend BufferIterator operator-(BufferIterator lhs, difference_type rhs) { return lhs -= rhs; }
+
+    /// The number of times we would need to increment rhs in order to reach lhs
+    friend difference_type operator-(const BufferIterator& lhs, const BufferIterator& rhs) {
+        if (lhs.shape_ && rhs.shape_) {
+            return *lhs.shape_ - *rhs.shape_;
+        } else if (lhs.shape_ || rhs.shape_) {
+            // when one is shaped and the other is not (or they have different
+            // shapes/strides) then they are not mutually reachable and this
+            // method is not defined.
+            assert(false && "rhs must be reachable from lhs");
+            unreachable();
+        } else {
+            // sanity check that they have the same itemsize, otherwise this is not defined
+            assert(lhs.itemsize() == rhs.itemsize() && "rhs must be reachable from lhs");
+
+            // both are contiguous, so it's just the distance between pointers
+            // but we need to be careful! Because it's type dependent
+            return (static_cast<const char*>(lhs.ptr_) - static_cast<const char*>(rhs.ptr_)) /
+                   lhs.itemsize();
         }
     }
 
@@ -252,12 +322,50 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
 
         // Check if another ShapeInfo is in the same location. For performance we
         // only check the location when debug symbols are off.
-        bool operator==(const ShapeInfo& other) const {
-            assert(this->ndim == other.ndim);
-            assert(this->shape == other.shape);
-            assert(this->strides == other.strides);
+        friend bool operator==(const ShapeInfo& lhs, const ShapeInfo& rhs) {
+            // Check that lhs and rhs are consistent with each other.
+            assert(std::ranges::equal(std::span(lhs.shape, lhs.ndim),
+                                      std::span(rhs.shape, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
+            assert(std::ranges::equal(std::span(lhs.strides, lhs.ndim),
+                                      std::span(rhs.strides, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
 
-            return std::equal(loc.get(), loc.get() + ndim, other.loc.get());
+            return std::equal(lhs.loc.get(), lhs.loc.get() + lhs.ndim, rhs.loc.get());
+        }
+        friend std::strong_ordering operator<=>(const ShapeInfo& lhs, const ShapeInfo& rhs) {
+            // Check that lhs and rhs are consistent with each other.
+            assert(std::ranges::equal(std::span(lhs.shape, lhs.ndim),
+                                      std::span(rhs.shape, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
+            assert(std::ranges::equal(std::span(lhs.strides, lhs.ndim),
+                                      std::span(rhs.strides, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
+
+            for (ssize_t axis = 0; axis < lhs.ndim; ++axis) {
+                if (lhs.loc[axis] != rhs.loc[axis]) return lhs.loc[axis] <=> rhs.loc[axis];
+            }
+            return std::strong_ordering::equal;
+        }
+
+        friend difference_type operator-(const ShapeInfo& lhs, const ShapeInfo& rhs) {
+            // Check that lhs and rhs are consistent with each other.
+            assert(std::ranges::equal(std::span(lhs.shape, lhs.ndim),
+                                      std::span(rhs.shape, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
+            assert(std::ranges::equal(std::span(lhs.strides, lhs.ndim),
+                                      std::span(rhs.strides, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
+
+            // calculate the difference in steps based on the respective locs
+            difference_type difference = 0;
+            difference_type step = 1;
+            for (ssize_t axis = lhs.ndim - 1; axis >= 0; --axis) {
+                difference += (lhs.loc[axis] - rhs.loc[axis]) * step;
+                step *= lhs.shape[axis];
+            }
+
+            return difference;
         }
 
         // Return the pointer offset (in bytes) relative to the current
