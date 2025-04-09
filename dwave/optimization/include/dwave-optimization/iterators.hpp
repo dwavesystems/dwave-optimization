@@ -33,7 +33,7 @@ concept DType = std::same_as<T, float> ||  // np.float32
         std::same_as<T, std::int8_t> ||    // np.int8
         std::same_as<T, std::int16_t> ||   // np.int16
         std::same_as<T, std::int32_t> ||   // np.int32
-        std::same_as<T, std::int64_t>;     // np int64
+        std::same_as<T, std::int64_t>;     // np.int64
 
 template <typename T>
 concept OptionalDType = DType<T> || std::same_as<T, void>;
@@ -53,131 +53,11 @@ enum class FormatCharacter : char {
     Q = 'Q',  // signed long long
 };
 
-namespace {
-
-struct ShapeInfo {
-    ShapeInfo() = default;
-
-    // Copy constructor
-    ShapeInfo(const ShapeInfo& other) noexcept
-            : ndim(other.ndim),
-              shape(other.shape),
-              strides(other.strides),
-              loc(std::make_unique<ssize_t[]>(ndim)) {
-        std::copy(other.loc.get(), other.loc.get() + ndim, loc.get());
-    }
-
-    // Move Constructor
-    ShapeInfo(ShapeInfo&& other) = default;
-
-    ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
-            : ndim(ndim), shape(shape), strides(strides), loc(std::make_unique<ssize_t[]>(ndim)) {
-        std::fill(loc.get(), loc.get() + ndim, 0);
-    }
-
-    // Copy and move assignment operators
-    ShapeInfo& operator=(ShapeInfo other) noexcept {
-        std::swap(ndim, other.ndim);
-        std::swap(shape, other.shape);
-        std::swap(strides, other.strides);
-        std::swap(loc, other.loc);
-        return *this;
-    }
-
-    ~ShapeInfo() = default;
-
-    // Check if another ShapeInfo is in the same location. For performance we
-    // only check the location when debug symbols are off.
-    bool operator==(const ShapeInfo& other) const {
-        assert(this->ndim == other.ndim);
-        assert(this->shape == other.shape);
-        assert(this->strides == other.strides);
-
-        return std::equal(loc.get(), loc.get() + ndim, other.loc.get());
-    }
-
-    // Return the pointer offset (in bytes) relative to the current
-    // position in order to increment the iterator n times.
-    // n can be negative.
-    std::ptrdiff_t increment(const ssize_t n = 1) {
-        // handle a few simple cases with faster implementations
-        if (n == 0) return 0;
-        // if (n == +1) return increment1();
-        // if (n == -1) return decrement1();
-
-        assert(ndim > 0);  // we shouldn't be here if we're a scalar.
-
-        // working from right-to-left, figure out how many steps in each
-        // axis. We handle axis 0 as a special case
-
-        ssize_t offset = 0;  // the number of bytes we need to move
-
-        // We'll be using std::div() over ssize_t, so we'll store our
-        // current location in the struct returned by it.
-        // Unfortunately std::div() is not templated, but overloaded,
-        // so we use decltype instead.
-        decltype(std::div(ssize_t(), ssize_t())) qr{.quot = n, .rem = 0};
-
-        for (ssize_t axis = this->ndim - 1; axis >= 1; --axis) {
-            // A bit of sanity checking on our location
-            // We can go "beyond" the relevant memory on the 0th axis, but
-            // otherwise the location must be nonnegative and strictly less
-            // than the size in that dimension.
-            assert(0 <= loc[axis]);
-            assert(axis == 0 || loc[axis] < shape[axis]);
-
-            // if we're partway through the axis, we shift to
-            // the beginning by adding the number of steps to the total
-            // that we want to go, and updating the offset accordingly
-            if (loc[axis]) {
-                qr.quot += loc[axis];
-                offset -= loc[axis] * strides[axis];
-                // loc[axis] = 0;  // overwritten later, so skip resetting the loc
-            }
-
-            // now, the number of steps might be more than our axis
-            // can support, so we do a div
-            qr = std::div(qr.quot, shape[axis]);
-
-            // adjust so that the remainder is positive
-            if (qr.rem < 0) {
-                qr.quot -= 1;
-                qr.rem += shape[axis];
-            }
-
-            // finally adjust our location and offset
-            loc[axis] = qr.rem;
-            offset += qr.rem * strides[axis];
-            // qr.rem = 0;  // overwritten later, so skip resetting the .rem
-
-            // if there's nothing left to do then exit early
-            if (qr.quot == 0) return offset;
-        }
-
-        offset += qr.quot * strides[0];
-        loc[0] += qr.quot;
-
-        return offset;
-    }
-
-    // Information about the shape/strides of the parent array. Note
-    // the pointers are non-owning!
-    ssize_t ndim;
-    const ssize_t* shape;
-    const ssize_t* strides;
-
-    // The current location of the iterator within the parent array.
-    std::unique_ptr<ssize_t[]> loc;
-};
-
-}  // namespace
-
 // The iterator can only allow editing of the underlying buffer in the
 // case that To and From are both known at compile-time and the same. Otherwise
 // we must be const.
 template <DType To, OptionalDType From = void, bool IsConst = true>
-requires(IsConst || std::same_as<To, From>)  //
-class BufferIterator {
+requires(IsConst || std::same_as<To, From>) class BufferIterator {
  public:
     using difference_type = std::ptrdiff_t;
     using value_type = To;
@@ -336,6 +216,124 @@ class BufferIterator {
     }
 
  private:
+    struct ShapeInfo {
+        ShapeInfo() = default;
+
+        // Copy constructor
+        ShapeInfo(const ShapeInfo& other) noexcept
+                : ndim(other.ndim),
+                  shape(other.shape),
+                  strides(other.strides),
+                  loc(std::make_unique<ssize_t[]>(ndim)) {
+            std::copy(other.loc.get(), other.loc.get() + ndim, loc.get());
+        }
+
+        // Move Constructor
+        ShapeInfo(ShapeInfo&& other) = default;
+
+        ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
+                : ndim(ndim),
+                  shape(shape),
+                  strides(strides),
+                  loc(std::make_unique<ssize_t[]>(ndim)) {
+            std::fill(loc.get(), loc.get() + ndim, 0);
+        }
+
+        // Copy and move assignment operators
+        ShapeInfo& operator=(ShapeInfo other) noexcept {
+            std::swap(ndim, other.ndim);
+            std::swap(shape, other.shape);
+            std::swap(strides, other.strides);
+            std::swap(loc, other.loc);
+            return *this;
+        }
+
+        ~ShapeInfo() = default;
+
+        // Check if another ShapeInfo is in the same location. For performance we
+        // only check the location when debug symbols are off.
+        bool operator==(const ShapeInfo& other) const {
+            assert(this->ndim == other.ndim);
+            assert(this->shape == other.shape);
+            assert(this->strides == other.strides);
+
+            return std::equal(loc.get(), loc.get() + ndim, other.loc.get());
+        }
+
+        // Return the pointer offset (in bytes) relative to the current
+        // position in order to increment the iterator n times.
+        // n can be negative.
+        std::ptrdiff_t increment(const ssize_t n = 1) {
+            // handle a few simple cases with faster implementations
+            if (n == 0) return 0;
+            // if (n == +1) return increment1();
+            // if (n == -1) return decrement1();
+
+            assert(ndim > 0);  // we shouldn't be here if we're a scalar.
+
+            // working from right-to-left, figure out how many steps in each
+            // axis. We handle axis 0 as a special case
+
+            ssize_t offset = 0;  // the number of bytes we need to move
+
+            // We'll be using std::div() over ssize_t, so we'll store our
+            // current location in the struct returned by it.
+            // Unfortunately std::div() is not templated, but overloaded,
+            // so we use decltype instead.
+            decltype(std::div(ssize_t(), ssize_t())) qr{.quot = n, .rem = 0};
+
+            for (ssize_t axis = this->ndim - 1; axis >= 1; --axis) {
+                // A bit of sanity checking on our location
+                // We can go "beyond" the relevant memory on the 0th axis, but
+                // otherwise the location must be nonnegative and strictly less
+                // than the size in that dimension.
+                assert(0 <= loc[axis]);
+                assert(axis == 0 || loc[axis] < shape[axis]);
+
+                // if we're partway through the axis, we shift to
+                // the beginning by adding the number of steps to the total
+                // that we want to go, and updating the offset accordingly
+                if (loc[axis]) {
+                    qr.quot += loc[axis];
+                    offset -= loc[axis] * strides[axis];
+                    // loc[axis] = 0;  // overwritten later, so skip resetting the loc
+                }
+
+                // now, the number of steps might be more than our axis
+                // can support, so we do a div
+                qr = std::div(qr.quot, shape[axis]);
+
+                // adjust so that the remainder is positive
+                if (qr.rem < 0) {
+                    qr.quot -= 1;
+                    qr.rem += shape[axis];
+                }
+
+                // finally adjust our location and offset
+                loc[axis] = qr.rem;
+                offset += qr.rem * strides[axis];
+                // qr.rem = 0;  // overwritten later, so skip resetting the .rem
+
+                // if there's nothing left to do then exit early
+                if (qr.quot == 0) return offset;
+            }
+
+            offset += qr.quot * strides[0];
+            loc[0] += qr.quot;
+
+            return offset;
+        }
+
+        // Information about the shape/strides of the parent array. Note
+        // the pointers are non-owning!
+        ssize_t ndim;
+        const ssize_t* shape;
+        const ssize_t* strides;
+
+        // The current location of the iterator within the parent array.
+        std::unique_ptr<ssize_t[]> loc;
+    };
+
     // If we're const, then hold a cost void*, else hold void*
     std::conditional<IsConst, const void*, void*>::type ptr_ = nullptr;
 
@@ -365,6 +363,56 @@ class BufferIterator {
         return FormatCharacter::Q;
     }
 };
+
+extern template class BufferIterator<float>;
+extern template class BufferIterator<double>;
+extern template class BufferIterator<std::int8_t>;
+extern template class BufferIterator<std::int16_t>;
+extern template class BufferIterator<std::int32_t>;
+extern template class BufferIterator<std::int64_t>;
+
+// There are a lot of combinations...
+extern template class BufferIterator<float, float>;
+extern template class BufferIterator<float, double>;
+extern template class BufferIterator<float, std::int8_t>;
+extern template class BufferIterator<float, std::int16_t>;
+extern template class BufferIterator<float, std::int32_t>;
+extern template class BufferIterator<float, std::int64_t>;
+
+extern template class BufferIterator<double, float>;
+extern template class BufferIterator<double, double>;
+extern template class BufferIterator<double, std::int8_t>;
+extern template class BufferIterator<double, std::int16_t>;
+extern template class BufferIterator<double, std::int32_t>;
+extern template class BufferIterator<double, std::int64_t>;
+
+extern template class BufferIterator<std::int8_t, float>;
+extern template class BufferIterator<std::int8_t, double>;
+extern template class BufferIterator<std::int8_t, std::int8_t>;
+extern template class BufferIterator<std::int8_t, std::int16_t>;
+extern template class BufferIterator<std::int8_t, std::int32_t>;
+extern template class BufferIterator<std::int8_t, std::int64_t>;
+
+extern template class BufferIterator<std::int16_t, float>;
+extern template class BufferIterator<std::int16_t, double>;
+extern template class BufferIterator<std::int16_t, std::int8_t>;
+extern template class BufferIterator<std::int16_t, std::int16_t>;
+extern template class BufferIterator<std::int16_t, std::int32_t>;
+extern template class BufferIterator<std::int16_t, std::int64_t>;
+
+extern template class BufferIterator<std::int32_t, float>;
+extern template class BufferIterator<std::int32_t, double>;
+extern template class BufferIterator<std::int32_t, std::int8_t>;
+extern template class BufferIterator<std::int32_t, std::int16_t>;
+extern template class BufferIterator<std::int32_t, std::int32_t>;
+extern template class BufferIterator<std::int32_t, std::int64_t>;
+
+extern template class BufferIterator<std::int64_t, float>;
+extern template class BufferIterator<std::int64_t, double>;
+extern template class BufferIterator<std::int64_t, std::int8_t>;
+extern template class BufferIterator<std::int64_t, std::int16_t>;
+extern template class BufferIterator<std::int64_t, std::int32_t>;
+extern template class BufferIterator<std::int64_t, std::int64_t>;
 
 }  // namespace exp
 
