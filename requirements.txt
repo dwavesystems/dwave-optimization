@@ -3,7 +3,7 @@ numpy==1.21.6; python_version < '3.10'  # support numpy.typing
 numpy==2.1.0; python_version >= '3.10'
 
 # Build requirements
-cython~=3.0.0
+cython==3.1.0b1
 meson-python~=0.17.0
 meson~=1.7.0
 ninja~=1.11.0

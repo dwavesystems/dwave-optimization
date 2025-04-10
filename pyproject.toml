@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "cython~=3.0.0",
+    "cython==3.1.0b1",
     "meson-python~=0.17.0",
 ]
 build-backend = 'mesonpy'
@@ -48,6 +48,7 @@ build-verbosity = "1"
 skip = "pp* *musllinux*"
 before-test = "pip install -r {project}/tests/requirements.txt"
 test-command = "python -Werror -m unittest discover {project}/tests/"
+enable = ["cpython-freethreading"]
 
 [tool.cibuildwheel.config-settings]
 compile-args = ["-v"]

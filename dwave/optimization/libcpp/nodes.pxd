@@ -100,7 +100,7 @@ cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimizatio
     cdef cppclass LinearProgramNode(Node):
         unordered_map[string, ssize_t] get_arguments()
         void initialize_state(State&, const span[double]) except + # for Cython
-        void initialize_state(State&, const span[const double]) except +
+        # void initialize_state(State&, const span[const double]) except +
         span[const double] solution(const State&) const
         span[const Py_ssize_t] variables_shape() const
 
