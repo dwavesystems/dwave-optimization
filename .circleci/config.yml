@@ -9,7 +9,7 @@ commands:
     parameters:
       cibw-version:
         type: string
-        default: 2.21.0
+        default: 2.23.2
     steps:
       - run:
           name: run cibuildwheel
