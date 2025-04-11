@@ -71,6 +71,11 @@ cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimizat
         pass
 
 
+# This would usually be defined in here, but we need it for Graph.inputs() so to
+# avoid the circular dependency we define it in graph.pxd.
+from dwave.optimization.libcpp.graph cimport InputNode
+
+
 cdef extern from "dwave-optimization/nodes/indexing.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass AdvancedIndexingNode(ArrayNode):
         ctypedef variant[ArrayNodePtr, Slice] array_or_slice
