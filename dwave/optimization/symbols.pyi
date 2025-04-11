@@ -205,6 +205,10 @@ class NaryMultiply(ArraySymbol):
     ...
 
 
+class NaryReduce(ArraySymbol):
+    ...
+
+
 class Negative(ArraySymbol):
     ...
 

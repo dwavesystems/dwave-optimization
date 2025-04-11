@@ -28,9 +28,13 @@ import numpy as np
 
 from cython.operator cimport dereference as deref, typeid
 from libc.math cimport modf
+from libc.stdint cimport uintptr_t
 from libcpp cimport bool
+from libcpp.cast cimport dynamic_cast, reinterpret_cast
 from libcpp.optional cimport nullopt, optional
 from libcpp.span cimport span
+from libcpp.typeindex cimport type_index
+from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
@@ -44,6 +48,8 @@ from dwave.optimization.libcpp.graph cimport (
     ArrayNode as cppArrayNode,
     ArrayNodePtr as cppArrayNodePtr,
     Node as cppNode,
+    NodePtr as cppNodePtr,
+    Graph as cppGraph,
     )
 from dwave.optimization.libcpp.nodes cimport (
     AbsoluteNode as cppAbsoluteNode,
@@ -90,6 +96,7 @@ from dwave.optimization.libcpp.nodes cimport (
     NaryMaximumNode as cppNaryMaximumNode,
     NaryMinimumNode as cppNaryMinimumNode,
     NaryMultiplyNode as cppNaryMultiplyNode,
+    NaryReduceNode as cppNaryReduceNode,
     NegativeNode as cppNegativeNode,
     NotNode as cppNotNode,
     OrNode as cppOrNode,
@@ -119,6 +126,7 @@ from dwave.optimization._model cimport (
     Symbol,
     symbol_from_ptr,
 )
+from dwave.optimization.model import Expression, UnsupportedExpressionError
 from dwave.optimization.states cimport States
 from dwave.optimization._utilities cimport as_cppshape, as_span
 
@@ -166,6 +174,7 @@ __all__ = [
     "NaryMaximum",
     "NaryMinimum",
     "NaryMultiply",
+    "NaryReduce",
     "Negative",
     "Not",
     "Or",
@@ -1955,7 +1964,10 @@ cdef class IntegerVariable(ArraySymbol):
         <class 'dwave.optimization.symbols.IntegerVariable'>
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
-        cdef vector[Py_ssize_t] vshape = as_cppshape(tuple() if shape is None else shape )
+        if isinstance(model, Expression):
+            raise TypeError("cannot add IntegerVariable to Expression")
+
+        cdef vector[Py_ssize_t] vshape = as_cppshape(tuple() if shape is None else shape)
 
         if lower_bound is None and upper_bound is None:
             self.ptr = model._graph.emplace_node[cppIntegerNode](vshape)
@@ -2777,6 +2789,175 @@ cdef class NaryMultiply(ArraySymbol):
 _register(NaryMultiply, typeid(cppNaryMultiplyNode))
 
 
+cdef class NaryReduce(ArraySymbol):
+    """Using a supplied :class:`~dwave.optimization.model.Expression`, perform
+    an element-wise reduction operation along one or more array operands. The
+    reduction operation (represented by the ``Expression``) takes as input one
+    value from each of the operand arrays, as well as the result of the
+    previously computed operation, and computes a new value at the next output
+    index.
+
+    This takes inspiration from
+    `numpy.ufunc.reduce <https://numpy.org/doc/2.1/reference/generated/numpy.ufunc.reduce.html>`_ 
+    but is different in that the reduction operation can take an arbitrary
+    number of arguments, instead of always two (hence the "n-ary" in
+    `NaryReduce`).
+
+    Args:
+        expression:
+            An :class:`~dwave.optimization.model.Expression` representing the
+            reduction operation. The first input on the expression will be given
+            the previous output of the operation at each iteration over the
+            values of the operands.
+        operands:
+            A list of the 1d-array symbols that will be the operands to the
+            reduction. There should be one fewer operands than inputs on the
+            expression.
+        initial (optional):
+            A float representing the value used to start the reduction. This
+            will be used to set the last input of the expression on the very
+            first iteration.
+
+    Examples:
+        This example performs a simple cumulative sum on an integer variable.
+
+        >>> from dwave.optimization.model import Expression, Model
+        >>> from dwave.optimization.symbols import NaryReduce
+        >>> model = Model()  # the main model
+        >>> x = model.integer(10, lower_bound=0, upper_bound=5)
+        >>> expr = Expression()  # the reduction operation
+        >>> # first input is used to take the value of the previous output
+        >>> previous = expr.input()
+        >>> # xi will take the values of `x`. Provided bounds are necessary
+        >>> # in this case, but may be helpful in other expressions.
+        >>> xi = expr.input(0, 5, integral=True)
+        >>> expr.set_output(xi + previous)
+        >>> cumulative_sum_x = NaryReduce(expr, (x,))
+        >>> type(cumulative_sum_x)
+        <class 'dwave.optimization.symbols.NaryReduce'>
+    """
+
+    def __init__(self, expression, operands, initial=0):
+        if len(operands) == 0:
+            raise ValueError("must have at least one operand")
+
+        if expression.num_inputs() != len(operands) + 1:
+            raise ValueError("must have exactly one more input than number of operands")
+
+        if expression.output is None:
+            raise ValueError(
+                "expression must have its output set (see `Expression.set_output()`)"
+            )
+
+        cdef _Graph graph = expression
+        cdef ArraySymbol output_symbol = expression.output
+
+        cdef _Graph model = operands[0].model
+        cdef vector[cppArrayNode*] cppoperands
+
+        cdef ArraySymbol array
+        for node in operands:
+            if node.model != model:
+                raise ValueError("all predecessors must be from the same model")
+            array = <ArraySymbol?>node
+            cppoperands.push_back(array.array_ptr)
+
+        cdef double cppinitial = initial
+
+        expression.lock()
+        try:
+            self.ptr = model._graph.emplace_node[cppNaryReduceNode](
+                move(graph._graph), cppoperands, cppinitial
+            )
+        except ValueError as e:
+            expression.unlock()
+            raise self._handle_unsupported_expression_exception(expression, e)
+
+        self.initialize_arraynode(model, self.ptr)
+
+    def _handle_unsupported_expression_exception(self, expression: Expression, exception):
+        try:
+            info = json.loads(str(exception))
+            message = info["message"]
+            node_ptr_int = info.get("node_ptr")
+        except json.JSONDecodeError, KeyError:
+            raise RuntimeError(
+                f"could not parse exception message from NaryReduceNode: {str(exception)}"
+            )
+
+        # some errors may not contain an associated node
+        if node_ptr_int is None:
+            return UnsupportedExpressionError(message)
+
+        # get a symbol from the supplied node pointer (encoded as an int) 
+        cdef uintptr_t node_ptr_val = node_ptr_int
+        cdef cppNode* node_ptr = reinterpret_cast[cppNodePtr](<void *>node_ptr_val)
+        cdef Symbol symbol = symbol_from_ptr(expression, node_ptr)
+        return UnsupportedExpressionError(message, symbol)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppNaryReduceNode* ptr = dynamic_cast_ptr[cppNaryReduceNode](
+            symbol.node_ptr
+        )
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct an NaryReduce")
+        cdef NaryReduce x = NaryReduce.__new__(NaryReduce)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        with zf.open(directory + "expression.nl", "r") as f:
+            expression = Expression.from_file(f)
+        with zf.open(directory + "initial.json", "r") as f:
+            initial = json.load(f)
+
+        return NaryReduce(expression, predecessors, initial=initial)
+
+    def _into_zipfile(self, zf, directory):
+        """Store a NaryReduce symbol as a compressed file.
+
+        Args:
+            zf:
+                File pointer to a compressed file to store the
+                disjoint-list symbol. Strings are interpreted as a
+                file name.
+            directory:
+                Directory where the file is located.
+        Returns:
+            A compressed file.
+
+        See also:
+            :meth:`._from_zipfile`
+        """
+
+        cdef _Graph expr = Expression()
+
+        # We want to serialize the cppGraph owned by the NaryReduceNode,
+        # so we swap the cppGraph to a temporary `_Graph`, do the
+        # serialization, then swap it back
+
+        self.ptr.swap_expression(move(expr._graph))
+        assert expr._graph.topologically_sorted()
+
+        with zf.open(directory + "expression.nl", mode="w") as f:
+            expr.into_file(f)
+
+        # swap the cppGraph back to the node
+        self.ptr.swap_expression(move(expr._graph))
+
+        del expr
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+        zf.writestr(directory + "initial.json", encoder.encode(self.ptr.initial))
+
+    cdef cppNaryReduceNode* ptr
+
+_register(NaryReduce, typeid(cppNaryReduceNode))
+
+
 cdef class Negative(ArraySymbol):
     """Numerical negative element-wise on a symbol.
 
@@ -3244,6 +3425,9 @@ cdef class Reshape(ArraySymbol):
         <class 'dwave.optimization.symbols.Reshape'>
     """
     def __init__(self, ArraySymbol node, shape):
+        if isinstance(node.model, Expression):
+            raise TypeError("cannot reshape symbol that belongs to `Expression`")
+
         cdef _Graph model = node.model
 
         self.ptr = model._graph.emplace_node[cppReshapeNode](
