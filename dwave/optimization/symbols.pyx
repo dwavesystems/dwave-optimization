@@ -1966,11 +1966,11 @@ cdef class Expit(ArraySymbol):
 _register(Expit, typeid(cppExpitNode))
 
 cdef class Input(ArraySymbol):
-    """An input symbol. Functions as a "placeholder" in a model/expression."""
+    """An input symbol. Functions as a "placeholder" in a model."""
 
     def __init__(
         self,
-        expression,
+        model,
         shape=None,
         double lower_bound = -float("inf"),
         double upper_bound = float("inf"),
@@ -1978,12 +1978,12 @@ cdef class Input(ArraySymbol):
     ):
         cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape)
 
-        cdef _Graph cygraph = expression
+        cdef _Graph cygraph = model
 
         # Get an observing pointer to the C++ InputNode
         self.ptr = cygraph._graph.emplace_node[cppInputNode](vshape, lower_bound, upper_bound, integral)
 
-        self.initialize_arraynode(expression, self.ptr)
+        self.initialize_arraynode(model, self.ptr)
 
     @staticmethod
     def _from_symbol(Symbol symbol):

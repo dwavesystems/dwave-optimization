@@ -30,18 +30,18 @@ namespace dwave::optimization {
 class InputNode : public ArrayOutputMixin<ArrayNode> {
  public:
     explicit InputNode(std::span<const ssize_t> shape, double min, double max, bool integral)
-            : ArrayOutputMixin(shape), min_(min), max_(max), integral_(integral) {};
+            : ArrayOutputMixin(shape), min_(min), max_(max), integral_(integral){};
 
     explicit InputNode(std::initializer_list<ssize_t> shape, double min, double max, bool integral)
-            : ArrayOutputMixin(shape), min_(min), max_(max), integral_(integral) {};
+            : ArrayOutputMixin(shape), min_(min), max_(max), integral_(integral){};
 
     explicit InputNode()
             : InputNode({}, -std::numeric_limits<double>::infinity(),
-                        std::numeric_limits<double>::infinity(), false) {};
+                        std::numeric_limits<double>::infinity(), false){};
 
     explicit InputNode(std::initializer_list<ssize_t> shape)
             : InputNode(shape, -std::numeric_limits<double>::infinity(),
-                        std::numeric_limits<double>::infinity(), false) {};
+                        std::numeric_limits<double>::infinity(), false){};
 
     void assign(State& state, std::span<const double> new_values) const;
 
@@ -64,7 +64,7 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
         return {min_, max_};
     }
 
-    void propagate(State& state) const noexcept override {};
+    void propagate(State& state) const noexcept override{};
     void revert(State& state) const noexcept override;
 
  private:

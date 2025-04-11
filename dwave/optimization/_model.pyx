@@ -148,14 +148,14 @@ cdef class _Graph:
     ):
         r"""Create an "input" symbol. This functions similarly to a decision variable,
         in that it takes no predecessors, but its state will always be set manually
-        (not by any solver). Used as a placeholder for input to an expression or model.
+        (not by any solver). Used as a placeholder for input to a model.
         The output of the symbol is always a scalar (0-dimensional) array.
         Provided bounds and integrality are used to supply information for
         min/max/integral/logical properties of the resulting node, and will be used to
         validate the state when set manually.
-        Note that the order in which inputs are added to the expression matters and is
+        Note that the order in which inputs are added to the model matters and is
         used by other symbols (see :class:`~dwave.optimization.symbols.NaryReduce`) to
-        infer how arguments are supplied to the expression during evaluation.
+        infer how arguments are supplied to the model during evaluation.
         Args:
             lower_bound: lower bound on any possible output of the node.
             upper_bound: upper bound on any possible output of the node.
