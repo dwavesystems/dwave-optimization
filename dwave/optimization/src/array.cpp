@@ -16,12 +16,12 @@
 
 namespace dwave::optimization {
 
-const double& Array::View::operator[](ssize_t n) const {
+double Array::View::operator[](ssize_t n) const {
     assert(0 <= n && n < size());
     return *(begin() + n);
 }
 
-const double& Array::View::at(ssize_t n) const {
+double Array::View::at(ssize_t n) const {
     if (n < 0 || n >= size()) {
         throw std::out_of_range(std::string("index ") + std::to_string(n) +
                                 std::string(" out of range for an Array of size ") +
@@ -30,7 +30,7 @@ const double& Array::View::at(ssize_t n) const {
     return (*this)[n];
 }
 
-const double& Array::View::back() const {
+double Array::View::back() const {
     assert(size() >= 1);
     return *(--end());
 }
@@ -53,7 +53,7 @@ Array::const_iterator Array::View::end() const {
     return array_ptr_->end(*state_ptr_);
 }
 
-const double& Array::View::front() const {
+double Array::View::front() const {
     assert(size() >= 1);
     return *begin();
 }

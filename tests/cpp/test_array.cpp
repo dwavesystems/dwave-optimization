@@ -14,6 +14,7 @@
 
 #include <sstream>
 
+#include "catch2/catch_template_test_macros.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/generators/catch_generators.hpp"
 #include "catch2/matchers/catch_matchers_all.hpp"
@@ -58,9 +59,73 @@ TEST_CASE("Test SizeInfo") {
     CHECK(SizeInfo(5) == 5);
 }
 
-TEST_CASE("ArrayIterator and ConstArrayIterator") {
-    using ArrayIterator = typename Array::iterator;
-    using ConstArrayIterator = typename Array::const_iterator;
+TEMPLATE_TEST_CASE("BufferIterator - templated", "",  //
+                   float, double, std::int8_t, std::int16_t, std::int32_t, std::int64_t) {
+    // Check that we can interpret buffers of each type as a double
+    GIVEN("A buffer of the given type") {
+        std::vector<TestType> buffer(10);
+        std::iota(buffer.begin(), buffer.end(), 0);
+
+        THEN("We can construct an iterator reading it as if it was doubles without specifying the "
+             "buffer type at compile-time") {
+            auto it = BufferIterator<double>(buffer.data());
+
+            // the output of the iterator is double as requested
+            static_assert(std::same_as<decltype(*it), double>);
+
+            CHECK_THAT(std::ranges::subrange(it, it + buffer.size()), RangeEquals(buffer));
+        }
+
+        THEN("We can construct an iterator reading it as if it was doubles specifying the buffer "
+             "type at compile-time") {
+            auto it = BufferIterator<double, TestType>(buffer.data());
+
+            // the output of the iterator is double as requested
+            static_assert(std::same_as<decltype(*it), double>);
+
+            CHECK_THAT(std::ranges::subrange(it, it + buffer.size()), RangeEquals(buffer));
+        }
+
+        THEN("We can construct a non-const iterator reading as the same type") {
+            auto it = BufferIterator<TestType, TestType, false>(buffer.data());
+
+            // the output of the iterator is a non-const reference
+            static_assert(std::same_as<decltype(*it), TestType&>);
+
+            CHECK_THAT(std::ranges::subrange(it, it + buffer.size()), RangeEquals(buffer));
+
+            // we can even mutate the underlying buffer!
+            *it = 5;
+            CHECK(buffer[0] == 5);
+        }
+    }
+
+    GIVEN("A buffer of doubles") {
+        std::vector<double> buffer(10);
+        std::iota(buffer.begin(), buffer.end(), 0);
+
+        THEN("We can construct an iterator reading it as the given type") {
+            auto it = BufferIterator<TestType>(buffer.data());
+
+            // the output of the iterator is TestType as requested
+            static_assert(std::same_as<decltype(*it), TestType>);
+
+            CHECK_THAT(std::ranges::subrange(it, it + buffer.size()), RangeEquals(buffer));
+        }
+
+        THEN("We can construct a strided 1D iterator equivalent to buffer[::2]") {
+            const ssize_t size = 5;
+            const ssize_t stride = 2 * sizeof(double);
+            auto it = BufferIterator<TestType>(buffer.data(), 1, &size, &stride);
+
+            CHECK_THAT(std::ranges::subrange(it, it + 5), RangeEquals({0, 2, 4, 6, 8}));
+        }
+    }
+}
+
+TEST_CASE("BufferIterator") {
+    using ArrayIterator = BufferIterator<double, double, false>;
+    using ConstArrayIterator = BufferIterator<double, double, true>;
 
     static_assert(std::is_nothrow_constructible<ArrayIterator>::value);
     static_assert(std::is_nothrow_constructible<ConstArrayIterator>::value);
@@ -86,11 +151,6 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
     // But only ArrayIterator is an output iterator.
     static_assert(std::output_iterator<ArrayIterator, double>);
     static_assert(!std::output_iterator<ConstArrayIterator, double>);
-
-    GIVEN("A default-constructed Array iterator") {
-        auto it = ArrayIterator();
-        CHECK(it.get() == nullptr);
-    }
 
     GIVEN("A buffer encoding 2d array [[0, 1, 2], [3, 4, 5]]") {
         auto values = std::array<double, 6>{0, 1, 2, 3, 4, 5};
@@ -212,9 +272,6 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
                 CHECK(*(it + 2) == 4);
                 CHECK(*(it + 3) == 6);
                 CHECK(*(it + 4) == 8);
-
-                // this is past-the-end, but a proxy for END
-                CHECK(it + 5 == ConstArrayIterator(values.data() + 10));
             }
 
             THEN("We can decrement an advanced iterator") {
@@ -244,27 +301,6 @@ TEST_CASE("ArrayIterator and ConstArrayIterator") {
                 CHECK(*(--it) == 4);
                 CHECK(*(--it) == 1);
                 CHECK(*(--it) == 0);
-            }
-        }
-
-        WHEN("We create a mask over the array and create a masked iterator") {
-            auto mask = std::vector<double>{1, 0, 0, 1, 0, 0, 0, 1, 0};
-            const double fill = 6;
-
-            auto it = ConstArrayIterator(values.data(), mask.data(), &fill);
-
-            THEN("It behaves like a contiguous iterator") {
-                CHECK(*it == 6);  // masked
-                ++it;
-                CHECK(*it == 1);  // not masked
-            }
-
-            THEN("We can do iterator arithmetic") {
-                CHECK(*(it + 0) == 6);  // masked
-                CHECK(*(it + 1) == 1);
-                CHECK(*(it + 2) == 2);
-                CHECK(*(it + 3) == 6);  // masked
-                CHECK(*(it + 4) == 4);
             }
         }
 

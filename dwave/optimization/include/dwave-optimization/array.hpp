@@ -38,6 +38,515 @@ namespace dwave::optimization {
 
 class Array;
 
+/// The `DType<T>` concept is satisfied if and only if `T` is one of the
+/// supported data types. This list is a subset of the `dtype`s supported by
+/// NumPy as is designed for consistency/compatibility with NumPy.
+/// See https://numpy.org/doc/stable/reference/arrays.dtypes.html for more
+/// information.
+template <typename T>
+concept DType = std::same_as<T, float> ||  // np.float32
+        std::same_as<T, double> ||         // np.float64
+        std::same_as<T, std::int8_t> ||    // np.int8
+        std::same_as<T, std::int16_t> ||   // np.int16
+        std::same_as<T, std::int32_t> ||   // np.int32
+        std::same_as<T, std::int64_t>;     // np.int64
+
+/// The `OptionalDType<T>` concept is satisfied if and only if `T` is `void`
+/// or satisfies `DType<T>`.
+/// `void` is used to signal that the dtype is unknown at compile-time.
+template <typename T>
+concept OptionalDType = DType<T> || std::same_as<T, void>;
+
+
+// Dev note: We'd like to work with `DType` only, but in order to work with the
+// buffer protocol (https://docs.python.org/3/c-api/buffer.html) we need to
+// use format characters. And, annoyingly, we need one more format character
+// than dtype to cover all of the compilers/OS that we care about.
+
+/// Format characters are used to signal how bytes in a fixed-size block of
+/// memory should be interpreted. This list is a subset of the format characters
+/// supported by Python's `struct` library.
+/// See https://docs.python.org/3/library/struct.html for more information.
+enum class FormatCharacter : char {
+    f = 'f',  // float
+    d = 'd',  // double
+    i = 'i',  // int
+    b = 'b',  // signed char
+    h = 'h',  // signed short
+    l = 'l',  // signed long
+    Q = 'Q',  // signed long long
+};
+
+/// An iterator over bytes with a fixed size that can be interpreted as an
+/// array.
+///
+/// Arrays can be contiguous or strided. For a contiguous array, the iterator
+/// holds a pointer. For a strided array, the iterator holds information about
+/// the strides and shape of the parent array, as well as its location within
+/// that array.
+///
+/// `To` determines the `value_type` of the iterator.
+///
+/// `From` describes the type of the underlying buffer.
+/// If `From` satisfies `DType<From>`, then the iterator does not need to hold
+/// any information.
+/// If `From` is `void`, then the iterator does the interpretation of the buffer
+/// at runtime.
+///
+/// `IsConst` toggles whether the iterator is an output iterator or not.
+/// `IsConst` must be `false` unless `To` is the same type as `From`.
+template <DType To, OptionalDType From = void, bool IsConst = true>
+requires(IsConst || std::same_as<To, From>) class BufferIterator {
+ public:
+    using difference_type = std::ptrdiff_t;
+    using pointer = std::conditional<IsConst, const To*, To*>::type;
+    using reference = std::conditional<IsConst, const To&, To&>::type;
+    using value_type = To;
+
+    /// Default constructor.
+    BufferIterator() = default;
+
+    /// Copy Constructor.
+    BufferIterator(const BufferIterator& other) noexcept
+            : ptr_(other.ptr_),
+              format_(other.format_),
+              shape_(other.shape_ ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
+
+    /// Move Constructor.
+    BufferIterator(BufferIterator&& other) = default;
+
+    /// Construct a contiguous iterator pointing to `ptr` when `From` is `void`.
+    template <DType T>
+    explicit BufferIterator(const T* ptr) noexcept requires(!DType<From>)
+            : ptr_(ptr), format_(format_of(ptr)), shape_() {}
+
+    /// Construct a contiguous iterator pointing to ptr when the type of ptr is
+    /// known at compile-time.
+    explicit BufferIterator(const From* ptr) noexcept requires(DType<From>)
+            : ptr_(ptr), format_(), shape_() {}
+    explicit BufferIterator(From* ptr) noexcept requires(DType<From> && !IsConst)
+            : ptr_(ptr), format_(), shape_() {}
+
+    /// Construct a non-contiguous iterator from a shape/strides defined as
+    /// observing pointers when `From` is `void`.
+    template <DType T>
+    BufferIterator(const T* ptr,
+                   ssize_t ndim,            // number of dimensions in the array
+                   const ssize_t* shape,    // shape of the array
+                   const ssize_t* strides)  // strides for each dimension of the array
+            noexcept requires(!DType<From>)
+            : ptr_(ptr),
+              format_(format_of(ptr)),
+              shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
+
+    /// Construct a non-contiguous iterator from a shape/strides defined as
+    /// ranges when `From` is `void`.
+    template <DType T>
+    BufferIterator(const T* ptr,
+                   const std::span<const ssize_t> shape,    // shape of the array
+                   const std::span<const ssize_t> strides)  // strides of the array
+            requires(!DType<From>)
+            : BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
+        assert(shape.size() == strides.size());
+    }
+
+    /// Construct a non-contiguous iterator from a shape/strides defined as
+    /// observing pointers when `From` satisfies `DType<From>`.
+    BufferIterator(pointer ptr,
+                   ssize_t ndim,            // number of dimensions in the array
+                   const ssize_t* shape,    // shape of the array
+                   const ssize_t* strides)  // strides for each dimension of the array
+            noexcept requires(DType<From>)
+            : ptr_(ptr),
+              format_(),
+              shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
+
+    /// Construct a non-contiguous iterator from a shape/strides defined as
+    /// ranges when `From` satisfies `DType<From>`.
+    BufferIterator(pointer ptr,
+                   const std::span<const ssize_t> shape,    // shape of the array
+                   const std::span<const ssize_t> strides)  // strides of the array
+            requires(DType<From>)
+            : BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
+        assert(shape.size() == strides.size());
+    }
+
+    /// Copy and move assignment operators
+    BufferIterator& operator=(BufferIterator other) noexcept {
+        std::swap(this->ptr_, other.ptr_);
+        std::swap(this->format_, other.format_);
+        std::swap(this->shape_, other.shape_);
+        return *this;
+    }
+
+    /// Destructor
+    ~BufferIterator() = default;
+
+    /// Dereference the iterator when the iterator is an output iterator.
+    value_type& operator*() const noexcept requires(std::same_as<To, From> && !IsConst) {
+        return *static_cast<From*>(ptr_);
+    }
+
+    /// Dereference the iterator when the iterator is not an output iterator.
+    value_type operator*() const noexcept requires(IsConst) {
+        if constexpr (DType<From>) {
+            // In this case we know at compile-time what type we're converting from
+            return *static_cast<const From*>(ptr_);
+        } else {
+            // In this case we need to do some switch behavior at runtime
+            switch (format_) {
+                case FormatCharacter::f:
+                    return *static_cast<const float*>(ptr_);
+                case FormatCharacter::d:
+                    return *static_cast<const double*>(ptr_);
+                case FormatCharacter::i:
+                    return *static_cast<const int*>(ptr_);
+                case FormatCharacter::b:
+                    return *static_cast<const signed char*>(ptr_);
+                case FormatCharacter::h:
+                    return *static_cast<const signed short*>(ptr_);
+                case FormatCharacter::l:
+                    return *static_cast<const signed long*>(ptr_);
+                case FormatCharacter::Q:
+                    return *static_cast<const signed long long*>(ptr_);
+            }
+            unreachable();
+        }
+    }
+
+    /// Access the value of the iterator at the given offset when the iterator
+    /// is an output iterator.
+    value_type& operator[](difference_type index) const noexcept
+            requires(std::same_as<To, From> && !IsConst) {
+        return *(*this + index);
+    }
+
+    /// Access the value of the iterator at the given offset when the iterator
+    /// is not an output iterator.
+    value_type operator[](difference_type index) const noexcept requires(IsConst) {
+        return *(*this + index);
+    }
+
+    /// Preincrement operator.
+    BufferIterator& operator++() {
+        return *this += 1;
+    }
+
+    /// Postincrement operator.
+    BufferIterator operator++(int) {
+        BufferIterator tmp = *this;
+        ++(*this);
+        return tmp;
+    }
+
+    /// Predecrement operator.
+    BufferIterator& operator--() {
+        return *this -= 1;
+    }
+
+    /// Postdecrement operator.
+    BufferIterator operator--(int) {
+        BufferIterator tmp = *this;
+        --(*this);
+        return tmp;
+    }
+
+    /// Increment the iterator by `rhs` steps.
+    BufferIterator& operator+=(difference_type rhs) {
+        // We want to increment the pointer by a number of bytes, so we cast
+        // void* to char*. But we also need to respect the const-correctness.
+        using ptr_type = std::conditional<IsConst, const char*, char*>::type;
+
+        if (shape_) {
+            ptr_ = static_cast<ptr_type>(ptr_) + shape_->increment(rhs);
+        } else {
+            ptr_ = static_cast<ptr_type>(ptr_) + rhs * itemsize();
+        }
+        return *this;
+    }
+
+    /// Decrement the iterator by `rhs` steps.
+    BufferIterator& operator-=(difference_type rhs) {
+        return *this += -rhs;
+    }
+
+    /// Return `true` is `lhs` and `rhs` are pointing to he same underlying
+    /// value.
+    friend bool operator==(const BufferIterator& lhs, const BufferIterator& rhs) {
+        if (lhs.shape_ && rhs.shape_) {
+            return *lhs.shape_ == *rhs.shape_;
+        } else if (lhs.shape_ || rhs.shape_) {
+            // when one is shaped and the other is not (or they have different
+            // shapes/strides) then they are not mutually reachable and this
+            // method is not defined.
+            assert(false && "rhs must be reachable from lhs");
+            unreachable();
+        } else {
+            // both are contiguous, so they are equal if their pointers match.
+            return lhs.ptr_ == rhs.ptr_;
+        }
+    }
+
+    /// Three-way comparison between two iterators.
+    friend std::strong_ordering operator<=>(const BufferIterator& lhs, const BufferIterator& rhs) {
+        if (lhs.shape_ && rhs.shape_) {
+            return *lhs.shape_ <=> *rhs.shape_;
+        } else if (lhs.shape_ || rhs.shape_) {
+            // when one is shaped and the other is not (or they have different
+            // shapes/strides) then they are not mutually reachable and this
+            // method is not defined.
+            assert(false && "rhs must be reachable from lhs");
+            unreachable();
+        } else {
+            // both are contiguous, so they are equal if their pointers match.
+            return lhs.ptr_ <=> rhs.ptr_;
+        }
+    }
+
+    /// Return an iterator pointing to the location `rhs` steps from `lhs`.
+    friend BufferIterator operator+(BufferIterator lhs, difference_type rhs) { return lhs += rhs; }
+
+    /// Return an iterator pointing to the location `lhs` steps from `rhs`.
+    friend BufferIterator operator+(difference_type lhs, BufferIterator rhs) { return rhs += lhs; }
+
+    /// Return an iterator pointing to the location `rhs` steps before `lhs`.
+    friend BufferIterator operator-(BufferIterator lhs, difference_type rhs) { return lhs -= rhs; }
+
+    /// Return the number of times we would need to increment `rhs` in order to reach `lhs`.
+    friend difference_type operator-(const BufferIterator& lhs, const BufferIterator& rhs) {
+        if (lhs.shape_ && rhs.shape_) {
+            return *lhs.shape_ - *rhs.shape_;
+        } else if (lhs.shape_ || rhs.shape_) {
+            // when one is shaped and the other is not (or they have different
+            // shapes/strides) then they are not mutually reachable and this
+            // method is not defined.
+            assert(false && "rhs must be reachable from lhs");
+            unreachable();
+        } else {
+            // sanity check that they have the same itemsize, otherwise this is not defined
+            assert(lhs.itemsize() == rhs.itemsize() && "rhs must be reachable from lhs");
+
+            // both are contiguous, so it's just the distance between pointers
+            // but we need to be careful! Because it's type dependent
+            return (static_cast<const char*>(lhs.ptr_) - static_cast<const char*>(rhs.ptr_)) /
+                   lhs.itemsize();
+        }
+    }
+
+    /// The number of bytes used to encode values in the buffer.
+    std::ptrdiff_t itemsize() const noexcept {
+        if constexpr (DType<From>) {
+            // If we know the type of From at compiletime, then this is easy
+            return sizeof(From);
+        } else {
+            // Otherwise we do a runtime check
+            switch (format_) {
+                case FormatCharacter::f:
+                    return sizeof(float);
+                case FormatCharacter::d:
+                    return sizeof(double);
+                case FormatCharacter::i:
+                    return sizeof(int);
+                case FormatCharacter::b:
+                    return sizeof(signed char);
+                case FormatCharacter::h:
+                    return sizeof(signed short);
+                case FormatCharacter::l:
+                    return sizeof(signed long);
+                case FormatCharacter::Q:
+                    return sizeof(signed long long);
+            }
+        }
+        unreachable();
+    }
+
+ private:
+    struct ShapeInfo {
+        ShapeInfo() = default;
+
+        // Copy constructor
+        ShapeInfo(const ShapeInfo& other) noexcept
+                : ndim(other.ndim),
+                  shape(other.shape),
+                  strides(other.strides),
+                  loc(std::make_unique<ssize_t[]>(ndim)) {
+            std::copy(other.loc.get(), other.loc.get() + ndim, loc.get());
+        }
+
+        // Move Constructor
+        ShapeInfo(ShapeInfo&& other) = default;
+
+        ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
+                : ndim(ndim),
+                  shape(shape),
+                  strides(strides),
+                  loc(std::make_unique<ssize_t[]>(ndim)) {
+            std::fill(loc.get(), loc.get() + ndim, 0);
+        }
+
+        // Copy and move assignment operators
+        ShapeInfo& operator=(ShapeInfo other) noexcept {
+            std::swap(ndim, other.ndim);
+            std::swap(shape, other.shape);
+            std::swap(strides, other.strides);
+            std::swap(loc, other.loc);
+            return *this;
+        }
+
+        ~ShapeInfo() = default;
+
+        // Check if another ShapeInfo is in the same location. For performance we
+        // only check the location when debug symbols are off.
+        friend bool operator==(const ShapeInfo& lhs, const ShapeInfo& rhs) {
+            // Check that lhs and rhs are consistent with each other.
+            assert(std::ranges::equal(std::span(lhs.shape, lhs.ndim),
+                                      std::span(rhs.shape, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
+            assert(std::ranges::equal(std::span(lhs.strides, lhs.ndim),
+                                      std::span(rhs.strides, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
+
+            return std::equal(lhs.loc.get(), lhs.loc.get() + lhs.ndim, rhs.loc.get());
+        }
+        friend std::strong_ordering operator<=>(const ShapeInfo& lhs, const ShapeInfo& rhs) {
+            // Check that lhs and rhs are consistent with each other.
+            assert(std::ranges::equal(std::span(lhs.shape, lhs.ndim),
+                                      std::span(rhs.shape, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
+            assert(std::ranges::equal(std::span(lhs.strides, lhs.ndim),
+                                      std::span(rhs.strides, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
+
+            for (ssize_t axis = 0; axis < lhs.ndim; ++axis) {
+                if (lhs.loc[axis] != rhs.loc[axis]) return lhs.loc[axis] <=> rhs.loc[axis];
+            }
+            return std::strong_ordering::equal;
+        }
+
+        friend difference_type operator-(const ShapeInfo& lhs, const ShapeInfo& rhs) {
+            // Check that lhs and rhs are consistent with each other.
+            assert(std::ranges::equal(std::span(lhs.shape, lhs.ndim),
+                                      std::span(rhs.shape, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
+            assert(std::ranges::equal(std::span(lhs.strides, lhs.ndim),
+                                      std::span(rhs.strides, rhs.ndim)) &&
+                   "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
+
+            // calculate the difference in steps based on the respective locs
+            difference_type difference = 0;
+            difference_type step = 1;
+            for (ssize_t axis = lhs.ndim - 1; axis >= 0; --axis) {
+                difference += (lhs.loc[axis] - rhs.loc[axis]) * step;
+                step *= lhs.shape[axis];
+            }
+
+            return difference;
+        }
+
+        // Return the pointer offset (in bytes) relative to the current
+        // position in order to increment the iterator n times.
+        // n can be negative.
+        std::ptrdiff_t increment(const ssize_t n = 1) {
+            // handle a few simple cases with faster implementations
+            if (n == 0) return 0;
+            // if (n == +1) return increment1();
+            // if (n == -1) return decrement1();
+
+            assert(ndim > 0);  // we shouldn't be here if we're a scalar.
+
+            // working from right-to-left, figure out how many steps in each
+            // axis. We handle axis 0 as a special case
+
+            ssize_t offset = 0;  // the number of bytes we need to move
+
+            // We'll be using std::div() over ssize_t, so we'll store our
+            // current location in the struct returned by it.
+            // Unfortunately std::div() is not templated, but overloaded,
+            // so we use decltype instead.
+            decltype(std::div(ssize_t(), ssize_t())) qr{.quot = n, .rem = 0};
+
+            for (ssize_t axis = this->ndim - 1; axis >= 1; --axis) {
+                // A bit of sanity checking on our location
+                // We can go "beyond" the relevant memory on the 0th axis, but
+                // otherwise the location must be nonnegative and strictly less
+                // than the size in that dimension.
+                assert(0 <= loc[axis]);
+                assert(axis == 0 || loc[axis] < shape[axis]);
+
+                // if we're partway through the axis, we shift to
+                // the beginning by adding the number of steps to the total
+                // that we want to go, and updating the offset accordingly
+                if (loc[axis]) {
+                    qr.quot += loc[axis];
+                    offset -= loc[axis] * strides[axis];
+                    // loc[axis] = 0;  // overwritten later, so skip resetting the loc
+                }
+
+                // now, the number of steps might be more than our axis
+                // can support, so we do a div
+                qr = std::div(qr.quot, shape[axis]);
+
+                // adjust so that the remainder is positive
+                if (qr.rem < 0) {
+                    qr.quot -= 1;
+                    qr.rem += shape[axis];
+                }
+
+                // finally adjust our location and offset
+                loc[axis] = qr.rem;
+                offset += qr.rem * strides[axis];
+                // qr.rem = 0;  // overwritten later, so skip resetting the .rem
+
+                // if there's nothing left to do then exit early
+                if (qr.quot == 0) return offset;
+            }
+
+            offset += qr.quot * strides[0];
+            loc[0] += qr.quot;
+
+            return offset;
+        }
+
+        // Information about the shape/strides of the parent array. Note
+        // the pointers are non-owning!
+        ssize_t ndim;
+        const ssize_t* shape;
+        const ssize_t* strides;
+
+        // The current location of the iterator within the parent array.
+        std::unique_ptr<ssize_t[]> loc;
+    };
+
+    // If we're const, then hold a cost void*, else hold void*
+    std::conditional<IsConst, const void*, void*>::type ptr_ = nullptr;
+
+    // If we know the type of the buffer at compile-time, we don't need to
+    // store any information about it. Otherwise we keep a FormatCharacter
+    // indicating what type is it.
+    struct empty {};  // no information stored
+    std::conditional<DType<From>, empty, FormatCharacter>::type format_;
+
+    std::unique_ptr<ShapeInfo> shape_ = nullptr;
+
+    // Convenience functions for getting the format character from a compile-time type.
+    // todo: move into the outer namespace.
+    static constexpr FormatCharacter format_of(const float* const) { return FormatCharacter::f; }
+    static constexpr FormatCharacter format_of(const double* const) { return FormatCharacter::d; }
+    static constexpr FormatCharacter format_of(const int* const) { return FormatCharacter::i; }
+    static constexpr FormatCharacter format_of(const signed char* const) {
+        return FormatCharacter::b;
+    }
+    static constexpr FormatCharacter format_of(const signed short* const) {
+        return FormatCharacter::h;
+    }
+    static constexpr FormatCharacter format_of(const signed long* const) {
+        return FormatCharacter::l;
+    }
+    static constexpr FormatCharacter format_of(const signed long long* const) {
+        return FormatCharacter::Q;
+    }
+};
+
 // Information about where a dynamic array gets its size.
 struct SizeInfo {
     SizeInfo() : SizeInfo(0) {}
@@ -246,448 +755,12 @@ struct Update {
 /// Array::size() and in the first element of Array::shape(). For convenience,
 /// the Array::dynamic() method is provided.
 class Array {
- private:
-    // The implementation of an iterator over the Array.
-    //
-    // Arrays can be contiguous or strided, so an iterator for them must be
-    // too.
-    //
-    // For a contiguous array, the array iterator only needs to hold a pointer
-    // to the memory it is iterating over.
-    //
-    // For a strided array, the iterator also holds information about
-    // the strides and shape of the parent array, as well as its location within
-    // that array.
-    //
-    // For a masked array, the iterator also holds information about whether
-    // the current value should be masked, and what value to return if so.
-    //
-    // `IsConst` toggles whether the iterator is an output iterator or not.
-    template <bool IsConst>
-    class ArrayIteratorImpl_ {
-     public:
-        using difference_type = std::ptrdiff_t;
-        using value_type = std::conditional<IsConst, const double, double>::type;
-        using pointer = value_type*;
-        using reference = value_type&;
-
-        // Default constructor. Contiguous iterator pointing to nullptr.
-        ArrayIteratorImpl_() = default;
-
-        // Copy constructor.
-        ArrayIteratorImpl_(const ArrayIteratorImpl_& other) noexcept
-                : ptr_(other.ptr_),
-                  mask_((other.mask_) ? std::make_unique<MaskInfo>(*other.mask_) : nullptr),
-                  shape_((other.shape_) ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
-
-        // Move constructor.
-        ArrayIteratorImpl_(ArrayIteratorImpl_&& other) = default;
-
-        // Destructor.
-        ~ArrayIteratorImpl_() = default;
-
-        // Construct a contiguous iterator pointing to `ptr`.
-        explicit ArrayIteratorImpl_(value_type* ptr) noexcept
-                : ptr_(ptr), mask_(nullptr), shape_(nullptr) {}
-
-        // Construct a masked iterator with a fill value.
-        // Will return the value pointed at by `fill_ptr` when `*mask_ptr`
-        // evaluates to true.
-        // The iterator does not own the mask or the fill value. Therefore
-        // the mask/fill must outlive the iterator.
-        ArrayIteratorImpl_(value_type* data_ptr, const value_type* mask_ptr,
-                           value_type* fill_ptr) noexcept
-                : ptr_(data_ptr),
-                  mask_(std::make_unique<MaskInfo>(mask_ptr, fill_ptr)),
-                  shape_(nullptr) {}
-
-        // Construct a strided iterator.
-        // The iterator does not own the shape/strides, it only holds a pointer.
-        // Therefore shape/strides must outlive the iterator.
-        ArrayIteratorImpl_(value_type* ptr, ssize_t ndim, const ssize_t* shape,
-                           const ssize_t* strides) noexcept
-                : ptr_(ptr),
-                  mask_(nullptr),
-                  shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
-        ArrayIteratorImpl_(value_type* ptr, std::span<const ssize_t> shape,
-                           std::span<const ssize_t> strides)
-                : ArrayIteratorImpl_(ptr, shape.size(), shape.data(), strides.data()) {
-            assert(shape.size() == strides.size());
-        }
-
-        // Copy and move assignment operator.
-        ArrayIteratorImpl_& operator=(ArrayIteratorImpl_ other) noexcept {
-            using std::swap;  // ADL, if it matters
-            std::swap(ptr_, other.ptr_);
-            std::swap(mask_, other.mask_);
-            std::swap(shape_, other.shape_);
-            return *this;
-        }
-
-        value_type& operator*() const noexcept {
-            if (mask_ && *(mask_->mask_ptr)) {
-                return *(mask_->fill_ptr);
-            }
-            return *ptr_;
-        }
-        value_type* operator->() const noexcept {
-            if (mask_ && *(mask_->mask_ptr)) {
-                return mask_->fill_ptr;
-            }
-            return ptr_;
-        }
-        value_type& operator[](ssize_t idx) const { return *(*this + idx); }
-
-        ArrayIteratorImpl_& operator++() {
-            if (shape_ && mask_) {
-                assert(false && "not implemented yet");  // or maybe ever
-                unreachable();
-            } else if (shape_) {
-                ptr_ += shape_->increment1() / itemsize;
-            } else if (mask_) {
-                // advance both the mask ptr and the data ptr
-                ++(mask_->mask_ptr);
-                ++ptr_;
-            } else {
-                ++ptr_;
-            }
-            return *this;
-        }
-        ArrayIteratorImpl_ operator++(int) {
-            ArrayIteratorImpl_ tmp = *this;
-            ++(*this);
-            return tmp;
-        }
-
-        ArrayIteratorImpl_& operator--() {
-            if (shape_ && mask_) {
-                assert(false && "not implemented yet");  // or maybe ever
-                unreachable();
-            } else if (shape_) {
-                ptr_ += shape_->decrement1() / itemsize;
-            } else if (mask_) {
-                // decrement both the mask ptr and the data ptr
-                --(mask_->mask_ptr);
-                --ptr_;
-            } else {
-                --ptr_;
-            }
-            return *this;
-        }
-        ArrayIteratorImpl_ operator--(int) {
-            ArrayIteratorImpl_ tmp = *this;
-            --(*this);
-            return tmp;
-        }
-
-        ArrayIteratorImpl_& operator+=(difference_type rhs) {
-            if (shape_ && mask_) {
-                assert(false && "not implemented yet");  // or maybe ever
-                unreachable();
-            } else if (shape_) {
-                ptr_ += shape_->increment(rhs) / itemsize;
-            } else if (mask_) {
-                ptr_ += rhs;
-                (mask_->mask_ptr) += rhs;
-            } else {
-                ptr_ += rhs;
-            }
-            return *this;
-        }
-        ArrayIteratorImpl_& operator-=(difference_type rhs) { return this->operator+=(-rhs); }
-
-        friend ArrayIteratorImpl_ operator+(ArrayIteratorImpl_ lhs, difference_type rhs) {
-            return lhs += rhs;
-        }
-        friend ArrayIteratorImpl_ operator+(difference_type lhs, ArrayIteratorImpl_ rhs) {
-            return rhs += lhs;
-        }
-        friend ArrayIteratorImpl_ operator-(ArrayIteratorImpl_ lhs, difference_type rhs) {
-            return lhs -= rhs;
-        }
-
-        friend difference_type operator-(const ArrayIteratorImpl_& a, const ArrayIteratorImpl_& b) {
-            if (!a.shape_ && !b.shape_) {
-                // if they are both contiguous then it's just the distance
-                // between the pointers
-                return a.ptr_ - b.ptr_;
-            } else if (!a.shape_ || !b.shape_) {
-                assert(false && "a must be reachable from b");
-                unreachable();
-            }
-
-            // Check that lhs and rhs are consistent with each other. They still
-            // might have different starting locations, but with these they are
-            // at least comparable.
-            assert(std::ranges::equal(std::span(a.shape_->shape, a.shape_->ndim),
-                                      std::span(b.shape_->shape, b.shape_->ndim)));
-            assert(std::ranges::equal(std::span(a.shape_->strides, a.shape_->ndim),
-                                      std::span(b.shape_->strides, b.shape_->ndim)));
-
-            // If they point to the same pointer then they are 0 apart
-            if (a.ptr_ == b.ptr_) return 0;
-
-            // shape information about our iterators for easy access
-            const ShapeInfo& shapeinfo = *a.shape_;
-
-            if (!shapeinfo.ndim) return 0;  // 0dim arrays have no distance.
-
-            // Calculating the distance between two strided iterators is
-            // relatively complex. So we do it in a few steps.
-
-            // We'll be mutating them, so we start by making copies of each.
-            // We're trying to calculate the number of iterations from source
-            // to target.
-            ArrayIteratorImpl_ target = a;
-            ArrayIteratorImpl_ source = b;
-
-            // Zero out the location in each axis except the 0th and track those
-            // changes in the offset
-            difference_type offset = 0;
-            ssize_t incs_per_step = 1;  // for each step in the axis how many increment operations
-            {
-                ssize_t* target_loc = a.shape_->loc.get();
-                ssize_t* source_loc = b.shape_->loc.get();
-
-                for (ssize_t axis = shapeinfo.ndim - 1; axis > 0; --axis) {
-                    const ssize_t stride = shapeinfo.strides[axis] / itemsize;
-
-                    // resetting the source removes steps
-                    offset -= source_loc[axis - 1] * incs_per_step;
-                    source.ptr_ -= source_loc[axis - 1] * stride;
-                    source_loc[axis - 1] = 0;
-
-                    // resetting the target adds steps
-                    offset += target_loc[axis - 1] * incs_per_step;
-                    target.ptr_ -= target_loc[axis - 1] * stride;
-                    target_loc[axis - 1] = 0;
-
-                    incs_per_step *= shapeinfo.shape[axis];
-                }
-            }
-
-            // ok, now we're along the same "column" so we calculate how far
-            // target is from source
-            const ssize_t stride = shapeinfo.strides[0] / itemsize;
-            offset += (target.ptr_ - source.ptr_) / stride * incs_per_step;
-
-            return offset;
-        }
-
-        // Equal if they both point to the same underlying array location
-        friend bool operator==(const ArrayIteratorImpl_& lhs, const ArrayIteratorImpl_& rhs) {
-            return lhs.ptr_ == rhs.ptr_;
-        }
-        friend bool operator!=(const ArrayIteratorImpl_& lhs, const ArrayIteratorImpl_& rhs) {
-            return lhs.ptr_ != rhs.ptr_;
-        }
-
-        // Other comparison operators are in terms of the distance. If all of the strides are
-        // non-negative or all of the strides are non-positive then we could potentially check
-        // faster in some cases. But for now this is easier.
-        friend auto operator<=>(const ArrayIteratorImpl_& lhs, const ArrayIteratorImpl_& rhs) {
-            return 0 <=> rhs - lhs;
-        }
-
-        /// Return a pointer to the underlying memory location.
-        value_type* get() const noexcept { return ptr_; }
-
-     private:
-        static constexpr difference_type itemsize = sizeof(value_type);
-
-        // All iterators hold a pointer to the underlying memory.
-        value_type* ptr_ = nullptr;
-
-        // Masked iterators store information about the mask in the MaskInfo
-        // structure.
-        struct MaskInfo {
-            MaskInfo() = delete;
-
-            MaskInfo(const value_type* mask_ptr, value_type* fill_ptr) noexcept
-                    : mask_ptr(mask_ptr), fill_ptr(fill_ptr) {}
-
-            // dereferencing `mask_ptr` tells the iterator whether to substitute
-            // the fill value or not. Therefore this pointer is incremented along
-            // with ArrayIteratorImpl_::ptr_.
-            const value_type* mask_ptr;
-
-            // A pointer to the fill value that is substituted when `!*mask_ptr`.
-            // This pointer is not incremented.
-            value_type* fill_ptr;
-        };
-
-        // Pointer to the MaskInfo. If nullptr then the iterator is not a masked
-        // iterator.
-        std::unique_ptr<MaskInfo> mask_ = nullptr;
-
-        // Strided iterators store information about the shape and strides of
-        // the parent array, as well as their location within that array in
-        // the ShapeInfo structure.
-        struct ShapeInfo {
-            ShapeInfo() = delete;
-
-            ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
-                    : ndim(ndim),
-                      shape(shape),
-                      strides(strides),
-                      loc(std::make_unique<ssize_t[]>(std::max<ssize_t>(ndim - 1, 0))) {
-                for (ssize_t i = 0; i < ndim - 1; ++i) {
-                    loc[i] = 0;
-                }
-            }
-
-            // Copy constructor
-            ShapeInfo(const ShapeInfo& other) noexcept
-                    : ndim(other.ndim),
-                      shape(other.shape),
-                      strides(other.strides),
-                      loc(std::make_unique<ssize_t[]>(std::max<ssize_t>(ndim - 1, 0))) {
-                if (ndim > 0) std::copy(other.loc.get(), other.loc.get() + ndim - 1, loc.get());
-            }
-
-            // Move constructor.
-            ShapeInfo(ShapeInfo&& other) = default;
-
-            // Copy and move assignment operator.
-            ShapeInfo& operator=(ShapeInfo other) noexcept {
-                using std::swap;  // ADL, if it matters
-                std::swap(ndim, other.ndim);
-                std::swap(shape, other.shape);
-                std::swap(strides, other.strides);
-                std::swap(loc, other.loc);
-                return *this;
-            }
-
-            // Return the pointer offset (in bytes) relative to the current
-            // position in order to decrement the iterator once.
-            difference_type decrement1() {
-                difference_type offset = 0;
-
-                ssize_t axis = ndim - 1;
-                for (; axis >= 1; --axis) {
-                    offset -= strides[axis];
-
-                    if (--loc[axis - 1] >= 0) break;
-
-                    assert(loc[axis - 1] == -1);
-
-                    offset += strides[axis] * shape[axis];
-                    loc[axis - 1] = shape[axis] - 1;
-                }
-                if (axis == 0) {
-                    offset -= strides[axis];
-                }
-
-                return offset;
-            }
-
-            // Return the pointer offset (in bytes) relative to the current
-            // position in order to increment the iterator once.
-            difference_type increment1() {
-                difference_type offset = 0;
-
-                ssize_t dim = ndim - 1;
-                for (; dim >= 1; --dim) {
-                    offset += strides[dim];
-
-                    // we don't need to advance any other dimensions
-                    if (++loc[dim - 1] < shape[dim]) break;
-
-                    offset -= strides[dim] * shape[dim];  // zero out this dim
-                    loc[dim - 1] = 0;
-                }
-                if (dim == 0) {
-                    // For dim 0, we don't care if we're past the end of the shape.
-                    // This allows us to work for dynamic arrays as well.
-                    offset += strides[dim];
-                }
-
-                return offset;
-            }
-
-            // Return the pointer offset (in bytes) relative to the current
-            // position in order to increment the iterator n times.
-            // n can be negative.
-            difference_type increment(ssize_t n) {
-                // handle a few simple cases with faster implementations
-                if (n == 0) return 0;
-                if (n == +1) return increment1();
-                if (n == -1) return decrement1();
-
-                difference_type offset = 0;  // the number of bytes we need to move
-
-                // working from right-to-left, figure out how many steps in each
-                // axis. We handle axis 0 as a special case
-                {
-                    // We'll be using std::div() over ssize_t, so we'll store our
-                    // current location in the struct returned by it.
-                    // Unfortunately std::div() is not templated, but overloaded,
-                    // so we use decltype instead.
-                    decltype(std::div(ssize_t(), ssize_t())) qr{.quot = n, .rem = 0};
-
-                    ssize_t axis = this->ndim - 1;
-                    for (; axis >= 1; --axis) {
-                        // if we're partway through the axis, we shift to
-                        // the beginning by adding the number of steps to the total
-                        // that we want to go, and updating the offset accordingly
-                        if (loc[axis - 1]) {
-                            assert(loc[axis - 1] > 0);  // should never be negative
-                            qr.quot += loc[axis - 1];
-                            offset -= loc[axis - 1] * strides[axis];
-                            // loc[axis - 1] = 0;  // overwritten later, so skip resetting the loc
-                        }
-
-                        // now, the number of steps might be more than our axis
-                        // can support, so we do a div
-                        qr = std::div(qr.quot, shape[axis]);
-
-                        // adjust so that the remainder is positive
-                        if (qr.rem < 0) {
-                            qr.quot -= 1;
-                            qr.rem += shape[axis];
-                        }
-
-                        // finally adjust our location and offset
-                        loc[axis - 1] = qr.rem;
-                        offset += qr.rem * strides[axis];
-                        // qr.rem = 0;  // overwritten later, so skip resetting the .rem
-
-                        // if there's nothing left to do then exit early
-                        if (qr.quot == 0) break;
-                    }
-                    if (axis == 0) {
-                        offset += qr.quot * strides[0];
-                    }
-                }
-
-                return offset;
-            }
-
-            // Information about the shape/strides of the parent array. Note
-            // the pointers are non-owning!
-            ssize_t ndim;
-            const ssize_t* shape;
-            const ssize_t* strides;
-
-            // The current location of the iterator within the parent array.
-            // Note that we don't care about out location in the 0th axis of the
-            // array so `loc.size() == max(ndim - 1, 0)`.
-            // E.g. for an array with shape (2, 3, 4), a loc of [2, 3] corresponds
-            // to the location array[?, 2, 3].
-            std::unique_ptr<ssize_t[]> loc;
-        };
-
-        // Pointer to the ShapeInfo. If nullptr then the iterator is not a
-        // strided iterator.
-        std::unique_ptr<ShapeInfo> shape_ = nullptr;
-    };
-
  public:
     /// A std::random_access_iterator over the values in the array.
-    using iterator = ArrayIteratorImpl_<false>;
+    using iterator = BufferIterator<double, double, false>;
 
     /// A std::random_access_iterator over the values in the array.
-    using const_iterator = ArrayIteratorImpl_<true>;
+    using const_iterator = BufferIterator<double, double, true>;
 
     template<class T>
     using cache_type = std::unordered_map<const Array*, T>;
@@ -706,9 +779,9 @@ class Array {
         // they are easy to add.
      public:
         /// A std::random_access_iterator over the values.
-        using iterator = ArrayIteratorImpl_<false>;
+        using iterator = BufferIterator<double, double, false>;
         /// A std::random_access_iterator over the values.
-        using const_iterator = ArrayIteratorImpl_<true>;
+        using const_iterator = BufferIterator<double, double, true>;
 
         /// Create an empty view.
         View() = default;
@@ -721,16 +794,16 @@ class Array {
         }
 
         /// Return a reference to the element at location `n`.
-        const double& operator[](ssize_t n) const;
+        double operator[](ssize_t n) const;
 
         /// Return a reference to the element at location `n`.
         ///
         /// This function checks whether `n` is within bounds and throws a
         /// std::out_of_range exception if it is not.
-        const double& at(ssize_t n) const;
+        double at(ssize_t n) const;
 
         /// Return a reference to the last element of the view.
-        const double& back() const;
+        double back() const;
 
         /// Return an iterator to the beginning of the view.
         const_iterator begin() const;
@@ -742,7 +815,7 @@ class Array {
         const_iterator end() const;
 
         /// Return a reference to the first element of the view.
-        const double& front() const;
+        double front() const;
 
         /// Return the number of elements in the view.
         ssize_t size() const;

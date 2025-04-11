@@ -598,7 +598,7 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
                 ssize_t stride = array_strides[index] / static_cast<ssize_t>(itemsize());
 
                 auto it = offsets.begin();
-                for (auto& index_val : std::get<ArrayNode*>(indices_[index])->view(state)) {
+                for (const auto index_val : std::get<ArrayNode*>(indices_[index])->view(state)) {
                     *it += index_val * stride;
                     ++it;
                 }
