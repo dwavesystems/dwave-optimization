@@ -38,6 +38,11 @@ namespace dwave::optimization {
 
 class Array;
 
+/// The `DType<T>` concept is satisfied if and only if `T` is one of the
+/// supported data types. This list is a subset of the `dtype`s supported by
+/// NumPy as is designed for consistency/compatibility with NumPy.
+/// See https://numpy.org/doc/stable/reference/arrays.dtypes.html for more
+/// information.
 template <typename T>
 concept DType = std::same_as<T, float> ||  // np.float32
         std::same_as<T, double> ||         // np.float64
@@ -46,14 +51,22 @@ concept DType = std::same_as<T, float> ||  // np.float32
         std::same_as<T, std::int32_t> ||   // np.int32
         std::same_as<T, std::int64_t>;     // np.int64
 
+/// The `OptionalDType<T>` concept is satisfied if and only if `T` is `void`
+/// or satisfies `DType<T>`.
+/// `void` is used to signal that the dtype is unknown at compile-time.
 template <typename T>
 concept OptionalDType = DType<T> || std::same_as<T, void>;
 
-// We need to be able to go back and forth between DTypes and Python format
-// characters, see https://docs.python.org/3/library/struct.html, because
-// that's how the buffer protocol is designed.
-// Annoyingly, to support the Windows/MacOS/Linux we need to have one more
-// format character than DType.
+
+// Dev note: We'd like to work with `DType` only, but in order to work with the
+// buffer protocol (https://docs.python.org/3/c-api/buffer.html) we need to
+// use format characters. And, annoyingly, we need one more format character
+// than dtype to cover all of the compilers/OS that we care about.
+
+/// Format characters are used to signal how bytes in a fixed-size block of
+/// memory should be interpreted. This list is a subset of the format characters
+/// supported by Python's `struct` library.
+/// See https://docs.python.org/3/library/struct.html for more information.
 enum class FormatCharacter : char {
     f = 'f',  // float
     d = 'd',  // double
@@ -64,60 +77,81 @@ enum class FormatCharacter : char {
     Q = 'Q',  // signed long long
 };
 
-// The iterator can only allow editing of the underlying buffer in the
-// case that To and From are both known at compile-time and the same. Otherwise
-// we must be const.
+/// An iterator over bytes with a fixed size that can be interpreted as an
+/// array.
+///
+/// Arrays can be contiguous or strided. For a contiguous array, the iterator
+/// holds a pointer. For a strided array, the iterator holds information about
+/// the strides and shape of the parent array, as well as its location within
+/// that array.
+///
+/// `To` determines the `value_type` of the iterator.
+///
+/// `From` describes the type of the underlying buffer.
+/// If `From` satisfies `DType<From>`, then the iterator does not need to hold
+/// any information.
+/// If `From` is `void`, then the iterator does the interpretation of the buffer
+/// at runtime.
+///
+/// `IsConst` toggles whether the iterator is an output iterator or not.
+/// `IsConst` must be `false` unless `To` is the same type as `From`.
 template <DType To, OptionalDType From = void, bool IsConst = true>
 requires(IsConst || std::same_as<To, From>) class BufferIterator {
  public:
     using difference_type = std::ptrdiff_t;
+    using pointer = std::conditional<IsConst, const To*, To*>::type;
+    using reference = std::conditional<IsConst, const To&, To&>::type;
     using value_type = To;
 
-    using pointer = std::conditional<IsConst, const value_type*, value_type*>::type;
-    using reference = std::conditional<IsConst, const value_type&, value_type&>::type;
-
+    /// Default constructor.
     BufferIterator() = default;
 
-    // Copy Constructor
+    /// Copy Constructor.
     BufferIterator(const BufferIterator& other) noexcept
             : ptr_(other.ptr_),
               format_(other.format_),
               shape_(other.shape_ ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
 
-    // Move Constructor
+    /// Move Constructor.
     BufferIterator(BufferIterator&& other) = default;
 
-    // Construct a contiguous iterator pointing to `ptr`.
+    /// Construct a contiguous iterator pointing to `ptr` when `From` is `void`.
     template <DType T>
-    explicit BufferIterator(const T* ptr) noexcept requires(std::is_void_v<From>)
+    explicit BufferIterator(const T* ptr) noexcept requires(!DType<From>)
             : ptr_(ptr), format_(format_of(ptr)), shape_() {}
 
-    // Construct a contiguous iterator pointing to ptr when the type of ptr is
-    // known at compile-time.
+    /// Construct a contiguous iterator pointing to ptr when the type of ptr is
+    /// known at compile-time.
     explicit BufferIterator(const From* ptr) noexcept requires(DType<From>)
             : ptr_(ptr), format_(), shape_() {}
     explicit BufferIterator(From* ptr) noexcept requires(DType<From> && !IsConst)
             : ptr_(ptr), format_(), shape_() {}
 
-    // Construct a non-contiguous iterator from a shape/strides defined as ranges
+    /// Construct a non-contiguous iterator from a shape/strides defined as
+    /// observing pointers when `From` is `void`.
     template <DType T>
     BufferIterator(const T* ptr,
                    ssize_t ndim,            // number of dimensions in the array
                    const ssize_t* shape,    // shape of the array
                    const ssize_t* strides)  // strides for each dimension of the array
-            noexcept requires(std::is_void_v<From>)
+            noexcept requires(!DType<From>)
             : ptr_(ptr),
               format_(format_of(ptr)),
               shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
+
+    /// Construct a non-contiguous iterator from a shape/strides defined as
+    /// ranges when `From` is `void`.
     template <DType T>
     BufferIterator(const T* ptr,
                    const std::span<const ssize_t> shape,    // shape of the array
                    const std::span<const ssize_t> strides)  // strides of the array
-            requires(std::is_void_v<From>)
+            requires(!DType<From>)
             : BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
         assert(shape.size() == strides.size());
     }
 
+    /// Construct a non-contiguous iterator from a shape/strides defined as
+    /// observing pointers when `From` satisfies `DType<From>`.
     BufferIterator(pointer ptr,
                    ssize_t ndim,            // number of dimensions in the array
                    const ssize_t* shape,    // shape of the array
@@ -126,6 +160,9 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
             : ptr_(ptr),
               format_(),
               shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
+
+    /// Construct a non-contiguous iterator from a shape/strides defined as
+    /// ranges when `From` satisfies `DType<From>`.
     BufferIterator(pointer ptr,
                    const std::span<const ssize_t> shape,    // shape of the array
                    const std::span<const ssize_t> strides)  // strides of the array
@@ -134,7 +171,7 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         assert(shape.size() == strides.size());
     }
 
-    // Copy and move assignment operators
+    /// Copy and move assignment operators
     BufferIterator& operator=(BufferIterator other) noexcept {
         std::swap(this->ptr_, other.ptr_);
         std::swap(this->format_, other.format_);
@@ -142,12 +179,15 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         return *this;
     }
 
-    // Destructor
+    /// Destructor
     ~BufferIterator() = default;
 
+    /// Dereference the iterator when the iterator is an output iterator.
     value_type& operator*() const noexcept requires(std::same_as<To, From> && !IsConst) {
         return *static_cast<From*>(ptr_);
     }
+
+    /// Dereference the iterator when the iterator is not an output iterator.
     value_type operator*() const noexcept requires(IsConst) {
         if constexpr (DType<From>) {
             // In this case we know at compile-time what type we're converting from
@@ -174,32 +214,44 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         }
     }
 
+    /// Access the value of the iterator at the given offset when the iterator
+    /// is an output iterator.
     value_type& operator[](difference_type index) const noexcept
             requires(std::same_as<To, From> && !IsConst) {
         return *(*this + index);
     }
+
+    /// Access the value of the iterator at the given offset when the iterator
+    /// is not an output iterator.
     value_type operator[](difference_type index) const noexcept requires(IsConst) {
         return *(*this + index);
     }
 
+    /// Preincrement operator.
     BufferIterator& operator++() {
         return *this += 1;
     }
+
+    /// Postincrement operator.
     BufferIterator operator++(int) {
         BufferIterator tmp = *this;
         ++(*this);
         return tmp;
     }
 
+    /// Predecrement operator.
     BufferIterator& operator--() {
         return *this -= 1;
     }
+
+    /// Postdecrement operator.
     BufferIterator operator--(int) {
         BufferIterator tmp = *this;
         --(*this);
         return tmp;
     }
 
+    /// Increment the iterator by `rhs` steps.
     BufferIterator& operator+=(difference_type rhs) {
         // We want to increment the pointer by a number of bytes, so we cast
         // void* to char*. But we also need to respect the const-correctness.
@@ -212,10 +264,14 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         }
         return *this;
     }
+
+    /// Decrement the iterator by `rhs` steps.
     BufferIterator& operator-=(difference_type rhs) {
         return *this += -rhs;
     }
 
+    /// Return `true` is `lhs` and `rhs` are pointing to he same underlying
+    /// value.
     friend bool operator==(const BufferIterator& lhs, const BufferIterator& rhs) {
         if (lhs.shape_ && rhs.shape_) {
             return *lhs.shape_ == *rhs.shape_;
@@ -230,6 +286,8 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
             return lhs.ptr_ == rhs.ptr_;
         }
     }
+
+    /// Three-way comparison between two iterators.
     friend std::strong_ordering operator<=>(const BufferIterator& lhs, const BufferIterator& rhs) {
         if (lhs.shape_ && rhs.shape_) {
             return *lhs.shape_ <=> *rhs.shape_;
@@ -245,12 +303,16 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         }
     }
 
+    /// Return an iterator pointing to the location `rhs` steps from `lhs`.
     friend BufferIterator operator+(BufferIterator lhs, difference_type rhs) { return lhs += rhs; }
+
+    /// Return an iterator pointing to the location `lhs` steps from `rhs`.
     friend BufferIterator operator+(difference_type lhs, BufferIterator rhs) { return rhs += lhs; }
 
+    /// Return an iterator pointing to the location `rhs` steps before `lhs`.
     friend BufferIterator operator-(BufferIterator lhs, difference_type rhs) { return lhs -= rhs; }
 
-    /// The number of times we would need to increment rhs in order to reach lhs
+    /// Return the number of times we would need to increment `rhs` in order to reach `lhs`.
     friend difference_type operator-(const BufferIterator& lhs, const BufferIterator& rhs) {
         if (lhs.shape_ && rhs.shape_) {
             return *lhs.shape_ - *rhs.shape_;
@@ -271,6 +333,7 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         }
     }
 
+    /// The number of bytes used to encode values in the buffer.
     std::ptrdiff_t itemsize() const noexcept {
         if constexpr (DType<From>) {
             // If we know the type of From at compiletime, then this is easy
