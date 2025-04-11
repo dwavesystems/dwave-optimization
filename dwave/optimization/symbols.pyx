@@ -67,6 +67,7 @@ from dwave.optimization.libcpp.nodes cimport (
     DivideNode as cppDivideNode,
     EqualNode as cppEqualNode,
     ExpitNode as cppExpitNode,
+    InputNode as cppInputNode,
     IntegerNode as cppIntegerNode,
     LessEqualNode as cppLessEqualNode,
     LinearProgramFeasibleNode as cppLinearProgramFeasibleNode,
@@ -132,6 +133,7 @@ __all__ = [
     "Divide",
     "Equal",
     "Expit",
+    "Input",
     "IntegerVariable",
     "LessEqual",
     "LinearProgram",
@@ -1962,6 +1964,69 @@ cdef class Expit(ArraySymbol):
     cdef cppExpitNode* ptr
 
 _register(Expit, typeid(cppExpitNode))
+
+cdef class Input(ArraySymbol):
+    """An input symbol. Functions as a "placeholder" in a model/expression."""
+
+    def __init__(
+        self,
+        expression,
+        shape=None,
+        double lower_bound = -float("inf"),
+        double upper_bound = float("inf"),
+        bool integral = False,
+    ):
+        cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape)
+
+        cdef _Graph cygraph = expression
+
+        # Get an observing pointer to the C++ InputNode
+        self.ptr = cygraph._graph.emplace_node[cppInputNode](vshape, lower_bound, upper_bound, integral)
+
+        self.initialize_arraynode(expression, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppInputNode* ptr = dynamic_cast_ptr[cppInputNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Input")
+
+        cdef Input inp = Input.__new__(Input)
+        inp.ptr = ptr
+        inp.initialize_arraynode(symbol.model, ptr)
+        return inp
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        if predecessors:
+            raise ValueError(f"{cls.__name__} cannot have predecessors")
+
+        with zf.open(directory + "properties.json", "r") as f:
+            properties = json.load(f)
+
+        return Input(model,
+            shape=properties["shape"],
+            lower_bound=properties["lb"],
+            upper_bound=properties["ub"],
+            integral=properties["integral"],
+        )
+
+    def _into_zipfile(self, zf, directory):
+        properties = dict(
+            lb=self.ptr.min(),
+            ub=self.ptr.max(),
+            integral=self.ptr.integral(),
+            shape=self.shape(),
+        )
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+
+        zf.writestr(directory + "properties.json", encoder.encode(properties))
+
+    cdef cppInputNode* ptr
+
+_register(Input, typeid(cppInputNode))
+
 
 cdef class IntegerVariable(ArraySymbol):
     """Integer decision-variable symbol.

@@ -140,6 +140,48 @@ cdef class _Graph:
         """
         return sum(sym.state_size() for sym in self.iter_decisions())
 
+    def input(
+        self,
+        lower_bound: float = -float("inf"),
+        upper_bound: float = float("inf"),
+        integral: bool = False,
+    ):
+        r"""Create an "input" symbol. This functions similarly to a decision variable,
+        in that it takes no predecessors, but its state will always be set manually
+        (not by any solver). Used as a placeholder for input to an expression or model.
+        The output of the symbol is always a scalar (0-dimensional) array.
+        Provided bounds and integrality are used to supply information for
+        min/max/integral/logical properties of the resulting node, and will be used to
+        validate the state when set manually.
+        Note that the order in which inputs are added to the expression matters and is
+        used by other symbols (see :class:`~dwave.optimization.symbols.NaryReduce`) to
+        infer how arguments are supplied to the expression during evaluation.
+        Args:
+            lower_bound: lower bound on any possible output of the node.
+            upper_bound: upper bound on any possible output of the node.
+            integral: whether the output of the node should always be integral.
+        Returns:
+            An input symbol.
+        Examples:
+            This example creates two input symbols and an integer decision symbol
+            and then sets the objective to the sum of all of them.
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> x, y = model.input(-7.3, 5), model.input(8, 10, True)
+            >>> z = model.integer()
+            >>> model.set_objective(x + y + z)
+        """
+        # avoid circular import
+        from dwave.optimization.symbols import Input
+        # Shape is always scalar for now
+        return Input(
+            self,
+            shape=tuple(),
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
+            integral=integral
+        )
+
     @classmethod
     @_file_object_arg("rb")  # translate str/bytes file inputs into file objects
     def from_file(cls, file, *,
@@ -544,6 +586,23 @@ cdef class _Graph:
         for ptr in self._graph.decisions():
             yield symbol_from_ptr(self, ptr)
 
+    def iter_inputs(self):
+        """Iterate over all inputs in the model.
+
+        Examples:
+            This example iterates over a model's inputs.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i0, i1 = model.input(), model.input()
+            >>> c = model.constant(7)
+            >>> inputs = list(model.iter_inputs())
+            >>> len(inputs)
+            2
+        """
+        for ptr in self._graph.inputs():
+            yield symbol_from_ptr(self, ptr)
+
     def iter_symbols(self):
         """Iterate over all symbols in the model.
 
@@ -663,6 +722,26 @@ cdef class _Graph:
         for i in range(self._graph.num_nodes()):
             num_edges += self._graph.nodes()[i].get().successors().size()
         return num_edges
+
+    cpdef Py_ssize_t num_inputs(self) noexcept:
+        """Number of input nodes on the model.
+
+        See also:
+            :meth:`.num_symbols`
+            :class:`~dwave.optimization.symbols.Input`
+
+        Examples:
+            This example adds two inputs and a constant to a model and
+            checks the number of inputs.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i0, i1 = model.input(), model.input()
+            >>> c = model.constant(7)
+            >>> model.num_inputs()
+            2
+        """
+        return self._graph.num_inputs()
 
     cpdef Py_ssize_t num_nodes(self) noexcept:
         """Number of nodes in the directed acyclic graph for the model.

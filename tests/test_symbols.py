@@ -1180,6 +1180,19 @@ class TestExpit(utils.SymbolTests):
             self.assertEqual(expit_node.state(), scipy_expit_output[i])  # confirm consistency with SciPy expit
 
 
+class TestInputModel(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        inp = model.input(lower_bound=-10, upper_bound=10, integral=False)
+        model.lock()
+
+        yield inp
+
+    @unittest.skip("Input state must be explicity initialized so can't run this test")
+    def test_state_serialization(*args, **kwargs):
+        pass
+
+
 class TestIntegerVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
