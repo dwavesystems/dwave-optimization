@@ -119,6 +119,12 @@ cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimizatio
         pass
 
 
+cdef extern from "dwave-optimization/nodes/lambda.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass NaryReduceNode(ArrayNode):
+        void swap_expression(...)
+        const double initial
+
+
 cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ConcatenateNode(ArrayNode):
         Py_ssize_t axis()

@@ -259,7 +259,7 @@ cdef class _Graph:
                 objective_id = json.loads(objective_buff)
                 if not isinstance(objective_id, int) or objective_id >= model.num_nodes():
                     raise ValueError("objective must be an integer and a valid node id")
-                model.minimize(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
+                model._set_objective(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
 
             for cid in json.loads(zf.read("constraints.json")):
                 model.add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
@@ -428,6 +428,20 @@ cdef class _Graph:
 
         .. _NPY format: https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html
         """
+        if not self.is_locked():
+            # lock for the duration of the method
+            self.lock()
+            try:
+                self.into_file(
+                    file,
+                    version=version,
+                    max_num_states=max_num_states,
+                    only_decision=only_decision
+                )
+            finally:
+                self.unlock()
+            return
+
         version, model_info = self._into_file_header(
             file,
             version=version,
@@ -480,8 +494,9 @@ cdef class _Graph:
                 self.states._into_zipfile(zf, num_states=num_states, version=version)
 
             # Encode the objective and the constraints
-            if self.objective is not None and self.objective.topological_index() < stop:
-                zf.writestr("objective.json", encoder.encode(self.objective.topological_index()))
+            objective = self._objective_symbol()
+            if objective is not None and objective.topological_index() < stop:
+                zf.writestr("objective.json", encoder.encode(objective.topological_index()))
             else:
                 zf.writestr("objective.json", b"")
 
@@ -627,28 +642,12 @@ cdef class _Graph:
         # note that we do not initialize the nodes or resize the states!
         # We do it lazily for performance
 
-    def minimize(self, ArraySymbol value):
-        """Set the objective value to minimize.
+    def _set_objective(self, ArraySymbol value):
+        """Set the objective value on the ``dwave::optimization::Graph``.
 
-        Optimization problems have an objective and/or constraints. The objective
-        expresses one or more aspects of the problem that should be minimized
-        (equivalent to maximization when multiplied by a minus sign). For example,
-        an optimized itinerary might minimize the value of distance traveled or
-        cost of transportation or travel time.
-
-        Args:
-            value: Value for which to minimize the cost function.
-
-        Examples:
-            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
-            within bounds.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(lower_bound=-5, upper_bound=5)
-            >>> c = model.constant(4)
-            >>> y = i*i - c*i
-            >>> model.minimize(y)
+        Note that we use this term somewhat loosely, as this "objective" is used for
+        both for the proper objective of a :class:`~dwave.optimization.model.Model`
+        as well as the output of an :class:`~dwave.optimization.model.Expression`.
         """
         if value is None:
             raise ValueError("value cannot be None")
@@ -782,6 +781,18 @@ cdef class _Graph:
             2
         """
         return self.num_nodes()
+
+    def _objective_symbol(self):
+        """Return the node set as the objective on the ``._graph`` as a symbol.
+        If the objective is not currently set, return ``None``.
+        """
+
+        cdef cppArrayNode* ptr = self._graph.objective()
+        if not ptr:
+            # nullptr, so objective is not set
+            return None
+
+        return symbol_from_ptr(self, ptr)
 
     def remove_unused_symbols(self):
         """Remove unused symbols from the model.
