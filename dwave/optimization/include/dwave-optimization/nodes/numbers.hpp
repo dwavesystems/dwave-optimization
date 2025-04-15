@@ -140,6 +140,9 @@ class IntegerNode : public NumberNode {
 /// A contiguous block of binary numbers.
 class BinaryNode : public IntegerNode {
  public:
+    /// A single binary scalar variable
+    BinaryNode() : BinaryNode({}) {}
+
     explicit BinaryNode(std::initializer_list<ssize_t> shape) : IntegerNode(shape, 0, 1) {}
     explicit BinaryNode(std::span<const ssize_t> shape) : IntegerNode(shape, 0, 1) {}
 

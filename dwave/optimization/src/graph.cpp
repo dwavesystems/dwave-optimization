@@ -227,6 +227,10 @@ std::vector<const Node*> Graph::descendants(State& state, std::vector<const Node
     return sources;
 }
 
+void Graph::propagate(State& state) const {
+    std::ranges::for_each(nodes(), [&state](const auto& ptr) { ptr->propagate(state); });
+}
+
 void Graph::propagate(State& state, std::span<const Node*> queue_to_update) const {
     for (const Node* node_ptr : queue_to_update) {
         node_ptr->propagate(state);
@@ -239,6 +243,10 @@ void Graph::propagate(State& state, std::span<const Node*> queue_to_update) cons
 
 void Graph::propagate(State& state, std::vector<const Node*>&& changed) const {
     return propagate(state, std::span(changed));
+}
+
+void Graph::commit(State& state) const {
+    std::ranges::for_each(nodes(), [&state](const auto& ptr) { ptr->commit(state); });
 }
 
 void Graph::commit(State& state, std::span<const Node*> changed) const {
@@ -257,6 +265,10 @@ void Graph::commit(State& state, std::span<const Node*> changed) const {
 
 void Graph::commit(State& state, std::vector<const Node*>&& changed) const {
     commit(state, std::span(changed));
+}
+
+void Graph::revert(State& state) const {
+    std::ranges::for_each(nodes(), [&state](const auto& ptr) { ptr->revert(state); });
 }
 
 void Graph::revert(State& state, std::span<const Node*> changed) const {
