@@ -1,4 +1,4 @@
-// Copyright 2024 D-Wave Inc.
+// Copyright 2024 D-Wave
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -54,18 +54,13 @@ std::span<const Update> InputNode::diff(const State& state) const noexcept {
 }
 
 void InputNode::initialize_state(State& state, std::span<const double> data) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     if (static_cast<ssize_t>(data.size()) != this->size()) {
         throw std::invalid_argument("data size does not match size of InputNode");
     }
 
     std::vector<double> copy(data.begin(), data.end());
 
-    state[index] = std::make_unique<ArrayNodeStateData>(std::move(copy));
+    emplace_data_ptr<ArrayNodeStateData>(state, std::move(copy));
 }
 
 void InputNode::revert(State& state) const noexcept {

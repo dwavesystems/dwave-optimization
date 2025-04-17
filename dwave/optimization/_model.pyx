@@ -142,34 +142,44 @@ cdef class _Graph:
 
     def input(
         self,
-        lower_bound: float = -float("inf"),
-        upper_bound: float = float("inf"),
-        integral: bool = False,
+        double lower_bound = -float("inf"),
+        double upper_bound = float("inf"),
+        bool integral = False,
     ):
-        r"""Create an "input" symbol. This functions similarly to a decision variable,
+        """Create an "input" symbol.
+
+        An input symbol functions similarly to a decision variable,
         in that it takes no predecessors, but its state will always be set manually
         (not by any solver). Used as a placeholder for input to a model.
+
         The output of the symbol is always a scalar (0-dimensional) array.
         Provided bounds and integrality are used to supply information for
         min/max/integral/logical properties of the resulting node, and will be used to
         validate the state when set manually.
+
         Note that the order in which inputs are added to the model matters and is
         used by other symbols (see :class:`~dwave.optimization.symbols.NaryReduce`) to
         infer how arguments are supplied to the model during evaluation.
+
         Args:
             lower_bound: lower bound on any possible output of the node.
             upper_bound: upper bound on any possible output of the node.
             integral: whether the output of the node should always be integral.
+
         Returns:
             An input symbol.
+
         Examples:
             This example creates two input symbols and an integer decision symbol
             and then sets the objective to the sum of all of them.
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> x, y = model.input(-7.3, 5), model.input(8, 10, True)
             >>> z = model.integer()
-            >>> model.set_objective(x + y + z)
+            >>> model.minimize(x + y + z)
+
+        .. versionadded:: 0.6.2
         """
         # avoid circular import
         from dwave.optimization.symbols import Input
@@ -599,6 +609,8 @@ cdef class _Graph:
             >>> inputs = list(model.iter_inputs())
             >>> len(inputs)
             2
+
+        .. versionadded:: 0.6.2
         """
         for ptr in self._graph.inputs():
             yield symbol_from_ptr(self, ptr)
@@ -740,6 +752,8 @@ cdef class _Graph:
             >>> c = model.constant(7)
             >>> model.num_inputs()
             2
+
+        .. versionadded:: 0.6.2
         """
         return self._graph.num_inputs()
 

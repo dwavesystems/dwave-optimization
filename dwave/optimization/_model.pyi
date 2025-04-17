@@ -52,7 +52,7 @@ class _Graph:
         lower_bound: float = -float("inf"),
         upper_bound: float = float("inf"),
         integral: bool = False,
-    ) -> Symbol
+    ) -> Input
 
     def into_file(
         self,

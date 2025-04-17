@@ -2006,17 +2006,17 @@ cdef class Input(ArraySymbol):
 
         return Input(model,
             shape=properties["shape"],
-            lower_bound=properties["lb"],
-            upper_bound=properties["ub"],
+            lower_bound=properties["min"],
+            upper_bound=properties["max"],
             integral=properties["integral"],
         )
 
     def _into_zipfile(self, zf, directory):
         properties = dict(
-            lb=self.ptr.min(),
-            ub=self.ptr.max(),
-            integral=self.ptr.integral(),
             shape=self.shape(),
+            min=self.ptr.min(),
+            max=self.ptr.max(),
+            integral=self.ptr.integral(),
         )
 
         encoder = json.JSONEncoder(separators=(',', ':'))
