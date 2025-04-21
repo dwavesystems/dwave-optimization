@@ -26,18 +26,9 @@ namespace dwave::optimization {
 class LinearProgramNodeBase;
 
 /// A logical node that propagates whether or not its predecessor LinearProgram is feasible.
-class LinearProgramFeasibleNode : public ScalarOutputMixin<ArrayNode> {
+class LinearProgramFeasibleNode : public ScalarOutputMixin<ArrayNode, true> {
  public:
     explicit LinearProgramFeasibleNode(LinearProgramNodeBase* lp_ptr);
-
-    /// @copydoc Array::buff()
-    double const* buff(const State& state) const override;
-
-    /// @copydoc Node::commit()
-    void commit(State& state) const override;
-
-    /// @copydoc Array::diff()
-    std::span<const Update> diff(const State& state) const override;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
@@ -51,9 +42,6 @@ class LinearProgramFeasibleNode : public ScalarOutputMixin<ArrayNode> {
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
-
-    /// @copydoc Node::revert()
-    void revert(State& state) const override;
 
  private:
     const LinearProgramNodeBase* lp_ptr_;
@@ -178,27 +166,15 @@ class LinearProgramNode : public LinearProgramNodeBase {
 
 /// A scalar node that propagates the objective value of the solution found by the
 /// LinearProgramNode. Note that the output is undefined if the solution is not feasible.
-class LinearProgramObjectiveValueNode : public ScalarOutputMixin<ArrayNode> {
+class LinearProgramObjectiveValueNode : public ScalarOutputMixin<ArrayNode, true> {
  public:
     explicit LinearProgramObjectiveValueNode(LinearProgramNodeBase* lp_ptr);
-
-    /// @copydoc Array::buff()
-    double const* buff(const State& state) const override;
-
-    /// @copydoc Node::commit()
-    void commit(State& state) const override;
-
-    /// @copydoc Array::diff()
-    std::span<const Update> diff(const State& state) const override;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
-
-    /// @copydoc Node::revert()
-    void revert(State& state) const override;
 
  private:
     const LinearProgramNodeBase* lp_ptr_;

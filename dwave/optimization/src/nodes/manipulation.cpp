@@ -577,26 +577,10 @@ std::pair<double, double> ReshapeNode::minmax(
 
 void ReshapeNode::revert(State& state) const {}  // stateless node
 
-class SizeNodeData : public ScalarNodeStateData {
- public:
-    explicit SizeNodeData(std::integral auto value) : ScalarNodeStateData(value) {}
-    void set(std::integral auto value) { ScalarNodeStateData::set(value); }
-};
-
 SizeNode::SizeNode(ArrayNode* node_ptr) : array_ptr_(node_ptr) { this->add_predecessor(node_ptr); }
 
-double const* SizeNode::buff(const State& state) const {
-    return data_ptr<SizeNodeData>(state)->buff();
-}
-
-void SizeNode::commit(State& state) const { return data_ptr<SizeNodeData>(state)->commit(); }
-
-std::span<const Update> SizeNode::diff(const State& state) const {
-    return data_ptr<SizeNodeData>(state)->diff();
-}
-
 void SizeNode::initialize_state(State& state) const {
-    emplace_data_ptr<SizeNodeData>(state, array_ptr_->size(state));
+    emplace_state(state, array_ptr_->size(state));
 }
 
 std::pair<double, double> SizeNode::minmax(
@@ -612,10 +596,6 @@ std::pair<double, double> SizeNode::minmax(
     });
 }
 
-void SizeNode::propagate(State& state) const {
-    return data_ptr<SizeNodeData>(state)->set(array_ptr_->size(state));
-}
-
-void SizeNode::revert(State& state) const { return data_ptr<SizeNodeData>(state)->revert(); }
+void SizeNode::propagate(State& state) const { set_state(state, array_ptr_->size(state)); }
 
 }  // namespace dwave::optimization
