@@ -95,14 +95,23 @@ class Graph {
     // the sources.
     static std::vector<const Node*> descendants(State& state, std::vector<const Node*> sources);
 
+    /// Call propagate on every `Node` in the `Graph`.
+    void propagate(State& state) const;
+
     // Call the propagate method on each node in changed. Note this does not call propagate on
     // the descendents of changed.
     void propagate(State& state, std::span<const Node*> changed) const;
     void propagate(State& state, std::vector<const Node*>&& changed) const;
 
+    /// Call commit on every `Node` in the `Graph`.
+    void commit(State& state) const;
+
     // Commit the changes on each changed node.
     void commit(State& state, std::span<const Node*> changed) const;
     void commit(State& state, std::vector<const Node*>&& changed) const;
+
+    /// Call revert on every `Node` in the `Graph`.
+    void revert(State& state) const;
 
     // Revert the changes on each changed node.
     void revert(State& state, std::span<const Node*> changed) const;

@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Add overloads to C++ methods ``Graph::commit()``, ``Graph::propagate()``,
+    and ``Graph::revert()`` that commit, propagate, or revert respectively
+    all nodes in the graph.
+  - Add a default constructor for C++ ``BinaryNode``.

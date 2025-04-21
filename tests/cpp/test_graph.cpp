@@ -227,6 +227,66 @@ TEST_CASE("Graph constructors, assignment operators, and swapping") {
     }
 }
 
+TEST_CASE("Graph::commit(), Graph::propagate(), and Graph::revert") {
+    SECTION("Propagate all") {
+        auto graph = Graph();
+
+        auto x_ptr = graph.emplace_node<BinaryNode>();
+        auto y_ptr = graph.emplace_node<BinaryNode>();
+        auto z_ptr = graph.emplace_node<AddNode>(x_ptr, y_ptr);
+        graph.set_objective(z_ptr);
+
+        auto state = graph.initialize_state();
+
+        CHECK(x_ptr->view(state).front() == 0);
+        CHECK(y_ptr->view(state).front() == 0);
+        CHECK(z_ptr->view(state).front() == 0);
+
+        x_ptr->flip(state, 0);
+        y_ptr->flip(state, 0);
+
+        CHECK(x_ptr->diff(state).size());
+        CHECK(y_ptr->diff(state).size());
+        CHECK(z_ptr->diff(state).empty());  // not yet propagated to
+
+        graph.propagate(state);
+
+        CHECK(x_ptr->view(state).front() == 1);
+        CHECK(y_ptr->view(state).front() == 1);
+        CHECK(z_ptr->view(state).front() == 2);
+
+        CHECK(x_ptr->diff(state).size());
+        CHECK(y_ptr->diff(state).size());
+        CHECK(z_ptr->diff(state).size());  // now has pending changes
+
+        SECTION("Commit all") {
+            graph.commit(state);
+
+            CHECK(x_ptr->view(state).front() == 1);
+            CHECK(y_ptr->view(state).front() == 1);
+            CHECK(z_ptr->view(state).front() == 2);
+
+            // no pending changes
+            CHECK(x_ptr->diff(state).empty());
+            CHECK(y_ptr->diff(state).empty());
+            CHECK(z_ptr->diff(state).empty());
+        }
+
+        SECTION("Revert all") {
+            graph.revert(state);
+
+            CHECK(x_ptr->view(state).front() == 0);
+            CHECK(y_ptr->view(state).front() == 0);
+            CHECK(z_ptr->view(state).front() == 0);
+
+            // no pending changes
+            CHECK(x_ptr->diff(state).empty());
+            CHECK(y_ptr->diff(state).empty());
+            CHECK(z_ptr->diff(state).empty());
+        }
+    }
+}
+
 TEST_CASE("Graph::objective()") {
     GIVEN("A graph") {
         auto graph = Graph();
