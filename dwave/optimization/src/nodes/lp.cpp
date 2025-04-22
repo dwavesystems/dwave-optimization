@@ -46,26 +46,8 @@ LinearProgramFeasibleNode::LinearProgramFeasibleNode(LinearProgramNodeBase* lp_p
     add_predecessor(lp_ptr);
 }
 
-double const* LinearProgramFeasibleNode::buff(const State& state) const {
-    return data_ptr<ScalarNodeStateData>(state)->buff();
-}
-
-// no state to manage so nothing to do
-void LinearProgramFeasibleNode::commit(State& state) const {
-    return data_ptr<ScalarNodeStateData>(state)->commit();
-}
-
-std::span<const Update> LinearProgramFeasibleNode::diff(const State& state) const {
-    return data_ptr<ScalarNodeStateData>(state)->diff();
-}
-
 void LinearProgramFeasibleNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
-    state[index] = std::make_unique<ScalarNodeStateData>(lp_ptr_->feasible(state));
+    emplace_state(state, lp_ptr_->feasible(state));
 }
 
 bool LinearProgramFeasibleNode::integral() const { return true; }
@@ -76,12 +58,7 @@ std::pair<double, double> LinearProgramFeasibleNode::minmax(
 }
 
 void LinearProgramFeasibleNode::propagate(State& state) const {
-    return data_ptr<ScalarNodeStateData>(state)->set(lp_ptr_->feasible(state));
-}
-
-// no state to manage so nothing to do
-void LinearProgramFeasibleNode::revert(State& state) const {
-    return data_ptr<ScalarNodeStateData>(state)->revert();
+    set_state(state, lp_ptr_->feasible(state));
 }
 
 void LinearProgramNodeBase::check_input_arguments(const ArrayNode* c_ptr, const ArrayNode* b_lb_ptr,
@@ -340,43 +317,20 @@ LinearProgramObjectiveValueNode::LinearProgramObjectiveValueNode(LinearProgramNo
     add_predecessor(lp_ptr);
 }
 
-double const* LinearProgramObjectiveValueNode::buff(const State& state) const {
-    return data_ptr<ScalarNodeStateData>(state)->buff();
-}
-
-// no state to manage so nothing to do
-void LinearProgramObjectiveValueNode::commit(State& state) const {
-    return data_ptr<ScalarNodeStateData>(state)->commit();
-}
-
-std::span<const Update> LinearProgramObjectiveValueNode::diff(const State& state) const {
-    return data_ptr<ScalarNodeStateData>(state)->diff();
-}
-
 void LinearProgramObjectiveValueNode::initialize_state(State& state) const {
-    int index = this->topological_index();
-    assert(index >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > index && "unexpected state length");
-    assert(state[index] == nullptr && "already initialized state");
-
     // if not feasible, we're undefined. So let's default to 0.0. Though it
     // might actually be better to default to our own maximum value.
     double value = lp_ptr_->feasible(state) ? lp_ptr_->objective_value(state) : 0;
 
-    state[index] = std::make_unique<ScalarNodeStateData>(value);
+    emplace_state(state, value);
 }
 
 void LinearProgramObjectiveValueNode::propagate(State& state) const {
     if (lp_ptr_->feasible(state)) {
-        data_ptr<ScalarNodeStateData>(state)->set(lp_ptr_->objective_value(state));
+        set_state(state, lp_ptr_->objective_value(state));
     }
     // Otherwise do nothing because we're not defined.
     // We could consider setting ourselves to max()
-}
-
-// no state to manage so nothing to do
-void LinearProgramObjectiveValueNode::revert(State& state) const {
-    return data_ptr<ScalarNodeStateData>(state)->revert();
 }
 
 LinearProgramSolutionNode::LinearProgramSolutionNode(LinearProgramNodeBase* lp_ptr)

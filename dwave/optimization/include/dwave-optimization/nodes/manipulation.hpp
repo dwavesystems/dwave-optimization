@@ -198,15 +198,9 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     const Array* array_ptr_;
 };
 
-class SizeNode : public ScalarOutputMixin<ArrayNode> {
+class SizeNode : public ScalarOutputMixin<ArrayNode, true> {
  public:
     explicit SizeNode(ArrayNode* node_ptr);
-
-    double const* buff(const State& state) const override;
-
-    void commit(State& state) const override;
-
-    std::span<const Update> diff(const State&) const override;
 
     void initialize_state(State& state) const override;
 
@@ -218,8 +212,6 @@ class SizeNode : public ScalarOutputMixin<ArrayNode> {
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
     void propagate(State& state) const override;
-
-    void revert(State& state) const override;
 
  private:
     // we could dynamically cast each time, but it's easier to just keep separate

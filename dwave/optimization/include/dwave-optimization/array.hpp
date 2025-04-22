@@ -1071,8 +1071,12 @@ class ArrayOutputMixin : public Base {
 
 // A convenience class for creating Arrays. Meant to be used for nodes
 // that have a single numeric output value.
+template <class Base, bool ProvideState = false>
+class ScalarOutputMixin : public Base {};
+
 template <class Base>
-struct ScalarOutputMixin : public Base {
+class ScalarOutputMixin<Base, false> : public Base {
+ public:
     constexpr ssize_t size() const noexcept final { return 1; }
     constexpr ssize_t size(const State&) const noexcept final { return 1; }
 
@@ -1084,6 +1088,59 @@ struct ScalarOutputMixin : public Base {
     constexpr std::span<const ssize_t> strides() const noexcept final { return {}; };
 
     constexpr bool contiguous() const noexcept final { return true; }
+};
+
+template <class Base>
+class ScalarOutputMixin<Base, true> : public ScalarOutputMixin<Base, false> {
+ public:
+    // Inherits all of the methods from ScalarOutputMixin<Base, false>
+    // But then also provides a few more
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const final {
+        return this->template data_ptr<ScalarOutputMixinStateData>(state)->buff();
+    }
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const final {
+        this->template data_ptr<ScalarOutputMixinStateData>(state)->commit();
+    }
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const final {
+        return this->template data_ptr<ScalarOutputMixinStateData>(state)->diff();
+    }
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const final {
+        this->template data_ptr<ScalarOutputMixinStateData>(state)->revert();
+    }
+
+ protected:
+    /// Emplace a state with the given scalar value.
+    void emplace_state(State& state, double value) const {
+        this->template emplace_data_ptr<ScalarOutputMixinStateData>(state, value);
+    }
+
+    /// Update the state value with the given value
+    void set_state(State& state, double value) const {
+        this->template data_ptr<ScalarOutputMixinStateData>(state)->set(value);
+    }
+
+ private:
+    struct ScalarOutputMixinStateData : public NodeStateData {
+        explicit ScalarOutputMixinStateData(double value) : update(0, value, value) {}
+
+        const double* buff() const { return &update.value; }
+        void commit() { update.old = update.value; }
+        std::span<const Update> diff() const {
+            return std::span(&update, update.old != update.value);
+        }
+        void revert() { update.value = update.old; }
+        void set(double value) { update.value = value; }
+
+        Update update;
+    };
 };
 
 // Views are printable

@@ -224,20 +224,4 @@ class ArrayNodeStateData: public ArrayStateData, public NodeStateData {
     }
 };
 
-
-class ScalarNodeStateData : public NodeStateData {
- public:
-    explicit ScalarNodeStateData(double value) : update(0, value, value) {}
-
-    const double* buff() const { return &update.value; }
-    void commit() { update.old = update.value; }
-    std::span<const Update> diff() const {
-        return std::span<const Update>(&update, update.old != update.value);
-    }
-    void revert() { update.value = update.old; }
-    void set(double value) { update.value = value; }
-
-    Update update;
-};
-
 }  // namespace dwave::optimization
