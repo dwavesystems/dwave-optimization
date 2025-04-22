@@ -31,6 +31,10 @@ TEST_CASE("InputNode") {
         auto ptr = graph.emplace_node<InputNode>(std::vector<ssize_t>{4}, 10, 50, true);
         auto val = graph.emplace_node<ArrayValidationNode>(ptr);
 
+        THEN("Graph.num_inputs() is correct") {
+            CHECK(graph.num_inputs() == 1);
+        }
+
         THEN("It copies the values into a 1d array") {
             CHECK(ptr->ndim() == 1);
             CHECK(ptr->size() == 4);
@@ -95,6 +99,16 @@ TEST_CASE("InputNode") {
 
                 new_values = {20, 20, 20, 20, 20};
                 CHECK_THROWS(ptr->assign(state, new_values));
+            }
+        }
+
+        AND_GIVEN("Another node, and another input") {
+
+            graph.emplace_node<IntegerNode>();
+            graph.emplace_node<InputNode>(std::vector<ssize_t>{1}, 10, 50, false);
+
+            THEN("Graph.num_inputs() is correct") {
+                CHECK(graph.num_inputs() == 2);
             }
         }
     }
