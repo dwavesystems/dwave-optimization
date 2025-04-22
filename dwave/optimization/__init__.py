@@ -17,7 +17,7 @@ import dwave.optimization.generators
 from dwave.optimization.model import Model
 from dwave.optimization.mathematical import *
 
-__version__ = "0.6.1"
+__version__ = "0.6.2.dev"
 
 
 def get_include() -> str:
