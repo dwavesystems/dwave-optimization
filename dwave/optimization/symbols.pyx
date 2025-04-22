@@ -1985,6 +1985,28 @@ cdef class Input(ArraySymbol):
 
         self.initialize_arraynode(model, self.ptr)
 
+    def set_state(self, Py_ssize_t index, state):
+        """Set the state of the input node.
+
+        The given state must be the same shape as the input node's shape.
+        """
+
+        # can't use ascontiguousarray yet because it will turn scalars into 1d arrays
+        np_arr = np.asarray(state, dtype=np.double)
+        if np_arr.shape != self.shape():
+            raise ValueError(
+                f"provided state's shape ({np_arr.shape}) does not match the Input's shape ({self.shape()})"
+            )
+        cdef double[::1] arr = np.ascontiguousarray(np_arr).flatten()
+
+        # Reset our state, and check whether that's possible
+        self.reset_state(index)
+
+        self.ptr.initialize_state(
+            (<States>self.model.states)._states[index],
+            <span[const double]>_as_span(arr)
+        )
+
     @staticmethod
     def _from_symbol(Symbol symbol):
         cdef cppInputNode* ptr = dynamic_cast_ptr[cppInputNode](symbol.node_ptr)

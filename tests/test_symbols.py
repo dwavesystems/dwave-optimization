@@ -1180,7 +1180,7 @@ class TestExpit(utils.SymbolTests):
             self.assertEqual(expit_node.state(), scipy_expit_output[i])  # confirm consistency with SciPy expit
 
 
-class TestInputModel(utils.SymbolTests):
+class TestInput(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         inp = model.input(lower_bound=-10, upper_bound=10, integral=False)
@@ -1188,10 +1188,58 @@ class TestInputModel(utils.SymbolTests):
 
         yield inp
 
-    @unittest.skip("Input state must be explicity initialized so can't run this test")
-    def test_state_serialization(*args, **kwargs):
-        pass
+    def test_set_state(self):
+        model = Model()
+        inp = dwave.optimization.symbols.Input(model, shape=(2, 1, 2))
+        model.lock()
 
+        model.states.resize(1)
+
+        inp.set_state(0, [[[0, 1]], [[2, 3]]])
+
+        np.testing.assert_array_equal(inp.state(), [[[0, 1]], [[2, 3]]])
+
+        with self.assertRaises(ValueError):
+            inp.set_state(0, [0, 1, 2, 3])
+
+    def test_state_serialization(self):
+        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+            if version < self.MIN_SERIALIZATION_VERSION:
+                continue
+            with self.subTest(version=version):
+                model = Model()
+                inp = model.input(lower_bound=-10, upper_bound=10, integral=False)
+                model.lock()
+
+                model.states.resize(1)
+
+                inp.set_state(0, -7)
+
+                self.assertTrue(inp.has_state(0))
+                self.assertEqual(inp.state(), -7)
+
+                with model.states.to_file(version=version) as f:
+                    model.states.clear()
+                    model.states.from_file(f)
+
+                self.assertEqual(inp.state(), -7)
+
+                # test with a larger shape
+                model = Model()
+                inp = dwave.optimization.symbols.Input(model, shape=(2, 1, 2))
+                model.lock()
+
+                model.states.resize(1)
+
+                inp.set_state(0, [[[0, 1]], [[2, 3]]])
+
+                self.assertTrue(inp.has_state(0))
+
+                with model.states.to_file(version=version) as f:
+                    model.states.clear()
+                    model.states.from_file(f)
+
+                np.testing.assert_array_equal(inp.state(), [[[0, 1]], [[2, 3]]])
 
 class TestIntegerVariable(utils.SymbolTests):
     def generate_symbols(self):

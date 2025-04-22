@@ -43,12 +43,24 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
             : InputNode(shape, -std::numeric_limits<double>::infinity(),
                         std::numeric_limits<double>::infinity(), false) {}
 
+    /// Assign new values to the input node (must be the same size)
     void assign(State& state, std::span<const double> new_values) const;
 
+    /// @copydoc Array::buff()
     double const* buff(const State&) const override;
+
+    /// @copydoc Node::commit()
     void commit(State& state) const noexcept override;
+
+    /// InputNode's state is not deterministic unlike most other non-decision nodes
+    bool deterministic_state() const override {
+        return false;
+    }
+
+    /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const noexcept override;
 
+    /// @copydoc Array::integral()
     bool integral() const override { return integral_; };
 
     [[noreturn]] void initialize_state(State& state) const override {
@@ -57,14 +69,19 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
                 "data)`)");
     }
 
+    /// Initialize a state with the given data as the values for the input node
     void initialize_state(State& state, std::span<const double> data) const;
 
+    /// @copydoc Array::minmax()
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache) const override {
         return {min_, max_};
     }
 
+    /// @copydoc Node::propagate()
     void propagate(State& state) const noexcept override{};
+
+    /// @copydoc Node::revert()
     void revert(State& state) const noexcept override;
 
  private:

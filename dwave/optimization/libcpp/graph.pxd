@@ -41,6 +41,7 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
 cdef extern from "dwave-optimization/nodes/inputs.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass InputNode(ArrayNode):
         const double* buff() const
+        void initialize_state(State&, span[const double] data) except+
 
 # Sometimes Cython isn't able to reason about pointers as template inputs, so
 # we make a few aliases for convenience
