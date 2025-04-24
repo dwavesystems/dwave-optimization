@@ -73,6 +73,17 @@ QuadraticModel::QuadraticModel(index_type num_variables) : num_variables_(num_va
         throw std::domain_error("Number of variables cannot be negative");
     }
 
+    // test some C++23 features
+    std::vector<double> a = {0, 1, 2};
+    std::vector<double> b = {3, 4, 5};
+    double out;
+    for (const auto elem : std::views::zip(a, b)) {
+        out += std::get<0>(elem);
+    }
+    for (const auto elem : std::views::iota(1, 13) | std::views::stride(3)) {
+        out += elem;
+    }
+
     linear_biases_.resize(num_variables_, 0);
     square_biases_.resize(num_variables_, 0);
     adj_.resize(num_variables_);
