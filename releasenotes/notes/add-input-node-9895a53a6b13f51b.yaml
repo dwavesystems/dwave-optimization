@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add ``Input`` symbol and corresponding ``InputNode`` node in the C++. This
+    symbol is meant to function as a "placeholder" in a model.

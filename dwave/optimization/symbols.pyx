@@ -67,6 +67,7 @@ from dwave.optimization.libcpp.nodes cimport (
     DivideNode as cppDivideNode,
     EqualNode as cppEqualNode,
     ExpitNode as cppExpitNode,
+    InputNode as cppInputNode,
     IntegerNode as cppIntegerNode,
     LessEqualNode as cppLessEqualNode,
     LinearProgramFeasibleNode as cppLinearProgramFeasibleNode,
@@ -132,6 +133,7 @@ __all__ = [
     "Divide",
     "Equal",
     "Expit",
+    "Input",
     "IntegerVariable",
     "LessEqual",
     "LinearProgram",
@@ -1962,6 +1964,91 @@ cdef class Expit(ArraySymbol):
     cdef cppExpitNode* ptr
 
 _register(Expit, typeid(cppExpitNode))
+
+cdef class Input(ArraySymbol):
+    """An input symbol. Functions as a "placeholder" in a model."""
+
+    def __init__(
+        self,
+        model,
+        shape=None,
+        double lower_bound = -float("inf"),
+        double upper_bound = float("inf"),
+        bool integral = False,
+    ):
+        cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape)
+
+        cdef _Graph cygraph = model
+
+        # Get an observing pointer to the C++ InputNode
+        self.ptr = cygraph._graph.emplace_node[cppInputNode](vshape, lower_bound, upper_bound, integral)
+
+        self.initialize_arraynode(model, self.ptr)
+
+    def set_state(self, Py_ssize_t index, state):
+        """Set the state of the input node.
+
+        The given state must be the same shape as the input node's shape.
+        """
+
+        # can't use ascontiguousarray yet because it will turn scalars into 1d arrays
+        np_arr = np.asarray(state, dtype=np.double)
+        if np_arr.shape != self.shape():
+            raise ValueError(
+                f"provided state's shape ({np_arr.shape}) does not match the Input's shape ({self.shape()})"
+            )
+        cdef double[::1] arr = np.ascontiguousarray(np_arr).flatten()
+
+        # Reset our state, and check whether that's possible
+        self.reset_state(index)
+
+        self.ptr.initialize_state(
+            (<States>self.model.states)._states[index],
+            <span[const double]>_as_span(arr)
+        )
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppInputNode* ptr = dynamic_cast_ptr[cppInputNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Input")
+
+        cdef Input inp = Input.__new__(Input)
+        inp.ptr = ptr
+        inp.initialize_arraynode(symbol.model, ptr)
+        return inp
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        if predecessors:
+            raise ValueError(f"{cls.__name__} cannot have predecessors")
+
+        with zf.open(directory + "properties.json", "r") as f:
+            properties = json.load(f)
+
+        return Input(model,
+            shape=properties["shape"],
+            lower_bound=properties["min"],
+            upper_bound=properties["max"],
+            integral=properties["integral"],
+        )
+
+    def _into_zipfile(self, zf, directory):
+        properties = dict(
+            shape=self.shape(),
+            min=self.ptr.min(),
+            max=self.ptr.max(),
+            integral=self.ptr.integral(),
+        )
+
+        encoder = json.JSONEncoder(separators=(',', ':'))
+
+        zf.writestr(directory + "properties.json", encoder.encode(properties))
+
+    cdef cppInputNode* ptr
+
+_register(Input, typeid(cppInputNode))
+
 
 cdef class IntegerVariable(ArraySymbol):
     """Integer decision-variable symbol.

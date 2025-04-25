@@ -28,6 +28,7 @@ cdef class _Graph:
     cpdef bool is_locked(self) noexcept
     cpdef Py_ssize_t num_constraints(self) noexcept
     cpdef Py_ssize_t num_decisions(self) noexcept
+    cpdef Py_ssize_t num_inputs(self) noexcept
     cpdef Py_ssize_t num_nodes(self) noexcept
     cpdef Py_ssize_t num_symbols(self) noexcept
 

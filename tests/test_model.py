@@ -226,6 +226,20 @@ class TestModel(unittest.TestCase):
             # Check that False is returned for infeasible state
             self.assertFalse(model.feasible(0))
 
+    def test_inputs(self):
+        model = Model()
+        i0 = model.input()
+        _ = model.constant(7)
+        i1 = model.input()
+
+        self.assertEqual(model.num_inputs(), 2)
+
+        inputs = list(model.iter_inputs())
+
+        self.assertEqual(len(inputs), 2)
+        self.assertTrue(i0.equals(inputs[0]))
+        self.assertTrue(i1.equals(inputs[1]))
+
     def test_lock(self):
         model = Model()
 
