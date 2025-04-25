@@ -1213,6 +1213,12 @@ class TestInput(utils.SymbolTests):
 
                 model.states.resize(1)
 
+                # ensure serialization works if no state is set
+                with model.states.to_file(version=version) as f:
+                    model.states.clear()
+                    model.states.from_file(f)
+
+                # ensure serialization saves the state if set
                 inp.set_state(0, -7)
 
                 self.assertTrue(inp.has_state(0))
