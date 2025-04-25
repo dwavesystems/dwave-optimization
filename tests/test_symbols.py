@@ -1247,6 +1247,24 @@ class TestInput(utils.SymbolTests):
 
                 np.testing.assert_array_equal(inp.state(), [[[0, 1]], [[2, 3]]])
 
+        def test_initializing_unset_state(self):
+            # ensure proper error is raised when initializing the model state without having
+            # set the input's state
+            model = Model()
+            inp = model.input()
+            x = model.binary()
+            model.minimize(inp + x)
+
+            model.lock()
+
+            model.states.resize(1)
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                r"^InputNode must have state explicitly initialized"
+            ):
+                model.objective.state()
+
 class TestIntegerVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
