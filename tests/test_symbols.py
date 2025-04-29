@@ -1537,7 +1537,7 @@ class TestListVariable(utils.SymbolTests):
             x = model.list(5)
 
             # repeated entries
-            with self.assertRaisesRegex(ValueError, r"^contents must be unique$"):
+            with self.assertRaisesRegex(ValueError, r"^values must be a subset of range\(5\)$"):
                 x.set_state(0, [0, 0, 1, 2, 3])
 
             # wrong size
@@ -2726,7 +2726,7 @@ class TestSetVariable(utils.SymbolTests):
             s = model.set(5)
 
             # repeated entries
-            with self.assertRaisesRegex(ValueError, r"^contents must be unique$"):
+            with self.assertRaisesRegex(ValueError, r"^values must be a subset of range\(5\)$"):
                 s.set_state(0, [0, 0, 1, 2, 3])
 
     def test_state_size(self):

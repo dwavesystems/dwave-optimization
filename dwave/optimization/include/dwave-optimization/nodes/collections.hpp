@@ -30,7 +30,7 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     CollectionNode() = delete;
 
     // Set the node's initial state explicitly
-    void initialize_state(State& state, std::vector<double> contents) const;
+    void initialize_state(State& state, std::vector<double> values) const;
     using Node::initialize_state;  // inherit the default overload
 
     // Overloads needed by the Array ABC **************************************

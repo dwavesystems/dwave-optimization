@@ -11,13 +11,61 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
+
 #include "dwave-optimization/nodes/collections.hpp"
 
 #include <ranges>
 #include <unordered_set>
 #include <utility>
 
+#include "dwave-optimization/utils.hpp"
+
 namespace dwave::optimization {
+
+// Given a collection, check that it is a valid sub-permutation of range(n),
+// and then "augment" it so that the values not in collection are appended onto
+// the end.
+std::vector<double> augment_collection(std::vector<double> values, const ssize_t n) {
+    // First check that our given values has the values we expect
+    if (!std::ranges::all_of(values, is_integer)) {
+        throw std::invalid_argument("values values must be integers");
+    }
+    if (std::ranges::any_of(values, [](const auto& val) -> bool { return val < 0; })) {
+        throw std::invalid_argument("values values must be non-negative");
+    }
+    if (std::ranges::any_of(values, [&n](const auto& val) -> bool { return val >= n; })) {
+        throw std::invalid_argument("values values must be less than " + std::to_string(n));
+    }
+
+    // Next check that we have a sub-permutation of range(n)
+
+    // We'll track how many times each value appears in the values.
+    // We void the weird vector<bool> overload for performance even though
+    // that's all we need here.
+    std::vector<signed char> count(n, 0);
+
+    for (const auto& val : values) {
+        const size_t i = static_cast<std::size_t>(val);  // should be safe due to previous checks
+
+        if (count[i]) {
+            throw std::invalid_argument("values must be a subset of range(" +
+                                        std::to_string(n) + ")");
+        }
+
+        ++count[i];
+    }
+
+    // If values has the same size as n, then we're a permutation rather than
+    // a sub-permutation and we can return
+    if (static_cast<ssize_t>(values.size()) == n) return values;  // already unique
+
+    // Otherwise add any "missing" values to the values.
+    for (ssize_t i = 0; i < n; ++i) {
+        if (!count[i]) values.emplace_back(i);
+    }
+
+    return values;
+}
 
 struct CollectionStateData : NodeStateData {
     explicit CollectionStateData(ssize_t n) : CollectionStateData(n, n) {}
@@ -160,35 +208,13 @@ void CollectionNode::grow(State& state) const {
     data_ptr<CollectionStateData>(state)->grow();
 }
 
-void CollectionNode::initialize_state(State& state, std::vector<double> contents) const {
-    if (static_cast<ssize_t>(contents.size()) < min_size_) {
-        throw std::invalid_argument("contents is shorter than the List's minimum size");
-    }
-    if (static_cast<ssize_t>(contents.size()) > max_size_) {
-        throw std::invalid_argument("contents is longer than the List's maximum size");
-    }
+void CollectionNode::initialize_state(State& state, std::vector<double> values) const {
+    const ssize_t size = values.size();
+    if (size < min_size_) throw std::invalid_argument("values does not contain enough values");
+    if (size > max_size_) throw std::invalid_argument("values contains too many values");
 
-    for (const auto& val : contents) {
-        if (ssize_t(val) != val) throw std::invalid_argument("contents must be integral");
-        if (val < 0) throw std::invalid_argument("contents must be non-negative");
-        if (val >= max_value_) throw std::invalid_argument("contents too large for the collection");
-    }
-
-    // now confirm that we have a permutation
-    std::unordered_set<double> set(contents.begin(), contents.end());
-    if (set.size() < contents.size()) {
-        throw std::invalid_argument("contents must be unique");
-    }
-
-    // finally, augment contents with the rest of the values so it's a permutation of range(n)
-    for (ssize_t i = 0; i < max_value_; ++i) {
-        if (set.count(static_cast<double>(i))) continue;  // already present
-        contents.emplace_back(i);
-    }
-
-    assert(static_cast<ssize_t>(contents.size()) == max_value_);
-
-    emplace_data_ptr<CollectionStateData>(state, std::move(contents), set.size());
+    emplace_data_ptr<CollectionStateData>(state, augment_collection(std::move(values), max_value_),
+                                          size);
 }
 
 std::pair<double, double> CollectionNode::minmax(
