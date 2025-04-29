@@ -86,6 +86,30 @@ struct CollectionStateData : NodeStateData {
         assert(0 <= size && static_cast<std::size_t>(size) <= this->elements.size());
     }
 
+    void assign(std::vector<double>&& values, ssize_t size) {
+        // this should have been checked already by the CollectionNode
+        assert(values.size() == elements.size());
+
+        // First, let's note the public changes to the visible part of the buffer
+        const ssize_t overlap_length = std::min(this->size, size);
+        for (ssize_t i = 0; i < overlap_length; ++i) {
+            updates.emplace_back(i, elements[i], values[i]);
+        }
+
+        // Next, actually swap the buffers (tracking the changes for a later revert)
+        for (ssize_t i = 0, n = elements.size(); i < n; ++i) {
+            if (elements[i] == values[i]) continue;  // no change
+            all_updates.emplace_back(i, elements[i], values[i]);
+        }
+        std::swap(elements, values);
+
+        // Finally do the resize until we're at the correct size
+        while (this->size < size) grow();
+        while (this->size > size) shrink();
+
+        assert(this->size == size);
+    }
+
     void commit() {
         updates.clear();
         all_updates.clear();
@@ -181,6 +205,17 @@ struct CollectionStateData : NodeStateData {
     ssize_t previous_size = size;
 };
 
+void CollectionNode::assign(State& state, std::vector<double> values) const {
+    const ssize_t size = values.size();
+    if (size < min_size_) throw std::invalid_argument("values does not contain enough values");
+    if (size > max_size_) throw std::invalid_argument("values contains too many values");
+
+    // Check that the values are a proper subset and fill out the invisible part
+    auto augemented = augment_collection(std::move(values), max_value_);
+
+    data_ptr<CollectionStateData>(state)->assign(std::move(augemented), size);
+}
+
 void CollectionNode::commit(State& state) const { data_ptr<CollectionStateData>(state)->commit(); }
 
 double const* CollectionNode::buff(const State& state) const {
@@ -213,8 +248,10 @@ void CollectionNode::initialize_state(State& state, std::vector<double> values) 
     if (size < min_size_) throw std::invalid_argument("values does not contain enough values");
     if (size > max_size_) throw std::invalid_argument("values contains too many values");
 
-    emplace_data_ptr<CollectionStateData>(state, augment_collection(std::move(values), max_value_),
-                                          size);
+    // Check that the values are a proper subset and fill out the invisible part
+    auto augemented = augment_collection(std::move(values), max_value_);
+
+    emplace_data_ptr<CollectionStateData>(state, std::move(augemented), size);
 }
 
 std::pair<double, double> CollectionNode::minmax(
