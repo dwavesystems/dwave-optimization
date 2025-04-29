@@ -23,22 +23,29 @@ struct CollectionStateData : NodeStateData {
     explicit CollectionStateData(ssize_t n) : CollectionStateData(n, n) {}
 
     CollectionStateData(ssize_t n, ssize_t size) : size(size) {
-        assert(size <= n);
+        assert(0 <= n && "n must be positive");
+        assert(0 <= size && size <= n && "size must be in [0, n] inclusive");
         for (ssize_t i = 0; i < n; ++i) {
             elements.push_back(i);
         }
     }
 
     explicit CollectionStateData(std::vector<double> elements)
-            : elements(std::move(elements)), size(this->elements.size()) {}
+            : CollectionStateData(std::move(elements), elements.size()) {}
 
     CollectionStateData(std::vector<double> elements, ssize_t size)
-            : elements(std::move(elements)), size(size) {}
+            : elements(std::move(elements)), size(size) {
+        assert(0 <= size && static_cast<std::size_t>(size) <= this->elements.size());
+    }
 
     void commit() {
-        previous.clear();
+        updates.clear();
         all_updates.clear();
         previous_size = size;
+    }
+
+    std::unique_ptr<NodeStateData> copy() const override {
+        return std::make_unique<CollectionStateData>(*this);
     }
 
     void exchange(ssize_t i, ssize_t j) {
@@ -52,13 +59,33 @@ struct CollectionStateData : NodeStateData {
 
         // only track changes within the visible part of the array
         if (i < size && j < size) {
-            previous.emplace_back(i, elements[j], elements[i]);
-            previous.emplace_back(j, elements[i], elements[j]);
+            updates.emplace_back(i, elements[j], elements[i]);
+            updates.emplace_back(j, elements[i], elements[j]);
         } else if (j < size) {
-            previous.emplace_back(j, elements[i], elements[j]);
+            updates.emplace_back(j, elements[i], elements[j]);
         } else if (i < size) {
-            previous.emplace_back(i, elements[j], elements[i]);
+            updates.emplace_back(i, elements[j], elements[i]);
         }  // if neither are visible we don't need to track it
+    }
+
+    void grow() {
+        assert(size < static_cast<ssize_t>(elements.size()));
+        updates.emplace_back(Update::placement(size, elements[size]));
+        ++size;
+    }
+
+    void revert() {
+        // Un-apply any changes by working backwards through all updates.
+        // If we end up enforcing updates being sorted and unique later then
+        // we could do this any order (or better in parallel).
+
+        for (const Update& update : all_updates | std::views::reverse) {
+            elements[update.index] = update.old;
+        }
+
+        updates.clear();
+        all_updates.clear();
+        size = previous_size;
     }
 
     void rotate(ssize_t dest_idx, ssize_t src_idx) {
@@ -72,51 +99,36 @@ struct CollectionStateData : NodeStateData {
             for (ssize_t i = dest_idx; i <= src_idx; i++) {
                 std::swap(elements[i], prev);
                 all_updates.emplace_back(i, prev, elements[i]);
-                previous.emplace_back(i, prev, elements[i]);
+                updates.emplace_back(i, prev, elements[i]);
             }
         } else if (src_idx < dest_idx) {
             auto prev = elements[src_idx];
             for (ssize_t i = dest_idx; i >= src_idx; i--) {
                 std::swap(elements[i], prev);
                 all_updates.emplace_back(i, prev, elements[i]);
-                previous.emplace_back(i, prev, elements[i]);
+                updates.emplace_back(i, prev, elements[i]);
             }
         }
-    }
-
-    void grow() {
-        assert(size < static_cast<ssize_t>(elements.size()));
-        previous.emplace_back(Update::placement(size, elements[size]));
-        ++size;
-    }
-
-    void revert() {
-        // Un-apply any changes by working backwards through all updates.
-        // If we end up enforcing previous being sorted and unique later then
-        // we could do this any order (or better in parallel).
-
-        for (const Update& update : all_updates | std::views::reverse) {
-            elements[update.index] = update.old;
-        }
-
-        previous.clear();
-        all_updates.clear();
-        size = previous_size;
     }
 
     void shrink() {
         assert(size > 0);
         --size;
-        previous.emplace_back(Update::removal(size, elements[size]));
+        updates.emplace_back(Update::removal(size, elements[size]));
     }
 
-    std::unique_ptr<NodeStateData> copy() const override {
-        return std::make_unique<CollectionStateData>(*this);
-    }
-
+    // The elements in the collection
     std::vector<double> elements;
-    std::vector<Update> previous;
+
+    // The updates to the *visible* elements
+    std::vector<Update> updates;
+
+    // The updates to the buffer, including the changes that are not currently
+    // visible to the user
     std::vector<Update> all_updates;
+
+    // The current size of visible buffer, as well as the size after the last
+    // commit/revert
     ssize_t size;
     ssize_t previous_size = size;
 };
@@ -129,7 +141,7 @@ double const* CollectionNode::buff(const State& state) const {
 }
 
 std::span<const Update> CollectionNode::diff(const State& state) const {
-    return data_ptr<CollectionStateData>(state)->previous;
+    return data_ptr<CollectionStateData>(state)->updates;
 }
 
 void CollectionNode::exchange(State& state, ssize_t i, ssize_t j) const {
