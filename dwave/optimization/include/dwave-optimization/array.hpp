@@ -1089,6 +1089,24 @@ class ScalarOutputMixin<Base, false> : public Base {
     constexpr std::span<const ssize_t> strides() const noexcept final { return {}; };
 
     constexpr bool contiguous() const noexcept final { return true; }
+
+ protected:
+    // Even though ScalarOutputMixinStateData is not used when ProvideState is false,
+    // it still might be useful to inheriting classes who want to customize it.
+    // So we make it avialable here.
+    struct ScalarOutputMixinStateData : public NodeStateData {
+        explicit ScalarOutputMixinStateData(double value) : update(0, value, value) {}
+
+        const double* buff() const { return &update.value; }
+        void commit() { update.old = update.value; }
+        std::span<const Update> diff() const {
+            return std::span(&update, update.old != update.value);
+        }
+        void revert() { update.value = update.old; }
+        void set(double value) { update.value = value; }
+
+        Update update;
+    };
 };
 
 template <class Base>
@@ -1118,6 +1136,8 @@ class ScalarOutputMixin<Base, true> : public ScalarOutputMixin<Base, false> {
     }
 
  protected:
+    using ScalarOutputMixinStateData = ScalarOutputMixin<Base, false>::ScalarOutputMixinStateData;
+
     /// Emplace a state with the given scalar value.
     void emplace_state(State& state, double value) const {
         this->template emplace_data_ptr<ScalarOutputMixinStateData>(state, value);
@@ -1127,21 +1147,6 @@ class ScalarOutputMixin<Base, true> : public ScalarOutputMixin<Base, false> {
     void set_state(State& state, double value) const {
         this->template data_ptr<ScalarOutputMixinStateData>(state)->set(value);
     }
-
- private:
-    struct ScalarOutputMixinStateData : public NodeStateData {
-        explicit ScalarOutputMixinStateData(double value) : update(0, value, value) {}
-
-        const double* buff() const { return &update.value; }
-        void commit() { update.old = update.value; }
-        std::span<const Update> diff() const {
-            return std::span(&update, update.old != update.value);
-        }
-        void revert() { update.value = update.old; }
-        void set(double value) { update.value = value; }
-
-        Update update;
-    };
 };
 
 // Views are printable
