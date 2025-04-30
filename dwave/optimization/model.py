@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import collections
 import contextlib
+import math
 import tempfile
 import typing
 
@@ -256,6 +257,62 @@ class Model(_Graph):
             False
         """
         return all(sym.state(index) for sym in self.iter_constraints())
+
+    def input(
+        self,
+        shape: tuple[int, ...] = (),
+        lower_bound: float = -math.inf,
+        upper_bound: float = math.inf,
+        integral: bool = False,
+    ):
+        """Create an "input" symbol.
+
+        An input symbol functions similarly to a decision variable,
+        in that it takes no predecessors, but its state will always be set manually
+        (not by any solver). Used as a placeholder for input to a model.
+
+        The shape of the output array is fixed at initialization and cannot be changed.
+
+        Provided bounds and integrality are used to supply information for
+        min/max/integral/logical properties of the resulting node, and will be used to
+        validate the state when set manually.
+
+        Note that the order in which inputs are added to the model matters and is
+        used by other symbols (see :class:`~dwave.optimization.symbols.NaryReduce`) to
+        infer how arguments are supplied to the model during evaluation.
+
+        Args:
+            shape: the shape of the output array.
+            lower_bound: lower bound on any possible output of the node.
+            upper_bound: upper bound on any possible output of the node.
+            integral: whether the output of the node should always be integral.
+
+        Returns:
+            An input symbol.
+
+        Examples:
+            This example creates two input symbols and an integer decision symbol
+            and then sets the objective to the sum of all of them.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> x = model.input()
+            >>> y = model.input(lower_bound=8, upper_bound=10, integral=True)
+            >>> z = model.integer()
+            >>> model.minimize(x + y + z)
+
+        .. versionadded:: 0.6.2
+        """
+        # avoid circular import
+        from dwave.optimization.symbols import Input
+
+        return Input(
+            self,
+            shape=shape,
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
+            integral=integral
+        )
 
     def integer(
             self,

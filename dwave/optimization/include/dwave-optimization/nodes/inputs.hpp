@@ -85,6 +85,8 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     void revert(State& state) const noexcept override;
 
  private:
+    void check_values(std::span<const double> new_values) const;
+
     const double min_;
     const double max_;
     const bool integral_;
