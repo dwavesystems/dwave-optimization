@@ -22,6 +22,16 @@
 namespace dwave::optimization {
 
 void InputNode::assign(State& state, std::span<const double> new_values) const {
+    check_values(new_values);
+
+    data_ptr<ArrayNodeStateData>(state)->assign(new_values);
+}
+
+double const* InputNode::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+void InputNode::check_values(std::span<const double> new_values) const {
     if (static_cast<ssize_t>(new_values.size()) != this->size()) {
         throw std::invalid_argument("size of new values must match");
     }
@@ -37,12 +47,6 @@ void InputNode::assign(State& state, std::span<const double> new_values) const {
             throw std::invalid_argument("new data contains a non-integral value");
         }
     }
-
-    data_ptr<ArrayNodeStateData>(state)->assign(new_values);
-}
-
-double const* InputNode::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
 }
 
 void InputNode::commit(State& state) const noexcept {
@@ -57,6 +61,8 @@ void InputNode::initialize_state(State& state, std::span<const double> data) con
     if (static_cast<ssize_t>(data.size()) != this->size()) {
         throw std::invalid_argument("data size does not match size of InputNode");
     }
+
+    check_values(data);
 
     std::vector<double> copy(data.begin(), data.end());
 

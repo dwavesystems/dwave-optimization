@@ -1184,9 +1184,11 @@ class TestInput(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
         inp = model.input(lower_bound=-10, upper_bound=10, integral=False)
+        inp10 = model.input((10,))
         model.lock()
 
         yield inp
+        yield inp10
 
     def test_set_state(self):
         model = Model()
