@@ -134,191 +134,66 @@ struct ZephyrLattice {
     ssize_t t;
 };
 
+/// The lattice types we currently support.
+template <typename T>
+concept Lattice = std::same_as<T, ZephyrLattice>;
+
 /// A node representing a quadratic model with linear and quadratic biases
-/// structured according to the given Lattice.
-template <class Lattice>  // todo: concept for Lattice?
+/// structured according to the given lattice.
+template <Lattice LatticeType>
 class LatticeNode : public ScalarOutputMixin<ArrayNode> {
  public:
     LatticeNode() = delete;
 
-    LatticeNode(ArrayNode* x_ptr, Lattice lattice)
-            : LatticeNode(
-                      x_ptr, lattice, [](int u) { return 0; }, [](int u, int v) { return 0; }) {}
+    /// Return a LatticeNode with all zero biases.
+    LatticeNode(ArrayNode* x_ptr, LatticeType lattice);
 
-    // `std::invocable` doesn't check the result type unfortunately, so the template is still
-    // underspecified. But this is better than just `class`
-    template <std::invocable<int> Linear, std::invocable<int, int> Quadratic>
-    LatticeNode(ArrayNode* x_ptr, Lattice lattice, Linear&& linear, Quadratic&& quadratic)
-            : x_ptr_(x_ptr), lattice_(std::move(lattice)) {
-        if (!std::ranges::equal(x_ptr_->shape(), std::array{lattice_.num_nodes()})) {
-            throw std::invalid_argument(
-                    "x must be a 1D array with a length that matches the number of nodes in the "
-                    "lattice");
-        }
-
-        // Add the nodes (with their weights) to the adjacency
-        adj_.resize(lattice_.num_nodes());
-        for (ssize_t u = 0, N = adj_.size(); u < N; ++u) {
-            adj_[u].bias = linear(u);
-        }
-
-        // Add the edges (with their weights) to the adjacency
-        for (const auto& [u, v] : lattice_.edges()) {
-            const double bias = quadratic(u, v);
-            adj_[u].neighbors.emplace_back(v, bias);
-            adj_[v].neighbors.emplace_back(u, bias);
-        }
-        // Make sure each neighborhood is sorted
-        for (auto& Nu : adj_) {
-            std::ranges::sort(Nu.neighbors);
-        }
-
-        add_predecessor(x_ptr_);
-    }
+    /// Construct a LatticeNode with the biases provided by the linear and quadratic functions.
+    LatticeNode(ArrayNode* x_ptr, LatticeType lattice,
+                std::function<double(int)> linear,           // function to get the linear biases
+                std::function<double(int, int)> quadratic);  // function to get the quadratic biases
 
     /// @copydoc Array::buff()
-    double const* buff(const State& state) const final {
-        return this->template data_ptr<StateData>(state)->buff();
-    }
+    double const* buff(const State& state) const override;
 
     /// @copydoc Node::commit()
-    void commit(State& state) const final {
-        this->template data_ptr<StateData>(state)->commit();
-    }
+    void commit(State& state) const override;
 
     /// @copydoc Array::diff()
-    std::span<const Update> diff(const State& state) const final {
-        return this->template data_ptr<StateData>(state)->diff();
-    }
+    std::span<const Update> diff(const State& state) const override;
 
     /// @copydoc Node::initialize_state()
-    void initialize_state(State& state) const override {
-        // Get the state of x
-        const auto view = x_ptr_->view(state);
+    void initialize_state(State& state) const override;
 
-        // Now just run through the graph doing the energy calculation
-        double energy = 0;
-        for (ssize_t u = 0, N = adj_.size(); u < N; ++u) {
-            const auto& Nu = adj_[u];
-
-            const auto u_val = view[u];
-
-            energy += Nu.bias * u_val;
-
-            for (const auto& [v, bias] : Nu.neighbors) {
-                assert(u != v);  // self loops are not allowed
-                if (v >= u) break;  // only traverse the lower triangle so we don't count each twice
-                energy += bias * (u_val * view[v]);
-            }
-        }
-
-        emplace_data_ptr<StateData>(state, energy, std::vector<double>(view.begin(), view.end()));
-    }
+    /// Return a reference to the lattice structure of the node.
+    const LatticeType& lattice() const noexcept { return lattice_; }
 
     /// Get the linear bias associated with `u`. Returns `0` if `u` is out-of-bounds.
-    double linear(int u) const noexcept {
-        // if out of bounds, return 0
-        if (u < 0 || static_cast<std::size_t>(u) >= adj_.size()) return 0;
-        // else return the bias
-        return adj_[u].bias;
-    }
+    double linear(int u) const noexcept;
 
     /// @copydoc Node::propagate()
-    void propagate(State& state) const override {
-        auto ptr = data_ptr<StateData>(state);
-
-        // get the current energy
-        double& energy = ptr->update.value;
-        std::vector<double>& x_state = ptr->x_state;
-        std::vector<std::tuple<ssize_t, double>>& x_diff = ptr->x_diff;
-
-        assert(x_diff.empty() && "x_diff not cleared between propagations");
-
-        // Now go through the diff and calculate the changes
-        for (const auto& [u, old_value, new_value] : x_ptr_->diff(state)) {
-            const auto delta = new_value - old_value;
-
-            // linear bias
-            energy += adj_[u].bias * delta;
-
-            // quadratic biases
-            for (const auto& [v, bias] : adj_[u].neighbors) {
-                assert(u != v);  // self loops are not allowed
-                energy += bias * (delta * x_state[v]);
-            }
-
-            x_diff.emplace_back(u, x_state[u]);
-            x_state[u] = new_value;
-        }
-
-        // we should have evolved such that our stored copy of x_state matches
-        // our predecessors
-        assert(std::ranges::equal(x_state, x_ptr_->view(state)));
-    }
+    void propagate(State& state) const override;
 
     /// Get the linear bias associated with `u` and `v`.
     /// Returns `0` if `u` or `v` are out of bounds or if they have no interaction.
-    double quadratic(int u, int v) const noexcept {
-        // If u or v is not in range, then the quadratic bias definitely doesn't
-        // exist so we just return 0.
-        if (u < 0 || static_cast<std::size_t>(u) >= adj_.size()) return 0;
-        if (v < 0 || static_cast<std::size_t>(v) >= adj_.size()) return 0;
-
-        // Otherwise we do a binary search through the neighborhood.
-        auto it = std::ranges::lower_bound(adj_[u].neighbors, neighbor(v));
-
-        // if v is not in u's neighborhood, then return 0
-        if (it == adj_[u].neighbors.end()) return 0;
-        if (it->v != v) return 0;
-
-        // it is a neighbor, so we can return the bias
-        return it->bias;
-    }
+    double quadratic(int u, int v) const noexcept;
 
     /// @copydoc Node::revert()
-    void revert(State& state) const final {
-        this->template data_ptr<StateData>(state)->revert();
-    }
+    void revert(State& state) const override;
 
  private:
-    struct StateData : public ScalarOutputMixinStateData {
-        StateData(double value, std::vector<double>&& x_state)
-                : ScalarOutputMixinStateData(value), x_state(std::move(x_state)) {}
-
-        void commit() {
-            ScalarOutputMixinStateData::commit();
-            x_diff.clear();  // clear any changes we tracked
-        }
-
-        void revert() {
-            ScalarOutputMixinStateData::revert();
-
-            // undo any changes to our x_state
-            for (const auto& [v, old] : x_diff | std::views::reverse) {
-                x_state[v] = old;
-            }
-            x_diff.clear();
-        }
-
-        // In order to calculate our energy diffs, we also need to save a copy
-        // of x's state, which we then change during propagation to match x.
-        std::vector<double> x_state;
-
-        // x_state index, old value pairs
-        std::vector<std::tuple<ssize_t, double>> x_diff;
-    };
-
+    struct StateData;
 
     ArrayNode* x_ptr_;
 
-    Lattice lattice_;
+    LatticeType lattice_;
 
     struct neighbor {
         neighbor() noexcept : neighbor(-1, 0) {}
         neighbor(int v) noexcept : neighbor(v, 0) {}
         neighbor(int v, double bias) noexcept : v(v), bias(bias) {}
 
-
+        // We want to be able to sort neighborhoods, so make neighbor weakly ordered
         friend bool operator==(const neighbor& lhs, const neighbor& rhs) noexcept {
             return lhs.v == rhs.v;
         }
@@ -329,17 +204,16 @@ class LatticeNode : public ScalarOutputMixin<ArrayNode> {
             return lhs.v <=> rhs.v;
         }
 
-        int v;
-
-        double bias;
+        int v;        // the variable index
+        double bias;  // the quadratic bias
     };
 
     struct neighborhood {
         std::vector<neighbor> neighbors;
-        double bias;
+        double bias;  // the linear bias
     };
 
-    // store the graph in an adjacency format
+    // Store the graph in an adjacency format
     std::vector<neighborhood> adj_;
 };
 
