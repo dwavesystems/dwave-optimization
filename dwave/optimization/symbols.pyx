@@ -181,8 +181,6 @@ __all__ = [
     ]
 
 
-
-
 cdef class Absolute(ArraySymbol):
     """Absolute value element-wise on a symbol.
 
@@ -192,20 +190,8 @@ cdef class Absolute(ArraySymbol):
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
 
-        self.ptr = model._graph.emplace_node[cppAbsoluteNode](x.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppAbsoluteNode* ptr = dynamic_cast_ptr[cppAbsoluteNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Absolute")
-        cdef Absolute x = Absolute.__new__(Absolute)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppAbsoluteNode* ptr
+        cdef cppAbsoluteNode* ptr = model._graph.emplace_node[cppAbsoluteNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Absolute, typeid(cppAbsoluteNode))
 
@@ -230,20 +216,8 @@ cdef class Add(ArraySymbol):
 
         cdef _Graph model = lhs.model
 
-        self.ptr = model._graph.emplace_node[cppAddNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppAddNode* ptr = dynamic_cast_ptr[cppAddNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Add")
-        cdef Add x = Add.__new__(Add)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppAddNode* ptr
+        cdef cppAddNode* ptr = model._graph.emplace_node[cppAddNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Add, typeid(cppAddNode))
 
@@ -263,20 +237,8 @@ cdef class All(ArraySymbol):
     """
     def __init__(self, ArraySymbol array):
         cdef _Graph model = array.model
-        self.ptr = model._graph.emplace_node[cppAllNode](array.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppAllNode* ptr = dynamic_cast_ptr[cppAllNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a All")
-        cdef All s = All.__new__(All)
-        s.ptr = ptr
-        s.initialize_arraynode(symbol.model, ptr)
-        return s
-
-    cdef cppAllNode* ptr
+        cdef cppAllNode* ptr = model._graph.emplace_node[cppAllNode](array.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(All, typeid(cppAllNode))
 
@@ -293,20 +255,8 @@ cdef class And(ArraySymbol):
 
         cdef _Graph model = lhs.model
 
-        self.ptr = model._graph.emplace_node[cppAndNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppAndNode* ptr = dynamic_cast_ptr[cppAndNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a And")
-        cdef And x = And.__new__(And)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppAndNode* ptr
+        cdef cppAndNode* ptr = model._graph.emplace_node[cppAndNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(And, typeid(cppAndNode))
 
@@ -334,20 +284,8 @@ cdef class Any(ArraySymbol):
     """
     def __init__(self, ArraySymbol array):
         cdef _Graph model = array.model
-        self.ptr = model._graph.emplace_node[cppAnyNode](array.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppAnyNode* ptr = dynamic_cast_ptr[cppAnyNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Any")
-        cdef Any s = Any.__new__(Any)
-        s.ptr = ptr
-        s.initialize_arraynode(symbol.model, ptr)
-        return s
-
-    cdef cppAnyNode* ptr
+        cdef cppAnyNode* ptr = model._graph.emplace_node[cppAnyNode](array.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Any, typeid(cppAnyNode))
 
@@ -356,22 +294,8 @@ cdef class _ArrayValidation(Symbol):
     def __init__(self, ArraySymbol array_node):
         cdef _Graph model = array_node.model
 
-        self.ptr = model._graph.emplace_node[cppArrayValidationNode](array_node.array_ptr)
-
-        self.initialize_node(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppArrayValidationNode* ptr = dynamic_cast_ptr[cppArrayValidationNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a _ArrayValidation")
-
-        cdef _ArrayValidation m = _ArrayValidation.__new__(_ArrayValidation)
-        m.ptr = ptr
-        m.initialize_node(symbol.model, ptr)
-        return m
-
-    cdef cppArrayValidationNode* ptr
+        cdef cppArrayValidationNode* ptr = model._graph.emplace_node[cppArrayValidationNode](array_node.array_ptr)
+        self.initialize_node(model, ptr)
 
 _register(_ArrayValidation, typeid(cppArrayValidationNode))
 
@@ -442,12 +366,12 @@ cdef class ARange(ArraySymbol):
         else:
             raise RuntimeError  # shouldn't be possible
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppARangeNode* ptr = dynamic_cast_ptr[cppARangeNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct an ARange")
-        cdef ARange sym = ARange.__new__(ARange)
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+        cdef ARange sym = cls.__new__(cls)
         sym.ptr = ptr
         sym.initialize_arraynode(symbol.model, ptr)
         return sym
@@ -583,11 +507,11 @@ cdef class AdvancedIndexing(ArraySymbol):
 
         return super().__getitem__(index)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppAdvancedIndexingNode* ptr = dynamic_cast_ptr[cppAdvancedIndexingNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a AdvancedIndexing")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef AdvancedIndexing sym = AdvancedIndexing.__new__(AdvancedIndexing)
         sym.ptr = ptr
@@ -682,11 +606,11 @@ cdef class BasicIndexing(ArraySymbol):
 
         return cppSlice(start, stop, step)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppBasicIndexingNode* ptr = dynamic_cast_ptr[cppBasicIndexingNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a BasicIndexing")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef BasicIndexing sym = BasicIndexing.__new__(BasicIndexing)
         sym.ptr = ptr
@@ -761,11 +685,11 @@ cdef class BinaryVariable(ArraySymbol):
 
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppBinaryNode* ptr = dynamic_cast_ptr[cppBinaryNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a BinaryVariable")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef BinaryVariable x = BinaryVariable.__new__(BinaryVariable)
         x.ptr = ptr
@@ -910,8 +834,8 @@ cdef class BSpline(ArraySymbol):
         self.ptr = model._graph.emplace_node[cppBSplineNode](x.array_ptr, val_k, vec_t, vec_c)
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppBSplineNode * ptr = dynamic_cast_ptr[cppBSplineNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a BSpline")
@@ -988,8 +912,8 @@ cdef class Concatenate(ArraySymbol):
         self.ptr = model._graph.emplace_node[cppConcatenateNode](cppinputs, axis)
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppConcatenateNode* ptr = dynamic_cast_ptr[cppConcatenateNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a Concatenate")
@@ -1120,8 +1044,8 @@ cdef class Constant(ArraySymbol):
         # The size check is redundant, but worth checking in order to avoid segfaults
         return self.ptr.size() == 1 and self.ptr.ndim() == 0
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppConstantNode* ptr = dynamic_cast_ptr[cppConstantNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a Constant")
@@ -1227,24 +1151,8 @@ cdef class Copy(ArraySymbol):
     def __init__(self, ArraySymbol node):
         cdef _Graph model = node.model
 
-        self.ptr = model._graph.emplace_node[cppCopyNode](
-            node.array_ptr,
-            )
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppCopyNode* ptr = dynamic_cast_ptr[cppCopyNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Copy")
-
-        cdef Copy m = Copy.__new__(Copy)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
-
-    cdef cppCopyNode* ptr
+        cdef cppCopyNode* ptr = model._graph.emplace_node[cppCopyNode](node.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Copy, typeid(cppCopyNode))
 
@@ -1271,8 +1179,8 @@ cdef class DisjointBitSets(Symbol):
 
         self.initialize_node(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppDisjointBitSetsNode* ptr = dynamic_cast_ptr[cppDisjointBitSetsNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a DisjointBitSets")
@@ -1450,8 +1358,8 @@ cdef class DisjointBitSet(ArraySymbol):
 
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppDisjointBitSetNode* ptr = dynamic_cast_ptr[cppDisjointBitSetNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a DisjointBitSet")
@@ -1542,8 +1450,8 @@ cdef class DisjointLists(Symbol):
 
         self.initialize_node(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppDisjointListsNode* ptr = dynamic_cast_ptr[cppDisjointListsNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a DisjointLists")
@@ -1717,8 +1625,8 @@ cdef class DisjointList(ArraySymbol):
 
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppDisjointListNode* ptr = dynamic_cast_ptr[cppDisjointListNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a DisjointList")
@@ -1810,8 +1718,8 @@ cdef class Divide(ArraySymbol):
         self.ptr = model._graph.emplace_node[cppDivideNode](lhs.array_ptr, rhs.array_ptr)
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppDivideNode* ptr = dynamic_cast_ptr[cppDivideNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a Divide")
@@ -1845,22 +1753,11 @@ cdef class Equal(ArraySymbol):
 
         cdef _Graph model = lhs.model
 
-        self.ptr = model._graph.emplace_node[cppEqualNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppEqualNode* ptr = dynamic_cast_ptr[cppEqualNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Equal")
-        cdef Equal x = Equal.__new__(Equal)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppEqualNode* ptr
+        cdef cppEqualNode* ptr = model._graph.emplace_node[cppEqualNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Equal, typeid(cppEqualNode))
+
 
 cdef class Exp(ArraySymbol):
     """Takes the values of a symbol and returns the corresponding base-e exponential.
@@ -1873,23 +1770,11 @@ cdef class Exp(ArraySymbol):
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
 
-        self.ptr = model._graph.emplace_node[cppExpNode](x.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppExpNode* ptr = dynamic_cast_ptr[cppExpNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Exp")
-
-        cdef Exp x = Exp.__new__(Exp)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppExpNode* ptr
+        cdef cppExpNode* ptr = model._graph.emplace_node[cppExpNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Exp, typeid(cppExpNode))
+
 
 cdef class Expit(ArraySymbol):
     """Takes the values of a symbol and returns the corresponding logistic sigmoid (expit).
@@ -1902,23 +1787,11 @@ cdef class Expit(ArraySymbol):
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
 
-        self.ptr = model._graph.emplace_node[cppExpitNode](x.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppExpitNode* ptr = dynamic_cast_ptr[cppExpitNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Expit")
-
-        cdef Expit x = Expit.__new__(Expit)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppExpitNode* ptr
+        cdef cppExpitNode* ptr = model._graph.emplace_node[cppExpitNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Expit, typeid(cppExpitNode))
+
 
 cdef class Input(ArraySymbol):
     """An input symbol. Functions as a "placeholder" in a model."""
@@ -1962,8 +1835,8 @@ cdef class Input(ArraySymbol):
             <span[const double]>as_span(arr)
         )
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppInputNode* ptr = dynamic_cast_ptr[cppInputNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a Input")
@@ -2031,8 +1904,8 @@ cdef class IntegerVariable(ArraySymbol):
 
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppIntegerNode* ptr = dynamic_cast_ptr[cppIntegerNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a IntegerVariable")
@@ -2127,20 +2000,8 @@ cdef class LessEqual(ArraySymbol):
 
         cdef _Graph model = lhs.model
 
-        self.ptr = model._graph.emplace_node[cppLessEqualNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppLessEqualNode* ptr = dynamic_cast_ptr[cppLessEqualNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a LessEqual")
-        cdef LessEqual x = LessEqual.__new__(LessEqual)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppLessEqualNode* ptr
+        cdef cppLessEqualNode* ptr = model._graph.emplace_node[cppLessEqualNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(LessEqual, typeid(cppLessEqualNode))
 
@@ -2191,8 +2052,8 @@ cdef class LinearProgram(Symbol):
             raise ValueError("all symbols must share the same underlying model")
         return x.array_ptr
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppLinearProgramNode* ptr = dynamic_cast_ptr[cppLinearProgramNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a LinearProgram")
@@ -2342,20 +2203,8 @@ cdef class LinearProgramFeasible(ArraySymbol):
         if not base_ptr:
             raise TypeError("Provided symbol must be derived from the LP base class")
 
-        self.ptr = model._graph.emplace_node[cppLinearProgramFeasibleNode](base_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppLinearProgramFeasibleNode* ptr = dynamic_cast_ptr[cppLinearProgramFeasibleNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a LinearProgramFeasible")
-        cdef LinearProgramFeasible x = LinearProgramFeasible.__new__(LinearProgramFeasible)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppLinearProgramFeasibleNode* ptr
+        cdef cppLinearProgramFeasibleNode* ptr = model._graph.emplace_node[cppLinearProgramFeasibleNode](base_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(LinearProgramFeasible, typeid(cppLinearProgramFeasibleNode))
 
@@ -2376,21 +2225,8 @@ cdef class LinearProgramObjectiveValue(ArraySymbol):
         if not base_ptr:
             raise TypeError("Provided symbol must be derived from the LP base class")
 
-        self.ptr = model._graph.emplace_node[cppLinearProgramObjectiveValueNode](base_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppLinearProgramObjectiveValueNode* ptr = dynamic_cast_ptr[cppLinearProgramObjectiveValueNode](
-            symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a LinearProgramObjectiveValue")
-        cdef LinearProgramObjectiveValue x = LinearProgramObjectiveValue.__new__(LinearProgramObjectiveValue)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppLinearProgramObjectiveValueNode* ptr
+        cdef cppLinearProgramObjectiveValueNode* ptr = model._graph.emplace_node[cppLinearProgramObjectiveValueNode](base_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(LinearProgramObjectiveValue, typeid(cppLinearProgramObjectiveValueNode))
 
@@ -2411,21 +2247,8 @@ cdef class LinearProgramSolution(ArraySymbol):
         if not base_ptr:
             raise TypeError("Provided symbol must be derived from the LP base class")
 
-        self.ptr = model._graph.emplace_node[cppLinearProgramSolutionNode](base_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppLinearProgramSolutionNode* ptr = dynamic_cast_ptr[cppLinearProgramSolutionNode](
-            symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a LinearProgramSolution")
-        cdef LinearProgramSolution x = LinearProgramSolution.__new__(LinearProgramSolution)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppLinearProgramSolutionNode* ptr
+        cdef cppLinearProgramSolutionNode* ptr = model._graph.emplace_node[cppLinearProgramSolutionNode](base_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(LinearProgramSolution, typeid(cppLinearProgramSolutionNode))
 
@@ -2448,8 +2271,8 @@ cdef class ListVariable(ArraySymbol):
 
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppListNode* ptr = dynamic_cast_ptr[cppListNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a ListVariable")
@@ -2525,21 +2348,8 @@ cdef class Log(ArraySymbol):
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
 
-        self.ptr = model._graph.emplace_node[cppLogNode](x.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppLogNode* ptr = dynamic_cast_ptr[cppLogNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Log")
-
-        cdef Log x = Log.__new__(Log)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppLogNode* ptr
+        cdef cppLogNode* ptr = model._graph.emplace_node[cppLogNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Log, typeid(cppLogNode))
 
@@ -2553,20 +2363,8 @@ cdef class Logical(ArraySymbol):
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
 
-        self.ptr = model._graph.emplace_node[cppLogicalNode](x.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppLogicalNode* ptr = dynamic_cast_ptr[cppLogicalNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Logical")
-        cdef Logical x = Logical.__new__(Logical)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppLogicalNode* ptr
+        cdef cppLogicalNode* ptr = model._graph.emplace_node[cppLogicalNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Logical, typeid(cppLogicalNode))
 
@@ -2588,21 +2386,8 @@ cdef class Max(ArraySymbol):
     def __init__(self, ArraySymbol node):
         cdef _Graph model = node.model
 
-        self.ptr = model._graph.emplace_node[cppMaxNode](node.array_ptr)
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppMaxNode* ptr = dynamic_cast_ptr[cppMaxNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Max")
-        cdef Max m = Max.__new__(Max)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
-
-    cdef cppMaxNode* ptr
+        cdef cppMaxNode* ptr = model._graph.emplace_node[cppMaxNode](node.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Max, typeid(cppMaxNode))
 
@@ -2630,21 +2415,8 @@ cdef class Maximum(ArraySymbol):
 
         cdef _Graph model = lhs.model
 
-        self.ptr = model._graph.emplace_node[cppMaximumNode](lhs.array_ptr, rhs.array_ptr)
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppMaximumNode* ptr = dynamic_cast_ptr[cppMaximumNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Maximum")
-        cdef Maximum m = Maximum.__new__(Maximum)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
-
-    cdef cppMaximumNode* ptr
+        cdef cppMaximumNode* ptr = model._graph.emplace_node[cppMaximumNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Maximum, typeid(cppMaximumNode))
 
@@ -2666,21 +2438,8 @@ cdef class Min(ArraySymbol):
     def __init__(self, ArraySymbol node):
         cdef _Graph model = node.model
 
-        self.ptr = model._graph.emplace_node[cppMinNode](node.array_ptr)
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppMinNode* ptr = dynamic_cast_ptr[cppMinNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Min")
-        cdef Min m = Min.__new__(Min)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
-
-    cdef cppMinNode* ptr
+        cdef cppMinNode* ptr = model._graph.emplace_node[cppMinNode](node.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Min, typeid(cppMinNode))
 
@@ -2708,21 +2467,8 @@ cdef class Minimum(ArraySymbol):
 
         cdef _Graph model = lhs.model
 
-        self.ptr = model._graph.emplace_node[cppMinimumNode](lhs.array_ptr, rhs.array_ptr)
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppMinimumNode* ptr = dynamic_cast_ptr[cppMinimumNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Minimum")
-        cdef Minimum m = Minimum.__new__(Minimum)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
-
-    cdef cppMinimumNode* ptr
+        cdef cppMinimumNode* ptr = model._graph.emplace_node[cppMinimumNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Minimum, typeid(cppMinimumNode))
 
@@ -2747,20 +2493,8 @@ cdef class Modulus(ArraySymbol):
 
         cdef _Graph model = lhs.model
 
-        self.ptr = model._graph.emplace_node[cppModulusNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppModulusNode* ptr = dynamic_cast_ptr[cppModulusNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Modulus")
-        cdef Modulus m = Modulus.__new__(Modulus)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
-
-    cdef cppModulusNode* ptr
+        cdef cppModulusNode* ptr = model._graph.emplace_node[cppModulusNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Modulus, typeid(cppModulusNode))
 
@@ -2785,20 +2519,8 @@ cdef class Multiply(ArraySymbol):
 
         cdef _Graph model = lhs.model
 
-        self.ptr = model._graph.emplace_node[cppMultiplyNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppMultiplyNode* ptr = dynamic_cast_ptr[cppMultiplyNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Multiply")
-        cdef Multiply x = Multiply.__new__(Multiply)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppMultiplyNode* ptr
+        cdef cppMultiplyNode* ptr = model._graph.emplace_node[cppMultiplyNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Multiply, typeid(cppMultiplyNode))
 
@@ -2837,11 +2559,11 @@ cdef class NaryAdd(ArraySymbol):
         self.ptr = model._graph.emplace_node[cppNaryAddNode](cppinputs)
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppNaryAddNode* ptr = dynamic_cast_ptr[cppNaryAddNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a NaryAdd")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
         cdef NaryAdd x = NaryAdd.__new__(NaryAdd)
         x.ptr = ptr
         x.initialize_arraynode(symbol.model, ptr)
@@ -2891,20 +2613,8 @@ cdef class NaryMaximum(ArraySymbol):
             array = <ArraySymbol?>node
             cppinputs.push_back(array.array_ptr)
 
-        self.ptr = model._graph.emplace_node[cppNaryMaximumNode](cppinputs)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppNaryMaximumNode* ptr = dynamic_cast_ptr[cppNaryMaximumNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a NaryMaximum")
-        cdef NaryMaximum x = NaryMaximum.__new__(NaryMaximum)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppNaryMaximumNode* ptr
+        cdef cppNaryMaximumNode* ptr = model._graph.emplace_node[cppNaryMaximumNode](cppinputs)
+        self.initialize_arraynode(model, ptr)
 
 _register(NaryMaximum, typeid(cppNaryMaximumNode))
 
@@ -2941,20 +2651,8 @@ cdef class NaryMinimum(ArraySymbol):
             array = <ArraySymbol?>node
             cppinputs.push_back(array.array_ptr)
 
-        self.ptr = model._graph.emplace_node[cppNaryMinimumNode](cppinputs)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppNaryMinimumNode* ptr = dynamic_cast_ptr[cppNaryMinimumNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a NaryMinimum")
-        cdef NaryMinimum x = NaryMinimum.__new__(NaryMinimum)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppNaryMinimumNode* ptr
+        cdef cppNaryMinimumNode* ptr = model._graph.emplace_node[cppNaryMinimumNode](cppinputs)
+        self.initialize_arraynode(model, ptr)
 
 _register(NaryMinimum, typeid(cppNaryMinimumNode))
 
@@ -2993,11 +2691,11 @@ cdef class NaryMultiply(ArraySymbol):
         self.ptr = model._graph.emplace_node[cppNaryMultiplyNode](cppinputs)
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppNaryMultiplyNode* ptr = dynamic_cast_ptr[cppNaryMultiplyNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a NaryMultiply")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
         cdef NaryMultiply x = NaryMultiply.__new__(NaryMultiply)
         x.ptr = ptr
         x.initialize_arraynode(symbol.model, ptr)
@@ -3031,20 +2729,8 @@ cdef class Negative(ArraySymbol):
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
 
-        self.ptr = model._graph.emplace_node[cppNegativeNode](x.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppNegativeNode* ptr = dynamic_cast_ptr[cppNegativeNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Negative")
-        cdef Negative x = Negative.__new__(Negative)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppNegativeNode* ptr
+        cdef cppNegativeNode* ptr = model._graph.emplace_node[cppNegativeNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Negative, typeid(cppNegativeNode))
 
@@ -3058,20 +2744,8 @@ cdef class Not(ArraySymbol):
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
 
-        self.ptr = model._graph.emplace_node[cppNotNode](x.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppNotNode* ptr = dynamic_cast_ptr[cppNotNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Not")
-        cdef Not x = Not.__new__(Not)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppNotNode* ptr
+        cdef cppNotNode* ptr = model._graph.emplace_node[cppNotNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Not, typeid(cppNotNode))
 
@@ -3088,20 +2762,8 @@ cdef class Or(ArraySymbol):
 
         cdef _Graph model = lhs.model
 
-        self.ptr = model._graph.emplace_node[cppOrNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppOrNode* ptr = dynamic_cast_ptr[cppOrNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Or")
-        cdef Or x = Or.__new__(Or)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppOrNode* ptr
+        cdef cppOrNode* ptr = model._graph.emplace_node[cppOrNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Or, typeid(cppOrNode))
 
@@ -3123,11 +2785,11 @@ cdef class PartialProd(ArraySymbol):
         axes = self.ptr.axes()
         return tuple(axes[i] for i in range(axes.size()))
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppPartialProdNode* ptr = dynamic_cast_ptr[cppPartialProdNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Partial Sum")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
         cdef PartialProd ps = PartialProd.__new__(PartialProd)
         ps.ptr = ptr
         ps.initialize_arraynode(symbol.model, ptr)
@@ -3173,11 +2835,11 @@ cdef class PartialSum(ArraySymbol):
         axes = self.ptr.axes()
         return tuple(axes[i] for i in range(axes.size()))
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppPartialSumNode* ptr = dynamic_cast_ptr[cppPartialSumNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Partial Sum")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
         cdef PartialSum ps = PartialSum.__new__(PartialSum)
         ps.ptr = ptr
         ps.initialize_arraynode(symbol.model, ptr)
@@ -3221,20 +2883,9 @@ cdef class Permutation(ArraySymbol):
         if array.model is not x.model:
             raise ValueError("array and x do not share the same underlying model")
 
-        self.ptr = array.model._graph.emplace_node[cppPermutationNode](array.array_ptr, x.array_ptr)
-        self.initialize_arraynode(array.model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppPermutationNode* ptr = dynamic_cast_ptr[cppPermutationNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Permutation")
-        cdef Permutation p = Permutation.__new__(Permutation)
-        p.ptr = ptr
-        p.initialize_arraynode(symbol.model, ptr)
-        return p
-
-    cdef cppPermutationNode* ptr
+        cdef cppPermutationNode* ptr = array.model._graph.emplace_node[cppPermutationNode](
+            array.array_ptr, x.array_ptr)
+        self.initialize_arraynode(array.model, ptr)
 
 _register(Permutation, typeid(cppPermutationNode))
 
@@ -3256,22 +2907,8 @@ cdef class Prod(ArraySymbol):
     def __init__(self, ArraySymbol node):
         cdef _Graph model = node.model
 
-        self.ptr = model._graph.emplace_node[cppProdNode](node.array_ptr)
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppProdNode* ptr = dynamic_cast_ptr[cppProdNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Prod")
-
-        cdef Prod m = Prod.__new__(Prod)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
-
-    cdef cppProdNode* ptr
+        cdef cppProdNode* ptr = model._graph.emplace_node[cppProdNode](node.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Prod, typeid(cppProdNode))
 
@@ -3292,22 +2929,9 @@ cdef class Put(ArraySymbol):
                 "array, indices, and values do not all share the same underlying model"
             )
 
-        self.ptr = model._graph.emplace_node[cppPutNode](array.array_ptr, indices.array_ptr, values.array_ptr)
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppPutNode* ptr = dynamic_cast_ptr[cppPutNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Put")
-
-        cdef Put m = Put.__new__(Put)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
-
-    cdef cppPutNode* ptr
+        cdef cppPutNode* ptr = model._graph.emplace_node[cppPutNode](
+            array.array_ptr, indices.array_ptr, values.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Put, typeid(cppPutNode))
 
@@ -3449,8 +3073,8 @@ cdef class QuadraticModel(ArraySymbol):
 
         self._init_from_coords(x, (data, coords), ldata)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppQuadraticModelNode* ptr = dynamic_cast_ptr[cppQuadraticModelNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a QuadraticModel")
@@ -3565,8 +3189,8 @@ cdef class Reshape(ArraySymbol):
 
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppReshapeNode* ptr = dynamic_cast_ptr[cppReshapeNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a Reshape")
@@ -3617,8 +3241,8 @@ cdef class SetVariable(ArraySymbol):
         self.ptr = model._graph.emplace_node[cppSetNode](n, min_size, max_size)
         self.initialize_arraynode(model, self.ptr)
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
         cdef cppSetNode* ptr = dynamic_cast_ptr[cppSetNode](symbol.node_ptr)
         if not ptr:
             raise TypeError("given symbol cannot be used to construct a SetVariable")
@@ -3695,22 +3319,8 @@ cdef class Size(ArraySymbol):
     def __init__(self, ArraySymbol array):
         cdef _Graph model = array.model
 
-        self.ptr = model._graph.emplace_node[cppSizeNode](array.array_ptr)
-        self.initialize_arraynode(array.model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppSizeNode* ptr = dynamic_cast_ptr[cppSizeNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Size")
-
-        cdef Size x = Size.__new__(Size)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    # An observing pointer to the C++ SizeNode
-    cdef cppSizeNode* ptr
+        cdef cppSizeNode* ptr = model._graph.emplace_node[cppSizeNode](array.array_ptr)
+        self.initialize_arraynode(array.model, ptr)
 
 _register(Size, typeid(cppSizeNode))
 
@@ -3733,21 +3343,8 @@ cdef class Rint(ArraySymbol):
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
 
-        self.ptr = model._graph.emplace_node[cppRintNode](x.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppRintNode* ptr = dynamic_cast_ptr[cppRintNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Rint")
-
-        cdef Rint x = Rint.__new__(Rint)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppRintNode* ptr
+        cdef cppRintNode* ptr = model._graph.emplace_node[cppRintNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Rint, typeid(cppRintNode))
 
@@ -3769,21 +3366,8 @@ cdef class Square(ArraySymbol):
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
 
-        self.ptr = model._graph.emplace_node[cppSquareNode](x.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppSquareNode* ptr = dynamic_cast_ptr[cppSquareNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Square")
-
-        cdef Square x = Square.__new__(Square)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppSquareNode* ptr
+        cdef cppSquareNode* ptr = model._graph.emplace_node[cppSquareNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Square, typeid(cppSquareNode))
 
@@ -3806,21 +3390,8 @@ cdef class SquareRoot(ArraySymbol):
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
 
-        self.ptr = model._graph.emplace_node[cppSquareRootNode](x.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppSquareRootNode* ptr = dynamic_cast_ptr[cppSquareRootNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a SquareRoot")
-
-        cdef SquareRoot x = SquareRoot.__new__(SquareRoot)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppSquareRootNode* ptr
+        cdef cppSquareRootNode* ptr = model._graph.emplace_node[cppSquareRootNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(SquareRoot, typeid(cppSquareRootNode))
 
@@ -3845,20 +3416,8 @@ cdef class Subtract(ArraySymbol):
 
         cdef _Graph model = lhs.model
 
-        self.ptr = model._graph.emplace_node[cppSubtractNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppSubtractNode* ptr = dynamic_cast_ptr[cppSubtractNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Subtract")
-        cdef Subtract x = Subtract.__new__(Subtract)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppSubtractNode* ptr
+        cdef cppSubtractNode* ptr = model._graph.emplace_node[cppSubtractNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Subtract, typeid(cppSubtractNode))
 
@@ -3879,20 +3438,8 @@ cdef class Sum(ArraySymbol):
     """
     def __init__(self, ArraySymbol array):
         cdef _Graph model = array.model
-        self.ptr = model._graph.emplace_node[cppSumNode](array.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppSumNode* ptr = dynamic_cast_ptr[cppSumNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Sum")
-        cdef Sum s = Sum.__new__(Sum)
-        s.ptr = ptr
-        s.initialize_arraynode(symbol.model, ptr)
-        return s
-
-    cdef cppSumNode* ptr
+        cdef cppSumNode* ptr = model._graph.emplace_node[cppSumNode](array.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Sum, typeid(cppSumNode))
 
@@ -3911,21 +3458,9 @@ cdef class Where(ArraySymbol):
         if condition.model is not y.model:
             raise ValueError("condition and y do not share the same underlying model")
 
-        self.ptr = model._graph.emplace_node[cppWhereNode](
+        cdef cppWhereNode* ptr = model._graph.emplace_node[cppWhereNode](
             condition.array_ptr, x.array_ptr, y.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppWhereNode* ptr = dynamic_cast_ptr[cppWhereNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Sum")
-        cdef Where sym = Where.__new__(Where)
-        sym.ptr = ptr
-        sym.initialize_arraynode(symbol.model, ptr)
-        return sym
-
-    cdef cppWhereNode* ptr
+        self.initialize_arraynode(model, ptr)
 
 _register(Where, typeid(cppWhereNode))
 
@@ -3944,19 +3479,7 @@ cdef class Xor(ArraySymbol):
 
         cdef _Graph model = lhs.model
 
-        self.ptr = model._graph.emplace_node[cppXorNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        cdef cppXorNode* ptr = dynamic_cast_ptr[cppXorNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Xor")
-        cdef Xor x = Xor.__new__(Xor)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppXorNode* ptr
+        cdef cppXorNode* ptr = model._graph.emplace_node[cppXorNode](lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(Xor, typeid(cppXorNode))

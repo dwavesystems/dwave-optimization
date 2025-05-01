@@ -33,6 +33,7 @@ from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
+from dwave.optimization.libcpp cimport dynamic_cast_ptr
 from dwave.optimization.libcpp.array cimport Array as cppArray
 from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.states cimport States
@@ -970,10 +971,18 @@ cdef class Symbol:
         obj.initialize_node(model, ptr)
         return obj
 
-    @staticmethod
-    def _from_symbol(Symbol symbol):
-        # Symbols must overload this method
-        raise ValueError("Symbols cannot be constructed directly")
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
+        # Disallow lateral casts or demotions.
+        # This is to prevent, say, an Add to be constructed from a Subtract
+        # There are ways around it, but this method is private anyway so it
+        # should be enough of a discouragement and for safety.
+        if not issubclass(cls, type(symbol)):
+            raise TypeError(f"cannot construct a {cls.__name__} from a {type(symbol).__name__}")
+
+        cdef Symbol obj = cls.__new__(cls)
+        obj.initialize_node(symbol.model, symbol.node_ptr)
+        return obj
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -1365,6 +1374,25 @@ cdef class ArraySymbol(Symbol):
     cdef void initialize_arraynode(self, _Graph model, cppArrayNode* array_ptr) noexcept:
         self.array_ptr = array_ptr
         self.initialize_node(model, array_ptr)
+
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
+        """Construct an ArraySymbol from another Symbol."""
+        # Disallow lateral casts or demotions.
+        # This is to prevent, say, an Add to be constructed from a Subtract
+        # There are ways around it, but this method is private anyway so it
+        # should be enough of a discouragement and for safety.
+        if not issubclass(cls, type(symbol)):
+            raise TypeError(f"cannot construct a {cls.__name__} from a {type(symbol).__name__}")
+
+        # Now try to "promote" the type and raise an error if that fails.
+        cdef cppArrayNode* ptr = dynamic_cast_ptr[cppArrayNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+
+        cdef ArraySymbol obj = cls.__new__(cls)
+        obj.initialize_arraynode(symbol.model, ptr)
+        return obj
 
     def __abs__(self):
         from dwave.optimization.symbols import Absolute  # avoid circular import
@@ -1863,3 +1891,6 @@ cdef class ArraySymbol(Symbol):
             return dwave.optimization.symbols.PartialSum(self, axis)
 
         return dwave.optimization.symbols.Sum(self)
+
+cdef class A:
+    pass
