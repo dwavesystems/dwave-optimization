@@ -15,6 +15,7 @@
 from libc.stdint cimport uintptr_t
 from libcpp cimport bool
 from libcpp.memory cimport shared_ptr
+from libcpp.typeinfo cimport type_info
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.graph cimport ArrayNode as cppArrayNode, Node as cppNode
@@ -22,6 +23,11 @@ from dwave.optimization.libcpp.graph cimport Graph as cppGraph
 from dwave.optimization.libcpp.state cimport State as cppState
 
 __all__ = []
+
+
+cdef void _register(object cls, const type_info& typeinfo)
+
+cdef object symbol_from_ptr(_Graph model, cppNode* ptr)
 
 
 cdef class _Graph:
