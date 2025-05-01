@@ -15,6 +15,7 @@
 #include "dwave-optimization/nodes/quadratic_model.hpp"
 
 #include "dwave-optimization/utils.hpp"
+#include "_state.hpp"
 
 namespace dwave::optimization {
 using index_type = int;
@@ -352,6 +353,90 @@ void QuadraticModelNode::propagate(State& state) const {
 QuadraticModel* QuadraticModelNode::get_quadratic_model() {
     QuadraticModel* qm_ptr = &quadratic_model_;
     return qm_ptr;
+}
+
+// Follows
+// https://github.com/dwavesystems/dwave-networkx/blob/0.8.17/dwave_networkx/generators/zephyr.py
+std::vector<std::tuple<int, int>> ZephyrLattice::edges() const {
+    assert(m > 0 && "m must be positive");
+    assert(t > 0 && "t must be positive");
+
+    const int M = 2 * m + 1;  // confusing name, but following dnx
+
+    std::vector<std::tuple<int, int>> edges;
+    edges.reserve(num_edges());
+
+    // Coordinates to linear index
+    auto index = [&](int u, int w, int k, int j, int z) -> int {
+        return (((u * M + w) * t + k) * 2 + j) * m + z;
+    };
+
+    // External edges
+    for (int u : {0, 1}) {
+        for (int w : std::views::iota(0, M)) {
+            for (int k : std::views::iota(0, t)) {
+                for (int j : {0, 1}) {
+                    for (int z : std::views::iota(0, m - 1)) {
+                        edges.emplace_back(index(u, w, k, j, z), index(u, w, k, j, z + 1));
+                    }
+                }
+            }
+        }
+    }
+
+    // Odd edges
+    for (int u : {0, 1}) {
+        for (int w : std::views::iota(0, M)) {
+            for (int k : std::views::iota(0, t)) {
+                for (int a : {0, 1}) {
+                    for (int z : std::views::iota(a, m)) {
+                        edges.emplace_back(index(u, w, k, 0, z), index(u, w, k, 1, z - a));
+                    }
+                }
+            }
+        }
+    }
+
+    // Internal edges
+    for (int w : std::views::iota(0, m)) {
+        for (int z : std::views::iota(0, m)) {
+            for (int h : std::views::iota(0, t)) {
+                for (int k : std::views::iota(0, t)) {
+                    for (int i : {0, 1}) {
+                        for (int j : {0, 1}) {
+                            for (int a : {0, 1}) {
+                                for (int b : {0, 1}) {
+                                    edges.emplace_back(
+                                            index(0, 2 * w + 1 + a * (2 * i - 1), k, j, z),
+                                            index(1, 2 * z + 1 + b * (2 * j - 1), h, i, w));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Sort each edge lexicographically
+    std::ranges::for_each(edges, [](auto& edge) {
+        auto& u = std::get<0>(edge);
+        auto& v = std::get<1>(edge);
+
+        assert(u >= 0);  // no negative indices
+        assert(v >= 0);  // no negative indices
+        assert(u != v);  // no self-loops
+
+        if (u > v) std::swap(u, v);
+    });
+
+    // Sort the whole thing lexicographically
+    std::ranges::sort(edges);
+
+    // Consider adding an assert for uniqueness
+    assert(static_cast<int>(edges.size()) == num_edges());
+
+    return edges;
 }
 
 }  // namespace dwave::optimization
