@@ -1944,6 +1944,7 @@ cdef class Exp(ArraySymbol):
     See Also:
         :func:`~dwave.optimization.mathematical.exp`: equivalent function.
 
+    .. versionadded:: 0.6.2
     """
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model

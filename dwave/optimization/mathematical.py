@@ -394,6 +394,7 @@ def exp(x: ArraySymbol) -> Exp:
     See Also:
         :class:`~dwave.optimization.symbols.Exp`: equivalent symbol.
 
+    .. versionadded:: 0.6.2
     """
     return Exp(x)
 
