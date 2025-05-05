@@ -67,6 +67,7 @@ from dwave.optimization.libcpp.nodes cimport (
     DivideNode as cppDivideNode,
     EqualNode as cppEqualNode,
     ExpitNode as cppExpitNode,
+    ExpNode as cppExpNode,
     InputNode as cppInputNode,
     IntegerNode as cppIntegerNode,
     LessEqualNode as cppLessEqualNode,
@@ -132,6 +133,7 @@ __all__ = [
     "DisjointList",
     "Divide",
     "Equal",
+    "Exp",
     "Expit",
     "Input",
     "IntegerVariable",
@@ -1935,6 +1937,34 @@ cdef class Equal(ArraySymbol):
     cdef cppEqualNode* ptr
 
 _register(Equal, typeid(cppEqualNode))
+
+cdef class Exp(ArraySymbol):
+    """Takes the values of a symbol and returns the corresponding base-e exponential.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.exp`: equivalent function.
+
+    """
+    def __init__(self, ArraySymbol x):
+        cdef _Graph model = x.model
+
+        self.ptr = model._graph.emplace_node[cppExpNode](x.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppExpNode* ptr = dynamic_cast_ptr[cppExpNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Exp")
+
+        cdef Exp x = Exp.__new__(Exp)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppExpNode* ptr
+
+_register(Exp, typeid(cppExpNode))
 
 cdef class Expit(ArraySymbol):
     """Takes the values of a symbol and returns the corresponding logistic sigmoid (expit).

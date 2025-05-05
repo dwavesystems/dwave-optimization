@@ -35,6 +35,14 @@ struct abs {
 };
 
 template <class T>
+struct exp {};
+
+template <>
+struct exp<double> {
+    double operator()(const double& x) const { return std::exp(x); }
+};
+
+template <class T>
 struct expit {};
 
 template <>
@@ -405,6 +413,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
 
 using AbsoluteNode = UnaryOpNode<functional::abs<double>>;
 using ExpitNode = UnaryOpNode<functional::expit<double>>;
+using ExpNode = UnaryOpNode<functional::exp<double>>;
 using LogNode = UnaryOpNode<functional::log<double>>;
 using LogicalNode = UnaryOpNode<functional::logical<double>>;
 using NegativeNode = UnaryOpNode<std::negate<double>>;
