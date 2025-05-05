@@ -34,7 +34,7 @@ from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
-from dwave.optimization.libcpp cimport get, holds_alternative, span
+from dwave.optimization.libcpp cimport bind_front, get, holds_alternative, span
 from dwave.optimization.libcpp.array cimport (
     Array as cppArray,
     SizeInfo as cppSizeInfo,
@@ -108,6 +108,7 @@ from dwave.optimization.libcpp.nodes cimport (
     SumNode as cppSumNode,
     WhereNode as cppWhereNode,
     XorNode as cppXorNode,
+    ZephyrNode as cppZephyrNode,
     )
 from dwave.optimization.model cimport ArraySymbol, _Graph, Symbol
 from dwave.optimization.states cimport States
@@ -172,6 +173,7 @@ __all__ = [
     "Sum",
     "Where",
     "Xor",
+    "Zephyr",
     ]
 
 # We would like to be able to do constructions like dynamic_cast[cppConstantNode*](...)
@@ -4003,3 +4005,129 @@ cdef class Xor(ArraySymbol):
     cdef cppXorNode* ptr
 
 _register(Xor, typeid(cppXorNode))
+
+
+cdef double _read_linear(void* obj, int v) noexcept nogil:
+    with gil:
+        try:
+            return (<object>obj)(v)
+        except Exception as ex:
+            (<object>obj).ex = ex
+        # If we got here that means an exception was raised. So we trigger C++'s
+        # error handling by returning a non-finite value.
+        return float('nan')
+
+cdef double _read_quadratic(void* obj, int u, int v) noexcept nogil:
+    # object must be a Python callable!
+    with gil:
+        try:
+            return (<object>obj)(u, v)
+        except Exception as ex:
+            (<object>obj).ex = ex
+        # If we got here that means an exception was raised. So we trigger C++'s
+        # error handling by returning a non-finite value.
+        return float('nan')
+
+# Currently we don't have a matching dwave.optimization.mathematical function
+# so we document it better here than we usually do.
+cdef class Zephyr(ArraySymbol):
+    """A quadratic model with biases arranged according to a Zephyr lattice.
+
+    Encode a quadratic model arranged according to a :term:`Zephyr` lattice.
+
+    Args:
+        x: A 1D array symbol giving the assignments to the variables.
+        m: Grid parameter for the Zephyr lattice.
+        linear:
+            A function that will be called for each node in the Zephyr lattice.
+            Must accept a single ``int`` giving the node index.
+            Must return a finite number giving the linear bias.
+            Will be called once for each node.
+        quadratic:
+            A function that will be called for each edge in the Zephyr lattice.
+            Must accept two ``int`` giving the indices of the nodes that share an edge.
+            Must return a finite number giving the quadratic bias.
+            Will be called once for each edge.
+
+    See also:
+        :func:`dwave_networkx.zephyr_graph()`
+
+    ..versionadded:: 0.6.2
+    """
+    def __init__(self, ArraySymbol x, Py_ssize_t m, *, object linear, object quadratic):
+        cdef _Graph model = x.model
+
+        # todo: we could accept dictionaries directly (probably adding uv + vu for quadratic)
+        if not callable(linear):
+            raise TypeError("linear must be a callable that accepts one int and returns a float")
+        if not callable(quadratic):
+            raise TypeError("quadratic must be a callable that accepts two ints and returns a float")
+
+        # We have to do a bit of convolution in order to do error handling
+        # We start by making some aliases of our input functions so that we
+        # can add an .ex attribute that will signal if an exception was raised
+        # in the C++ code.
+        def _linear(v):
+            return linear(v)
+        _linear.ex = None
+        def _quadratic(u, v):
+            return quadratic(u, v)
+        _quadratic.ex = None
+
+        try:
+            self.ptr = model._graph.emplace_node[cppZephyrNode](
+                x.array_ptr,
+                m,
+                bind_front(_read_linear, <void*>_linear),
+                bind_front(_read_quadratic, <void*>_quadratic),
+            )
+        except Exception as ex:
+            # Determine if the error was raised by the Python function or by C++
+            if _linear.ex:
+                raise _linear.ex from None
+            if _quadratic.ex:
+                raise _quadratic.ex from None
+            raise ex
+
+        self.initialize_arraynode(model, self.ptr)
+
+    @staticmethod
+    def _from_symbol(Symbol symbol):
+        cdef cppZephyrNode* ptr = dynamic_cast_ptr[cppZephyrNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError("given symbol cannot be used to construct a Zephyr")
+        cdef Zephyr x = Zephyr.__new__(Zephyr)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        raise NotImplementedError
+
+    def _into_zipfile(self, zf, directory):
+        raise NotImplementedError
+
+    @staticmethod
+    def lattice_num_edges(Py_ssize_t m):
+        """Return the number of edges in a Zephyr lattice with grid parameter ``m``."""
+        return cppZephyrNode.lattice_num_edges(m)
+
+    @staticmethod
+    def lattice_num_nodes(Py_ssize_t m):
+        """Return the number of nodes in a Zephyr lattice with grid parameter ``m``."""
+        return cppZephyrNode.lattice_num_nodes(m)
+
+    def linear(self, Py_ssize_t v):
+        """Return the linear bias associated with node ``v``, or ``0`` if the node
+        is not in the model."""
+        return self.ptr.linear(v)
+
+    def quadratic(self, Py_ssize_t u, Py_ssize_t v):
+        """Return the quadratic bias associated with edge ``u, v``, or ``0`` if
+        the edge is not in the model."""
+        return self.ptr.quadratic(u, v)
+
+    cdef cppZephyrNode* ptr
+
+_register(Zephyr, typeid(cppZephyrNode))

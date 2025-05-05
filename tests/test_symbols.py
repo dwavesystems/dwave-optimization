@@ -2936,3 +2936,89 @@ class TestXor(utils.BinaryOpTests):
 
         np.testing.assert_array_equal(ab.state(0), [0, 1, 0, 1])
         np.testing.assert_array_equal(ac.state(0), [1, 0, 1, 0])
+
+
+class TestZephyr(utils.SymbolTests):
+    def generate_symbols(self):
+        from dwave.optimization.symbols import Zephyr
+
+        model = Model()
+
+        num_nodes = Zephyr.lattice_num_nodes(2)
+
+        x = model.binary(num_nodes)
+        z = Zephyr(x, 2, linear=lambda v: 5, quadratic=lambda u, v: 1)
+        with model.lock():
+            yield z
+
+    def test_exceptions(self):
+        from dwave.optimization.symbols import Zephyr
+
+        model = Model()
+        x = model.binary(Zephyr.lattice_num_nodes(2))
+
+        def _raise(*args):
+            raise ValueError("boom")
+
+        with self.assertRaisesRegex(ValueError, "boom"):
+            Zephyr(x, 2, linear=_raise, quadratic=lambda u, v: 1)
+        with self.assertRaisesRegex(ValueError, "boom"):
+            Zephyr(x, 2, linear=lambda u: 1, quadratic=_raise)
+
+        def _infinite(*args):
+            return float('inf')
+        with self.assertRaisesRegex(ValueError, "biases must be finite"):
+            Zephyr(x, 2, linear=_infinite, quadratic=lambda u, v: 1)
+
+        # and, very importantly, there shouldn't be any side effects nodes
+        self.assertEqual(model.num_symbols(), 1)
+        self.assertEqual(len(list(x.iter_successors())), 0)
+
+    def test_graph(self):
+        try:
+            import dwave_networkx as dnx
+        except ImportError:
+            return self.skipTest("no dwave_networkx")
+
+        from dwave.optimization.symbols import Zephyr
+
+        model = Model()
+
+        for m in range(1, 4):
+            with self.subTest(m=m):
+                G = dnx.zephyr_graph(m)
+
+                for v in G.nodes:
+                    G.nodes[v]["count"] = 0
+                for u, v in G.edges:
+                    G.edges[u, v]["count"] = 0
+
+                x = model.binary(len(G.nodes))
+
+                def linear(v):
+                    if not G.has_node(v):
+                        raise ValueError("no node")
+                    G.nodes[v]["count"] += 1
+                    return v
+
+                def quadratic(u, v):
+                    if not G.has_edge(u, v):
+                        raise ValueError("no edge")
+                    G.edges[u, v]["count"] += 1
+                    return u*v
+
+                z = Zephyr(x, m, linear=linear, quadratic=quadratic)
+
+                # each node/edge should have been called exactly once
+                self.assertTrue(all(G.nodes[v]["count"] == 1 for v in G.nodes))
+                self.assertTrue(all(G.edges[u, v]["count"] == 1 for u, v in G.edges))
+
+                # and they got the bias we expected
+                for v in G.nodes:
+                    self.assertEqual(z.linear(v), v)
+                for u, v in G.edges:
+                    self.assertEqual(z.quadratic(u, v), u * v)
+                    self.assertEqual(z.quadratic(v, u), u * v)
+
+    def test_serialization(self):
+        return self.skipTest("serialization not yet implemented")

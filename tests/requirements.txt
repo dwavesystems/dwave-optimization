@@ -1,1 +1,2 @@
 dimod==0.12.17
+dwave-networkx==0.8.17

@@ -484,12 +484,15 @@ LatticeNode<T>::LatticeNode(ArrayNode* x_ptr, T lattice, std::function<double(in
     // Add the nodes (with their weights) to the adjacency
     adj_.resize(lattice_.num_nodes());
     for (ssize_t u = 0, N = adj_.size(); u < N; ++u) {
-        adj_[u].bias = linear(u);
+        const double bias = linear(u);
+        if (!std::isfinite(bias)) throw std::invalid_argument("biases must be finite");
+        adj_[u].bias = bias;
     }
 
     // Add the edges (with their weights) to the adjacency
     for (const auto& [u, v] : lattice_.edges()) {
         const double bias = quadratic(u, v);
+        if (!std::isfinite(bias)) throw std::invalid_argument("biases must be finite");
         adj_[u].neighbors.emplace_back(v, bias);
         adj_[v].neighbors.emplace_back(u, bias);
     }

@@ -262,6 +262,14 @@ cdef extern from "dwave-optimization/nodes/quadratic_model.hpp" namespace "dwave
     cdef cppclass QuadraticModelNode(ArrayNode):
         QuadraticModel* get_quadratic_model()
 
+    cdef cppclass ZephyrNode(ArrayNode):
+        @staticmethod
+        Py_ssize_t lattice_num_nodes(Py_ssize_t m)
+        @staticmethod
+        Py_ssize_t lattice_num_edges(Py_ssize_t m)
+        double linear(int v)
+        double quadratic(int u, int v)
+
 
 cdef extern from "dwave-optimization/nodes/testing.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ArrayValidationNode(Node):

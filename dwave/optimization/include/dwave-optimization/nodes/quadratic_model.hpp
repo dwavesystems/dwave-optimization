@@ -168,6 +168,16 @@ class LatticeNode : public ScalarOutputMixin<ArrayNode> {
     /// Return a reference to the lattice structure of the node.
     const LatticeType& lattice() const noexcept { return lattice_; }
 
+    template<class... Args>
+    static ssize_t lattice_num_edges(Args... args) {
+        return LatticeType(args...).num_edges();
+    }
+
+    template<class... Args>
+    static ssize_t lattice_num_nodes(Args... args) {
+        return LatticeType(args...).num_nodes();
+    }
+
     /// Get the linear bias associated with `u`. Returns `0` if `u` is out-of-bounds.
     double linear(int u) const noexcept;
 
