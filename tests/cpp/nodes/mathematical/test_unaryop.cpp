@@ -28,7 +28,8 @@ using Catch::Matchers::RangeEquals;
 namespace dwave::optimization {
 
 // NOTE: square_root and log should also be included but the templated tests need to be updated first.
-TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::expit<double>,
+TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::exp<double>,
+                   functional::expit<double>,
                    functional::logical<double>, functional::rint<double>, functional::square<double>,
                    std::negate<double>, std::logical_not<double>) {
     auto graph = Graph();
@@ -301,6 +302,49 @@ TEST_CASE("UnaryOpNode - ExpitNode") {
         THEN("The min/max are expected") {
             CHECK(expit_ptr->min() == 0.5);
             CHECK(expit_ptr->max() == 1);
+        }
+    }
+}
+
+TEST_CASE("UnaryOpNode - ExpNode") {
+    auto graph = Graph();
+    GIVEN("An arbitrary number") {
+        double c = 3.0;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        auto exp_ptr = graph.emplace_node<ExpNode>(c_ptr);
+        auto state = graph.initialize_state();
+        CHECK(exp_ptr->min() == std::exp(c));
+        CHECK(exp_ptr->max() == std::exp(c));
+    }
+
+    GIVEN("A negative number") {
+        double c = -4.0;
+        auto c_ptr = graph.emplace_node<ConstantNode>(c);
+        auto exp_ptr = graph.emplace_node<ExpNode>(c_ptr);
+        auto state = graph.initialize_state();
+        CHECK(exp_ptr->min() == std::exp(c));
+        CHECK(exp_ptr->max() == std::exp(c));
+    }
+
+    GIVEN("A constant 1d array of doubles") {
+        auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{-6.0, -0.3, 0.0, 1.2, 5.6});
+        auto exp_ptr = graph.emplace_node<ExpNode>(c_ptr);
+
+        THEN("The min/max are expected") {
+            THEN("exp(x) is not integral") { CHECK_FALSE(exp_ptr->integral()); }
+            CHECK(exp_ptr->min() == std::exp(-6.0));
+            CHECK(exp_ptr->max() == std::exp(5.6));
+        }
+    }
+
+    GIVEN("An integer with max domain") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
+        auto exp_ptr = graph.emplace_node<ExpNode>(i_ptr);
+        graph.emplace_node<ArrayValidationNode>(exp_ptr);
+
+        THEN("The min is expected") {
+            // overflow with max
+            CHECK(exp_ptr->min() == 1.0);
         }
     }
 }

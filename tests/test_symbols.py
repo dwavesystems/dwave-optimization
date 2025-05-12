@@ -27,6 +27,7 @@ from dwave.optimization import (
     Model,
     arange,
     bspline,
+    exp,
     expit,
     log,
     logical,
@@ -1152,6 +1153,32 @@ class TestDivide(utils.SymbolTests):
 
         with self.assertRaises(TypeError):
             a // b
+
+
+class TestExp(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        a = model.constant(1.3)
+        op_a = exp(a)
+        model.lock()
+        yield op_a
+
+    def test_simple_inputs(self):
+        model = Model()
+        empty = exp(model.constant(0))
+        model.lock()
+        model.states.resize(1)
+        self.assertEqual(empty.state(), 1.0)
+
+        # confirm consistency with numpy exp
+        simple_inputs = [-1.0, 1.23, 3.14]
+        numpy_outputs = [0.36787944117144233, 3.4212295362896734, 23.103866858722185]
+        for i, si in enumerate(simple_inputs):
+            model = Model()
+            exp_node = exp(model.constant(si))
+            model.lock()
+            model.states.resize(1)
+            self.assertEqual(exp_node.state(), numpy_outputs[i])
 
 
 class TestExpit(utils.SymbolTests):

@@ -108,6 +108,10 @@ class Equal(ArraySymbol):
     ...
 
 
+class Exp(ArraySymbol):
+    ...
+
+
 class Expit(ArraySymbol):
     ...
 

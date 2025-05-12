@@ -24,6 +24,7 @@ from dwave.optimization.symbols import (
     BSpline,
     Concatenate,
     Divide,
+    Exp,
     Expit,
     LinearProgram,
     LinearProgramFeasible,
@@ -57,6 +58,7 @@ __all__ = [
     "bspline",
     "concatenate",
     "divide",
+    "exp",
     "expit",
     "hstack",
     "linprog",
@@ -367,6 +369,34 @@ def divide(x1: ArraySymbol, x2: ArraySymbol) -> Divide:
         [3. 5.]
     """
     return Divide(x1, x2)
+
+def exp(x: ArraySymbol) -> Exp:
+    """Return the element-wise base-e exponential of the given symbol.
+
+    Args:
+        x: Input symbol.
+
+    Returns:
+        A symbol that propagates the values of the base-e exponential of a given symbol.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import exp
+        ...
+        >>> model = Model()
+        >>> x = model.constant(1.0)
+        >>> exp_x = exp(x)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(exp_x.state())
+        2.718281828459045
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Exp`: equivalent symbol.
+
+    .. versionadded:: 0.6.2
+    """
+    return Exp(x)
 
 def expit(x: ArraySymbol) -> Expit:
     """Return an element-wise logistic sigmoid on the given symbol.

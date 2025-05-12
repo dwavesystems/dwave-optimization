@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add C++ ``ExpNode`` and Python ``Exp`` symbol. ``Exp`` propagates the base-e exponential values of its
+    predecessor element-wise.
+    See `#282 <https://github.com/dwavesystems/dwave-optimization/issues/282>`_.
