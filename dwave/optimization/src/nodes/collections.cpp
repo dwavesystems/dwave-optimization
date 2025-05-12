@@ -11,34 +11,113 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
+
 #include "dwave-optimization/nodes/collections.hpp"
 
 #include <ranges>
 #include <unordered_set>
 #include <utility>
 
+#include "dwave-optimization/utils.hpp"
+
 namespace dwave::optimization {
+
+// Given a collection, check that it is a valid sub-permutation of range(n),
+// and then "augment" it so that the values not in collection are appended onto
+// the end.
+std::vector<double> augment_collection(std::vector<double> values, const ssize_t n) {
+    // First check that our given values has the values we expect
+    if (!std::ranges::all_of(values, is_integer)) {
+        throw std::invalid_argument("values values must be integers");
+    }
+    if (std::ranges::any_of(values, [](const auto& val) -> bool { return val < 0; })) {
+        throw std::invalid_argument("values values must be non-negative");
+    }
+    if (std::ranges::any_of(values, [&n](const auto& val) -> bool { return val >= n; })) {
+        throw std::invalid_argument("values values must be less than " + std::to_string(n));
+    }
+
+    // Next check that we have a sub-permutation of range(n)
+
+    // We'll track how many times each value appears in the values.
+    // We void the weird vector<bool> overload for performance even though
+    // that's all we need here.
+    std::vector<signed char> count(n, 0);
+
+    for (const auto& val : values) {
+        const size_t i = static_cast<std::size_t>(val);  // should be safe due to previous checks
+
+        if (count[i]) {
+            throw std::invalid_argument("values must be a subset of range(" +
+                                        std::to_string(n) + ")");
+        }
+
+        ++count[i];
+    }
+
+    // If values has the same size as n, then we're a permutation rather than
+    // a sub-permutation and we can return
+    if (static_cast<ssize_t>(values.size()) == n) return values;  // already unique
+
+    // Otherwise add any "missing" values to the values.
+    for (ssize_t i = 0; i < n; ++i) {
+        if (!count[i]) values.emplace_back(i);
+    }
+
+    return values;
+}
 
 struct CollectionStateData : NodeStateData {
     explicit CollectionStateData(ssize_t n) : CollectionStateData(n, n) {}
 
     CollectionStateData(ssize_t n, ssize_t size) : size(size) {
-        assert(size <= n);
+        assert(0 <= n && "n must be positive");
+        assert(0 <= size && size <= n && "size must be in [0, n] inclusive");
         for (ssize_t i = 0; i < n; ++i) {
             elements.push_back(i);
         }
     }
 
     explicit CollectionStateData(std::vector<double> elements)
-            : elements(std::move(elements)), size(this->elements.size()) {}
+            : CollectionStateData(std::move(elements), elements.size()) {}
 
     CollectionStateData(std::vector<double> elements, ssize_t size)
-            : elements(std::move(elements)), size(size) {}
+            : elements(std::move(elements)), size(size) {
+        assert(0 <= size && static_cast<std::size_t>(size) <= this->elements.size());
+    }
+
+    void assign(std::vector<double>&& values, ssize_t size) {
+        // this should have been checked already by the CollectionNode
+        assert(values.size() == elements.size());
+
+        // First, let's note the public changes to the visible part of the buffer
+        const ssize_t overlap_length = std::min(this->size, size);
+        for (ssize_t i = 0; i < overlap_length; ++i) {
+            updates.emplace_back(i, elements[i], values[i]);
+        }
+
+        // Next, actually swap the buffers (tracking the changes for a later revert)
+        for (ssize_t i = 0, n = elements.size(); i < n; ++i) {
+            if (elements[i] == values[i]) continue;  // no change
+            all_updates.emplace_back(i, elements[i], values[i]);
+        }
+        std::swap(elements, values);
+
+        // Finally do the resize until we're at the correct size
+        while (this->size < size) grow();
+        while (this->size > size) shrink();
+
+        assert(this->size == size);
+    }
 
     void commit() {
-        previous.clear();
+        updates.clear();
         all_updates.clear();
         previous_size = size;
+    }
+
+    std::unique_ptr<NodeStateData> copy() const override {
+        return std::make_unique<CollectionStateData>(*this);
     }
 
     void exchange(ssize_t i, ssize_t j) {
@@ -52,13 +131,33 @@ struct CollectionStateData : NodeStateData {
 
         // only track changes within the visible part of the array
         if (i < size && j < size) {
-            previous.emplace_back(i, elements[j], elements[i]);
-            previous.emplace_back(j, elements[i], elements[j]);
+            updates.emplace_back(i, elements[j], elements[i]);
+            updates.emplace_back(j, elements[i], elements[j]);
         } else if (j < size) {
-            previous.emplace_back(j, elements[i], elements[j]);
+            updates.emplace_back(j, elements[i], elements[j]);
         } else if (i < size) {
-            previous.emplace_back(i, elements[j], elements[i]);
+            updates.emplace_back(i, elements[j], elements[i]);
         }  // if neither are visible we don't need to track it
+    }
+
+    void grow() {
+        assert(size < static_cast<ssize_t>(elements.size()));
+        updates.emplace_back(Update::placement(size, elements[size]));
+        ++size;
+    }
+
+    void revert() {
+        // Un-apply any changes by working backwards through all updates.
+        // If we end up enforcing updates being sorted and unique later then
+        // we could do this any order (or better in parallel).
+
+        for (const Update& update : all_updates | std::views::reverse) {
+            elements[update.index] = update.old;
+        }
+
+        updates.clear();
+        all_updates.clear();
+        size = previous_size;
     }
 
     void rotate(ssize_t dest_idx, ssize_t src_idx) {
@@ -72,54 +171,50 @@ struct CollectionStateData : NodeStateData {
             for (ssize_t i = dest_idx; i <= src_idx; i++) {
                 std::swap(elements[i], prev);
                 all_updates.emplace_back(i, prev, elements[i]);
-                previous.emplace_back(i, prev, elements[i]);
+                updates.emplace_back(i, prev, elements[i]);
             }
         } else if (src_idx < dest_idx) {
             auto prev = elements[src_idx];
             for (ssize_t i = dest_idx; i >= src_idx; i--) {
                 std::swap(elements[i], prev);
                 all_updates.emplace_back(i, prev, elements[i]);
-                previous.emplace_back(i, prev, elements[i]);
+                updates.emplace_back(i, prev, elements[i]);
             }
         }
-    }
-
-    void grow() {
-        assert(size < static_cast<ssize_t>(elements.size()));
-        previous.emplace_back(Update::placement(size, elements[size]));
-        ++size;
-    }
-
-    void revert() {
-        // Un-apply any changes by working backwards through all updates.
-        // If we end up enforcing previous being sorted and unique later then
-        // we could do this any order (or better in parallel).
-
-        for (const Update& update : all_updates | std::views::reverse) {
-            elements[update.index] = update.old;
-        }
-
-        previous.clear();
-        all_updates.clear();
-        size = previous_size;
     }
 
     void shrink() {
         assert(size > 0);
         --size;
-        previous.emplace_back(Update::removal(size, elements[size]));
+        updates.emplace_back(Update::removal(size, elements[size]));
     }
 
-    std::unique_ptr<NodeStateData> copy() const override {
-        return std::make_unique<CollectionStateData>(*this);
-    }
-
+    // The elements in the collection
     std::vector<double> elements;
-    std::vector<Update> previous;
+
+    // The updates to the *visible* elements
+    std::vector<Update> updates;
+
+    // The updates to the buffer, including the changes that are not currently
+    // visible to the user
     std::vector<Update> all_updates;
+
+    // The current size of visible buffer, as well as the size after the last
+    // commit/revert
     ssize_t size;
     ssize_t previous_size = size;
 };
+
+void CollectionNode::assign(State& state, std::vector<double> values) const {
+    const ssize_t size = values.size();
+    if (size < min_size_) throw std::invalid_argument("values does not contain enough values");
+    if (size > max_size_) throw std::invalid_argument("values contains too many values");
+
+    // Check that the values are a proper subset and fill out the invisible part
+    auto augemented = augment_collection(std::move(values), max_value_);
+
+    data_ptr<CollectionStateData>(state)->assign(std::move(augemented), size);
+}
 
 void CollectionNode::commit(State& state) const { data_ptr<CollectionStateData>(state)->commit(); }
 
@@ -129,7 +224,7 @@ double const* CollectionNode::buff(const State& state) const {
 }
 
 std::span<const Update> CollectionNode::diff(const State& state) const {
-    return data_ptr<CollectionStateData>(state)->previous;
+    return data_ptr<CollectionStateData>(state)->updates;
 }
 
 void CollectionNode::exchange(State& state, ssize_t i, ssize_t j) const {
@@ -148,35 +243,15 @@ void CollectionNode::grow(State& state) const {
     data_ptr<CollectionStateData>(state)->grow();
 }
 
-void CollectionNode::initialize_state(State& state, std::vector<double> contents) const {
-    if (static_cast<ssize_t>(contents.size()) < min_size_) {
-        throw std::invalid_argument("contents is shorter than the List's minimum size");
-    }
-    if (static_cast<ssize_t>(contents.size()) > max_size_) {
-        throw std::invalid_argument("contents is longer than the List's maximum size");
-    }
+void CollectionNode::initialize_state(State& state, std::vector<double> values) const {
+    const ssize_t size = values.size();
+    if (size < min_size_) throw std::invalid_argument("values does not contain enough values");
+    if (size > max_size_) throw std::invalid_argument("values contains too many values");
 
-    for (const auto& val : contents) {
-        if (ssize_t(val) != val) throw std::invalid_argument("contents must be integral");
-        if (val < 0) throw std::invalid_argument("contents must be non-negative");
-        if (val >= max_value_) throw std::invalid_argument("contents too large for the collection");
-    }
+    // Check that the values are a proper subset and fill out the invisible part
+    auto augemented = augment_collection(std::move(values), max_value_);
 
-    // now confirm that we have a permutation
-    std::unordered_set<double> set(contents.begin(), contents.end());
-    if (set.size() < contents.size()) {
-        throw std::invalid_argument("contents must be unique");
-    }
-
-    // finally, augment contents with the rest of the values so it's a permutation of range(n)
-    for (ssize_t i = 0; i < max_value_; ++i) {
-        if (set.count(static_cast<double>(i))) continue;  // already present
-        contents.emplace_back(i);
-    }
-
-    assert(static_cast<ssize_t>(contents.size()) == max_value_);
-
-    emplace_data_ptr<CollectionStateData>(state, std::move(contents), set.size());
+    emplace_data_ptr<CollectionStateData>(state, std::move(augemented), size);
 }
 
 std::pair<double, double> CollectionNode::minmax(

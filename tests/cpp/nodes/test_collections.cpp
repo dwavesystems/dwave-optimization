@@ -393,6 +393,25 @@ TEST_CASE("ListNode") {
                     }
                 }
             }
+
+            AND_WHEN("We rewrite the state explicitly") {
+                ptr->assign(state, {0, 4, 2, 1, 3});
+                graph.propagate(state);
+
+                CHECK_THAT(ptr->view(state), RangeEquals({0, 4, 2, 1, 3}));
+
+                AND_WHEN("We commit") {
+                    graph.commit(state);
+                    CHECK_THAT(ptr->view(state), RangeEquals({0, 4, 2, 1, 3}));
+                    CHECK(ptr->diff(state).empty());
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+                    CHECK_THAT(ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
+                    CHECK(ptr->diff(state).empty());
+                }
+            }
         }
     }
 }
@@ -463,6 +482,45 @@ TEST_CASE("SetNode") {
                         CHECK(ptr->size_diff(state) == 0);
                         CHECK(ptr->diff(state).size() == 0);
                     }
+                }
+            }
+
+            AND_WHEN("We rewrite the state explicitly") {
+                ptr->assign(state, {9, 4, 3});
+                graph.propagate(state);
+
+                CHECK_THAT(ptr->view(state), RangeEquals({9, 4, 3}));
+
+                AND_WHEN("We commit") {
+                    graph.commit(state);
+                    CHECK_THAT(ptr->view(state), RangeEquals({9, 4, 3}));
+                    CHECK(ptr->diff(state).empty());
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+                    CHECK_THAT(ptr->view(state), RangeEquals(std::vector<int>{}));
+                    CHECK(ptr->diff(state).empty());
+                }
+            }
+
+            AND_WHEN("We rewrite the state explicitly and then shrink") {
+                ptr->assign(state, {9, 4, 3});
+                ptr->shrink(state);
+                graph.propagate(state);
+
+                CHECK_THAT(ptr->view(state), RangeEquals({9, 4}));
+
+                AND_WHEN("We commit") {
+                    graph.commit(state);
+                    CHECK_THAT(ptr->view(state), RangeEquals({9, 4}));
+                    CHECK(ptr->diff(state).empty());
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+                    CHECK_THAT(ptr->view(state), RangeEquals(std::vector<int>{}));
+                    CHECK(ptr->diff(state).empty());
                 }
             }
         }

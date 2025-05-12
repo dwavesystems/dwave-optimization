@@ -1,0 +1,6 @@
+---
+features:
+  - Improve the error messages returned by ``ListVariable.set_state()`` and ``SetVariable.set_state()``.
+  - Add C++ ``CollectionNode::assign()`` method.
+upgrade:
+  - Rename the first argument ``ListVariable.set_state()`` and ``SetVariable.set_state()`` from ``state`` to ``values``.

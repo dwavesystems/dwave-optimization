@@ -2528,15 +2528,16 @@ cdef class ListVariable(ArraySymbol):
 
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
 
-    def set_state(self, Py_ssize_t index, state):
+    def set_state(self, Py_ssize_t index, values):
         """Set the state of the list node.
 
-        The given state must be a permuation of ``range(len(state))``.
+        The given values must be a sub-permuation of ``range(n)`` where ``n`` is
+        the size of the list.
         """
-        # Convert the state into something we can handle in C++.
+        # Convert the values into something we can handle in C++.
         # This also does some type checking etc
         # We go ahead and do the translation to integer now
-        cdef Py_ssize_t[:] arr = np.asarray(state, dtype=np.intp)
+        cdef Py_ssize_t[:] arr = np.asarray(values, dtype=np.intp)
 
         # Reset our state, and check whether that's possible
         self.reset_state(index)
@@ -3701,18 +3702,19 @@ cdef class SetVariable(ArraySymbol):
 
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
 
-    def set_state(self, Py_ssize_t index, state):
+    def set_state(self, Py_ssize_t index, values):
         """Set the state of the set node.
 
-        The given state must be a permuation of ``range(len(state))``.
+        The given state must be a subset of ``range(n)`` where ``n`` is the size
+        of the set.
         """
-        if isinstance(state, collections.abc.Set):
-            state = sorted(state)
+        if isinstance(values, collections.abc.Set):
+            values = sorted(values)
 
         # Convert the state into something we can handle in C++.
         # This also does some type checking etc
         # We go ahead and do the translation to integer now
-        cdef Py_ssize_t[:] arr = np.asarray(state, dtype=np.intp)
+        cdef Py_ssize_t[:] arr = np.asarray(values, dtype=np.intp)
 
         # Reset our state, and check whether that's possible
         self.reset_state(index)

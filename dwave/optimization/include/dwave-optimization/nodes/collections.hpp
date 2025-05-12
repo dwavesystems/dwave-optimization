@@ -30,7 +30,7 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     CollectionNode() = delete;
 
     // Set the node's initial state explicitly
-    void initialize_state(State& state, std::vector<double> contents) const;
+    void initialize_state(State& state, std::vector<double> values) const;
     using Node::initialize_state;  // inherit the default overload
 
     // Overloads needed by the Array ABC **************************************
@@ -57,6 +57,14 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     void commit(State&) const override;
     void revert(State&) const override;
 
+    // Information about the size of the collection.
+    SizeInfo sizeinfo() const override;
+
+    // Moves ******************************************************************
+
+    // Set the node's state, tracking the diff.
+    void assign(State& state, std::vector<double> values) const;
+
     // Exchange the values in the list at index i and index j
     // Note that for variable-length collections these indices might not
     // be in the "visible" range.
@@ -71,9 +79,6 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     // Shrink the size of the collection by one
     void shrink(State& state) const;
-
-    // Information about the size of the collection.
-    SizeInfo sizeinfo() const override;
 
  protected:
     CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size)
