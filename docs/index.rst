@@ -33,11 +33,14 @@ Design Principals
 :ref:`design principals <optimization_philosophy>` from each of the following
 areas:
 
-.. grid:: 2
-    :gutter: 3
+.. developer note: this will look funny when build locally but looks fine as
+   part of the sdk
+
+.. grid:: 2 2 3 2
+    :gutter: 2
 
     .. grid-item-card:: Quantum Optimization
-        :class-body: sd-outline-warning
+        :img-top: /_images/optimization_quantum_icon.svg
         :link: optimization_philosophy_quantum_optimization
         :link-type: ref
 
@@ -45,7 +48,7 @@ areas:
         compute.
 
     .. grid-item-card:: (Mixed-Integer) Linear Programming
-        :class-body: sd-outline-info
+        :img-top: /_images/optimization_lp_icon.svg
         :link: optimization_philosophy_linear_programming
         :link-type: ref
 
@@ -53,7 +56,7 @@ areas:
         solvers.
 
     .. grid-item-card:: Lists, Sets, and other combinatorial variables
-        :class-body: sd-outline-info
+        :img-top: /_images/optimization_combinatorial_icon.svg
         :link: optimization_philosophy_constraint_programming
         :link-type: ref
 
@@ -61,7 +64,7 @@ areas:
         optimization simpler and more performant.
 
     .. grid-item-card:: Tensor Programming
-        :class-body: sd-outline-info
+        :img-top: /_images/optimization_tensor_icon.svg
         :link: optimization_philosophy_tensor_programming
         :link-type: ref
 
