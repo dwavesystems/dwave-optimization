@@ -12,7 +12,14 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from libcpp.functional cimport function
+
 # As of Cython 3.0.8 these are not in Cython's libcpp
+
+cdef extern from "<functional>" namespace "std" nogil:
+    # We just do the overloads we need
+    function[double(int)] bind_front(double(void*, int), void*)
+    function[double(int, int)] bind_front(double(void*, int, int), void*)
 
 cdef extern from "<span>" namespace "std" nogil:
     cdef cppclass span[T]:
