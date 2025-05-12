@@ -144,5 +144,40 @@ the solver is more likely to be able to find an optimal solution.
 Tensor Programming
 ==================
 
-Lorem ipsum
+`NumPy <https://numpy.org/>`_ is the most popular scientific computing library
+in Python. The NumPy library contains data structures for multidimensional arrays.
+To learn more, NumPy provides an excellent
+`introduction to arrays <https://numpy.org/doc/stable/user/absolute_beginners.html>`_.
 
+Working with arrays can be beneficial for readability and for performance.
+Consider calculating the dot product of two lists of numbers ``a`` and ``b``.
+This can be accomplished in Python with
+
+.. code-block:: python
+
+    a = [...]
+    b = [...]
+    value = sum(u * b for u, v in zip(a, b))
+
+But it is more readable and more performant to express it using array operations
+
+.. code-block:: python
+
+    a = np.asarray([...])
+    b = np.asarray([...])
+
+    value = (a * b).sum()  # or even np.dot(a, b)
+
+*dwave-optimization* can be thought of as a framework for symbolically encoding
+operations over multidimensional arrays. It therefore inherits much of its API
+as well as performance intuition from NumPy. With *dwave-optimization* the
+previous example can be expressed as
+
+.. code-block:: python
+
+    model = dwave.optimization.Model()
+
+    a = model.constant([...])
+    b = model.constant([...])
+
+    value = (a * b).sum()
