@@ -57,7 +57,7 @@ areas:
 
     .. grid-item-card:: Lists, Sets, and other combinatorial variables
         :img-top: /_images/optimization_combinatorial_icon.svg
-        :link: optimization_philosophy_constraint_programming
+        :link: optimization_philosophy_combinatorial_variables
         :link-type: ref
 
         Explore how lists, sets, and other combinatorial structures make
