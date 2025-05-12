@@ -14,48 +14,6 @@
 
 # As of Cython 3.0.8 these are not in Cython's libcpp
 
-cdef extern from "<span>" namespace "std" nogil:
-    cdef cppclass span[T]:
-        ctypedef size_t size_type
-        ctypedef ptrdiff_t difference_type
-
-        cppclass iterator:
-            iterator() except +
-            iterator(iterator&) except +
-            T& operator*()
-            iterator operator++()
-            iterator operator--()
-            iterator operator++(int)
-            iterator operator--(int)
-            iterator operator+(size_type)
-            iterator operator-(size_type)
-            difference_type operator-(iterator)
-            difference_type operator-(const_iterator)
-            bint operator==(iterator)
-            bint operator==(const_iterator)
-            bint operator!=(iterator)
-            bint operator!=(const_iterator)
-            bint operator<(iterator)
-            bint operator<(const_iterator)
-            bint operator>(iterator)
-            bint operator>(const_iterator)
-            bint operator<=(iterator)
-            bint operator<=(const_iterator)
-            bint operator>=(iterator)
-            bint operator>=(const_iterator)
-
-        span()
-        span(T* ptr)
-        span(T*, size_type) except +  # span[It](It, size_type)
-
-        T& operator[](ssize_t)
-
-        iterator begin()
-        T* data()
-        iterator end()
-        size_type size()
-
-
 cdef extern from "<variant>" namespace "std" nogil:
     cdef cppclass variant[T, U]:
         variant()

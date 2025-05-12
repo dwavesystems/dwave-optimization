@@ -27,10 +27,11 @@ from cython.operator cimport dereference as deref, typeid
 from libc.math cimport modf
 from libcpp cimport bool
 from libcpp.optional cimport nullopt, optional
+from libcpp.span cimport span
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
-from dwave.optimization.libcpp cimport dynamic_cast_ptr, get, holds_alternative, span
+from dwave.optimization.libcpp cimport dynamic_cast_ptr, get, holds_alternative
 from dwave.optimization.libcpp.array cimport (
     Array as cppArray,
     SizeInfo as cppSizeInfo,
