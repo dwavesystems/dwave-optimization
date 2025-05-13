@@ -92,8 +92,8 @@ py.extension_module(
 )
 
 py.extension_module(
-    'symbols',
-    'dwave/optimization/symbols.pyx',
+    '_symbols',
+    'dwave/optimization/_symbols.pyx',
     dependencies: libdwave_optimization,
     gnu_symbol_visibility: 'default',
     install: true,
