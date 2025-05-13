@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 from dwave.optimization.symbols.collections import *
+from dwave.optimization.symbols.constants import *
 
 from dwave.optimization._symbols import *
 from dwave.optimization._symbols import _ArrayValidation

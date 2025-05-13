@@ -102,7 +102,7 @@ py.extension_module(
     subdir: 'dwave/optimization/',
 )
 
-foreach name : ['collections']
+foreach name : ['collections', 'constants']
     py.extension_module(
         name,
         'dwave/optimization/symbols/' + name + '.pyx',

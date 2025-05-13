@@ -27,10 +27,7 @@ ctypedef const Array* ArrayPtr
 ctypedef ArrayNode* ArrayNodePtr
 
 from dwave.optimization.libcpp.nodes.collections cimport *
-
-cdef extern from "dwave-optimization/nodes/constants.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass ConstantNode(ArrayNode):
-        const double* buff() const
+from dwave.optimization.libcpp.nodes.constants cimport *
 
 
 cdef extern from "dwave-optimization/nodes/creation.hpp" namespace "dwave::optimization" nogil:
