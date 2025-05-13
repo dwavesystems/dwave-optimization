@@ -64,6 +64,20 @@ class TestAbsolute(utils.UnaryOpTests):
         self.assertIsInstance(a, Absolute)
         self.assertEqual(model.num_symbols(), 2)
 
+    def test_absolute(self):
+        from dwave.optimization.symbols import Absolute
+
+        model = Model()
+        x = model.integer(5, lower_bound=-5, upper_bound=5)
+        a = dwave.optimization.absolute(x)
+        self.assertIsInstance(a, Absolute)
+        self.assertEqual(model.num_symbols(), 2)
+
+        model.states.resize(1)
+        with model.lock():
+            x.set_state(0, [-2, -1, 0, 1, 5])
+            np.testing.assert_array_equal(a.state(), [2, 1, 0, 1, 5])
+
 
 class TestAdd(utils.BinaryOpTests):
     def generate_symbols(self):

@@ -258,16 +258,8 @@ cdef bool _empty_slice(object slice_) noexcept:
 cdef class Absolute(ArraySymbol):
     """Absolute value element-wise on a symbol.
 
-    Examples:
-        This example adds the absolute value of an integer decision
-        variable to a model.
-
-        >>> from dwave.optimization.model import Model
-        >>> model = Model()
-        >>> i = model.integer(1, lower_bound=-50, upper_bound=50)
-        >>> i_abs = abs(i)
-        >>> type(i_abs)
-        <class 'dwave.optimization.symbols.Absolute'>
+    See Also:
+        :func:`~dwave.optimization.mathematical.absolute`: equivalent function.
     """
     def __init__(self, ArraySymbol x):
         cdef _Graph model = x.model
