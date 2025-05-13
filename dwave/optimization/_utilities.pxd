@@ -13,9 +13,8 @@
 #    limitations under the License.
 
 from libc.stdint cimport int16_t, int32_t, int64_t
+from libcpp.span cimport span
 from libcpp.vector cimport vector
-
-from dwave.optimization.libcpp cimport span
 
 __all__ = ["as_cppshape", "as_span"]
 

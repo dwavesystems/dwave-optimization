@@ -14,9 +14,9 @@
 
 from libcpp cimport bool
 from libcpp.memory cimport shared_ptr, unique_ptr
+from libcpp.span cimport span
 from libcpp.vector cimport vector
 
-from dwave.optimization.libcpp cimport span
 from dwave.optimization.libcpp.array cimport Array
 from dwave.optimization.libcpp.state cimport State
 

@@ -41,5 +41,5 @@ cdef vector[Py_ssize_t] as_cppshape(object shape, bint nonnegative = True):
 cdef span[numeric] as_span(numeric[::1] array):
     """Convert a Cython memoryview over contiguous memory into a C++ span"""
     if array.size:
-        return span[numeric](&array[0], array.size)
+        return span[numeric](&array[0], <size_t>array.size)
     return span[numeric]()

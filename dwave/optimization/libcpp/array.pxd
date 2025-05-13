@@ -13,9 +13,9 @@
 #    limitations under the License.
 
 from libcpp.optional cimport optional
+from libcpp.span cimport span
 from libcpp.string cimport string
 
-from dwave.optimization.libcpp cimport span
 from dwave.optimization.libcpp.state cimport State
 
 __all__ = ["Array"]
