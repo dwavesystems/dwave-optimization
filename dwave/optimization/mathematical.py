@@ -51,6 +51,7 @@ from dwave.optimization.symbols import (
 
 
 __all__ = [
+    "absolute",
     "add",
     "arange",
     "atleast_1d",
@@ -96,6 +97,30 @@ def _op(BinaryOp: type, NaryOp: type, reduce_method: str):
                 return NaryOp(x1, *xi, **kwargs)
         return wrapper
     return decorator
+
+
+absolute = abs
+"""Absolute value element-wise on a symbol.
+
+An alias for :func:`abs`.
+
+Examples:
+    This example adds the absolute value of an integer decision
+    variable to a model.
+
+    >>> from dwave.optimization.model import Model
+    >>> model = Model()
+    >>> x = abs(model.constant([-2, 0, 1]))
+    >>> model.states.resize(1)
+    >>> with model.lock():
+    ...     print(x.state())
+    [2. 0. 1.]
+
+See Also:
+    :class:`~dwave.optimization.symbols.Absolute`: equivalent symbol.
+
+.. versionadded:: 0.6.2
+"""
 
 
 @_op(Add, NaryAdd, "sum")
