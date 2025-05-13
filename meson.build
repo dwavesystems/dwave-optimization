@@ -102,6 +102,19 @@ py.extension_module(
     subdir: 'dwave/optimization/',
 )
 
+foreach name : ['collections']
+    py.extension_module(
+        name,
+        'dwave/optimization/symbols/' + name + '.pyx',
+        dependencies: libdwave_optimization,
+        gnu_symbol_visibility: 'default',
+        install: true,
+        install_rpath: '$ORIGIN',
+        override_options : ['cython_language=cpp'],
+        subdir: 'dwave/optimization/symbols/',
+    )
+endforeach
+
 py.extension_module(
     '_utilities',
     'dwave/optimization/_utilities.pyx',

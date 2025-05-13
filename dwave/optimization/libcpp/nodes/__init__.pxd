@@ -26,32 +26,7 @@ from dwave.optimization.libcpp.state cimport State
 ctypedef const Array* ArrayPtr
 ctypedef ArrayNode* ArrayNodePtr
 
-
-cdef extern from "dwave-optimization/nodes/collections.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass DisjointBitSetsNode(Node):
-        void initialize_state(State&, vector[vector[double]]) except+
-        Py_ssize_t primary_set_size() const
-        Py_ssize_t num_disjoint_sets() const
-
-    cdef cppclass DisjointBitSetNode(ArrayNode):
-        Py_ssize_t set_index()
-
-    cdef cppclass DisjointListsNode(Node):
-        void initialize_state(State&, vector[vector[double]]) except+
-        Py_ssize_t num_disjoint_lists() const
-        Py_ssize_t primary_set_size() const
-
-    cdef cppclass DisjointListNode(ArrayNode):
-        Py_ssize_t list_index()
-
-    cdef cppclass ListNode(ArrayNode):
-        ListNode(Py_ssize_t) except+
-        void initialize_state(State&, vector[double]) except+
-
-    cdef cppclass SetNode(ArrayNode):
-        SetNode(Py_ssize_t, Py_ssize_t, Py_ssize_t) except+
-        void initialize_state(State&, vector[double]) except+
-
+from dwave.optimization.libcpp.nodes.collections cimport *
 
 cdef extern from "dwave-optimization/nodes/constants.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ConstantNode(ArrayNode):

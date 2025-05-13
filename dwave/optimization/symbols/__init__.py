@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from dwave.optimization.symbols.collections import *
+
 from dwave.optimization._symbols import *
 from dwave.optimization._symbols import _ArrayValidation
 
