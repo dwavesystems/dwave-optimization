@@ -64,3 +64,18 @@ cdef extern from "<variant>" namespace "std" nogil:
 
     T get[T](...)
     bint holds_alternative[T](...)
+
+
+# We would like to be able to do constructions like dynamic_cast[cppConstantNode*](...)
+# but Cython does not allow pointers as template types
+# see https://github.com/cython/cython/issues/2143
+# So instead we create our own wrapper to handle this case. Crucially, the
+# template type is the class, but it dynamically casts on the pointer
+cdef extern from *:
+    """
+    template<class T, class F>
+    T* dynamic_cast_ptr(F* ptr) {
+        return dynamic_cast<T*>(ptr);
+    }
+    """
+    cdef T* dynamic_cast_ptr[T](...) noexcept

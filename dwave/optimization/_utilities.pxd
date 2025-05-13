@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave
+# Copyright 2025 D-Wave
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,13 +12,24 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from libcpp.typeinfo cimport type_info
+from libc.stdint cimport int16_t, int32_t, int64_t
+from libcpp.vector cimport vector
 
-from dwave.optimization.libcpp.graph cimport Array as cppArray
-from dwave.optimization.libcpp.graph cimport Node as cppNode
-from dwave.optimization.model cimport _Graph, Symbol
+from dwave.optimization.libcpp cimport span
+
+__all__ = ["as_cppshape", "as_span"]
 
 
-cdef void _register(object cls, const type_info& typeinfo)
+# cython.numeric includes complex numbers which we don't want
+ctypedef fused numeric:
+    signed char  # int8_t, but Cython is grumpy about that for some reason
+    int16_t
+    int32_t
+    int64_t
+    float
+    double
 
-cdef object symbol_from_ptr(_Graph model, cppNode* ptr)
+
+cdef vector[Py_ssize_t] as_cppshape(object shape, bint nonnegative=?)
+
+cdef span[numeric] as_span(numeric[::1] array)

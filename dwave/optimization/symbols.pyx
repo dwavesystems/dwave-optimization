@@ -23,18 +23,14 @@ import cython
 cimport cython
 import numpy as np
 
-from cpython.ref cimport PyObject
 from cython.operator cimport dereference as deref, typeid
 from libc.math cimport modf
 from libcpp cimport bool
-from libcpp.cast cimport dynamic_cast
 from libcpp.optional cimport nullopt, optional
-from libcpp.typeindex cimport type_index
-from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
-from dwave.optimization.libcpp cimport get, holds_alternative, span
+from dwave.optimization.libcpp cimport dynamic_cast_ptr, get, holds_alternative, span
 from dwave.optimization.libcpp.array cimport (
     Array as cppArray,
     SizeInfo as cppSizeInfo,
@@ -109,9 +105,17 @@ from dwave.optimization.libcpp.nodes cimport (
     SumNode as cppSumNode,
     WhereNode as cppWhereNode,
     XorNode as cppXorNode,
-    )
-from dwave.optimization.model cimport ArraySymbol, _Graph, Symbol
+)
+from dwave.optimization._model cimport (
+    ArraySymbol,
+    _Graph,
+    _register,
+    Symbol,
+    symbol_from_ptr,
+)
 from dwave.optimization.states cimport States
+from dwave.optimization._utilities cimport as_cppshape, as_span
+
 
 __all__ = [
     "Absolute",
@@ -176,83 +180,7 @@ __all__ = [
     "Xor",
     ]
 
-# We would like to be able to do constructions like dynamic_cast[cppConstantNode*](...)
-# but Cython does not allow pointers as template types
-# see https://github.com/cython/cython/issues/2143
-# So instead we create our own wrapper to handle this case. Crucially, the
-# template type is the class, but it dynamically casts on the pointer
-cdef extern from *:
-    """
-    template<class T, class F>
-    T* dynamic_cast_ptr(F* ptr) {
-        return dynamic_cast<T*>(ptr);
-    }
-    """
-    cdef T* dynamic_cast_ptr[T](...) noexcept
 
-# Store a mapping from the type_index of each C++ Node type to the relevant
-# Cython class. We don't refcount the PyObject*s pointing to each class because
-# the lifespace of this map is identical to that of the type objects.
-cdef unordered_map[type_index, PyObject*] _cpp_type_to_python
-
-# Register a mapping between the given Cython class and C++ class.
-cdef void _register(object cls, const type_info& typeinfo):
-    """Register a Python/Cython symbol to allow it to be created from a pointer
-    via `symbol_from_ptr`.
-    """
-    _cpp_type_to_python[type_index(typeinfo)] = <PyObject*>(cls)
-
-
-cdef object symbol_from_ptr(_Graph model, cppNode* node_ptr):
-    """Create a Python/Cython symbol from a C++ Node*."""
-
-    # If it's null, either after the cast of just as given, then we can't get a symbol from it
-    if not node_ptr:
-        raise ValueError("cannot construct a Symbol from the given pointer")
-
-    try:
-        cls = <object>_cpp_type_to_python.at(type_index(typeid(deref(node_ptr))))
-    except IndexError:
-        # IndexError would be returned by .at()
-        raise RuntimeError("given pointer cannot be cast to a known node type") from None
-
-    # In order to get nice polymorphism, it's much easier to pass the dispatch
-    # through Python, so we construct a generic Symbol holding the pointer and then
-    # construct the specific symbol from it.
-    return cls._from_symbol(Symbol.from_ptr(model, node_ptr))
-
-
-cdef vector[Py_ssize_t] _as_cppshape(object shape, bint nonnegative = True):
-    """Convert a shape specified as a python object to a C++ vector."""
-
-    # Use the same error messages as NumPy
-
-    if isinstance(shape, numbers.Integral):
-        return _as_cppshape((shape,), nonnegative=nonnegative)
-
-    if not isinstance(shape, collections.abc.Sequence):
-        raise TypeError(f"expected a sequence of integers or a single integer, got '{repr(shape)}'")
-
-    shape = tuple(shape)  # cast from list or whatever
-
-    if not all(isinstance(x, numbers.Integral) for x in shape):
-        raise ValueError(f"expected a sequence of integers or a single integer, got '{repr(shape)}'")
-
-    if nonnegative and any(x < 0 for x in shape):
-        raise ValueError("negative dimensions are not allowed")
-
-    return shape
-
-
-cdef span[cython.numeric] _as_span(cython.numeric[::1] array):
-    """Convert a Cython memoryview over contiguous memory into a C++ span"""
-    if array.size:
-        return span[cython.numeric](&array[0], array.size)
-    return span[cython.numeric]()
-
-
-cdef bool _empty_slice(object slice_) noexcept:
-    return slice_.start is None and slice_.stop is None and slice_.step is None
 
 
 cdef class Absolute(ArraySymbol):
@@ -577,6 +505,10 @@ cdef class ARange(ArraySymbol):
 _register(ARange, typeid(cppARangeNode))
 
 
+cdef bool _empty_slice(object slice_) noexcept:
+    return slice_.start is None and slice_.stop is None and slice_.step is None
+
+
 cdef class AdvancedIndexing(ArraySymbol):
     """Advanced indexing.
 
@@ -823,7 +755,7 @@ cdef class BinaryVariable(ArraySymbol):
     """
     def __init__(self, _Graph model, shape=None):
         # Get an observing pointer to the node
-        cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape)
+        cdef vector[Py_ssize_t] vshape = as_cppshape(tuple() if shape is None else shape)
 
         self.ptr = model._graph.emplace_node[cppBinaryNode](vshape)
 
@@ -1999,7 +1931,7 @@ cdef class Input(ArraySymbol):
         double upper_bound = float("inf"),
         bool integral = False,
     ):
-        cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape)
+        cdef vector[Py_ssize_t] vshape = as_cppshape(tuple() if shape is None else shape)
 
         cdef _Graph cygraph = model
 
@@ -2027,7 +1959,7 @@ cdef class Input(ArraySymbol):
 
         self.ptr.initialize_state(
             (<States>self.model.states)._states[index],
-            <span[const double]>_as_span(arr)
+            <span[const double]>as_span(arr)
         )
 
     @staticmethod
@@ -2086,7 +2018,7 @@ cdef class IntegerVariable(ArraySymbol):
         <class 'dwave.optimization.symbols.IntegerVariable'>
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
-        cdef vector[Py_ssize_t] vshape = _as_cppshape(tuple() if shape is None else shape )
+        cdef vector[Py_ssize_t] vshape = as_cppshape(tuple() if shape is None else shape )
 
         if lower_bound is None and upper_bound is None:
             self.ptr = model._graph.emplace_node[cppIntegerNode](vshape)
@@ -2343,7 +2275,7 @@ cdef class LinearProgram(Symbol):
             self.model._graph.recursive_initialize(states._states.at(index), (<Symbol>pred).node_ptr)
 
         # The validity of the state is checked in C++
-        self.ptr.initialize_state(states._states.at(index), _as_span(arr))
+        self.ptr.initialize_state(states._states.at(index), as_span(arr))
 
     def _states_from_zipfile(self, zf, *, num_states, version):
         if version < (1, 0):
@@ -3628,7 +3560,7 @@ cdef class Reshape(ArraySymbol):
 
         self.ptr = model._graph.emplace_node[cppReshapeNode](
             node.array_ptr,
-            _as_cppshape(shape, nonnegative=False),
+            as_cppshape(shape, nonnegative=False),
             )
 
         self.initialize_arraynode(model, self.ptr)

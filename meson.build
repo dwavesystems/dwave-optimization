@@ -102,6 +102,16 @@ py.extension_module(
     subdir: 'dwave/optimization/',
 )
 
+py.extension_module(
+    '_utilities',
+    'dwave/optimization/_utilities.pyx',
+    gnu_symbol_visibility: 'default',
+    install: true,
+    install_rpath: '$ORIGIN',
+    override_options : ['cython_language=cpp'],
+    subdir: 'dwave/optimization/',
+)
+
 install_subdir('dwave', install_dir: py.get_install_dir(pure: false))
 
 # meson doesn't disable tests by default, so we let the user decide via the build-tests
