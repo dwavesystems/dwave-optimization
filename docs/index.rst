@@ -33,7 +33,7 @@ Design Principals
 :ref:`design principals <optimization_philosophy>` from each of the following
 areas:
 
-.. developer note: this will look funny when build locally but looks fine as
+.. developer note: this will look funny when built locally but looks fine as
    part of the sdk
 
 .. grid:: 2 2 3 2
@@ -55,7 +55,7 @@ areas:
         Learn the basics of solving optimization problems with linear program
         solvers.
 
-    .. grid-item-card:: Lists, Sets, and other combinatorial variables
+    .. grid-item-card:: Lists, Sets, and Other Combinatorial Variables
         :img-top: /_images/optimization_combinatorial_icon.svg
         :link: optimization_philosophy_combinatorial_variables
         :link-type: ref
