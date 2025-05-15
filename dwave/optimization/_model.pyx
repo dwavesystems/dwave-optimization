@@ -1891,6 +1891,3 @@ cdef class ArraySymbol(Symbol):
             return dwave.optimization.symbols.PartialSum(self, axis)
 
         return dwave.optimization.symbols.Sum(self)
-
-cdef class A:
-    pass
