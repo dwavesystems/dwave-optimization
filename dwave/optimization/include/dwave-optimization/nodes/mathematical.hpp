@@ -164,7 +164,7 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     }
 
  private:
-    using op = BinaryOp;
+    BinaryOp op;
 
     // There are redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
@@ -224,7 +224,7 @@ class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
     }
 
  private:
-    using op = BinaryOp;
+    BinaryOp op;
 
     std::vector<Array*> operands_;
 };
@@ -286,7 +286,7 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
     const std::optional<double> init;
 
  private:
-    using op = BinaryOp;
+    BinaryOp op;
 
     // There are redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
@@ -349,7 +349,7 @@ class ReduceNode : public ScalarOutputMixin<ArrayNode> {
     const std::optional<double> init;
 
  private:
-    using op = BinaryOp;
+    BinaryOp op;
 
     // Calculate the output value based on the state of the predecessor
     double reduce(const State& state) const;
@@ -404,7 +404,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     }
 
  private:
-    using op = UnaryOp;
+    UnaryOp op;
 
     // There are redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
