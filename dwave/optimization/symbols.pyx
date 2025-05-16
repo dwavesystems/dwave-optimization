@@ -839,7 +839,7 @@ cdef class BSpline(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppBSplineNode * ptr = dynamic_cast_ptr[cppBSplineNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a BSpline")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
         cdef BSpline m = BSpline.__new__(BSpline)
         m.ptr = ptr
         m.initialize_arraynode(symbol.model, ptr)
@@ -917,7 +917,7 @@ cdef class Concatenate(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppConcatenateNode* ptr = dynamic_cast_ptr[cppConcatenateNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Concatenate")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef Concatenate m = Concatenate.__new__(Concatenate)
         m.ptr = ptr
@@ -1049,7 +1049,7 @@ cdef class Constant(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppConstantNode* ptr = dynamic_cast_ptr[cppConstantNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Constant")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef Constant constant = Constant.__new__(Constant)
         constant.ptr = ptr
@@ -1184,7 +1184,7 @@ cdef class DisjointBitSets(Symbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppDisjointBitSetsNode* ptr = dynamic_cast_ptr[cppDisjointBitSetsNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a DisjointBitSets")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef DisjointBitSets x = DisjointBitSets.__new__(DisjointBitSets)
         x.ptr = ptr
@@ -1363,7 +1363,7 @@ cdef class DisjointBitSet(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppDisjointBitSetNode* ptr = dynamic_cast_ptr[cppDisjointBitSetNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a DisjointBitSet")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
         cdef DisjointBitSet x = DisjointBitSet.__new__(DisjointBitSet)
         x.ptr = ptr
         x.initialize_arraynode(symbol.model, ptr)
@@ -1455,7 +1455,7 @@ cdef class DisjointLists(Symbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppDisjointListsNode* ptr = dynamic_cast_ptr[cppDisjointListsNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a DisjointLists")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
         cdef DisjointLists x = DisjointLists.__new__(DisjointLists)
         x.ptr = ptr
         x.initialize_node(symbol.model, ptr)
@@ -1630,7 +1630,7 @@ cdef class DisjointList(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppDisjointListNode* ptr = dynamic_cast_ptr[cppDisjointListNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a DisjointList")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
         cdef DisjointList x = DisjointList.__new__(DisjointList)
         x.ptr = ptr
         x.initialize_arraynode(symbol.model, ptr)
@@ -1723,7 +1723,7 @@ cdef class Divide(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppDivideNode* ptr = dynamic_cast_ptr[cppDivideNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Divide")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
         cdef Divide x = Divide.__new__(Divide)
         x.ptr = ptr
         x.initialize_arraynode(symbol.model, ptr)
@@ -1840,7 +1840,7 @@ cdef class Input(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppInputNode* ptr = dynamic_cast_ptr[cppInputNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Input")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef Input inp = Input.__new__(Input)
         inp.ptr = ptr
@@ -1909,7 +1909,7 @@ cdef class IntegerVariable(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppIntegerNode* ptr = dynamic_cast_ptr[cppIntegerNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a IntegerVariable")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef IntegerVariable x = IntegerVariable.__new__(IntegerVariable)
         x.ptr = ptr
@@ -2057,7 +2057,7 @@ cdef class LinearProgram(Symbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppLinearProgramNode* ptr = dynamic_cast_ptr[cppLinearProgramNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a LinearProgram")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
         cdef LinearProgram x = LinearProgram.__new__(LinearProgram)
         x.ptr = ptr
         x.initialize_node(symbol.model, ptr)
@@ -2276,7 +2276,7 @@ cdef class ListVariable(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppListNode* ptr = dynamic_cast_ptr[cppListNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a ListVariable")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef ListVariable x = ListVariable.__new__(ListVariable)
         x.ptr = ptr
@@ -3078,7 +3078,7 @@ cdef class QuadraticModel(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppQuadraticModelNode* ptr = dynamic_cast_ptr[cppQuadraticModelNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a QuadraticModel")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef QuadraticModel qm = QuadraticModel.__new__(QuadraticModel)
         qm.ptr = ptr
@@ -3194,7 +3194,7 @@ cdef class Reshape(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppReshapeNode* ptr = dynamic_cast_ptr[cppReshapeNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a Reshape")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef Reshape m = Reshape.__new__(Reshape)
         m.ptr = ptr
@@ -3246,7 +3246,7 @@ cdef class SetVariable(ArraySymbol):
     def _from_symbol(cls, Symbol symbol):
         cdef cppSetNode* ptr = dynamic_cast_ptr[cppSetNode](symbol.node_ptr)
         if not ptr:
-            raise TypeError("given symbol cannot be used to construct a SetVariable")
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
 
         cdef SetVariable x = SetVariable.__new__(SetVariable)
         x.ptr = ptr
