@@ -1452,6 +1452,19 @@ cdef class ArraySymbol(Symbol):
 
         return NotImplemented
 
+    def __iter__(self):
+        if self.ndim() <= 0:
+            # NumPy's error is TypeError("iteration over a 0-d array"), so match
+            # that.
+            raise TypeError("iteration over a 0-d array symbol")
+
+        if self.array_ptr.dynamic():
+            # NumPy doesn't have a notion of dynamic size, but let's keep our
+            # error message consistent
+            raise TypeError("iteration over a dynamically sized array symbol")
+
+        yield from (self[i] for i in range(self.shape()[0]))
+
     def __le__(self, rhs):
         if isinstance(rhs, ArraySymbol):
             from dwave.optimization.symbols import LessEqual # avoid circular import

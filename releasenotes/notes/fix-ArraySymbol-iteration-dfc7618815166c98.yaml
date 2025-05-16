@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Fix iteration over ``ArraySymbol``s.
+    Now iteration works correctly for ``ArraySymbol``s with more than one
+    dimension and a fixed size.
+    Other ``ArraySymbol``s now raise a ``TypeError``.
+    See `#287 <https://github.com/dwavesystems/dwave-optimization/issues/287>`_.
