@@ -203,7 +203,8 @@ bool BinaryOpNode<BinaryOp>::integral() const {
     auto lhs_ptr = operands_[0];
     auto rhs_ptr = operands_[1];
 
-    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value) {
+    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value ||
+                  std::is_same<BinaryOp, functional::safe_divides<double>>::value) {
         return false;
     }
     if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
@@ -256,6 +257,40 @@ std::pair<double, double> BinaryOpNode<BinaryOp>::minmax(
         // just get all possible combinations of values
         std::array<double, 4> combos{op(lhs_low, rhs_low), op(lhs_low, rhs_high),
                                      op(lhs_high, rhs_low), op(lhs_high, rhs_high)};
+
+        return memoize(cache, std::make_pair(std::ranges::min(combos), std::ranges::max(combos)));
+    }
+    if constexpr (std::same_as<BinaryOp, functional::safe_divides<double>>) {
+        // safe_divide is, well, safe. So we start by calculating all combos.
+        // Though there are some possible other values depending on our rhs.
+        std::vector<double> combos = {op(lhs_low, rhs_low), op(lhs_low, rhs_high),
+                                      op(lhs_high, rhs_low), op(lhs_high, rhs_high)};
+
+        if (rhs_low < 0 && 0 < rhs_high) {
+            // rhs's range includes zero, but it's not currently accounted for
+            // so let's do that.
+            combos.emplace_back(op(1, 0));
+        } else if (rhs_low == 0 && rhs_high != 0) {
+            if (rhs_ptr->integral()) {
+                assert(rhs_high >= rhs_low + 1);  // the bounds should leave room
+                combos.emplace_back(op(lhs_low, rhs_low + 1));
+                combos.emplace_back(op(lhs_high, rhs_low + 1));
+            } else {
+                // We can get very close to dividing by 0
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_low));
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_high));
+            }
+        } else if (rhs_low != 0 && rhs_high == 0) {
+            if (rhs_ptr->integral()) {
+                assert(rhs_low + 1 <= rhs_high);
+                combos.emplace_back(op(lhs_low, rhs_high - 1));
+                combos.emplace_back(op(lhs_high, rhs_high - 1));
+            } else {
+                // We can get very close to dividing by -0
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_low));
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_high));
+            }
+        }
 
         return memoize(cache, std::make_pair(std::ranges::min(combos), std::ranges::max(combos)));
     }
@@ -455,6 +490,7 @@ template class BinaryOpNode<std::logical_or<double>>;
 template class BinaryOpNode<functional::logical_xor<double>>;
 template class BinaryOpNode<functional::max<double>>;
 template class BinaryOpNode<functional::min<double>>;
+template class BinaryOpNode<functional::safe_divides<double>>;
 
 // NaryOpNode *****************************************************************
 

@@ -110,6 +110,14 @@ struct rint<double> {
 };
 
 template <class T>
+struct safe_divides {
+    T operator()(const T& lhs, const T& rhs) const {
+        if (!rhs) return 0;
+        return std::divides<T>()(lhs, rhs);
+    }
+};
+
+template <class T>
 struct square {
     constexpr T operator()(const T& x) const { return x * x; }
 };
@@ -184,6 +192,7 @@ using MaximumNode = BinaryOpNode<functional::max<double>>;
 using MinimumNode = BinaryOpNode<functional::min<double>>;
 using ModulusNode = BinaryOpNode<functional::modulus<double>>;
 using OrNode = BinaryOpNode<std::logical_or<double>>;
+using SafeDivideNode = BinaryOpNode<functional::safe_divides<double>>;
 using SubtractNode = BinaryOpNode<std::minus<double>>;
 using XorNode = BinaryOpNode<functional::logical_xor<double>>;
 

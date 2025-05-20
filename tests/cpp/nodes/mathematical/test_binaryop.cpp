@@ -33,7 +33,8 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "",
                    std::equal_to<double>, std::less_equal<double>, std::plus<double>,
                    std::minus<double>, functional::modulus<double>, std::multiplies<double>,
                    functional::max<double>, functional::min<double>, std::logical_and<double>,
-                   std::logical_or<double>, functional::logical_xor<double>) {
+                   std::logical_or<double>, functional::logical_xor<double>,
+                   functional::safe_divides<double>) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -479,6 +480,103 @@ TEST_CASE("BinaryOpNode - DivideNode") {
         THEN("Check division-by-zero") {
             CHECK_THROWS(graph.emplace_node<DivideNode>(x_ptr, a_ptr));
         }
+    }
+}
+
+TEST_CASE("BinaryOpNode - SafeDivideNode") {
+    auto graph = Graph();
+
+    GIVEN("a in {-1, +1}, b in {0, 1}, y = a / b") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1});
+        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+
+        REQUIRE(a_ptr->integral());
+        REQUIRE(b_ptr->integral());
+
+        CHECK(y_ptr->max() == +1);  //  1 / 1
+        CHECK(y_ptr->min() == -1);  // -1 / 1
+    }
+
+    GIVEN("a in {1}, b in {1, 2}, y = a / b") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 2});
+        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+
+        REQUIRE(a_ptr->integral());
+        REQUIRE(b_ptr->integral());
+
+        CHECK(y_ptr->max() == 1);   // 1 / 1
+        CHECK(y_ptr->min() == .5);  // 1 / 2
+    }
+
+    GIVEN("a in {-1, +1}, b in [0, .5], y = a / b") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{0., .5});
+        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+
+        // Here we're exploiting our own inability to introspect b for the
+        // purpose of the test.
+        // The ConstantNode just sees that it's not integral so it's not able
+        // to reason more than that.
+        // In the future smarter introspection might break this test.
+        REQUIRE(a_ptr->integral());
+        REQUIRE(!b_ptr->integral());
+
+        CHECK(y_ptr->max() == std::numeric_limits<double>::max());     //  1 / eps
+        CHECK(y_ptr->min() == std::numeric_limits<double>::lowest());  // -1 / eps
+    }
+
+    GIVEN("a in {-1, +1}, b in {-1, 0}, y = a / b") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, 0});
+        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+
+        REQUIRE(a_ptr->integral());
+        REQUIRE(b_ptr->integral());
+
+        CHECK(y_ptr->max() == 1);   //  -1 / -1
+        CHECK(y_ptr->min() == -1);  // -1 / 1
+    }
+
+    GIVEN("a in {1}, b in {-2, -1}, y = a / b") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-2, -1});
+        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+
+        REQUIRE(a_ptr->integral());
+        REQUIRE(b_ptr->integral());
+
+        CHECK(y_ptr->max() == -.5);  // 1 / -2
+        CHECK(y_ptr->min() == -1.);  // 1 / -1
+    }
+
+    GIVEN("a in {-1, +1}, b in [-.5, 0], y = a / b") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-.5, 0.});
+        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+
+        // Here we're exploiting our own inability to introspect b for the
+        // purpose of the test.
+        // The ConstantNode just sees that it's not integral so it's not able
+        // to reason more than that.
+        // In the future smarter introspection might break this test.
+        REQUIRE(a_ptr->integral());
+        REQUIRE(!b_ptr->integral());
+
+        CHECK(y_ptr->max() == std::numeric_limits<double>::max());     //  -1 / eps
+        CHECK(y_ptr->min() == std::numeric_limits<double>::lowest());  // -1 / -eps
+    }
+    GIVEN("a in {-1, +1}, b in {-1, +1}, y = a / b") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+
+        REQUIRE(a_ptr->integral());
+        REQUIRE(b_ptr->integral());
+
+        CHECK(y_ptr->max() == 1);
+        CHECK(y_ptr->min() == -1);
     }
 }
 

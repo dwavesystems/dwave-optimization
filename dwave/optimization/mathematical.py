@@ -44,6 +44,7 @@ from dwave.optimization.symbols import (
     Or,
     Put,
     Rint,
+    SafeDivide,
     SquareRoot,
     Where,
     Xor,
@@ -75,6 +76,7 @@ __all__ = [
     "multiply",
     "put",
     "rint",
+    "safe_divide",
     "sqrt",
     "stack",
     "vstack",
@@ -1072,6 +1074,47 @@ def rint(x: ArraySymbol) -> Rint:
         :class:`~dwave.optimization.symbols.Rint`: equivalent symbol.
     """
     return Rint(x)
+
+
+def safe_divide(x1: ArraySymbol, x2: ArraySymbol) -> SafeDivide:
+    r"""Divide the symbols element-wise, substituting ``0`` where ``x2 == 0``.
+
+    This function is not strictly mathematical division. Rather it encodes
+    the following function:
+
+    .. math::
+        f(a, b) = \begin{cases}
+            a / b & \text{for } b \neq 0 \\
+            0 & \text{else}
+        \end{cases}
+
+    Such a definition is useful [#buzzard]_ in cases where ``x2`` is non-zero by
+    construction or otherwise enforced to be non-zero.
+
+    .. [#buzzard] Buzzard, Kevin (5 Jul 2020),
+       `"Division by zero in type theory: a FAQ" <xena_>`_,
+       Xena Project (Blog), retrieved 2025-05-20
+    .. _xena: https://xenaproject.wordpress.com/2020/07/05/division-by-zero-in-type-theory-a-faq/
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import safe_divide
+        ...
+        >>> model = Model()
+        >>> a = model.constant([-1, 0, 1, 2])
+        >>> b = model.constant([2, 1, 0, -1])
+        >>> x = safe_divide(a, b)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(x.state())
+        [-0.5  0.   0.  -2. ]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.SafeDivide`: equivalent symbol.
+
+    .. versionadded:: 0.6.2
+    """
+    return SafeDivide(x1, x2)
 
 
 def sqrt(x: ArraySymbol) -> SquareRoot:
