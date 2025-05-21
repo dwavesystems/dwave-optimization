@@ -111,9 +111,9 @@ struct rint<double> {
 
 template <class T>
 struct safe_divides {
-    T operator()(const T& lhs, const T& rhs) const {
+    constexpr T operator()(const T& lhs, const T& rhs) const {
         if (!rhs) return 0;
-        return std::divides<T>()(lhs, rhs);
+        return lhs / rhs;
     }
 };
 
