@@ -272,10 +272,8 @@ std::pair<double, double> BinaryOpNode<BinaryOp>::minmax(
             combos.emplace_back(op(1, 0));
 
             if (!rhs_ptr->integral()) {
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_low));
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_low));
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_high));
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_high));
+                combos.emplace_back(std::numeric_limits<double>::max());
+                combos.emplace_back(std::numeric_limits<double>::lowest());
             }
         } else if (rhs_low == 0 && rhs_high != 0) {
             if (rhs_ptr->integral()) {
