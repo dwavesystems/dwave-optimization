@@ -270,6 +270,13 @@ std::pair<double, double> BinaryOpNode<BinaryOp>::minmax(
             // rhs's range includes zero, but it's not currently accounted for
             // so let's do that.
             combos.emplace_back(op(1, 0));
+
+            if (!rhs_ptr->integral()) {
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_low));
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_low));
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_high));
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_high));
+            }
         } else if (rhs_low == 0 && rhs_high != 0) {
             if (rhs_ptr->integral()) {
                 assert(rhs_high >= rhs_low + 1);  // the bounds should leave room

@@ -481,6 +481,31 @@ TEST_CASE("BinaryOpNode - DivideNode") {
             CHECK_THROWS(graph.emplace_node<DivideNode>(x_ptr, a_ptr));
         }
     }
+    GIVEN("a = [-1, 1, 1], b = [.00000001, .00000001, +1]") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, 1, 1});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{.00000001, .00000001, 1.});
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+
+        REQUIRE(a_ptr->integral());
+        REQUIRE(!b_ptr->integral());
+
+        // this triggers a check of the values
+        auto state = graph.initialize_state();
+    }
+
+    GIVEN("a = [-1, 1, 1], b = [-.00000001, -.00000001, -1]") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, 1, 1});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-.00000001, -.00000001, -1.});
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+
+        REQUIRE(a_ptr->integral());
+        REQUIRE(!b_ptr->integral());
+
+        // this triggers a check of the values
+        auto state = graph.initialize_state();
+    }
 }
 
 TEST_CASE("BinaryOpNode - SafeDivideNode") {
@@ -567,6 +592,20 @@ TEST_CASE("BinaryOpNode - SafeDivideNode") {
         CHECK(y_ptr->max() == std::numeric_limits<double>::max());     //  -1 / eps
         CHECK(y_ptr->min() == std::numeric_limits<double>::lowest());  // -1 / -eps
     }
+
+    GIVEN("a = [-1, -1, 1, 1], b = [-1, .00000001, .00000001, +1]") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, -1, 1, 1});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1., .00000001, .00000001, 1.});
+        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+
+        REQUIRE(a_ptr->integral());
+        REQUIRE(!b_ptr->integral());
+
+        // this triggers a check of the values by the validation node
+        auto state = graph.initialize_state();
+    }
+
     GIVEN("a in {-1, +1}, b in {-1, +1}, y = a / b") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
         auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
