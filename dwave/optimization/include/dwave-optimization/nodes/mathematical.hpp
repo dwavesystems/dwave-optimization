@@ -79,7 +79,7 @@ struct modulus {
 
         T result;
         if constexpr (std::integral<T>) {
-            result = x % y;
+            result = std::div(x, y).rem;
         } else {
             result = std::fmod(x, y);
         }
