@@ -35,27 +35,18 @@ struct abs {
 };
 
 template <class T>
-struct exp {};
-
-template <>
-struct exp<double> {
-    double operator()(const double& x) const { return std::exp(x); }
+struct exp {
+    constexpr auto operator()(const T& x) const { return std::exp(x); }
 };
 
 template <class T>
-struct expit {};
-
-template <>
-struct expit<double> {
-    double operator()(const double& x) const { return 1.0 / (1.0 + std::exp(-x)); }
+struct expit {
+    constexpr double operator()(const T& x) const { return 1.0 / (1.0 + std::exp(-1. * x)); }
 };
 
 template <class T>
-struct log {};
-
-template <>
-struct log<double> {
-    double operator()(const double& x) const { return std::log(x); }
+struct log {
+    constexpr auto operator()(const T& x) const { return std::log(x); }
 };
 
 template <class T>
@@ -81,16 +72,17 @@ struct min {
 };
 
 template <class T>
-struct modulus {};
-
-template <>
-struct modulus<double> {
-    constexpr double operator()(const double& x, const double& y) const {
+struct modulus {
+    constexpr T operator()(const T& x, const T& y) const {
         // Copy numpy behavior and return 0 for `x % 0`
-        if (y == 0) {
-            return 0;
+        if (y == 0) return 0;
+
+        T result;
+        if constexpr (std::integral<T>) {
+            result = std::div(x, y).rem;
+        } else {
+            result = std::fmod(x, y);
         }
-        double result = std::fmod(x, y);
 
         if ((std::signbit(x) != std::signbit(y)) && (result != 0)) {
             // Make result consistent with numpy for different-sign arguments
@@ -102,11 +94,8 @@ struct modulus<double> {
 };
 
 template <class T>
-struct rint {};
-
-template <>
-struct rint<double> {
-    double operator()(const double& x) const { return std::rint(x); }
+struct rint {
+    constexpr auto operator()(const T& x) const { return std::rint(x); }
 };
 
 template <class T>
@@ -123,11 +112,8 @@ struct square {
 };
 
 template <class T>
-struct square_root {};
-
-template <>
-struct square_root<double> {
-    double operator()(const double& x) const { return std::sqrt(x); }
+struct square_root {
+    constexpr auto operator()(const T& x) const { return std::sqrt(x); }
 };
 
 }  // namespace functional
