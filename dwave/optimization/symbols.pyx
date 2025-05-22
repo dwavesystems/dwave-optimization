@@ -97,6 +97,7 @@ from dwave.optimization.libcpp.nodes cimport (
     QuadraticModel as cppQuadraticModel,
     QuadraticModelNode as cppQuadraticModelNode,
     ReshapeNode as cppReshapeNode,
+    SafeDivideNode as cppSafeDivideNode,
     SetNode as cppSetNode,
     SizeNode as cppSizeNode,
     SubtractNode as cppSubtractNode,
@@ -174,6 +175,7 @@ __all__ = [
     "SetVariable",
     "Size",
     "Rint",
+    "SafeDivide",
     "Square",
     "SquareRoot",
     "Sum",
@@ -3348,6 +3350,27 @@ cdef class Rint(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(Rint, typeid(cppRintNode))
+
+
+cdef class SafeDivide(ArraySymbol):
+    """Safe division element-wise between two symbols.
+
+    See also:
+        :func:`~dwave.optimization.mathematical.safe_divide`: equivalent function.
+
+    .. versionadded:: 0.6.2
+    """
+    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
+        if lhs.model is not rhs.model:
+            raise ValueError("lhs and rhs do not share the same underlying model")
+
+        cdef _Graph model = lhs.model
+
+        cdef cppSafeDivideNode* ptr = model._graph.emplace_node[cppSafeDivideNode](
+            lhs.array_ptr, rhs.array_ptr)
+        self.initialize_arraynode(model, ptr)
+
+_register(SafeDivide, typeid(cppSafeDivideNode))
 
 
 cdef class Square(ArraySymbol):

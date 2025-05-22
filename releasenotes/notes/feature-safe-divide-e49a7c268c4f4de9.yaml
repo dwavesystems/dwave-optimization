@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add Python ``safe_divide()`` function and ``SafeDivide`` symbol.
+    Also add C++ ``SafeDivideNode``.
+    See `#290 <https://github.com/dwavesystems/dwave-optimization/issues/290>`_.

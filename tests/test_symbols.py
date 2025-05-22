@@ -38,6 +38,7 @@ from dwave.optimization import (
     mod,
     put,
     rint,
+    safe_divide,
     sqrt,
     stack,
 )
@@ -2642,6 +2643,38 @@ class TestRint(utils.SymbolTests):
         self.assertEqual(six.state(0), 6)
         self.assertEqual(twelve.state(0), 12)
         self.assertEqual(sixteen.state(0), 16)
+
+
+class TestSafeDivide(utils.BinaryOpTests):
+    def generate_symbols(self):
+        model = Model()
+
+        a = model.constant(1)
+        b = model.constant(2)
+        zero = model.constant(0)
+
+        w = safe_divide(a, b)
+        x = safe_divide(b, a)
+        y = safe_divide(a, zero)
+        z = safe_divide(zero, a)
+        with model.lock():
+            yield from (w, x, y, z)
+
+    def op(self, lhs, rhs):
+        return np.divide(lhs, rhs, where=(rhs != 0))
+
+    def symbol_op(self, lhs, rhs):
+        return safe_divide(lhs, rhs)
+
+    def test(self):
+        model = Model()
+        a = model.constant([-1, 0, 1, 2])
+        b = model.constant([2, 1, 0, -1])
+        x = safe_divide(a, b)
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(x.state(), [-.5, 0, 0, -2])
 
 
 class TestSquare(utils.UnaryOpTests):
