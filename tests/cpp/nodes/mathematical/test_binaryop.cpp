@@ -617,6 +617,18 @@ TEST_CASE("BinaryOpNode - SafeDivideNode") {
         CHECK(y_ptr->max() == 1);
         CHECK(y_ptr->min() == -1);
     }
+
+    GIVEN("a in {1}, b in {-2, 2}, y = a / b") {
+        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
+        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-2, 2});
+        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+
+        REQUIRE(a_ptr->integral());
+        REQUIRE(b_ptr->integral());
+
+        CHECK(y_ptr->max() == 1);   // 1 / 1
+        CHECK(y_ptr->min() == -1);  // 1 / -1
+    }
 }
 
 TEST_CASE("BinaryOpNode - SubtractNode") {

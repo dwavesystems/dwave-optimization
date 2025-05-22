@@ -266,31 +266,30 @@ std::pair<double, double> BinaryOpNode<BinaryOp>::minmax(
         std::vector<double> combos = {op(lhs_low, rhs_low), op(lhs_low, rhs_high),
                                       op(lhs_high, rhs_low), op(lhs_high, rhs_high)};
 
-        if (rhs_low < 0 && 0 < rhs_high) {
-            // rhs's range includes zero, but it's not currently accounted for
-            // so let's do that.
-            combos.emplace_back(op(1, 0));
-
-            if (!rhs_ptr->integral()) {
+       if (rhs_ptr->integral()) {
+            if (rhs_low < 0 && 0 < rhs_high) {
+                combos.emplace_back(op(1, 0));
+            }
+            if (rhs_low < -1 && -1 < rhs_high) {
+                combos.emplace_back(op(lhs_low, -1));
+                combos.emplace_back(op(lhs_high, -1));
+            }
+            if (rhs_low < 1 && 1 < rhs_high) {
+                combos.emplace_back(op(lhs_low, 1));
+                combos.emplace_back(op(lhs_high, 1));
+            }
+        } else {
+            if (rhs_low < 0 && 0 < rhs_high) {
+                // rhs's range includes zero, but it's not currently accounted for
+                // so let's do that.
+                // combos.emplace_back(op(1, 0));  // redundant because we're already max range
                 combos.emplace_back(std::numeric_limits<double>::max());
                 combos.emplace_back(std::numeric_limits<double>::lowest());
-            }
-        } else if (rhs_low == 0 && rhs_high != 0) {
-            if (rhs_ptr->integral()) {
-                assert(rhs_high >= rhs_low + 1);  // the bounds should leave room
-                combos.emplace_back(op(lhs_low, rhs_low + 1));
-                combos.emplace_back(op(lhs_high, rhs_low + 1));
-            } else {
+            } else if (rhs_low == 0 && rhs_high != 0) {
                 // We can get very close to dividing by 0
                 combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_low));
                 combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_high));
-            }
-        } else if (rhs_low != 0 && rhs_high == 0) {
-            if (rhs_ptr->integral()) {
-                assert(rhs_low + 1 <= rhs_high);
-                combos.emplace_back(op(lhs_low, rhs_high - 1));
-                combos.emplace_back(op(lhs_high, rhs_high - 1));
-            } else {
+            } else if (rhs_low != 0 && rhs_high == 0) {
                 // We can get very close to dividing by -0
                 combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_low));
                 combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_high));
