@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add new constructors to C++ ``ConstantNode`` and add update the existing
+    constructors to accept ``const double*`` rather than just ``double*``.
