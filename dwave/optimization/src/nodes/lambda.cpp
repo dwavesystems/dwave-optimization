@@ -158,13 +158,20 @@ Graph _validate_naryreduce_arguments(Graph&& expression, const std::vector<Array
 }
 
 NaryReduceNode::NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands,
-                               double initial)
+                               array_or_double initial)
         : ArrayOutputMixin(get_operands_shape(expression, operands)),
           initial(initial),
           expression_(_validate_naryreduce_arguments(_validate_expression(std::move(expression)),
                                                      operands)),
           operands_(operands),
           output_(expression_.objective()) {
+    if (std::holds_alternative<ArrayNode*>(initial)) {
+        ArrayNode* initial_node = std::get<ArrayNode*>(initial);
+        if (initial_node->ndim() != 0) {
+            throw std::invalid_argument("when using a node for the initial value, it must have scalar output");
+        }
+        add_predecessor(initial_node);
+    }
     for (const auto& op : operands_) {
         add_predecessor(op);
     }
@@ -192,6 +199,14 @@ double NaryReduceNode::evaluate_expression(State& register_) const {
     return output_->view(register_)[0];
 }
 
+double NaryReduceNode::get_initial_value(const State& state) const {
+    if (std::holds_alternative<double>(initial)) {
+        return std::get<double>(initial);
+    } else {
+        return std::get<ArrayNode*>(initial)->view(state)[0];
+    }
+}
+
 void NaryReduceNode::initialize_state(State& state) const {
     int node_idx = topological_index();
     assert(node_idx >= 0 && "must be topologically sorted");
@@ -217,7 +232,7 @@ void NaryReduceNode::initialize_state(State& state) const {
     // Finish the initialization after the input states have been set
     expression_.initialize_state(reg);
 
-    double val = initial;
+    double val = get_initial_value(state);
 
     // Compute the expression for each subsequent index
     for (ssize_t index = 0; index < start_size; ++index) {
@@ -259,7 +274,7 @@ void NaryReduceNode::propagate(State& state) const {
         data->iterators.push_back(array_ptr->begin(state));
     }
 
-    double val = initial;
+    double val = get_initial_value(state);
 
     for (ssize_t index = 0; index < new_size; ++index) {
         // First input comes from the previous expression

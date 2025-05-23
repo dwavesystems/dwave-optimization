@@ -430,19 +430,6 @@ cdef class _Graph:
 
         .. _NPY format: https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html
         """
-        if not self.is_locked():
-            # lock for the duration of the method
-            self.lock()
-            try:
-                self.into_file(
-                    file,
-                    version=version,
-                    max_num_states=max_num_states,
-                    only_decision=only_decision
-                )
-            finally:
-                self.unlock()
-            return
 
         version, model_info = self._into_file_header(
             file,
