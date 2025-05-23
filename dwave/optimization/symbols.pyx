@@ -1803,16 +1803,21 @@ cdef class Input(ArraySymbol):
         self,
         model,
         shape=None,
-        double lower_bound = -float("inf"),
-        double upper_bound = float("inf"),
-        bool integral = False,
+        lower_bound=None,
+        upper_bound=None,
+        integral=None,
     ):
         cdef vector[Py_ssize_t] vshape = as_cppshape(tuple() if shape is None else shape)
 
         cdef _Graph cygraph = model
 
         # Get an observing pointer to the C++ InputNode
-        self.ptr = cygraph._graph.emplace_node[cppInputNode](vshape, lower_bound, upper_bound, integral)
+        self.ptr = cygraph._graph.emplace_node[cppInputNode](
+            vshape,
+            optional[double](nullopt) if lower_bound is None else optional[double](<double>lower_bound),
+            optional[double](nullopt) if upper_bound is None else optional[double](<double>upper_bound),
+            optional[bool](nullopt) if integral is None else optional[bool](<bool>integral),
+        )
 
         self.initialize_arraynode(model, self.ptr)
 
