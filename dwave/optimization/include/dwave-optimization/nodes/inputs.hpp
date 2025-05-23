@@ -29,19 +29,17 @@ namespace dwave::optimization {
 // explicitly with some data.
 class InputNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    explicit InputNode(std::span<const ssize_t> shape, double min, double max, bool integral)
-            : ArrayOutputMixin(shape), min_(min), max_(max), integral_(integral) {}
+    explicit InputNode(std::span<const ssize_t> shape, std::optional<double> min,
+                       std::optional<double> max, std::optional<bool> integral);
 
-    explicit InputNode(std::initializer_list<ssize_t> shape, double min, double max, bool integral)
-            : ArrayOutputMixin(shape), min_(min), max_(max), integral_(integral) {}
+    explicit InputNode(std::initializer_list<ssize_t> shape, std::optional<double> min,
+                       std::optional<double> max, std::optional<bool> integral)
+            : InputNode(std::span<const ssize_t>(shape), min, max, integral) {}
 
-    explicit InputNode()
-            : InputNode({}, std::numeric_limits<double>::lowest(),
-                        std::numeric_limits<double>::infinity(), false) {}
+    explicit InputNode() : InputNode({}, std::nullopt, std::nullopt, std::nullopt) {}
 
     explicit InputNode(std::initializer_list<ssize_t> shape)
-            : InputNode(shape, -std::numeric_limits<double>::infinity(),
-                        std::numeric_limits<double>::infinity(), false) {}
+            : InputNode(shape, std::nullopt, std::nullopt, std::nullopt) {}
 
     /// Assign new values to the input node (must be the same size)
     void assign(State& state, std::span<const double> new_values) const;
@@ -53,9 +51,7 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     void commit(State& state) const noexcept override;
 
     /// InputNode's state is not deterministic unlike most other non-decision nodes
-    bool deterministic_state() const override {
-        return false;
-    }
+    bool deterministic_state() const override { return false; }
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const noexcept override;

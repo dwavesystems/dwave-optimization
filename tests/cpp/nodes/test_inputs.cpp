@@ -27,13 +27,18 @@ namespace dwave::optimization {
 TEST_CASE("InputNode") {
     auto graph = Graph();
 
+    // Ensure errors are thrown on bad limits
+    CHECK_THROWS(graph.emplace_node<InputNode>(std::vector<ssize_t>{1},
+                                               -std::numeric_limits<double>::infinity(), 0, false));
+    CHECK_THROWS(graph.emplace_node<InputNode>(std::vector<ssize_t>{1}, 0,
+                                               std::numeric_limits<double>::infinity(), false));
+    CHECK_THROWS(graph.emplace_node<InputNode>(std::vector<ssize_t>{1}, 0, -0.5, false));
+
     GIVEN("An input node starting with state copied from a vector") {
         auto ptr = graph.emplace_node<InputNode>(std::vector<ssize_t>{4}, 10, 50, true);
         auto val = graph.emplace_node<ArrayValidationNode>(ptr);
 
-        THEN("Graph.num_inputs() is correct") {
-            CHECK(graph.num_inputs() == 1);
-        }
+        THEN("Graph.num_inputs() is correct") { CHECK(graph.num_inputs() == 1); }
 
         THEN("It copies the values into a 1d array") {
             CHECK(ptr->ndim() == 1);
@@ -103,13 +108,10 @@ TEST_CASE("InputNode") {
         }
 
         AND_GIVEN("Another node, and another input") {
-
             graph.emplace_node<IntegerNode>();
             graph.emplace_node<InputNode>(std::vector<ssize_t>{1}, 10, 50, false);
 
-            THEN("Graph.num_inputs() is correct") {
-                CHECK(graph.num_inputs() == 2);
-            }
+            THEN("Graph.num_inputs() is correct") { CHECK(graph.num_inputs() == 2); }
         }
     }
 }
