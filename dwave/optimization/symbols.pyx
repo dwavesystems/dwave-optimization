@@ -967,8 +967,8 @@ cdef class Constant(ArraySymbol):
         cdef vector[Py_ssize_t] strides = array.strides  # not used because contiguous for now
 
         # Get a pointer to the first element
-        cdef double[:] flat = array.ravel()
-        cdef double* start = NULL
+        cdef const double[:] flat = array.ravel()
+        cdef const double* start = NULL
         if flat.size:
             start = &flat[0]
 

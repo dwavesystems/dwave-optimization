@@ -30,17 +30,25 @@ namespace dwave::optimization {
 class ConstantNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // Default constructor - defaults to an empty 1d array.
-    ConstantNode() noexcept : ConstantNode({0}) {}
+    ConstantNode() noexcept : ConstantNode(std::vector<double>{}, std::vector<ssize_t>{0}) {}
 
     // A single scalar value
-    explicit ConstantNode(double value) : ConstantNode({}) { *buffer_ptr_ = value; }
+    explicit ConstantNode(double value)
+            : ConstantNode(std::vector{value}, std::vector<ssize_t>{}) {}
 
     // A pointer to another array or similar. In this case the ConstantNode will be a *view*
     // rather than a container. That is it does not manage the lifespan of the array data.
-    ConstantNode(double* data_ptr, std::initializer_list<ssize_t> shape)
+    ConstantNode(const double* data_ptr, std::initializer_list<ssize_t> shape)
             : ArrayOutputMixin(shape), own_data_(false), buffer_ptr_(data_ptr) {}
-    ConstantNode(double* data_ptr, std::span<const ssize_t> shape)
+    ConstantNode(const double* data_ptr, const std::span<const ssize_t> shape)
             : ArrayOutputMixin(shape), own_data_(false), buffer_ptr_(data_ptr) {}
+
+    // An owning pointer to an array. In this case the ConstantNode will manage the lifespan
+    // of the array.
+    ConstantNode(std::unique_ptr<const double[]>&& owning_ptr, std::initializer_list<ssize_t> shape)
+            : ArrayOutputMixin(shape), own_data_(true), buffer_ptr_(owning_ptr.release()) {}
+    ConstantNode(std::unique_ptr<const double[]>&& owning_ptr, const std::span<const ssize_t> shape)
+            : ArrayOutputMixin(shape), own_data_(true), buffer_ptr_(owning_ptr.release()) {}
 
     /// Create a ConstantNode by copying the contents of a range
     template <std::ranges::sized_range Range>
@@ -50,20 +58,15 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     /// Create a ConstantNode by copying the contents of a range and interpreting
     /// it as the given shape
     template <std::ranges::sized_range Range>
-    ConstantNode(Range&& values, std::initializer_list<ssize_t> shape) : ConstantNode(shape) {
-        const ssize_t size = this->size();
-        if (size < 0) {
-            throw std::invalid_argument("ConstantNode cannot be dynamic");
-        }
-        if (values.size() < static_cast<std::size_t>(size)) {
-            throw std::out_of_range("too few values for the given shape");
-        }
-        std::copy(values.begin(), std::next(values.begin(), size), buffer_ptr_);
-    }
+    ConstantNode(Range&& values, std::initializer_list<ssize_t> shape)
+            : ConstantNode(from_range(std::forward<Range>(values), shape), shape) {}
+    template <std::ranges::sized_range Range>
+    ConstantNode(Range&& values, const std::span<const ssize_t> shape)
+            : ConstantNode(from_range(std::forward<Range>(values), shape), shape) {}
 
     ~ConstantNode() {
         // Only deallocate in the instance that it owns its own data
-        if (own_data_) buffer_alloc_.deallocate(buffer_ptr_, size());
+        if (own_data_) std::default_delete<const double>()(buffer_ptr_);
     }
 
     bool own_data() const noexcept { return own_data_; }
@@ -110,14 +113,24 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     void revert(State&) const noexcept override {}
 
  private:
-    // Allocate the memory to hold shape worth of doubles, but don't populate it
-    explicit ConstantNode(std::initializer_list<ssize_t> shape)
-            : ArrayOutputMixin(shape), own_data_(true) {
-        buffer_ptr_ = buffer_alloc_.allocate(this->size());
-    }
+    // Create a unique_ptr<double[]> built from the given range of values holding
+    // the values of the array.
+    template <std::ranges::sized_range Range>
+    static std::unique_ptr<double[]> from_range(Range&& values,
+                                                const std::span<const ssize_t> shape) {
+        const ssize_t size = shape_to_size(shape);
+        if (size < 0) {
+            throw std::invalid_argument("ConstantNode cannot be dynamic");
+        }
+        if (values.size() < static_cast<std::size_t>(size)) {
+            throw std::out_of_range("too few values for the given shape");
+        }
 
-    // Allocator for the buffer. Does not consume any memory
-    std::allocator<double> buffer_alloc_;
+        // allocate the vector and populate it from the range
+        std::unique_ptr<double[]> ptr = std::make_unique<double[]>(size);
+        std::copy(values.begin(), std::next(values.begin(), size), ptr.get());
+        return ptr;
+    }
 
     // If True, the node is responsible for deallocating the data, otherwise
     // it is just a view
@@ -125,7 +138,7 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
 
     // The beginning of the array data. The ConstantNode is unusual because it
     // holds its values on the object itself rather than in a State.
-    double* buffer_ptr_;
+    const double* buffer_ptr_;
 
     // Information about the values in the buffer
     struct BufferStats {
