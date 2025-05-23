@@ -43,13 +43,6 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     ConstantNode(const double* data_ptr, const std::span<const ssize_t> shape)
             : ArrayOutputMixin(shape), own_data_(false), buffer_ptr_(data_ptr) {}
 
-    // An owning pointer to an array. In this case the ConstantNode will manage the lifespan
-    // of the array.
-    ConstantNode(std::unique_ptr<const double[]>&& owning_ptr, std::initializer_list<ssize_t> shape)
-            : ArrayOutputMixin(shape), own_data_(true), buffer_ptr_(owning_ptr.release()) {}
-    ConstantNode(std::unique_ptr<const double[]>&& owning_ptr, const std::span<const ssize_t> shape)
-            : ArrayOutputMixin(shape), own_data_(true), buffer_ptr_(owning_ptr.release()) {}
-
     /// Create a ConstantNode by copying the contents of a range
     template <std::ranges::sized_range Range>
     explicit ConstantNode(Range&& values)
@@ -113,6 +106,13 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     void revert(State&) const noexcept override {}
 
  private:
+    // An owning pointer to an array. In this case the ConstantNode will manage the lifespan
+    // of the array.
+    ConstantNode(std::unique_ptr<const double[]>&& owning_ptr, std::initializer_list<ssize_t> shape)
+            : ArrayOutputMixin(shape), own_data_(true), buffer_ptr_(owning_ptr.release()) {}
+    ConstantNode(std::unique_ptr<const double[]>&& owning_ptr, const std::span<const ssize_t> shape)
+            : ArrayOutputMixin(shape), own_data_(true), buffer_ptr_(owning_ptr.release()) {}
+
     // Create a unique_ptr<double[]> built from the given range of values holding
     // the values of the array.
     template <std::ranges::sized_range Range>
