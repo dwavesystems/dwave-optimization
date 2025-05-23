@@ -35,8 +35,13 @@ namespace dwave::optimization {
 // the operands.
 class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    // Runtime constructor that can be used from Cython/Python
-    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, double initial);
+    // Initial value can either be a double or another node
+    using array_or_double = std::variant<ArrayNode*, double>;
+
+    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, array_or_double initial);
+
+    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, double initial) : NaryReduceNode(std::move(expression), operands, array_or_double(initial)) {};
+    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, ArrayNode* initial) : NaryReduceNode(std::move(expression), operands, array_or_double(initial)) {};
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -71,10 +76,12 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
 
     void swap_expression(Graph&& other) { std::swap(expression_, other); };
 
-    const double initial;
+    const array_or_double initial;
 
  private:
     double evaluate_expression(State& register_) const;
+
+    double get_initial_value(const State& state) const;
 
     std::span<const InputNode* const> operand_inputs() const;
     const InputNode* const reduction_input() const;

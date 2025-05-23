@@ -2345,11 +2345,17 @@ class TestNaryReduce(utils.SymbolTests):
         expr = Expression()
         inputs = [expr.input() for _ in range(3)]
         expr.set_output(inputs[0] + inputs[1] + inputs[2])
-
         acc = dwave.optimization.symbols.NaryReduce(expr, (c0, c1), initial=7)
 
+        expr = Expression()
+        inputs = [expr.input() for _ in range(3)]
+        expr.set_output(inputs[0] + inputs[1] + inputs[2])
+        acc_with_initial_node = dwave.optimization.symbols.NaryReduce(expr, (c0, c1), initial=model.constant(7))
+
         model.lock()
+
         yield acc
+        yield acc_with_initial_node
 
     def test_mismatched_inputs(self):
         model = Model()

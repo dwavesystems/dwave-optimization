@@ -28,7 +28,7 @@ namespace dwave::optimization {
 TEST_CASE("NaryReduceNode") {
     auto graph = Graph();
 
-    GIVEN("A vector<Node*> of constants and an expression") {
+    GIVEN("Two constant vector nodes and an expression") {
         std::vector<double> i = {0, 1, 2, 2};
         std::vector<double> j = {1, 2, 4, 3};
 
@@ -45,16 +45,41 @@ TEST_CASE("NaryReduceNode") {
         expression.set_objective(output_ptr);
         expression.topological_sort();
 
-        std::cout << output_ptr->min() << " - " << output_ptr->max() << "\n";
-
-        THEN("We can create an accumulate node") {
-            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 5);
+        THEN("We can create a reduce node") {
+            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 5.0);
 
             AND_WHEN("We initialize a state") {
                 auto state = graph.initialize_state();
 
                 THEN("The state is correct") {
                     CHECK(std::ranges::equal(reduce_ptr->view(state), std::vector{5, 7, 15, 21}));
+                }
+            }
+        }
+
+        AND_GIVEN("A scalar node") {
+            IntegerNode* initial = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -10, 10);
+
+            THEN("We can create a reduce node with a non-constant initial value") {
+                auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, initial);
+
+                AND_WHEN("We initialize a state") {
+                    auto state = graph.empty_state();
+                    initial->initialize_state(state, {5.0});
+                    graph.initialize_state(state);
+
+                    THEN("The state is correct") {
+                        CHECK(std::ranges::equal(reduce_ptr->view(state), std::vector{5, 7, 15, 21}));
+                    }
+
+                    AND_WHEN("We mutate the initial value and propagate") {
+                        initial->set_value(state, 0, -3.0);
+                        graph.propagate(state);
+
+                        THEN("The state is correct") {
+                            CHECK(std::ranges::equal(reduce_ptr->view(state), std::vector{-3.0, -1.0, 7.0, 13.0}));
+                        }
+                    }
                 }
             }
         }
@@ -83,7 +108,7 @@ TEST_CASE("NaryReduceNode") {
         THEN("We can create a lambda node") {
             std::vector<ArrayNode*> args({i_ptr, j_ptr});
 
-            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 6);
+            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 6.0);
 
             auto validation_ptr = graph.emplace_node<ArrayValidationNode>(reduce_ptr);
 
@@ -135,7 +160,7 @@ TEST_CASE("NaryReduceNode") {
         THEN("We can create a lambda node with basic functions and logic control") {
             std::vector<ArrayNode*> args({i_ptr, j_ptr});
 
-            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0);
+            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0);
 
             auto validation_ptr = graph.emplace_node<ArrayValidationNode>(reduce_ptr);
 
@@ -186,7 +211,7 @@ TEST_CASE("NaryReduceNode") {
                     inputs[0], expression.emplace_node<IntegerNode>()));
             expression.topological_sort();
 
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0));
+            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0));
         }
 
         THEN("We can't create a NaryReduceNode with non-scalar nodes") {
@@ -199,7 +224,7 @@ TEST_CASE("NaryReduceNode") {
                     expression.emplace_node<AddNode>(inputs[0], inputs[1])));
             expression.topological_sort();
 
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0));
+            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0));
         }
 
         THEN("We can't create a NaryReduceNode with an expression that has inputs with a smaller "
@@ -211,7 +236,7 @@ TEST_CASE("NaryReduceNode") {
             };
             expression.set_objective(expression.emplace_node<AddNode>(inputs[0], inputs[1]));
             expression.topological_sort();
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0));
+            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0));
         }
 
         THEN("We can't create a NaryReduceNode with an expression that has inputs with an integral "
@@ -223,7 +248,7 @@ TEST_CASE("NaryReduceNode") {
             };
             expression.set_objective(expression.emplace_node<AddNode>(inputs[0], inputs[1]));
             expression.topological_sort();
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0));
+            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0));
         }
     }
 
@@ -243,7 +268,7 @@ TEST_CASE("NaryReduceNode") {
                     inputs[0], expression.emplace_node<MultiplyNode>(
                                        expression.emplace_node<ConstantNode>(0.5), inputs[1])));
             expression.topological_sort();
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0));
+            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0));
         }
     }
 }

@@ -2862,13 +2862,23 @@ cdef class NaryReduce(ArraySymbol):
             array = <ArraySymbol?>node
             cppoperands.push_back(array.array_ptr)
 
-        cdef double cppinitial = initial
-
+        cdef double cppinitial_double
+        cdef cppArrayNodePtr cppinitial_node
         expression.lock()
         try:
-            self.ptr = model._graph.emplace_node[cppNaryReduceNode](
-                move(graph._graph), cppoperands, cppinitial
-            )
+            if isinstance(initial, (int, float)):
+                self.ptr = model._graph.emplace_node[cppNaryReduceNode](
+                    move(graph._graph), cppoperands, <double>initial
+                )
+            elif isinstance(initial, ArraySymbol):
+                self.ptr = model._graph.emplace_node[cppNaryReduceNode](
+                    move(graph._graph), cppoperands, <cppArrayNodePtr>((<ArraySymbol>initial).array_ptr)
+                )
+            else:
+                raise TypeError(
+                    f"expected type of `initial` to be either an int, float or an ArraySymbol, got {type(initial)}"
+                )
+
         except ValueError as e:
             expression.unlock()
             raise self._handle_unsupported_expression_exception(expression, e)
@@ -2912,9 +2922,24 @@ cdef class NaryReduce(ArraySymbol):
         with zf.open(directory + "expression.nl", "r") as f:
             expression = Expression.from_file(f)
         with zf.open(directory + "initial.json", "r") as f:
-            initial = json.load(f)
+            initial_info = json.load(f)
 
-        return NaryReduce(expression, predecessors, initial=initial)
+        if initial_info["type"] == "double":
+            initial = initial_info["value"]
+            operands = predecessors
+        elif initial_info["type"] == "node":
+            initial = predecessors[0]
+            operands = predecessors[1:]
+        else:
+            raise ValueError("unexpected type for initial value")
+
+        return NaryReduce(expression, operands, initial=initial)
+
+    def initial(self):
+        if holds_alternative[cppArrayNodePtr](self.ptr.initial):
+            return symbol_from_ptr(self.model, get[cppArrayNodePtr](self.ptr.initial))
+        else:
+            return get[double](self.ptr.initial)
 
     def _into_zipfile(self, zf, directory):
         """Store a NaryReduce symbol as a compressed file.
@@ -2942,8 +2967,15 @@ cdef class NaryReduce(ArraySymbol):
         self.ptr.swap_expression(move(expr._graph))
         assert expr._graph.topologically_sorted()
 
+        # Have to set this manually because the graph we're swapping in is already
+        # topologically sorted. If we don't set it, then `info_file` and other methods
+        # may call unlock will cause the topological sort to be erased.
+        expr._lock_count = 1  
+
         with zf.open(directory + "expression.nl", mode="w") as f:
             expr.into_file(f)
+
+        assert expr._graph.topologically_sorted()
 
         # swap the cppGraph back to the node
         self.ptr.swap_expression(move(expr._graph))
@@ -2951,7 +2983,16 @@ cdef class NaryReduce(ArraySymbol):
         del expr
 
         encoder = json.JSONEncoder(separators=(',', ':'))
-        zf.writestr(directory + "initial.json", encoder.encode(self.ptr.initial))
+
+        if holds_alternative[cppArrayNodePtr](self.ptr.initial):
+            initial_info = dict(
+                type="node",
+                value=get[cppArrayNodePtr](self.ptr.initial).topological_index()
+            )
+        else:
+            initial_info = dict(type="double", value=get[double](self.ptr.initial))
+
+        zf.writestr(directory + "initial.json", encoder.encode(initial_info))
 
     cdef cppNaryReduceNode* ptr
 
