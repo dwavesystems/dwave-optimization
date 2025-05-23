@@ -27,14 +27,6 @@ InputNode::InputNode(std::span<const ssize_t> shape, std::optional<double> min,
           min_(min.value_or(std::numeric_limits<double>::lowest())),
           max_(max.value_or(std::numeric_limits<double>::max())),
           integral_(integral.value_or(false)) {
-    if (min_ < std::numeric_limits<double>::lowest()) {
-        throw std::invalid_argument("minimum limit on InputNode must be finite");
-    }
-
-    if (max_ > std::numeric_limits<double>::max()) {
-        throw std::invalid_argument("maximum limit on InputNode must be finite");
-    }
-
     if (min_ > max_) {
         throw std::invalid_argument(
                 "maximum limit must be greater to or equal than minimum limit for InputNode");
