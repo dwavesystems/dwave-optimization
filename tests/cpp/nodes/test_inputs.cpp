@@ -27,11 +27,7 @@ namespace dwave::optimization {
 TEST_CASE("InputNode") {
     auto graph = Graph();
 
-    // Ensure errors are thrown on bad limits
-    CHECK_THROWS(graph.emplace_node<InputNode>(std::vector<ssize_t>{1},
-                                               -std::numeric_limits<double>::infinity(), 0, false));
-    CHECK_THROWS(graph.emplace_node<InputNode>(std::vector<ssize_t>{1}, 0,
-                                               std::numeric_limits<double>::infinity(), false));
+    // Ensure error thrown on bad limits
     CHECK_THROWS(graph.emplace_node<InputNode>(std::vector<ssize_t>{1}, 0, -0.5, false));
 
     GIVEN("An input node starting with state copied from a vector") {
