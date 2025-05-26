@@ -1002,6 +1002,10 @@ class Array {
         return std::reduce(shape, shape + ndim, 1, std::multiplies<ssize_t>());
     }
 
+    static ssize_t shape_to_size(const std::span<const ssize_t> shape) noexcept {
+        return shape_to_size(shape.size(), shape.data());
+    }
+
     // Determine the strides from the shape.
     // Assumes itemsize = sizeof(double).
     // Expects the shape to be stored in a C-style array of length ndim.
