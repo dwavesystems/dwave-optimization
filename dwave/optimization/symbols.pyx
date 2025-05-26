@@ -18,6 +18,7 @@ import collections.abc
 import json
 import numbers
 
+cimport cpython.buffer
 cimport cpython.object
 import cython
 cimport cython
@@ -987,6 +988,26 @@ cdef class Constant(ArraySymbol):
         return <bool>deref(self.ptr.buff())
 
     def __getbuffer__(self, Py_buffer *buffer, int flags):
+        # We never export a writeable array
+        if flags & cpython.buffer.PyBUF_WRITABLE == cpython.buffer.PyBUF_WRITABLE:
+            raise BufferError(f"{type(self).__name__} cannot export a writeable buffer")
+
+        # The remaining flags are accurate to the information we export, but over-zealous.
+        # We could, for instance, check whether we're contiguous and in that case not raise
+        # an error.
+        # But for now, we *always* expose strides, format, and we never assume that we're
+        # contiguous.
+        # Luckily, NumPy and memoryview always ask for everything so it doesn't really matter.
+        # If there is a compelling use case we can add more information.
+        if flags & cpython.buffer.PyBUF_STRIDES != cpython.buffer.PyBUF_STRIDES:
+            raise BufferError(f"{type(self).__name__} always returns stride information")
+        if flags & cpython.buffer.PyBUF_FORMAT != cpython.buffer.PyBUF_FORMAT:
+            raise BufferError(f"{type(self).__name__} always sets the format field")
+        if (flags & cpython.buffer.PyBUF_ANY_CONTIGUOUS == cpython.buffer.PyBUF_ANY_CONTIGUOUS or
+                flags & cpython.buffer.PyBUF_C_CONTIGUOUS == cpython.buffer.PyBUF_C_CONTIGUOUS or
+                flags & cpython.buffer.PyBUF_F_CONTIGUOUS == cpython.buffer.PyBUF_F_CONTIGUOUS):
+            raise BufferError(f"{type(self).__name__} is not necessarily contiguous")
+
         buffer.buf = <void*>(self.ptr.buff())
         buffer.format = <char*>(self.ptr.format().c_str())
         buffer.internal = NULL
@@ -994,7 +1015,7 @@ cdef class Constant(ArraySymbol):
         buffer.len = self.ptr.len()
         buffer.ndim = self.ptr.ndim()
         buffer.obj = self
-        buffer.readonly = 1  # todo: consider loosening this requirement
+        buffer.readonly = 1
         buffer.shape = <Py_ssize_t*>(self.ptr.shape().data())
         buffer.strides = <Py_ssize_t*>(self.ptr.strides().data())
         buffer.suboffsets = NULL
