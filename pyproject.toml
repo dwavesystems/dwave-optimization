@@ -70,9 +70,11 @@ before-build = "pip install delvewheel>=1.4.0"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg dwave"
 
 [tool.coverage.run]
+omit = ["tests/*"]
 source = ["dwave/optimization"]
 
 [tool.coverage.report]
+include_namespace_packages = true
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
