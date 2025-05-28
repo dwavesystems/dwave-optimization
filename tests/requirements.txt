@@ -1,1 +1,2 @@
 dimod==0.12.17
+coverage[toml]>=7.0.0       # native namespace package support added in 7.0.0
