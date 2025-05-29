@@ -265,12 +265,12 @@ TEST_CASE("IntegerNode") {
         THEN("The function to check valid integers works") {
             CHECK(inode.max() == 2000000000);
             CHECK(inode.min() == 0);
-            CHECK(inode.is_valid(inode.min() - 1) == false);
-            CHECK(inode.is_valid(inode.max() + 1) == false);
-            CHECK(inode.is_valid(10.5) == false);
-            CHECK(inode.is_valid(inode.min()) == true);
-            CHECK(inode.is_valid(inode.max()) == true);
-            CHECK(inode.is_valid(10) == true);
+            CHECK(inode.is_valid(0, inode.min() - 1) == false);
+            CHECK(inode.is_valid(0, inode.max() + 1) == false);
+            CHECK(inode.is_valid(0, 10.5) == false);
+            CHECK(inode.is_valid(0, inode.min()) == true);
+            CHECK(inode.is_valid(0, inode.max()) == true);
+            CHECK(inode.is_valid(0, 10) == true);
         }
     }
 
@@ -280,12 +280,12 @@ TEST_CASE("IntegerNode") {
         THEN("The function to check valid integers works") {
             CHECK(inode.max() == 10);
             CHECK(inode.min() == -5);
-            CHECK(inode.is_valid(inode.min() - 1) == false);
-            CHECK(inode.is_valid(inode.max() + 1) == false);
-            CHECK(inode.is_valid(5.5) == false);
-            CHECK(inode.is_valid(inode.min()) == true);
-            CHECK(inode.is_valid(inode.max()) == true);
-            CHECK(inode.is_valid(5) == true);
+            CHECK(inode.is_valid(0, inode.min() - 1) == false);
+            CHECK(inode.is_valid(0, inode.max() + 1) == false);
+            CHECK(inode.is_valid(0, 5.5) == false);
+            CHECK(inode.is_valid(0, inode.min()) == true);
+            CHECK(inode.is_valid(0, inode.max()) == true);
+            CHECK(inode.is_valid(0, 5) == true);
         }
     }
 
@@ -344,9 +344,14 @@ TEST_CASE("IntegerNode") {
             auto state_view = ptr->view(state);
 
             THEN("Then all elements are integral and within range") {
-                CHECK(std::find_if(state_view.begin(), state_view.end(), [&](double i) {
-                          return !ptr->is_valid(i);
-                      }) == state_view.end());
+                bool found_invalid = false;
+                for (ssize_t i = 0, stop = state_view.size(); i < stop; i++) {
+                    if (!ptr->is_valid(i, state_view[i])) {
+                        found_invalid = true;
+                        break;
+                    }
+                }
+                CHECK(!found_invalid);
             }
         }
 

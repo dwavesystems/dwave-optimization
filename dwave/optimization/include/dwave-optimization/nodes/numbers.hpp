@@ -46,6 +46,13 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     double lower_bound() const;
     double upper_bound() const;
 
+    virtual double lower_bound(ssize_t index) const {
+        return lower_bound();
+    }
+    virtual double upper_bound(ssize_t index) const {
+        return upper_bound();
+    }
+
     // Overloads required by the Node ABC *************************************
 
     // Initialize the state. Defaults to 0 if 0 is in range, otherwise defaults
@@ -94,8 +101,8 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         }
     }
 
-    virtual bool is_valid(double value) const = 0;
-    virtual double default_value() const = 0;
+    virtual bool is_valid(ssize_t index, double value) const = 0;
+    virtual double default_value(ssize_t index) const = 0;
 
     double lower_bound_;
     double upper_bound_;
@@ -130,8 +137,8 @@ class IntegerNode : public NumberNode {
 
     // Overloads needed by the NumberNode ABC **************************************
 
-    bool is_valid(double value) const override;
-    double default_value() const override;
+    bool is_valid(ssize_t index, double value) const override;
+    double default_value(ssize_t index) const override;
 
     // Specializations for the linear case
     bool set_value(State& state, ssize_t i, int value) const;
