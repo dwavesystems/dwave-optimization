@@ -1952,7 +1952,7 @@ cdef class IntegerVariable(ArraySymbol):
 
     def lower_bound(self):
         """The lowest value allowed for the integer symbol."""
-        return int(self.ptr.lower_bound())
+        return int(self.ptr.min())
 
     def set_state(self, Py_ssize_t index, state):
         """Set the state of the integer node.
@@ -1980,7 +1980,7 @@ cdef class IntegerVariable(ArraySymbol):
 
     def upper_bound(self):
         """The highest value allowed for the integer symbol."""
-        return int(self.ptr.upper_bound())
+        return int(self.ptr.max())
 
     # An observing pointer to the C++ IntegerNode
     cdef cppIntegerNode* ptr

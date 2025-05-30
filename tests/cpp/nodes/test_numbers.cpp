@@ -265,12 +265,12 @@ TEST_CASE("IntegerNode") {
         THEN("The function to check valid integers works") {
             CHECK(inode.max() == 2000000000);
             CHECK(inode.min() == 0);
-            CHECK(inode.is_valid(inode.min() - 1) == false);
-            CHECK(inode.is_valid(inode.max() + 1) == false);
-            CHECK(inode.is_valid(10.5) == false);
-            CHECK(inode.is_valid(inode.min()) == true);
-            CHECK(inode.is_valid(inode.max()) == true);
-            CHECK(inode.is_valid(10) == true);
+            CHECK(inode.is_valid(0, inode.min() - 1) == false);
+            CHECK(inode.is_valid(0, inode.max() + 1) == false);
+            CHECK(inode.is_valid(0, 10.5) == false);
+            CHECK(inode.is_valid(0, inode.min()) == true);
+            CHECK(inode.is_valid(0, inode.max()) == true);
+            CHECK(inode.is_valid(0, 10) == true);
         }
     }
 
@@ -280,12 +280,12 @@ TEST_CASE("IntegerNode") {
         THEN("The function to check valid integers works") {
             CHECK(inode.max() == 10);
             CHECK(inode.min() == -5);
-            CHECK(inode.is_valid(inode.min() - 1) == false);
-            CHECK(inode.is_valid(inode.max() + 1) == false);
-            CHECK(inode.is_valid(5.5) == false);
-            CHECK(inode.is_valid(inode.min()) == true);
-            CHECK(inode.is_valid(inode.max()) == true);
-            CHECK(inode.is_valid(5) == true);
+            CHECK(inode.is_valid(0, inode.min() - 1) == false);
+            CHECK(inode.is_valid(0, inode.max() + 1) == false);
+            CHECK(inode.is_valid(0, 5.5) == false);
+            CHECK(inode.is_valid(0, inode.min()) == true);
+            CHECK(inode.is_valid(0, inode.max()) == true);
+            CHECK(inode.is_valid(0, 5) == true);
         }
     }
 
@@ -293,8 +293,8 @@ TEST_CASE("IntegerNode") {
         IntegerNode inode({1}, {}, 10);
 
         THEN("The lower bound takes the default we expect") {
-            CHECK(inode.lower_bound() == IntegerNode::default_lower_bound);
-            CHECK(inode.upper_bound() == 10);
+            CHECK(inode.min() == IntegerNode::default_lower_bound);
+            CHECK(inode.max() == 10);
         }
     }
 
@@ -302,8 +302,8 @@ TEST_CASE("IntegerNode") {
         IntegerNode inode1({1}, 5);
 
         THEN("The lower bound takes the default we expect") {
-            CHECK(inode1.lower_bound() == 5);
-            CHECK(inode1.upper_bound() == IntegerNode::default_upper_bound);
+            CHECK(inode1.min() == 5);
+            CHECK(inode1.max() == IntegerNode::default_upper_bound);
         }
     }
 
@@ -311,8 +311,8 @@ TEST_CASE("IntegerNode") {
         IntegerNode inode1({1}, 5, {});
 
         THEN("The lower bound takes the default we expect") {
-            CHECK(inode1.lower_bound() == 5);
-            CHECK(inode1.upper_bound() == IntegerNode::default_upper_bound);
+            CHECK(inode1.min() == 5);
+            CHECK(inode1.max() == IntegerNode::default_upper_bound);
         }
     }
 
@@ -344,9 +344,14 @@ TEST_CASE("IntegerNode") {
             auto state_view = ptr->view(state);
 
             THEN("Then all elements are integral and within range") {
-                CHECK(std::find_if(state_view.begin(), state_view.end(), [&](double i) {
-                          return !ptr->is_valid(i);
-                      }) == state_view.end());
+                bool found_invalid = false;
+                for (ssize_t i = 0, stop = state_view.size(); i < stop; i++) {
+                    if (!ptr->is_valid(i, state_view[i])) {
+                        found_invalid = true;
+                        break;
+                    }
+                }
+                CHECK(!found_invalid);
             }
         }
 

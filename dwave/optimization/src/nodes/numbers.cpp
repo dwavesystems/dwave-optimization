@@ -36,29 +36,32 @@ void NumberNode::revert(State& state) const noexcept {
     data_ptr<ArrayNodeStateData>(state)->revert();
 }
 
-double NumberNode::lower_bound() const { return lower_bound_; }
-double NumberNode::upper_bound() const { return upper_bound_; }
-
 std::pair<double, double> NumberNode::minmax(
         optional_cache_type<std::pair<double, double>>) const {
-    return {lower_bound_, upper_bound_};
+    return {min_, max_};
 }
 
 void NumberNode::initialize_state(State& state, std::vector<double>&& number_data) const {
     if (number_data.size() != static_cast<size_t>(this->size())) {
         throw std::invalid_argument("Size of data provided does not match node size");
     }
-    if (auto it = std::find_if_not(number_data.begin(), number_data.end(),
-                                   [&](double value) { return is_valid(value); });
-        it != number_data.end()) {
-        throw std::invalid_argument("Invalid data provided for node");
+
+    for (ssize_t index = 0, stop = this->size(); index < stop; index++) {
+        if (!is_valid(index, number_data[index])) {
+            throw std::invalid_argument("Invalid data provided for node");
+        }
     }
 
     emplace_data_ptr<ArrayNodeStateData>(state, std::move(number_data));
 }
 
 void NumberNode::initialize_state(State& state) const {
-    initialize_state(state, std::vector<double>(this->size(), default_value()));
+    std::vector<double> values;
+    values.reserve(this->size());
+    for (ssize_t i = 0; i < this->size(); i++) {
+        values.push_back(default_value(i));
+    }
+    initialize_state(state, values);
 }
 
 // Specializations for the linear case
@@ -86,7 +89,7 @@ IntegerNode::IntegerNode(std::span<const ssize_t> shape, std::optional<int> lowe
                          std::optional<int> upper_bound)
         : NumberNode(shape, lower_bound.value_or(default_lower_bound),
                      upper_bound.value_or(default_upper_bound)) {
-    if (lower_bound_ < minimum_lower_bound || upper_bound_ > maximum_upper_bound) {
+    if (min_ < minimum_lower_bound || max_ > maximum_upper_bound) {
         throw std::invalid_argument("range provided for integers exceeds supported range");
     }
 }
@@ -101,16 +104,16 @@ IntegerNode::IntegerNode(ssize_t size, std::optional<int> lower_bound,
 
 bool IntegerNode::integral() const { return true; }
 
-bool IntegerNode::is_valid(double value) const {
-    return (value >= lower_bound()) && (value <= upper_bound()) && (std::round(value) == value);
+bool IntegerNode::is_valid(ssize_t index, double value) const {
+    return (value >= min_) && (value <= max_) && (std::round(value) == value);
 }
 
-double IntegerNode::default_value() const {
-    return (lower_bound() <= 0 && upper_bound() >= 0) ? 0 : lower_bound();
+double IntegerNode::default_value(ssize_t index) const {
+    return (min_ <= 0 && max_ >= 0) ? 0 : min_;
 }
 
 bool IntegerNode::set_value(State& state, ssize_t i, int value) const {
-    if (!is_valid(value)) {
+    if (!is_valid(i, value)) {
         throw std::invalid_argument("Invalid integer value provided");
     }
     return data_ptr<ArrayNodeStateData>(state)->set(i, value);
