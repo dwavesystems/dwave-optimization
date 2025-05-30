@@ -293,8 +293,8 @@ TEST_CASE("IntegerNode") {
         IntegerNode inode({1}, {}, 10);
 
         THEN("The lower bound takes the default we expect") {
-            CHECK(inode.lower_bound() == IntegerNode::default_lower_bound);
-            CHECK(inode.upper_bound() == 10);
+            CHECK(inode.min() == IntegerNode::default_lower_bound);
+            CHECK(inode.max() == 10);
         }
     }
 
@@ -302,8 +302,8 @@ TEST_CASE("IntegerNode") {
         IntegerNode inode1({1}, 5);
 
         THEN("The lower bound takes the default we expect") {
-            CHECK(inode1.lower_bound() == 5);
-            CHECK(inode1.upper_bound() == IntegerNode::default_upper_bound);
+            CHECK(inode1.min() == 5);
+            CHECK(inode1.max() == IntegerNode::default_upper_bound);
         }
     }
 
@@ -311,8 +311,8 @@ TEST_CASE("IntegerNode") {
         IntegerNode inode1({1}, 5, {});
 
         THEN("The lower bound takes the default we expect") {
-            CHECK(inode1.lower_bound() == 5);
-            CHECK(inode1.upper_bound() == IntegerNode::default_upper_bound);
+            CHECK(inode1.min() == 5);
+            CHECK(inode1.max() == IntegerNode::default_upper_bound);
         }
     }
 

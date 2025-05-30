@@ -14,8 +14,6 @@
 
 #pragma once
 
-#include <algorithm>
-#include <memory>
 #include <ranges>
 #include <span>
 #include <utility>
@@ -43,14 +41,12 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
-    double lower_bound() const;
-    double upper_bound() const;
-
     virtual double lower_bound(ssize_t index) const {
-        return lower_bound();
+        return min_;
     }
+
     virtual double upper_bound(ssize_t index) const {
-        return upper_bound();
+        return max_;
     }
 
     // Overloads required by the Node ABC *************************************
@@ -77,11 +73,15 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         values.reserve(size);
 
         if (integral()) {
-            std::uniform_int_distribution<ssize_t> gen(lower_bound_, upper_bound_);
-            for (ssize_t i = 0; i < size; ++i) values.emplace_back(gen(rng));
+            for (ssize_t i = 0; i < size; ++i) {
+                std::uniform_int_distribution<ssize_t> gen(lower_bound(i), upper_bound(i));
+                values.emplace_back(gen(rng));
+            }
         } else {
-            std::uniform_real_distribution<double> gen(lower_bound_, upper_bound_);
-            for (ssize_t i = 0; i < size; ++i) values.emplace_back(gen(rng));
+            for (ssize_t i = 0; i < size; ++i) {
+                std::uniform_real_distribution<double> gen(lower_bound(i), upper_bound(i));
+                values.emplace_back(gen(rng));
+            }
         }
 
         return initialize_state(state, std::move(values));
@@ -94,9 +94,9 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     ssize_t linear_index(ssize_t x, ssize_t y) const;
 
  protected:
-    explicit NumberNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound)
-            : ArrayOutputMixin(shape), lower_bound_(lower_bound), upper_bound_(upper_bound) {
-        if (upper_bound_ < lower_bound_) {
+    explicit NumberNode(std::span<const ssize_t> shape, double minimum, double maximum)
+            : ArrayOutputMixin(shape), min_(minimum), max_(maximum) {
+        if (max_ < min_) {
             throw std::invalid_argument("Invalid range for number array provided");
         }
     }
@@ -104,8 +104,8 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     virtual bool is_valid(ssize_t index, double value) const = 0;
     virtual double default_value(ssize_t index) const = 0;
 
-    double lower_bound_;
-    double upper_bound_;
+    double min_;
+    double max_;
 };
 
 /// A contiguous block of integer numbers.

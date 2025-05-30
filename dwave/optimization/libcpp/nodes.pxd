@@ -246,8 +246,6 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
 cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass IntegerNode(ArrayNode):
         void initialize_state(State&, vector[double]) except+
-        double lower_bound()
-        double upper_bound()
 
     cdef cppclass BinaryNode(ArrayNode):
         void initialize_state(State&, vector[double]) except+
