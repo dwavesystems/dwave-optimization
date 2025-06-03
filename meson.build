@@ -112,7 +112,7 @@ py.extension_module(
     subdir: 'dwave/optimization/',
 )
 
-install_subdir('dwave', install_dir: py.get_install_dir(pure: false))
+install_subdir('dwave/optimization', install_dir: py.get_install_dir(pure: false) / 'dwave')
 
 # meson doesn't disable tests by default, so we let the user decide via the build-tests
 # option. If set to 'auto', then we build the tests for non-release builds.
