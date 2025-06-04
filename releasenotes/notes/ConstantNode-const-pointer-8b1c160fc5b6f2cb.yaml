@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Update the C++ ``ConstantNode`` constructors to accept ``const double*``
+    rather than ``double*``.
+fixes:
+  - |
+    Fix constructing ``Constant`` symbols from read-only NumPy arrays.
+    See `#296 <https://github.com/dwavesystems/dwave-optimization/issues/296>`_.

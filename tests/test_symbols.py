@@ -851,6 +851,14 @@ class TestConstant(utils.SymbolTests):
         with self.assertRaises(ValueError):
             model.constant(np.array([0, 5, np.nan]))
 
+    def test_readonly(self):
+        model = Model()
+
+        arr = np.ones(3)
+        arr.setflags(write=False)
+        c = model.constant(arr)
+        np.testing.assert_array_equal(arr, c)
+
 
 class TestCopy(utils.SymbolTests):
     def generate_symbols(self):
