@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Allow BinaryOpNode (which Add, And, Multiply, etc. rely on) to accept two
+    dynamic-sized predecessors, as long as they have an equivalent shape as
+    determined by their `sizeinfo()`.
