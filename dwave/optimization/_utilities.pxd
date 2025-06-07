@@ -1,3 +1,5 @@
+# cython: auto_pickle=False
+
 # Copyright 2025 D-Wave
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
