@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    Previously, the size info as reported by `ArrayIndexingNode` was correct
+    only when the advanced indexing operation had no empty slices (i.e. all
+    axes were specified with indexing arrays), and even in that case, the full
+    size information from the indexing predecessors was not utilized. This has
+    been fixed, so certain operations on advanced indexing nodes may now be
+    allowed that weren't previously, and a size check may fail on certain models
+    that worked before (operations such as `A + B[i, :, j, :]` where `A` is a
+    dynamic 2d array, and `i` and `j` are dynamic 1d arrays, but the dimensions
+    do not match).
