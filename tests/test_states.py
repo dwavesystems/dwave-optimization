@@ -17,6 +17,7 @@ import io
 import os.path
 import tempfile
 import threading
+import sys
 import unittest
 
 import numpy as np
@@ -24,9 +25,43 @@ import numpy as np
 import dwave.optimization
 
 from dwave.optimization import Model
+from dwave.optimization.states import StateView
 
 
 class TestStates(unittest.TestCase):
+    @unittest.skipIf((sys.version_info.major, sys.version_info.minor) < (3, 12),
+                     "Python-level access to the buffer protocol requires Python 3.12+")
+    def test_buffer_flags(self):
+        import inspect  # for the buffer flags
+
+        model = Model()
+        model.states.resize(1)
+        x = model.list(10)
+
+        # A few smoke tests to make sure we're not being overly restrictive with
+        # our flags for the cases we care about
+        memoryview(StateView(x, 0))
+        np.asarray(StateView(x, 0))
+
+        # We never allow a writeable buffer
+        with self.assertRaises(BufferError):
+            StateView(x, 0).__buffer__(inspect.BufferFlags.WRITABLE)
+
+        # While we often incidentally export contiguous buffers, we don't
+        # respect the request (for now)
+        with self.assertRaises(BufferError):
+            StateView(x, 0).__buffer__(inspect.BufferFlags.ANY_CONTIGUOUS)
+        with self.assertRaises(BufferError):
+            StateView(x, 0).__buffer__(inspect.BufferFlags.C_CONTIGUOUS)
+        with self.assertRaises(BufferError):
+            StateView(x, 0).__buffer__(inspect.BufferFlags.F_CONTIGUOUS)
+
+        # Currently we always expose stride information
+        with self.assertRaises(BufferError):
+            StateView(x, 0).__buffer__(inspect.BufferFlags.ND)
+        with self.assertRaises(BufferError):
+            StateView(x, 0).__buffer__(inspect.BufferFlags.SIMPLE)
+
     def test_clear(self):
         model = Model()
         model.states.resize(100)

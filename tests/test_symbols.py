@@ -16,6 +16,7 @@ import collections.abc
 import itertools
 import math
 import operator
+import sys
 import typing
 import unittest
 
@@ -768,6 +769,39 @@ class TestConstant(utils.SymbolTests):
 
         # the type is correct
         self.assertIsInstance(model.constant(123.4).__bool__(), bool)
+
+    @unittest.skipIf((sys.version_info.major, sys.version_info.minor) < (3, 12),
+                     "Python-level access to the buffer protocol requires Python 3.12+")
+    def test_buffer_flags(self):
+        import inspect  # for the buffer flags
+
+        model = Model()
+
+        A = model.constant(np.arange(25).reshape(5, 5))
+
+        # A few smoke tests to make sure we're not being overly restrictive with
+        # our flags for the cases we care about
+        memoryview(A)
+        np.asarray(A)
+
+        # We never allow a writeable buffer
+        with self.assertRaises(BufferError):
+            A.__buffer__(inspect.BufferFlags.WRITABLE)
+
+        # While we often incidentally export contiguous buffers, we don't
+        # respect the request (for now)
+        with self.assertRaises(BufferError):
+            A.__buffer__(inspect.BufferFlags.ANY_CONTIGUOUS)
+        with self.assertRaises(BufferError):
+            A.__buffer__(inspect.BufferFlags.C_CONTIGUOUS)
+        with self.assertRaises(BufferError):
+            A.__buffer__(inspect.BufferFlags.F_CONTIGUOUS)
+
+        # Currently we always expose stride information
+        with self.assertRaises(BufferError):
+            A.__buffer__(inspect.BufferFlags.ND)
+        with self.assertRaises(BufferError):
+            A.__buffer__(inspect.BufferFlags.SIMPLE)
 
     def test_comparisons(self):
         model = Model()
