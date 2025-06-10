@@ -644,9 +644,11 @@ SizeInfo AdvancedIndexingNode::sizeinfo() const {
     if (!dynamic()) return SizeInfo(size());
     // when we get around to supporting broadcasting this will need to change
     assert(predecessors().size() >= 2);
-    assert(!dynamic_cast<ArrayNode*>(predecessors()[0])->dynamic() &&
-           "sizeinfo for dynamic base arrays not supported");
-    return SizeInfo(dynamic_cast<ArrayNode*>(predecessors()[1]));
+    SizeInfo sizeinfo(dynamic_cast<ArrayNode*>(predecessors()[1])->sizeinfo());
+    for (const auto& dim : this->shape() | std::views::drop(1)) {
+        sizeinfo.multiplier *= dim;
+    }
+    return sizeinfo;
 }
 
 std::span<const ssize_t> AdvancedIndexingNode::shape(const State& state) const {

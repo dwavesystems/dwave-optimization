@@ -693,6 +693,11 @@ TEST_CASE("AdvancedIndexingNode") {
             THEN("We get the shape we expect") {
                 CHECK(adv->dynamic());
                 CHECK_THAT(adv->shape(), RangeEquals({-1, 4}));
+                // sizeinfo should be the size of the indexers (1/3 * dyn_ptr size) times the
+                // remaining shape of arr_ptr (4)
+                SizeInfo correct_sizeinfo(dyn_ptr);
+                correct_sizeinfo.multiplier = fraction(4, 3);
+                CHECK(adv->sizeinfo() == correct_sizeinfo);
             }
 
             AND_WHEN("We create a state") {
@@ -752,6 +757,8 @@ TEST_CASE("AdvancedIndexingNode") {
             THEN("We get the shape we expect") {
                 CHECK(adv->dynamic());
                 CHECK_THAT(adv->shape(), RangeEquals({-1, 3}));
+                // sizeinfo should be 1/3 * dyn_ptr size * 3 = dyn_ptr size
+                CHECK(adv->sizeinfo() == SizeInfo(dyn_ptr));
             }
 
             AND_WHEN("We create a state") {
@@ -832,6 +839,11 @@ TEST_CASE("AdvancedIndexingNode") {
             THEN("We get the shape we expect") {
                 CHECK(adv_ptr->dynamic());
                 CHECK_THAT(adv_ptr->shape(), RangeEquals({-1, 3}));
+                // sizeinfo should be the size of the indexers (dyn_ptr size, min=0, max=2) times
+                // the remaining shape of arr_ptr (3)
+                SizeInfo correct_sizeinfo(dyn_ptr, 0, 2);
+                correct_sizeinfo.multiplier = 3;
+                CHECK(adv_ptr->sizeinfo() == correct_sizeinfo);
             }
 
             AND_WHEN("We create a state") {
@@ -881,7 +893,7 @@ TEST_CASE("AdvancedIndexingNode") {
             }
         }
 
-        WHEN("We access the matrix by (i, :, j, ;)") {
+        WHEN("We access the matrix by (i, :, j, :)") {
             auto adv_ptr = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr,
                                                                     Slice());
 
@@ -890,6 +902,11 @@ TEST_CASE("AdvancedIndexingNode") {
             THEN("We get the shape we expect") {
                 CHECK(adv_ptr->dynamic());
                 CHECK_THAT(adv_ptr->shape(), RangeEquals({-1, 3, 4}));
+                // sizeinfo should be the size of the indexers (dyn_ptr size, min=0, max=2) times
+                // the remaining shape of arr_ptr (12)
+                SizeInfo correct_sizeinfo(dyn_ptr, 0, 2);
+                correct_sizeinfo.multiplier = 12;
+                CHECK(adv_ptr->sizeinfo() == correct_sizeinfo);
             }
 
             AND_WHEN("We create a state") {
