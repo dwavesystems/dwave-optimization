@@ -43,7 +43,11 @@ cdef class _Graph:
     # Make the _Graph class weak referenceable
     cdef object __weakref__
 
-    cdef cppGraph _graph
+    # The lifespan of the C++ Graph is managed by a shared_ptr<Graph>, but
+    # we add an additional (redundant) Graph* because Cython knows what to do
+    # with that.
+    cdef shared_ptr[cppGraph] _owning_ptr
+    cdef cppGraph* _graph
 
     # The number of times "lock()" has been called.
     cdef readonly Py_ssize_t _lock_count

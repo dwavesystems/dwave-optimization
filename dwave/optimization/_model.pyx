@@ -28,6 +28,7 @@ from cpython.ref cimport PyObject
 from cython.operator cimport dereference as deref, preincrement as inc
 from cython.operator cimport typeid
 from libcpp cimport bool
+from libcpp.memory cimport make_shared
 from libcpp.typeindex cimport type_index
 from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
@@ -94,6 +95,9 @@ cdef class _Graph:
     def __cinit__(self):
         self._lock_count = 0
         self._data_sources = []
+
+        self._owning_ptr = make_shared[cppGraph]()
+        self._graph = self._owning_ptr.get()
 
     def __init__(self, *args, **kwargs):
         # disallow direct construction of _Graphs, they should be constructed

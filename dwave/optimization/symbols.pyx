@@ -89,6 +89,7 @@ from dwave.optimization.libcpp.nodes cimport (
     NaryMaximumNode as cppNaryMaximumNode,
     NaryMinimumNode as cppNaryMinimumNode,
     NaryMultiplyNode as cppNaryMultiplyNode,
+    NaryReduceNode as cppNaryReduceNode,
     NegativeNode as cppNegativeNode,
     NotNode as cppNotNode,
     OrNode as cppOrNode,
@@ -2742,6 +2743,18 @@ cdef class NaryMultiply(ArraySymbol):
     cdef cppNaryMultiplyNode* ptr
 
 _register(NaryMultiply, typeid(cppNaryMultiplyNode))
+
+
+from libcpp.memory cimport unique_ptr, make_unique
+
+
+cdef class NaryReduce:
+    """PLACEHOLDER TO DEMONSTRATE A PATTERN, DO NOT MERGE"""
+    def __init__(self, expression):
+        cdef _Graph model = expression._model
+        self.ptr = make_unique[cppNaryReduceNode](model._owning_ptr)
+
+    cdef unique_ptr[cppNaryReduceNode] ptr
 
 
 cdef class Negative(ArraySymbol):

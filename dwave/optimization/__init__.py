@@ -14,6 +14,7 @@
 
 import dwave.optimization.generators
 
+from dwave.optimization.expression import *
 from dwave.optimization.model import Model
 from dwave.optimization.mathematical import *
 

@@ -99,6 +99,11 @@ cdef extern from "dwave-optimization/nodes/interpolation.hpp" namespace "dwave::
         vector[double] c()
 
 
+cdef extern from "dwave-optimization/nodes/lambda.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass NaryReduceNode:
+        pass
+
+
 cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass LinearProgramFeasibleNode(ArrayNode):
         pass
