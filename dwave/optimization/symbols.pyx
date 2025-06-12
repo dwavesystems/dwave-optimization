@@ -1845,6 +1845,13 @@ cdef class Input(ArraySymbol):
 
         self.initialize_arraynode(model, self.ptr)
 
+    def integral(self):
+        return self.ptr.integral()
+
+    def lower_bound(self):
+        """Lowest value allowed to the input."""
+        return self.ptr.min()
+
     def set_state(self, Py_ssize_t index, state):
         """Set the state of the input node.
 
@@ -1866,6 +1873,10 @@ cdef class Input(ArraySymbol):
             (<States>self.model.states)._states[index],
             <span[const double]>as_span(arr)
         )
+
+    def upper_bound(self):
+        """Largest value allowed to the input."""
+        return self.ptr.max()
 
     @classmethod
     def _from_symbol(cls, Symbol symbol):

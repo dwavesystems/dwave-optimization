@@ -21,6 +21,20 @@ Model Class
     :inherited-members:
     :member-order: bysource
 
+Expressions
+-----------
+
+.. currentmodule:: dwave.optimization.expression
+
+.. automodule:: dwave.optimization.expression
+    :members:
+    :member-order: bysource
+
+.. autoclass:: Expression
+    :members:
+    :inherited-members:
+    :member-order: bysource
+
 States Class
 ------------
 

@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import collections.abc
+import functools
 import inspect
 import typing
 
@@ -24,7 +26,11 @@ __all__ = ["expression"]
 
 
 class Expression:
-    _function: typing.Callable  # todo: better typing?
+    """An expression that can be used as an input to other symbols.
+
+    .. versionadded:: 0.6.3
+    """
+    _function: collections.abc.Callable  # todo: better typing?
     _model: Model
 
     def __init__(self):
@@ -34,22 +40,63 @@ class Expression:
     def __str__(self) -> str:
         return f"expression({self._function!r})"
 
-    @staticmethod
-    def _from_function(function: typing.Callable) -> Expression:
-        expr = Expression.__new__(Expression)
-        expr._function = function
-        expr._model = model = Model()
 
-        # Use function to construct the symbols. Let the relevant methods to raise
-        # any relevant exceptions.
-        inputs = [model.input() for _ in inspect.signature(function).parameters]
-        if len(inputs) < 1:
-            raise ValueError("function must accept at least one argument")
-        model.minimize(function(*inputs))
-
-        return expr
+@typing.overload
+def expression(function: collections.abc.Callable, **kwargs) -> Expression: ...
+@typing.overload
+def expression(**kwargs) -> collections.abc.Callable: ...
 
 
-def expression(function: typing.Callable) -> Expression:
-    """Create an :class:`Expression` from a function."""
-    return Expression._from_function(function)
+def expression(*args, **kwargs):
+    """Transform a function into an :class:`Expression`.
+
+    The given ``function`` is executed once to generate the :class:`Expression`.
+
+    Examples:
+        >>> from dwave.optimization import expression
+
+        >>> @expression
+        ... def func(a, b, c):
+        ...     return (a + b) * c
+
+        >>> @expression(a=dict(lower_bound=0), b=dict(upper_bound=1))
+        ... def func(a, b, c):
+        ...     return (a + b) * c
+
+    .. versionadded:: 0.6.3
+    """
+    if len(args) == 0:
+        def _decorator(function):
+            return expression(function, **kwargs)
+        return _decorator
+    elif len(args) == 1:
+        function, = args
+    else:
+        raise TypeError(
+            f"expression() takes 0 or 1 positional arguments but {len(args)} were given",
+        )
+
+    if not callable(function):
+        raise TypeError(f'{function!r} is not a callable object')
+
+    model = Model()
+
+    # Create the inputs. By default we loosen the values to -inf/+inf, but we also
+    # allow the user to overwrite that default.
+    default_kwargs = dict(lower_bound=-float('inf'), upper_bound=float('inf'))
+    inputs = []
+    for parameter in inspect.signature(function).parameters:
+        input_kwargs = default_kwargs | kwargs.get(parameter, dict())
+        inputs.append(model.input(**input_kwargs))
+    if len(inputs) < 1:
+        raise ValueError("function must accept at least one argument")
+
+    # Use function to construct the symbols and/or raise any exceptions
+    model.minimize(function(*inputs))
+
+    # Finally create an Expression object to hold the model and return it to
+    # the user.
+    expr = Expression.__new__(Expression)
+    expr._function = function
+    expr._model = model
+    return expr
