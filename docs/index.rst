@@ -63,6 +63,8 @@ areas:
         Explore how lists, sets, and other combinatorial structures make
         optimization simpler and more performant.
 
+.. include:: ImplicitlyConstrainedSymbols.rst
+
     .. grid-item-card:: Tensor Programming
         :img-top: /_images/optimization_tensor_icon.svg
         :link: optimization_philosophy_tensor_programming

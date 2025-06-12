@@ -778,6 +778,59 @@ symbol for a given problem, this section provides a side-by-side
 comparison of their key characteristics and typical applications. The
 table below summarizes these aspects.
 
+.. raw:: html
+
+   <div style="overflow-x: auto; max-width: 100%;">
+
+.. list-table:: Comparative Summary of Implicitly Constrained Symbols
+   :widths: 15 20 20 22 22
+   :header-rows: 1
+
+   * - **Feature**
+     - ``list(N)``
+     - ``set(N)``
+     - ``disjoint_lists(...)``
+     - ``disjoint_bit_sets(...)``
+   * - **Primary Purpose**
+     - Ordered permutation of ``range(N)``
+     - Unordered subset of ``range(N)``
+     - Disjoint ordered partitions of ``range(primary_set_size)``
+     - Disjoint unordered partitions of ``range(primary_set_size)``
+   * - **Order Within Group/List**
+     - Yes
+     - No
+     - Yes (within each list)
+     - No (within each set)
+   * - **Item Uniqueness**
+     - All ``N`` items appear exactly once in the list
+     - Unique subset from universe
+     - Each item appears in at most one list; lists are permutations
+     - Each item appears in at most one set; sets contain unique items
+   * - **Number of Collections**
+     - 1 list
+     - 1 set
+     - ``num_disjoint_lists``
+     - ``num_disjoint_sets``
+   * - **Creation Returns**
+     - Single decision variable
+     - Single decision variable
+     - Main variable + collection of lists
+     - Main variable + collection of sets
+   * - **Typical Problem Type**
+     - TSP, QAP, sequencing
+     - Knapsack, feature selection
+     - CVRP, task assignment, multi-machine scheduling
+     - Bin packing, clustering, set partitioning
+   * - **Input Parameters**
+     - ``N``
+     - ``N``
+     - ``primary_set_size``, ``num_disjoint_lists``
+     - ``primary_set_size``, ``num_disjoint_sets``
+
+.. raw:: html
+
+   </div>
+
 .. _`sec:general_guidelines`:
 
 General Guidelines for Choosing Implicitly Constrained Symbols
