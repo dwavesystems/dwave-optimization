@@ -40,12 +40,12 @@ __all__ = [
 def _require(argname: str,
              array_like: numpy.typing.ArrayLike,
              *,
-             dtype=None,
+             dtype: numpy.typing.DTypeLike = None,
              ndim: typing.Optional[int] = None,
              nonnegative: bool = False,
              positive: bool = False,
              square: bool = False
-             ) -> np.ndarray:
+             ) -> numpy.typing.NDArray[typing.Any]:
     """Coerce the given array-like into the form we want and raise a consistent
     error message if it cannot be coerced.
     """
