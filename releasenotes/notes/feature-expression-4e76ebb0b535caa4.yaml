@@ -1,0 +1,6 @@
+---
+features:
+  - Add ``expression()`` decorator for constructing expressions.
+  - |
+    Add ``.lower_bound()``, ``.upper_bound()``, and ``.integral()`` methods to
+    the ``Input`` symbol.
