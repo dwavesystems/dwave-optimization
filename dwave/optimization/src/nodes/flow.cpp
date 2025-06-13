@@ -42,6 +42,113 @@ std::span<const ssize_t> same_shape(const Array* node_ptr,
     return node_ptr->shape();
 }
 
+/// ExtractNode
+
+ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr)
+        : ArrayOutputMixin({-1}), condition_ptr_(condition_ptr), arr_ptr_(arr_ptr) {
+    if (condition_ptr_->sizeinfo() != arr_ptr_->sizeinfo()) {
+        throw std::invalid_argument("condition and arr must have the same size");
+    }
+
+    add_predecessor(condition_ptr);
+    add_predecessor(arr_ptr);
+}
+
+double const* ExtractNode::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+void ExtractNode::commit(State& state) const { data_ptr<ArrayNodeStateData>(state)->commit(); }
+
+std::span<const Update> ExtractNode::diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->diff();
+}
+
+void ExtractNode::initialize_state(State& state) const {
+    const Array::View condition = condition_ptr_->view(state);
+    const Array::View arr = arr_ptr_->view(state);
+
+    std::vector<double> values;
+    values.reserve(condition.size());
+
+    for (auto cit = condition.begin(), arrit = arr.begin(), end = condition.end(); cit != end;
+         ++cit, ++arrit) {
+        if (*cit) {
+            values.emplace_back(*arrit);
+        }
+    }
+
+    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
+}
+
+bool ExtractNode::integral() const { return arr_ptr_->integral(); }
+
+std::pair<double, double> ExtractNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return arr_ptr_->minmax(cache);
+}
+
+void ExtractNode::propagate(State& state) const {
+    auto node_data = data_ptr<ArrayNodeStateData>(state);
+
+    // Nothing to do in this case
+    if (condition_ptr_->diff(state).empty() && arr_ptr_->diff(state).empty()) return;
+
+    auto get_index = [](const Update& update) { return update.index; };
+
+    // Get the minimum changed index
+    auto cond_view = condition_ptr_->diff(state) | std::views::transform(get_index);
+    auto arr_view = arr_ptr_->diff(state) | std::views::transform(get_index);
+    auto min_cond_it = std::ranges::min_element(cond_view);
+    auto min_arr_it = std::ranges::min_element(arr_view);
+
+    ssize_t min_changed_idx = -1;
+    if (min_cond_it != cond_view.end() && min_arr_it != arr_view.end()) {
+        min_changed_idx = std::min(*min_cond_it, *min_arr_it);
+    } else if (min_cond_it != cond_view.end()) {
+        min_changed_idx = *min_cond_it;
+    } else if (min_arr_it != arr_view.end()) {
+        min_changed_idx = *min_arr_it;
+    }
+    assert(min_changed_idx != -1 && "one of the arrays should have an update");
+
+    const Array::View condition = condition_ptr_->view(state);
+    const Array::View arr = arr_ptr_->view(state);
+
+    // Count the trues before this index
+    auto add_true = [](ssize_t acc, double val) -> ssize_t { return acc + static_cast<bool>(val); };
+    ssize_t count =
+            std::accumulate(condition.begin(), condition.begin() + min_changed_idx, 0, add_true);
+
+    // Get the new values
+    std::vector<double> new_values;
+    for (auto cit = condition.begin() + min_changed_idx, arrit = arr.begin() + min_changed_idx,
+              end = condition.end();
+         cit != end; ++cit, ++arrit) {
+        if (*cit) new_values.push_back(*arrit);
+    }
+
+    node_data->assign(new_values, count);
+}
+
+void ExtractNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
+
+std::span<const ssize_t> ExtractNode::shape(const State& state) const {
+    return std::span(&data_ptr<ArrayNodeStateData>(state)->size(), 1);
+}
+
+ssize_t ExtractNode::size(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->size();
+}
+
+ssize_t ExtractNode::size_diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->size_diff();
+}
+
+SizeInfo ExtractNode::sizeinfo() const { return SizeInfo(this, 0, condition_ptr_->sizeinfo().max); }
+
+/// WhereNode
+
 struct WhereNodeData : ArrayNodeStateData {
     // Initialize the state with the values given
     explicit WhereNodeData(const Array::View values) noexcept
@@ -175,7 +282,8 @@ std::pair<double, double> WhereNode::minmax(
     return memoize(cache, [&]() {
         const auto [x_min, x_max] = x_ptr_->minmax(cache);
         const auto [y_min, y_max] = y_ptr_->minmax(cache);
-        return std::make_pair(std::min(x_min, y_min), std::max(x_max, y_max));});
+        return std::make_pair(std::min(x_min, y_min), std::max(x_max, y_max));
+    });
 }
 
 // Given a list of updates on a single `conditional`, did we end up flipping?

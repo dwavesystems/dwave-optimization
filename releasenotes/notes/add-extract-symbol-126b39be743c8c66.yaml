@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add the ``Extract`` symbol and node, following the behavior of
+    ``numpy.extract``. See
+    `#272 <https://github.com/dwavesystems/dwave-optimization/issues/272>`_.
