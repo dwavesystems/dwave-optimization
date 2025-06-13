@@ -1446,7 +1446,7 @@ cdef class ArraySymbol(Symbol):
                 # Combined indexing
                 # https://numpy.org/doc/stable/user/basics.indexing.html#combining-advanced-and-basic-indexing
 
-                # We handle this by doing basic and then advanced indexing. In principal the other
+                # We handle this by doing basic and then advanced indexing. In principle the other
                 # order may be more efficient in some cases, but for now let's do the simple thing
 
                 basic_indices, advanced_indices = _split_indices(index)

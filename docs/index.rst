@@ -20,7 +20,7 @@ About dwave-optimization
 For explanations of the terminology, see the
 :ref:`Concepts <index_concepts>` section.
 
-Design Principals
+Design Principles
 =================
 
 .. toctree::
@@ -30,7 +30,7 @@ Design Principals
   philosophy
 
 `dwave-optimization` and the hybrid nonlinear solver incorporate features and
-:ref:`design principals <optimization_philosophy>` from each of the following
+:ref:`design principles <optimization_philosophy>` from each of the following
 areas:
 
 .. developer note: this will look funny when built locally but looks fine as
