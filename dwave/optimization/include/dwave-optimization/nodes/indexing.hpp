@@ -119,6 +119,8 @@ class AdvancedIndexingNode : public ArrayNode {
         return std::span(array_item_strides_.get(), array_ptr_->ndim());
     }
 
+    void update_dynamic_shape(State& state) const;
+
     // We could do dynamic_cast<Array*>(predecessors[0]), but since there's
     // only one we just go ahead and hold a direct pointer
     const Array* array_ptr_;
@@ -126,7 +128,6 @@ class AdvancedIndexingNode : public ArrayNode {
     const ssize_t ndim_;
     std::unique_ptr<ssize_t[]> strides_;
     std::unique_ptr<ssize_t[]> shape_;
-    std::unique_ptr<ssize_t[]> dynamic_shape_;
 
     std::unique_ptr<ssize_t[]> array_item_strides_;
 
