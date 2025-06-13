@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <memory>
 #include <variant>
 #include <vector>
 
@@ -38,10 +39,16 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
     // Initial value can either be a double or another node
     using array_or_double = std::variant<ArrayNode*, double>;
 
-    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, array_or_double initial);
+    NaryReduceNode(std::shared_ptr<Graph> expression_ptr, const std::vector<ArrayNode*>& operands,
+                   array_or_double initial);
 
-    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, double initial) : NaryReduceNode(std::move(expression), operands, array_or_double(initial)) {};
-    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, ArrayNode* initial) : NaryReduceNode(std::move(expression), operands, array_or_double(initial)) {};
+    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands,
+                   array_or_double initial)
+            : NaryReduceNode(std::make_shared<Graph>(std::move(expression)), operands, initial) {}
+    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, double initial)
+            : NaryReduceNode(std::move(expression), operands, array_or_double(initial)) {}
+    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, ArrayNode* initial)
+            : NaryReduceNode(std::move(expression), operands, array_or_double(initial)) {}
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -51,6 +58,10 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
+
+    /// Access the underlying shared_ptr holding the Graph.
+    /// Modifying the Graph leads to undefined behavior.
+    std::shared_ptr<Graph>& expression_ptr() { return expression_ptr_; }
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
@@ -74,8 +85,6 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t size_diff(const State& state) const override;
     SizeInfo sizeinfo() const override;
 
-    void swap_expression(Graph&& other) { std::swap(expression_, other); };
-
     const array_or_double initial;
 
  private:
@@ -86,7 +95,7 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const InputNode* const> operand_inputs() const;
     const InputNode* const reduction_input() const;
 
-    Graph expression_;
+    std::shared_ptr<Graph> expression_ptr_;
     const std::vector<ArrayNode*> operands_;
     const ArrayNode* output_;
 };
