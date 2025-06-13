@@ -261,8 +261,8 @@ class Model(_Graph):
     def input(
         self,
         shape: tuple[int, ...] = (),
-        lower_bound: typing.Optional[float] = None,
-        upper_bound: typing.Optional[float] = None,
+        lower_bound: typing.Optional[float] = -float('inf'),
+        upper_bound: typing.Optional[float] = float('inf'),
         integral: typing.Optional[bool] = None,
     ) -> Input:
         """Create an "input" symbol.
