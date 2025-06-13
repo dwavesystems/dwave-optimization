@@ -285,7 +285,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 
     if distances is not None and (locations_x is not None or locations_y is not None):
         raise ValueError("Either `locations_x` and `locations_y` or `distances`"
-                         f" can be specified. Got both input formats.")
+                         " can be specified. Got both input formats.")
 
     demand = _require("demand", demand, dtype=float, ndim=1, nonnegative=True)
 
@@ -332,7 +332,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         if demand[0] == 0:
             if len(x) < 2:
                 raise ValueError("Lengths of `locations_x` and `locations_y` must"
-                                 f" be at least 2 when `demand[0]=0`.")
+                                 " be at least 2 when `demand[0]=0`.")
 
             customer_demand = demand[1:]
             customer_locations_x = locations_x[1:]
