@@ -12,7 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import numpy as np
 import unittest
 import warnings
 
@@ -511,7 +510,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
             time_window_close=[20, 20, 20],
             service_time=[0, 0, 0])
 
-        min_expected_number_of_constraints = num_vehicles*2 + n_time_windows + n_customers
+        min_expected_number_of_constraints = num_vehicles * 2 + n_time_windows + n_customers
         self.assertEqual(model.num_decisions(), 1)
         self.assertGreaterEqual(model.num_constraints(),min_expected_number_of_constraints)
         self.assertEqual(model.is_locked(), True)
@@ -562,14 +561,14 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
     def test_only_one_vehicle_required(self):
         problem = dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
-        demand=[0, 1],
-        number_of_vehicles=5,
-        vehicle_capacity=100,
-        time_distances=[ [0, 1], [1, 0] ],
-        time_window_open=[0, 0],
-        time_window_close=[10, 10],
-        service_time=[0, 1],
-    )
+            demand=[0, 1],
+            number_of_vehicles=5,
+            vehicle_capacity=100,
+            time_distances=[[0, 1], [1, 0]],
+            time_window_open=[0, 0],
+            time_window_close=[10, 10],
+            service_time=[0, 1],
+        )
     def test_state_serialization(self):
         model = dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
             time_distances=[[0, 14, 19, 32],

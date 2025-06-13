@@ -582,7 +582,9 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
 
     # Constrain the number of locations per route
     # approximation to restrict solution space
-    max_loc_per_route_constant = model.constant(min(num_customers,max(1,3 * int(num_customers / number_of_vehicles))))
+    max_loc_per_route_constant = model.constant(
+        min(num_customers, max(1, 3 * int(num_customers / number_of_vehicles)))
+    )
     max_loc_per_route_constraints = [(num_clients_in_route[f'route{v}'] <= max_loc_per_route_constant)
                                      for v in range(number_of_vehicles)]
     for mlpr in max_loc_per_route_constraints:
