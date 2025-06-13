@@ -41,7 +41,7 @@ if typing.TYPE_CHECKING:
 
     _ShapeLike: typing.TypeAlias = typing.Union[int, collections.abc.Sequence[int]]
 
-__all__ = ["Expression", "Model"]
+__all__ = ["Model"]
 
 
 @contextlib.contextmanager
@@ -51,200 +51,6 @@ def locked(model: _Graph):
         yield
     finally:
         model.unlock()
-
-
-class Expression(_Graph):
-    """A mathematical expression.
-
-    The :class:`.Expression` is very similar to the :class:`.Model`, and has
-    many of the same methods and properties. However, unlike :class:`.Model`s,
-    :class:`.Expression`s are not meant to represent optimization problems,
-    and do not have decision symbols, constraints, or an objective. Instead,
-    they have only inputs, an output, and intermediate symbols that represent
-    some mathematical expression or computation.
-
-    Examples:
-        This example creates an expression that computes the minimum of its
-        first two inputs, and then multiplies that by third input (i.e.
-        computes the expression ``min(x, y) * z``).
-
-        >>> from dwave.optimization.model import Expression
-        >>> expr = Expression()
-        >>> x, y, z = expr.input(), expr.input(), expr.input()
-        >>> expr.set_output(min(x, y) * z)
-    """
-
-    output: typing.Optional[ArraySymbol]
-    """The final output of the expression.
-
-    Examples:
-        >>> from dwave.optimization.model import Expression
-        >>> expr = Expression()
-        >>> x, y = expr.input(), expr.input()
-        >>> added = x + y
-        >>> type(added)
-        <class 'dwave.optimization.symbols.Add'>
-        >>> expr.set_output(added)
-        >>> expr.output is added
-        True
-    """
-
-    states: States
-    """States of the expression.
-
-    :ref:`States <opt_model_construction_nl_states>` represent assignments of
-    values to a symbol.
-
-    See also:
-        :ref:`States methods <optimization_models>` such as
-        :meth:`~dwave.optimization.model.States.size` and
-        :meth:`~dwave.optimization.model.States.resize`.
-    """
-
-    def __init__(self):
-        self.output = None
-        self.states = States(self)
-
-    def constant(self, value: float) -> Constant:
-        r"""Create a scalar constant symbol.
-
-        Args:
-            value: A number representing the constant.
-
-        Returns:
-            A constant symbol.
-
-        Examples:
-            This example creates a constant and adds it to an input.
-
-            >>> from dwave.optimization.model import Expression
-            >>> expression = Expression()
-            >>> c0 = expression.consant(5.7)
-            >>> i0 = expression.input(-10, 10, false)
-            >>> added = c0 + i0
-        """
-        from dwave.optimization.symbols import Constant  # avoid circular import
-        return Constant(self, value)
-
-    @classmethod
-    def from_file(cls, *args, **kwargs):
-        model = super().from_file(*args, **kwargs)
-        model.output = model._objective_symbol()
-        return model
-
-    def input(
-        self,
-        lower_bound: float = -math.inf,
-        upper_bound: float = math.inf,
-        integral: bool = False,
-    ):
-        """Create an "input" symbol.
-
-        An input symbol functions similarly to a decision variable,
-        in that it takes no predecessors, but its state will always be set manually
-        (not by any solver). Used as a placeholder for input to a model.
-
-        The shape of the output array is fixed at initialization and cannot be changed.
-
-        Provided bounds and integrality are used to supply information for
-        min/max/integral/logical properties of the resulting node, and will be used to
-        validate the state when set manually.
-
-        Note that the order in which inputs are added to the model matters and is
-        used by other symbols (see :class:`~dwave.optimization.symbols.NaryReduce`) to
-        infer how arguments are supplied to the model during evaluation.
-
-        Args:
-            shape: the shape of the output array.
-            lower_bound: lower bound on any possible output of the node.
-            upper_bound: upper bound on any possible output of the node.
-            integral: whether the output of the node should always be integral.
-
-        Returns:
-            An input symbol.
-
-        Examples:
-            This example creates two input symbols and an integer decision symbol
-            and then sets the objective to the sum of all of them.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> x = model.input()
-            >>> y = model.input(lower_bound=8, upper_bound=10, integral=True)
-            >>> z = model.integer()
-            >>> model.minimize(x + y + z)
-
-        .. versionadded:: 0.6.2
-        """
-        # avoid circular import
-        from dwave.optimization.symbols import Input
-
-        return Input(
-            self,
-            shape=(),
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            integral=integral
-        )
-
-    def lock(self) -> contextlib.AbstractContextManager:
-        """Lock the expression.
-
-        No new symbols can be added to a locked expression.
-
-        Returns:
-            A context manager. If the context is subsequently exited then the
-            :meth:`.unlock` will be called.
-
-        See also:
-            :meth:`.is_locked`, :meth:`.unlock`
-
-        Examples:
-            This example checks the status of a expression after locking it and
-            subsequently unlocking it.
-
-            >>> from dwave.optimization.model import Expression
-            >>> expr = Expression()
-            >>> i = expr.integer(20, upper_bound=100)
-            >>> cntx = expr.lock()
-            >>> expr.is_locked()
-            True
-            >>> expr.unlock()
-            >>> expr.is_locked()
-            False
-
-            This example locks a expression temporarily with a context manager.
-
-            >>> expr = Expression()
-            >>> with expr.lock():
-            ...     # no nodes can be added within the context
-            ...     print(expr.is_locked())
-            True
-            >>> expr.is_locked()
-            False
-        """
-        super().lock()
-        return locked(self)
-
-    def set_output(self, value: ArraySymbol):
-        """Set the output of the expression.
-
-        Args:
-            value: The symbol that will be used to represent the output.
-
-        Examples:
-            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
-            within bounds.
-
-            >>> from dwave.optimization import Expression
-            >>> expr = Expression()
-            >>> i = model.input(-5, 5, integral=True)
-            >>> c = expr.constant(4)
-            >>> y = i*i - c*i
-            >>> expr.set_output(y)
-        """
-        self._set_objective(value)
-        self.output = value
 
 
 class Model(_Graph):
@@ -508,12 +314,6 @@ class Model(_Graph):
             integral=integral
         )
 
-    @classmethod
-    def from_file(cls, *args, **kwargs):
-        model = super().from_file(*args, **kwargs)
-        model.objective = model._objective_symbol()
-        return model
-
     def integer(
             self,
             shape: typing.Optional[_ShapeLike] = None,
@@ -604,29 +404,8 @@ class Model(_Graph):
         return locked(self)
 
     def minimize(self, value: ArraySymbol):
-        """Set the objective value to minimize.
-
-        Optimization problems have an objective and/or constraints. The objective
-        expresses one or more aspects of the problem that should be minimized
-        (equivalent to maximization when multiplied by a minus sign). For example,
-        an optimized itinerary might minimize the value of distance traveled or
-        cost of transportation or travel time.
-
-        Args:
-            value: Value for which to minimize the cost function.
-
-        Examples:
-            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
-            within bounds.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(lower_bound=-5, upper_bound=5)
-            >>> c = model.constant(4)
-            >>> y = i*i - c*i
-            >>> model.minimize(y)
-        """
-        self._set_objective(value)
+        # inherit the docstring from _Graph
+        super().minimize(value)
         self.objective = value
 
     # dev note: the typing is underspecified, but it would be quite complex to fully
@@ -783,17 +562,3 @@ class Model(_Graph):
 
         if not self.is_locked():
             self.states._reset_intermediate_states()
-
-
-class UnsupportedExpressionError(Exception):
-    """An exception for when an expression is unsupported in a certain
-    use-case, e.g. an expression which has non-scalar symbols is used to
-    create a :class:`~dwave.optimization.symbols.NaryReduce` symbol.
-
-    This exception may include a reference to the specific symbol that caused
-    the issue (``.symbol``).
-    """
-
-    def __init__(self, message: str, symbol: typing.Optional[Symbol] = None):
-        super().__init__(message)
-        self.symbol = symbol

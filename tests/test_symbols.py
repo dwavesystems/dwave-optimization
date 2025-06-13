@@ -43,7 +43,6 @@ from dwave.optimization import (
     sqrt,
     stack,
 )
-from dwave.optimization.model import Expression
 
 # Try to import utils normally. If it fails, assume that we are running the
 # tests from the inside the `tests/` directory to avoid importing
@@ -1294,31 +1293,6 @@ class TestExtract(utils.SymbolTests):
 
 class TestInput(utils.SymbolTests):
     def generate_symbols(self):
-        expr = Expression()
-        inp = expr.input(lower_bound=-10, upper_bound=10, integral=False)
-        expr.lock()
-
-        # monkeypatch to_file in to test serialization
-        def to_file(self, **kwargs) -> typing.BinaryIO:
-            import tempfile
-            file = tempfile.TemporaryFile(mode="w+b")
-            self.into_file(file, **kwargs)
-            file.seek(0)
-            return file
-
-        Expression.to_file = to_file
-
-        yield inp
-
-        del Expression.to_file
-
-    @unittest.skip("Input state must be explicity initialized so can't run this test")
-    def test_state_serialization(*args, **kwargs):
-        pass
-
-
-class TestInputModel(utils.SymbolTests):
-    def generate_symbols(self):
         model = Model()
         inp = model.input(lower_bound=-10, upper_bound=10, integral=False)
         inp10 = model.input((10,))
@@ -2342,28 +2316,24 @@ class TestNaryReduce(utils.SymbolTests):
         c0 = model.constant([0, 0])
         c1 = model.constant([0, 1])
 
-        expr = Expression()
-        inputs = [expr.input() for _ in range(3)]
-        expr.set_output(inputs[0] + inputs[1] + inputs[2])
-        acc = dwave.optimization.symbols.NaryReduce(expr, (c0, c1), initial=7)
+        @dwave.optimization.expression
+        def expr(a, b, c):
+            return a + b + c
 
-        expr = Expression()
-        inputs = [expr.input() for _ in range(3)]
-        expr.set_output(inputs[0] + inputs[1] + inputs[2])
+        acc = dwave.optimization.symbols.NaryReduce(expr, (c0, c1), initial=7)
         acc_with_initial_node = dwave.optimization.symbols.NaryReduce(expr, (c0, c1), initial=model.constant(7))
 
-        model.lock()
-
-        yield acc
-        yield acc_with_initial_node
+        with model.lock():
+            yield acc
+            yield acc_with_initial_node
 
     def test_mismatched_inputs(self):
         model = Model()
         c0 = model.constant([0, 0])
 
-        expr = Expression()
-        inputs = [expr.input() for _ in range(3)]
-        expr.set_output(inputs[0] + inputs[1] + inputs[2])
+        @dwave.optimization.expression
+        def expr(a, b, c):
+            return a + b + c
 
         with self.assertRaises(ValueError):
             dwave.optimization.symbols.NaryReduce(expr, (c0,))
@@ -2373,36 +2343,26 @@ class TestNaryReduce(utils.SymbolTests):
         c0 = model.constant([0, 0])
 
         # Can't use an Expression that uses a non-scalar input
-        expr = Expression()
-        inp1 = expr.input(-10, 10, False)
-        inp5 = dwave.optimization.symbols.Input(expr, (5,), -10, 10, False)
-        expr.set_output(inp1)
-        try:
+        # In the future we may prevent this when forming the expression
+        expr = dwave.optimization.expression(
+            lambda a, b: a + b,
+            a=dict(lower_bound=-10, upper_bound=10, integral=False, shape=(1,)),
+        )
+
+        with self.assertRaises(ValueError):
             dwave.optimization.symbols.NaryReduce(expr, (c0,))
-            self.assertTrue(False, "should raise exception")
-        except Exception as e:
-            self.assertIsInstance(
-                e, dwave.optimization.model.UnsupportedExpressionError
-            )
-            self.assertRegex(str(e), "scalar")
-            self.assertTrue(inp5.equals(e.symbol))
 
     def test_invalid_expression_input_range(self):
         model = Model()
         c0 = model.constant([0, 0])
 
-        # Can't use an expression without higher possible output than last input
-        expr = Expression()
-        inp0, inp1 = expr.input(0, 100), expr.input(0, 10)
-        expr.set_output(inp0 + inp1)
-        try:
+        @dwave.optimization.expression(inp0=dict(lower_bound=0, upper_bound=100),
+                                       inp2=dict(lower_bound=0, upper_bound=10))
+        def expr(inp0, inp1):
+            return inp0 + inp1
+
+        with self.assertRaises(ValueError):
             dwave.optimization.symbols.NaryReduce(expr, (c0,))
-            self.assertTrue(False, "should raise exception")
-        except Exception as e:
-            self.assertIsInstance(
-                e, dwave.optimization.model.UnsupportedExpressionError
-            )
-            self.assertRegex(str(e), "must not have a higher max than the last input")
 
 
 class TestNegate(utils.UnaryOpTests):
