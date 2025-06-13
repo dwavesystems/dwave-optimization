@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add ``.lower_bound()``, ``.upper_bound()``, and ``.integral()`` methods to
+    the ``Input`` symbol.

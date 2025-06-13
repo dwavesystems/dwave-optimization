@@ -1333,23 +1333,52 @@ class TestInput(utils.SymbolTests):
 
                 np.testing.assert_array_equal(inp.state(), [[[0, 1]], [[2, 3]]])
 
-        def test_initializing_unset_state(self):
-            # ensure proper error is raised when initializing the model state without having
-            # set the input's state
-            model = Model()
-            inp = model.input()
-            x = model.binary()
-            model.minimize(inp + x)
+    def test_initializing_unset_state(self):
+        # ensure proper error is raised when initializing the model state without having
+        # set the input's state
+        model = Model()
+        inp = model.input()
+        x = model.binary()
+        model.minimize(inp + x)
 
-            model.lock()
+        model.lock()
 
-            model.states.resize(1)
+        model.states.resize(1)
 
-            with self.assertRaisesRegex(
-                RuntimeError,
-                r"^InputNode must have state explicitly initialized"
-            ):
-                model.objective.state()
+        with self.assertRaisesRegex(
+            RuntimeError,
+            r"^InputNode must have state explicitly initialized"
+        ):
+            model.objective.state()
+
+    def test_bounds_and_integrality(self):
+        model = Model()
+
+        i0 = model.input()
+        default_lower_bound = i0.lower_bound()
+        default_upper_bound = i0.upper_bound()
+        default_integral = i0.integral()
+
+        i1 = model.input(lower_bound=-10)
+        self.assertEqual(i1.lower_bound(), -10)
+        self.assertEqual(i1.upper_bound(), default_upper_bound)
+        self.assertEqual(i1.integral(), default_integral)
+
+        i2 = model.input(upper_bound=100)
+        self.assertEqual(i2.lower_bound(), default_lower_bound)
+        self.assertEqual(i2.upper_bound(), 100)
+        self.assertEqual(i2.integral(), default_integral)
+
+        i3 = model.input(integral=True)
+        self.assertEqual(i3.lower_bound(), default_lower_bound)
+        self.assertEqual(i3.upper_bound(), default_upper_bound)
+        self.assertEqual(i3.integral(), True)
+
+        with self.assertRaises(ValueError):
+            model.input(lower_bound=100, upper_bound=-100)
+        with self.assertRaises(ValueError):
+            model.input(lower_bound=.1, upper_bound=.9, integral=True)
+
 
 class TestIntegerVariable(utils.SymbolTests):
     def generate_symbols(self):

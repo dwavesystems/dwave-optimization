@@ -264,7 +264,7 @@ class Model(_Graph):
         lower_bound: typing.Optional[float] = None,
         upper_bound: typing.Optional[float] = None,
         integral: typing.Optional[bool] = None,
-    ):
+    ) -> Input:
         """Create an "input" symbol.
 
         An input symbol functions similarly to a decision variable,
