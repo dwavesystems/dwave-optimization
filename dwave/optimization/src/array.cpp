@@ -14,6 +14,9 @@
 
 #include "dwave-optimization/array.hpp"
 
+#include <array>
+#include <ranges>
+
 namespace dwave::optimization {
 
 double Array::View::operator[](ssize_t n) const {
@@ -224,37 +227,46 @@ std::string shape_to_string(const std::span<const ssize_t> shape) {
     return out;
 }
 
-bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr) {
-    auto lhs_size = lhs_ptr->sizeinfo();
-    auto rhs_size = rhs_ptr->sizeinfo();
-
-    if (lhs_size == rhs_size) return true;
-    if (lhs_size.array_ptr == nullptr || rhs_size.array_ptr == nullptr) return false;
-
-    // This first loop is redundant, but often we get diamond structures
-    // of predecessors so by going back together we might get to short circuit the
-    // dfs
-    while (lhs_size.array_ptr != lhs_ptr && rhs_size.array_ptr != rhs_ptr) {
-        lhs_ptr = lhs_size.array_ptr;
-        lhs_size = lhs_size.substitute();
-        rhs_ptr = rhs_size.array_ptr;
-        rhs_size = rhs_size.substitute();
-        if (lhs_size == rhs_size) return true;
-    }
-    while (lhs_size.array_ptr != lhs_ptr) {
-        lhs_ptr = lhs_size.array_ptr;
-        lhs_size = lhs_size.substitute();
-        if (lhs_size == rhs_size) return true;
-    }
-    while (rhs_size.array_ptr != rhs_ptr) {
-        rhs_ptr = rhs_size.array_ptr;
-        rhs_size = rhs_size.substitute();
-        if (lhs_size == rhs_size) return true;
+bool array_shape_equal(const std::span<const Array* const> array_ptrs) {
+    if (array_ptrs.size() == 0) {
+        return false;
+    } else if (array_ptrs.size() == 1) {
+        return true;
     }
 
-    return false;
+    const Array* first_ptr = array_ptrs[0];
+    auto first_size = first_ptr->sizeinfo();
+    while (first_size.array_ptr != nullptr && first_size.array_ptr != first_ptr) {
+        first_ptr = first_size.array_ptr;
+        first_size = first_size.substitute();
+    }
+
+    for (const Array* array_ptr : array_ptrs | std::views::drop(1)) {
+        auto this_size = array_ptr->sizeinfo();
+
+        if (first_size == this_size) continue;
+        if (this_size.array_ptr == nullptr) return false;
+
+        while (this_size.array_ptr != nullptr && this_size.array_ptr != array_ptr) {
+            array_ptr = this_size.array_ptr;
+            this_size = this_size.substitute();
+            if (first_size == this_size) break;
+        }
+
+        // Have to check again as it's possible that `this_size.array_ptr` is nullptr
+        if (first_size != this_size) return false;
+    }
+
+    return true;
 }
-bool array_shape_equal(const Array& lhs, const Array& rhs) { return array_shape_equal(&lhs, &rhs); }
+
+bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr) {
+    return array_shape_equal(std::array<const Array*, 2>{lhs_ptr, rhs_ptr});
+}
+
+bool array_shape_equal(const Array& lhs, const Array& rhs) {
+    return array_shape_equal(&lhs, &rhs);
+}
 
 // We follow NumPy's broadcasting rules
 // See https://numpy.org/doc/stable/user/basics.broadcasting.html

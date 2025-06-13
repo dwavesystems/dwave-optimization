@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Add the ``Expression`` class, similar to ``Model``, meant to represent
+    mathematical or computational expressions leveraging the same underlying
+    ``Graph`` as ``Model``, but excludes decision symbols and certain other
+    types of symbols.
+  - |
+    Add the ``NaryReduce`` symbol and corresponding ``NaryReduceNode`` node in
+    the C++. This symbol computes an arbitrary reduction operation on 1-d
+    arrays, similar to ``numpy.ufunc.reduce``, except that it takes any number
+    of operands/predecessors. The reduction operation is supplied by the user
+    and encoded as an ``Expression``.
