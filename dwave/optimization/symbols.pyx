@@ -1844,10 +1844,18 @@ cdef class Input(ArraySymbol):
 
         self.initialize_arraynode(model, self.ptr)
 
-    def set_state(self, Py_ssize_t index, state):
-        """Set the state of the input node.
+    def integral(self):
+        """Whether the input symbol will always output integers."""
+        return self.ptr.integral()
 
-        The given state must be the same shape as the input node's shape.
+    def lower_bound(self):
+        """Lowest value allowed to the input."""
+        return self.ptr.min()
+
+    def set_state(self, Py_ssize_t index, state):
+        """Set the state of the input symbol.
+
+        The given state must be the same shape as the input symbol's shape.
         """
 
         # can't use ascontiguousarray yet because it will turn scalars into 1d arrays
@@ -1865,6 +1873,10 @@ cdef class Input(ArraySymbol):
             (<States>self.model.states)._states[index],
             <span[const double]>as_span(arr)
         )
+
+    def upper_bound(self):
+        """Largest value allowed to the input."""
+        return self.ptr.max()
 
     @classmethod
     def _from_symbol(cls, Symbol symbol):
