@@ -15,6 +15,8 @@
 import unittest
 import warnings
 
+import numpy as np
+
 try:
     # dimod should fix its own warnings, but just so we're not too coupled,
     # let's ignore import warnings from dimod.
