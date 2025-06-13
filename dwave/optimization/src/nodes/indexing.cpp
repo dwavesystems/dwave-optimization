@@ -79,7 +79,8 @@ struct IndexingNodeData : NodeStateData {
 
 struct AdvancedIndexingNodeData : NodeStateData {
  public:
-    AdvancedIndexingNodeData(std::vector<ssize_t>&& offsets, std::vector<double>&& values,
+    AdvancedIndexingNodeData(const AdvancedIndexingNode* node, std::vector<ssize_t>&& offsets,
+                             std::vector<double>&& values,
                              bool maintain_reverse_offset_map) noexcept
             : data(values),
               old_offsets_size(offsets.size()),
@@ -88,6 +89,12 @@ struct AdvancedIndexingNodeData : NodeStateData {
               maintain_reverse_offset_map(maintain_reverse_offset_map) {
         for (ssize_t idx = 0; idx < static_cast<ssize_t>(offsets_.size()); ++idx) {
             add_to_reverse(idx, offsets_[idx]);
+        }
+
+        if (node->dynamic()) {
+            dynamic_shape = std::make_unique<ssize_t[]>(node->ndim());
+            // First dim will be set later
+            std::copy(node->shape().begin(), node->shape().end(), dynamic_shape.get());
         }
     }
 
@@ -173,6 +180,10 @@ struct AdvancedIndexingNodeData : NodeStateData {
 
     // The array values as a contiguous dataset
     std::vector<double> data;
+
+    // The state dependent shape when the indexers are dynamic. Will be nullptr when
+    // predecessor array is fixed shape.
+    std::unique_ptr<ssize_t[]> dynamic_shape = nullptr;
 
     // Updates to the values, as well as the old indices so we can revert
     std::vector<Update> diff;
@@ -471,13 +482,6 @@ AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& 
             add_predecessor(std::get<ArrayNode*>(index));
         }
     }
-
-    if (dynamic()) {
-        // Copy over the shape to dynamic_shape_. Then the first index of dynamic_shape_
-        // will be rewritten as the output changes size.
-        dynamic_shape_ = std::make_unique<ssize_t[]>(ndim());
-        std::copy(shape_.get(), shape_.get() + ndim(), dynamic_shape_.get());
-    }
 }
 
 double const* AdvancedIndexingNode::buff(const State& state) const {
@@ -619,8 +623,9 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
 
     bool main_array_is_constant_node = dynamic_cast<const ConstantNode*>(array_ptr_) != nullptr;
 
-    emplace_data_ptr<AdvancedIndexingNodeData>(state, std::move(offsets), std::move(data),
+    emplace_data_ptr<AdvancedIndexingNodeData>(state, this, std::move(offsets), std::move(data),
                                                !main_array_is_constant_node);
+    if (dynamic()) update_dynamic_shape(state);
 }
 
 void AdvancedIndexingNode::commit(State& state) const {
@@ -629,6 +634,8 @@ void AdvancedIndexingNode::commit(State& state) const {
 
 void AdvancedIndexingNode::revert(State& state) const {
     data_ptr<AdvancedIndexingNodeData>(state)->revert();
+
+    if (dynamic()) update_dynamic_shape(state);
 }
 
 std::pair<double, double> AdvancedIndexingNode::minmax(
@@ -653,9 +660,8 @@ SizeInfo AdvancedIndexingNode::sizeinfo() const {
 
 std::span<const ssize_t> AdvancedIndexingNode::shape(const State& state) const {
     if (!dynamic()) return shape();
-    assert(this->ndim() >= 1);
-    dynamic_shape_[0] = this->size(state) / (strides()[0] / itemsize());
-    return std::span<const ssize_t>(dynamic_shape_.get(), this->ndim());
+    return std::span<const ssize_t>(data_ptr<AdvancedIndexingNodeData>(state)->dynamic_shape.get(),
+                                    ndim_);
 }
 
 std::pair<ssize_t, ssize_t> get_mapped_index(
@@ -897,6 +903,8 @@ void AdvancedIndexingNode::propagate(State& state) const {
         }
     }
 
+    if (dynamic()) update_dynamic_shape(state);
+
     // Only signal successors if we actually have something to propagate
     if (diff.size()) Node::propagate(state);
 }
@@ -908,6 +916,15 @@ ssize_t AdvancedIndexingNode::size_diff(const State& state) const {
         return static_cast<ssize_t>(ptr->data.size()) - ptr->old_data_size;
     }
     return 0;
+}
+
+void AdvancedIndexingNode::update_dynamic_shape(State& state) const {
+    assert(dynamic());
+    assert(array_ptr_->ndim() >= 1);
+
+    auto node_data = data_ptr<AdvancedIndexingNodeData>(state);
+
+    node_data->dynamic_shape[0] = this->size(state) / (strides()[0] / itemsize());
 }
 
 // BasicIndexingNode **********************************************************

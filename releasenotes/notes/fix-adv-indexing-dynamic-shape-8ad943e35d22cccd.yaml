@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Due to the way `AdvancedIndexingNode` held the data for its shape in the
+    dynamic size case (i.e. when the indexers are dynamic), it was possible to
+    encounter issues when mutating multiple states on the model. This has been
+    fixed by tracking the shape on the node's state data.
