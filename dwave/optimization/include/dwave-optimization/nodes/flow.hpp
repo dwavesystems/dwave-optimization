@@ -22,6 +22,61 @@
 
 namespace dwave::optimization {
 
+/// Return elements of an array where the condition is true.
+///
+/// `condition` and `arr` must be the same size. This always outputs a
+/// 1d array.
+class ExtractNode : public ArrayOutputMixin<ArrayNode> {
+ public:
+    ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr);
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+    using Array::shape;
+
+    /// @copydoc Array::shape()
+    std::span<const ssize_t> shape(const State& state) const override;
+
+    using Array::size;
+
+    /// @copydoc Array::size()
+    ssize_t size(const State& state) const override;
+
+    /// @copydoc Array::size_diff()
+    ssize_t size_diff(const State& state) const override;
+
+    /// @copydoc Array::sizeinfo()
+    SizeInfo sizeinfo() const override;
+
+ private:
+    // these are redundant, but convenient
+    const Array* condition_ptr_;
+    const Array* arr_ptr_;
+};
+
 /// Choose elements from x or y depending on condition.
 ///
 /// `condition` must be either a scalar array or the same shape as `x` and `y`.

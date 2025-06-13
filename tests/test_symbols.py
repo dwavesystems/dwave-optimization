@@ -1264,6 +1264,33 @@ class TestExpit(utils.SymbolTests):
             self.assertEqual(expit_node.state(), scipy_expit_output[i])  # confirm consistency with SciPy expit
 
 
+class TestExtract(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        condition = model.binary(3)
+        arr = model.constant([1, 2, 3])
+        extract = dwave.optimization.extract(condition, arr)
+        with model.lock():
+            yield extract
+
+    def test(self):
+        model = Model()
+        condition = model.binary(3)
+        arr = model.integer(3)
+        extract = dwave.optimization.extract(condition, arr)
+        with model.lock():
+            model.states.resize(1)
+            condition.set_state(0, [False, True, True])
+            arr.set_state(0, [1, 2, 3])
+            np.testing.assert_array_equal(extract.state(), [2, 3])
+            condition.set_state(0, [False, False, True])
+            np.testing.assert_array_equal(extract.state(), [3])
+
+        with self.assertRaises(ValueError):
+            # wrong shape
+            dwave.optimization.extract(model.binary(4), arr)
+
+
 class TestInput(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

@@ -68,6 +68,7 @@ from dwave.optimization.libcpp.nodes cimport (
     EqualNode as cppEqualNode,
     ExpitNode as cppExpitNode,
     ExpNode as cppExpNode,
+    ExtractNode as cppExtractNode,
     InputNode as cppInputNode,
     IntegerNode as cppIntegerNode,
     LessEqualNode as cppLessEqualNode,
@@ -144,6 +145,7 @@ __all__ = [
     "Equal",
     "Exp",
     "Expit",
+    "Extract",
     "Input",
     "IntegerVariable",
     "LessEqual",
@@ -1817,6 +1819,25 @@ cdef class Expit(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(Expit, typeid(cppExpitNode))
+
+
+cdef class Extract(ArraySymbol):
+    """Return elements chosen from x or y depending on condition.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.where`: equivalent function.
+    """
+    def __init__(self, ArraySymbol condition, ArraySymbol arr):
+        cdef _Graph model = condition.model
+
+        if condition.model is not arr.model:
+            raise ValueError("condition and arr do not share the same underlying model")
+
+        cdef cppExtractNode* ptr = model._graph.emplace_node[cppExtractNode](
+            condition.array_ptr, arr.array_ptr)
+        self.initialize_arraynode(model, ptr)
+
+_register(Extract, typeid(cppExtractNode))
 
 
 cdef class Input(ArraySymbol):
