@@ -439,8 +439,8 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
             vehicle on any route must not exceed this value.
         time_distances:
             time_distances between **all** the problem's locations, as an |array-like|_
-            of positive numbers, including both customer sites and the depot.The first
-            row and colum of the distance matrix are customer distances form the depot.
+            of positive numbers, including both customer sites and the depot. The first
+            row and column of the distance matrix are customer distances from the depot.
         time_window_open:
             The opening time of each customer, as an |array-like|_. The first element is
             the depot.
