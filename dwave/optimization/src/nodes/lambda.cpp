@@ -87,9 +87,9 @@ void validate_expression(const Graph& expression) {
     }
 }
 
-Graph _validate_expression(Graph&& expression) {
-    validate_expression(expression);
-    return expression;
+std::shared_ptr<Graph> _validate_expression(std::shared_ptr<Graph>&& expression) {
+    validate_expression(*expression);
+    return std::move(expression);
 }
 
 auto get_operands_shape(const Graph& expression, std::span<ArrayNode* const> operands) {
@@ -152,23 +152,25 @@ void validate_naryreduce_arguments(const Graph& expression,
     }
 }
 
-Graph _validate_naryreduce_arguments(Graph&& expression, const std::vector<ArrayNode*> operands) {
-    validate_naryreduce_arguments(expression, operands);
-    return expression;
+std::shared_ptr<Graph> _validate_naryreduce_arguments(std::shared_ptr<Graph>&& expression,
+                                                      const std::vector<ArrayNode*> operands) {
+    validate_naryreduce_arguments(*expression, operands);
+    return std::move(expression);
 }
 
-NaryReduceNode::NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands,
-                               array_or_double initial)
-        : ArrayOutputMixin(get_operands_shape(expression, operands)),
+NaryReduceNode::NaryReduceNode(std::shared_ptr<Graph> expression_ptr,
+                               const std::vector<ArrayNode*>& operands, array_or_double initial)
+        : ArrayOutputMixin(get_operands_shape(*expression_ptr, operands)),
           initial(initial),
-          expression_(_validate_naryreduce_arguments(_validate_expression(std::move(expression)),
-                                                     operands)),
+          expression_ptr_(_validate_naryreduce_arguments(
+                  _validate_expression(std::move(expression_ptr)), operands)),
           operands_(operands),
-          output_(expression_.objective()) {
+          output_(expression_ptr_->objective()) {
     if (std::holds_alternative<ArrayNode*>(initial)) {
         ArrayNode* initial_node = std::get<ArrayNode*>(initial);
         if (initial_node->ndim() != 0) {
-            throw std::invalid_argument("when using a node for the initial value, it must have scalar output");
+            throw std::invalid_argument(
+                    "when using a node for the initial value, it must have scalar output");
         }
         add_predecessor(initial_node);
     }
@@ -179,7 +181,7 @@ NaryReduceNode::NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>
 
 double const* NaryReduceNode::buff(const State& state) const {
     return data_ptr<NaryReduceNodeData>(state)->buffer.data();
-};
+}
 
 void NaryReduceNode::commit(State& state) const { data_ptr<NaryReduceNodeData>(state)->commit(); }
 
@@ -189,11 +191,11 @@ std::span<const Update> NaryReduceNode::diff(const State& state) const {
 
 double NaryReduceNode::evaluate_expression(State& register_) const {
     // First propagate all the nodes
-    for (const auto& node_ptr : expression_.nodes()) {
+    for (const auto& node_ptr : expression_ptr_->nodes()) {
         node_ptr->propagate(register_);
     }
     // Then commit to clear the diffs
-    for (const auto& node_ptr : expression_.nodes()) {
+    for (const auto& node_ptr : expression_ptr_->nodes()) {
         node_ptr->commit(register_);
     }
     return output_->view(register_)[0];
@@ -216,7 +218,7 @@ void NaryReduceNode::initialize_state(State& state) const {
     ssize_t num_args = operands_.size();
     std::vector<double> values;
     State reg;
-    reg = expression_.empty_state();
+    reg = expression_ptr_->empty_state();
 
     std::vector<Array::const_iterator> iterators;
     for (const ArrayNode* array_ptr : operands_) {
@@ -224,13 +226,13 @@ void NaryReduceNode::initialize_state(State& state) const {
     }
 
     // Initialize the inputs
-    for (const auto inp : expression_.inputs()) {
+    for (const auto inp : expression_ptr_->inputs()) {
         double val = inp->min();
         inp->initialize_state(reg, std::span(&val, 1));
     }
 
     // Finish the initialization after the input states have been set
-    expression_.initialize_state(reg);
+    expression_ptr_->initialize_state(reg);
 
     double val = get_initial_value(state);
 
@@ -261,7 +263,7 @@ std::pair<double, double> NaryReduceNode::minmax(
 }
 
 std::span<const InputNode* const> NaryReduceNode::operand_inputs() const {
-    return expression_.inputs().subspan(1);
+    return expression_ptr_->inputs().subspan(1);
 }
 
 void NaryReduceNode::propagate(State& state) const {
@@ -293,7 +295,7 @@ void NaryReduceNode::propagate(State& state) const {
     if (data->diff().size()) Node::propagate(state);
 }
 
-const InputNode* const NaryReduceNode::reduction_input() const { return expression_.inputs()[0]; }
+const InputNode* const NaryReduceNode::reduction_input() const { return expression_ptr_->inputs()[0]; }
 
 void NaryReduceNode::revert(State& state) const { data_ptr<NaryReduceNodeData>(state)->revert(); }
 

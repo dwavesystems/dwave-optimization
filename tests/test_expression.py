@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave Inc.
+# Copyright 2025 D-Wave
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -15,68 +15,46 @@
 import unittest
 
 import dwave.optimization.symbols
-from dwave.optimization.model import Expression
+
+from dwave.optimization import Model, expression
 
 
 class TestExpression(unittest.TestCase):
-    def test(self):
-        Expression()
+    def test_decorator(self):
+        @expression
+        def func(a, b, c):
+            return (a + b) * c
+        self.assertEqual(func._model.num_inputs(), 3)
+        self.assertIsInstance(func._model.objective, dwave.optimization.symbols.Multiply)
 
-    def test_unsupported_symbols(self):
-        # Can't add decisions to an Expression, even manually
-        expr = Expression()
-        with self.assertRaises(TypeError):
-            dwave.optimization.symbols.IntegerVariable(expr)
+    def test_decorator_with_bounds(self):
+        @expression(a=dict(lower_bound=0), b=dict(integral=True))
+        def func(a, b, c):
+            return (a + b) * c
 
-        # Can't add other symbols, e.g. Reshape
-        expr = Expression()
-        inp = expr.input(0, 1, False)
-        with self.assertRaises(TypeError):
-            dwave.optimization.symbols.Reshape(inp, (1, 1, 1))
+    def test_exceptions(self):
+        with self.assertRaisesRegex(ValueError, "function must accept at least one argument"):
+            expression(lambda: 1)
+        with self.assertRaisesRegex(TypeError, "100 is not a callable object"):
+            expression(100)
+        with self.assertRaisesRegex(
+                TypeError,
+                r"expression\(\) takes 0 or 1 positional arguments but 3 were given",
+        ):
+            expression(lambda a: a, lambda b: b, lambda c: c)
 
-    def test_num_inputs(self):
-        expr = Expression()
-        self.assertEqual(expr.num_inputs(), 0)
+    def test_lambda(self):
+        identity = expression(lambda a: a)
+        self.assertEqual(identity._model.num_inputs(), 1)
+        self.assertIsInstance(identity._model.objective, dwave.optimization.symbols.Input)
 
-        inp0 = expr.input(-1, 1, True)
-        self.assertEqual(expr.num_inputs(), 1)
+        add = expression(lambda a, b: a + b)
+        self.assertEqual(add._model.num_inputs(), 2)
+        self.assertIsInstance(add._model.objective, dwave.optimization.symbols.Add)
 
-        inp1 = expr.input(-1, 1, True)
-        self.assertEqual(expr.num_inputs(), 2)
-
-        inp0 + inp1
-        self.assertEqual(expr.num_inputs(), 2)
-        self.assertEqual(expr.num_nodes(), 3)
-
-        expr.input(-1, 1, True)
-        self.assertEqual(expr.num_inputs(), 3)
-        self.assertEqual(expr.num_nodes(), 4)
-
-    def test_iter_inputs(self):
-        expr = Expression()
-        self.assertListEqual(list(expr.iter_inputs()), [])
-
-        inp0 = expr.input(-1, 1, True)
-        symbols = list(expr.iter_inputs())
-        self.assertEqual(len(symbols), 1)
-        self.assertTrue(inp0.equals(symbols[0]))
-
-        inp1 = expr.input(-1, 1, True)
-        symbols = list(expr.iter_inputs())
-        self.assertEqual(len(symbols), 2)
-        self.assertTrue(inp0.equals(symbols[0]))
-        self.assertTrue(inp1.equals(symbols[1]))
-
-        inp0 + inp1
-        symbols = list(expr.iter_inputs())
-        self.assertEqual(len(symbols), 2)
-
-        inp2 = expr.input(-1, 1, True)
-        symbols = list(expr.iter_inputs())
-        self.assertEqual(len(symbols), 3)
-        self.assertTrue(inp2.equals(symbols[2]))
-
-    def test_constants(self):
-        expr = Expression()
-        c0, c1 = expr.constant(5), expr.constant(-7.5)
-        c0 + c1
+    def test_lambda_with_bounds(self):
+        identity = expression(lambda a: a, a=dict(lower_bound=0, upper_bound=10))
+        a, = identity._model.iter_inputs()
+        self.assertEqual(a.lower_bound(), 0)
+        self.assertEqual(a.upper_bound(), 10)
+        self.assertEqual(a.integral(), False)  # default

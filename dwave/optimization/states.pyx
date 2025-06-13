@@ -82,8 +82,8 @@ cdef class States:
         0
     """
     def __init__(self, model):
-        if not isinstance(model, _Graph):
-            raise TypeError("model must be an instance of _Graph")
+        if not isinstance(model, Model):
+            raise TypeError("model must be an instance of Model")
         self._model_ref = weakref.ref(model)
 
     def __len__(self):

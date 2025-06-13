@@ -28,6 +28,7 @@ from cpython.ref cimport PyObject
 from cython.operator cimport dereference as deref, preincrement as inc
 from cython.operator cimport typeid
 from libcpp cimport bool
+from libcpp.memory cimport make_shared
 from libcpp.typeindex cimport type_index
 from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
@@ -94,6 +95,21 @@ cdef class _Graph:
     def __cinit__(self):
         self._lock_count = 0
         self._data_sources = []
+
+        self._owning_ptr = make_shared[cppGraph]()
+        self._graph = self._owning_ptr.get()
+
+    @staticmethod
+    cdef _Graph from_shared_ptr(shared_ptr[cppGraph] ptr):
+        cdef _Graph model = _Graph.__new__(_Graph)
+
+        model._owning_ptr = ptr
+        model._graph = model._owning_ptr.get()
+
+        if model._graph.topologically_sorted():
+            model._lock_count += 1
+
+        return model
 
     def __init__(self, *args, **kwargs):
         # disallow direct construction of _Graphs, they should be constructed
@@ -245,11 +261,9 @@ cdef class _Graph:
                     directory = f"nodes/{node_id}/"
                     classname = classname.decode("UTF-8").rstrip("\n")
 
-                    node_cls = substitute.get(classname)
-                    if node_cls is None:
-                        # take advanctage of the symbols all being in the same namespace
-                        # and the fact that we (currently) encode them all by name
-                        node_cls = getattr(symbols, classname, None)
+                    # take advanctage of the symbols all being in the same namespace
+                    # and the fact that we (currently) encode them all by name
+                    node_cls = substitute.get(classname, getattr(symbols, classname, None))
 
                     if not issubclass(node_cls, Symbol):
                         raise ValueError("encoded model has an unsupported node type")
@@ -261,7 +275,7 @@ cdef class _Graph:
                 objective_id = json.loads(objective_buff)
                 if not isinstance(objective_id, int) or objective_id >= model.num_nodes():
                     raise ValueError("objective must be an integer and a valid node id")
-                model._set_objective(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
+                model.minimize(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
 
             for cid in json.loads(zf.read("constraints.json")):
                 model.add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
@@ -430,7 +444,6 @@ cdef class _Graph:
 
         .. _NPY format: https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html
         """
-
         version, model_info = self._into_file_header(
             file,
             version=version,
@@ -483,7 +496,10 @@ cdef class _Graph:
                 self.states._into_zipfile(zf, num_states=num_states, version=version)
 
             # Encode the objective and the constraints
-            objective = self._objective_symbol()
+            if self._graph.objective():
+                objective = symbol_from_ptr(self, self._graph.objective())
+            else:
+                objective = None
             if objective is not None and objective.topological_index() < stop:
                 zf.writestr("objective.json", encoder.encode(objective.topological_index()))
             else:
@@ -631,12 +647,28 @@ cdef class _Graph:
         # note that we do not initialize the nodes or resize the states!
         # We do it lazily for performance
 
-    def _set_objective(self, ArraySymbol value):
-        """Set the objective value on the ``dwave::optimization::Graph``.
+    def minimize(self, ArraySymbol value):
+        """Set the objective value to minimize.
 
-        Note that we use this term somewhat loosely, as this "objective" is used for
-        both for the proper objective of a :class:`~dwave.optimization.model.Model`
-        as well as the output of an :class:`~dwave.optimization.model.Expression`.
+        Optimization problems have an objective and/or constraints. The objective
+        expresses one or more aspects of the problem that should be minimized
+        (equivalent to maximization when multiplied by a minus sign). For example,
+        an optimized itinerary might minimize the value of distance traveled or
+        cost of transportation or travel time.
+
+        Args:
+            value: Value for which to minimize the cost function.
+
+        Examples:
+            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
+            within bounds.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(lower_bound=-5, upper_bound=5)
+            >>> c = model.constant(4)
+            >>> y = i*i - c*i
+            >>> model.minimize(y)
         """
         if value is None:
             raise ValueError("value cannot be None")
@@ -770,18 +802,6 @@ cdef class _Graph:
             2
         """
         return self.num_nodes()
-
-    def _objective_symbol(self):
-        """Return the node set as the objective on the ``._graph`` as a symbol.
-        If the objective is not currently set, return ``None``.
-        """
-
-        cdef cppArrayNode* ptr = self._graph.objective()
-        if not ptr:
-            # nullptr, so objective is not set
-            return None
-
-        return symbol_from_ptr(self, ptr)
 
     def remove_unused_symbols(self):
         """Remove unused symbols from the model.
