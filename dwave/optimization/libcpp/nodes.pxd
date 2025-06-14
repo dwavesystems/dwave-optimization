@@ -68,6 +68,9 @@ cdef extern from "dwave-optimization/nodes/creation.hpp" namespace "dwave::optim
 
 
 cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass ExtractNode(ArrayNode):
+        pass
+
     cdef cppclass WhereNode(ArrayNode):
         pass
 

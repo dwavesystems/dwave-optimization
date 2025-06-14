@@ -39,38 +39,39 @@ class ArrayStateData {
     explicit ArrayStateData(Range&& values) noexcept
             : ArrayStateData(std::vector<double>(values.begin(), values.end())) {}
 
-    // Assign new values to the state, tracking the changes from the previous state to the new
-    // one. Including resizes.
-    bool assign(std::ranges::sized_range auto&& values) {
-        // dev note: we could implement a version of this that doesn't need sized_range.
-        const ssize_t overlap_length = std::min<ssize_t>(buffer.size(), std::ranges::size(values));
+    // Assign new values to the state, starting from an offset and optionally "trimming" the
+    // end of the previous buffer if it extends past the range of the newly set values.
+    bool assign_partial(std::ranges::sized_range auto&& values, ssize_t offset,
+                        bool trim_end = false) {
+        const ssize_t overlap_length =
+                std::min<ssize_t>(buffer.size(), std::ranges::size(values) + offset) - offset;
 
         auto vit = std::ranges::begin(values);
 
         // first walk through the overlap, updating the buffer and the diff accordingly
         {
-            auto bit = buffer.begin();
-            for (ssize_t index = 0; index < overlap_length; ++index, ++bit, ++vit) {
+            auto bit = buffer.begin() + offset;
+            for (ssize_t index = offset; index < overlap_length + offset; ++index, ++bit, ++vit) {
                 if (*bit == *vit) continue;  // no change
                 updates.emplace_back(index, *bit, *vit);
                 *bit = *vit;
             }
         }
 
-        // next walk backwards through the excess buffer, if there is any, removing as we go
-        {
-            for (ssize_t index = buffer.size() - 1; index >= overlap_length; --index) {
+        if (trim_end) {
+            // trim the end of the buffer
+            for (ssize_t index = buffer.size() - 1; index >= overlap_length + offset; --index) {
                 updates.emplace_back(Update::removal(index, buffer[index]));
             }
-            buffer.resize(overlap_length);
+            buffer.resize(overlap_length + offset);
         }
 
         // finally walk forward through the excess values, if there are any, adding them to the
         // buffer
         {
             buffer.reserve(std::ranges::size(values));
-            for (ssize_t index = buffer.size(), stop = std::ranges::size(values); index < stop;
-                 ++index, ++vit) {
+            for (ssize_t index = buffer.size(), stop = std::ranges::size(values) + offset;
+                 index < stop; ++index, ++vit) {
                 updates.emplace_back(Update::placement(index, *vit));
                 buffer.emplace_back(*vit);
             }
@@ -79,6 +80,11 @@ class ArrayStateData {
         size_ = buffer.size();
 
         return !updates.empty();
+    }
+
+    // Assign new values to the state, tracking the changes from the previous state to the new
+    bool assign(std::ranges::sized_range auto&& values) {
+        return assign_partial(std::move(values), 0, true);
     }
 
     double* buff() noexcept { return buffer.data(); }
@@ -209,8 +215,7 @@ class ArrayStateData {
     ssize_t previous_size_;
 };
 
-
-class ArrayNodeStateData: public ArrayStateData, public NodeStateData {
+class ArrayNodeStateData : public ArrayStateData, public NodeStateData {
  public:
     explicit ArrayNodeStateData(std::vector<double>&& values) noexcept
             : ArrayStateData(std::move(values)), NodeStateData() {}

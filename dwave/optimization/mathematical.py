@@ -26,6 +26,7 @@ from dwave.optimization.symbols import (
     Divide,
     Exp,
     Expit,
+    Extract,
     LinearProgram,
     LinearProgramFeasible,
     LinearProgramObjectiveValue,
@@ -62,6 +63,7 @@ __all__ = [
     "divide",
     "exp",
     "expit",
+    "extract",
     "hstack",
     "linprog",
     "log",
@@ -452,6 +454,37 @@ def expit(x: ArraySymbol) -> Expit:
     .. versionadded:: 0.5.2
     """
     return Expit(x)
+
+
+def extract(condition: ArraySymbol, arr: ArraySymbol) -> Extract:
+    """Return the elements of an array where the condition is true.
+
+    Args:
+        condition:
+            Where ``True``, return the corresponding element from ``arr``.
+        arr:
+            The input array.
+
+    Returns:
+        An :class:`~dwave.optimization.model.ArraySymbol`
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import extract
+        ...
+        >>> model = Model()
+        >>> condition = model.binary(3)
+        >>> arr = model.constant([4, 5, 6])
+        >>> extracted = extract(condition, arr)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     condition.set_state(0, [True, False, True])
+        ...     print(extracted.state())
+        [4. 6.]
+
+    .. versionadded:: 0.6.3
+    """
+    return Extract(condition, arr)
 
 
 def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:

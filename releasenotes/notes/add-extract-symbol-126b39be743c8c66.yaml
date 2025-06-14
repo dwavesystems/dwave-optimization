@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add the ``Extract`` symbol and node, following the behavior of
+    ``numpy.extract``.
