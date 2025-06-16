@@ -40,12 +40,12 @@ __all__ = [
 def _require(argname: str,
              array_like: numpy.typing.ArrayLike,
              *,
-             dtype=None,
+             dtype: numpy.typing.DTypeLike = None,
              ndim: typing.Optional[int] = None,
              nonnegative: bool = False,
              positive: bool = False,
              square: bool = False
-             ) -> np.ndarray:
+             ) -> numpy.typing.NDArray[typing.Any]:
     """Coerce the given array-like into the form we want and raise a consistent
     error message if it cannot be coerced.
     """
@@ -285,7 +285,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 
     if distances is not None and (locations_x is not None or locations_y is not None):
         raise ValueError("Either `locations_x` and `locations_y` or `distances`"
-                         f" can be specified. Got both input formats.")
+                         " can be specified. Got both input formats.")
 
     demand = _require("demand", demand, dtype=float, ndim=1, nonnegative=True)
 
@@ -332,7 +332,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         if demand[0] == 0:
             if len(x) < 2:
                 raise ValueError("Lengths of `locations_x` and `locations_y` must"
-                                 f" be at least 2 when `demand[0]=0`.")
+                                 " be at least 2 when `demand[0]=0`.")
 
             customer_demand = demand[1:]
             customer_locations_x = locations_x[1:]
@@ -439,8 +439,8 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
             vehicle on any route must not exceed this value.
         time_distances:
             time_distances between **all** the problem's locations, as an |array-like|_
-            of positive numbers, including both customer sites and the depot.The first
-            row and colum of the distance matrix are customer distances form the depot.
+            of positive numbers, including both customer sites and the depot. The first
+            row and column of the distance matrix are customer distances from the depot.
         time_window_open:
             The opening time of each customer, as an |array-like|_. The first element is
             the depot.
@@ -581,7 +581,10 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
         num_clients_in_route[f'route{i}'] = routes[i].size()
 
     # Constrain the number of locations per route
-    max_loc_per_route_constant = model.constant(3 * int(num_customers / number_of_vehicles))
+    # approximation to restrict solution space
+    max_loc_per_route_constant = model.constant(
+        min(num_customers, max(10, 3 * int(num_customers / number_of_vehicles)))
+    )
     max_loc_per_route_constraints = [(num_clients_in_route[f'route{v}'] <= max_loc_per_route_constant)
                                      for v in range(number_of_vehicles)]
     for mlpr in max_loc_per_route_constraints:
