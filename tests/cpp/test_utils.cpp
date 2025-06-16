@@ -131,6 +131,39 @@ TEST_CASE("Test fraction") {
     }
 }
 
+TEST_CASE("Test type_list") {
+    static_assert(type_list<float, int>::count<float>() == 1);
+    static_assert(type_list<float, int, float>::count<float>() == 2);
+    static_assert(type_list<float, int>::count<bool>() == 0);
+    static_assert(type_list<float, int>::count<const float>() == 0);
+
+    static_assert(type_list<float, int>::contains<float>());
+    static_assert(type_list<float, int, float>::contains<float>());
+    static_assert(!type_list<float, int>::contains<bool>());
+
+    static_assert(type_list<float, int>::size() == 2);
+    static_assert(type_list<float, int, float>::size() == 3);
+
+    static_assert(type_list<float>::issubset<type_list<int, float>>());
+    static_assert(type_list<float, int>::issubset<type_list<int, float>>());
+    static_assert(!type_list<float, int>::issubset<type_list<float>>());
+
+    static_assert(!type_list<float>::issuperset<type_list<int, float>>());
+    static_assert(type_list<float, int>::issuperset<type_list<int, float>>());
+    static_assert(type_list<float, int>::issuperset<type_list<float>>());
+
+    static_assert(type_list<float, int>::add_pointer::count<float*>() == 1);
+    static_assert(type_list<float, float*>::add_pointer::count<float*>() == 1);
+    static_assert(type_list<float, float*>::add_pointer::count<float**>() == 1);
+
+    static_assert(type_list<float, float*>::remove_pointer::count<float>() == 2);
+
+    // can convert to a tuple (also works for variant but this is easier to test)
+    type_list<bool, int>::to<std::tuple> tpl{10, 10};
+    CHECK(std::get<0>(tpl) == 1);
+    CHECK(std::get<1>(tpl) == 10);
+}
+
 TEST_CASE("Test deduplicate_diff") {
     GIVEN("An empty vector of updates") {
         std::vector<Update> updates;
