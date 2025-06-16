@@ -97,6 +97,13 @@ bool SizeInfo::operator==(const SizeInfo& other) const {
 }
 
 SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
+    if (array_ptr == nullptr) {
+        assert(this->min.has_value() && this->max.has_value() &&
+               this->min.value() == this->max.value() &&
+               "SizeInfo should either have an associated array or have its min and max be equal");
+        return *this;
+    }
+
     if (max_depth <= 0) return *this;
 
     SizeInfo sizeinfo = this->array_ptr->sizeinfo();

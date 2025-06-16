@@ -29,6 +29,22 @@ namespace dwave::optimization {
 
 TEST_CASE("BasicIndexingNode") {
     SECTION("SizeInfo") {
+        SECTION("ListNode(10)[3:7]") {
+            auto set = ListNode(10);
+
+            auto slice = BasicIndexingNode(&set, Slice(3, 7));
+
+            auto sizeinfo = slice.sizeinfo();
+            CHECK(sizeinfo.array_ptr == nullptr);
+            CHECK(sizeinfo.offset == 4);
+            REQUIRE(sizeinfo.min.has_value());
+            REQUIRE(sizeinfo.max.has_value());
+            CHECK(sizeinfo.min.value() == 4);
+            CHECK(sizeinfo.max.value() == 4);
+            // substitute should return the same sizeinfo
+            CHECK(sizeinfo == sizeinfo.substitute());
+        }
+
         SECTION("SetNode(10)[:]") {
             auto set = SetNode(10);
 

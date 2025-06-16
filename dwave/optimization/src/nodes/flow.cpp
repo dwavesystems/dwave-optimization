@@ -46,7 +46,7 @@ std::span<const ssize_t> same_shape(const Array* node_ptr,
 
 ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr)
         : ArrayOutputMixin({-1}), condition_ptr_(condition_ptr), arr_ptr_(arr_ptr) {
-    if (condition_ptr_->sizeinfo() != arr_ptr_->sizeinfo()) {
+    if (condition_ptr_->sizeinfo().substitute(100) != arr_ptr_->sizeinfo().substitute(100)) {
         throw std::invalid_argument("condition and arr must have the same size");
     }
 
