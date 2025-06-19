@@ -97,7 +97,7 @@ bool SizeInfo::operator==(const SizeInfo& other) const {
 }
 
 SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
-    if (array_ptr == nullptr) {
+    if (this->array_ptr == nullptr) {
         assert(this->min.has_value() && this->max.has_value() &&
                this->min.value() == this->max.value() &&
                "SizeInfo should either have an associated array or have its min and max be equal");
@@ -108,11 +108,15 @@ SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
 
     SizeInfo sizeinfo = this->array_ptr->sizeinfo();
 
+    std::cout << "start this=" << *this << "\n";
+    std::cout << "start sizeinfo=" << sizeinfo << "\n";
+
     // Check if substitution will do nothing, and return if so
     constexpr ssize_t MAX = std::numeric_limits<ssize_t>::max();
     if (this->array_ptr == sizeinfo.array_ptr && sizeinfo.multiplier == 1 && sizeinfo.offset == 0 &&
         this->min.value_or(-MAX) >= sizeinfo.min.value_or(MAX) &&
         this->max.value_or(MAX) <= sizeinfo.max.value_or(-MAX)) {
+        std::cout << "returning this=" << *this << "\n";
         return *this;
     }
 
@@ -121,40 +125,41 @@ SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
     sizeinfo.offset = static_cast<ssize_t>(this->multiplier * sizeinfo.offset);
     sizeinfo.offset += this->offset;
 
-    if (this->max) {
-        if (sizeinfo.max) {
-            sizeinfo.max = std::min<ssize_t>(*max, *sizeinfo.max);
-        } else {
-            sizeinfo.max = this->max;
-        }
-    }
-
-    if (this->min) {
-        if (sizeinfo.min) {
-            sizeinfo.min = std::max<ssize_t>(*(this->min), *sizeinfo.min);
-        } else {
-            sizeinfo.min = this->min;
-        }
-    }
+    std::cout << "middle sizeinfo=" << sizeinfo << "\n";
 
     if (sizeinfo.min) {
         if (this->multiplier != 1) {
             sizeinfo.min = static_cast<ssize_t>(this->multiplier * *sizeinfo.min);
         }
         sizeinfo.min = std::max<ssize_t>(0, *sizeinfo.min + this->offset);
+        if (this->min) {
+            sizeinfo.min = std::max<ssize_t>(*sizeinfo.min, *this->min);
+        }
+    } else if (this->min) {
+        sizeinfo.min = this->min;
     }
+
     if (sizeinfo.max) {
         if (this->multiplier != 1) {
             sizeinfo.max = static_cast<ssize_t>(this->multiplier * *sizeinfo.max);
         }
         sizeinfo.max = std::max<ssize_t>(0, *sizeinfo.max + this->offset);
+        if (this->max) {
+            sizeinfo.max = std::min<ssize_t>(*sizeinfo.max, *this->max);
+        }
+    } else if (this->max) {
+        sizeinfo.max = this->max;
     }
+
+    std::cout << "new sizeinfo=" << sizeinfo << "\n";
 
     // Adjust the minimum based on the offset
     if (sizeinfo.min && sizeinfo.max && sizeinfo.min == sizeinfo.max) {
         sizeinfo.offset = *sizeinfo.min;
         sizeinfo.multiplier = 0;
     }
+
+    std::cout << "final sizeinfo=" << sizeinfo << "\n\n";
 
     // in the future we can/should do an iterative rather than recurisive
     // version
@@ -171,8 +176,10 @@ std::ostream& operator<<(std::ostream& os, const SizeInfo& sizeinfo) {
 
     os << "<Array at " << sizeinfo.array_ptr << ">.size()";
 
-    if (sizeinfo.offset) {
-        os << " + " << sizeinfo.offset;
+    if (sizeinfo.offset < 0) {
+        os << " - " << -sizeinfo.offset;
+    } else if (sizeinfo.offset > 0) {
+        os << " + " << -sizeinfo.offset;
     }
 
     if (sizeinfo.min && sizeinfo.max) {

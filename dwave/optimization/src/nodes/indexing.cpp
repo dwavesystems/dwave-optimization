@@ -933,6 +933,16 @@ void AdvancedIndexingNode::update_dynamic_shape(State& state) const {
 // the given indices
 struct BasicIndexingNode::IndexParser_ {
     IndexParser_(Array* array_ptr, std::vector<slice_or_int>&& indices) {
+        std::cout << "PARSER\n";
+        for (const slice_or_int& index : indices) {
+            if (std::holds_alternative<Slice>(index)) {
+                std::cout << std::get<Slice>(index) << ", ";
+            } else {
+                std::cout << std::get<ssize_t>(index) << ", ";
+            }
+        }
+        std::cout << "\n";
+
         // some input validation
         assert(array_ptr->ndim() >= 0);  // should always be true
         if (static_cast<std::size_t>(array_ptr->ndim()) > indices.size()) {
@@ -1058,6 +1068,7 @@ BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser
           size_(Array::shape_to_size(ndim_, shape_.get())),
           axis0_slice_(parser.axis0_slice),
           contiguous_(Array::is_contiguous(ndim_, shape_.get(), strides_.get())) {
+    std::cout << "initial axis0_slice_=" << axis0_slice_.value_or(Slice()) << "\n";
     add_predecessor(array_ptr);
 }
 
@@ -1555,6 +1566,14 @@ ssize_t BasicIndexingNode::size(const State& state) const {
 SizeInfo BasicIndexingNode::sizeinfo() const {
     if (size_ >= 0) return SizeInfo(size_);
 
+    if (axis0_slice_->stop >= 0 && axis0_slice_->stop < std::numeric_limits<ssize_t>::max() && axis0_slice_->start < 0) {
+        // Stop is positive and finite and start is less than zero. In this case, the size is not a
+        // linear function of the main array's size, and thus the best we can do is compute the
+        // maximum and return a SizeInfo pointing to the BasicIndexingNode itself.
+        ssize_t max_size = std::min<ssize_t>(-axis0_slice_->start, axis0_slice_->stop);
+        return SizeInfo(this, 0, max_size);
+    }
+
     auto sizeinfo = SizeInfo(array_ptr_);
 
     // Get the multiplier on the size of the array
@@ -1583,7 +1602,32 @@ SizeInfo BasicIndexingNode::sizeinfo() const {
         sizeinfo.multiplier /= axis0_slice_->step;
     }
 
-    // Get the offset and bounds
+    // Get the max size
+    {
+        std::cout << "axis0_slice_ = " << axis0_slice_.value() << ", maxmax=" << std::numeric_limits<ssize_t>::max() << "\n";
+        std::cout << "axis0_slice_ size = " << axis0_slice_->size() << "\n";
+
+        std::optional<ssize_t> max_slice_range;
+        if ((axis0_slice_->stop < std::numeric_limits<ssize_t>::max() && axis0_slice_->start >= 0 && axis0_slice_->stop >= 0) ||
+                (axis0_slice_->start < 0 && axis0_slice_->stop < 0)) {
+            // Both positive/negative and stop is finite
+            max_slice_range = std::max<ssize_t>(0, axis0_slice_->stop - axis0_slice_->start);
+        } else if (axis0_slice_->stop < std::numeric_limits<ssize_t>::max() && axis0_slice_->start < 0) {
+            // Stop is finite and start is less than zero
+            assert(false &&  "finite stop and start < 0 should have been handled earlier");
+            unreachable();
+        } else if (axis0_slice_->start < 0) {
+            // Stop is infinite and start is less than zero
+            max_slice_range = -axis0_slice_->start;
+        }
+
+        if (max_slice_range.has_value()) {
+            std::cout << "range=" << max_slice_range.value() << ", setting max to = " << sizeinfo.multiplier * max_slice_range.value();
+            sizeinfo.max = static_cast<ssize_t>(sizeinfo.multiplier * max_slice_range.value());
+        }
+    }
+
+    // Get the offset
     {
         assert(axis0_slice_);  // dynamic so this should be present
 
@@ -1592,20 +1636,9 @@ SizeInfo BasicIndexingNode::sizeinfo() const {
                 // having a positive start imposes a size offset
                 assert((sizeinfo.multiplier * axis0_slice_->start).denominator() == 1);
                 sizeinfo.offset -= static_cast<ssize_t>(sizeinfo.multiplier * axis0_slice_->start);
-
-            } else if (axis0_slice_->start < 0) {
-                // a negative start imposes a max size
-                sizeinfo.max = static_cast<ssize_t>(sizeinfo.multiplier * -1 * axis0_slice_->start);
             }
 
-            // This is where having Slice's values be optional<ssize_t> would be useful.
-            // For now let's just hard code it.
-            constexpr ssize_t MAX = std::numeric_limits<ssize_t>::max();
-
-            if (axis0_slice_->stop > 0 && axis0_slice_->stop != MAX) {
-                // having a positive stop imposes a max size
-                sizeinfo.max = static_cast<ssize_t>(sizeinfo.multiplier * axis0_slice_->stop);
-            } else if (axis0_slice_->stop < 0) {
+            if (axis0_slice_->stop < 0) {
                 // having a negative stop imposes a size offset
                 sizeinfo.offset += static_cast<ssize_t>(sizeinfo.multiplier * axis0_slice_->stop);
             }
