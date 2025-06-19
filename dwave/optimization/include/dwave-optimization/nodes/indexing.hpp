@@ -142,7 +142,7 @@ class AdvancedIndexingNode : public ArrayNode {
     // https://numpy.org/doc/stable/user/basics.indexing.html#combining-advanced-and-basic-indexing
     const bool bullet1mode_;
 
-    const ssize_t first_array_index_;
+    const ssize_t first_array_index_;  // first axis indexed by an array
     const ssize_t subspace_stride_;
 };
 

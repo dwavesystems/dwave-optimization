@@ -116,6 +116,10 @@ class fraction {
         lhs *= rhs;
         return lhs;
     }
+    constexpr friend fraction operator*(const std::integral auto lhs, fraction rhs) noexcept {
+        rhs *= lhs;
+        return rhs;
+    }
     constexpr fraction& operator/=(const std::integral auto n) {
         if (!n) throw std::invalid_argument("cannot divide by 0");
         denominator_ *= n;
@@ -125,6 +129,18 @@ class fraction {
     constexpr friend fraction operator/(fraction lhs, const std::integral auto rhs) {
         lhs /= rhs;
         return lhs;
+    }
+
+    // fractions can be added
+    constexpr friend fraction operator+(const fraction& lhs, const fraction& rhs) {
+        return fraction(lhs.numerator_ * rhs.denominator_ + rhs.numerator_ * lhs.denominator_,
+                        lhs.denominator_ * rhs.denominator_);
+    }
+    constexpr friend fraction operator+(const fraction& lhs, const std::integral auto& rhs) {
+        return lhs + fraction(rhs);
+    }
+    constexpr friend fraction operator+(const std::integral auto& lhs, fraction& rhs) {
+        return fraction(lhs) + rhs;
     }
 
     /// Fractions can be printed
