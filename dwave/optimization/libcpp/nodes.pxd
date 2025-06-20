@@ -12,14 +12,17 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from libcpp.memory cimport shared_ptr
 from libcpp.span cimport span
 from libcpp.string cimport string
 from libcpp.unordered_map cimport unordered_map
 from libcpp.vector cimport vector
 
+from libcpp cimport bool
+
 from dwave.optimization.libcpp cimport  variant
 from dwave.optimization.libcpp.array cimport Array, Slice
-from dwave.optimization.libcpp.graph cimport ArrayNode, Node
+from dwave.optimization.libcpp.graph cimport ArrayNode, Graph, Node
 from dwave.optimization.libcpp.state cimport State
 
 # Cython gets confused when templating pointers
@@ -120,6 +123,13 @@ cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimizatio
 
     cdef cppclass LinearProgramSolutionNode(ArrayNode):
         pass
+
+
+cdef extern from "dwave-optimization/nodes/lambda.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass NaryReduceNode(ArrayNode):
+        ctypedef variant[ArrayNodePtr, double] array_or_double
+        shared_ptr[Graph] expression_ptr()
+        const array_or_double initial
 
 
 cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::optimization" nogil:

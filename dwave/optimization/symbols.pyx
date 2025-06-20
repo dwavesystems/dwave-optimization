@@ -28,12 +28,17 @@ import numpy as np
 
 from cython.operator cimport dereference as deref, typeid
 from libc.math cimport modf
+from libc.stdint cimport uintptr_t
 from libcpp cimport bool
+from libcpp.cast cimport dynamic_cast, reinterpret_cast
 from libcpp.optional cimport nullopt, optional
 from libcpp.span cimport span
+from libcpp.typeindex cimport type_index
+from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
+from dwave.optimization.expression import Expression
 from dwave.optimization.libcpp cimport dynamic_cast_ptr, get, holds_alternative
 from dwave.optimization.libcpp.array cimport (
     Array as cppArray,
@@ -44,6 +49,8 @@ from dwave.optimization.libcpp.graph cimport (
     ArrayNode as cppArrayNode,
     ArrayNodePtr as cppArrayNodePtr,
     Node as cppNode,
+    NodePtr as cppNodePtr,
+    Graph as cppGraph,
     )
 from dwave.optimization.libcpp.nodes cimport (
     AbsoluteNode as cppAbsoluteNode,
@@ -90,6 +97,7 @@ from dwave.optimization.libcpp.nodes cimport (
     NaryMaximumNode as cppNaryMaximumNode,
     NaryMinimumNode as cppNaryMinimumNode,
     NaryMultiplyNode as cppNaryMultiplyNode,
+    NaryReduceNode as cppNaryReduceNode,
     NegativeNode as cppNegativeNode,
     NotNode as cppNotNode,
     OrNode as cppOrNode,
@@ -166,6 +174,7 @@ __all__ = [
     "NaryMaximum",
     "NaryMinimum",
     "NaryMultiply",
+    "NaryReduce",
     "Negative",
     "Not",
     "Or",
@@ -1955,7 +1964,7 @@ cdef class IntegerVariable(ArraySymbol):
         <class 'dwave.optimization.symbols.IntegerVariable'>
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
-        cdef vector[Py_ssize_t] vshape = as_cppshape(tuple() if shape is None else shape )
+        cdef vector[Py_ssize_t] vshape = as_cppshape(tuple() if shape is None else shape)
 
         if lower_bound is None and upper_bound is None:
             self.ptr = model._graph.emplace_node[cppIntegerNode](vshape)
@@ -2775,6 +2784,168 @@ cdef class NaryMultiply(ArraySymbol):
     cdef cppNaryMultiplyNode* ptr
 
 _register(NaryMultiply, typeid(cppNaryMultiplyNode))
+
+
+cdef class NaryReduce(ArraySymbol):
+    """Using a supplied :class:`~dwave.optimization.model.Expression`, perform
+    an element-wise reduction operation along one or more array operands. The
+    reduction operation (represented by the ``Expression``) takes as input one
+    value from each of the operand arrays, as well as the result of the
+    previously computed operation, and computes a new value at the next output
+    index.
+
+    This takes inspiration from
+    `numpy.ufunc.reduce <https://numpy.org/doc/2.1/reference/generated/numpy.ufunc.reduce.html>`_ 
+    but is different in that the reduction operation can take an arbitrary
+    number of arguments, instead of always two (hence the "n-ary" in
+    `NaryReduce`).
+
+    Args:
+        expression:
+            An :class:`~dwave.optimization.model.Expression` representing the
+            reduction operation. The first input on the expression will be given
+            the previous output of the operation at each iteration over the
+            values of the operands.
+        operands:
+            A list of the 1d-array symbols that will be the operands to the
+            reduction. There should be one fewer operands than inputs on the
+            expression.
+        initial (optional):
+            A float representing the value used to start the reduction. This
+            will be used to set the last input of the expression on the very
+            first iteration.
+
+    """
+
+    def __init__(self, expression, operands, object initial = 0):
+        if not isinstance(expression, Expression):
+            raise TypeError("expression must be of type Expression")
+
+        # Get the underlying Graph representing our expression, and make sure it matches our
+        # expectations.
+        # Much of this is re-checked at the C++ level, but we can raise nicer errors here
+        cdef _Graph expr = expression._model
+        if expr is None:
+            raise TypeError("expression has not been initialized")  # user bypassed __init__()
+        for symbol in expr.iter_decisions():
+            raise ValueError(
+                "expression must only have inputs and constants as roots, "
+                f"recieved an expression with {type(symbol).__name__} as a root"
+            )
+
+        if len(operands) == 0:
+            raise ValueError("operands must contain at least one array symbol")
+        if expr.num_inputs() != len(operands) + 1:
+            raise ValueError("expression must have exactly one more input than number of operands")
+
+        # Convert the operands into something we can pass to C++, and check that they all share a
+        # model while we're at it
+        cdef _Graph model = operands[0].model
+        cdef vector[cppArrayNode*] cppoperands
+        for symbol in operands:
+            if symbol.model != model:
+                raise ValueError("all predecessors must be from the same model")
+            cppoperands.push_back((<ArraySymbol?>symbol).array_ptr)
+
+        # Convert initial into something we can handle
+        if isinstance(initial, ArraySymbol):
+            self.ptr = model._graph.emplace_node[cppNaryReduceNode](
+                expr._owning_ptr, cppoperands, (<ArraySymbol>initial).array_ptr,
+            )
+        else:
+            try:
+                <double?>(initial)
+            except TypeError:
+                raise TypeError(
+                    f"expected type of `initial` to be either an int, float or an ArraySymbol, got {type(initial)}"
+                )
+
+            self.ptr = model._graph.emplace_node[cppNaryReduceNode](
+                expr._owning_ptr, cppoperands, <double>initial,
+            )
+
+        self.initialize_arraynode(model, self.ptr)
+
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
+        cdef cppNaryReduceNode* ptr = dynamic_cast_ptr[cppNaryReduceNode](
+            symbol.node_ptr
+        )
+        if not ptr:
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+        cdef NaryReduce x = NaryReduce.__new__(NaryReduce)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        from dwave.optimization import Model  # avoid circular import
+
+        expression = Expression.__new__(Expression)  # bypass the __init__
+        with zf.open(directory + "expression.nl", "r") as f:
+            expression._model = Model.from_file(f)
+            expression._model.lock()
+        with zf.open(directory + "initial.json", "r") as f:
+            initial_info = json.load(f)
+
+        if initial_info["type"] == "double":
+            initial = initial_info["value"]
+            operands = predecessors
+        elif initial_info["type"] == "node":
+            initial = predecessors[0]
+            operands = predecessors[1:]
+        else:
+            raise ValueError("unexpected type for initial value")
+
+        return NaryReduce(expression, operands, initial=initial)
+
+    def initial(self):
+        if holds_alternative[cppArrayNodePtr](self.ptr.initial):
+            return symbol_from_ptr(self.model, get[cppArrayNodePtr](self.ptr.initial))
+        else:
+            return get[double](self.ptr.initial)
+
+    def _into_zipfile(self, zf, directory):
+        """Store a NaryReduce symbol as a compressed file.
+
+        Args:
+            zf:
+                File pointer to a compressed file to store the
+                disjoint-list symbol. Strings are interpreted as a
+                file name.
+            directory:
+                Directory where the file is located.
+        Returns:
+            A compressed file.
+
+        See also:
+            :meth:`._from_zipfile`
+        """
+        # Create a model from the shared_ptr held by the node. We need to be careful
+        # not to modify it! That leads to undefined behavior.
+        # There is also an asymmetry here where we serialize as a _Graph and then
+        # load as Model. Right now that's OK, but we need to formalize that process.
+        cdef _Graph expr = _Graph.from_shared_ptr(self.ptr.expression_ptr())
+        assert expr._graph.topologically_sorted()
+        assert expr._lock_count > 0  
+        with zf.open(directory + "expression.nl", mode="w") as f:
+            expr.into_file(f)
+
+        # Now save information about the initial state
+        encoder = json.JSONEncoder(separators=(',', ':'))
+        if holds_alternative[cppArrayNodePtr](self.ptr.initial):
+            initial_info = dict(
+                type="node",
+                value=get[cppArrayNodePtr](self.ptr.initial).topological_index()
+            )
+        else:
+            initial_info = dict(type="double", value=get[double](self.ptr.initial))
+        zf.writestr(directory + "initial.json", encoder.encode(initial_info))
+
+    cdef cppNaryReduceNode* ptr
+
+_register(NaryReduce, typeid(cppNaryReduceNode))
 
 
 cdef class Negative(ArraySymbol):

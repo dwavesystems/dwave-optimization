@@ -33,6 +33,9 @@ cdef object symbol_from_ptr(_Graph model, cppNode* ptr)
 
 
 cdef class _Graph:
+    @staticmethod
+    cdef _Graph from_shared_ptr(shared_ptr[cppGraph])
+
     cpdef bool is_locked(self) noexcept
     cpdef Py_ssize_t num_constraints(self) noexcept
     cpdef Py_ssize_t num_decisions(self) noexcept
@@ -43,7 +46,11 @@ cdef class _Graph:
     # Make the _Graph class weak referenceable
     cdef object __weakref__
 
-    cdef cppGraph _graph
+    # The lifespan of the C++ Graph is managed by a shared_ptr<Graph>, but
+    # we add an additional (redundant) Graph* because Cython knows what to do
+    # with that.
+    cdef shared_ptr[cppGraph] _owning_ptr
+    cdef cppGraph* _graph
 
     # The number of times "lock()" has been called.
     cdef readonly Py_ssize_t _lock_count
