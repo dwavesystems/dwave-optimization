@@ -207,7 +207,7 @@ struct WhereNodeData : ArrayNodeStateData {
             }
 
             const double& value = (*cit) ? *xit : *yit;  // value from x or y based on condition
-            this->set_or_emplace(index, value);
+            this->set(index, value, true);
         }
 
         this->trim_to(final_size);
