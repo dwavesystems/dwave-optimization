@@ -46,7 +46,10 @@ void check_shape(const std::span<const ssize_t>& dynamic_shape,
 ArrayValidationNode::ArrayValidationNode(ArrayNode* node_ptr) : array_ptr(node_ptr) {
     assert(array_ptr->ndim() == static_cast<ssize_t>(array_ptr->shape().size()));
     assert(array_ptr->dynamic() == (array_ptr->size() == -1));
-    node_ptr->sizeinfo();  // smoke check
+    assert([&]() {
+        node_ptr->sizeinfo().substitute(5);
+        return true;
+    }());  // smoke check
     add_predecessor(node_ptr);
 }
 

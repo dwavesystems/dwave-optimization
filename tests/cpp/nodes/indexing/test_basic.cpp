@@ -295,7 +295,8 @@ TEST_CASE("BasicIndexingNode") {
             CHECK(sizeinfo.array_ptr == &dynamic);
             CHECK(sizeinfo.multiplier == fraction(4 * 2, 5 * 2));
             CHECK(sizeinfo.offset == -5 * 5 * 2 * sizeinfo.multiplier);
-            CHECK(!sizeinfo.min.has_value());
+            CHECK(!sizeinfo.min.has_value());  // dynamic doesn't know either (by construction)
+            CHECK(!dynamic.sizeinfo().min.has_value());
             CHECK(sizeinfo.max == 2 * 4 * 2);
         }
     }
