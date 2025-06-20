@@ -59,13 +59,8 @@ class ArrayStateData {
             }
         }
 
-        // next walk backwards through the excess buffer, if there is any, removing as we go
-        {
-            for (ssize_t index = buffer.size() - 1; index >= overlap_length + offset; --index) {
-                updates.emplace_back(Update::removal(index, buffer[index]));
-            }
-            buffer.resize(overlap_length + offset);
-        }
+        // trim the excess buffer
+        this->trim_to(overlap_length + offset);
 
         // finally walk forward through the excess values, if there are any, adding them to the
         // buffer
@@ -163,6 +158,14 @@ class ArrayStateData {
         return true;
     }
 
+    bool set_or_emplace(ssize_t index, double value) {
+        if (index < this->size()) {
+            return this->set(index, value);
+        }
+        assert(index == this->size());
+        return this->emplace_back(value);
+    }
+
     const ssize_t& size() const {
         assert(size_ >= 0 && static_cast<std::size_t>(size_) == buffer.size());
         return size_;
@@ -171,6 +174,20 @@ class ArrayStateData {
     ssize_t size_diff() const noexcept {
         assert(size_ >= 0 && static_cast<std::size_t>(size_) == buffer.size());
         return size_ - previous_size_;
+    }
+
+    bool trim_to(ssize_t new_size) {
+        assert(new_size >= 0);
+        if (new_size >= size()) return false;
+
+        for (ssize_t index = buffer.size() - 1; index >= new_size; --index) {
+            updates.emplace_back(Update::removal(index, buffer[index]));
+        }
+        buffer.resize(new_size);
+
+        size_ = new_size;
+
+        return true;
     }
 
     // Update the state according to the given updates. Includes resizing.

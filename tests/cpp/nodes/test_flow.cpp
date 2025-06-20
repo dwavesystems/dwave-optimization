@@ -420,6 +420,122 @@ TEST_CASE("WhereNode") {
             }
         }
     }
+
+    GIVEN("Three dynamic nodes and a where node") {
+        auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 3});
+
+        auto condition_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
+        auto x_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 1);
+        auto y_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 2);
+        auto where_ptr = graph.emplace_node<WhereNode>(condition_ptr, x_ptr, y_ptr);
+        graph.emplace_node<ArrayValidationNode>(where_ptr);
+
+        // this node will be testing consistency/shape/etc
+        graph.emplace_node<ArrayValidationNode>(where_ptr);
+
+        // initialize the state to an interesting starting point
+        auto state = graph.empty_state();
+        dyn_ptr->initialize_state(state, {
+            // condition, x, y
+            0, 1, 1,
+            1, 2, 1,
+            0, 3, 1,
+            2, 4, 1,
+        });
+        graph.initialize_state(state);
+
+        THEN("`where` has the expected sizeinfo") {
+            CHECK(where_ptr->sizeinfo().array_ptr == condition_ptr);
+        }
+
+        THEN("`where` has the expected output") {
+            CHECK_THAT(where_ptr->view(state), RangeEquals({1, 2, 1, 4}));
+        }
+
+        WHEN("We update `condition`") {
+            // condition_ptr->set_value(state, 0, 4);
+            // condition_ptr->set_value(state, 3, 0);
+            dyn_ptr->set(state, 0 * 3, 4);
+            dyn_ptr->set(state, 3 * 3, 0);
+            graph.propose(state, {dyn_ptr});
+
+            THEN("`where` has the expected output") {
+                CHECK_THAT(where_ptr->view(state), RangeEquals({1, 2, 1, 1}));
+            }
+        }
+
+        WHEN("We do a bunch of updates") {
+            // condition_ptr->set_value(state, 0, 4);
+            dyn_ptr->set(state, 0 * 3 + 0, 4);
+            // x_ptr->set_value(state, 0, 4);
+            dyn_ptr->set(state, 0 * 3 + 1, 4);
+            // y_ptr->set_value(state, 0, 3);
+            dyn_ptr->set(state, 0 * 3 + 2, 3);
+            // x_ptr->set_value(state, 1, 3);
+            dyn_ptr->set(state, 1 * 3 + 1, 3);
+            // x_ptr->set_value(state, 1, 3);  // deliberate duplicate
+            dyn_ptr->set(state, 1 * 3 + 1, 3);
+            // y_ptr->set_value(state, 1, 2);
+            dyn_ptr->set(state, 1 * 3 + 2, 2);
+            // y_ptr->set_value(state, 2, 2);
+            dyn_ptr->set(state, 2 * 3 + 2, 2);
+
+            graph.propose(state, {dyn_ptr});
+
+            THEN("`where` has the expected output") {
+                // condition = [4, 1, 0, 2]
+                // x = [4, 3, 3, 4]
+                // y = [3, 2, 2, 1]
+                CHECK_THAT(where_ptr->view(state), RangeEquals({4, 3, 2, 4}));
+            }
+        }
+
+        WHEN("We grow and shrink the arrays") {
+            dyn_ptr->grow(state, {0, -1, 5});
+            // dyn_ptr->grow(state, {1, -2, 6});
+            // dyn_ptr->shrink(state);
+
+            graph.propose(state, {dyn_ptr});
+
+            THEN("`where` has the expected output") {
+                // condition = [0, 1, 0, 2, 0]
+                // x = [1, 2, 3, 4, -1]
+                // y = [1, 1, 1, 1, 5]
+                CHECK_THAT(where_ptr->view(state), RangeEquals({1, 2, 1, 4, 5}));
+            }
+        }
+
+        WHEN("We shrink and grow the arrays") {
+            dyn_ptr->shrink(state);
+            dyn_ptr->grow(state, {0, -1, 5});
+            // set condition[0] = 1
+            dyn_ptr->set(state, 0, 1);
+            dyn_ptr->grow(state, {1, -2, 6});
+            dyn_ptr->shrink(state);
+            // set y[2] = -7
+            dyn_ptr->set(state, 2 * 3 + 2, -7);
+            dyn_ptr->shrink(state);
+
+            graph.propose(state, {dyn_ptr});
+
+            THEN("`where` has the expected output") {
+                // condition = [1, 1, 0]
+                // x = [1, 2, 3]
+                // y = [1, 1, 1]
+                CHECK_THAT(where_ptr->view(state), RangeEquals({1, 2, -7}));
+            }
+        }
+    }
+
+    GIVEN("Three differently sized dynamic nodes") {
+        auto condition_ptr = graph.emplace_node<SetNode>(10);
+        auto x_ptr = graph.emplace_node<SetNode>(10);
+        auto y_ptr = graph.emplace_node<SetNode>(10);
+
+        THEN("We cannot create a where node with them") {
+            CHECK_THROWS_AS(WhereNode(condition_ptr, x_ptr, y_ptr), std::invalid_argument);
+        }
+    }
 }
 
 }  // namespace dwave::optimization
