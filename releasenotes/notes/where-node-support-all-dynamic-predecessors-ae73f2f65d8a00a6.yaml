@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    The Where node/symbol now supports the case of all three predecessors
+    being dynamic, as long as they have the same shape and size.
