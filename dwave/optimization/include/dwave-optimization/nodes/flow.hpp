@@ -104,6 +104,9 @@ class WhereNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t size(const State& state) const override;
     ssize_t size_diff(const State& state) const override;
 
+    /// @copydoc Array::sizeinfo()
+    SizeInfo sizeinfo() const override;
+
  private:
     // these are redundant, but convenient
     const Array* condition_ptr_;
