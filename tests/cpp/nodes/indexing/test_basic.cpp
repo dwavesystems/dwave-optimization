@@ -204,7 +204,7 @@ TEST_CASE("BasicIndexingNode") {
             CHECK(sizeinfo.multiplier == 1);
             CHECK(sizeinfo.offset == -5);
             CHECK(!sizeinfo.min.has_value());
-            CHECK(sizeinfo.max == 4);
+            CHECK(sizeinfo.max == 0);
 
             // now substitute so we can see what we did to the array's size
             sizeinfo = sizeinfo.substitute();
@@ -213,6 +213,91 @@ TEST_CASE("BasicIndexingNode") {
             CHECK(sizeinfo.offset == 0);
             CHECK(sizeinfo.min == 0);
             CHECK(sizeinfo.max == 0);
+        }
+
+        SECTION("SetNode(10)[-4:-5]") {
+            auto set = SetNode(10);
+
+            auto slice = BasicIndexingNode(&set, Slice(-4, -5));
+
+            auto sizeinfo = slice.sizeinfo();
+            CHECK(sizeinfo.array_ptr == &set);
+            CHECK(sizeinfo.multiplier == 1);
+            CHECK(sizeinfo.offset == -5);
+            CHECK(!sizeinfo.min.has_value());
+            CHECK(sizeinfo.max == 0);
+
+            // now substitute so we can see what we did to the array's size
+            sizeinfo = sizeinfo.substitute();
+            CHECK(sizeinfo.array_ptr == &set);
+            CHECK(sizeinfo.multiplier == 0);
+            CHECK(sizeinfo.offset == 0);
+            CHECK(sizeinfo.min == 0);
+            CHECK(sizeinfo.max == 0);
+        }
+
+        SECTION("SetNode(10)[-4:5]") {
+            auto set = SetNode(3);
+
+            auto slice = BasicIndexingNode(&set, Slice(-4, 5));
+
+            // Check that it "gives up" because the size is not a linear
+            // function of the predecessor's size
+            auto sizeinfo = slice.sizeinfo();
+            CHECK(sizeinfo.array_ptr == &slice);
+            CHECK(sizeinfo.multiplier == 1);
+            CHECK(sizeinfo.offset == 0);
+            CHECK(sizeinfo.min == 0);
+            // NOTE: unfortunate that we can't limit it to 3 here given the base array is max 3,
+            // but substitute has to stop here and for now we're not doing any recursion in the
+            // initial sizeinfo() call.
+            CHECK(sizeinfo.max == 4);
+        }
+
+        SECTION("SetNode(10)[:-1][-1:]") {
+            auto set = SetNode(10);
+
+            auto slice0 = BasicIndexingNode(&set, Slice(std::nullopt, -1));
+            auto slice1 = BasicIndexingNode(&slice0, Slice(-1, std::nullopt));
+
+            auto sizeinfo = slice1.sizeinfo();
+            CHECK(sizeinfo.array_ptr == &slice0);
+            CHECK(sizeinfo.multiplier == 1);
+            CHECK(sizeinfo.offset == 0);
+            CHECK(!sizeinfo.min.has_value());
+            CHECK(sizeinfo.max == 1);
+
+            sizeinfo = sizeinfo.substitute(2);
+            CHECK(sizeinfo.array_ptr == &set);
+            CHECK(sizeinfo.multiplier == 1);
+            CHECK(sizeinfo.offset == -1);
+            CHECK(sizeinfo.min == 0);
+            CHECK(sizeinfo.max == 1);
+        }
+
+        SECTION("Dynamic(n, 5, 2)[5:7, 1:, :]") {
+            // the resuling array will either be (0, 4, 2), (1, 4, 2), or (2, 4, 2) array.
+            auto dynamic = DynamicArrayTestingNode(std::initializer_list<ssize_t>{-1, 5, 2});
+
+            auto slice = BasicIndexingNode(&dynamic, Slice(5, 7), Slice(1, std::nullopt), Slice());
+
+            CHECK_THAT(slice.shape(), RangeEquals({-1, 4, 2}));  // sanity check
+
+            auto sizeinfo = slice.sizeinfo();
+            CHECK(sizeinfo.array_ptr == &dynamic);
+            CHECK(sizeinfo.multiplier == fraction(4 * 2, 5 * 2));
+            CHECK(sizeinfo.offset == -5 * 5 * 2 * sizeinfo.multiplier);  // output has shape 0 when
+                                                                         // input has shape 5x5x2
+            CHECK(!sizeinfo.min.has_value());
+            CHECK(sizeinfo.max == 2 * 4 * 2);
+
+            sizeinfo = sizeinfo.substitute();
+            CHECK(sizeinfo.array_ptr == &dynamic);
+            CHECK(sizeinfo.multiplier == fraction(4 * 2, 5 * 2));
+            CHECK(sizeinfo.offset == -5 * 5 * 2 * sizeinfo.multiplier);
+            CHECK(!sizeinfo.min.has_value());  // dynamic doesn't know either (by construction)
+            CHECK(!dynamic.sizeinfo().min.has_value());
+            CHECK(sizeinfo.max == 2 * 4 * 2);
         }
     }
 

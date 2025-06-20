@@ -1,0 +1,6 @@
+---
+fixes:
+  - Fix C++ ``SizeInfo::substitute()`` method. Previously it would not correctly update the min/max.
+  - |
+    Fix C++ ``BasicIndexingNode::sizeinfo()`` and ``AdvancedIndexingNode::sizeinfo()`` methods.
+    Previously they would sometimes report incorrect size information when indexing or being indexed by dynamic nodes.

@@ -84,20 +84,40 @@ TEST_CASE("AdvancedIndexingNode") {
 
         graph.emplace_node<ArrayValidationNode>(B_ptr);
 
-        THEN("The resulting array has the size/shape we expect") {
-            CHECK(B_ptr->dynamic());
-            CHECK_THAT(B_ptr->shape(), RangeEquals({-1}));
-            CHECK(B_ptr->size() == Array::DYNAMIC_SIZE);
-            CHECK_THAT(B_ptr->strides(), RangeEquals({sizeof(double)}));
-            CHECK(B_ptr->ndim() == 1);
+        CHECK(B_ptr->min() == 0);
+        CHECK(B_ptr->max() == 4);
+        CHECK(B_ptr->integral());
 
-            CHECK(array_shape_equal(B_ptr, s_ptr));
-        }
+        CHECK_THAT(B_ptr->shape(), RangeEquals({-1}));
+        CHECK_THAT(B_ptr->strides(), RangeEquals({sizeof(double)}));
+        CHECK(array_shape_equal(B_ptr, s_ptr));
 
-        THEN("We see the min/max/integral we expect") {
-            CHECK(B_ptr->min() == 0);
-            CHECK(B_ptr->max() == 4);
-            CHECK(B_ptr->integral());
+        {
+            auto sizeinfo = B_ptr->sizeinfo();
+
+            CHECK(sizeinfo.array_ptr == s_ptr);
+            CHECK(sizeinfo.multiplier == 1);
+            CHECK(sizeinfo.offset == 0);
+            CHECK(!sizeinfo.min);  // without knowing anything about s, we don't know our own min
+            CHECK(!sizeinfo.max);  // without knowing anything about s, we don't know our own max
+
+            sizeinfo = sizeinfo.substitute();
+
+            CHECK(sizeinfo.array_ptr == s_ptr);
+            CHECK(sizeinfo.multiplier == 1);
+            CHECK(sizeinfo.offset == 0);
+            CHECK(sizeinfo.min == 0);  // we've now established the min and max size
+            CHECK(sizeinfo.max == 5);  // we've now established the min and max size
+
+            // one more recurse does nothing (this is becoming a SizeInfo test but whatevs)
+
+            sizeinfo = sizeinfo.substitute();
+
+            CHECK(sizeinfo.array_ptr == s_ptr);
+            CHECK(sizeinfo.multiplier == 1);
+            CHECK(sizeinfo.offset == 0);
+            CHECK(sizeinfo.min == 0);
+            CHECK(sizeinfo.max == 5);
         }
 
         WHEN("We default-initialize the state") {
@@ -232,6 +252,40 @@ TEST_CASE("AdvancedIndexingNode") {
                     }
                 }
             }
+        }
+    }
+
+    GIVEN("A 2d 5x2 matrix A accessed by Set(5) and Slice()") {
+        auto A_ptr = graph.emplace_node<ConstantNode>(std::views::iota(0, 10),
+                                                      std::vector<ssize_t>{5, 2});
+        auto s_ptr = graph.emplace_node<SetNode>(5);
+        auto B_ptr = graph.emplace_node<AdvancedIndexingNode>(A_ptr, s_ptr, Slice());
+
+        graph.emplace_node<ArrayValidationNode>(B_ptr);
+
+        CHECK(B_ptr->min() == 0);
+        CHECK(B_ptr->max() == 9);
+        CHECK(B_ptr->integral());
+
+        CHECK_THAT(B_ptr->shape(), RangeEquals({-1, 2}));
+        CHECK_THAT(B_ptr->strides(), RangeEquals({2 * sizeof(double), sizeof(double)}));
+
+        {
+            auto sizeinfo = B_ptr->sizeinfo();
+
+            CHECK(sizeinfo.array_ptr == s_ptr);
+            CHECK(sizeinfo.multiplier == 2);  // twice as big as s
+            CHECK(sizeinfo.offset == 0);
+            CHECK(!sizeinfo.min);  // without knowing anything about s, we don't know our own min
+            CHECK(!sizeinfo.max);  // without knowing anything about s, we don't know our own max
+
+            sizeinfo = sizeinfo.substitute();
+
+            CHECK(sizeinfo.array_ptr == s_ptr);
+            CHECK(sizeinfo.multiplier == 2);
+            CHECK(sizeinfo.offset == 0);
+            CHECK(sizeinfo.min == 0);   // we've now established the min and max size
+            CHECK(sizeinfo.max == 10);  // we've now established the min and max size
         }
     }
 
@@ -672,7 +726,7 @@ TEST_CASE("AdvancedIndexingNode") {
         }
     }
 
-    GIVEN("A 4d 2x3x5x4 matrix with 3 dynamic indexing arrays") {
+    GIVEN("A 4d 2x3x5x4 matrix with 3 dynamic indexing arrays of length M") {
         std::vector<double> values(2 * 3 * 5 * 4);
         std::iota(values.begin(), values.end(), 0);
         auto arr_ptr = graph.emplace_node<ConstantNode>(values,
@@ -690,14 +744,19 @@ TEST_CASE("AdvancedIndexingNode") {
 
             graph.emplace_node<ArrayValidationNode>(adv);
 
-            THEN("We get the shape we expect") {
+            THEN("We get an Mx4 matrix") {
                 CHECK(adv->dynamic());
                 CHECK_THAT(adv->shape(), RangeEquals({-1, 4}));
-                // sizeinfo should be the size of the indexers (1/3 * dyn_ptr size) times the
-                // remaining shape of arr_ptr (4)
-                SizeInfo correct_sizeinfo(dyn_ptr);
-                correct_sizeinfo.multiplier = fraction(4, 3);
-                CHECK(adv->sizeinfo() == correct_sizeinfo);
+
+                auto sizeinfo = adv->sizeinfo().substitute(3);
+
+                CHECK(sizeinfo.array_ptr == dyn_ptr);
+                CHECK(sizeinfo.multiplier == fraction(4, 3));
+                CHECK(sizeinfo.offset == 0);
+                CHECK(!sizeinfo.min);  // dyn doesn't know either (by construction)
+                CHECK(!dyn_ptr->sizeinfo().min);
+                CHECK(!sizeinfo.max);  // dyn doesn't know either (by construction)
+                CHECK(!dyn_ptr->sizeinfo().max);
             }
 
             AND_WHEN("We create a state") {
@@ -754,11 +813,34 @@ TEST_CASE("AdvancedIndexingNode") {
 
             graph.emplace_node<ArrayValidationNode>(adv);
 
-            THEN("We get the shape we expect") {
-                CHECK(adv->dynamic());
+            THEN("We get an Mx3 matrix") {
                 CHECK_THAT(adv->shape(), RangeEquals({-1, 3}));
-                // sizeinfo should be 1/3 * dyn_ptr size * 3 = dyn_ptr size
-                CHECK(adv->sizeinfo() == SizeInfo(dyn_ptr));
+
+                auto sizeinfo = adv->sizeinfo();
+
+                CHECK(sizeinfo.array_ptr == i_ptr);
+                CHECK(sizeinfo.multiplier == 3);
+                CHECK(sizeinfo.offset == 0);
+                CHECK(!sizeinfo.min);  // doesn't know unless it asks i
+                CHECK(!sizeinfo.max);  // doesn't know unless it asks i
+
+                sizeinfo = sizeinfo.substitute();
+
+                CHECK(sizeinfo.array_ptr == dyn_ptr);
+                CHECK(sizeinfo.multiplier == 1);  // dyn is itself an Mx3 matrix!
+                CHECK(sizeinfo.offset == 0);
+                CHECK(!sizeinfo.min);  // doesn't know unless it asks dyn
+                CHECK(!sizeinfo.max);  // doesn't know unless it asks dyn
+
+                sizeinfo = sizeinfo.substitute();
+
+                CHECK(sizeinfo.array_ptr == dyn_ptr);
+                CHECK(sizeinfo.multiplier == 1);
+                CHECK(sizeinfo.offset == 0);
+                CHECK(!sizeinfo.min);  // dyn doesn't know either (by construction)
+                CHECK(!dyn_ptr->sizeinfo().min);
+                CHECK(!sizeinfo.max);  // dyn doesn't know either (by construction)
+                CHECK(!dyn_ptr->sizeinfo().max);
             }
 
             AND_WHEN("We create a state") {
@@ -808,7 +890,7 @@ TEST_CASE("AdvancedIndexingNode") {
         }
     }
 
-    GIVEN("A dynamic 4d Nx3x5x4 matrix with 3 dynamic indexing arrays") {
+    GIVEN("A dynamic 4d Nx3x5x4 matrix with 3 dynamic indexing arrays of length M with M < 3") {
         auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
                 std::initializer_list<ssize_t>{-1, 3, 5, 4},  //
                 -180, 180, true,  // takes values in [-180, 180] and will always be integers
@@ -836,14 +918,32 @@ TEST_CASE("AdvancedIndexingNode") {
 
             graph.emplace_node<ArrayValidationNode>(adv_ptr);
 
-            THEN("We get the shape we expect") {
-                CHECK(adv_ptr->dynamic());
+            THEN("We get an Mx3 matrix") {
                 CHECK_THAT(adv_ptr->shape(), RangeEquals({-1, 3}));
-                // sizeinfo should be the size of the indexers (dyn_ptr size, min=0, max=2) times
-                // the remaining shape of arr_ptr (3)
-                SizeInfo correct_sizeinfo(dyn_ptr, 0, 2);
-                correct_sizeinfo.multiplier = 3;
-                CHECK(adv_ptr->sizeinfo() == correct_sizeinfo);
+
+                auto sizeinfo = adv_ptr->sizeinfo();
+
+                CHECK(sizeinfo.array_ptr == i_ptr);
+                CHECK(sizeinfo.multiplier == 3);
+                CHECK(sizeinfo.offset == 0);
+                CHECK(!sizeinfo.min);  // doesn't know unless it asks i
+                CHECK(!sizeinfo.max);  // doesn't know unless it asks i
+
+                sizeinfo = sizeinfo.substitute();
+
+                CHECK(sizeinfo.array_ptr == dyn_ptr);
+                CHECK(sizeinfo.multiplier == 3);
+                CHECK(sizeinfo.offset == 0);
+                CHECK(!sizeinfo.min);  // doesn't know unless it asks dyn
+                CHECK(!sizeinfo.max);  // doesn't know unless it asks dyn
+
+                sizeinfo = sizeinfo.substitute();
+
+                CHECK(sizeinfo.array_ptr == dyn_ptr);
+                CHECK(sizeinfo.multiplier == 3);
+                CHECK(sizeinfo.offset == 0);
+                CHECK(*sizeinfo.min == 0);  // finally establishes the min
+                CHECK(*sizeinfo.max == 6);  // finally establishes the max
             }
 
             AND_WHEN("We create a state") {
@@ -899,14 +999,32 @@ TEST_CASE("AdvancedIndexingNode") {
 
             graph.emplace_node<ArrayValidationNode>(adv_ptr);
 
-            THEN("We get the shape we expect") {
-                CHECK(adv_ptr->dynamic());
+            THEN("We get an Mx3x4 array") {
                 CHECK_THAT(adv_ptr->shape(), RangeEquals({-1, 3, 4}));
-                // sizeinfo should be the size of the indexers (dyn_ptr size, min=0, max=2) times
-                // the remaining shape of arr_ptr (12)
-                SizeInfo correct_sizeinfo(dyn_ptr, 0, 2);
-                correct_sizeinfo.multiplier = 12;
-                CHECK(adv_ptr->sizeinfo() == correct_sizeinfo);
+
+                auto sizeinfo = adv_ptr->sizeinfo();
+
+                CHECK(sizeinfo.array_ptr == i_ptr);
+                CHECK(sizeinfo.multiplier == 12);
+                CHECK(sizeinfo.offset == 0);
+                CHECK(!sizeinfo.min);  // doesn't know unless it asks i
+                CHECK(!sizeinfo.max);  // doesn't know unless it asks i
+
+                sizeinfo = sizeinfo.substitute();
+
+                CHECK(sizeinfo.array_ptr == dyn_ptr);
+                CHECK(sizeinfo.multiplier == 12);
+                CHECK(sizeinfo.offset == 0);
+                CHECK(!sizeinfo.min);  // doesn't know unless it asks dyn
+                CHECK(!sizeinfo.max);  // doesn't know unless it asks dyn
+
+                sizeinfo = sizeinfo.substitute();
+
+                CHECK(sizeinfo.array_ptr == dyn_ptr);
+                CHECK(sizeinfo.multiplier == 12);
+                CHECK(sizeinfo.offset == 0);
+                CHECK(*sizeinfo.min == 0);   // have now established min size
+                CHECK(*sizeinfo.max == 24);  // have now established max size
             }
 
             AND_WHEN("We create a state") {
