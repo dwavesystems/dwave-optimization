@@ -111,7 +111,7 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
     // Otherwise both arrays must be the same shape and not be dynamic
     if (lhs_ptr->size() == 1 || rhs_ptr->size() == 1) {
         // this is allowed
-    } else if (lhs_ptr->sizeinfo() != rhs_ptr->sizeinfo()) {
+    } else if (lhs_ptr->sizeinfo().substitute(100) != rhs_ptr->sizeinfo().substitute(100)) {
         throw std::invalid_argument("arrays must have the same shape or one must be a scalar");
     }
 
@@ -479,7 +479,7 @@ SizeInfo BinaryOpNode<BinaryOp>::sizeinfo() const {
     const Array* rhs_ptr = operands_[1];
 
     if (lhs_ptr->dynamic() && rhs_ptr->dynamic()) {
-        assert(lhs_ptr->sizeinfo() == rhs_ptr->sizeinfo());
+        assert(lhs_ptr->sizeinfo().substitute(100) == rhs_ptr->sizeinfo().substitute(100));
         return lhs_ptr->sizeinfo();
     } else if (lhs_ptr->dynamic()) {
         assert(rhs_ptr->size() == 1);

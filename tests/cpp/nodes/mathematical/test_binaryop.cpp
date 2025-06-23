@@ -750,6 +750,19 @@ TEST_CASE("BinaryOpNode - SubtractNode") {
             CHECK(z_ptr->integral());
         }
     }
+
+    // smoke test for checking predecessor sizeinfo
+    GIVEN("x = Set(10), y = x[1:][-1:], z = x[:-1][-1:]") {
+        auto x_ptr = graph.emplace_node<SetNode>(10);
+        auto y_ptr = graph.emplace_node<BasicIndexingNode>(
+                graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(1, std::nullopt)),
+                Slice(-1, std::nullopt));
+        auto z_ptr = graph.emplace_node<BasicIndexingNode>(
+                graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(std::nullopt, -1)),
+                Slice(-1, std::nullopt));
+
+        THEN("We can create y - z") { graph.emplace_node<SubtractNode>(y_ptr, z_ptr); }
+    }
 }
 
 }  // namespace dwave::optimization

@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Previously, the check in ``BinaryOpNode`` (used by Add, Subtract, Maximum, etc) for
+    ensuring that predecessors have the same dynamic size did not recurse, meaning that
+    the node might reject some predecessors that were actually valid. This has been
+    fixed.
