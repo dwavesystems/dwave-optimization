@@ -23,7 +23,11 @@
 #include <dwave-optimization/nodes/numbers.hpp>
 #include <dwave-optimization/nodes/testing.hpp>
 
+#include "catch2/matchers/catch_matchers_all.hpp"
+
 namespace dwave::optimization {
+
+using Catch::Matchers::RangeEquals;
 
 TEST_CASE("NaryReduceNode") {
     auto graph = Graph();
@@ -37,9 +41,10 @@ TEST_CASE("NaryReduceNode") {
 
         // x0 * x1 + x2
         auto expression = Graph();
-        std::vector<InputNode*> inputs = {expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                                          expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                                          expression.emplace_node<InputNode>(InputNode::unbounded_scalar())};
+        std::vector<InputNode*> inputs = {
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar())};
         auto output_ptr = expression.emplace_node<AddNode>(
                 expression.emplace_node<MultiplyNode>(inputs[1], inputs[2]), inputs[0]);
         expression.set_objective(output_ptr);
@@ -58,10 +63,12 @@ TEST_CASE("NaryReduceNode") {
         }
 
         AND_GIVEN("A scalar node") {
-            IntegerNode* initial = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -10, 10);
+            IntegerNode* initial =
+                    graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -10, 10);
 
             THEN("We can create a reduce node with a non-constant initial value") {
-                auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, initial);
+                auto reduce_ptr =
+                        graph.emplace_node<NaryReduceNode>(std::move(expression), args, initial);
 
                 AND_WHEN("We initialize a state") {
                     auto state = graph.empty_state();
@@ -69,7 +76,8 @@ TEST_CASE("NaryReduceNode") {
                     graph.initialize_state(state);
 
                     THEN("The state is correct") {
-                        CHECK(std::ranges::equal(reduce_ptr->view(state), std::vector{5, 7, 15, 21}));
+                        CHECK(std::ranges::equal(reduce_ptr->view(state),
+                                                 std::vector{5, 7, 15, 21}));
                     }
 
                     AND_WHEN("We mutate the initial value and propagate") {
@@ -77,7 +85,8 @@ TEST_CASE("NaryReduceNode") {
                         graph.propagate(state);
 
                         THEN("The state is correct") {
-                            CHECK(std::ranges::equal(reduce_ptr->view(state), std::vector{-3.0, -1.0, 7.0, 13.0}));
+                            CHECK(std::ranges::equal(reduce_ptr->view(state),
+                                                     std::vector{-3.0, -1.0, 7.0, 13.0}));
                         }
                     }
                 }
@@ -91,9 +100,10 @@ TEST_CASE("NaryReduceNode") {
 
         // (x0 + 1) * x1 - x2 + 5
         auto expression = Graph();
-        std::vector<InputNode*> inputs = {expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                                          expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                                          expression.emplace_node<InputNode>(InputNode::unbounded_scalar())};
+        std::vector<InputNode*> inputs = {
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar())};
         auto output_ptr = expression.emplace_node<AddNode>(
                 expression.emplace_node<SubtractNode>(
                         expression.emplace_node<MultiplyNode>(
@@ -149,9 +159,10 @@ TEST_CASE("NaryReduceNode") {
 
         // max(x0 + x2, x1)
         auto expression = Graph();
-        std::vector<InputNode*> inputs = {expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                                          expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                                          expression.emplace_node<InputNode>(InputNode::unbounded_scalar())};
+        std::vector<InputNode*> inputs = {
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar())};
         auto output_ptr = expression.emplace_node<MaximumNode>(
                 expression.emplace_node<AddNode>(inputs[1], inputs[0]), inputs[2]);
         expression.set_objective(output_ptr);
@@ -269,6 +280,54 @@ TEST_CASE("NaryReduceNode") {
                                        expression.emplace_node<ConstantNode>(0.5), inputs[1])));
             expression.topological_sort();
             CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0));
+        }
+    }
+
+    GIVEN("A set node and an expression") {
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+
+        auto expression = Graph();
+        std::vector<InputNode*> inputs = {
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+        };
+        expression.set_objective(expression.emplace_node<AddNode>(inputs[0], inputs[1]));
+        expression.topological_sort();
+
+        THEN("We create and initialize a NaryReduceNode") {
+            auto naryreduce_ptr = graph.emplace_node<NaryReduceNode>(
+                    std::move(expression), std::vector<ArrayNode*>{set_ptr}, 0.0);
+
+            auto state = graph.initialize_state();
+
+            AND_WHEN("We modify the set variable and propagate") {
+                set_ptr->assign(state, {1, 3, 8});
+                graph.propose(state, {set_ptr});
+
+                THEN("The NaryReduceNode has the correct size and state") {
+                    REQUIRE(naryreduce_ptr->size(state) == 3);
+                    CHECK_THAT(naryreduce_ptr->view(state), RangeEquals({1, 4, 12}));
+                }
+
+                AND_WHEN("We modify the set variable, propagate and revert") {
+                    set_ptr->assign(state, {3, 6});
+                    REQUIRE_THAT(set_ptr->view(state), RangeEquals({3, 6}));
+
+                    set_ptr->propagate(state);
+                    naryreduce_ptr->propagate(state);
+
+                    REQUIRE(naryreduce_ptr->size(state) == 2);
+                    REQUIRE_THAT(naryreduce_ptr->view(state), RangeEquals({3, 9}));
+
+                    set_ptr->revert(state);
+                    naryreduce_ptr->revert(state);
+
+                    THEN("The NaryReduceNode has the correct size and state") {
+                        REQUIRE(naryreduce_ptr->size(state) == 3);
+                        CHECK_THAT(naryreduce_ptr->view(state), RangeEquals({1, 4, 12}));
+                    }
+                }
+            }
         }
     }
 }

@@ -289,8 +289,18 @@ void NaryReduceNode::propagate(State& state) const {
             data->iterators[arg_index]++;
         }
         val = evaluate_expression(data->register_);
-        data->set(index, val);
+
+        if (index < data->size()) {
+            data->set(index, val);
+        } else if (index == data->size()) {
+            data->emplace_back(val);
+        } else {
+            assert(false && "index is too large for current buffer");
+            unreachable();
+        }
     }
+
+    data->trim_to(new_size);
 
     if (data->diff().size()) Node::propagate(state);
 }
