@@ -25,6 +25,10 @@ class Absolute(ArraySymbol):
     ...
 
 
+class AccumulateZip(ArraySymbol):
+    ...
+
+
 class Add(ArraySymbol):
     ...
 
@@ -202,10 +206,6 @@ class NaryMinimum(ArraySymbol):
 
 
 class NaryMultiply(ArraySymbol):
-    ...
-
-
-class NaryReduce(ArraySymbol):
     ...
 
 

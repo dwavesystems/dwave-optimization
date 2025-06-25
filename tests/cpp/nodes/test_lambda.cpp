@@ -29,7 +29,7 @@ namespace dwave::optimization {
 
 using Catch::Matchers::RangeEquals;
 
-TEST_CASE("NaryReduceNode") {
+TEST_CASE("AccumulateZipNode") {
     auto graph = Graph();
 
     GIVEN("Two constant vector nodes and an expression") {
@@ -50,14 +50,14 @@ TEST_CASE("NaryReduceNode") {
         expression.set_objective(output_ptr);
         expression.topological_sort();
 
-        THEN("We can create a reduce node") {
-            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 5.0);
+        THEN("We can create a accumulate node") {
+            auto accumulate_ptr = graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 5.0);
 
             AND_WHEN("We initialize a state") {
                 auto state = graph.initialize_state();
 
                 THEN("The state is correct") {
-                    CHECK(std::ranges::equal(reduce_ptr->view(state), std::vector{5, 7, 15, 21}));
+                    CHECK(std::ranges::equal(accumulate_ptr->view(state), std::vector{5, 7, 15, 21}));
                 }
             }
         }
@@ -66,9 +66,9 @@ TEST_CASE("NaryReduceNode") {
             IntegerNode* initial =
                     graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -10, 10);
 
-            THEN("We can create a reduce node with a non-constant initial value") {
-                auto reduce_ptr =
-                        graph.emplace_node<NaryReduceNode>(std::move(expression), args, initial);
+            THEN("We can create a accumulate node with a non-constant initial value") {
+                auto accumulate_ptr =
+                        graph.emplace_node<AccumulateZipNode>(std::move(expression), args, initial);
 
                 AND_WHEN("We initialize a state") {
                     auto state = graph.empty_state();
@@ -76,7 +76,7 @@ TEST_CASE("NaryReduceNode") {
                     graph.initialize_state(state);
 
                     THEN("The state is correct") {
-                        CHECK(std::ranges::equal(reduce_ptr->view(state),
+                        CHECK(std::ranges::equal(accumulate_ptr->view(state),
                                                  std::vector{5, 7, 15, 21}));
                     }
 
@@ -85,7 +85,7 @@ TEST_CASE("NaryReduceNode") {
                         graph.propagate(state);
 
                         THEN("The state is correct") {
-                            CHECK(std::ranges::equal(reduce_ptr->view(state),
+                            CHECK(std::ranges::equal(accumulate_ptr->view(state),
                                                      std::vector{-3.0, -1.0, 7.0, 13.0}));
                         }
                     }
@@ -118,15 +118,15 @@ TEST_CASE("NaryReduceNode") {
         THEN("We can create a lambda node") {
             std::vector<ArrayNode*> args({i_ptr, j_ptr});
 
-            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 6.0);
+            auto accumulate_ptr = graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 6.0);
 
-            auto validation_ptr = graph.emplace_node<ArrayValidationNode>(reduce_ptr);
+            auto validation_ptr = graph.emplace_node<ArrayValidationNode>(accumulate_ptr);
 
             AND_WHEN("We initialize a state") {
                 auto state = graph.initialize_state();
 
                 THEN("The state is correct") {
-                    CHECK(std::ranges::equal(reduce_ptr->view(state),
+                    CHECK(std::ranges::equal(accumulate_ptr->view(state),
                                              std::vector{-1, 6, -1, 6, -1}));
                 }
 
@@ -141,11 +141,11 @@ TEST_CASE("NaryReduceNode") {
 
                     i_ptr->propagate(state);  // [3, 0, 0, 0, 4]
                     j_ptr->propagate(state);  // [-1, 0, 0, 7, 5]
-                    reduce_ptr->propagate(state);
+                    accumulate_ptr->propagate(state);
                     validation_ptr->propagate(state);
 
                     THEN("The state is correct") {
-                        CHECK(std::ranges::equal(reduce_ptr->view(state),
+                        CHECK(std::ranges::equal(accumulate_ptr->view(state),
                                                  std::vector{-5, 10, -5, 17, 13}));
                     }
                 }
@@ -171,9 +171,9 @@ TEST_CASE("NaryReduceNode") {
         THEN("We can create a lambda node with basic functions and logic control") {
             std::vector<ArrayNode*> args({i_ptr, j_ptr});
 
-            auto reduce_ptr = graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0);
+            auto accumulate_ptr = graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0);
 
-            auto validation_ptr = graph.emplace_node<ArrayValidationNode>(reduce_ptr);
+            auto validation_ptr = graph.emplace_node<ArrayValidationNode>(accumulate_ptr);
 
             AND_WHEN("We initialize a state") {
                 auto state = graph.empty_state();
@@ -183,7 +183,7 @@ TEST_CASE("NaryReduceNode") {
                 graph.initialize_state(state);
 
                 THEN("The state is correct") {
-                    CHECK(std::ranges::equal(reduce_ptr->view(state),
+                    CHECK(std::ranges::equal(accumulate_ptr->view(state),
                                              std::vector{10, 11, 20, 30, 34}));
                 }
 
@@ -195,11 +195,11 @@ TEST_CASE("NaryReduceNode") {
 
                     i_ptr->propagate(state);  // [0, 1, 2, 3, 5]
                     j_ptr->propagate(state);  // [10, 15, 15, 30, 32]
-                    reduce_ptr->propagate(state);
+                    accumulate_ptr->propagate(state);
                     validation_ptr->propagate(state);
 
                     THEN("The state is correct") {
-                        CHECK(std::ranges::equal(reduce_ptr->view(state),
+                        CHECK(std::ranges::equal(accumulate_ptr->view(state),
                                                  std::vector{10, 15, 17, 30, 35}));
                     }
                 }
@@ -212,7 +212,7 @@ TEST_CASE("NaryReduceNode") {
 
         auto args = std::vector<ArrayNode*>{graph.emplace_node<ConstantNode>(i)};
 
-        THEN("We can't create a NaryReduceNode with an expression with decision variables") {
+        THEN("We can't create a AccumulateZipNode with an expression with decision variables") {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
                     expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
@@ -222,10 +222,10 @@ TEST_CASE("NaryReduceNode") {
                     inputs[0], expression.emplace_node<IntegerNode>()));
             expression.topological_sort();
 
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0));
+            CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
 
-        THEN("We can't create a NaryReduceNode with non-scalar nodes") {
+        THEN("We can't create a AccumulateZipNode with non-scalar nodes") {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
                     expression.emplace_node<InputNode>(std::vector<ssize_t>{2}, 0, 10, false),
@@ -235,10 +235,10 @@ TEST_CASE("NaryReduceNode") {
                     expression.emplace_node<AddNode>(inputs[0], inputs[1])));
             expression.topological_sort();
 
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0));
+            CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
 
-        THEN("We can't create a NaryReduceNode with an expression that has inputs with a smaller "
+        THEN("We can't create a AccumulateZipNode with an expression that has inputs with a smaller "
              "domain") {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
@@ -247,10 +247,10 @@ TEST_CASE("NaryReduceNode") {
             };
             expression.set_objective(expression.emplace_node<AddNode>(inputs[0], inputs[1]));
             expression.topological_sort();
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0));
+            CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
 
-        THEN("We can't create a NaryReduceNode with an expression that has inputs with an integral "
+        THEN("We can't create a AccumulateZipNode with an expression that has inputs with an integral "
              "domain") {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
@@ -259,7 +259,7 @@ TEST_CASE("NaryReduceNode") {
             };
             expression.set_objective(expression.emplace_node<AddNode>(inputs[0], inputs[1]));
             expression.topological_sort();
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0));
+            CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
     }
 
@@ -268,7 +268,7 @@ TEST_CASE("NaryReduceNode") {
 
         auto args = std::vector<ArrayNode*>{graph.emplace_node<ConstantNode>(i)};
 
-        THEN("We can't create a NaryReduceNode with an expression that has inputs with an integral "
+        THEN("We can't create a AccumulateZipNode with an expression that has inputs with an integral "
              "domain, and output that is non-integral") {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
@@ -279,7 +279,7 @@ TEST_CASE("NaryReduceNode") {
                     inputs[0], expression.emplace_node<MultiplyNode>(
                                        expression.emplace_node<ConstantNode>(0.5), inputs[1])));
             expression.topological_sort();
-            CHECK_THROWS(graph.emplace_node<NaryReduceNode>(std::move(expression), args, 0.0));
+            CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
     }
 
@@ -294,8 +294,8 @@ TEST_CASE("NaryReduceNode") {
         expression.set_objective(expression.emplace_node<AddNode>(inputs[0], inputs[1]));
         expression.topological_sort();
 
-        THEN("We create and initialize a NaryReduceNode") {
-            auto naryreduce_ptr = graph.emplace_node<NaryReduceNode>(
+        THEN("We create and initialize a AccumulateZipNode") {
+            auto accumulatezip_ptr = graph.emplace_node<AccumulateZipNode>(
                     std::move(expression), std::vector<ArrayNode*>{set_ptr}, 0.0);
 
             auto state = graph.initialize_state();
@@ -304,9 +304,9 @@ TEST_CASE("NaryReduceNode") {
                 set_ptr->assign(state, {1, 3, 8});
                 graph.propose(state, {set_ptr});
 
-                THEN("The NaryReduceNode has the correct size and state") {
-                    REQUIRE(naryreduce_ptr->size(state) == 3);
-                    CHECK_THAT(naryreduce_ptr->view(state), RangeEquals({1, 4, 12}));
+                THEN("The AccumulateZipNode has the correct size and state") {
+                    REQUIRE(accumulatezip_ptr->size(state) == 3);
+                    CHECK_THAT(accumulatezip_ptr->view(state), RangeEquals({1, 4, 12}));
                 }
 
                 AND_WHEN("We modify the set variable, propagate and revert") {
@@ -314,17 +314,17 @@ TEST_CASE("NaryReduceNode") {
                     REQUIRE_THAT(set_ptr->view(state), RangeEquals({3, 6}));
 
                     set_ptr->propagate(state);
-                    naryreduce_ptr->propagate(state);
+                    accumulatezip_ptr->propagate(state);
 
-                    REQUIRE(naryreduce_ptr->size(state) == 2);
-                    REQUIRE_THAT(naryreduce_ptr->view(state), RangeEquals({3, 9}));
+                    REQUIRE(accumulatezip_ptr->size(state) == 2);
+                    REQUIRE_THAT(accumulatezip_ptr->view(state), RangeEquals({3, 9}));
 
                     set_ptr->revert(state);
-                    naryreduce_ptr->revert(state);
+                    accumulatezip_ptr->revert(state);
 
-                    THEN("The NaryReduceNode has the correct size and state") {
-                        REQUIRE(naryreduce_ptr->size(state) == 3);
-                        CHECK_THAT(naryreduce_ptr->view(state), RangeEquals({1, 4, 12}));
+                    THEN("The AccumulateZipNode has the correct size and state") {
+                        REQUIRE(accumulatezip_ptr->size(state) == 3);
+                        CHECK_THAT(accumulatezip_ptr->view(state), RangeEquals({1, 4, 12}));
                     }
                 }
             }

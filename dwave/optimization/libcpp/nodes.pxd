@@ -126,7 +126,7 @@ cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimizatio
 
 
 cdef extern from "dwave-optimization/nodes/lambda.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass NaryReduceNode(ArrayNode):
+    cdef cppclass AccumulateZipNode(ArrayNode):
         ctypedef variant[ArrayNodePtr, double] array_or_double
         shared_ptr[Graph] expression_ptr()
         const array_or_double initial

@@ -277,10 +277,6 @@ class Model(_Graph):
         min/max/integral/logical properties of the resulting node, and will be used to
         validate the state when set manually.
 
-        Note that the order in which inputs are added to the model matters and is
-        used by other symbols (see :class:`~dwave.optimization.symbols.NaryReduce`) to
-        infer how arguments are supplied to the model during evaluation.
-
         Args:
             shape: the shape of the output array.
             lower_bound: lower bound on any possible output of the node.

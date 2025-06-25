@@ -1,9 +1,0 @@
----
-features:
-  - Add ``expression()`` decorator for constructing expressions.
-  - |
-    Add the ``NaryReduce`` symbol and corresponding ``NaryReduceNode`` node in
-    the C++. This symbol computes an arbitrary reduction operation on 1-d
-    arrays, similar to ``numpy.ufunc.reduce``, except that it takes any number
-    of operands/predecessors. The reduction operation is supplied by the user
-    and encoded as an ``Expression``.

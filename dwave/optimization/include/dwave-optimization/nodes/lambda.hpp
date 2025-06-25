@@ -25,30 +25,30 @@
 
 namespace dwave::optimization {
 
-// Performs an n-ary element-wise reduction operation on the 1d array operands.
+// Performs an n-ary element-wise accumulate operation on the 1d array operands.
 //
 // The operation is taken in as another (separate) `Graph`, which is expected
 // to have n + 1 `InputNode`s, where n is the number of operands. The extra
 // `InputNode` will be used for the previous/initial value of the output of
-// the reduction. Following the convention of `numpy.ufunc.reduce()` and
+// the accumulate. Following the convention of `numpy.ufunc.accumulate()` and
 // `std::accumulate()`, the special input should be the first `InputNode`
 // on the given `Graph`, with the remaining inputs used for the values of
 // the operands.
-class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
+class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
  public:
     // Initial value can either be a double or another node
     using array_or_double = std::variant<ArrayNode*, double>;
 
-    NaryReduceNode(std::shared_ptr<Graph> expression_ptr, const std::vector<ArrayNode*>& operands,
+    AccumulateZipNode(std::shared_ptr<Graph> expression_ptr, const std::vector<ArrayNode*>& operands,
                    array_or_double initial);
 
-    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands,
+    AccumulateZipNode(Graph&& expression, const std::vector<ArrayNode*>& operands,
                    array_or_double initial)
-            : NaryReduceNode(std::make_shared<Graph>(std::move(expression)), operands, initial) {}
-    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, double initial)
-            : NaryReduceNode(std::move(expression), operands, array_or_double(initial)) {}
-    NaryReduceNode(Graph&& expression, const std::vector<ArrayNode*>& operands, ArrayNode* initial)
-            : NaryReduceNode(std::move(expression), operands, array_or_double(initial)) {}
+            : AccumulateZipNode(std::make_shared<Graph>(std::move(expression)), operands, initial) {}
+    AccumulateZipNode(Graph&& expression, const std::vector<ArrayNode*>& operands, double initial)
+            : AccumulateZipNode(std::move(expression), operands, array_or_double(initial)) {}
+    AccumulateZipNode(Graph&& expression, const std::vector<ArrayNode*>& operands, ArrayNode* initial)
+            : AccumulateZipNode(std::move(expression), operands, array_or_double(initial)) {}
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -93,7 +93,7 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
     double get_initial_value(const State& state) const;
 
     std::span<const InputNode* const> operand_inputs() const;
-    const InputNode* const reduction_input() const;
+    const InputNode* const accumulate_input() const;
 
     std::shared_ptr<Graph> expression_ptr_;
     const std::vector<ArrayNode*> operands_;
@@ -102,9 +102,9 @@ class NaryReduceNode : public ArrayOutputMixin<ArrayNode> {
 
 void validate_expression(const Graph& expression);
 
-void validate_naryreduce_arguments(const Graph& expression, const std::vector<ArrayNode*> operands);
+void validate_accumulatezip_arguments(const Graph& expression, const std::vector<ArrayNode*> operands);
 
-using NaryReduceSupportedNodes =
+using AccumulateZipSupportedNodes =
         std::variant<const InputNode*, const ConstantNode*, const MaximumNode*, const NegativeNode*,
                      const AddNode*, const SubtractNode*, const MultiplyNode*>;
 

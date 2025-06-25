@@ -22,9 +22,9 @@
 
 namespace dwave::optimization {
 
-class NaryReduceNodeData : public ArrayNodeStateData {
+class AccumulateZipNodeData : public ArrayNodeStateData {
  public:
-    explicit NaryReduceNodeData(std::vector<double>&& values,
+    explicit AccumulateZipNodeData(std::vector<double>&& values,
                                 std::vector<Array::const_iterator>&& iterators, State&& state)
             : ArrayNodeStateData(std::move(values)),
               iterators(std::move(iterators)),
@@ -73,7 +73,7 @@ void validate_expression(const Graph& expression) {
                     std::to_string((uintptr_t)(void*)node_ptr.get()) + "}");
         }
 
-        if (!variant_supports<NaryReduceSupportedNodes>(array_node)) {
+        if (!variant_supports<AccumulateZipSupportedNodes>(array_node)) {
             throw std::invalid_argument(
                     R"({"message": "Expression contains unsupported node", "node_ptr": )" +
                     std::to_string((uintptr_t)(void*)node_ptr.get()) + "}");
@@ -113,7 +113,7 @@ auto get_operands_shape(const Graph& expression, std::span<ArrayNode* const> ope
     return operands[0]->shape();
 }
 
-void validate_naryreduce_arguments(const Graph& expression,
+void validate_accumulatezip_arguments(const Graph& expression,
                                    const std::vector<ArrayNode*> operands) {
     auto output = expression.objective();
 
@@ -137,32 +137,32 @@ void validate_naryreduce_arguments(const Graph& expression,
         }
     }
 
-    auto reduction_input = expression.inputs()[0];
+    auto accumulate_input = expression.inputs()[0];
 
-    if (reduction_input->integral() && !output->integral()) {
+    if (accumulate_input->integral() && !output->integral()) {
         throw std::invalid_argument(
                 R"({"message": "if expression output can be non-integral, last input must not be integral"})");
         ;
-    } else if (output->min() < reduction_input->min()) {
+    } else if (output->min() < accumulate_input->min()) {
         throw std::invalid_argument(
                 R"({"message": "expression output must not have a lower min than the last input"})");
-    } else if (output->max() > reduction_input->max()) {
+    } else if (output->max() > accumulate_input->max()) {
         throw std::invalid_argument(
                 R"({"message": "expression output must not have a higher max than the last input"})");
     }
 }
 
-std::shared_ptr<Graph> _validate_naryreduce_arguments(std::shared_ptr<Graph>&& expression,
+std::shared_ptr<Graph> _validate_accumulatezip_arguments(std::shared_ptr<Graph>&& expression,
                                                       const std::vector<ArrayNode*> operands) {
-    validate_naryreduce_arguments(*expression, operands);
+    validate_accumulatezip_arguments(*expression, operands);
     return std::move(expression);
 }
 
-NaryReduceNode::NaryReduceNode(std::shared_ptr<Graph> expression_ptr,
+AccumulateZipNode::AccumulateZipNode(std::shared_ptr<Graph> expression_ptr,
                                const std::vector<ArrayNode*>& operands, array_or_double initial)
         : ArrayOutputMixin(get_operands_shape(*expression_ptr, operands)),
           initial(initial),
-          expression_ptr_(_validate_naryreduce_arguments(
+          expression_ptr_(_validate_accumulatezip_arguments(
                   _validate_expression(std::move(expression_ptr)), operands)),
           operands_(operands),
           output_(expression_ptr_->objective()) {
@@ -179,17 +179,17 @@ NaryReduceNode::NaryReduceNode(std::shared_ptr<Graph> expression_ptr,
     }
 }
 
-double const* NaryReduceNode::buff(const State& state) const {
-    return data_ptr<NaryReduceNodeData>(state)->buffer.data();
+double const* AccumulateZipNode::buff(const State& state) const {
+    return data_ptr<AccumulateZipNodeData>(state)->buffer.data();
 }
 
-void NaryReduceNode::commit(State& state) const { data_ptr<NaryReduceNodeData>(state)->commit(); }
+void AccumulateZipNode::commit(State& state) const { data_ptr<AccumulateZipNodeData>(state)->commit(); }
 
-std::span<const Update> NaryReduceNode::diff(const State& state) const {
-    return data_ptr<NaryReduceNodeData>(state)->diff();
+std::span<const Update> AccumulateZipNode::diff(const State& state) const {
+    return data_ptr<AccumulateZipNodeData>(state)->diff();
 }
 
-double NaryReduceNode::evaluate_expression(State& register_) const {
+double AccumulateZipNode::evaluate_expression(State& register_) const {
     // First propagate all the nodes
     for (const auto& node_ptr : expression_ptr_->nodes()) {
         node_ptr->propagate(register_);
@@ -201,7 +201,7 @@ double NaryReduceNode::evaluate_expression(State& register_) const {
     return output_->view(register_)[0];
 }
 
-double NaryReduceNode::get_initial_value(const State& state) const {
+double AccumulateZipNode::get_initial_value(const State& state) const {
     if (std::holds_alternative<double>(initial)) {
         return std::get<double>(initial);
     } else {
@@ -209,7 +209,7 @@ double NaryReduceNode::get_initial_value(const State& state) const {
     }
 }
 
-void NaryReduceNode::initialize_state(State& state) const {
+void AccumulateZipNode::initialize_state(State& state) const {
     int node_idx = topological_index();
     assert(node_idx >= 0 && "must be topologically sorted");
     assert(state[node_idx] == nullptr && "already initialized state");
@@ -239,8 +239,8 @@ void NaryReduceNode::initialize_state(State& state) const {
     // Compute the expression for each subsequent index
     for (ssize_t index = 0; index < start_size; ++index) {
         // First input comes from the previous expression
-        val = std::clamp(val, reduction_input()->min(), reduction_input()->max());
-        reduction_input()->assign(reg, std::span(&val, 1));
+        val = std::clamp(val, accumulate_input()->min(), accumulate_input()->max());
+        accumulate_input()->assign(reg, std::span(&val, 1));
 
         for (ssize_t arg_index = 0; arg_index < num_args; ++arg_index) {
             double input_val = *iterators[arg_index];
@@ -251,23 +251,23 @@ void NaryReduceNode::initialize_state(State& state) const {
         values.push_back(val);
     }
 
-    state[node_idx] = std::make_unique<NaryReduceNodeData>(std::move(values), std::move(iterators),
+    state[node_idx] = std::make_unique<AccumulateZipNodeData>(std::move(values), std::move(iterators),
                                                            std::move(reg));
 }
 
-bool NaryReduceNode::integral() const { return output_->integral(); }
+bool AccumulateZipNode::integral() const { return output_->integral(); }
 
-std::pair<double, double> NaryReduceNode::minmax(
+std::pair<double, double> AccumulateZipNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return memoize(cache, [&]() { return std::make_pair(output_->min(), output_->max()); });
 }
 
-std::span<const InputNode* const> NaryReduceNode::operand_inputs() const {
+std::span<const InputNode* const> AccumulateZipNode::operand_inputs() const {
     return expression_ptr_->inputs().subspan(1);
 }
 
-void NaryReduceNode::propagate(State& state) const {
-    NaryReduceNodeData* data = data_ptr<NaryReduceNodeData>(state);
+void AccumulateZipNode::propagate(State& state) const {
+    AccumulateZipNodeData* data = data_ptr<AccumulateZipNodeData>(state);
     ssize_t new_size = this->size(state);
     ssize_t num_args = operands_.size();
 
@@ -280,8 +280,8 @@ void NaryReduceNode::propagate(State& state) const {
 
     for (ssize_t index = 0; index < new_size; ++index) {
         // First input comes from the previous expression
-        val = std::clamp(val, reduction_input()->min(), reduction_input()->max());
-        reduction_input()->assign(data->register_, std::span(&val, 1));
+        val = std::clamp(val, accumulate_input()->min(), accumulate_input()->max());
+        accumulate_input()->assign(data->register_, std::span(&val, 1));
 
         for (ssize_t arg_index = 0; arg_index < num_args; ++arg_index) {
             double arg_val = *data->iterators[arg_index];
@@ -305,20 +305,20 @@ void NaryReduceNode::propagate(State& state) const {
     if (data->diff().size()) Node::propagate(state);
 }
 
-const InputNode* const NaryReduceNode::reduction_input() const { return expression_ptr_->inputs()[0]; }
+const InputNode* const AccumulateZipNode::accumulate_input() const { return expression_ptr_->inputs()[0]; }
 
-void NaryReduceNode::revert(State& state) const { data_ptr<NaryReduceNodeData>(state)->revert(); }
+void AccumulateZipNode::revert(State& state) const { data_ptr<AccumulateZipNodeData>(state)->revert(); }
 
-std::span<const ssize_t> NaryReduceNode::shape(const State& state) const {
+std::span<const ssize_t> AccumulateZipNode::shape(const State& state) const {
     return operands_[0]->shape(state);
 }
 
-ssize_t NaryReduceNode::size(const State& state) const { return operands_[0]->size(state); }
+ssize_t AccumulateZipNode::size(const State& state) const { return operands_[0]->size(state); }
 
-SizeInfo NaryReduceNode::sizeinfo() const { return operands_[0]->sizeinfo(); }
+SizeInfo AccumulateZipNode::sizeinfo() const { return operands_[0]->sizeinfo(); }
 
-ssize_t NaryReduceNode::size_diff(const State& state) const {
-    return data_ptr<NaryReduceNodeData>(state)->size_diff();
+ssize_t AccumulateZipNode::size_diff(const State& state) const {
+    return data_ptr<AccumulateZipNodeData>(state)->size_diff();
 }
 
 }  // namespace dwave::optimization

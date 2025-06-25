@@ -81,6 +81,61 @@ class TestAbsolute(utils.UnaryOpTests):
             np.testing.assert_array_equal(a.state(), [2, 1, 0, 1, 5])
 
 
+class TestAccumulateZip(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        c0 = model.constant([0, 0])
+        c1 = model.constant([0, 1])
+
+        @dwave.optimization.expression
+        def expr(a, b, c):
+            return a + b + c
+
+        acc = dwave.optimization.symbols.AccumulateZip(expr, (c0, c1), initial=7)
+        acc_with_initial_node = dwave.optimization.symbols.AccumulateZip(expr, (c0, c1), initial=model.constant(7))
+
+        with model.lock():
+            yield acc
+            yield acc_with_initial_node
+
+    def test_mismatched_inputs(self):
+        model = Model()
+        c0 = model.constant([0, 0])
+
+        @dwave.optimization.expression
+        def expr(a, b, c):
+            return a + b + c
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.AccumulateZip(expr, (c0,))
+
+    def test_invalid_expression_non_scalar(self):
+        model = Model()
+        c0 = model.constant([0, 0])
+
+        # Can't use an Expression that uses a non-scalar input
+        # In the future we may prevent this when forming the expression
+        expr = dwave.optimization.expression(
+            lambda a, b: a + b,
+            a=dict(lower_bound=-10, upper_bound=10, integral=False, shape=(1,)),
+        )
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.AccumulateZip(expr, (c0,))
+
+    def test_invalid_expression_input_range(self):
+        model = Model()
+        c0 = model.constant([0, 0])
+
+        @dwave.optimization.expression(inp0=dict(lower_bound=0, upper_bound=100),
+                                       inp2=dict(lower_bound=0, upper_bound=10))
+        def expr(inp0, inp1):
+            return inp0 + inp1
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.AccumulateZip(expr, (c0,))
+
+
 class TestAdd(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
@@ -2308,61 +2363,6 @@ class TestNaryMultiply(utils.NaryOpTests):
 
         with self.assertRaises(ValueError):
             x *= b  # after promotion
-
-
-class TestNaryReduce(utils.SymbolTests):
-    def generate_symbols(self):
-        model = Model()
-        c0 = model.constant([0, 0])
-        c1 = model.constant([0, 1])
-
-        @dwave.optimization.expression
-        def expr(a, b, c):
-            return a + b + c
-
-        acc = dwave.optimization.symbols.NaryReduce(expr, (c0, c1), initial=7)
-        acc_with_initial_node = dwave.optimization.symbols.NaryReduce(expr, (c0, c1), initial=model.constant(7))
-
-        with model.lock():
-            yield acc
-            yield acc_with_initial_node
-
-    def test_mismatched_inputs(self):
-        model = Model()
-        c0 = model.constant([0, 0])
-
-        @dwave.optimization.expression
-        def expr(a, b, c):
-            return a + b + c
-
-        with self.assertRaises(ValueError):
-            dwave.optimization.symbols.NaryReduce(expr, (c0,))
-
-    def test_invalid_expression_non_scalar(self):
-        model = Model()
-        c0 = model.constant([0, 0])
-
-        # Can't use an Expression that uses a non-scalar input
-        # In the future we may prevent this when forming the expression
-        expr = dwave.optimization.expression(
-            lambda a, b: a + b,
-            a=dict(lower_bound=-10, upper_bound=10, integral=False, shape=(1,)),
-        )
-
-        with self.assertRaises(ValueError):
-            dwave.optimization.symbols.NaryReduce(expr, (c0,))
-
-    def test_invalid_expression_input_range(self):
-        model = Model()
-        c0 = model.constant([0, 0])
-
-        @dwave.optimization.expression(inp0=dict(lower_bound=0, upper_bound=100),
-                                       inp2=dict(lower_bound=0, upper_bound=10))
-        def expr(inp0, inp1):
-            return inp0 + inp1
-
-        with self.assertRaises(ValueError):
-            dwave.optimization.symbols.NaryReduce(expr, (c0,))
 
 
 class TestNegate(utils.UnaryOpTests):
