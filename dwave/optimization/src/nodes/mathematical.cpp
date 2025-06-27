@@ -726,8 +726,6 @@ template <class BinaryOp>
 void NaryOpNode<BinaryOp>::propagate(State& state) const {
     auto node_data = data_ptr<NaryOpNodeData>(state);
 
-    auto& values = node_data->buffer;
-    auto& changes = node_data->updates;
     auto& iterators = node_data->iterators;
 
     std::vector<ssize_t> recompute_indices;
@@ -747,7 +745,7 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
         for (const Array* input : operands_) {
             if (input->diff(state).size()) {
                 for (const auto& [index, old_val, new_val] : input->diff(state)) {
-                    double new_reduced_val = values[index];
+                    double new_reduced_val = node_data->get(index);
                     new_reduced_val = inv_func.op(new_reduced_val, old_val);
                     if (std::isnan(new_reduced_val) || std::isinf(new_reduced_val)) {
                         // calling the inverse has failed (such as divide by zero),
@@ -756,9 +754,7 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
                         continue;
                     }
 
-                    double old_reduced = values[index];
-                    values[index] = op(new_reduced_val, new_val);
-                    changes.emplace_back(index, old_reduced, values[index]);
+                    node_data->set(index, op(new_reduced_val, new_val));
                 }
             }
         }
@@ -772,16 +768,13 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
         }
 
         for (const auto& index : recompute_indices) {
-            double old = values[index];
-            double& val = values[index];
+            double val = node_data->get(index);
             val = *(iterators[0] + index);
             for (auto it : iterators | std::views::drop(1)) {
                 val = op(*(it + index), val);
             }
 
-            if (val != old) {
-                changes.emplace_back(index, old, val);
-            }
+            node_data->set(index, val);
         }
     }
 }
