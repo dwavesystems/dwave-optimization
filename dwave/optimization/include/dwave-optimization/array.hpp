@@ -221,23 +221,8 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         }
     }
 
-    /// Access the value of the iterator at the given offset when the iterator
-    /// is an output iterator.
-    value_type& operator[](difference_type index) const noexcept
-            requires(std::same_as<To, From> && !IsConst) {
-        return *(*this + index);
-    }
-
-    /// Access the value of the iterator at the given offset when the iterator
-    /// is not an output iterator, but To and From types are the same.
-    const value_type& operator[](difference_type index) const noexcept
-            requires(std::same_as<To, From> && IsConst) {
-        return *(*this + index);
-    }
-
-    /// Access the value of the iterator at the given offset when the iterator
-    /// is not an output iterator.
-    value_type operator[](difference_type index) const noexcept requires(IsConst) {
+    /// Access the value of the iterator at the given offset
+    decltype(auto) operator[](difference_type index) const noexcept {
         return *(*this + index);
     }
 
