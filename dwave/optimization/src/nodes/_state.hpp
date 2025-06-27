@@ -147,7 +147,7 @@ class ArrayStateData {
 
     // Set the value at index, tracking the change in the diff.
     // If allow_emplace is true, do an emplace_back iff the index is equal to the current size.
-    bool set(ssize_t i, double value, bool allow_emplace = false) {
+    bool inline set(ssize_t i, double value, bool allow_emplace = false) {
         if (allow_emplace && i == this->size()) {
             return this->emplace_back(value);
         }
@@ -203,8 +203,7 @@ class ArrayStateData {
                 buffer.emplace_back(new_);
             } else {
                 assert(0 <= index && static_cast<std::size_t>(index) < buffer.size());
-                this->updates.emplace_back(index, buffer[index], new_);
-                buffer[index] = new_;
+                this->set(index, new_);
             }
         }
 
