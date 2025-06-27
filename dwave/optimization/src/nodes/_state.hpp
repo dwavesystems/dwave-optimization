@@ -78,7 +78,8 @@ class ArrayStateData {
         return !updates.empty();
     }
 
-    double* buff() noexcept { return buffer.data(); }
+    const double& back() { return buffer.back(); }
+
     const double* buff() const noexcept { return buffer.data(); }
 
     void commit() noexcept {
@@ -203,8 +204,7 @@ class ArrayStateData {
                 buffer.emplace_back(new_);
             } else {
                 assert(0 <= index && static_cast<std::size_t>(index) < buffer.size());
-                this->updates.emplace_back(index, buffer[index], new_);
-                buffer[index] = new_;
+                this->set(index, new_);
             }
         }
 
@@ -213,11 +213,11 @@ class ArrayStateData {
         return !this->updates.empty();
     }
 
+ private:
     // Changes made directly to the buffer/update must be reflected in both!
     std::vector<double> buffer;
     std::vector<Update> updates;
 
- private:
     // We need to be able to calculate a size diff, and to have a referencable
     // size. So we keep an addition source of truth for the size and we assert
     // it absolutely everywhere.

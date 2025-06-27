@@ -82,7 +82,11 @@ TEMPLATE_TEST_CASE("BufferIterator - templated", "",  //
             auto it = BufferIterator<double, TestType>(buffer.data());
 
             // the output of the iterator is double as requested
-            static_assert(std::same_as<decltype(*it), double>);
+            if constexpr (std::same_as<TestType, double>) {
+                static_assert(std::same_as<decltype(*it), const double&>);
+            } else {
+                static_assert(std::same_as<decltype(*it), double>);
+            }
 
             CHECK_THAT(std::ranges::subrange(it, it + buffer.size()), RangeEquals(buffer));
         }

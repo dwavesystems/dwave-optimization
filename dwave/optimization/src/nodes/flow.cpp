@@ -361,7 +361,7 @@ ssize_t WhereNode::size(const State& state) const {
     }
 
     // should match our current buffer
-    assert(static_cast<ssize_t>(data_ptr<WhereNodeData>(state)->buffer.size()) == size);
+    assert(static_cast<ssize_t>(data_ptr<WhereNodeData>(state)->size()) == size);
 
     return size;
 }
