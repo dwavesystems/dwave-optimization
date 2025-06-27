@@ -143,6 +143,9 @@ void Graph::recursive_reset(State& state, const Node* ptr) {
         return;
     }
 
+    // We've already been reset so nothing to do
+    if (!state[index]) return;
+
     // Otherwise, reset our own state and then all of our successors
     state[index].reset();
 
