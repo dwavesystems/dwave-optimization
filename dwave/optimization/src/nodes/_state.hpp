@@ -78,7 +78,8 @@ class ArrayStateData {
         return !updates.empty();
     }
 
-    double* buff() noexcept { return buffer.data(); }
+    const double& back() { return buffer.back(); }
+
     const double* buff() const noexcept { return buffer.data(); }
 
     void commit() noexcept {
@@ -212,11 +213,11 @@ class ArrayStateData {
         return !this->updates.empty();
     }
 
+ private:
     // Changes made directly to the buffer/update must be reflected in both!
     std::vector<double> buffer;
     std::vector<Update> updates;
 
- private:
     // We need to be able to calculate a size diff, and to have a referencable
     // size. So we keep an addition source of truth for the size and we assert
     // it absolutely everywhere.

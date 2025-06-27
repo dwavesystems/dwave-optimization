@@ -188,8 +188,14 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         return *static_cast<From*>(ptr_);
     }
 
+    /// Dereference the iterator when it is not an output iterator, but To and From types
+    /// are the same.
+    const value_type& operator*() const noexcept requires(std::same_as<To, From> && IsConst) {
+        return *static_cast<const From*>(ptr_);
+    }
+
     /// Dereference the iterator when the iterator is not an output iterator.
-    value_type operator*() const noexcept requires(IsConst) {
+    value_type operator*() const noexcept requires(!std::same_as<To, From> && IsConst) {
         if constexpr (DType<From>) {
             // In this case we know at compile-time what type we're converting from
             return *static_cast<const From*>(ptr_);
@@ -219,6 +225,13 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
     /// is an output iterator.
     value_type& operator[](difference_type index) const noexcept
             requires(std::same_as<To, From> && !IsConst) {
+        return *(*this + index);
+    }
+
+    /// Access the value of the iterator at the given offset when the iterator
+    /// is not an output iterator, but To and From types are the same.
+    const value_type& operator[](difference_type index) const noexcept
+            requires(std::same_as<To, From> && IsConst) {
         return *(*this + index);
     }
 
@@ -518,7 +531,7 @@ requires(IsConst || std::same_as<To, From>) class BufferIterator {
         std::unique_ptr<ssize_t[]> loc;
     };
 
-    // If we're const, then hold a cost void*, else hold void*
+    // If we're const, then hold a const void*, else hold void*
     std::conditional<IsConst, const void*, void*>::type ptr_ = nullptr;
 
     // If we know the type of the buffer at compile-time, we don't need to
