@@ -20,6 +20,7 @@
 #include "dwave-optimization/nodes/flow.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
 #include "dwave-optimization/nodes/inputs.hpp"
+#include "dwave-optimization/nodes/lambda.hpp"
 #include "dwave-optimization/nodes/lp.hpp"
 #include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/mathematical.hpp"

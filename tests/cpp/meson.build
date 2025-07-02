@@ -21,6 +21,7 @@ tests_all = executable(
         'nodes/test_inputs.cpp',
         'nodes/test_interpolation.cpp',
         'nodes/test_lp.cpp',
+        'nodes/test_lambda.cpp',
         'nodes/test_manipulation.cpp',
         'nodes/test_numbers.cpp',
         'nodes/test_quadratic_model.cpp',

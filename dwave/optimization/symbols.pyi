@@ -25,6 +25,10 @@ class Absolute(ArraySymbol):
     ...
 
 
+class AccumulateZip(ArraySymbol):
+    ...
+
+
 class Add(ArraySymbol):
     ...
 

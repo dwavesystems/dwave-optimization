@@ -20,6 +20,7 @@ from libcpp.vector cimport vector
 from dwave.optimization.libcpp.array cimport Array
 from dwave.optimization.libcpp.state cimport State
 
+
 cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass Node:
         struct SuccessorView:
