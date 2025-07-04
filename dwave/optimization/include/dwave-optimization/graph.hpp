@@ -22,6 +22,7 @@
 #include <numeric>
 #include <random>
 #include <span>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -250,6 +251,15 @@ class Node {
     template <class NodeType, class... Args>
     friend NodeType* Graph::emplace_node(Args&&... args);
     friend ssize_t Graph::remove_unused_nodes(bool ignore_listeners);
+
+    // Methods for interrogating nodes as strings. Useful for error messages
+    // and debugging. We roughly follow Python's scheme of repr() and str()
+    // printing different information.
+    virtual std::string classname() const;
+    virtual std::string repr() const;
+    virtual std::string str() const;
+
+    friend std::ostream& operator<<(std::ostream& os, const Node& node);
 
  protected:
     // For use by non-dynamic node constructors.

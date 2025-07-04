@@ -50,6 +50,13 @@ ArrayValidationNode::ArrayValidationNode(ArrayNode* node_ptr) : array_ptr(node_p
         node_ptr->sizeinfo().substitute(5);
         return true;
     }());  // smoke check
+
+    // also smoke check the string methods. There is some node and/or compiler-specific
+    // stuff here so just check there isn't an obvious bug.
+    assert(node_ptr->classname().size());
+    assert(node_ptr->repr().size());
+    assert(node_ptr->str().size());
+
     add_predecessor(node_ptr);
 }
 
