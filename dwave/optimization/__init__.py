@@ -12,10 +12,13 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import dwave.optimization.generators
-
-from dwave.optimization.model import Model
-from dwave.optimization.mathematical import *
+# Pull a bunch of stuff into the namespace
+# Linters (like pyflake and ruff) object without also specifying them in __all__
+# directly, but we actively want everything in this namespace to be "public" so
+# we mark them as noqa
+import dwave.optimization.generators           # noqa
+from dwave.optimization.model import *         # noqa
+from dwave.optimization.mathematical import *  # noqa
 
 __version__ = "0.6.3.dev"
 
