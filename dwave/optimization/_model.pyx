@@ -1864,7 +1864,7 @@ cdef class ArraySymbol(Symbol):
 
         # This shouldn't happen, but just in case...
         if not sizeinfo.max.has_value():
-            raise RuntimeError("size is unbounded")
+            raise RuntimeError(f"size of {self!r} is unbounded")
 
         return sizeinfo.max.value() * self.array_ptr.itemsize()
 
