@@ -1860,6 +1860,12 @@ ssize_t UnaryOpNode<UnaryOp>::size_diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->size_diff();
 }
 
+template <class UnaryOp>
+SizeInfo UnaryOpNode<UnaryOp>::sizeinfo() const {
+    if (dynamic()) return SizeInfo(array_ptr_);  // exactly the same as predecessor
+    return SizeInfo(size());
+}
+
 template class UnaryOpNode<functional::abs<double>>;
 template class UnaryOpNode<functional::exp<double>>;
 template class UnaryOpNode<functional::expit<double>>;

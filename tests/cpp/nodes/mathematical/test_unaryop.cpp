@@ -44,6 +44,7 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::exp<d
         THEN("The shape is also a scalar") {
             CHECK(p_ptr->ndim() == 0);
             CHECK(p_ptr->size() == 1);
+            CHECK(p_ptr->sizeinfo() == SizeInfo(1));
         }
 
         THEN("The constant is the operand") {
@@ -72,6 +73,7 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::exp<d
         THEN("The shape is also dynamic") {
             CHECK(p_ptr->dynamic());
             CHECK(p_ptr->ndim() == 1);
+            CHECK(p_ptr->sizeinfo() == SizeInfo(a_ptr));
         }
 
         WHEN("We initialize the input node to be empty") {

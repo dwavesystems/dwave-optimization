@@ -382,6 +382,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     using ArrayOutputMixin::size;
     ssize_t size(const State& state) const override;
     ssize_t size_diff(const State& state) const override;
+    SizeInfo sizeinfo() const override;
 
     void commit(State& state) const override;
     void revert(State& state) const override;
