@@ -27,17 +27,17 @@ from __future__ import annotations
 
 import collections
 import contextlib
-import math
 import tempfile
 import typing
 
-from dwave.optimization._model import ArraySymbol, _Graph, Symbol
+from dwave.optimization._model import _Graph
+from dwave.optimization._model import ArraySymbol, Symbol  # noqa
 from dwave.optimization.states import States
+
 
 if typing.TYPE_CHECKING:
     import numpy.typing
-
-    from dwave.optimization.symbols import *
+    import dwave.optimization.symbols as symbols
 
     _ShapeLike: typing.TypeAlias = typing.Union[int, collections.abc.Sequence[int]]
 
@@ -112,7 +112,7 @@ class Model(_Graph):
         self.objective = None
         self.states = States(self)
 
-    def binary(self, shape: typing.Optional[_ShapeLike] = None) -> BinaryVariable:
+    def binary(self, shape: typing.Optional[_ShapeLike] = None) -> symbols.BinaryVariable:
         r"""Create a binary symbol as a decision variable.
 
         Args:
@@ -131,7 +131,7 @@ class Model(_Graph):
         from dwave.optimization.symbols import BinaryVariable  # avoid circular import
         return BinaryVariable(self, shape)
 
-    def constant(self, array_like: numpy.typing.ArrayLike) -> Constant:
+    def constant(self, array_like: numpy.typing.ArrayLike) -> symbols.Constant:
         r"""Create a constant symbol.
 
         Args:
@@ -157,7 +157,7 @@ class Model(_Graph):
             self,
             primary_set_size: int,
             num_disjoint_sets: int,
-            ) -> tuple[DisjointBitSets, tuple[DisjointBitSet, ...]]:
+            ) -> tuple[symbols.DisjointBitSets, tuple[symbols.DisjointBitSet, ...]]:
         """Create a disjoint-sets symbol as a decision variable.
 
         Divides a set of the elements of ``range(primary_set_size)`` into
@@ -197,7 +197,7 @@ class Model(_Graph):
             self,
             primary_set_size: int,
             num_disjoint_lists: int,
-            ) -> tuple[DisjointLists, tuple[DisjointList, ...]]:
+            ) -> tuple[symbols.DisjointLists, tuple[symbols.DisjointList, ...]]:
         """Create a disjoint-lists symbol as a decision variable.
 
         Divides a set of the elements of ``range(primary_set_size)`` into
@@ -264,7 +264,7 @@ class Model(_Graph):
         lower_bound: typing.Optional[float] = None,
         upper_bound: typing.Optional[float] = None,
         integral: typing.Optional[bool] = None,
-    ) -> Input:
+    ) -> symbols.Input:
         """Create an "input" symbol.
 
         An input symbol functions similarly to a decision variable,
@@ -319,7 +319,7 @@ class Model(_Graph):
             shape: typing.Optional[_ShapeLike] = None,
             lower_bound: typing.Optional[int] = None,
             upper_bound: typing.Optional[int] = None,
-            ) -> IntegerVariable:
+            ) -> symbols.IntegerVariable:
         r"""Create an integer symbol as a decision variable.
 
         Args:
@@ -345,7 +345,7 @@ class Model(_Graph):
         from dwave.optimization.symbols import IntegerVariable  # avoid circular import
         return IntegerVariable(self, shape, lower_bound, upper_bound)
 
-    def list(self, n: int) -> ListVariable:
+    def list(self, n: int) -> symbols.ListVariable:
         """Create a list symbol as a decision variable.
 
         Args:
@@ -410,7 +410,7 @@ class Model(_Graph):
 
     # dev note: the typing is underspecified, but it would be quite complex to fully
     # specify the linear/quadratic so let's leave it alone for now.
-    def quadratic_model(self, x: ArraySymbol, quadratic, linear=None) -> QuadraticModel:
+    def quadratic_model(self, x: ArraySymbol, quadratic, linear=None) -> symbols.QuadraticModel:
         """Create a quadratic model from an array and a quadratic model.
 
         Args:
@@ -440,7 +440,7 @@ class Model(_Graph):
             n: int,
             min_size: int = 0,
             max_size: typing.Optional[int] = None,
-            ) -> SetVariable:
+            ) -> symbols.SetVariable:
         """Create a set symbol as a decision variable.
 
         Args:

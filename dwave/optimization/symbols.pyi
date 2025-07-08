@@ -20,46 +20,35 @@ from dwave.optimization.model import Symbol, ArraySymbol
 
 __all__: list[str]
 
-
 class Absolute(ArraySymbol):
     ...
-
 
 class Add(ArraySymbol):
     ...
 
-
 class All(ArraySymbol):
     ...
-
 
 class And(ArraySymbol):
     ...
 
-
 class Any(ArraySymbol):
     ...
-
 
 class AdvancedIndexing(ArraySymbol):
     ...
 
-
 class BasicIndexing(ArraySymbol):
     ...
-
 
 class BinaryVariable(ArraySymbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
 
-
 class BSpline(ArraySymbol):
     ...
 
-
 class Concatenate(ArraySymbol):
     ...
-
 
 class Constant(ArraySymbol):
     def __bool__(self) -> bool: ...
@@ -79,46 +68,35 @@ class Constant(ArraySymbol):
     @typing.overload
     def __le__(self, rhs: numpy.typing.ArrayLike) -> numpy.typing.NDArray[numpy.bool]: ...
 
-
 class Copy(ArraySymbol):
     ...
-
 
 class DisjointBitSets(Symbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
 
-
 class DisjointBitSet(ArraySymbol):
     ...
-
 
 class DisjointLists(Symbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
 
-
 class DisjointList(ArraySymbol):
     ...
-
 
 class Divide(ArraySymbol):
     ...
 
-
 class Equal(ArraySymbol):
     ...
-
 
 class Exp(ArraySymbol):
     ...
 
-
 class Expit(ArraySymbol):
     ...
 
-
 class Extract(ArraySymbol):
     ...
-
 
 class Input(ArraySymbol):
     def integral(self) -> bool: ...
@@ -126,148 +104,112 @@ class Input(ArraySymbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
     def upper_bound(self) -> float: ...
 
-
 class IntegerVariable(ArraySymbol):
     def lower_bound(self) -> float: ...
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
     def upper_bound(self) -> float: ...
 
-
 class LessEqual(ArraySymbol):
     ...
-
 
 class LinearProgram(Symbol):
     ...
 
-
 class LinearProgramFeasible(ArraySymbol):
     ...
-
 
 class LinearProgramObjectiveValue(ArraySymbol):
     ...
 
-
 class LinearProgramSolution(ArraySymbol):
     ...
-
 
 class ListVariable(ArraySymbol):
     def set_state(self, index: int, values: numpy.typing.ArrayLike): ...
 
-
 class Log(ArraySymbol):
     ...
-
 
 class Logical(ArraySymbol):
     ...
 
-
 class Max(ArraySymbol):
     ...
-
 
 class Maximum(ArraySymbol):
     ...
 
-
 class Min(ArraySymbol):
     ...
-
 
 class Minimum(ArraySymbol):
     ...
 
-
 class Modulus(ArraySymbol):
     ...
-    
 
 class Multiply(ArraySymbol):
     ...
 
-
 class NaryAdd(ArraySymbol):
     ...
-
 
 class NaryMaximum(ArraySymbol):
     ...
 
-
 class NaryMinimum(ArraySymbol):
     ...
-
 
 class NaryMultiply(ArraySymbol):
     ...
 
-
 class Negative(ArraySymbol):
     ...
-
 
 class Not(ArraySymbol):
     ...
 
-
 class Or(ArraySymbol):
     ...
-
 
 class PartialSum(ArraySymbol):
     ...
 
-
 class Permutation(ArraySymbol):
     ...
-
 
 class Prod(ArraySymbol):
     ...
 
-
 class QuadraticModel(ArraySymbol):
     ...
-
 
 class Reshape(ArraySymbol):
     ...
 
-
 class Rint(ArraySymbol):
     ...
-
 
 class SetVariable(ArraySymbol):
     def set_state(self, index: int, values: numpy.typing.ArrayLike): ...
 
-
 class Size(ArraySymbol):
     ...
-
 
 class Square(ArraySymbol):
     ...
 
-
 class SquareRoot(ArraySymbol):
     ...
-
 
 class Subtract(ArraySymbol):
     ...
 
-
 class Sum(ArraySymbol):
     ...
 
-
 class Where(ArraySymbol):
     ...
-
 
 class Xor(ArraySymbol):
     ...
