@@ -17,8 +17,15 @@
 #include <algorithm>
 #include <deque>
 #include <ranges>
+#include <sstream>
 #include <stdexcept>
 #include <utility>
+
+
+#if defined( __has_include ) && __has_include(<cxxabi.h>)
+#define _HAS_CXXABI
+#include <cxxabi.h>
+#endif
 
 #include "dwave-optimization/array.hpp"
 
@@ -142,6 +149,9 @@ void Graph::recursive_reset(State& state, const Node* ptr) {
     if (index >= static_cast<ssize_t>(state.size())) {
         return;
     }
+
+    // We've already been reset so nothing to do
+    if (!state[index]) return;
 
     // Otherwise, reset our own state and then all of our successors
     state[index].reset();
@@ -382,6 +392,62 @@ void Node::initialize_state(State& state) const {
 
     state[topological_index_] = std::make_unique<NodeStateData>();
 }
+
+// We try to avoid needing to override this method in every class by doing
+// some compiler-specific stuff.
+std::string Node::classname() const {
+    // get the compiler-specific name
+    const char* compiler_name = typeid(*this).name();
+
+#if defined(_HAS_CXXABI)
+    // if cxxabi.h is available, we can demangle
+    std::string name;
+
+    // __cxa_demangle requires us to manage the lifespan of the returned pointer
+    // so we do this a bit carefully
+    {
+        int status = 0;
+        std::size_t size = 0;
+        char* demangled = abi::__cxa_demangle(compiler_name, NULL, &size, &status);
+        assert(status == 0);  // these are type names so this should always work
+        if (demangled != nullptr) {
+            name = std::string(demangled);
+            free(demangled);
+        } else {
+            // if the status assert above passed we should never get here, but just in case
+            name = std::string(compiler_name);
+        }
+    }
+#else
+    // otherwise just use the compiler name as-is.
+    std::string name(compiler_name);
+#endif
+
+    // try to strip dwave::optimization:: from the beginning if it's there
+    static const std::string namespace_name = "dwave::optimization::";
+    if (const auto found = name.find(namespace_name); found != std::string::npos) {
+        name.replace(found, namespace_name.size(), "");
+    }
+
+    return name;
+}
+
+std::string Node::repr() const {
+    std::ostringstream oss;  // we use this for os-specific pointer formatting
+
+    // by default we do a Python-style repr print
+    oss << "<" << classname() << " at " << this;
+
+    // if we're topologically sorted, we print that too
+    if (topological_index_ >= 0) oss << ", topological_index=" << topological_index_;
+
+    oss << ">";
+    return oss.str();
+}
+
+std::string Node::str() const { return classname(); }
+
+std::ostream& operator<<(std::ostream& os, const Node& node) { return os << node.repr(); }
 
 // DecisionNode ***************************************************************
 

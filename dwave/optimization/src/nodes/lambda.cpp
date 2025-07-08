@@ -180,7 +180,7 @@ AccumulateZipNode::AccumulateZipNode(std::shared_ptr<Graph> expression_ptr,
 }
 
 double const* AccumulateZipNode::buff(const State& state) const {
-    return data_ptr<AccumulateZipNodeData>(state)->buffer.data();
+    return data_ptr<AccumulateZipNodeData>(state)->buff();
 }
 
 void AccumulateZipNode::commit(State& state) const { data_ptr<AccumulateZipNodeData>(state)->commit(); }
