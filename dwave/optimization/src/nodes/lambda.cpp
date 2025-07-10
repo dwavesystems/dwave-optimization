@@ -60,6 +60,8 @@ double const* AccumulateZipNode::buff(const State& state) const {
 
 void AccumulateZipNode::check(Graph& expression, std::span<const ArrayNode* const> operands,
                               array_or_double initial) {
+    Array::cache_type<std::pair<double, double>> minmax_cache;  // we'll be doing a lot of checks
+
     // First, let's check that the expression is valid
     {
         if (!expression.topologically_sorted()) {
@@ -102,6 +104,15 @@ void AccumulateZipNode::check(Graph& expression, std::span<const ArrayNode* cons
         }
     }
 
+    // Check the shape of the initial value
+    if (std::holds_alternative<ArrayNode*>(initial)) {
+        ArrayNode* initial_node = std::get<ArrayNode*>(initial);
+        if (initial_node->ndim() != 0) {
+            throw std::invalid_argument(
+                    "when using a node for the initial value, it must have scalar output");
+        }
+    }
+
     // Now we need to check whether the expression is consistent with the operands
     // and the operands are consistent with eachother
     {
@@ -127,11 +138,16 @@ void AccumulateZipNode::check(Graph& expression, std::span<const ArrayNode* cons
         // Make sure the min/max are consistent
         auto operand_inputs = expression.inputs().subspan(1);
         for (ssize_t op_idx = 0, stop = operands.size(); op_idx < stop; ++op_idx) {
-            if (operands[op_idx]->min() < operand_inputs[op_idx]->min()) {
+            // make sure the values provided by the array don't exceed the values allowed by
+            // the expression
+            const auto [outmin, outmax] = operands[op_idx]->minmax(minmax_cache);
+            const auto [inmin, inmax] = operand_inputs[op_idx]->minmax(minmax_cache);
+
+            if (outmin < inmin) {
                 throw std::invalid_argument(std::string("the ") + std::to_string(op_idx) +
                                             "th operand has minimum smaller than the corresponding "
                                             "input in the expression");
-            } else if (operands[op_idx]->max() > operand_inputs[op_idx]->max()) {
+            } else if (outmax > inmax) {
                 throw std::invalid_argument(std::string("the ") + std::to_string(op_idx) +
                                             "th operand has maximum larger than the corresponding "
                                             "input in the expression");
@@ -142,25 +158,38 @@ void AccumulateZipNode::check(Graph& expression, std::span<const ArrayNode* cons
             }
         }
 
-        auto accumulate_input = expression.inputs()[0];
-        if (accumulate_input->integral() && !expression.objective()->integral()) {
+        const auto [expmin, expmax] = expression.objective()->minmax(minmax_cache);
+        const auto [accmin, accmax] = expression.inputs()[0]->minmax(minmax_cache);
+        if (expression.inputs()[0]->integral() && !expression.objective()->integral()) {
             throw std::invalid_argument(
-                    "if expression output can be non-integral, last input must not be integral");
-        } else if (expression.objective()->min() < accumulate_input->min()) {
+                    "if expression output can be non-integral, first input must not be integral");
+        } else if (expmin < accmin) {
             throw std::invalid_argument(
-                    "expression output must not have a lower min than the last input");
-        } else if (expression.objective()->max() > accumulate_input->max()) {
+                    "expression output must not have a lower min than the first input");
+        } else if (expmax > accmax) {
             throw std::invalid_argument(
-                    "expression output must not have a higher max than the last input");
+                    "expression output must not have a higher max than the first input");
         }
-    }
 
-    // Finally check the input
-    if (std::holds_alternative<ArrayNode*>(initial)) {
-        ArrayNode* initial_node = std::get<ArrayNode*>(initial);
-        if (initial_node->ndim() != 0) {
-            throw std::invalid_argument(
-                    "when using a node for the initial value, it must have scalar output");
+        if (std::holds_alternative<ArrayNode*>(initial)) {
+            const auto [initmin, initmax] = std::get<ArrayNode*>(initial)->minmax(minmax_cache);
+            if (initmin < accmin) {
+                throw std::invalid_argument(
+                        "initial value must not have a lower min than the first input");
+            }
+            if (initmax > accmax) {
+                throw std::invalid_argument(
+                        "initial value must not have a higher max than the first input");
+            }
+        } else {
+            assert(std::holds_alternative<double>(initial));
+            if (std::get<double>(initial) < accmin) {
+                throw std::invalid_argument("initial value must not be lower than the first input");
+            }
+            if (std::get<double>(initial) > accmax) {
+                throw std::invalid_argument(
+                        "initial value must not be greater than the first input");
+            }
         }
     }
 }
