@@ -39,7 +39,12 @@ TEST_CASE("Array::View") {
     static_assert(std::ranges::random_access_range<Array::View>);
     static_assert(std::ranges::range<Array::View>);
     static_assert(std::ranges::sized_range<Array::View>);
-    static_assert(std::is_trivially_copyable<Array::View>::value);
+    static_assert(std::ranges::input_range<Array::View>);
+
+    // What we want is std::ranges::constant_range<...> but that's a c++23 feature,
+    // so we make due. This test actually might fail if say we didn't retern a reference
+    // but it's good enough for now
+    static_assert(std::is_const_v<std::remove_reference_t<decltype(Array::View()[0])>>);
 
     // Because non-empty Views are so tied to Arrays, we do most of the
     // testing in the Array tests. But we can test the empty ones here

@@ -771,58 +771,39 @@ class Array {
     ///
     /// Satisfies the requirements for std::ranges::random_access_range and
     /// std::ranges::sized_range.
-    class View {
+    class View : public std::ranges::view_interface<View> {
         // This models most, but not all, of the Container named requirements.
         // Some of the methods, like operator==(), are not modelled because it's
         // not obvious what the value to the user would be. If we ever need them
         // they are easy to add.
      public:
-        /// A std::random_access_iterator over the values.
-        using iterator = BufferIterator<double, double, false>;
-        /// A std::random_access_iterator over the values.
-        using const_iterator = BufferIterator<double, double, true>;
-
         /// Create an empty view.
         View() = default;
 
         /// Create a view from an Array and a State.
         View(const Array* array_ptr, const State* state_ptr)
-                : array_ptr_(array_ptr), state_ptr_(state_ptr) {
-            assert(array_ptr && "array_ptr must not be nullptr");
-            assert(state_ptr && "state_ptr must not be nullptr");
+                : begin_(array_ptr->begin(*state_ptr)), end_(array_ptr->end(*state_ptr)) {}
+
+        /// Return the value at ``n``, raising an error if ``n`` is out of bounds.
+        decltype(auto) at(ssize_t n) const {
+            const auto size = end_ - begin_;
+            if (n < 0 || n >= size) {
+                throw std::out_of_range(std::string("index ") + std::to_string(n) +
+                                        std::string(" out of range for an Array of size ") +
+                                        std::to_string(size));
+            }
+            return *(begin_ + n);
         }
 
-        /// Return a reference to the element at location `n`.
-        double operator[](ssize_t n) const;
+        /// An iterator to the beginning of the range.
+        auto begin() const { return begin_; }
 
-        /// Return a reference to the element at location `n`.
-        ///
-        /// This function checks whether `n` is within bounds and throws a
-        /// std::out_of_range exception if it is not.
-        double at(ssize_t n) const;
-
-        /// Return a reference to the last element of the view.
-        double back() const;
-
-        /// Return an iterator to the beginning of the view.
-        const_iterator begin() const;
-
-        /// Test whether the view is empty.
-        bool empty() const;
-
-        /// Return an iterator to the end of the view.
-        const_iterator end() const;
-
-        /// Return a reference to the first element of the view.
-        double front() const;
-
-        /// Return the number of elements in the view.
-        ssize_t size() const;
+        /// An iterator to the end of the range.
+        auto end() const { return end_; }
 
      private:
-        // non-owning pointers to Array and State.
-        const Array* array_ptr_;
-        const State* state_ptr_;
+        BufferIterator<double, double, true> begin_;
+        BufferIterator<double, double, true> end_;
     };
 
     /// Constant used to signal that the size is based on the state.
