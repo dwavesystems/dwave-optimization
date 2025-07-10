@@ -261,6 +261,26 @@ TEST_CASE("AccumulateZipNode") {
             expression.topological_sort();
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
+
+        THEN("We can't create a AccumulateZipNode with an initial value larger than allowed by the "
+             "first input") {
+            auto expression = std::make_shared<Graph>();
+            std::vector<InputNode*> inputs = {
+                    expression->emplace_node<InputNode>(std::vector<ssize_t>{}, -10, 10, false),
+                    expression->emplace_node<InputNode>(std::vector<ssize_t>{}, -10, 10, false),
+            };
+            expression->set_objective(inputs[0]);
+            expression->topological_sort();
+
+            CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(expression, args, -11.0));
+            CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(expression, args, +11.0));
+            CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(
+                    expression, args,
+                    graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -11, 10)));
+            CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(
+                    expression, args,
+                    graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -10, 11)));
+        }
     }
 
     GIVEN("An integral constant node") {

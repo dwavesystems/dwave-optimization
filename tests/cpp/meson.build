@@ -28,6 +28,7 @@ tests_all = executable(
         'test_array.cpp',
         'test_graph.cpp',
         'test_simplex.cpp',
+        'test_type_list.cpp',
         'test_utils.cpp',
     ],
     dependencies: [

@@ -22,6 +22,7 @@
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/mathematical.hpp"
+#include "dwave-optimization/type_list.hpp"
 
 namespace dwave::optimization {
 
@@ -39,6 +40,10 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
     // Initial value can either be a double or another node
     using array_or_double = std::variant<ArrayNode*, double>;
 
+    /// The node types that are allowed to be used in the expression.
+    using supported_node_types = type_list<AddNode, ConstantNode, InputNode, MaximumNode,
+                                           MultiplyNode, NegativeNode, SubtractNode>;
+
     AccumulateZipNode(std::shared_ptr<Graph> expression_ptr, const std::vector<ArrayNode*>& operands,
                    array_or_double initial);
 
@@ -52,6 +57,10 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
+
+    /// Do a "dry run" of the constructor and raise any errors that constructor would
+    /// raise.
+    static void check(Graph& expression, std::span<const ArrayNode* const> operands, array_or_double initial);
 
     /// @copydoc Node::commit()
     void commit(State& state) const override;
@@ -97,15 +106,6 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
 
     std::shared_ptr<Graph> expression_ptr_;
     const std::vector<ArrayNode*> operands_;
-    const ArrayNode* output_;
 };
-
-void validate_expression(const Graph& expression);
-
-void validate_accumulatezip_arguments(const Graph& expression, const std::vector<ArrayNode*> operands);
-
-using AccumulateZipSupportedNodes =
-        std::variant<const InputNode*, const ConstantNode*, const MaximumNode*, const NegativeNode*,
-                     const AddNode*, const SubtractNode*, const MultiplyNode*>;
 
 }  // namespace dwave::optimization

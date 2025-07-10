@@ -36,143 +36,18 @@ class AccumulateZipNodeData : public ArrayNodeStateData {
     State register_;
 };
 
-// Returns whether the node pointer can be cast to one of the types in the supplied variant
-template <class V, std::size_t type_index = 0>
-bool variant_supports(const ArrayNode* node_ptr) {
-    if constexpr (type_index < std::variant_size_v<V>) {
-        if (dynamic_cast<std::variant_alternative_t<type_index, V>>(node_ptr)) {
-            return true;
-        }
-        return variant_supports<V, type_index + 1>(node_ptr);
-    }
-    return false;
-}
-
-void validate_expression(const Graph& expression) {
-    if (!expression.topologically_sorted()) {
-        throw std::invalid_argument("Expression must be topologically sorted");
-    }
-
-    if (!expression.objective()) {
-        throw std::invalid_argument(
-                R"({"message": "expression must have output (objective) set"})");
-    }
-
-    if (expression.num_decisions()) {
-        // At least one decision, so the first node must be a decision
-        throw std::invalid_argument(
-                R"({"message": "Expression should not have any decision variables", "node_ptr": )" +
-                std::to_string((uintptr_t)(void*)expression.nodes()[0].get()) + "}");
-    }
-
-    for (const auto& node_ptr : expression.nodes()) {
-        const ArrayNode* array_node = dynamic_cast<const ArrayNode*>(node_ptr.get());
-        if (!array_node) {
-            throw std::invalid_argument(
-                    R"({"message": "Expression should contain only array nodes", "node_ptr": )" +
-                    std::to_string((uintptr_t)(void*)node_ptr.get()) + "}");
-        }
-
-        if (!variant_supports<AccumulateZipSupportedNodes>(array_node)) {
-            throw std::invalid_argument(
-                    R"({"message": "Expression contains unsupported node", "node_ptr": )" +
-                    std::to_string((uintptr_t)(void*)node_ptr.get()) + "}");
-        }
-
-        if (array_node->ndim() != 0) {
-            throw std::invalid_argument(
-                    R"({"message": "Expression should only contain scalars", "node_ptr": )" +
-                    std::to_string((uintptr_t)(void*)node_ptr.get()) + "}");
-        }
-    }
-}
-
-std::shared_ptr<Graph> _validate_expression(std::shared_ptr<Graph>&& expression) {
-    validate_expression(*expression);
-    return std::move(expression);
-}
-
-auto get_operands_shape(const Graph& expression, std::span<ArrayNode* const> operands) {
-    if (operands.size() == 0) {
-        throw std::invalid_argument("Must have at least one operand");
-    }
-
-    if (static_cast<ssize_t>(operands.size()) + 1 != expression.num_inputs()) {
-        throw std::invalid_argument("Expression must have one more inputs than operands");
-    }
-
-    std::vector<const Array*> array_ops;
-    for (const ArrayNode* op : operands) {
-        array_ops.push_back(op);
-    }
-
-    if (!array_shape_equal(array_ops)) {
-        throw std::invalid_argument("All operands must have the same shape");
-    }
-
-    return operands[0]->shape();
-}
-
-void validate_accumulatezip_arguments(const Graph& expression,
-                                   const std::vector<ArrayNode*> operands) {
-    auto output = expression.objective();
-
-    auto operand_inputs = expression.inputs().subspan(1);
-
-    assert(operand_inputs.size() == operands.size());
-
-    for (ssize_t op_idx = 0; op_idx < static_cast<ssize_t>(operands.size()); op_idx++) {
-        if (operands[op_idx]->min() < operand_inputs[op_idx]->min()) {
-            throw std::invalid_argument(
-                    R"({"message": "operand with index )" + std::to_string(op_idx) +
-                    R"( has minimum smaller than corresponding input in expression"})");
-        } else if (operands[op_idx]->max() > operand_inputs[op_idx]->max()) {
-            throw std::invalid_argument(
-                    R"({"message": "operand with index )" + std::to_string(op_idx) +
-                    R"( has maximum larger than corresponding input in expression"})");
-        } else if (operand_inputs[op_idx]->integral() && !operands[op_idx]->integral()) {
-            throw std::invalid_argument(
-                    R"({"message": "operand with index )" + std::to_string(op_idx) +
-                    R"( is non-integral, but corresponding input is integral"})");
-        }
-    }
-
-    auto accumulate_input = expression.inputs()[0];
-
-    if (accumulate_input->integral() && !output->integral()) {
-        throw std::invalid_argument(
-                R"({"message": "if expression output can be non-integral, last input must not be integral"})");
-        ;
-    } else if (output->min() < accumulate_input->min()) {
-        throw std::invalid_argument(
-                R"({"message": "expression output must not have a lower min than the last input"})");
-    } else if (output->max() > accumulate_input->max()) {
-        throw std::invalid_argument(
-                R"({"message": "expression output must not have a higher max than the last input"})");
-    }
-}
-
-std::shared_ptr<Graph> _validate_accumulatezip_arguments(std::shared_ptr<Graph>&& expression,
-                                                      const std::vector<ArrayNode*> operands) {
-    validate_accumulatezip_arguments(*expression, operands);
-    return std::move(expression);
-}
-
 AccumulateZipNode::AccumulateZipNode(std::shared_ptr<Graph> expression_ptr,
-                               const std::vector<ArrayNode*>& operands, array_or_double initial)
-        : ArrayOutputMixin(get_operands_shape(*expression_ptr, operands)),
+                                     const std::vector<ArrayNode*>& operands,
+                                     array_or_double initial)
+        : ArrayOutputMixin(operands.empty() ? std::span<ssize_t, 0>() : operands[0]->shape()),
           initial(initial),
-          expression_ptr_(_validate_accumulatezip_arguments(
-                  _validate_expression(std::move(expression_ptr)), operands)),
-          operands_(operands),
-          output_(expression_ptr_->objective()) {
+          expression_ptr_(std::move(expression_ptr)),
+          operands_(operands) {
+    check(*expression_ptr_, operands, initial);
+
     if (std::holds_alternative<ArrayNode*>(initial)) {
-        ArrayNode* initial_node = std::get<ArrayNode*>(initial);
-        if (initial_node->ndim() != 0) {
-            throw std::invalid_argument(
-                    "when using a node for the initial value, it must have scalar output");
-        }
-        add_predecessor(initial_node);
+        // was checked in check() method
+        add_predecessor(std::get<ArrayNode*>(initial));
     }
     for (const auto& op : operands_) {
         add_predecessor(op);
@@ -180,7 +55,143 @@ AccumulateZipNode::AccumulateZipNode(std::shared_ptr<Graph> expression_ptr,
 }
 
 double const* AccumulateZipNode::buff(const State& state) const {
-    return data_ptr<AccumulateZipNodeData>(state)->buffer.data();
+    return data_ptr<AccumulateZipNodeData>(state)->buff();
+}
+
+void AccumulateZipNode::check(Graph& expression, std::span<const ArrayNode* const> operands,
+                              array_or_double initial) {
+    Array::cache_type<std::pair<double, double>> minmax_cache;  // we'll be doing a lot of checks
+
+    // First, let's check that the expression is valid
+    {
+        if (!expression.topologically_sorted()) {
+            throw std::invalid_argument("expression must be topologically sorted");
+        }
+
+        if (!expression.objective()) {
+            throw std::invalid_argument("expression must have an objective set");
+        }
+
+        if (expression.num_decisions()) {
+            throw std::invalid_argument("expression must not have any decisions");
+        }
+
+        if (expression.num_inputs() < 2) {
+            throw std::invalid_argument("expression must have at least two inputs");
+        }
+
+        for (const auto& node_uptr : expression.nodes()) {
+            const Node* const node_ptr = node_uptr.get();
+            const ArrayNode* const array_ptr = dynamic_cast<const ArrayNode*>(node_uptr.get());
+
+            if (!array_ptr) {
+                throw std::invalid_argument(
+                        std::string("expression must contain only array nodes, ") +
+                        node_ptr->repr() + " is not supported");
+            }
+
+            if (!supported_node_types::add_const::add_pointer::check(node_ptr)) {
+                throw std::invalid_argument(
+                        std::string("expression contains an unsupported node type, ") +
+                        node_ptr->repr() + " is not supported");
+            }
+
+            if (array_ptr->ndim() != 0) {
+                throw std::invalid_argument(
+                        std::string("expression nodes should all be scalars, ") + node_ptr->repr() +
+                        " is " + std::to_string(array_ptr->ndim()) + " dimensional");
+            }
+        }
+    }
+
+    // Check the shape of the initial value
+    if (std::holds_alternative<ArrayNode*>(initial)) {
+        ArrayNode* initial_node = std::get<ArrayNode*>(initial);
+        if (initial_node->ndim() != 0) {
+            throw std::invalid_argument(
+                    "when using a node for the initial value, it must have scalar output");
+        }
+    }
+
+    // Now we need to check whether the expression is consistent with the operands
+    // and the operands are consistent with eachother
+    {
+        if (operands.empty()) {
+            throw std::invalid_argument("must have at least one operands");
+        }
+
+        if (static_cast<ssize_t>(operands.size()) + 1 != expression.num_inputs()) {
+            throw std::invalid_argument(
+                    std::string("expression must have one more input than operands, ") +
+                    "expression.num_inputs()=" + std::to_string(expression.num_inputs()) +
+                    ", operands.size()=" + std::to_string(operands.size()));
+        }
+
+        // For array_shape_equal we need Array*, not ArrayNode* so we do a copy.
+        // In the future we should consider another overload
+        std::vector<const Array*> array_operands;
+        for (const ArrayNode* op : operands) array_operands.emplace_back(op);
+        if (!array_shape_equal(array_operands)) {
+            throw std::invalid_argument("all operands must have the same shape");
+        }
+
+        // Make sure the min/max are consistent
+        auto operand_inputs = expression.inputs().subspan(1);
+        for (ssize_t op_idx = 0, stop = operands.size(); op_idx < stop; ++op_idx) {
+            // make sure the values provided by the array don't exceed the values allowed by
+            // the expression
+            const auto [outmin, outmax] = operands[op_idx]->minmax(minmax_cache);
+            const auto [inmin, inmax] = operand_inputs[op_idx]->minmax(minmax_cache);
+
+            if (outmin < inmin) {
+                throw std::invalid_argument(std::string("the ") + std::to_string(op_idx) +
+                                            "th operand has minimum smaller than the corresponding "
+                                            "input in the expression");
+            } else if (outmax > inmax) {
+                throw std::invalid_argument(std::string("the ") + std::to_string(op_idx) +
+                                            "th operand has maximum larger than the corresponding "
+                                            "input in the expression");
+            } else if (operand_inputs[op_idx]->integral() && !operands[op_idx]->integral()) {
+                throw std::invalid_argument(
+                        std::string("the ") + std::to_string(op_idx) +
+                        "th operand is not integral, but the corresponding input is integral");
+            }
+        }
+
+        const auto [expmin, expmax] = expression.objective()->minmax(minmax_cache);
+        const auto [accmin, accmax] = expression.inputs()[0]->minmax(minmax_cache);
+        if (expression.inputs()[0]->integral() && !expression.objective()->integral()) {
+            throw std::invalid_argument(
+                    "if expression output can be non-integral, first input must not be integral");
+        } else if (expmin < accmin) {
+            throw std::invalid_argument(
+                    "expression output must not have a lower min than the first input");
+        } else if (expmax > accmax) {
+            throw std::invalid_argument(
+                    "expression output must not have a higher max than the first input");
+        }
+
+        if (std::holds_alternative<ArrayNode*>(initial)) {
+            const auto [initmin, initmax] = std::get<ArrayNode*>(initial)->minmax(minmax_cache);
+            if (initmin < accmin) {
+                throw std::invalid_argument(
+                        "initial value must not have a lower min than the first input");
+            }
+            if (initmax > accmax) {
+                throw std::invalid_argument(
+                        "initial value must not have a higher max than the first input");
+            }
+        } else {
+            assert(std::holds_alternative<double>(initial));
+            if (std::get<double>(initial) < accmin) {
+                throw std::invalid_argument("initial value must not be lower than the first input");
+            }
+            if (std::get<double>(initial) > accmax) {
+                throw std::invalid_argument(
+                        "initial value must not be greater than the first input");
+            }
+        }
+    }
 }
 
 void AccumulateZipNode::commit(State& state) const { data_ptr<AccumulateZipNodeData>(state)->commit(); }
@@ -198,7 +209,7 @@ double AccumulateZipNode::evaluate_expression(State& register_) const {
     for (const auto& node_ptr : expression_ptr_->nodes()) {
         node_ptr->commit(register_);
     }
-    return output_->view(register_)[0];
+    return expression_ptr_->objective()->view(register_)[0];
 }
 
 double AccumulateZipNode::get_initial_value(const State& state) const {
@@ -255,11 +266,14 @@ void AccumulateZipNode::initialize_state(State& state) const {
                                                            std::move(reg));
 }
 
-bool AccumulateZipNode::integral() const { return output_->integral(); }
+bool AccumulateZipNode::integral() const { return expression_ptr_->objective()->integral(); }
 
 std::pair<double, double> AccumulateZipNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() { return std::make_pair(output_->min(), output_->max()); });
+    return memoize(cache, [&]() {
+        return std::make_pair(expression_ptr_->objective()->min(),
+                              expression_ptr_->objective()->max());
+    });
 }
 
 std::span<const InputNode* const> AccumulateZipNode::operand_inputs() const {

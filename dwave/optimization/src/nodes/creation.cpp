@@ -283,30 +283,29 @@ void ARangeNode::propagate(State& state) const {
     const ssize_t step = step_old;
     assert(step == step_new);
 
-    const auto& buffer = ptr->buffer;  // readonly for our purposes
-    assert(buffer.size() >= 1);
+    assert(ptr->size() >= 1);
 
     if (step > 0) {
         if (stop_old < stop_new) {
             // we grew
-            for (const double& val : arange(buffer.back() + step, stop_new, step)) {
+            for (const double& val : arange(ptr->back() + step, stop_new, step)) {
                 ptr->emplace_back(val);
             }
         } else {
             // we shrank
-            while (buffer.size() && buffer.back() >= stop_new) {
+            while (ptr->size() && ptr->back() >= stop_new) {
                 ptr->pop_back();
             }
         }
     } else if (step < 0) {
         if (stop_old < stop_new) {
             // we shrank
-            while (buffer.size() && buffer.back() <= stop_new) {
+            while (ptr->size() && ptr->back() <= stop_new) {
                 ptr->pop_back();
             }
         } else {
             // we grew
-            for (const double& val : arange(buffer.back() + step, stop_new, step)) {
+            for (const double& val : arange(ptr->back() + step, stop_new, step)) {
                 ptr->emplace_back(val);
             }
         }
