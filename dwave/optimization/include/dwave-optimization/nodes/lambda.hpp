@@ -60,7 +60,7 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
 
     /// Do a "dry run" of the constructor and raise any errors that constructor would
     /// raise.
-    static void check(Graph& expression, std::span<const ArrayNode* const> operands, array_or_double initial);
+    static void check(const Graph& expression, std::span<const ArrayNode* const> operands, array_or_double initial);
 
     /// @copydoc Node::commit()
     void commit(State& state) const override;

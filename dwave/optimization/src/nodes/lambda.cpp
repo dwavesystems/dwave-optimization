@@ -58,7 +58,7 @@ double const* AccumulateZipNode::buff(const State& state) const {
     return data_ptr<AccumulateZipNodeData>(state)->buff();
 }
 
-void AccumulateZipNode::check(Graph& expression, std::span<const ArrayNode* const> operands,
+void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode* const> operands,
                               array_or_double initial) {
     Array::cache_type<std::pair<double, double>> minmax_cache;  // we'll be doing a lot of checks
 
