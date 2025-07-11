@@ -767,44 +767,7 @@ class Array {
     template<class T>
     using optional_cache_type = std::optional<std::reference_wrapper<cache_type<T>>>;
 
-    /// Container-like access to the Array's values as a flat array.
-    ///
-    /// Satisfies the requirements for std::ranges::random_access_range and
-    /// std::ranges::sized_range.
-    class View : public std::ranges::view_interface<View> {
-        // This models most, but not all, of the Container named requirements.
-        // Some of the methods, like operator==(), are not modelled because it's
-        // not obvious what the value to the user would be. If we ever need them
-        // they are easy to add.
-     public:
-        /// Create an empty view.
-        View() = default;
-
-        /// Create a view from an Array and a State.
-        View(const Array* array_ptr, const State* state_ptr)
-                : begin_(array_ptr->begin(*state_ptr)), end_(array_ptr->end(*state_ptr)) {}
-
-        /// Return the value at ``n``, raising an error if ``n`` is out of bounds.
-        decltype(auto) at(ssize_t n) const {
-            const auto size = end_ - begin_;
-            if (n < 0 || n >= size) {
-                throw std::out_of_range(std::string("index ") + std::to_string(n) +
-                                        std::string(" out of range for an Array of size ") +
-                                        std::to_string(size));
-            }
-            return *(begin_ + n);
-        }
-
-        /// An iterator to the beginning of the range.
-        auto begin() const { return begin_; }
-
-        /// An iterator to the end of the range.
-        auto end() const { return end_; }
-
-     private:
-        BufferIterator<double, double, true> begin_;
-        BufferIterator<double, double, true> end_;
-    };
+    using View = std::ranges::subrange<const_iterator>;
 
     /// Constant used to signal that the size is based on the state.
     static constexpr ssize_t DYNAMIC_SIZE = -1;
@@ -871,7 +834,7 @@ class Array {
     const_iterator end(const State& state) const { return this->begin(state) + this->size(state); }
 
     /// Return a container-like view over the array.
-    const View view(const State& state) const { return View(this, &state); }
+    const View view(const State& state) const { return View(begin(state), end(state)); }
 
     /// The number of doubles in the flattened array.
     virtual ssize_t size() const = 0;

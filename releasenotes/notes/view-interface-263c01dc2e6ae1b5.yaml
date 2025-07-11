@@ -1,0 +1,3 @@
+---
+upgrade:
+  - Remove C++ ``Array::View::at()`` method.
