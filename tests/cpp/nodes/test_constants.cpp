@@ -129,6 +129,42 @@ TEST_CASE("ConstantNode") {
             }
         }
     }
+
+    GIVEN("Some values and constant node using them") {
+        std::vector<double> values = {30, 10, 40, 20, 50};  // deliberately too large
+        const double* data_ptr = values.data();
+        auto ptr = graph.emplace_node<ConstantNode>(data_ptr, std::initializer_list<ssize_t>{2, 2});
+
+        THEN("Emplacing the same values and shape returns the previous node due to interning") {
+            auto new_ptr = graph.emplace_node<ConstantNode>(data_ptr,
+                                                            std::initializer_list<ssize_t>{2, 2});
+            CHECK(ptr == new_ptr);
+        }
+
+        THEN("Emplacing the same values and but a different shape returns a new node") {
+            auto new_ptr = graph.emplace_node<ConstantNode>(data_ptr,
+                                                            std::initializer_list<ssize_t>{1, 4});
+            CHECK(ptr != new_ptr);
+        }
+    }
+
+    GIVEN("A scalar constant of value 0") {
+        double zero = 0.0;
+        const double* data_ptr = &zero;
+        auto ptr0 = graph.emplace_node<ConstantNode>(data_ptr, std::initializer_list<ssize_t>{});
+
+        THEN("Emplacing the scalar again returns the same pointer") {
+            auto new_ptr =
+                    graph.emplace_node<ConstantNode>(data_ptr, std::initializer_list<ssize_t>{});
+            CHECK(ptr0 == new_ptr);
+        }
+
+        THEN("Emplacing a length zero 1d constant does not return the same pointer") {
+            auto new_ptr =
+                    graph.emplace_node<ConstantNode>(data_ptr, std::initializer_list<ssize_t>{0});
+            CHECK(ptr0 != new_ptr);
+        }
+    }
 }
 
 }  // namespace dwave::optimization

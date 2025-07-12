@@ -18,6 +18,8 @@ project(
     ).stdout(),
 )
 
+xxhash = subproject('xxhash').get_variable('xxhash_dep')
+
 # We want some debugging symbols
 add_project_arguments(['-g1'], language: ['cpp'])
 
@@ -48,6 +50,7 @@ if host_machine.system() == 'windows'
     # Shared libraries don't work so well on windows, so we build from a static
     # library instead
     libdwave_optimization = declare_dependency(
+        dependencies: xxhash,
         link_with: static_library(
             'dwave-optimization',
             sources: dwave_optimization_src,
@@ -60,12 +63,14 @@ else
     libdwave_optimization = declare_dependency(
         link_with: shared_library(
             'dwave-optimization',
+            dependencies: xxhash,
             sources: dwave_optimization_src,
             include_directories: dwave_optimization_include,
             install: true,
             install_dir: py.get_install_dir(pure: false) / 'dwave/optimization/',
         ),
-        include_directories: dwave_optimization_include
+        include_directories: dwave_optimization_include,
+        dependencies: xxhash,
     )
 endif
 

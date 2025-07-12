@@ -29,6 +29,7 @@
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/state.hpp"
 #include "dwave-optimization/utils.hpp"
+#include "xxhash.h"
 
 namespace dwave::optimization {
 
@@ -36,6 +37,7 @@ class ArrayNode;
 class Node;
 class DecisionNode;
 class InputNode;
+class ConstantNode;
 
 // A decision is an independent variable in the model. The value(s) to be optimized.
 struct Decision {};
@@ -57,6 +59,11 @@ class Graph {
 
     template <class NodeType, class... Args>
     NodeType* emplace_node(Args&&... args);
+
+    // Special implementation for ConstantNode which does interning
+    template <class NodeType, typename ShapeType>
+    NodeType* emplace_node(const double* data_ptr,
+                           ShapeType shape) requires std::same_as<NodeType, ConstantNode>;
 
     State initialize_state() const;
     State initialize_state();  // topologically sorts first
@@ -172,6 +179,15 @@ class Graph {
     static void visit_(Node* n_ptr, int* count_ptr);
 
     std::vector<std::unique_ptr<Node>> nodes_;
+
+    // Each interned constant takes ~66 bytes to store in this table (using GCC 13).
+    // Limiting this to 100k items means that the maximum memory usage is ~0.65MB
+    // which seems reasonable.
+    static const ssize_t MAX_INTERNED_CONSTANTS_COUNT_ = 100000;
+    struct IdentityHash {
+        size_t operator()(const XXH64_hash_t& key) const { return key; }
+    };
+    std::unordered_map<XXH64_hash_t, ConstantNode*, IdentityHash> interned_constants_;
 
     // The nodes with important semantic meanings to the model.
     // All of these pointers are non-owning!
@@ -354,6 +370,58 @@ NodeType* Graph::emplace_node(Args&&... args) {
         decisions_.emplace_back(ptr);
     } else if constexpr (std::is_base_of_v<InputNode, NodeType>) {
         inputs_.emplace_back(ptr);
+    }
+
+    return ptr;  // return the observing pointer
+}
+
+template <class NodeType, typename ShapeType>
+NodeType* Graph::emplace_node(const double* data_ptr,
+                              ShapeType shape) requires std::same_as<NodeType, ConstantNode> {
+    if (topologically_sorted_) {
+        // "locked" is a python concept, but we use it rather than "topologically sorted"
+        // to avoid a lot of fiddling with error handling.
+        throw std::logic_error("cannot add a symbol to a locked model");
+    }
+
+    // Get the hash value of the data and the shape
+    XXH64_hash_t hash = ({
+        XXH3_state_t* state = XXH3_createState();
+        if (state == nullptr) throw std::bad_alloc();
+
+        XXH3_64bits_reset(state);
+
+        // Calculate the size and hash the shape
+        ssize_t size = 1;
+        for (const ssize_t& dim : shape) {
+            size *= dim;
+            XXH3_64bits_update(state, &dim, sizeof(ssize_t));
+        }
+        // Need a separator to disambiguate e.g. hash([], [0]) from hash([0], [])
+        XXH3_64bits_update(state, "|", sizeof("|"));
+        // Hash the data
+        XXH3_64bits_update(state, data_ptr, size * sizeof(double));
+
+        XXH3_64bits_digest(state);
+    });
+
+    // If we've already interned a constant node with this value, we can return it instead
+    if (interned_constants_.contains(hash)) {
+        return interned_constants_[hash];
+    }
+
+    // Create and add a constant node to the graph as normal
+
+    // Construct via make_unique so we can allow the constructor to throw
+    auto uptr = std::make_unique<NodeType>(data_ptr, shape);
+    NodeType* ptr = uptr.get();
+
+    // Pass ownership of the lifespan to nodes_
+    nodes_.emplace_back(std::move(uptr));
+
+    // Intern this constant if we haven't reach the limit
+    if (interned_constants_.size() < MAX_INTERNED_CONSTANTS_COUNT_) {
+        interned_constants_[hash] = ptr;
     }
 
     return ptr;  // return the observing pointer
