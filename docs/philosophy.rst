@@ -180,3 +180,33 @@ With *dwave-optimization* the dot-product example can be expressed as
     b = model.constant([...])
 
     value = (a * b).sum()
+
+.. _optimization_philosophy_tensor_programming_dynamic:
+
+Dynamically Sized Arrays
+------------------------
+
+*dwave-optimization* does differ significantly from NumPy is one significant
+way: it allows arrays to be *dynamic*. Dynamic arrays are arrays with a
+state-dependent size.
+
+For example, consider a set variable
+(as constructed by :meth:`~dwave.optimization.model.Model.set`).
+The domain of the set variable are any subsets of :math:`[0, n)`.
+This means that the set variable's size is the size of the subset.
+
+A dynamic array symbol will have a ``-1`` as the size of the first dimension.
+
+>>> model = dwave.optimization.Model()
+>>> s = model.set(10)
+>>> s.shape()
+(-1,)
+
+Operations on dynamic array symbols will create new dynamic array symbols
+
+>>> model = dwave.optimization.Model()
+>>> s = model.set(10)
+>>> two = model.constant(2)
+>>> two_s = s * two
+>>> two_s.shape()
+(-1,)

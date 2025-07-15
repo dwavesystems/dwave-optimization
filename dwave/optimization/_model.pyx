@@ -1738,6 +1738,9 @@ cdef class ArraySymbol(Symbol):
     def shape(self):
         """Return the shape of the symbol.
 
+        A :ref:`dynamic <optimization_philosophy_tensor_programming_dynamic>`
+        array symbol will return a ``-1`` in the first dimension.
+
         Examples:
             This example returns the shape of a newly instantiated symbol.
 
@@ -1746,8 +1749,10 @@ cdef class ArraySymbol(Symbol):
             >>> x = model.binary(20)
             >>> x.shape()
             (20,)
+            >>> s = model.set(20)
+            >>> s.shape()
+            (-1,)
         """
-
         # We could do the whole buffer format thing and return a numpy array
         # but I think it's better to follow NumPy and return a tuple
         shape = self.array_ptr.shape()
