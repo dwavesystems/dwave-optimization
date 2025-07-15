@@ -156,7 +156,7 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
         values.reserve(lhs_ptr->size(state));
 
         auto it = lhs_ptr->begin(state);
-        for (const double& val : rhs_ptr->view(state)) {
+        for (const double val : rhs_ptr->view(state)) {
             values.emplace_back(op(*it, val));  // order is important
             ++it;
         }
@@ -164,18 +164,18 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
     } else if (lhs_ptr->size() == 1) {
         values.reserve(rhs_ptr->size(state));
 
-        const double& lhs = lhs_ptr->view(state).front();
+        const double lhs = lhs_ptr->view(state).front();
 
-        for (const double& val : rhs_ptr->view(state)) {
+        for (const double val : rhs_ptr->view(state)) {
             values.emplace_back(op(lhs, val));
         }
 
     } else if (rhs_ptr->size() == 1) {
         values.reserve(lhs_ptr->size(state));
 
-        const double& rhs = rhs_ptr->view(state).front();
+        const double rhs = rhs_ptr->view(state).front();
 
-        for (const double& val : lhs_ptr->view(state)) {
+        for (const double val : lhs_ptr->view(state)) {
             values.emplace_back(op(val, rhs));
         }
 
@@ -384,7 +384,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         // lhs is a single value being broadcast to the rhs array.
 
         // Create a unary version of our binary op.
-        const double& lhs = lhs_ptr->view(state).front();
+        const double lhs = lhs_ptr->view(state).front();
         auto unary_func = std::bind(op, lhs, std::placeholders::_1);
 
         if (lhs_ptr->diff(state).size()) {
@@ -404,7 +404,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         // rhs is a single value being broadcast to the lhs array
 
         // create a unary version of our binary op
-        const double& rhs = rhs_ptr->view(state).front();
+        const double rhs = rhs_ptr->view(state).front();
         auto unary_func = std::bind(op, std::placeholders::_1, rhs);
 
         if (rhs_ptr->diff(state).size()) {
@@ -1304,7 +1304,7 @@ void ReduceNode<BinaryOp>::initialize_state(State& state) const {
 template <>
 void ReduceNode<std::logical_and<double>>::initialize_state(State& state) const {
     ssize_t num_zero = init.value_or(1) ? 0 : 1;
-    for (const double& value : array_ptr_->view(state)) {
+    for (const double value : array_ptr_->view(state)) {
         num_zero += !value;
     }
 
@@ -1314,7 +1314,7 @@ void ReduceNode<std::logical_and<double>>::initialize_state(State& state) const 
 template <>
 void ReduceNode<std::logical_or<double>>::initialize_state(State& state) const {
     ssize_t num_nonzero = init.value_or(1) ? 1 : 0;
-    for (const double& value : array_ptr_->view(state)) {
+    for (const double value : array_ptr_->view(state)) {
         num_nonzero += static_cast<bool>(value);
     }
 
@@ -1330,7 +1330,7 @@ void ReduceNode<std::multiplies<double>>::initialize_state(State& state) const {
 
     RunningProduct product(init.value_or(1));
 
-    for (const double& value : array_ptr_->view(state)) {
+    for (const double value : array_ptr_->view(state)) {
         product *= value;
     }
 
@@ -1707,7 +1707,7 @@ template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::initialize_state(State& state) const {
     std::vector<double> values;
     values.reserve(array_ptr_->size(state));
-    for (const double& val : array_ptr_->view(state)) {
+    for (const double val : array_ptr_->view(state)) {
         values.emplace_back(op(val));
     }
 
