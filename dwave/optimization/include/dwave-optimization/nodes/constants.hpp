@@ -29,6 +29,25 @@ namespace dwave::optimization {
 /// A contiguous block of numbers.
 class ConstantNode : public ArrayOutputMixin<ArrayNode> {
  public:
+    struct DataSource {
+        DataSource() = default;
+        virtual ~DataSource() = default;
+        // Technically should satisfy the rule of five here, and it's good
+        // to be on the safe side by deleting the unnecessary constructors
+        DataSource(const DataSource&) = delete;
+        DataSource& operator=(const DataSource&) = delete;
+        DataSource(DataSource&& other) noexcept = default;
+        DataSource& operator=(DataSource&& other) noexcept = delete;
+    };
+
+    struct OwningDataSource : public DataSource {
+        OwningDataSource(std::unique_ptr<const double[]>&& owning_ptr)
+                : data_(std::move(owning_ptr)) {}
+        const double* get() const { return data_.get(); }
+
+        std::unique_ptr<const double[]> data_;
+    };
+
     // Default constructor - defaults to an empty 1d array.
     ConstantNode() noexcept : ConstantNode(std::vector<double>{}, std::vector<ssize_t>{0}) {}
 
@@ -39,9 +58,17 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     // A pointer to another array or similar. In this case the ConstantNode will be a *view*
     // rather than a container. That is it does not manage the lifespan of the array data.
     ConstantNode(const double* data_ptr, std::initializer_list<ssize_t> shape)
-            : ArrayOutputMixin(shape), own_data_(false), buffer_ptr_(data_ptr) {}
+            : ArrayOutputMixin(shape), buffer_ptr_(data_ptr) {}
     ConstantNode(const double* data_ptr, const std::span<const ssize_t> shape)
-            : ArrayOutputMixin(shape), own_data_(false), buffer_ptr_(data_ptr) {}
+            : ArrayOutputMixin(shape), buffer_ptr_(data_ptr) {}
+
+    // For use from Python, where we will pass in a PyDataSource which manages the python reference
+    // to the original object (a numpy array) that holds the data.
+    ConstantNode(std::unique_ptr<DataSource> data_source, const double* data_ptr,
+                 const std::span<const ssize_t> shape)
+            : ArrayOutputMixin(shape),
+              buffer_ptr_(data_ptr),
+              data_source_(std::move(data_source)) {}
 
     /// Create a ConstantNode by copying the contents of a range
     template <std::ranges::sized_range Range>
@@ -56,13 +83,6 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     template <std::ranges::sized_range Range>
     ConstantNode(Range&& values, const std::span<const ssize_t> shape)
             : ConstantNode(from_range(std::forward<Range>(values), shape), shape) {}
-
-    ~ConstantNode() {
-        // Only deallocate in the instance that it owns its own data
-        if (own_data_) std::default_delete<const double>()(buffer_ptr_);
-    }
-
-    bool own_data() const noexcept { return own_data_; }
 
     // Stateless access to the underlying data.
     std::span<const double> data() const noexcept {
@@ -108,16 +128,19 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
  private:
     // An owning pointer to an array. In this case the ConstantNode will manage the lifespan
     // of the array.
-    ConstantNode(std::unique_ptr<const double[]>&& owning_ptr, std::initializer_list<ssize_t> shape)
-            : ArrayOutputMixin(shape), own_data_(true), buffer_ptr_(owning_ptr.release()) {}
-    ConstantNode(std::unique_ptr<const double[]>&& owning_ptr, const std::span<const ssize_t> shape)
-            : ArrayOutputMixin(shape), own_data_(true), buffer_ptr_(owning_ptr.release()) {}
+    ConstantNode(OwningDataSource&& data_source, std::initializer_list<ssize_t> shape)
+            : ArrayOutputMixin(shape),
+              buffer_ptr_(data_source.get()),
+              data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
+    ConstantNode(OwningDataSource&& data_source, const std::span<const ssize_t> shape)
+            : ArrayOutputMixin(shape),
+              buffer_ptr_(data_source.get()),
+              data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
 
     // Create a unique_ptr<double[]> built from the given range of values holding
     // the values of the array.
     template <std::ranges::sized_range Range>
-    static std::unique_ptr<double[]> from_range(Range&& values,
-                                                const std::span<const ssize_t> shape) {
+    static OwningDataSource from_range(Range&& values, const std::span<const ssize_t> shape) {
         const ssize_t size = shape_to_size(shape);
         if (size < 0) {
             throw std::invalid_argument("ConstantNode cannot be dynamic");
@@ -129,16 +152,14 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
         // allocate the vector and populate it from the range
         std::unique_ptr<double[]> ptr = std::make_unique<double[]>(size);
         std::copy(values.begin(), std::next(values.begin(), size), ptr.get());
-        return ptr;
+        return OwningDataSource(std::move(ptr));
     }
-
-    // If True, the node is responsible for deallocating the data, otherwise
-    // it is just a view
-    const bool own_data_;
 
     // The beginning of the array data. The ConstantNode is unusual because it
     // holds its values on the object itself rather than in a State.
     const double* buffer_ptr_;
+
+    std::unique_ptr<DataSource> data_source_;
 
     // Information about the values in the buffer
     struct BufferStats {
