@@ -26,9 +26,11 @@ import cython
 cimport cython
 import numpy as np
 
+from cpython.ref cimport PyObject
 from cython.operator cimport dereference as deref, typeid
 from libc.math cimport modf
 from libcpp cimport bool
+from libcpp.memory cimport make_unique, unique_ptr
 from libcpp.optional cimport nullopt, optional
 from libcpp.span cimport span
 from libcpp.utility cimport move
@@ -951,6 +953,25 @@ cdef class Concatenate(ArraySymbol):
 _register(Concatenate, typeid(cppConcatenateNode))
 
 
+cdef extern from *:
+    """
+    #include "Python.h"
+
+    struct PyDataSource : dwave::optimization::ConstantNode::DataSource {
+        PyDataSource(PyObject* ptr) : ptr_(ptr) {
+            Py_INCREF(ptr_);
+        }
+        ~PyDataSource() {
+            Py_DECREF(ptr_);
+        }
+
+        PyObject* ptr_;
+    };
+    """
+    cppclass PyDataSource:
+        PyDataSource(PyObject*)
+
+
 cdef class Constant(ArraySymbol):
     """Constant symbol.
 
@@ -977,13 +998,14 @@ cdef class Constant(ArraySymbol):
         if flat.size:
             start = &flat[0]
 
+        # Make a PyDataSource that will essentially take ownership of the numpy array,
+        # preventing garbage collection from deallocating it before the C++ node is
+        # destructed
+        cdef unique_ptr[PyDataSource] data_source = make_unique[PyDataSource](<PyObject*>(array))
         # Get an observing pointer to the C++ ConstantNode
-        self.ptr = model._graph.emplace_node[cppConstantNode](start, shape)
+        self.ptr = model._graph.emplace_node[cppConstantNode](move(data_source), start, shape)
 
         self.initialize_arraynode(model, self.ptr)
-
-        # Have the parent model hold a reference to the array, so it's kept alive
-        model._data_sources.append(array)
 
     def __bool__(self):
         if not self._is_scalar():

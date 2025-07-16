@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The ``Constant`` symbol is now able to pass ownership of the corresponding
+    numpy array to the ``ConstantNode`` which prevents the numpy array from
+    being garbage collected even after the symbol has been collected. This
+    means it is no longer necessary to save references to all the numpy arrays
+    used by ``Constant`` symbols on the model itself. To support this, a new
+    constructor for the C++ ``ConstantNode`` has been added which takes a
+    special ``ConstantNode::DataSource`` struct allowing the Python reference
+    count to modified when appropriate.

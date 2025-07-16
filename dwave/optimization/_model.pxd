@@ -48,11 +48,6 @@ cdef class _Graph:
     # The number of times "lock()" has been called.
     cdef readonly Py_ssize_t _lock_count
 
-    # Used to keep NumPy arrays that own data alive etc etc
-    # We could pair each of these with an expired_ptr for the node holding
-    # memory for easier cleanup later if that becomes a concern.
-    cdef object _data_sources
-
 
 cdef class Symbol:
     # Inheriting nodes must call this method from their __init__()
