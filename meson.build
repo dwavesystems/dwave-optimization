@@ -53,6 +53,7 @@ if host_machine.system() == 'windows'
         dependencies: xxhash,
         link_with: static_library(
             'dwave-optimization',
+            dependencies: xxhash,
             sources: dwave_optimization_src,
             include_directories: dwave_optimization_include,
         ),
