@@ -60,9 +60,9 @@ class Graph {
     NodeType* emplace_node(Args&&... args);
 
     // Special implementation for ConstantNode which does interning
-    template <class NodeType, typename ShapeType>
-    ConstantNode* emplace_node(const double* data_ptr,
-                               ShapeType shape) requires std::same_as<NodeType, ConstantNode>;
+    template <class NodeType, typename ShapeType, class... Args>
+    ConstantNode* emplace_node(const double* data_ptr, ShapeType shape,
+                               Args&&... args) requires std::same_as<NodeType, ConstantNode>;
 
     State initialize_state() const;
     State initialize_state();  // topologically sorts first
@@ -378,9 +378,9 @@ NodeType* Graph::emplace_node(Args&&... args) {
     return ptr;  // return the observing pointer
 }
 
-template <class NodeType, typename ShapeType>
-ConstantNode* Graph::emplace_node(const double* data_ptr,
-                                  ShapeType shape) requires std::same_as<NodeType, ConstantNode> {
+template <class NodeType, typename ShapeType, class... Args>
+ConstantNode* Graph::emplace_node(const double* data_ptr, ShapeType shape,
+                                  Args&&... args) requires std::same_as<NodeType, ConstantNode> {
     if (topologically_sorted_) {
         // "locked" is a python concept, but we use it rather than "topologically sorted"
         // to avoid a lot of fiddling with error handling.
@@ -399,7 +399,7 @@ ConstantNode* Graph::emplace_node(const double* data_ptr,
     // Create and add a constant node to the graph as normal
 
     // Construct via make_unique so we can allow the constructor to throw
-    auto uptr = std::make_unique<NodeType>(data_ptr, shape);
+    auto uptr = std::make_unique<NodeType>(data_ptr, shape, std::forward<Args&&>(args)...);
     NodeType* ptr = uptr.get();
 
     // Pass ownership of the lifespan to nodes_

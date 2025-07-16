@@ -1003,7 +1003,7 @@ cdef class Constant(ArraySymbol):
         # destructed
         cdef unique_ptr[PyDataSource] data_source = make_unique[PyDataSource](<PyObject*>(array))
         # Get an observing pointer to the C++ ConstantNode
-        self.ptr = model._graph.emplace_node[cppConstantNode](move(data_source), start, shape)
+        self.ptr = model._graph.emplace_node[cppConstantNode](start, shape, move(data_source))
 
         self.initialize_arraynode(model, self.ptr)
 

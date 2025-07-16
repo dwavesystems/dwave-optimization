@@ -891,6 +891,37 @@ class TestConstant(utils.SymbolTests):
         c = model.constant(arr)
         np.testing.assert_array_equal(arr, c)
 
+    def test_interning(self):
+        model = Model()
+
+        c = model.constant(5)
+        self.assertEqual(model.num_symbols(), 1)
+
+        d = model.constant(5)
+        self.assertEqual(model.num_symbols(), 1)
+        self.assertEqual(c.id(), d.id())
+
+        a = model.constant([1, 2, 3, 4])
+        self.assertEqual(model.num_symbols(), 2)
+
+        b = model.constant([1, 2, 3, 4])
+        self.assertEqual(model.num_symbols(), 2)
+        self.assertEqual(a.id(), b.id())
+
+        x = model.constant([[1, 2, 3, 4], [5, 6, 7, 8]])
+        self.assertEqual(model.num_symbols(), 3)
+        self.assertEqual(x.shape(), (2, 4))
+
+        y = model.constant([[1, 2, 3, 4], [5, 6, 7, 8]])
+        self.assertEqual(model.num_symbols(), 3)
+        self.assertEqual(y.shape(), (2, 4))
+        self.assertEqual(x.id(), y.id())
+
+        z = model.constant([[1, 2], [3, 4], [5, 6], [7, 8]])
+        self.assertEqual(model.num_symbols(), 4)
+        self.assertEqual(z.shape(), (4, 2))
+        self.assertNotEqual(x.id(), z.id())
+
 
 class TestCopy(utils.SymbolTests):
     def generate_symbols(self):
