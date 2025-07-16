@@ -135,6 +135,9 @@ TEST_CASE("ConstantNode") {
         const double* data_ptr = values.data();
         auto ptr = graph.emplace_node<ConstantNode>(data_ptr, std::initializer_list<ssize_t>{2, 2});
 
+        // Check we can also emplace with a vector/span shape
+        graph.emplace_node<ConstantNode>(data_ptr, std::vector<ssize_t>{2, 2});
+
         THEN("Emplacing the same values and shape returns the previous node due to interning") {
             auto new_ptr = graph.emplace_node<ConstantNode>(data_ptr,
                                                             std::initializer_list<ssize_t>{2, 2});

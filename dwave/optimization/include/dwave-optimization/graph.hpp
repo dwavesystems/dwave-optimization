@@ -29,7 +29,6 @@
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/state.hpp"
 #include "dwave-optimization/utils.hpp"
-#include "xxhash.h"
 
 namespace dwave::optimization {
 
@@ -62,8 +61,8 @@ class Graph {
 
     // Special implementation for ConstantNode which does interning
     template <class NodeType, typename ShapeType>
-    NodeType* emplace_node(const double* data_ptr,
-                           ShapeType shape) requires std::same_as<NodeType, ConstantNode>;
+    ConstantNode* emplace_node(const double* data_ptr,
+                               ShapeType shape) requires std::same_as<NodeType, ConstantNode>;
 
     State initialize_state() const;
     State initialize_state();  // topologically sorts first
@@ -176,6 +175,10 @@ class Graph {
     ssize_t remove_unused_nodes(bool ignore_listeners = false);
 
  private:
+    static uint64_t get_hash_(const double* data_ptr, const std::span<const ssize_t> shape);
+    void check_constant_data_(ConstantNode* node_ptr, const double* data_ptr,
+                              const std::span<const ssize_t> shape);
+
     static void visit_(Node* n_ptr, int* count_ptr);
 
     std::vector<std::unique_ptr<Node>> nodes_;
@@ -185,9 +188,9 @@ class Graph {
     // which seems reasonable.
     static const ssize_t MAX_INTERNED_CONSTANTS_COUNT_ = 100000;
     struct IdentityHash {
-        size_t operator()(const XXH64_hash_t& key) const { return key; }
+        size_t operator()(const uint64_t& key) const { return key; }
     };
-    std::unordered_map<XXH64_hash_t, ConstantNode*, IdentityHash> interned_constants_;
+    std::unordered_map<uint64_t, ConstantNode*, IdentityHash> interned_constants_;
 
     // The nodes with important semantic meanings to the model.
     // All of these pointers are non-owning!
@@ -376,8 +379,8 @@ NodeType* Graph::emplace_node(Args&&... args) {
 }
 
 template <class NodeType, typename ShapeType>
-NodeType* Graph::emplace_node(const double* data_ptr,
-                              ShapeType shape) requires std::same_as<NodeType, ConstantNode> {
+ConstantNode* Graph::emplace_node(const double* data_ptr,
+                                  ShapeType shape) requires std::same_as<NodeType, ConstantNode> {
     if (topologically_sorted_) {
         // "locked" is a python concept, but we use it rather than "topologically sorted"
         // to avoid a lot of fiddling with error handling.
@@ -385,28 +388,11 @@ NodeType* Graph::emplace_node(const double* data_ptr,
     }
 
     // Get the hash value of the data and the shape
-    XXH64_hash_t hash = ({
-        XXH3_state_t* state = XXH3_createState();
-        if (state == nullptr) throw std::bad_alloc();
-
-        XXH3_64bits_reset(state);
-
-        // Calculate the size and hash the shape
-        ssize_t size = 1;
-        for (const ssize_t& dim : shape) {
-            size *= dim;
-            XXH3_64bits_update(state, &dim, sizeof(ssize_t));
-        }
-        // Need a separator to disambiguate e.g. hash([], [0]) from hash([0], [])
-        XXH3_64bits_update(state, "|", sizeof("|"));
-        // Hash the data
-        XXH3_64bits_update(state, data_ptr, size * sizeof(double));
-
-        XXH3_64bits_digest(state);
-    });
+    uint64_t hash = get_hash_(data_ptr, shape);
 
     // If we've already interned a constant node with this value, we can return it instead
     if (interned_constants_.contains(hash)) {
+        check_constant_data_(interned_constants_[hash], data_ptr, shape);
         return interned_constants_[hash];
     }
 
