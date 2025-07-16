@@ -19,56 +19,6 @@
 
 namespace dwave::optimization {
 
-double Array::View::operator[](ssize_t n) const {
-    assert(0 <= n && n < size());
-    return *(begin() + n);
-}
-
-double Array::View::at(ssize_t n) const {
-    if (n < 0 || n >= size()) {
-        throw std::out_of_range(std::string("index ") + std::to_string(n) +
-                                std::string(" out of range for an Array of size ") +
-                                std::to_string(size()));
-    }
-    return (*this)[n];
-}
-
-double Array::View::back() const {
-    assert(size() >= 1);
-    return *(--end());
-}
-
-Array::const_iterator Array::View::begin() const {
-    // either both are null or neither
-    assert(static_cast<bool>(array_ptr_) == static_cast<bool>(state_ptr_));
-
-    if (!array_ptr_) return const_iterator();
-    return array_ptr_->begin(*state_ptr_);
-}
-
-bool Array::View::empty() const { return !size(); }
-
-Array::const_iterator Array::View::end() const {
-    // either both are null or neither
-    assert(static_cast<bool>(array_ptr_) == static_cast<bool>(state_ptr_));
-
-    if (!array_ptr_) return const_iterator();
-    return array_ptr_->end(*state_ptr_);
-}
-
-double Array::View::front() const {
-    assert(size() >= 1);
-    return *begin();
-}
-
-ssize_t Array::View::size() const {
-    // either both are null or neither
-    assert(static_cast<bool>(array_ptr_) == static_cast<bool>(state_ptr_));
-
-    if (!array_ptr_) return 0;
-    return array_ptr_->size(*state_ptr_);
-}
-
 std::pair<double, double> Array::minmax(
             optional_cache_type<std::pair<double, double>> cache) const {
     return {std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max()};

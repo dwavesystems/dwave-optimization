@@ -1999,16 +1999,11 @@ class TestLinearProgram(utils.SymbolTests):
             np.testing.assert_array_equal(lp.state(3), [1, 1])
 
 
-class TestMax(utils.SymbolTests):
-    def generate_symbols(self):
-        model = Model()
-        A = model.constant(np.arange(5))
-        B = model.constant(np.arange(5, 10))
-        a = A.max()
-        b = B.max()
-        model.lock()
-        yield a
-        yield b
+class TestMax(utils.ReduceTests):
+    empty_requires_initial = True
+
+    def op(self, x, *args, **kwargs):
+        return x.max(*args, **kwargs)
 
     def test_empty(self):
         model = Model()
@@ -2022,11 +2017,15 @@ class TestMax(utils.SymbolTests):
         B = model.constant(np.arange(5, 10))
         a = A.max()
         b = B.max()
+        c = B.max(initial=6)
+        d = B.max(initial=105)
         model.states.resize(1)
         model.lock()
 
         self.assertEqual(a.state(0), 4)
         self.assertEqual(b.state(0), 9)
+        self.assertEqual(c.state(0), 9)
+        self.assertEqual(d.state(0), 105)
 
 
 class TestMaximum(utils.SymbolTests):
@@ -2062,16 +2061,11 @@ class TestMaximum(utils.SymbolTests):
         np.testing.assert_array_equal(m.state(0), np.arange(5, 10))
 
 
-class TestMin(utils.SymbolTests):
-    def generate_symbols(self):
-        model = Model()
-        A = model.constant(np.arange(5))
-        B = model.constant(np.arange(5, 10))
-        a = A.min()
-        b = B.min()
-        model.lock()
-        yield a
-        yield b
+class TestMin(utils.ReduceTests):
+    empty_requires_initial = True
+
+    def op(self, x, *args, **kwargs):
+        return x.min(*args, **kwargs)
 
     def test_empty(self):
         model = Model()
@@ -2085,11 +2079,15 @@ class TestMin(utils.SymbolTests):
         B = model.constant(np.arange(5, 10))
         a = A.min()
         b = B.min()
+        c = B.min(initial=6)
+        d = B.min(initial=-105)
         model.states.resize(1)
         model.lock()
 
         self.assertEqual(a.state(0), 0)
         self.assertEqual(b.state(0), 5)
+        self.assertEqual(c.state(0), 5)
+        self.assertEqual(d.state(0), -105)
 
 
 class TestMinimum(utils.SymbolTests):
@@ -2442,23 +2440,40 @@ class TestPartialProd(utils.SymbolTests):
         model = Model()
         A = model.constant(np.arange(8).reshape((2, 2, 2)))
         B = model.constant(np.arange(25).reshape((5, 5)))
+        C = model.constant(np.arange(9).reshape(3, 3))
         a = A.prod(axis=0)
         b = B.prod(axis=1)
+        c = C.prod(axis=1, initial=3)
         model.lock()
         yield a
         yield b
+        yield c
+
+    def test_initial(self):
+        model = Model()
+        model.states.resize(1)
+        
+        A = model.constant(np.arange(8).reshape((2, 2, 2)))
+
+        with self.subTest(initial="howdy"):
+            with self.assertRaises(TypeError):
+                A.prod(axis=1, initial="howdy")
+            self.assertEqual(model.num_symbols(), 1)  # no side-effects
 
     def test_state(self):
         model = Model()
 
         A = model.constant(np.arange(8).reshape((2, 2, 2)))
         B = model.constant(np.arange(25).reshape((5, 5)))
+        C = model.constant(np.arange(9).reshape(3, 3))
         a = A.prod(axis=0)
         b = B.prod(axis=1)
+        c = C.prod(axis=1, initial=3)
         model.lock()
         model.states.resize(1)
         np.testing.assert_array_equal(a.state(0), np.prod(np.arange(8).reshape((2, 2, 2)), axis=0))
         np.testing.assert_array_equal(b.state(0), np.prod(np.arange(25).reshape((5, 5)), axis=1))
+        np.testing.assert_array_equal(c.state(0), np.prod(np.arange(9).reshape(3, 3), axis=1, initial=3))
 
     def test_indexed(self):
         model = Model()
@@ -2479,23 +2494,40 @@ class TestPartialSum(utils.SymbolTests):
         model = Model()
         A = model.constant(np.arange(8).reshape((2, 2, 2)))
         B = model.constant(np.arange(25).reshape((5, 5)))
+        C = model.constant(np.arange(9).reshape(3, 3))
         a = A.sum(axis=0)
         b = B.sum(axis=1)
+        c = C.sum(axis=1, initial=3)
         model.lock()
         yield a
         yield b
+        yield c
+
+    def test_initial(self):
+        model = Model()
+        model.states.resize(1)
+        
+        A = model.constant(np.arange(8).reshape((2, 2, 2)))
+
+        with self.subTest(initial="howdy"):
+            with self.assertRaises(TypeError):
+                A.sum(axis=1, initial="howdy")
+            self.assertEqual(model.num_symbols(), 1)  # no side-effects
 
     def test_state(self):
         model = Model()
 
         A = model.constant(np.arange(8).reshape((2, 2, 2)))
         B = model.constant(np.arange(25).reshape((5, 5)))
+        C = model.constant(np.arange(9).reshape(3, 3))
         a = A.sum(axis=0)
         b = B.sum(axis=1)
+        c = C.sum(axis=1, initial=3)
         model.lock()
         model.states.resize(1)
         np.testing.assert_array_equal(a.state(0), np.sum(np.arange(8).reshape((2, 2, 2)), axis=0))
         np.testing.assert_array_equal(b.state(0), np.sum(np.arange(25).reshape((5, 5)), axis=1))
+        np.testing.assert_array_equal(c.state(0), np.sum(np.arange(9).reshape(3, 3), axis=1, initial=3))
 
     def test_indexed(self):
         model = Model()
@@ -2537,16 +2569,11 @@ class TestPermutation(utils.SymbolTests):
         self.assertNotIsInstance(b[:, x][x, :], Permutation)
 
 
-class TestProd(utils.SymbolTests):
-    def generate_symbols(self):
-        model = Model()
-        A = model.constant(np.arange(5))
-        B = model.constant(np.arange(5, 10))
-        a = A.prod()
-        b = B.prod()
-        model.lock()
-        yield a
-        yield b
+class TestProd(utils.ReduceTests):
+    empty_requires_initial = False
+
+    def op(self, x, *args, **kwargs):
+        return x.prod(*args, **kwargs)
 
     def test_empty(self):
         model = Model()
@@ -3042,16 +3069,11 @@ class TestSubtract(utils.BinaryOpTests):
             a - b
 
 
-class TestSum(utils.SymbolTests):
-    def generate_symbols(self):
-        model = Model()
-        A = model.constant(np.arange(5))
-        B = model.constant(np.arange(5, 10))
-        a = A.sum()
-        b = B.sum()
-        model.lock()
-        yield a
-        yield b
+class TestSum(utils.ReduceTests):
+    empty_requires_initial = False
+
+    def op(self, x, *args, **kwargs):
+        return x.sum(*args, **kwargs)
 
     def test_empty(self):
         model = Model()

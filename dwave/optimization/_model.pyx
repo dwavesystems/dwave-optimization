@@ -94,7 +94,6 @@ cdef class _Graph:
     """
     def __cinit__(self):
         self._lock_count = 0
-        self._data_sources = []
 
         self._owning_ptr = make_shared[cppGraph]()
         self._graph = self._owning_ptr.get()
@@ -1608,13 +1607,33 @@ cdef class ArraySymbol(Symbol):
         """
         return self.reshape(-1)
 
-    def max(self):
+    def max(self, *, initial=None):
         """Create a :class:`~dwave.optimization.symbols.Max` symbol.
 
         The new symbol returns the maximum value in its elements.
+
+        Args:
+            initial:
+                The starting value for the product operation.
+
+                .. versionadded:: 0.6.4
+
+        Examples:
+            This example adds the minimum value of an integer decision
+            variable to a model.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
+            >>> i_max = i.max()
+            >>> type(i_max)
+            <class 'dwave.optimization.symbols.Max'>
+
+        See Also:
+            :class:`~dwave.optimization.symbols.Max`
         """
         from dwave.optimization.symbols import Max  # avoid circular import
-        return Max(self)
+        return Max(self, initial=initial)
 
     def maybe_equals(self, other):
         # note: docstring inherited from Symbol.maybe_equal()
@@ -1636,38 +1655,74 @@ cdef class ArraySymbol(Symbol):
 
         return MAYBE
 
-    def min(self):
+    def min(self, *, initial=None):
         """Create a :class:`~dwave.optimization.symbols.Min` symbol.
 
         The new symbol returns the minimum value in its elements.
+
+        Args:
+            initial:
+                The starting value for the product operation.
+
+                .. versionadded:: 0.6.4
+
+        Examples:
+            This example adds the minimum value of an integer decision
+            variable to a model.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
+            >>> i_min = i.min()
+            >>> type(i_min)
+            <class 'dwave.optimization.symbols.Min'>
+
+        See Also:
+            :class:`~dwave.optimization.symbols.Min`
         """
         from dwave.optimization.symbols import Min  # avoid circular import
-        return Min(self)
+        return Min(self, initial=initial)
 
     def ndim(self):
         """Return the number of dimensions for a symbol."""
         return self.array_ptr.ndim()
 
-    def prod(self, axis=None):
+    def prod(self, *, axis=None, initial=None):
         """Create a :class:`~dwave.optimization.symbols.Prod` symbol.
 
         The new symbol returns the product of its elements.
 
-        .. versionadded:: 0.5.1
-            The ``axis`` keyword argument was added in version 0.5.1.
+        Args:
+            axis:
+                Axis along which the a product operation is performed.
+
+                .. versionadded:: 0.5.1
+
+            initial:
+                The starting value for the product operation.
+
+                .. versionadded:: 0.6.4
+
+        Examples:
+            This example adds the product of an integer symbol's
+            elements to a model.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
+            >>> i.prod()  # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.Prod at ...>
+
+        See Also:
+            :class:`~dwave.optimization.symbols.PartialProd`
+            :class:`~dwave.optimization.symbols.Prod`
         """
         import dwave.optimization.symbols
 
         if axis is not None:
-            if not isinstance(axis, numbers.Integral):
-                raise TypeError("axis of the prod should be an int")
+            return dwave.optimization.symbols.PartialProd(self, axis, initial=initial)
 
-            if not (0 <= axis < self.ndim()):
-                raise ValueError("axis should be 0 <= axis < self.ndim()")
-
-            return dwave.optimization.symbols.PartialProd(self, axis)
-
-        return dwave.optimization.symbols.Prod(self)
+        return dwave.optimization.symbols.Prod(self, initial=initial)
 
     def reshape(self, *shape):
         """Create a :class:`~dwave.optimization.symbols.Reshape` symbol.
@@ -1907,20 +1962,39 @@ cdef class ArraySymbol(Symbol):
         strides = self.array_ptr.strides()
         return tuple(strides[i] for i in range(strides.size()))
 
-    def sum(self, axis=None):
+    def sum(self, *, axis=None, initial=None):
         """Create a :class:`~dwave.optimization.symbols.Sum` symbol.
 
         The new symbol returns the sum of its elements.
+
+        Args:
+            axis:
+                Axis along which the a plus operation is performed.
+
+                .. versionadded:: 0.4.1
+
+            initial:
+                The starting value for the plus operation.
+
+                .. versionadded:: 0.6.4
+
+        Examples:
+            This example adds the product of an integer symbol's
+            elements to a model.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
+            >>> i.sum()  # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.Sum at ...>
+
+        See Also:
+            :class:`~dwave.optimization.symbols.PartialSum`
+            :class:`~dwave.optimization.symbols.Sum`
         """
         import dwave.optimization.symbols
 
         if axis is not None:
-            if not isinstance(axis, numbers.Integral):
-                raise TypeError("axis of the sum should be an int")
+            return dwave.optimization.symbols.PartialSum(self, axis, initial=initial)
 
-            if not (0 <= axis < self.ndim()):
-                raise ValueError("axis should be 0 <= axis < self.ndim()")
-
-            return dwave.optimization.symbols.PartialSum(self, axis)
-
-        return dwave.optimization.symbols.Sum(self)
+        return dwave.optimization.symbols.Sum(self, initial=initial)

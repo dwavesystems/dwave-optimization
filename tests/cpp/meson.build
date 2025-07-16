@@ -27,6 +27,7 @@ tests_all = executable(
         'nodes/test_quadratic_model.cpp',
         'test_array.cpp',
         'test_graph.cpp',
+        'test_iterators.cpp',
         'test_simplex.cpp',
         'test_type_list.cpp',
         'test_utils.cpp',
