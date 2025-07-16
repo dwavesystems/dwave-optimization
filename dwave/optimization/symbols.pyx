@@ -53,6 +53,7 @@ from dwave.optimization.libcpp.nodes cimport (
     AnyNode as cppAnyNode,
     AdvancedIndexingNode as cppAdvancedIndexingNode,
     ARangeNode as cppARangeNode,
+    ArgSortNode as cppArgSortNode,
     ArrayValidationNode as cppArrayValidationNode,
     BasicIndexingNode as cppBasicIndexingNode,
     BinaryNode as cppBinaryNode,
@@ -131,6 +132,7 @@ __all__ = [
     "Any",
     "AdvancedIndexing",
     "ARange",
+    "ArgSort",
     "BasicIndexing",
     "BinaryVariable",
     "BSpline",
@@ -435,6 +437,30 @@ cdef class ARange(ArraySymbol):
     cdef cppARangeNode* ptr
 
 _register(ARange, typeid(cppARangeNode))
+
+
+cdef class ArgSort(ArraySymbol):
+    """TODO
+    """
+    def __init__(self, ArraySymbol arr):
+        cdef _Graph model = arr.model
+
+        self.ptr = model._graph.emplace_node[cppArgSortNode](arr.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
+        cdef cppArgSortNode* ptr = dynamic_cast_ptr[cppArgSortNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+        cdef ArgSort x = ArgSort.__new__(ArgSort)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppArgSortNode* ptr
+
+_register(ArgSort, typeid(cppArgSortNode))
 
 
 cdef bool _empty_slice(object slice_) noexcept:

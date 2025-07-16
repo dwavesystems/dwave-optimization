@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Added ``ArgSort`` symbol/node which returns a stable argsort of its
+    predecessor.
