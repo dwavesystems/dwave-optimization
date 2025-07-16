@@ -40,14 +40,6 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
         DataSource& operator=(DataSource&& other) noexcept = delete;
     };
 
-    struct OwningDataSource : public DataSource {
-        OwningDataSource(std::unique_ptr<const double[]>&& owning_ptr)
-                : data_(std::move(owning_ptr)) {}
-        const double* get() const { return data_.get(); }
-
-        std::unique_ptr<const double[]> data_;
-    };
-
     // Default constructor - defaults to an empty 1d array.
     ConstantNode() noexcept : ConstantNode(std::vector<double>{}, std::vector<ssize_t>{0}) {}
 
@@ -126,6 +118,14 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     void revert(State&) const noexcept override {}
 
  private:
+    struct OwningDataSource : public DataSource {
+        OwningDataSource(std::unique_ptr<const double[]>&& owning_ptr)
+                : data_(std::move(owning_ptr)) {}
+        const double* get() const { return data_.get(); }
+
+        std::unique_ptr<const double[]> data_;
+    };
+
     // An owning pointer to an array. In this case the ConstantNode will manage the lifespan
     // of the array.
     ConstantNode(OwningDataSource&& data_source, std::initializer_list<ssize_t> shape)
