@@ -22,11 +22,11 @@ import numbers
 
 cimport cpython.buffer
 cimport cpython.object
-from cpython.ref cimport PyObject
 import cython
 cimport cython
 import numpy as np
 
+from cpython.ref cimport PyObject
 from cython.operator cimport dereference as deref, typeid
 from libc.math cimport modf
 from libcpp cimport bool
@@ -959,7 +959,7 @@ cdef extern from *:
 
     struct PyDataSource : dwave::optimization::ConstantNode::DataSource {
         PyDataSource(PyObject* ptr) : ptr_(ptr) {
-            Py_INCREF(ptr);
+            Py_INCREF(ptr_);
         }
         ~PyDataSource() {
             Py_DECREF(ptr_);
