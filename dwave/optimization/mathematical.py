@@ -961,7 +961,7 @@ def mean(array: ArraySymbol) -> Mean:
         ...     model.states.resize(1)
         ...     i.set_state(0, [8, 4, 3])
         ...     print(m.state(0))
-        [5.0]
+        5.0
     """
     return Mean(array)
 
