@@ -1739,7 +1739,7 @@ cdef class ArraySymbol(Symbol):
         """Return the shape of the symbol.
 
         A :ref:`dynamic <optimization_philosophy_tensor_programming_dynamic>`
-        array symbol will return a ``-1`` in the first dimension.
+        array symbol returns a ``-1`` in the first dimension.
 
         Examples:
             This example returns the shape of a newly instantiated symbol.

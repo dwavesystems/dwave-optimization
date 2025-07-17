@@ -186,14 +186,24 @@ With *dwave-optimization* the dot-product example can be expressed as
 Dynamically Sized Arrays
 ------------------------
 
-*dwave-optimization* does differ significantly from NumPy is one significant
+*dwave-optimization* does differ from NumPy in one significant
 way: it allows arrays to be *dynamic*. Dynamic arrays are arrays with a
 state-dependent size.
 
-For example, consider a set variable
-(as constructed by :meth:`~dwave.optimization.model.Model.set`).
-The domain of the set variable are any subsets of :math:`[0, n)`.
-This means that the set variable's size is the size of the subset.
+Consider a :meth:`set<dwave.optimization.model.Model.set>` variable.
+The domain of the set variable are the subsets of :math:`[0, n)`.
+Therefore, to be able to encode subsets with different lengths, the set variable's
+state size must also vary.
+
+>>> model = dwave.optimization.Model()
+>>> model.states.resize(1)
+>>> s = model.set(5)
+>>> s.set_state(0, [0, 3])  # {0, 3} is a subset of [0, 5)
+>>> s.state(0)
+array([0., 3.])
+>>> s.set_state(0, [0, 1, 2])  # {0, 1, 2} is also a subset of [0, 5)
+>>> s.state(0)
+array([0., 1., 2.])
 
 A dynamic array symbol will have a ``-1`` as the size of the first dimension.
 
@@ -202,7 +212,7 @@ A dynamic array symbol will have a ``-1`` as the size of the first dimension.
 >>> s.shape()
 (-1,)
 
-Operations on dynamic array symbols will create new dynamic array symbols
+Operations on dynamic array symbols create a new dynamic array symbol
 
 >>> model = dwave.optimization.Model()
 >>> s = model.set(10)
@@ -210,3 +220,17 @@ Operations on dynamic array symbols will create new dynamic array symbols
 >>> two_s = s * two
 >>> two_s.shape()
 (-1,)
+
+.. warning::
+    Dynamic array symbols support only a subset of operations that are
+    supported by static arrays.
+
+    For instance, dynamic arrays cannot be used as the second indexer of other
+    arrays
+
+    >>> model = dwave.optimization.Model()
+    >>> c = model.constant([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+    >>> s = model.set(3)
+    >>> c[:, s] # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: Indexing arrays cannot be dynamic when using in-place combined indexing
