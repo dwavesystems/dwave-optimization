@@ -275,6 +275,11 @@ cdef extern from "dwave-optimization/nodes/quadratic_model.hpp" namespace "dwave
         QuadraticModel* get_quadratic_model()
 
 
+cdef extern from "dwave-optimization/nodes/statistics.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass MeanNode(ArrayNode):
+        pass
+
+
 cdef extern from "dwave-optimization/nodes/testing.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ArrayValidationNode(Node):
         pass
