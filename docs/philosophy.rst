@@ -212,7 +212,7 @@ A dynamic array symbol will have a ``-1`` as the size of the first dimension.
 >>> s.shape()
 (-1,)
 
-Operations on dynamic array symbols create a new dynamic array symbol
+Operations on dynamic array symbols create a new dynamic array symbol.
 
 >>> model = dwave.optimization.Model()
 >>> s = model.set(10)
@@ -226,7 +226,7 @@ Operations on dynamic array symbols create a new dynamic array symbol
     supported by static arrays.
 
     For instance, dynamic arrays cannot be used as the second indexer of other
-    arrays
+    arrays.
 
     >>> model = dwave.optimization.Model()
     >>> c = model.constant([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
