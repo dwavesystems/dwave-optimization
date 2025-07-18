@@ -1,32 +1,63 @@
 .. _optimization_models:
 
-================
-Nonlinear Models
-================
+=========================================
+Nonlinear Models: Construction and States
+=========================================
 
-This page describes the `dwave-optimization` package's nonlinear model: classes,
-attributes, and methods.
+The `dwave-optimization` package provides the
+:class:`~dwave.optimization.model.Model` and
+:class:`~dwave.optimization.model.States` classes to construct nonlinear models
+and handle results, respectively. These models map to a
+`directed acyclic graph <https://en.wikipedia.org/wiki/Directed_acyclic_graph>`_
+constituted of the package's :ref:`optimization_symbols` classes.
 
 For examples, see the :ref:`opt_index_examples_beginner` section.
 
 .. currentmodule:: dwave.optimization
 
+Models and States
+=================
+
 .. automodule:: dwave.optimization.model
 
-Model Class
------------
+.. autosummary::
+    :recursive:
+    :nosignatures:
+    :toctree: generated
+    :template: autosummary_class.rst
 
-.. autoclass:: Model
-    :members:
-    :inherited-members:
-    :member-order: bysource
+    Model
+    States
 
-States Class
-------------
+.. _optimization_symbols:
 
-.. currentmodule:: dwave.optimization.states
+Symbols
+=======
 
-.. autoclass:: States
-    :members:
-    :inherited-members:
-    :member-order: bysource
+Symbols are a model's decision variables, intermediate variables, constants,
+and mathematical operations.
+
+See the :ref:`Symbols <opt_model_construction_nl_symbols>` section for an
+introduction to working with symbols.
+
+All symbols inherit from the :class:`Symbol` class and therefore inherit its
+methods.
+
+Most mathematical symbols inherit from the :class:`ArraySymbol` class and
+therefore inherit its methods.
+
+All symbols listed on the :ref:`Model Symbols <symbols_model_symbols>`
+page inherit from the :class:`Symbol` class and, for most
+mathematical symbols, the :class:`ArraySymbol` class.
+
+.. _symbols_base_symbols:
+
+.. autosummary::
+    :recursive:
+    :nosignatures:
+    :toctree: generated
+    :template: autosummary_class.rst
+
+    Symbol
+    ArraySymbol
+

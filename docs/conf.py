@@ -27,6 +27,7 @@ extensions = [
 ]
 
 autosummary_generate = True
+templates_path = ['_templates']
 
 source_suffix = ['.rst']
 

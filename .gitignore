@@ -69,7 +69,7 @@ dwave/optimization/*.html
 
 # Sphinx documentation
 docs/_build/
-docs/reference/generated/
+docs/generated/
 
 # meson-managed subprojects
 subprojects/
