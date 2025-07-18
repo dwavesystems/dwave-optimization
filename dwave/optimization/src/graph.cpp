@@ -14,6 +14,8 @@
 
 #include "dwave-optimization/graph.hpp"
 
+#include <xxhash.h>
+
 #include <algorithm>
 #include <deque>
 #include <ranges>
@@ -21,13 +23,13 @@
 #include <stdexcept>
 #include <utility>
 
-
-#if defined( __has_include ) && __has_include(<cxxabi.h>)
+#if defined(__has_include) && __has_include(<cxxabi.h>)
 #define _HAS_CXXABI
 #include <cxxabi.h>
 #endif
 
 #include "dwave-optimization/array.hpp"
+#include "dwave-optimization/nodes/constants.hpp"
 
 namespace dwave::optimization {
 
@@ -381,6 +383,37 @@ ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
 
     // Finally return the number of nodes that have been removed!
     return num_nodes_before - this->num_nodes();
+}
+
+uint64_t Graph::get_hash_(const double* data_ptr, const std::span<const ssize_t> shape) {
+    XXH3_state_t* state = XXH3_createState();
+    if (state == nullptr) throw std::bad_alloc();
+
+    XXH3_64bits_reset(state);
+
+    // Calculate the size and hash the shape
+    ssize_t size = 1;
+    for (const ssize_t& dim : shape) {
+        size *= dim;
+        XXH3_64bits_update(state, &dim, sizeof(ssize_t));
+    }
+    // Need a separator to disambiguate e.g. hash([], [0]) from hash([0], [])
+    XXH3_64bits_update(state, "|", sizeof("|"));
+    // Hash the data
+    XXH3_64bits_update(state, data_ptr, size * sizeof(double));
+
+    // Ensure that the 64 bit digest will be a uint64_t as expected
+    static_assert(std::same_as<uint64_t, decltype(std::function{XXH3_64bits_digest})::result_type>);
+
+    return XXH3_64bits_digest(state);
+}
+
+void Graph::check_constant_data_(ConstantNode* node_ptr, const double* data_ptr,
+                                 const std::span<const ssize_t> shape) {
+    assert(std::ranges::equal(shape, node_ptr->shape()) &&
+           "given shape and cached constant's shape should be the same");
+    assert(std::ranges::equal(std::span(data_ptr, data_ptr + node_ptr->size()), node_ptr->data()) &&
+           "given data and cached constant's data should be the same");
 }
 
 // Node ***********************************************************************

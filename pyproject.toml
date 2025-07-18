@@ -78,3 +78,7 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
+
+[tool.meson-python.args]
+setup = ['--default-library=static']
+install = ['--skip-subprojects']
