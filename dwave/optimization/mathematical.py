@@ -21,6 +21,7 @@ from dwave.optimization.symbols import (
     Add,
     And,
     ARange,
+    ArgSort,
     BSpline,
     Concatenate,
     Divide,
@@ -195,6 +196,11 @@ def arange(start: typing.Union[int, ArraySymbol, None] = None,
         step = 1
 
     return ARange(start, stop, step)
+
+
+def argsort(array: ArraySymbol) -> ArgSort:
+    """TODO"""
+    return ArgSort(array)
 
 
 @typing.overload
