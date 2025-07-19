@@ -28,6 +28,7 @@ from cpython.ref cimport PyObject
 from cython.operator cimport dereference as deref, preincrement as inc
 from cython.operator cimport typeid
 from libcpp cimport bool
+from libcpp.memory cimport make_shared
 from libcpp.typeindex cimport type_index
 from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
@@ -93,6 +94,21 @@ cdef class _Graph:
     """
     def __cinit__(self):
         self._lock_count = 0
+
+        self._owning_ptr = make_shared[cppGraph]()
+        self._graph = self._owning_ptr.get()
+
+    @staticmethod
+    cdef _Graph from_shared_ptr(shared_ptr[cppGraph] ptr):
+        cdef _Graph model = _Graph.__new__(_Graph)
+
+        model._owning_ptr = ptr
+        model._graph = model._owning_ptr.get()
+
+        if model._graph.topologically_sorted():
+            model._lock_count += 1
+
+        return model
 
     def __init__(self, *args, **kwargs):
         # disallow direct construction of _Graphs, they should be constructed
@@ -479,8 +495,12 @@ cdef class _Graph:
                 self.states._into_zipfile(zf, num_states=num_states, version=version)
 
             # Encode the objective and the constraints
-            if self.objective is not None and self.objective.topological_index() < stop:
-                zf.writestr("objective.json", encoder.encode(self.objective.topological_index()))
+            if self._graph.objective():
+                objective = symbol_from_ptr(self, self._graph.objective())
+            else:
+                objective = None
+            if objective is not None and objective.topological_index() < stop:
+                zf.writestr("objective.json", encoder.encode(objective.topological_index()))
             else:
                 zf.writestr("objective.json", b"")
 
