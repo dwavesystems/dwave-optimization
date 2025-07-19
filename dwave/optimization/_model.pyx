@@ -93,6 +93,7 @@ cdef class _Graph:
     """
     def __cinit__(self):
         self._lock_count = 0
+        self._constant_cache = dict()
 
     def __init__(self, *args, **kwargs):
         # disallow direct construction of _Graphs, they should be constructed

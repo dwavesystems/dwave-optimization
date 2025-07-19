@@ -28,6 +28,7 @@ from __future__ import annotations
 import collections
 import contextlib
 import math
+import numpy as np
 import tempfile
 import typing
 
@@ -151,7 +152,15 @@ class Model(_Graph):
             >>> time_limits = model.constant([10, 15, 5, 8.5])
         """
         from dwave.optimization.symbols import Constant  # avoid circular import
-        return Constant(self, array_like)
+
+        array = np.asarray_chkfinite(array_like, dtype=np.double, order="C")
+        hash_val = Constant._hash(np.atleast_1d(array))
+        if hash_val in self._constant_cache:
+            return self._constant_cache[hash_val]
+
+        constant = Constant(self, array_like)
+        self._constant_cache[hash_val] = constant
+        return constant
 
     def disjoint_bit_sets(
             self,

@@ -1080,6 +1080,14 @@ cdef class Constant(ArraySymbol):
         else:
             return NotImplemented  # this should never happen, but just in case
 
+    @staticmethod
+    def _hash(array):
+        import hashlib
+        h = hashlib.blake2b()
+        h.update(array.view(dtype=np.byte))
+        h.update(b"|" + str(array.shape).encode())
+        return h.digest()
+
     cdef bool _is_integer(self) noexcept:
         """Return True if the constant encodes a single integer."""
         if not self._is_scalar():
