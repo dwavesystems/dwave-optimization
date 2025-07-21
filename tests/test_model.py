@@ -326,6 +326,8 @@ class TestModel(unittest.TestCase):
             # or adding to constraints/objective
             model.constant(0) + model.integer()
 
+            model.constant.clear_cache()
+
             num_removed = model.remove_unused_symbols()
 
             # only the decision is kept
@@ -361,6 +363,7 @@ class TestModel(unittest.TestCase):
 
             # now delete the namespace symbol
             del y
+            model.constant.clear_cache()
 
             num_removed = model.remove_unused_symbols()
 

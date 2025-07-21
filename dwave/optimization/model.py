@@ -27,6 +27,8 @@ from __future__ import annotations
 
 import collections
 import contextlib
+import functools
+import hashlib
 import math
 import numpy as np
 import tempfile
@@ -112,6 +114,21 @@ class Model(_Graph):
     def __init__(self):
         self.objective = None
         self.states = States(self)
+        self._constant_cache: dict[bytes, Constant] = dict()
+
+        def constant_decorator(f):
+            @functools.wraps(f)
+            def wrapper(*args, **kwargs):
+                return f(*args, **kwargs)
+
+            def clear_cache():
+                """Clear the constant cache"""
+                self._constant_cache.clear()
+
+            wrapper.clear_cache = clear_cache
+            return wrapper
+
+        self.constant = constant_decorator(self.constant)
 
     def binary(self, shape: typing.Optional[_ShapeLike] = None) -> BinaryVariable:
         r"""Create a binary symbol as a decision variable.
@@ -154,8 +171,18 @@ class Model(_Graph):
         from dwave.optimization.symbols import Constant  # avoid circular import
 
         array = np.asarray_chkfinite(array_like, dtype=np.double, order="C")
-        hash_val = Constant._hash(np.atleast_1d(array))
+
+        # Hash the incoming array to a unique key for use in the constant cache.
+        # Using BLAKE2b as it is the fastest hash available in hashlib.
+        # Note that we don't care about cryptographic guarantees BLAKE2b or the other
+        # hashing algorithms that hashlib provides.
+        h = hashlib.blake2b()
+        h.update(np.atleast_1d(array).view(dtype=np.byte))
+        h.update(b"|" + str(array.shape).encode())
+        hash_val = h.digest()
+
         if hash_val in self._constant_cache:
+            assert np.all(array == self._constant_cache[hash_val].state())
             return self._constant_cache[hash_val]
 
         constant = Constant(self, array_like)
