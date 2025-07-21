@@ -12,6 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <catch2/benchmark/catch_benchmark_all.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
 
@@ -135,6 +136,29 @@ TEST_CASE("ArgSortNode") {
                 }
             }
         }
+    }
+
+    GIVEN("A large integer array") {
+        ssize_t n = 10000;
+        auto i_ptr = graph.emplace_node<IntegerNode>(n);
+        auto argsort_ptr = graph.emplace_node<ArgSortNode>(i_ptr);
+
+        auto state = graph.empty_state();
+        auto rng = std::default_random_engine(666);
+        i_ptr->initialize_state(state, rng);
+        graph.initialize_state(state);
+
+        std::uniform_int_distribution<> dist(0, n - 1);
+
+        BENCHMARK("Propagation of ArgSortNode") {
+            i_ptr->set_value(state, dist(rng), dist(rng));
+
+            i_ptr->propagate(state);
+            argsort_ptr->propagate(state);
+
+            i_ptr->commit(state);
+            argsort_ptr->commit(state);
+        };
     }
 }
 
