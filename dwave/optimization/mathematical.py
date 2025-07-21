@@ -199,7 +199,45 @@ def arange(start: typing.Union[int, ArraySymbol, None] = None,
 
 
 def argsort(array: ArraySymbol) -> ArgSort:
-    """TODO"""
+    """Return an ordering of the indices that would sort (flattened) values
+    of the given symbol. Note that while it will return an array with
+    identical shape to the given symbol, the returned indices will always be
+    indices on flattened array, similar to ``numpy.argsort(a, axis=None)``.
+
+    Always performs a index-wise stable sort such that the relative order of
+    values is maintained in the returned order.
+
+    Args:
+        array: Input array to perform the argsort on.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import argsort
+        ...
+        >>> model = Model()
+        >>> a = model.constant([5, 2, 7, 4, 9, 1])
+        >>> indices = argsort(a)
+        >>> indices.shape()
+        (5,)
+        >>> with model.lock():
+        ...    model.states.resize(1)
+        ...    print(indices.state())
+        [5. 1. 3. 0. 2. 4.]
+        >>> a = model.constant([[5, 2, 7], [4, 9, 1]])
+        >>> indices = argsort(a)
+        >>> indices.shape()
+        (5,)
+        >>> with model.lock():
+        ...    model.states.resize(1)
+        ...    print(indices.state())
+        [[5. 1. 3.]
+         [0. 2. 4.]]
+
+    See Also:
+        :class:`~dwave.optimization.ArgSort`: equivalent symbol.
+
+    .. versionadded:: 0.6.4
+    """
     return ArgSort(array)
 
 

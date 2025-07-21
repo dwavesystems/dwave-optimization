@@ -440,7 +440,15 @@ _register(ARange, typeid(cppARangeNode))
 
 
 cdef class ArgSort(ArraySymbol):
-    """TODO
+    """Return an ordering of the indices that would sort (flattened) values
+    of the given symbol. Note that while it will return an array with
+    identical shape to the given symbol, the returned indices will always be
+    indices on flattened array, similar to ``numpy.argsort(a, axis=None)``.
+
+    Always performs a index-wise stable sort such that the relative order of
+    values is maintained in the returned order.
+
+    .. versionadded:: 0.6.4
     """
     def __init__(self, ArraySymbol arr):
         cdef _Graph model = arr.model
