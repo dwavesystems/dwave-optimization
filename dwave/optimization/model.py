@@ -56,6 +56,55 @@ def locked(model: _Graph):
         model.unlock()
 
 
+class _ConstantCache:
+    def __init__(self, model):
+        self.model = model
+        self.constant_cache: dict[bytes, Constant] = dict()
+
+    def __call__(self, array_like: numpy.typing.ArrayLike):
+        r"""Create a constant symbol.
+
+        Args:
+            array_like: An |array-like|_ representing a constant. Can be a scalar
+                or a NumPy array. If the array's ``dtype`` is ``np.double``, the
+                array is not copied.
+
+        Returns:
+            A constant symbol.
+
+        Examples:
+            This example creates a :math:`1 \times 4`-sized constant symbol
+            with the specified values.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> time_limits = model.constant([10, 15, 5, 8.5])
+        """
+        from dwave.optimization.symbols import Constant  # avoid circular import
+
+        array = np.asarray_chkfinite(array_like, dtype=np.double, order="C")
+
+        # Hash the incoming array to a unique key for use in the constant cache.
+        # Using BLAKE2b as it is the fastest hash available in hashlib.
+        # Note that we don't care about cryptographic guarantees BLAKE2b or the other
+        # hashing algorithms that hashlib provides.
+        h = hashlib.blake2b()
+        h.update(np.atleast_1d(array).view(dtype=np.byte))
+        h.update(b"|" + str(array.shape).encode())
+        hash_val = h.digest()
+
+        if hash_val in self.constant_cache:
+            assert np.all(array == self.constant_cache[hash_val].state())
+            return self.constant_cache[hash_val]
+
+        constant = Constant(self.model, array_like)
+        self.constant_cache[hash_val] = constant
+        return constant
+
+    def clear_cache(self):
+        self.constant_cache.clear()
+
+
 class Model(_Graph):
     """Nonlinear model.
 
@@ -114,21 +163,6 @@ class Model(_Graph):
     def __init__(self):
         self.objective = None
         self.states = States(self)
-        self._constant_cache: dict[bytes, Constant] = dict()
-
-        def constant_decorator(f):
-            @functools.wraps(f)
-            def wrapper(*args, **kwargs):
-                return f(*args, **kwargs)
-
-            def clear_cache():
-                """Clear the constant cache"""
-                self._constant_cache.clear()
-
-            wrapper.clear_cache = clear_cache
-            return wrapper
-
-        self.constant = constant_decorator(self.constant)
 
     def binary(self, shape: typing.Optional[_ShapeLike] = None) -> BinaryVariable:
         r"""Create a binary symbol as a decision variable.
@@ -149,45 +183,9 @@ class Model(_Graph):
         from dwave.optimization.symbols import BinaryVariable  # avoid circular import
         return BinaryVariable(self, shape)
 
-    def constant(self, array_like: numpy.typing.ArrayLike) -> Constant:
-        r"""Create a constant symbol.
-
-        Args:
-            array_like: An |array-like|_ representing a constant. Can be a scalar
-                or a NumPy array. If the array's ``dtype`` is ``np.double``, the
-                array is not copied.
-
-        Returns:
-            A constant symbol.
-
-        Examples:
-            This example creates a :math:`1 \times 4`-sized constant symbol
-            with the specified values.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> time_limits = model.constant([10, 15, 5, 8.5])
-        """
-        from dwave.optimization.symbols import Constant  # avoid circular import
-
-        array = np.asarray_chkfinite(array_like, dtype=np.double, order="C")
-
-        # Hash the incoming array to a unique key for use in the constant cache.
-        # Using BLAKE2b as it is the fastest hash available in hashlib.
-        # Note that we don't care about cryptographic guarantees BLAKE2b or the other
-        # hashing algorithms that hashlib provides.
-        h = hashlib.blake2b()
-        h.update(np.atleast_1d(array).view(dtype=np.byte))
-        h.update(b"|" + str(array.shape).encode())
-        hash_val = h.digest()
-
-        if hash_val in self._constant_cache:
-            assert np.all(array == self._constant_cache[hash_val].state())
-            return self._constant_cache[hash_val]
-
-        constant = Constant(self, array_like)
-        self._constant_cache[hash_val] = constant
-        return constant
+    @functools.cached_property
+    def constant(self):
+        return _ConstantCache(self)
 
     def disjoint_bit_sets(
             self,
