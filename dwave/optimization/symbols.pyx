@@ -448,25 +448,16 @@ cdef class ArgSort(ArraySymbol):
     Always performs a index-wise stable sort such that the relative order of
     values is maintained in the returned order.
 
+    See Also:
+        :meth:`~dwave.optimization.mathematical.argsort`: equivalent method.
+
     .. versionadded:: 0.6.4
     """
     def __init__(self, ArraySymbol arr):
         cdef _Graph model = arr.model
 
-        self.ptr = model._graph.emplace_node[cppArgSortNode](arr.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppArgSortNode* ptr = dynamic_cast_ptr[cppArgSortNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef ArgSort x = ArgSort.__new__(ArgSort)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppArgSortNode* ptr
+        cdef cppArgSortNode* ptr = model._graph.emplace_node[cppArgSortNode](arr.array_ptr)
+        self.initialize_arraynode(model, ptr)
 
 _register(ArgSort, typeid(cppArgSortNode))
 

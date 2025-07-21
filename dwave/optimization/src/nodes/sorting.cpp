@@ -65,8 +65,7 @@ std::span<const Update> ArgSortNode::diff(const State& state) const {
 void ArgSortNode::initialize_state(State& state) const {
     const Array::View arr = arr_ptr_->view(state);
 
-    std::vector<double> vals{arr.begin(), arr.end()};
-    emplace_data_ptr<ArgSortNodeData>(state, vals);
+    emplace_data_ptr<ArgSortNodeData>(state, std::vector<double>{arr.begin(), arr.end()});
 }
 
 bool ArgSortNode::integral() const { return arr_ptr_->integral(); }
@@ -96,8 +95,9 @@ void ArgSortNode::propagate(State& state) const {
     // A further optimization could be to track the earliest modified (final) index
     // and only assign from there which might help when all the updates only affect
     // the end region of the final ordering.
-    node_data->assign(node_data->order |
-                      std::views::transform([](std::pair<double, ssize_t> p) { return p.second; }));
+    node_data->assign(
+            node_data->order |
+            std::views::transform([](const std::pair<double, ssize_t>& p) { return p.second; }));
 }
 
 void ArgSortNode::revert(State& state) const { data_ptr<ArgSortNodeData>(state)->revert(); }
