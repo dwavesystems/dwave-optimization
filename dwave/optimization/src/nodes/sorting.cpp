@@ -14,11 +14,38 @@
 
 #include "dwave-optimization/nodes/sorting.hpp"
 
+#include <set>
+
 #include "_state.hpp"
 
 namespace dwave::optimization {
 
 /// ArgSortNode
+
+struct ArgSortNodeDataHelper_ {
+    ArgSortNodeDataHelper_(std::vector<double> values) {
+        for (ssize_t index = 0, stop = values.size(); index < stop; index++) {
+            order.emplace(values[index], index);
+        }
+
+        for (const auto& [_, index] : order) {
+            indices.push_back(index);
+        }
+    }
+
+    std::vector<double> indices;
+    std::set<std::pair<double, ssize_t>> order;
+};
+
+struct ArgSortNodeData : public ArrayNodeStateData {
+    ArgSortNodeData(std::vector<double> values)
+            : ArgSortNodeData(ArgSortNodeDataHelper_(std::move(values))) {}
+    ArgSortNodeData(ArgSortNodeDataHelper_&& helper)
+            : ArrayNodeStateData(std::move(helper.indices)), order(std::move(helper.order)) {}
+
+    /// First is the value in the original array, second is the index of the value
+    std::set<std::pair<double, ssize_t>> order;
+};
 
 ArgSortNode::ArgSortNode(ArrayNode* arr_ptr)
         : ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr) {
@@ -26,26 +53,20 @@ ArgSortNode::ArgSortNode(ArrayNode* arr_ptr)
 }
 
 double const* ArgSortNode::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
+    return data_ptr<ArgSortNodeData>(state)->buff();
 }
 
-void ArgSortNode::commit(State& state) const { data_ptr<ArrayNodeStateData>(state)->commit(); }
+void ArgSortNode::commit(State& state) const { data_ptr<ArgSortNodeData>(state)->commit(); }
 
 std::span<const Update> ArgSortNode::diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->diff();
+    return data_ptr<ArgSortNodeData>(state)->diff();
 }
 
 void ArgSortNode::initialize_state(State& state) const {
     const Array::View arr = arr_ptr_->view(state);
 
-    std::vector<double> values(arr_ptr_->size(state));
-    std::iota(values.begin(), values.end(), 0);
-
-    auto arg_compare = [&arr](double x, double y) { return arr[x] < arr[y]; };
-
-    std::stable_sort(values.begin(), values.end(), arg_compare);
-
-    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
+    std::vector<double> vals{arr.begin(), arr.end()};
+    emplace_data_ptr<ArgSortNodeData>(state, vals);
 }
 
 bool ArgSortNode::integral() const { return arr_ptr_->integral(); }
@@ -59,32 +80,38 @@ std::pair<double, double> ArgSortNode::minmax(
 }
 
 void ArgSortNode::propagate(State& state) const {
-    const Array::View arr = arr_ptr_->view(state);
+    auto node_data = data_ptr<ArgSortNodeData>(state);
 
-    auto node_data = data_ptr<ArrayNodeStateData>(state);
+    // Make the modifications to the std::set based on the updates.
+    for (const Update& update : arr_ptr_->diff(state)) {
+        if (!update.placed()) {
+            node_data->order.erase(std::make_pair(update.old, update.index));
+        }
+        if (!update.removed()) {
+            node_data->order.insert(std::make_pair(update.value, update.index));
+        }
+    }
 
-    std::vector<double> values(arr_ptr_->size(state));
-    std::iota(values.begin(), values.end(), 0);
-
-    auto arg_compare = [&arr](double x, double y) { return arr[x] < arr[y]; };
-
-    std::stable_sort(values.begin(), values.end(), arg_compare);
-
-    node_data->assign(values);
+    // Assign the new order as determined by the ordering of the std::set.
+    // A further optimization could be to track the earliest modified (final) index
+    // and only assign from there which might help when all the updates only affect
+    // the end region of the final ordering.
+    node_data->assign(node_data->order |
+                      std::views::transform([](std::pair<double, ssize_t> p) { return p.second; }));
 }
 
-void ArgSortNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
+void ArgSortNode::revert(State& state) const { data_ptr<ArgSortNodeData>(state)->revert(); }
 
 std::span<const ssize_t> ArgSortNode::shape(const State& state) const {
     return arr_ptr_->shape(state);
 }
 
 ssize_t ArgSortNode::size(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->size();
+    return data_ptr<ArgSortNodeData>(state)->size();
 }
 
 ssize_t ArgSortNode::size_diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->size_diff();
+    return data_ptr<ArgSortNodeData>(state)->size_diff();
 }
 
 SizeInfo ArgSortNode::sizeinfo() const { return arr_ptr_->sizeinfo(); }
