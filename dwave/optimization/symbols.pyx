@@ -1000,14 +1000,8 @@ cdef extern from *:
 cdef class Constant(ArraySymbol):
     """Constant symbol.
 
-    Examples:
-        This example adds a constant symbol to a model.
-
-        >>> from dwave.optimization.model import Model
-        >>> model = Model()
-        >>> a = model.constant(20)
-        >>> type(a)
-        <class 'dwave.optimization.symbols.Constant'>
+    See also:
+        :meth:`~dwave.optimization.model.Model.constant`: equivalent method.
     """
     def __init__(self, _Graph model, array_like):
         # In the future we won't need to be contiguous, but we do need to be right now

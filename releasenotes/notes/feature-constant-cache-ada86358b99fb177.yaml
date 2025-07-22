@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Change the behavior of ``Model.constant()`` to keep a cache of symbols.
+    Multiple calls to ``Model.constant()`` with the same array will no longer
+    create redundant symbols.
