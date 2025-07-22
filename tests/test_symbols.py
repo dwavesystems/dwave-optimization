@@ -2079,7 +2079,7 @@ class TestMean(utils.SymbolTests):
         from dwave.optimization.symbols import Mean
         model = Model()
         c = model.constant([2, 3, 5, 1])
-        mean = dwave.optimization.symbols.Mean(c)
+        mean = dwave.optimization.mean(c)
 
         self.assertIsInstance(mean, Mean)
 
