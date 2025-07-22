@@ -21,8 +21,6 @@
 #include "dwave-optimization/nodes/statistics.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
 
-using Catch::Matchers::RangeEquals;
-
 namespace dwave::optimization {
 
 TEST_CASE("MeanNode") {
@@ -37,7 +35,9 @@ TEST_CASE("MeanNode") {
             auto state = graph.initialize_state();
 
             THEN("The initial mean is correct") {
-                CHECK_THAT(mean_ptr->view(state), RangeEquals({0.0}));
+                // empty constant node has min and max = 0
+                // in this case, mean = (min + max) / 2 = 0
+                CHECK(mean_ptr->view(state)[0] == 0.0);
             }
         }
     }
@@ -51,9 +51,7 @@ TEST_CASE("MeanNode") {
         WHEN("We initialize a state") {
             auto state = graph.initialize_state();
 
-            THEN("The initial mean is correct") {
-                CHECK_THAT(mean_ptr->view(state), RangeEquals({3.0}));
-            }
+            THEN("The initial mean is correct") { CHECK(mean_ptr->view(state)[0] == 3.0); }
         }
     }
     GIVEN("A non-empty integer constant node (with non-integer mean) and a mean "
@@ -65,9 +63,7 @@ TEST_CASE("MeanNode") {
         WHEN("We initialize a state") {
             auto state = graph.initialize_state();
 
-            THEN("The initial mean is correct") {
-                CHECK_THAT(mean_ptr->view(state), RangeEquals({2.5}));
-            }
+            THEN("The initial mean is correct") { CHECK(mean_ptr->view(state)[0] == 2.5); }
         }
     }
     GIVEN("A non-empty mixed constant node (with non-integer mean) and a mean "
@@ -79,9 +75,19 @@ TEST_CASE("MeanNode") {
         WHEN("We initialize a state") {
             auto state = graph.initialize_state();
 
-            THEN("The initial mean is correct") {
-                CHECK_THAT(mean_ptr->view(state), RangeEquals({-0.75}));
-            }
+            THEN("The initial mean is correct") { CHECK(mean_ptr->view(state)[0] == -0.75); }
+        }
+    }
+
+    GIVEN("An empty integer node and a mean node") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(4);
+        auto mean_ptr = graph.emplace_node<MeanNode>(i_ptr);
+        graph.emplace_node<ArrayValidationNode>(mean_ptr);
+
+        WHEN("We initialize a state") {
+            auto state = graph.initialize_state();
+
+            THEN("The initial mean is correct") { CHECK(mean_ptr->view(state)[0] == 0.0); }
         }
     }
 
@@ -95,9 +101,7 @@ TEST_CASE("MeanNode") {
             i_ptr->initialize_state(state, {6.0, 5.0, 1.0});
             graph.initialize_state(state);
 
-            THEN("The initial mean is correct") {
-                CHECK_THAT(mean_ptr->view(state), RangeEquals({4.0}));
-            }
+            THEN("The initial mean is correct") { CHECK(mean_ptr->view(state)[0] == 4.0); }
 
             AND_WHEN("We make some changes to the integer node and propagate") {
                 i_ptr->set_value(state, 1, 0.0);
@@ -105,9 +109,7 @@ TEST_CASE("MeanNode") {
                 // i_ptr should now be [6.0, 0.0, 3.0]
                 graph.propagate(state);
 
-                THEN("The mean is correct") {
-                    CHECK_THAT(mean_ptr->view(state), RangeEquals({3.0}));
-                }
+                THEN("The mean is correct") { CHECK(mean_ptr->view(state)[0] == 3.0); }
             }
         }
     }
@@ -121,16 +123,16 @@ TEST_CASE("MeanNode") {
             auto state = graph.initialize_state();
 
             THEN("The initial mean is correct") {
-                CHECK_THAT(mean_ptr->view(state), RangeEquals({0.0}));
+                // set_ptr->min() = 0 and set_ptr->.max() = 8
+                // array is empty, therefore mean (min + max) / 2
+                CHECK(mean_ptr->view(state)[0] == 4.0);
             }
 
             AND_WHEN("We grow the set node and propagate") {
                 set_ptr->assign(state, std::vector<double>{5, 8, 2, 6});
                 graph.propagate(state);
 
-                THEN("The mean is correct") {
-                    CHECK_THAT(mean_ptr->view(state), RangeEquals({5.25}));
-                }
+                THEN("The mean is correct") { CHECK(mean_ptr->view(state)[0] == 5.25); }
 
                 AND_WHEN("We commit, shrink the set node, and propagate") {
                     graph.commit(state);
@@ -140,9 +142,7 @@ TEST_CASE("MeanNode") {
                     // set should be [5, 8]
                     graph.propagate(state);
 
-                    THEN("The mean is correct") {
-                        CHECK_THAT(mean_ptr->view(state), RangeEquals({6.5}));
-                    }
+                    THEN("The mean is correct") { CHECK(mean_ptr->view(state)[0] == 6.5); }
 
                     AND_WHEN("We commit, shrink the set node to nothing, and propagate") {
                         graph.commit(state);
@@ -153,7 +153,9 @@ TEST_CASE("MeanNode") {
                         graph.propagate(state);
 
                         THEN("The mean is correct") {
-                            CHECK_THAT(mean_ptr->view(state), RangeEquals({0.0}));
+                            // set_ptr->min() = 0 and set_ptr->.max() = 8
+                            // array is empty, therefore mean (min + max) / 2
+                            CHECK(mean_ptr->view(state)[0] == 4.0);
                         }
                     }
                 }
@@ -161,5 +163,4 @@ TEST_CASE("MeanNode") {
         }
     }
 }
-
 }  // namespace dwave::optimization

@@ -2763,7 +2763,10 @@ _register(Maximum, typeid(cppMaximumNode))
 
 
 cdef class Mean(ArraySymbol):
-    """Mean value of the elements of a symbol."""
+    """Mean value of the elements of a symbol.
+    
+    .. versionadded:: 0.6.4
+    """
     def __init__(self, ArraySymbol arr):
         cdef _Graph model = arr.model
 

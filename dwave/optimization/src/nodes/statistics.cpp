@@ -25,9 +25,8 @@ MeanNode::MeanNode(ArrayNode *arr_ptr) : ScalarOutputMixin<ArrayNode, true>(), a
 }
 
 void MeanNode::initialize_state(State &state) const {
-    // If state is empty, default value for mean is zero.
     if (arr_ptr_->size(state) == 0) {
-        emplace_data_ptr<ScalarOutputMixinStateData>(state, 0.0);
+        emplace_state(state, (arr_ptr_->min() + arr_ptr_->max()) / 2.0);
         return;
     }
     // Otherwise, compute mean of values in array
@@ -35,8 +34,7 @@ void MeanNode::initialize_state(State &state) const {
     for (const auto val : arr_ptr_->view(state)) {
         sum += val;
     }
-    const double mean = sum / static_cast<double>(arr_ptr_->size(state));
-    emplace_data_ptr<ScalarOutputMixinStateData>(state, mean);
+    emplace_state(state, sum / static_cast<double>(arr_ptr_->size(state)));
 }
 
 bool MeanNode::integral() const { return false; }
@@ -44,9 +42,9 @@ bool MeanNode::integral() const { return false; }
 std::pair<double, double> MeanNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return memoize(cache, [&]() {
-        // If state is empty, default value for mean is zero.
         if (arr_ptr_->size() == 0) {
-            return std::make_pair(0.0, 0.0);
+            return std::make_pair((arr_ptr_->min() + arr_ptr_->max()) / 2.0,
+                                  (arr_ptr_->min() + arr_ptr_->max()) / 2.0);
         }
         // Othwerwise, ArrayNode is non-empty and therefore has min and max
         return std::make_pair(arr_ptr_->min(), arr_ptr_->max());
@@ -61,38 +59,29 @@ void MeanNode::propagate(State &state) const {
         return;
     }
 
-    auto node_data = data_ptr<ScalarOutputMixinStateData>(state);
-    const double state_size = static_cast<double>(arr_ptr_->size(state));
+    const ssize_t state_size = arr_ptr_->size(state);
 
-    // If state is empty, default value for mean is zero.
-    if (state_size == 0.0) {
-        node_data->set(0.0);
+    if (state_size == 0) {
+        set_state(state, (arr_ptr_->min() + arr_ptr_->max()) / 2.0);
         return;
     }
 
     // Compute size of ArrayNode prior to change
-    const double state_size_prior = state_size - static_cast<double>(arr_ptr_->size_diff(state));
-    // Compute the sum of ArrayNode prior to change
-    double sum = node_data->update.value * (state_size_prior);
+    const ssize_t state_size_prior = state_size - arr_ptr_->size_diff(state);
 
-    if (state_size == state_size_prior) {
-        // no value was removed or placed
-        for (const Update &u : arr_updates) {
+    // Compute the sum of ArrayNode prior to change
+    const double mean = data_ptr<ScalarOutputMixinStateData>(state)->update.value;
+    double sum = mean * static_cast<double>(state_size_prior);
+
+    for (const Update &u : arr_updates) {
+        if (u.removed()) {
+            sum -= u.old;
+        } else if (u.placed()) {
+            sum += u.value;
+        } else {
             sum += u.value - u.old;
         }
-    } else {
-        for (const Update &u : arr_updates) {
-            if (u.removed()) {
-                sum -= u.old;
-            } else if (u.placed()) {
-                sum += u.value;
-            } else {
-                sum += u.value - u.old;
-            }
-        }
     }
-    // Compute new mean
-    node_data->set(sum / state_size);
+    set_state(state, sum / static_cast<double>(state_size));
 }
-
 }  // namespace dwave::optimization

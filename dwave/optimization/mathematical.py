@@ -940,16 +940,18 @@ def maximum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
 
 
 def mean(array: ArraySymbol) -> Mean:
-    r"""Return the mean of the array elements.
+    r"""Return mean of given symbol.
 
     Args:
-        array: Input array symbols.
+        array: Input array symbol.
 
     Returns:
-        A symbol that is the mean of the input array elements.
+        A symbol that is the mean of given symbol. 
+        If given symbol is empty, mean defaults to (minimum + maximum) / 2 of 
+        given symbol.
 
     Examples:
-        This example minimizes two integer symbols of size :math:`1 \times 2`.
+        This example takes the mean of one symbol.
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import mean
@@ -962,6 +964,8 @@ def mean(array: ArraySymbol) -> Mean:
         ...     i.set_state(0, [8, 4, 3])
         ...     print(m.state(0))
         5.0
+
+    .. versionadded:: 0.6.4
     """
     return Mean(array)
 
