@@ -64,21 +64,7 @@ class _ConstantCache:
     def __call__(self, array_like: numpy.typing.ArrayLike):
         r"""Create a constant symbol.
 
-        Args:
-            array_like: An |array-like|_ representing a constant. Can be a scalar
-                or a NumPy array. If the array's ``dtype`` is ``np.double``, the
-                array is not copied.
-
-        Returns:
-            A constant symbol.
-
-        Examples:
-            This example creates a :math:`1 \times 4`-sized constant symbol
-            with the specified values.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> time_limits = model.constant([10, 15, 5, 8.5])
+        See :meth:`~Model.constant`.
         """
         from dwave.optimization.symbols import Constant  # avoid circular import
 
@@ -102,7 +88,14 @@ class _ConstantCache:
         return constant
 
     def clear_cache(self):
+        """Clear the constant cache. Subsequent calls to .constant() will create
+        new symbols.
+        """
         self.constant_cache.clear()
+
+    # If additional methods are added, don't forget to make them available before
+    # the cache has been instantiated! See comment below .constant(...) method
+    # definition.
 
 
 class Model(_Graph):
@@ -183,9 +176,43 @@ class Model(_Graph):
         from dwave.optimization.symbols import BinaryVariable  # avoid circular import
         return BinaryVariable(self, shape)
 
-    @functools.cached_property
-    def constant(self):
-        return _ConstantCache(self)
+    def constant(self, array_like: numpy.typing.ArrayLike) -> Constant:
+        r"""Create a constant symbol.
+
+        To avoid redundancy, ``Constant``\s are cached. Repeated calls to
+        ``.constant(array)`` with the same array will result in the same
+        ``Constant``.
+        The cache can be cleared by calling ``model.constant.clear_cache()``.
+
+        Args:
+            array_like: An |array-like|_ representing a constant. Can be a scalar
+                or a NumPy array. If the array's ``dtype`` is ``np.double``, the
+                array is not copied.
+
+        Returns:
+            A constant symbol.
+
+        Examples:
+            This example creates a :math:`1 \times 4`-sized constant symbol
+            with the specified values.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> time_limits = model.constant([10, 15, 5, 8.5])
+
+        See Also:
+            :class:`~dwave.optimization.symbols.Constant`: equivalent symbol.
+
+        .. versionchanged:: 0.6.4
+            Beginning in version 0.6.4, constants are cached. Also known as
+            `memoization <https://en.wikipedia.org/wiki/Memoization>`_.
+        """
+        self.__dict__["constant"] = cache = _ConstantCache(self)
+        return cache(array_like)
+
+    # Make sure the clear_cache method is available even if `.constant()` has never
+    # been called. An edge case for sure, but an easy one to support.
+    constant.clear_cache = functools.update_wrapper(lambda: None, _ConstantCache.clear_cache)
 
     def disjoint_bit_sets(
             self,
