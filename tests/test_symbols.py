@@ -257,18 +257,17 @@ class TestAnd(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(1)
-        b = model.constant(1)
+        b = model.constant(2)
         c = model.constant(0)
-        d = model.constant(0)
         ab = logical_and(a, b)
         ac = logical_and(a, c)
-        cd = logical_and(c, d)
+        cc = logical_and(c, c)
         cb = logical_and(c, b)
-        self.assertEqual(model.num_symbols(), 8)
+        self.assertEqual(model.num_symbols(), 7)
 
         model.lock()
 
-        yield from (ab, ac, cd, cb)
+        yield from (ab, ac, cc, cb)
 
     def op(self, lhs, rhs):
         return np.logical_and(lhs, rhs)
@@ -279,20 +278,19 @@ class TestAnd(utils.BinaryOpTests):
     def test_scalar_and(self):
         model = Model()
         a = model.constant(1)
-        b = model.constant(1)
+        b = model.constant(2)
         c = model.constant(0)
-        d = model.constant(0)
         ab = logical_and(a, b)
         ac = logical_and(a, c)
-        cd = logical_and(c, d)
+        cc = logical_and(c, c)
         cb = logical_and(c, b)
-        self.assertEqual(model.num_symbols(), 8)
+        self.assertEqual(model.num_symbols(), 7)
 
         model.lock()
         model.states.resize(1)
         self.assertEqual(ab.state(0), 1)
         self.assertEqual(ac.state(0), 0)
-        self.assertEqual(cd.state(0), 0)
+        self.assertEqual(cc.state(0), 0)
         self.assertEqual(cb.state(0), 0)
 
         with self.assertRaises(TypeError):
@@ -903,6 +901,40 @@ class TestConstant(utils.SymbolTests):
         c = model.constant(arr)
         np.testing.assert_array_equal(arr, c)
 
+    def test_interning(self):
+        model = Model()
+
+        c = model.constant(5)
+        self.assertEqual(model.num_symbols(), 1)
+
+        d = model.constant(5)
+        self.assertEqual(model.num_symbols(), 1)
+        self.assertEqual(c.id(), d.id())
+
+        d = model.constant([5])
+        self.assertEqual(model.num_symbols(), 2)
+        self.assertNotEqual(c.id(), d.id())
+
+        a = model.constant([1, 2, 3, 4])
+        self.assertEqual(model.num_symbols(), 3)
+
+        b = model.constant([1, 2, 3, 4])
+        self.assertEqual(model.num_symbols(), 3)
+        self.assertEqual(a.id(), b.id())
+
+        x = model.constant([[1, 2, 3, 4], [5, 6, 7, 8]])
+        self.assertEqual(model.num_symbols(), 4)
+        self.assertEqual(x.shape(), (2, 4))
+
+        y = model.constant([[1, 2, 3, 4], [5, 6, 7, 8]])
+        self.assertEqual(model.num_symbols(), 4)
+        self.assertEqual(y.shape(), (2, 4))
+        self.assertEqual(x.id(), y.id())
+
+        z = model.constant([[1, 2], [3, 4], [5, 6], [7, 8]])
+        self.assertEqual(model.num_symbols(), 5)
+        self.assertEqual(z.shape(), (4, 2))
+        self.assertNotEqual(x.id(), z.id())
 
 class TestCopy(utils.SymbolTests):
     def generate_symbols(self):
@@ -2354,20 +2386,19 @@ class TestOr(utils.BinaryOpTests):
     def test_scalar_or(self):
         model = Model()
         a = model.constant(1)
-        b = model.constant(1)
+        b = model.constant(2)
         c = model.constant(0)
-        d = model.constant(0)
         ab = logical_or(a, b)
         ac = logical_or(a, c)
-        cd = logical_or(c, d)
+        cc = logical_or(c, c)
         cb = logical_or(c, b)
-        self.assertEqual(model.num_symbols(), 8)
+        self.assertEqual(model.num_symbols(), 7)
 
         model.lock()
         model.states.resize(1)
         self.assertEqual(ab.state(0), 1)
         self.assertEqual(ac.state(0), 1)
-        self.assertEqual(cd.state(0), 0)
+        self.assertEqual(cc.state(0), 0)
         self.assertEqual(cb.state(0), 1)
 
         with self.assertRaises(TypeError):
@@ -3106,20 +3137,19 @@ class TestXor(utils.BinaryOpTests):
     def test_scalar_xor(self):
         model = Model()
         a = model.constant(1)
-        b = model.constant(1)
+        b = model.constant(2)
         c = model.constant(0)
-        d = model.constant(0)
         ab = logical_xor(a, b)
         ac = logical_xor(a, c)
-        cd = logical_xor(c, d)
+        cc = logical_xor(c, c)
         cb = logical_xor(c, b)
-        self.assertEqual(model.num_symbols(), 8)
+        self.assertEqual(model.num_symbols(), 7)
 
         model.lock()
         model.states.resize(1)
         self.assertEqual(ab.state(0), 0)
         self.assertEqual(ac.state(0), 1)
-        self.assertEqual(cd.state(0), 0)
+        self.assertEqual(cc.state(0), 0)
         self.assertEqual(cb.state(0), 1)
 
         with self.assertRaises(TypeError):

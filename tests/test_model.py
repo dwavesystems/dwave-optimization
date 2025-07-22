@@ -326,6 +326,8 @@ class TestModel(unittest.TestCase):
             # or adding to constraints/objective
             model.constant(0) + model.integer()
 
+            model.constant.clear_cache()
+
             num_removed = model.remove_unused_symbols()
 
             # only the decision is kept
@@ -361,6 +363,7 @@ class TestModel(unittest.TestCase):
 
             # now delete the namespace symbol
             del y
+            model.constant.clear_cache()
 
             num_removed = model.remove_unused_symbols()
 
@@ -657,7 +660,7 @@ class TestSymbol(unittest.TestCase):
         model = Model()
         c0 = model.constant(5)
         c1, = model.iter_symbols()
-        c2 = model.constant(5)
+        c2 = model.constant(6)
 
         self.assertIsInstance(c0.id(), int)
         self.assertEqual(c0.id(), c1.id())
@@ -667,7 +670,7 @@ class TestSymbol(unittest.TestCase):
         model = Model()
         c0 = model.constant(5)
         c1, = model.iter_symbols()
-        c2 = model.constant(5)
+        c2 = model.constant(6)
 
         # the specific form is an implementation detail, but different symbols
         # representing the same underlying node should have the same repr

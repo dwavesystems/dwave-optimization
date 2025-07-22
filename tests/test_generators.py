@@ -258,7 +258,7 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
 
         self.assertEqual(model.num_decisions(), 1)
         self.assertEqual(model.num_constraints(), num_vehicles)
-        self.assertEqual(model.num_nodes(), 35)
+        self.assertEqual(model.num_nodes(), 34)
         self.assertEqual(model.num_edges(), 46)
         self.assertEqual(model.is_locked(), True)
 
