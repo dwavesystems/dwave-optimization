@@ -55,6 +55,7 @@ from dwave.optimization.libcpp.nodes cimport (
     AnyNode as cppAnyNode,
     AdvancedIndexingNode as cppAdvancedIndexingNode,
     ARangeNode as cppARangeNode,
+    ArgSortNode as cppArgSortNode,
     ArrayValidationNode as cppArrayValidationNode,
     BasicIndexingNode as cppBasicIndexingNode,
     BinaryNode as cppBinaryNode,
@@ -133,6 +134,7 @@ __all__ = [
     "Any",
     "AdvancedIndexing",
     "ARange",
+    "ArgSort",
     "BasicIndexing",
     "BinaryVariable",
     "BSpline",
@@ -437,6 +439,29 @@ cdef class ARange(ArraySymbol):
     cdef cppARangeNode* ptr
 
 _register(ARange, typeid(cppARangeNode))
+
+
+cdef class ArgSort(ArraySymbol):
+    """Return an ordering of the indices that would sort (flattened) values
+    of the given symbol. Note that while it will return an array with
+    identical shape to the given symbol, the returned indices will always be
+    indices on flattened array, similar to ``numpy.argsort(a, axis=None)``.
+
+    Always performs a index-wise stable sort such that the relative order of
+    values is maintained in the returned order.
+
+    See Also:
+        :meth:`~dwave.optimization.mathematical.argsort`: equivalent method.
+
+    .. versionadded:: 0.6.4
+    """
+    def __init__(self, ArraySymbol arr):
+        cdef _Graph model = arr.model
+
+        cdef cppArgSortNode* ptr = model._graph.emplace_node[cppArgSortNode](arr.array_ptr)
+        self.initialize_arraynode(model, ptr)
+
+_register(ArgSort, typeid(cppArgSortNode))
 
 
 cdef bool _empty_slice(object slice_) noexcept:
