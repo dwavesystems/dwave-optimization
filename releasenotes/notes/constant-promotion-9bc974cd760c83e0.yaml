@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Support automatic constant promotion for arithmetic operations on Symbols.
+    This enables operations like ``model.binary() + 5``, where the ``5`` will
+    automatically be converted to a ``Constant`` symbol and added to the 
+    model.
