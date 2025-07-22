@@ -2271,6 +2271,9 @@ class TestNaryAdd(utils.NaryOpTests):
         x += b
         self.assertIs(x, y)  # subsequent should be in-place
 
+        x += 5
+        self.assertIs(x, y)  # subsequent should be in-place
+
     def test_mismatched_shape(self):
         model = Model()
         x: dwave.optimization.model.ArraySymbol = model.binary()  # typing is for mypy
@@ -2331,6 +2334,9 @@ class TestNaryMultiply(utils.NaryOpTests):
 
         y = x
         x *= b
+        self.assertIs(x, y)  # subsequent should be in-place
+
+        x *= 5
         self.assertIs(x, y)  # subsequent should be in-place
 
     def test_mismatched_shape(self):
