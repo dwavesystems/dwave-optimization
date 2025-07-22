@@ -130,6 +130,7 @@ class TestArraySymbol(unittest.TestCase):
         for op, method, cls in operators:
             with self.subTest(method):
                 self.assertIsInstance(op(x, y), cls)
+                self.assertIsInstance(op(x, 5.7), cls)
                 self.assertIs(getattr(x, method)(UnknownType()), NotImplemented)
 
         # The operators that don't fit as neatly into the above
