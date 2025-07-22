@@ -197,6 +197,24 @@ class TestAdvancedIndexing(unittest.TestCase):
         with self.assertRaises(ValueError):
             constant[i2]
 
+    def test_constant_promotion(self):
+        model = Model()
+        x = model.integer((2, 3, 5))
+        x[1, [0, 2], model.constant([0, 3])]
+
+        with self.assertRaisesRegex(
+                IndexError,
+                "index's largest possible value 3 is out of bounds for axis 0 with size 3"):
+            x[1, [0, 3], model.constant([0, 3])]
+
+        with self.assertRaisesRegex(
+                IndexError,
+                "index may not contain non-integer values for axis 0"):
+            x[1, [0, 1.1], model.constant([0, 3])]
+
+        with self.assertRaisesRegex(IndexError, "only integers, slices"):
+            x[1, [0, float("inf")], model.constant([0, 3])]
+
 
 class TestAll(utils.SymbolTests):
     def generate_symbols(self):

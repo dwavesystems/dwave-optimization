@@ -1441,6 +1441,15 @@ cdef class ArraySymbol(Symbol):
             while len(index) < self.ndim():
                 index.append(slice(None))
 
+            # replace any array-like indices with constants
+            for i in range(len(index)):
+                if isinstance(index[i], numbers.Integral):
+                    continue
+                try:
+                    index[i] = _as_array_symbol(self.model, index[i])
+                except (TypeError, ValueError):
+                    pass
+
             if all(isinstance(idx, (slice, numbers.Integral)) for idx in index):
                 # Basic indexing
                 # https://numpy.org/doc/stable/user/basics.indexing.html#basic-indexing
@@ -1466,10 +1475,8 @@ cdef class ArraySymbol(Symbol):
                 return dwave.optimization.symbols.AdvancedIndexing(basic, *advanced_indices)
 
             else:
-                # todo: consider supporting NumPy arrays directly
-
                 # this error message is chosen to be similar to NumPy's
-                raise IndexError("only integers, slices (`:`), and array symbols are valid indices")
+                raise IndexError("only integers, slices (`:`), arrays, and array symbols are valid indices")
 
         else:
             return self[(index,)]
