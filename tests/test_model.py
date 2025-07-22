@@ -130,8 +130,35 @@ class TestArraySymbol(unittest.TestCase):
         for op, method, cls in operators:
             with self.subTest(method):
                 self.assertIsInstance(op(x, y), cls)
-                self.assertIsInstance(op(x, 5.7), cls)
                 self.assertIs(getattr(x, method)(UnknownType()), NotImplemented)
+            with self.subTest(f"{method} with constant promotion"):
+                model_ = Model()
+                x_ = model_.binary()
+                self.assertIsInstance(op(x_, 5.7), cls)
+                self.assertEqual(model_.num_symbols(), 3)
+                op(x_, 5.7)  # equivalent scalar should be cached
+                self.assertEqual(model_.num_symbols(), 4)
+                op(x_, 5.6)
+                self.assertEqual(model_.num_symbols(), 6)
+
+                with self.assertRaises(ValueError):
+                    op(x_, float("inf"))
+                with self.assertRaises(ValueError):
+                    op(x_, float("nan"))
+
+                model_ = Model()
+                y_ = model_.integer(3)
+                self.assertIsInstance(op(y_, [4, 5.6, 6.5]), cls)
+                self.assertEqual(model_.num_symbols(), 3)
+                op(y_, [4, 5.6, 6.5])  # equivalent array should be cached
+                self.assertEqual(model_.num_symbols(), 4)
+                op(y_, [3, 5.6, 6.5])
+                self.assertEqual(model_.num_symbols(), 6)
+
+                with self.assertRaises(ValueError):
+                    op(y_, [float("inf"), 5, 6])
+                with self.assertRaises(ValueError):
+                    op(y_, [float("nan"), 5, 6])
 
         # The operators that don't fit as neatly into the above
 

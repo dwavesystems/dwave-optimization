@@ -1359,10 +1359,13 @@ def _split_indices(indices):
     return tuple(basic_indices), tuple(advanced_indices)
 
 
-def as_array_symbol(model, symbol):
+def _as_array_symbol(model, symbol):
     if isinstance(symbol, ArraySymbol):
         return symbol
-    return model.constant(np.asarray(symbol, dtype=np.double))
+    try:
+        return model.constant(symbol)
+    except TypeError as err:
+        raise TypeError(f"{symbol!r} cannot be interpreted as an array symbol") from err
 
 
 # Ideally this wouldn't subclass Symbol, but Cython only allows a single
@@ -1405,10 +1408,9 @@ cdef class ArraySymbol(Symbol):
 
     def __add__(self, rhs):
         try:
-            rhs = as_array_symbol(self.model, rhs)
+            rhs = _as_array_symbol(self.model, rhs)
         except TypeError:
             return NotImplemented
-        assert isinstance(rhs, ArraySymbol)
 
         from dwave.optimization.symbols import Add  # avoid circular import
         return Add(self, rhs)
@@ -1420,10 +1422,9 @@ cdef class ArraySymbol(Symbol):
 
     def __eq__(self, rhs):
         try:
-            rhs = as_array_symbol(self.model, rhs)
+            rhs = _as_array_symbol(self.model, rhs)
         except TypeError:
             return NotImplemented
-        assert isinstance(rhs, ArraySymbol)
 
         # We could consider returning a Constant(True) is the case that self is rhs
 
@@ -1475,10 +1476,9 @@ cdef class ArraySymbol(Symbol):
 
     def __iadd__(self, rhs):
         try:
-            rhs = as_array_symbol(self.model, rhs)
+            rhs = _as_array_symbol(self.model, rhs)
         except TypeError:
             return NotImplemented
-        assert isinstance(rhs, ArraySymbol)
 
         # If the user is doing +=, we make the assumption that they will want to
         # do it again, so we jump to NaryAdd
@@ -1487,10 +1487,9 @@ cdef class ArraySymbol(Symbol):
 
     def __imul__(self, rhs):
         try:
-            rhs = as_array_symbol(self.model, rhs)
+            rhs = _as_array_symbol(self.model, rhs)
         except TypeError:
             return NotImplemented
-        assert isinstance(rhs, ArraySymbol)
 
         # If the user is doing *=, we make the assumption that they will want to
         # do it again, so we jump to NaryMultiply
@@ -1512,30 +1511,27 @@ cdef class ArraySymbol(Symbol):
 
     def __le__(self, rhs):
         try:
-            rhs = as_array_symbol(self.model, rhs)
+            rhs = _as_array_symbol(self.model, rhs)
         except TypeError:
             return NotImplemented
-        assert isinstance(rhs, ArraySymbol)
 
         from dwave.optimization.symbols import LessEqual # avoid circular import
         return LessEqual(self, rhs)
 
     def __mod__(self, rhs):
         try:
-            rhs = as_array_symbol(self.model, rhs)
+            rhs = _as_array_symbol(self.model, rhs)
         except TypeError:
             return NotImplemented
-        assert isinstance(rhs, ArraySymbol)
 
         from dwave.optimization.symbols import Modulus # avoid circular import
         return Modulus(self, rhs)
 
     def __mul__(self, rhs):
         try:
-            rhs = as_array_symbol(self.model, rhs)
+            rhs = _as_array_symbol(self.model, rhs)
         except TypeError:
             return NotImplemented
-        assert isinstance(rhs, ArraySymbol)
 
         from dwave.optimization.symbols import Multiply  # avoid circular import
         return Multiply(self, rhs)
@@ -1566,20 +1562,18 @@ cdef class ArraySymbol(Symbol):
 
     def __sub__(self, rhs):
         try:
-            rhs = as_array_symbol(self.model, rhs)
+            rhs = _as_array_symbol(self.model, rhs)
         except TypeError:
             return NotImplemented
-        assert isinstance(rhs, ArraySymbol)
 
         from dwave.optimization.symbols import Subtract  # avoid circular import
         return Subtract(self, rhs)
 
     def __truediv__(self, rhs):
         try:
-            rhs = as_array_symbol(self.model, rhs)
+            rhs = _as_array_symbol(self.model, rhs)
         except TypeError:
             return NotImplemented
-        assert isinstance(rhs, ArraySymbol)
 
         from dwave.optimization.symbols import Divide  # avoid circular import
         return Divide(self, rhs)
