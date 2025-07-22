@@ -115,6 +115,7 @@ from dwave.optimization.libcpp.nodes cimport (
     WhereNode as cppWhereNode,
     XorNode as cppXorNode,
 )
+from dwave.optimization._model import _as_array_symbol
 from dwave.optimization._model cimport (
     ArraySymbol,
     _Graph,
@@ -2765,9 +2766,13 @@ cdef class NaryAdd(ArraySymbol):
         return x
 
     def __iadd__(self, rhs):
-        if isinstance(rhs, ArraySymbol):
+        try:
+            rhs = _as_array_symbol(self.model, rhs)
             self.ptr.add_node((<ArraySymbol>rhs).array_ptr)
             return self
+        except TypeError:
+            # this should be handled by the call to ArraySymbol.__iadd__ below
+            pass
 
         return super().__iadd__(rhs)
 
@@ -2897,9 +2902,13 @@ cdef class NaryMultiply(ArraySymbol):
         return x
 
     def __imul__(self, rhs):
-        if isinstance(rhs, ArraySymbol):
+        try:
+            rhs = _as_array_symbol(self.model, rhs)
             self.ptr.add_node((<ArraySymbol>rhs).array_ptr)
             return self
+        except TypeError:
+            # this should be handled by the call to ArraySymbol.__imul__ below
+            pass
 
         return super().__imul__(rhs)
 
