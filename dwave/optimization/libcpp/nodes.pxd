@@ -293,6 +293,11 @@ cdef extern from "dwave-optimization/nodes/sorting.hpp" namespace "dwave::optimi
         pass
 
 
+cdef extern from "dwave-optimization/nodes/statistics.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass MeanNode(ArrayNode):
+        pass
+
+
 cdef extern from "dwave-optimization/nodes/testing.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ArrayValidationNode(Node):
         pass

@@ -35,6 +35,7 @@ from dwave.optimization.symbols import (
     Log,
     Logical,
     Maximum,
+    Mean,
     Minimum,
     Modulus,
     Multiply,
@@ -75,6 +76,7 @@ __all__ = [
     "logical_or",
     "logical_xor",
     "maximum",
+    "mean",
     "minimum",
     "mod",
     "multiply",
@@ -935,6 +937,33 @@ def maximum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         [7. 5.]
     """
     raise RuntimeError("implemented by the op() decorator")
+
+
+def mean(array: ArraySymbol) -> Mean:
+    r"""Return the mean of the array elements.
+
+    Args:
+        array: Input array symbols.
+
+    Returns:
+        A symbol that is the mean of the input array elements.
+
+    Examples:
+        This example minimizes two integer symbols of size :math:`1 \times 2`.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import mean
+        ...
+        >>> model = Model()
+        >>> i = model.integer(3)
+        >>> m = mean(i)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [8, 4, 3])
+        ...     print(m.state(0))
+        [5.0]
+    """
+    return Mean(array)
 
 
 @_op(Minimum, NaryMinimum, "min")
