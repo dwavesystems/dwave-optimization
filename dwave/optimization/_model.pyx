@@ -1431,6 +1431,14 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Equal # avoid circular import
         return Equal(self, rhs)
 
+    def __ge__(self, rhs):
+        try:
+            rhs = _as_array_symbol(self.model, rhs)
+        except TypeError:
+            return NotImplemented
+
+        return rhs <= self
+
     def __getitem__(self, index):
         import dwave.optimization.symbols  # avoid circular import
         if isinstance(index, tuple):
@@ -1566,6 +1574,46 @@ cdef class ArraySymbol(Symbol):
                 out *= symbol
             return out
         raise ValueError("only integer exponents of 1 or greater are supported")
+
+    def __radd__(self, lhs):
+        try:
+            lhs = _as_array_symbol(self.model, lhs)
+        except TypeError:
+            return NotImplemented
+
+        return lhs + self
+
+    def __rmod__(self, lhs):
+        try:
+            lhs = _as_array_symbol(self.model, lhs)
+        except TypeError:
+            return NotImplemented
+
+        return lhs % self
+
+    def __rmul__(self, lhs):
+        try:
+            lhs = _as_array_symbol(self.model, lhs)
+        except TypeError:
+            return NotImplemented
+
+        return lhs * self
+
+    def __rsub__(self, lhs):
+        try:
+            lhs = _as_array_symbol(self.model, lhs)
+        except TypeError:
+            return NotImplemented
+
+        return lhs - self
+
+    def __rtruediv__(self, lhs):
+        try:
+            lhs = _as_array_symbol(self.model, lhs)
+        except TypeError:
+            return NotImplemented
+
+        return lhs / self
 
     def __sub__(self, rhs):
         try:
