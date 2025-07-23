@@ -342,10 +342,16 @@ class Array {
     virtual SizeInfo sizeinfo() const { return dynamic() ? SizeInfo(this) : SizeInfo(size()); }
 
     /// The minimum value that elements in the array may take.
-    double min() const { return minmax().first; }
+    double min() const {
+        cache_type<std::pair<double, double>> cache;
+        return minmax(cache).first;
+    }
 
     /// The maximum value that elements in the array may take.
-    double max() const { return minmax().second; }
+    double max() const {
+        cache_type<std::pair<double, double>> cache;
+        return minmax(cache).second;
+    }
 
     /// The smallest and largest values that elements in the array may take.
     virtual std::pair<double, double> minmax(
