@@ -39,38 +39,35 @@ class ArrayStateData {
     explicit ArrayStateData(Range&& values) noexcept
             : ArrayStateData(std::vector<double>(values.begin(), values.end())) {}
 
-    // Assign new values to the state, tracking the changes from the previous state to the new
-    // one. Including resizes.
-    bool assign(std::ranges::sized_range auto&& values) {
+    // Assign new values to the state starting from an offset, tracking the changes from the
+    // previous state to the new. If the original buffer extends past the new range of values,
+    // trim it by adding removal updates.
+    bool assign(std::ranges::sized_range auto&& values, ssize_t offset = 0) {
         // dev note: we could implement a version of this that doesn't need sized_range.
-        const ssize_t overlap_length = std::min<ssize_t>(buffer.size(), std::ranges::size(values));
+        const ssize_t overlap_length =
+                std::min<ssize_t>(buffer.size(), std::ranges::size(values) + offset) - offset;
 
         auto vit = std::ranges::begin(values);
 
         // first walk through the overlap, updating the buffer and the diff accordingly
         {
-            auto bit = buffer.begin();
-            for (ssize_t index = 0; index < overlap_length; ++index, ++bit, ++vit) {
+            auto bit = buffer.begin() + offset;
+            for (ssize_t index = offset; index < overlap_length + offset; ++index, ++bit, ++vit) {
                 if (*bit == *vit) continue;  // no change
                 updates.emplace_back(index, *bit, *vit);
                 *bit = *vit;
             }
         }
 
-        // next walk backwards through the excess buffer, if there is any, removing as we go
-        {
-            for (ssize_t index = buffer.size() - 1; index >= overlap_length; --index) {
-                updates.emplace_back(Update::removal(index, buffer[index]));
-            }
-            buffer.resize(overlap_length);
-        }
+        // trim the excess buffer
+        this->trim_to(overlap_length + offset);
 
         // finally walk forward through the excess values, if there are any, adding them to the
         // buffer
         {
             buffer.reserve(std::ranges::size(values));
-            for (ssize_t index = buffer.size(), stop = std::ranges::size(values); index < stop;
-                 ++index, ++vit) {
+            for (ssize_t index = buffer.size(), stop = std::ranges::size(values) + offset;
+                 index < stop; ++index, ++vit) {
                 updates.emplace_back(Update::placement(index, *vit));
                 buffer.emplace_back(*vit);
             }
@@ -81,7 +78,8 @@ class ArrayStateData {
         return !updates.empty();
     }
 
-    double* buff() noexcept { return buffer.data(); }
+    const double& back() { return buffer.back(); }
+
     const double* buff() const noexcept { return buffer.data(); }
 
     void commit() noexcept {
@@ -149,7 +147,12 @@ class ArrayStateData {
     }
 
     // Set the value at index, tracking the change in the diff.
-    bool set(ssize_t i, double value) {
+    // If allow_emplace is true, do an emplace_back iff the index is equal to the current size.
+    bool set(ssize_t i, double value, bool allow_emplace = false) {
+        if (allow_emplace && i == this->size()) {
+            return this->emplace_back(value);
+        }
+
         assert(i >= 0 && static_cast<std::size_t>(i) < buffer.size());
 
         double& old = buffer[i];
@@ -171,6 +174,20 @@ class ArrayStateData {
         return size_ - previous_size_;
     }
 
+    bool trim_to(ssize_t new_size) {
+        assert(new_size >= 0);
+        if (new_size >= size()) return false;
+
+        for (ssize_t index = buffer.size() - 1; index >= new_size; --index) {
+            updates.emplace_back(Update::removal(index, buffer[index]));
+        }
+        buffer.resize(new_size);
+
+        size_ = new_size;
+
+        return true;
+    }
+
     // Update the state according to the given updates. Includes resizing.
     // Note that the old value of each update is ignored, and the buffer is
     // used as the source of truth.
@@ -187,8 +204,7 @@ class ArrayStateData {
                 buffer.emplace_back(new_);
             } else {
                 assert(0 <= index && static_cast<std::size_t>(index) < buffer.size());
-                this->updates.emplace_back(index, buffer[index], new_);
-                buffer[index] = new_;
+                this->set(index, new_);
             }
         }
 
@@ -197,11 +213,11 @@ class ArrayStateData {
         return !this->updates.empty();
     }
 
+ private:
     // Changes made directly to the buffer/update must be reflected in both!
     std::vector<double> buffer;
     std::vector<Update> updates;
 
- private:
     // We need to be able to calculate a size diff, and to have a referencable
     // size. So we keep an addition source of truth for the size and we assert
     // it absolutely everywhere.
@@ -209,8 +225,7 @@ class ArrayStateData {
     ssize_t previous_size_;
 };
 
-
-class ArrayNodeStateData: public ArrayStateData, public NodeStateData {
+class ArrayNodeStateData : public ArrayStateData, public NodeStateData {
  public:
     explicit ArrayNodeStateData(std::vector<double>&& values) noexcept
             : ArrayStateData(std::move(values)), NodeStateData() {}

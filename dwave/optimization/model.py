@@ -27,7 +27,10 @@ from __future__ import annotations
 
 import collections
 import contextlib
+import functools
+import hashlib
 import math
+import numpy as np
 import tempfile
 import typing
 
@@ -51,6 +54,48 @@ def locked(model: _Graph):
         yield
     finally:
         model.unlock()
+
+
+class _ConstantCache:
+    def __init__(self, model):
+        self.model = model
+        self.constant_cache: dict[bytes, Constant] = dict()
+
+    def __call__(self, array_like: numpy.typing.ArrayLike):
+        r"""Create a constant symbol.
+
+        See :meth:`~Model.constant`.
+        """
+        from dwave.optimization.symbols import Constant  # avoid circular import
+
+        array = np.asarray_chkfinite(array_like, dtype=np.double, order="C")
+
+        # Hash the incoming array to a unique key for use in the constant cache.
+        # Using BLAKE2b as it is the fastest hash available in hashlib.
+        # Note that we don't care about cryptographic guarantees BLAKE2b or the other
+        # hashing algorithms that hashlib provides.
+        h = hashlib.blake2b()
+        h.update(np.atleast_1d(array).view(dtype=np.byte))
+        h.update(b"|" + str(array.shape).encode())
+        hash_val = h.digest()
+
+        if hash_val in self.constant_cache:
+            assert np.all(array == self.constant_cache[hash_val].state())
+            return self.constant_cache[hash_val]
+
+        constant = Constant(self.model, array_like)
+        self.constant_cache[hash_val] = constant
+        return constant
+
+    def clear_cache(self):
+        """Clear the constant cache. Subsequent calls to .constant() will create
+        new symbols.
+        """
+        self.constant_cache.clear()
+
+    # If additional methods are added, don't forget to make them available before
+    # the cache has been instantiated! See comment below .constant(...) method
+    # definition.
 
 
 class Model(_Graph):
@@ -134,6 +179,11 @@ class Model(_Graph):
     def constant(self, array_like: numpy.typing.ArrayLike) -> Constant:
         r"""Create a constant symbol.
 
+        To avoid redundancy, ``Constant``\s are cached. Repeated calls to
+        ``.constant(array)`` with the same array will result in the same
+        ``Constant``.
+        The cache can be cleared by calling ``model.constant.clear_cache()``.
+
         Args:
             array_like: An |array-like|_ representing a constant. Can be a scalar
                 or a NumPy array. If the array's ``dtype`` is ``np.double``, the
@@ -149,9 +199,20 @@ class Model(_Graph):
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> time_limits = model.constant([10, 15, 5, 8.5])
+
+        See Also:
+            :class:`~dwave.optimization.symbols.Constant`: equivalent symbol.
+
+        .. versionchanged:: 0.6.4
+            Beginning in version 0.6.4, constants are cached. Also known as
+            `memoization <https://en.wikipedia.org/wiki/Memoization>`_.
         """
-        from dwave.optimization.symbols import Constant  # avoid circular import
-        return Constant(self, array_like)
+        self.__dict__["constant"] = cache = _ConstantCache(self)
+        return cache(array_like)
+
+    # Make sure the clear_cache method is available even if `.constant()` has never
+    # been called. An edge case for sure, but an easy one to support.
+    constant.clear_cache = functools.update_wrapper(lambda: None, _ConstantCache.clear_cache)
 
     def disjoint_bit_sets(
             self,
@@ -264,7 +325,7 @@ class Model(_Graph):
         lower_bound: typing.Optional[float] = None,
         upper_bound: typing.Optional[float] = None,
         integral: typing.Optional[bool] = None,
-    ):
+    ) -> Input:
         """Create an "input" symbol.
 
         An input symbol functions similarly to a decision variable,

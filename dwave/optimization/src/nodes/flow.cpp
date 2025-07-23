@@ -25,6 +25,9 @@
 namespace dwave::optimization {
 
 // todo: consider promoting this function to some public namespace.
+// NOTE: this does not check that dynamic arrays have the same (dynamic) size
+// (i.e. does not use sizeinfo()), only that their remaining static dimensions
+// are equivalent.
 std::span<const ssize_t> same_shape(const Array* node_ptr,
                                     std::convertible_to<const Array*> auto... node_ptrs) {
     if (!node_ptr) throw std::invalid_argument("node pointer cannot be nullptr");
@@ -42,6 +45,113 @@ std::span<const ssize_t> same_shape(const Array* node_ptr,
     return node_ptr->shape();
 }
 
+/// ExtractNode
+
+ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr)
+        : ArrayOutputMixin({-1}), condition_ptr_(condition_ptr), arr_ptr_(arr_ptr) {
+    if (condition_ptr_->sizeinfo().substitute(100) != arr_ptr_->sizeinfo().substitute(100)) {
+        throw std::invalid_argument("condition and arr must have the same size");
+    }
+
+    add_predecessor(condition_ptr);
+    add_predecessor(arr_ptr);
+}
+
+double const* ExtractNode::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+void ExtractNode::commit(State& state) const { data_ptr<ArrayNodeStateData>(state)->commit(); }
+
+std::span<const Update> ExtractNode::diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->diff();
+}
+
+void ExtractNode::initialize_state(State& state) const {
+    const Array::View condition = condition_ptr_->view(state);
+    const Array::View arr = arr_ptr_->view(state);
+
+    std::vector<double> values;
+    values.reserve(condition.size());
+
+    for (auto cit = condition.begin(), arrit = arr.begin(), end = condition.end(); cit != end;
+         ++cit, ++arrit) {
+        if (*cit) {
+            values.emplace_back(*arrit);
+        }
+    }
+
+    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
+}
+
+bool ExtractNode::integral() const { return arr_ptr_->integral(); }
+
+std::pair<double, double> ExtractNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return arr_ptr_->minmax(cache);
+}
+
+void ExtractNode::propagate(State& state) const {
+    auto node_data = data_ptr<ArrayNodeStateData>(state);
+
+    // Nothing to do in this case
+    if (condition_ptr_->diff(state).empty() && arr_ptr_->diff(state).empty()) return;
+
+    auto get_index = [](const Update& update) { return update.index; };
+
+    // Get the minimum changed index
+    auto cond_view = condition_ptr_->diff(state) | std::views::transform(get_index);
+    auto arr_view = arr_ptr_->diff(state) | std::views::transform(get_index);
+    auto min_cond_it = std::ranges::min_element(cond_view);
+    auto min_arr_it = std::ranges::min_element(arr_view);
+
+    ssize_t min_changed_idx = -1;
+    if (min_cond_it != cond_view.end() && min_arr_it != arr_view.end()) {
+        min_changed_idx = std::min(*min_cond_it, *min_arr_it);
+    } else if (min_cond_it != cond_view.end()) {
+        min_changed_idx = *min_cond_it;
+    } else if (min_arr_it != arr_view.end()) {
+        min_changed_idx = *min_arr_it;
+    }
+    assert(min_changed_idx != -1 && "one of the arrays should have an update");
+
+    const Array::View condition = condition_ptr_->view(state);
+    const Array::View arr = arr_ptr_->view(state);
+
+    // Count the trues before this index
+    auto add_true = [](ssize_t acc, double val) -> ssize_t { return acc + static_cast<bool>(val); };
+    ssize_t count =
+            std::accumulate(condition.begin(), condition.begin() + min_changed_idx, 0, add_true);
+
+    // Get the new values
+    std::vector<double> new_values;
+    for (auto cit = condition.begin() + min_changed_idx, arrit = arr.begin() + min_changed_idx,
+              end = condition.end();
+         cit != end; ++cit, ++arrit) {
+        if (*cit) new_values.push_back(*arrit);
+    }
+
+    node_data->assign(new_values, count);
+}
+
+void ExtractNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
+
+std::span<const ssize_t> ExtractNode::shape(const State& state) const {
+    return std::span(&data_ptr<ArrayNodeStateData>(state)->size(), 1);
+}
+
+ssize_t ExtractNode::size(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->size();
+}
+
+ssize_t ExtractNode::size_diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->size_diff();
+}
+
+SizeInfo ExtractNode::sizeinfo() const { return SizeInfo(this, 0, condition_ptr_->sizeinfo().max); }
+
+/// WhereNode
+
 struct WhereNodeData : ArrayNodeStateData {
     // Initialize the state with the values given
     explicit WhereNodeData(const Array::View values) noexcept
@@ -57,21 +167,23 @@ struct WhereNodeData : ArrayNodeStateData {
         // rather than doing a lot of fancy things to track the various changes, let's
         // just get the indices that have been updated in at least one predecessor and
         // recalculate those from scratch
+
+        // We'll ignore any updates at indices greater than the final size
+        ssize_t final_size = condition.size();
+        auto relevant_index = [&final_size](const Update& up) { return up.index < final_size; };
+
         std::vector<ssize_t> indices;
         {
             indices.reserve(condition_diff.size() + x_diff.size() + y_diff.size());
 
             // dump any changed indices
-            for (const Update& update : condition_diff) {
-                assert(!update.placed() && !update.removed());  // shouldn't be dynamic
+            for (const Update& update : std::views::filter(condition_diff, relevant_index)) {
                 indices.emplace_back(update.index);
             }
-            for (const Update& update : x_diff) {
-                assert(!update.placed() && !update.removed());  // shouldn't be dynamic
+            for (const Update& update : std::views::filter(x_diff, relevant_index)) {
                 indices.emplace_back(update.index);
             }
-            for (const Update& update : y_diff) {
-                assert(!update.placed() && !update.removed());  // shouldn't be dynamic
+            for (const Update& update : std::views::filter(y_diff, relevant_index)) {
                 indices.emplace_back(update.index);
             }
 
@@ -84,7 +196,6 @@ struct WhereNodeData : ArrayNodeStateData {
         auto cit = condition.begin();
         auto xit = x.begin();
         auto yit = y.begin();
-        auto bit = buffer.begin();
         for (const ssize_t& index : indices) {
             // advance all of the iterators to the given index
             {
@@ -92,18 +203,14 @@ struct WhereNodeData : ArrayNodeStateData {
                 cit += distance;
                 xit += distance;
                 yit += distance;
-                bit += distance;
                 previous_index = index;
             }
 
-            double& old = *bit;
             const double& value = (*cit) ? *xit : *yit;  // value from x or y based on condition
-
-            if (old == value) continue;  // nothing to update
-
-            updates.emplace_back(index, old, value);
-            old = value;
+            this->set(index, value, true);
         }
+
+        this->trim_to(final_size);
     }
 };
 
@@ -116,12 +223,14 @@ WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_pt
     if (!condition_ptr_) throw std::invalid_argument("node pointer cannot be nullptr");
 
     // If `condition` is a single number, then we broadcast to x/y and don't care about their shapes
-    // Otherwise, we need all to be the same shape and to not be dynamic
+    // Otherwise, we need all to be the same shape and size
     if (condition_ptr_->size() != 1) {
         same_shape(condition_ptr_, x_ptr_);  // x/y have already been checked
-
-        if (condition_ptr_->dynamic()) {
-            throw std::invalid_argument("arrays cannot be dynamic unless condition is a scalar");
+        SizeInfo cond_size = condition_ptr_->sizeinfo().substitute(100);
+        if (cond_size != x_ptr_->sizeinfo().substitute(100) ||
+            cond_size != y_ptr->sizeinfo().substitute(100)) {
+            throw std::invalid_argument(
+                    "If condition is not of size 1, condition, x and y must all be the same size");
         }
     }
 
@@ -175,7 +284,8 @@ std::pair<double, double> WhereNode::minmax(
     return memoize(cache, [&]() {
         const auto [x_min, x_max] = x_ptr_->minmax(cache);
         const auto [y_min, y_max] = y_ptr_->minmax(cache);
-        return std::make_pair(std::min(x_min, y_min), std::max(x_max, y_max));});
+        return std::make_pair(std::min(x_min, y_min), std::max(x_max, y_max));
+    });
 }
 
 // Given a list of updates on a single `conditional`, did we end up flipping?
@@ -229,25 +339,29 @@ void WhereNode::revert(State& state) const { data_ptr<WhereNodeData>(state)->rev
 std::span<const ssize_t> WhereNode::shape(const State& state) const {
     if (!this->dynamic()) return this->shape();
 
-    // we're dynamic. Which should only happen when `condition` is a single value
-    assert(condition_ptr_->size() == 1);
-
     // in which case our shape is determined by `condition`
-    return condition_ptr_->buff(state)[0] ? x_ptr_->shape(state) : y_ptr_->shape(state);
+    if (condition_ptr_->size() == 1) {
+        // in this case our shape is determined by `condition`
+        return condition_ptr_->buff(state)[0] ? x_ptr_->shape(state) : y_ptr_->shape(state);
+    }
+
+    return condition_ptr_->shape(state);
 }
 
 ssize_t WhereNode::size(const State& state) const {
     ssize_t size = this->size();
     if (size >= 0) return size;
 
-    // we're dynamic. Which should only happen when `condition` is a single value
-    assert(condition_ptr_->size() == 1);
-
-    // in which case our size is determined by `condition`
-    size = condition_ptr_->buff(state)[0] ? x_ptr_->size(state) : y_ptr_->size(state);
+    if (condition_ptr_->size() == 1) {
+        // in this case our size is determined by `condition`
+        size = condition_ptr_->buff(state)[0] ? x_ptr_->size(state) : y_ptr_->size(state);
+    } else {
+        // all the arrays should have equal dynamic size
+        size = condition_ptr_->size(state);
+    }
 
     // should match our current buffer
-    assert(static_cast<ssize_t>(data_ptr<WhereNodeData>(state)->buffer.size()) == size);
+    assert(static_cast<ssize_t>(data_ptr<WhereNodeData>(state)->size()) == size);
 
     return size;
 }
@@ -255,6 +369,16 @@ ssize_t WhereNode::size(const State& state) const {
 ssize_t WhereNode::size_diff(const State& state) const {
     if (!this->dynamic()) return 0;
     return data_ptr<WhereNodeData>(state)->size_diff();
+}
+
+SizeInfo WhereNode::sizeinfo() const {
+    if (!this->dynamic()) return SizeInfo(this->size());
+
+    // NOTE: could maybe do something with the min/max of x and y?
+    if (condition_ptr_->size() == 1) return SizeInfo(this);
+
+    // all three predecessor arrays should be the same (dynamic) size
+    return SizeInfo(condition_ptr_);
 }
 
 }  // namespace dwave::optimization

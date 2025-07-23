@@ -373,6 +373,105 @@ class NaryOpTests(SymbolTests):
         )
 
 
+class ReduceTests(SymbolTests):
+    @property
+    @abc.abstractmethod
+    def empty_requires_initial(self):
+        pass
+
+    @abc.abstractmethod
+    def op(self, x, **kwargs):
+        pass
+
+    def generate_symbols(self):
+        model = Model()
+        A = model.constant(np.arange(5))
+        B = model.constant(np.arange(5, 10))
+        C = model.constant([])
+        a = self.op(A)
+        b = self.op(B)
+        c = self.op(C, initial=1)
+        model.lock()
+        yield a
+        yield b
+        yield c
+
+    def test_initial(self):
+        model = Model()
+        model.states.resize(1)
+        
+        arr = model.constant([0, 1])
+        empty = model.constant([])
+        dynamic = model.set(5)
+
+        with self.subTest(initial="howdy"):
+            with self.assertRaises(TypeError):
+                self.op(arr, initial="howdy")
+            with self.assertRaises(TypeError):
+                self.op(empty, initial="howdy")
+            with self.assertRaises(TypeError):
+                self.op(dynamic, initial="howdy")
+
+            self.assertEqual(model.num_symbols(), 3)  # no side-effects
+
+        with self.subTest(initial=None):
+            out = self.op(arr, initial=None)  # this is OK
+            with model.lock():
+                self.assertEqual(out.state(), self.op(np.asarray(arr)))
+
+            if self.empty_requires_initial:
+                with self.assertRaises(ValueError):
+                    self.op(empty, initial=None)
+                with self.assertRaises(ValueError):
+                    self.op(dynamic, initial=None)
+
+                self.assertEqual(model.num_symbols(), 4)  # no side-effects
+            else:
+                out = self.op(empty, initial=None)
+                with model.lock():
+                    self.assertEqual(out.state(), self.op(empty.state()))
+
+                out = self.op(dynamic, initial=None)
+                with model.lock():
+                    self.assertEqual(out.state(), self.op(dynamic.state()))
+
+                self.assertEqual(model.num_symbols(), 6)
+
+    def test_numpy_equivalence(self):
+        model = Model()
+        model.states.resize(1)
+
+        with self.subTest("0D"):
+            arr = np.asarray(-1)
+            sym = self.op(model.constant(arr))
+            with model.lock():
+                np.testing.assert_array_equal(sym.state(), self.op(arr))
+
+        with self.subTest("1D"):
+            arr = np.asarray([-1, 0, 1, 2])
+            sym = self.op(model.constant(arr))
+            with model.lock():
+                np.testing.assert_array_equal(sym.state(), self.op(arr))
+
+        with self.subTest("1D with initial"):
+            arr = np.asarray([-1, 0, 1, 2])
+            sym = self.op(model.constant(arr), initial=1)
+            with model.lock():
+                np.testing.assert_array_equal(sym.state(), self.op(arr, initial=1))
+
+        with self.subTest("2D"):
+            arr = np.arange(9).reshape(3, 3)
+            sym = self.op(model.constant(arr))
+            with model.lock():
+                np.testing.assert_array_equal(sym.state(), self.op(arr))
+
+        with self.subTest("empty with initial"):
+            arr = np.asarray([])
+            sym = self.op(model.constant(arr), initial=105)
+            with model.lock():
+                np.testing.assert_array_equal(sym.state(), self.op(arr, initial=105))
+
+
 class UnaryOpTests(SymbolTests):
     @abc.abstractmethod
     def op(self, x):

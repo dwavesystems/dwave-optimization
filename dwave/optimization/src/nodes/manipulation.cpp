@@ -150,16 +150,16 @@ void ConcatenateNode::propagate(State& state) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);
 
     for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
-        auto view_it = Array::iterator(ptr->buff() + array_starts_[arr_i], this->ndim(),
-                                       array_ptrs_[arr_i]->shape().data(), this->strides().data());
+        auto view_it = Array::const_iterator(ptr->buff() + array_starts_[arr_i], this->ndim(),
+                                             array_ptrs_[arr_i]->shape().data(),
+                                             this->strides().data());
 
-        for (auto diff : array_ptrs_[arr_i]->diff(state)) {
-            assert(!diff.placed() && !diff.removed() && "no dynamic support implemented");
-            auto update_it = view_it + diff.index;
-            ssize_t buffer_index = &*update_it - ptr->buffer.data();
-            assert(*update_it == diff.old);
-            ptr->updates.emplace_back(buffer_index, *update_it, diff.value);
-            *update_it = diff.value;
+        for (auto update : array_ptrs_[arr_i]->diff(state)) {
+            assert(!update.placed() && !update.removed() && "no dynamic support implemented");
+            auto update_it = view_it + update.index;
+            ssize_t buffer_index = &*update_it - ptr->buff();
+            assert(*update_it == update.old);
+            ptr->set(buffer_index, update.value);
         }
     }
 }

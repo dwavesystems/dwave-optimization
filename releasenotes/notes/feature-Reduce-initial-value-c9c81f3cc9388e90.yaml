@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Allow the user to provide an initial value to ``ArraySymbol.max()``,
+    ``.min()``, ``.prod()``, and ``.sum()`` methods.

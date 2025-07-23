@@ -21,11 +21,13 @@ from dwave.optimization.symbols import (
     Add,
     And,
     ARange,
+    ArgSort,
     BSpline,
     Concatenate,
     Divide,
     Exp,
     Expit,
+    Extract,
     LinearProgram,
     LinearProgramFeasible,
     LinearProgramObjectiveValue,
@@ -62,6 +64,7 @@ __all__ = [
     "divide",
     "exp",
     "expit",
+    "extract",
     "hstack",
     "linprog",
     "log",
@@ -193,6 +196,49 @@ def arange(start: typing.Union[int, ArraySymbol, None] = None,
         step = 1
 
     return ARange(start, stop, step)
+
+
+def argsort(array: ArraySymbol) -> ArgSort:
+    """Return an ordering of the indices that would sort (flattened) values
+    of the given symbol. Note that while it will return an array with
+    identical shape to the given symbol, the returned indices will always be
+    indices on flattened array, similar to ``numpy.argsort(a, axis=None)``.
+
+    Always performs a index-wise stable sort such that the relative order of
+    values is maintained in the returned order.
+
+    Args:
+        array: Input array to perform the argsort on.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import argsort
+        ...
+        >>> model = Model()
+        >>> a = model.constant([5, 2, 7, 4, 9, 1])
+        >>> indices = argsort(a)
+        >>> indices.shape()
+        (5,)
+        >>> with model.lock():
+        ...    model.states.resize(1)
+        ...    print(indices.state())
+        [5. 1. 3. 0. 2. 4.]
+        >>> a = model.constant([[5, 2, 7], [4, 9, 1]])
+        >>> indices = argsort(a)
+        >>> indices.shape()
+        (5,)
+        >>> with model.lock():
+        ...    model.states.resize(1)
+        ...    print(indices.state())
+        [[5. 1. 3.]
+         [0. 2. 4.]]
+
+    See Also:
+        :class:`~dwave.optimization.ArgSort`: equivalent symbol.
+
+    .. versionadded:: 0.6.4
+    """
+    return ArgSort(array)
 
 
 @typing.overload
@@ -452,6 +498,37 @@ def expit(x: ArraySymbol) -> Expit:
     .. versionadded:: 0.5.2
     """
     return Expit(x)
+
+
+def extract(condition: ArraySymbol, arr: ArraySymbol) -> Extract:
+    """Return the elements of an array where the condition is true.
+
+    Args:
+        condition:
+            Where ``True``, return the corresponding element from ``arr``.
+        arr:
+            The input array.
+
+    Returns:
+        An :class:`~dwave.optimization.model.ArraySymbol`
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import extract
+        ...
+        >>> model = Model()
+        >>> condition = model.binary(3)
+        >>> arr = model.constant([4, 5, 6])
+        >>> extracted = extract(condition, arr)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     condition.set_state(0, [True, False, True])
+        ...     print(extracted.state())
+        [4. 6.]
+
+    .. versionadded:: 0.6.3
+    """
+    return Extract(condition, arr)
 
 
 def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:

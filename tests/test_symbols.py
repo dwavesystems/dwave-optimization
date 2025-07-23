@@ -197,6 +197,24 @@ class TestAdvancedIndexing(unittest.TestCase):
         with self.assertRaises(ValueError):
             constant[i2]
 
+    def test_constant_promotion(self):
+        model = Model()
+        x = model.integer((2, 3, 5))
+        x[1, [0, 2], model.constant([0, 3])]
+
+        with self.assertRaisesRegex(
+                IndexError,
+                "index's largest possible value 3 is out of bounds for axis 0 with size 3"):
+            x[1, [0, 3], model.constant([0, 3])]
+
+        with self.assertRaisesRegex(
+                IndexError,
+                "index may not contain non-integer values for axis 0"):
+            x[1, [0, 1.1], model.constant([0, 3])]
+
+        with self.assertRaisesRegex(IndexError, "only integers, slices"):
+            x[1, [0, float("inf")], model.constant([0, 3])]
+
 
 class TestAll(utils.SymbolTests):
     def generate_symbols(self):
@@ -257,18 +275,17 @@ class TestAnd(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
         a = model.constant(1)
-        b = model.constant(1)
+        b = model.constant(2)
         c = model.constant(0)
-        d = model.constant(0)
         ab = logical_and(a, b)
         ac = logical_and(a, c)
-        cd = logical_and(c, d)
+        cc = logical_and(c, c)
         cb = logical_and(c, b)
-        self.assertEqual(model.num_symbols(), 8)
+        self.assertEqual(model.num_symbols(), 7)
 
         model.lock()
 
-        yield from (ab, ac, cd, cb)
+        yield from (ab, ac, cc, cb)
 
     def op(self, lhs, rhs):
         return np.logical_and(lhs, rhs)
@@ -279,20 +296,19 @@ class TestAnd(utils.BinaryOpTests):
     def test_scalar_and(self):
         model = Model()
         a = model.constant(1)
-        b = model.constant(1)
+        b = model.constant(2)
         c = model.constant(0)
-        d = model.constant(0)
         ab = logical_and(a, b)
         ac = logical_and(a, c)
-        cd = logical_and(c, d)
+        cc = logical_and(c, c)
         cb = logical_and(c, b)
-        self.assertEqual(model.num_symbols(), 8)
+        self.assertEqual(model.num_symbols(), 7)
 
         model.lock()
         model.states.resize(1)
         self.assertEqual(ab.state(0), 1)
         self.assertEqual(ac.state(0), 0)
-        self.assertEqual(cd.state(0), 0)
+        self.assertEqual(cc.state(0), 0)
         self.assertEqual(cb.state(0), 0)
 
         with self.assertRaises(TypeError):
@@ -417,6 +433,16 @@ class TestARange(utils.SymbolTests):
                 ar = arange(stop=stop, start=start)
                 with model.lock():
                     np.testing.assert_array_equal(ar.state(), np.arange(1, 5, 1))
+
+
+class TestArgSort(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        c = model.constant([1, 5, 2, 3])
+        argsort = dwave.optimization.symbols.ArgSort(c)
+
+        with model.lock():
+            yield argsort
 
 
 class TestBasicIndexing(utils.SymbolTests):
@@ -893,6 +919,40 @@ class TestConstant(utils.SymbolTests):
         c = model.constant(arr)
         np.testing.assert_array_equal(arr, c)
 
+    def test_interning(self):
+        model = Model()
+
+        c = model.constant(5)
+        self.assertEqual(model.num_symbols(), 1)
+
+        d = model.constant(5)
+        self.assertEqual(model.num_symbols(), 1)
+        self.assertEqual(c.id(), d.id())
+
+        d = model.constant([5])
+        self.assertEqual(model.num_symbols(), 2)
+        self.assertNotEqual(c.id(), d.id())
+
+        a = model.constant([1, 2, 3, 4])
+        self.assertEqual(model.num_symbols(), 3)
+
+        b = model.constant([1, 2, 3, 4])
+        self.assertEqual(model.num_symbols(), 3)
+        self.assertEqual(a.id(), b.id())
+
+        x = model.constant([[1, 2, 3, 4], [5, 6, 7, 8]])
+        self.assertEqual(model.num_symbols(), 4)
+        self.assertEqual(x.shape(), (2, 4))
+
+        y = model.constant([[1, 2, 3, 4], [5, 6, 7, 8]])
+        self.assertEqual(model.num_symbols(), 4)
+        self.assertEqual(y.shape(), (2, 4))
+        self.assertEqual(x.id(), y.id())
+
+        z = model.constant([[1, 2], [3, 4], [5, 6], [7, 8]])
+        self.assertEqual(model.num_symbols(), 5)
+        self.assertEqual(z.shape(), (4, 2))
+        self.assertNotEqual(x.id(), z.id())
 
 class TestCopy(utils.SymbolTests):
     def generate_symbols(self):
@@ -1264,6 +1324,33 @@ class TestExpit(utils.SymbolTests):
             self.assertEqual(expit_node.state(), scipy_expit_output[i])  # confirm consistency with SciPy expit
 
 
+class TestExtract(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        condition = model.binary(3)
+        arr = model.constant([1, 2, 3])
+        extract = dwave.optimization.extract(condition, arr)
+        with model.lock():
+            yield extract
+
+    def test(self):
+        model = Model()
+        condition = model.binary(3)
+        arr = model.integer(3)
+        extract = dwave.optimization.extract(condition, arr)
+        with model.lock():
+            model.states.resize(1)
+            condition.set_state(0, [False, True, True])
+            arr.set_state(0, [1, 2, 3])
+            np.testing.assert_array_equal(extract.state(), [2, 3])
+            condition.set_state(0, [False, False, True])
+            np.testing.assert_array_equal(extract.state(), [3])
+
+        with self.assertRaises(ValueError):
+            # wrong shape
+            dwave.optimization.extract(model.binary(4), arr)
+
+
 class TestInput(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
@@ -1333,23 +1420,52 @@ class TestInput(utils.SymbolTests):
 
                 np.testing.assert_array_equal(inp.state(), [[[0, 1]], [[2, 3]]])
 
-        def test_initializing_unset_state(self):
-            # ensure proper error is raised when initializing the model state without having
-            # set the input's state
-            model = Model()
-            inp = model.input()
-            x = model.binary()
-            model.minimize(inp + x)
+    def test_initializing_unset_state(self):
+        # ensure proper error is raised when initializing the model state without having
+        # set the input's state
+        model = Model()
+        inp = model.input()
+        x = model.binary()
+        model.minimize(inp + x)
 
-            model.lock()
+        model.lock()
 
-            model.states.resize(1)
+        model.states.resize(1)
 
-            with self.assertRaisesRegex(
-                RuntimeError,
-                r"^InputNode must have state explicitly initialized"
-            ):
-                model.objective.state()
+        with self.assertRaisesRegex(
+            RuntimeError,
+            r"^InputNode must have state explicitly initialized"
+        ):
+            model.objective.state()
+
+    def test_bounds_and_integrality(self):
+        model = Model()
+
+        i0 = model.input()
+        default_lower_bound = i0.lower_bound()
+        default_upper_bound = i0.upper_bound()
+        default_integral = i0.integral()
+
+        i1 = model.input(lower_bound=-10)
+        self.assertEqual(i1.lower_bound(), -10)
+        self.assertEqual(i1.upper_bound(), default_upper_bound)
+        self.assertEqual(i1.integral(), default_integral)
+
+        i2 = model.input(upper_bound=100)
+        self.assertEqual(i2.lower_bound(), default_lower_bound)
+        self.assertEqual(i2.upper_bound(), 100)
+        self.assertEqual(i2.integral(), default_integral)
+
+        i3 = model.input(integral=True)
+        self.assertEqual(i3.lower_bound(), default_lower_bound)
+        self.assertEqual(i3.upper_bound(), default_upper_bound)
+        self.assertEqual(i3.integral(), True)
+
+        with self.assertRaises(ValueError):
+            model.input(lower_bound=100, upper_bound=-100)
+        with self.assertRaises(ValueError):
+            model.input(lower_bound=.1, upper_bound=.9, integral=True)
+
 
 class TestIntegerVariable(utils.SymbolTests):
     def generate_symbols(self):
@@ -1888,16 +2004,11 @@ class TestLinearProgram(utils.SymbolTests):
             np.testing.assert_array_equal(lp.state(3), [1, 1])
 
 
-class TestMax(utils.SymbolTests):
-    def generate_symbols(self):
-        model = Model()
-        A = model.constant(np.arange(5))
-        B = model.constant(np.arange(5, 10))
-        a = A.max()
-        b = B.max()
-        model.lock()
-        yield a
-        yield b
+class TestMax(utils.ReduceTests):
+    empty_requires_initial = True
+
+    def op(self, x, *args, **kwargs):
+        return x.max(*args, **kwargs)
 
     def test_empty(self):
         model = Model()
@@ -1911,11 +2022,15 @@ class TestMax(utils.SymbolTests):
         B = model.constant(np.arange(5, 10))
         a = A.max()
         b = B.max()
+        c = B.max(initial=6)
+        d = B.max(initial=105)
         model.states.resize(1)
         model.lock()
 
         self.assertEqual(a.state(0), 4)
         self.assertEqual(b.state(0), 9)
+        self.assertEqual(c.state(0), 9)
+        self.assertEqual(d.state(0), 105)
 
 
 class TestMaximum(utils.SymbolTests):
@@ -1951,16 +2066,11 @@ class TestMaximum(utils.SymbolTests):
         np.testing.assert_array_equal(m.state(0), np.arange(5, 10))
 
 
-class TestMin(utils.SymbolTests):
-    def generate_symbols(self):
-        model = Model()
-        A = model.constant(np.arange(5))
-        B = model.constant(np.arange(5, 10))
-        a = A.min()
-        b = B.min()
-        model.lock()
-        yield a
-        yield b
+class TestMin(utils.ReduceTests):
+    empty_requires_initial = True
+
+    def op(self, x, *args, **kwargs):
+        return x.min(*args, **kwargs)
 
     def test_empty(self):
         model = Model()
@@ -1974,11 +2084,15 @@ class TestMin(utils.SymbolTests):
         B = model.constant(np.arange(5, 10))
         a = A.min()
         b = B.min()
+        c = B.min(initial=6)
+        d = B.min(initial=-105)
         model.states.resize(1)
         model.lock()
 
         self.assertEqual(a.state(0), 0)
         self.assertEqual(b.state(0), 5)
+        self.assertEqual(c.state(0), 5)
+        self.assertEqual(d.state(0), -105)
 
 
 class TestMinimum(utils.SymbolTests):
@@ -2175,6 +2289,9 @@ class TestNaryAdd(utils.NaryOpTests):
         x += b
         self.assertIs(x, y)  # subsequent should be in-place
 
+        x += 5
+        self.assertIs(x, y)  # subsequent should be in-place
+
     def test_mismatched_shape(self):
         model = Model()
         x: dwave.optimization.model.ArraySymbol = model.binary()  # typing is for mypy
@@ -2237,6 +2354,9 @@ class TestNaryMultiply(utils.NaryOpTests):
         x *= b
         self.assertIs(x, y)  # subsequent should be in-place
 
+        x *= 5
+        self.assertIs(x, y)  # subsequent should be in-place
+
     def test_mismatched_shape(self):
         model = Model()
         x: dwave.optimization.model.ArraySymbol = model.binary()  # typing is for mypy
@@ -2290,20 +2410,19 @@ class TestOr(utils.BinaryOpTests):
     def test_scalar_or(self):
         model = Model()
         a = model.constant(1)
-        b = model.constant(1)
+        b = model.constant(2)
         c = model.constant(0)
-        d = model.constant(0)
         ab = logical_or(a, b)
         ac = logical_or(a, c)
-        cd = logical_or(c, d)
+        cc = logical_or(c, c)
         cb = logical_or(c, b)
-        self.assertEqual(model.num_symbols(), 8)
+        self.assertEqual(model.num_symbols(), 7)
 
         model.lock()
         model.states.resize(1)
         self.assertEqual(ab.state(0), 1)
         self.assertEqual(ac.state(0), 1)
-        self.assertEqual(cd.state(0), 0)
+        self.assertEqual(cc.state(0), 0)
         self.assertEqual(cb.state(0), 1)
 
         with self.assertRaises(TypeError):
@@ -2331,23 +2450,40 @@ class TestPartialProd(utils.SymbolTests):
         model = Model()
         A = model.constant(np.arange(8).reshape((2, 2, 2)))
         B = model.constant(np.arange(25).reshape((5, 5)))
+        C = model.constant(np.arange(9).reshape(3, 3))
         a = A.prod(axis=0)
         b = B.prod(axis=1)
+        c = C.prod(axis=1, initial=3)
         model.lock()
         yield a
         yield b
+        yield c
+
+    def test_initial(self):
+        model = Model()
+        model.states.resize(1)
+        
+        A = model.constant(np.arange(8).reshape((2, 2, 2)))
+
+        with self.subTest(initial="howdy"):
+            with self.assertRaises(TypeError):
+                A.prod(axis=1, initial="howdy")
+            self.assertEqual(model.num_symbols(), 1)  # no side-effects
 
     def test_state(self):
         model = Model()
 
         A = model.constant(np.arange(8).reshape((2, 2, 2)))
         B = model.constant(np.arange(25).reshape((5, 5)))
+        C = model.constant(np.arange(9).reshape(3, 3))
         a = A.prod(axis=0)
         b = B.prod(axis=1)
+        c = C.prod(axis=1, initial=3)
         model.lock()
         model.states.resize(1)
         np.testing.assert_array_equal(a.state(0), np.prod(np.arange(8).reshape((2, 2, 2)), axis=0))
         np.testing.assert_array_equal(b.state(0), np.prod(np.arange(25).reshape((5, 5)), axis=1))
+        np.testing.assert_array_equal(c.state(0), np.prod(np.arange(9).reshape(3, 3), axis=1, initial=3))
 
     def test_indexed(self):
         model = Model()
@@ -2368,23 +2504,40 @@ class TestPartialSum(utils.SymbolTests):
         model = Model()
         A = model.constant(np.arange(8).reshape((2, 2, 2)))
         B = model.constant(np.arange(25).reshape((5, 5)))
+        C = model.constant(np.arange(9).reshape(3, 3))
         a = A.sum(axis=0)
         b = B.sum(axis=1)
+        c = C.sum(axis=1, initial=3)
         model.lock()
         yield a
         yield b
+        yield c
+
+    def test_initial(self):
+        model = Model()
+        model.states.resize(1)
+        
+        A = model.constant(np.arange(8).reshape((2, 2, 2)))
+
+        with self.subTest(initial="howdy"):
+            with self.assertRaises(TypeError):
+                A.sum(axis=1, initial="howdy")
+            self.assertEqual(model.num_symbols(), 1)  # no side-effects
 
     def test_state(self):
         model = Model()
 
         A = model.constant(np.arange(8).reshape((2, 2, 2)))
         B = model.constant(np.arange(25).reshape((5, 5)))
+        C = model.constant(np.arange(9).reshape(3, 3))
         a = A.sum(axis=0)
         b = B.sum(axis=1)
+        c = C.sum(axis=1, initial=3)
         model.lock()
         model.states.resize(1)
         np.testing.assert_array_equal(a.state(0), np.sum(np.arange(8).reshape((2, 2, 2)), axis=0))
         np.testing.assert_array_equal(b.state(0), np.sum(np.arange(25).reshape((5, 5)), axis=1))
+        np.testing.assert_array_equal(c.state(0), np.sum(np.arange(9).reshape(3, 3), axis=1, initial=3))
 
     def test_indexed(self):
         model = Model()
@@ -2426,16 +2579,11 @@ class TestPermutation(utils.SymbolTests):
         self.assertNotIsInstance(b[:, x][x, :], Permutation)
 
 
-class TestProd(utils.SymbolTests):
-    def generate_symbols(self):
-        model = Model()
-        A = model.constant(np.arange(5))
-        B = model.constant(np.arange(5, 10))
-        a = A.prod()
-        b = B.prod()
-        model.lock()
-        yield a
-        yield b
+class TestProd(utils.ReduceTests):
+    empty_requires_initial = False
+
+    def op(self, x, *args, **kwargs):
+        return x.prod(*args, **kwargs)
 
     def test_empty(self):
         model = Model()
@@ -2931,16 +3079,11 @@ class TestSubtract(utils.BinaryOpTests):
             a - b
 
 
-class TestSum(utils.SymbolTests):
-    def generate_symbols(self):
-        model = Model()
-        A = model.constant(np.arange(5))
-        B = model.constant(np.arange(5, 10))
-        a = A.sum()
-        b = B.sum()
-        model.lock()
-        yield a
-        yield b
+class TestSum(utils.ReduceTests):
+    empty_requires_initial = False
+
+    def op(self, x, *args, **kwargs):
+        return x.sum(*args, **kwargs)
 
     def test_empty(self):
         model = Model()
@@ -3018,20 +3161,19 @@ class TestXor(utils.BinaryOpTests):
     def test_scalar_xor(self):
         model = Model()
         a = model.constant(1)
-        b = model.constant(1)
+        b = model.constant(2)
         c = model.constant(0)
-        d = model.constant(0)
         ab = logical_xor(a, b)
         ac = logical_xor(a, c)
-        cd = logical_xor(c, d)
+        cc = logical_xor(c, c)
         cb = logical_xor(c, b)
-        self.assertEqual(model.num_symbols(), 8)
+        self.assertEqual(model.num_symbols(), 7)
 
         model.lock()
         model.states.resize(1)
         self.assertEqual(ab.state(0), 0)
         self.assertEqual(ac.state(0), 1)
-        self.assertEqual(cd.state(0), 0)
+        self.assertEqual(cc.state(0), 0)
         self.assertEqual(cb.state(0), 1)
 
         with self.assertRaises(TypeError):

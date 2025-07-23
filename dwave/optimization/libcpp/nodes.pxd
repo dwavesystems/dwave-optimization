@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from libcpp.optional cimport optional
 from libcpp.span cimport span
 from libcpp.string cimport string
 from libcpp.unordered_map cimport unordered_map
@@ -68,6 +69,9 @@ cdef extern from "dwave-optimization/nodes/creation.hpp" namespace "dwave::optim
 
 
 cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass ExtractNode(ArrayNode):
+        pass
+
     cdef cppclass WhereNode(ArrayNode):
         pass
 
@@ -177,13 +181,13 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
         pass
 
     cdef cppclass MaxNode(ArrayNode):
-        pass
+        optional[double] init
 
     cdef cppclass MinimumNode(ArrayNode):
         pass
 
     cdef cppclass MinNode(ArrayNode):
-        pass
+        optional[double] init
 
     cdef cppclass ModulusNode(ArrayNode):
         pass
@@ -214,12 +218,14 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
 
     cdef cppclass PartialProdNode(ArrayNode):
         span[const Py_ssize_t] axes() const
+        optional[double] init
 
     cdef cppclass PartialSumNode(ArrayNode):
         span[const Py_ssize_t] axes() const
+        optional[double] init
 
     cdef cppclass ProdNode(ArrayNode):
-        pass
+        optional[double] init
 
     cdef cppclass RintNode(ArrayNode):
         pass
@@ -237,7 +243,7 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
         pass
 
     cdef cppclass SumNode(ArrayNode):
-        pass
+        optional[double] init
 
     cdef cppclass XorNode(ArrayNode):
         pass
@@ -267,6 +273,11 @@ cdef extern from "dwave-optimization/nodes/quadratic_model.hpp" namespace "dwave
 
     cdef cppclass QuadraticModelNode(ArrayNode):
         QuadraticModel* get_quadratic_model()
+
+
+cdef extern from "dwave-optimization/nodes/sorting.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass ArgSortNode(ArrayNode):
+        pass
 
 
 cdef extern from "dwave-optimization/nodes/testing.hpp" namespace "dwave::optimization" nogil:

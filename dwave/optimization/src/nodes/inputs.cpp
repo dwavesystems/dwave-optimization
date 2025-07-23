@@ -14,6 +14,8 @@
 
 #include "dwave-optimization/nodes/inputs.hpp"
 
+#include <cmath>
+
 #include "_state.hpp"
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/state.hpp"
@@ -27,9 +29,13 @@ InputNode::InputNode(std::span<const ssize_t> shape, std::optional<double> min,
           min_(min.value_or(std::numeric_limits<double>::lowest())),
           max_(max.value_or(std::numeric_limits<double>::max())),
           integral_(integral.value_or(false)) {
+    // these errors are propagated to Python so we use "Input" rather than "InputNode"
     if (min_ > max_) {
         throw std::invalid_argument(
-                "maximum limit must be greater to or equal than minimum limit for InputNode");
+                "maximum limit must be greater to or equal than minimum limit for Input");
+    }
+    if (integral_ && std::ceil(min_) > std::floor(max_)) {
+        throw std::invalid_argument("bounds on the integral Input must allow at least one value");
     }
 }
 

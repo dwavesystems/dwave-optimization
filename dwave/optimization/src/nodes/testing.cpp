@@ -46,6 +46,17 @@ void check_shape(const std::span<const ssize_t>& dynamic_shape,
 ArrayValidationNode::ArrayValidationNode(ArrayNode* node_ptr) : array_ptr(node_ptr) {
     assert(array_ptr->ndim() == static_cast<ssize_t>(array_ptr->shape().size()));
     assert(array_ptr->dynamic() == (array_ptr->size() == -1));
+    assert([&]() {
+        node_ptr->sizeinfo().substitute(5);
+        return true;
+    }());  // smoke check
+
+    // also smoke check the string methods. There is some node and/or compiler-specific
+    // stuff here so just check there isn't an obvious bug.
+    assert(node_ptr->classname().size());
+    assert(node_ptr->repr().size());
+    assert(node_ptr->str().size());
+
     add_predecessor(node_ptr);
 }
 
@@ -63,7 +74,7 @@ void ArrayValidationNode::initialize_state(State& state) const {
     emplace_data_ptr<ArrayValidationNodeData>(state, array_ptr->view(state));
     assert(array_ptr->diff(state).size() == 0);
     assert(array_ptr->size_diff(state) == 0);
-    assert(array_ptr->view(state).size() == static_cast<ssize_t>(array_ptr->size(state)));
+    assert(static_cast<ssize_t>(array_ptr->view(state).size()) == array_ptr->size(state));
 
     // check that the size/shape are consistent
     assert(array_ptr->size(state) == std::reduce(array_ptr->shape(state).begin(),
@@ -183,6 +194,27 @@ void ArrayValidationNode::propagate(State& state) const {
         assert(std::ranges::max(array_ptr->view(state)) <= array_ptr->max());
         assert(!array_ptr->integral() || std::ranges::all_of(array_ptr->view(state), is_integer));
     }
+
+    // check that whatever sizeinfo the array reports is accurate
+    auto sizeinfo = array_ptr->sizeinfo();
+    if (sizeinfo.array_ptr != nullptr) {
+        // the size is at least theoretically derived from another array, so let's check that the
+        // reported multiplier/offset are correct
+
+        [[maybe_unused]] auto predicted_size = [&state](const SizeInfo& sizeinfo) -> ssize_t {
+            ssize_t size = static_cast<ssize_t>(
+                    sizeinfo.multiplier * sizeinfo.array_ptr->size(state) + sizeinfo.offset);
+            size = std::max(size, sizeinfo.min.value_or(0));
+            if (sizeinfo.max) size = std::min(size, *sizeinfo.max);
+            return size;
+        };
+
+        assert(array_ptr->size(state) == predicted_size(sizeinfo));
+    } else {
+        assert(array_ptr->size(state) == sizeinfo.offset);
+    }
+    assert(!sizeinfo.max || array_ptr->size(state) <= *sizeinfo.max);
+    assert(!sizeinfo.min || array_ptr->size(state) >= *sizeinfo.min);
 }
 
 void ArrayValidationNode::revert(State& state) const {

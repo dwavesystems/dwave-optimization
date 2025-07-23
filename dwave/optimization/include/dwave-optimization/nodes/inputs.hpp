@@ -61,7 +61,7 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
 
     [[noreturn]] void initialize_state(State& state) const override {
         throw std::logic_error(
-                "InputNode must have state explicity initialized (with `initialize_state(state, "
+                "InputNode must have state explicitly initialized (with `initialize_state(state, "
                 "data)`)");
     }
 

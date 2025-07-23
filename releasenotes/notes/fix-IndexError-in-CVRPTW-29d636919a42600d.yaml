@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fix potential ``IndexError`` raised by ``capacitated_vehicle_routing_with_time_windows()``. 
+    See `#306 <https://github.com/dwavesystems/dwave-optimization/issues/306>`_.

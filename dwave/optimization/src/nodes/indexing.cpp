@@ -79,7 +79,8 @@ struct IndexingNodeData : NodeStateData {
 
 struct AdvancedIndexingNodeData : NodeStateData {
  public:
-    AdvancedIndexingNodeData(std::vector<ssize_t>&& offsets, std::vector<double>&& values,
+    AdvancedIndexingNodeData(const AdvancedIndexingNode* node, std::vector<ssize_t>&& offsets,
+                             std::vector<double>&& values,
                              bool maintain_reverse_offset_map) noexcept
             : data(values),
               old_offsets_size(offsets.size()),
@@ -88,6 +89,12 @@ struct AdvancedIndexingNodeData : NodeStateData {
               maintain_reverse_offset_map(maintain_reverse_offset_map) {
         for (ssize_t idx = 0; idx < static_cast<ssize_t>(offsets_.size()); ++idx) {
             add_to_reverse(idx, offsets_[idx]);
+        }
+
+        if (node->dynamic()) {
+            dynamic_shape = std::make_unique<ssize_t[]>(node->ndim());
+            // First dim will be set later
+            std::copy(node->shape().begin(), node->shape().end(), dynamic_shape.get());
         }
     }
 
@@ -173,6 +180,10 @@ struct AdvancedIndexingNodeData : NodeStateData {
 
     // The array values as a contiguous dataset
     std::vector<double> data;
+
+    // The state dependent shape when the indexers are dynamic. Will be nullptr when
+    // predecessor array is fixed shape.
+    std::unique_ptr<ssize_t[]> dynamic_shape = nullptr;
 
     // Updates to the values, as well as the old indices so we can revert
     std::vector<Update> diff;
@@ -471,13 +482,6 @@ AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& 
             add_predecessor(std::get<ArrayNode*>(index));
         }
     }
-
-    if (dynamic()) {
-        // Copy over the shape to dynamic_shape_. Then the first index of dynamic_shape_
-        // will be rewritten as the output changes size.
-        dynamic_shape_ = std::make_unique<ssize_t[]>(ndim());
-        std::copy(shape_.get(), shape_.get() + ndim(), dynamic_shape_.get());
-    }
 }
 
 double const* AdvancedIndexingNode::buff(const State& state) const {
@@ -619,8 +623,9 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
 
     bool main_array_is_constant_node = dynamic_cast<const ConstantNode*>(array_ptr_) != nullptr;
 
-    emplace_data_ptr<AdvancedIndexingNodeData>(state, std::move(offsets), std::move(data),
+    emplace_data_ptr<AdvancedIndexingNodeData>(state, this, std::move(offsets), std::move(data),
                                                !main_array_is_constant_node);
+    if (dynamic()) update_dynamic_shape(state);
 }
 
 void AdvancedIndexingNode::commit(State& state) const {
@@ -629,6 +634,8 @@ void AdvancedIndexingNode::commit(State& state) const {
 
 void AdvancedIndexingNode::revert(State& state) const {
     data_ptr<AdvancedIndexingNodeData>(state)->revert();
+
+    if (dynamic()) update_dynamic_shape(state);
 }
 
 std::pair<double, double> AdvancedIndexingNode::minmax(
@@ -641,21 +648,59 @@ ssize_t AdvancedIndexingNode::size(const State& state) const {
 }
 
 SizeInfo AdvancedIndexingNode::sizeinfo() const {
+    // The implementation of this method assumes no broadcasting. Adding broadcasting
+    // complicates things.
+
+    // Easy case, if we're not dynamic then we can just return.
     if (!dynamic()) return SizeInfo(size());
-    // when we get around to supporting broadcasting this will need to change
-    assert(predecessors().size() >= 2);
-    SizeInfo sizeinfo(dynamic_cast<ArrayNode*>(predecessors()[1])->sizeinfo());
-    for (const auto& dim : this->shape() | std::views::drop(1)) {
-        sizeinfo.multiplier *= dim;
+
+    assert(predecessors().size() >= 2);  // the base array and at least one indexing array
+
+    SizeInfo sizeinfo;  // the value we'll return
+
+    if (this->first_array_index_ == 0) {
+        // If we're dynamic and our first indexing array corresponds to axis 0,
+        // then the size of *our* axis 0 is the size of that indexing array's axis 0.
+        // So we need to do some manipulation to figure out the multipliers.
+
+        const ArrayNode* indexer0_ptr = dynamic_cast<ArrayNode*>(predecessors()[1]);
+
+        ssize_t multiplier = 1;
+        for (const auto& dim : this->shape() | std::views::drop(1)) {
+            multiplier *= dim;
+        }
+        for (const auto& dim : indexer0_ptr->shape() | std::views::drop(1)) {
+            assert(!std::remainder(multiplier, dim));
+            multiplier /= dim;
+        }
+
+        sizeinfo = SizeInfo(indexer0_ptr);
+        sizeinfo.multiplier = multiplier;
+    } else {
+        // If we're dynamic and the first indexer is not an array, then the size
+        // of our axis 0 is the size of the base array's axis 0.
+
+        const Array* base_ptr = this->array_ptr_;
+        assert(base_ptr->dynamic());
+
+        fraction multiplier = 1;
+        for (const auto& dim : this->shape() | std::views::drop(1)) {
+            multiplier *= dim;
+        }
+        for (const auto& dim : base_ptr->shape() | std::views::drop(1)) {
+            multiplier /= dim;
+        }
+
+        sizeinfo = SizeInfo(base_ptr);
+        sizeinfo.multiplier = multiplier;
     }
     return sizeinfo;
 }
 
 std::span<const ssize_t> AdvancedIndexingNode::shape(const State& state) const {
     if (!dynamic()) return shape();
-    assert(this->ndim() >= 1);
-    dynamic_shape_[0] = this->size(state) / (strides()[0] / itemsize());
-    return std::span<const ssize_t>(dynamic_shape_.get(), this->ndim());
+    return std::span<const ssize_t>(data_ptr<AdvancedIndexingNodeData>(state)->dynamic_shape.get(),
+                                    ndim_);
 }
 
 std::pair<ssize_t, ssize_t> get_mapped_index(
@@ -897,6 +942,8 @@ void AdvancedIndexingNode::propagate(State& state) const {
         }
     }
 
+    if (dynamic()) update_dynamic_shape(state);
+
     // Only signal successors if we actually have something to propagate
     if (diff.size()) Node::propagate(state);
 }
@@ -908,6 +955,15 @@ ssize_t AdvancedIndexingNode::size_diff(const State& state) const {
         return static_cast<ssize_t>(ptr->data.size()) - ptr->old_data_size;
     }
     return 0;
+}
+
+void AdvancedIndexingNode::update_dynamic_shape(State& state) const {
+    assert(dynamic());
+    assert(array_ptr_->ndim() >= 1);
+
+    auto node_data = data_ptr<AdvancedIndexingNodeData>(state);
+
+    node_data->dynamic_shape[0] = this->size(state) / (strides()[0] / itemsize());
 }
 
 // BasicIndexingNode **********************************************************
@@ -1536,7 +1592,17 @@ ssize_t BasicIndexingNode::size(const State& state) const {
 }
 
 SizeInfo BasicIndexingNode::sizeinfo() const {
+    // easy case, fixed size
     if (size_ >= 0) return SizeInfo(size_);
+
+    if (axis0_slice_->stop >= 0 && axis0_slice_->stop < std::numeric_limits<ssize_t>::max() &&
+        axis0_slice_->start < 0) {
+        // Stop is positive and finite and start is less than zero. In this case, the size is not a
+        // linear function of the main array's size, and thus the best we can do is compute the
+        // maximum and return a SizeInfo pointing to the BasicIndexingNode itself.
+        ssize_t max_size = std::min<ssize_t>(-axis0_slice_->start, axis0_slice_->stop);
+        return SizeInfo(this, 0, max_size);
+    }
 
     auto sizeinfo = SizeInfo(array_ptr_);
 
@@ -1566,36 +1632,55 @@ SizeInfo BasicIndexingNode::sizeinfo() const {
         sizeinfo.multiplier /= axis0_slice_->step;
     }
 
+    // This is where having Slice's values be optional<ssize_t> would be useful.
+    // For now let's just read them off of Slice
+    // constexpr auto MIN = Slice(std::nullopt, std::nullopt, -1).stop;
+    constexpr auto MAX = Slice().stop;
+
     // Get the offset and bounds
     {
-        assert(axis0_slice_);  // dynamic so this should be present
+        assert(axis0_slice_);            // dynamic so this should be present
+        assert(axis0_slice_->step > 0);  // currently required by constructor
+        assert(!sizeinfo.max);           // bounds have not been set yet
+        assert(!sizeinfo.min);
 
-        if (axis0_slice_->step > 0) {
-            if (axis0_slice_->start > 0) {
-                // having a positive start imposes a size offset
-                assert((sizeinfo.multiplier * axis0_slice_->start).denominator() == 1);
-                sizeinfo.offset -= static_cast<ssize_t>(sizeinfo.multiplier * axis0_slice_->start);
+        const auto& [start, stop, step] = *axis0_slice_;  // all for axis 0!
 
-            } else if (axis0_slice_->start < 0) {
-                // a negative start imposes a max size
-                sizeinfo.max = static_cast<ssize_t>(sizeinfo.multiplier * -1 * axis0_slice_->start);
-            }
+        // get the number of elements in each "row" of the model
+        auto shape = this->shape();
+        ssize_t num_per_row =
+                std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>());
 
-            // This is where having Slice's values be optional<ssize_t> would be useful.
-            // For now let's just hard code it.
-            constexpr ssize_t MAX = std::numeric_limits<ssize_t>::max();
+        // having a positive start imposes a size offset
+        if (start > 0) sizeinfo.offset -= num_per_row * start;
 
-            if (axis0_slice_->stop > 0 && axis0_slice_->stop != MAX) {
-                // having a positive stop imposes a max size
-                sizeinfo.max = static_cast<ssize_t>(sizeinfo.multiplier * axis0_slice_->stop);
-            } else if (axis0_slice_->stop < 0) {
-                // having a negative stop imposes a size offset
-                sizeinfo.offset += static_cast<ssize_t>(sizeinfo.multiplier * axis0_slice_->stop);
-            }
+        // having a negative stop imposes a size offset
+        if (stop < 0) sizeinfo.offset += num_per_row * stop;
 
+        // now the bounds
+        if (start >= 0 && stop == MAX) {
+            // start::step - no information about bounds
+        } else if (start < 0 && stop == MAX) {
+            // -start::step - imposes a maximum size
+            sizeinfo.max = num_per_row * -start / step;
+            assert(-start % step == 0);
+        } else if (start >= 0 && stop >= 0) {
+            // start:stop:step - imposes a maximum size
+            assert(stop < MAX);  // previous case, already checked
+            sizeinfo.max = num_per_row * std::max<ssize_t>(stop - start, 0) / step;
+            assert(std::max<ssize_t>(stop - start, 0) % step == 0);
+        } else if (start >= 0 && stop < 0) {
+            // start:-stop:step - no information about bounds
+        } else if (start < 0 && stop >= 0) {
+            // -start:stop:step - imposes a nonlinear maximum size
+            assert(false && "not linear, handled above");
+            unreachable();
+        } else if (start < 0 && stop < 0) {
+            // -start:-stop:step - imposes a maximum size
+            sizeinfo.max = num_per_row * std::max<ssize_t>(stop - start, 0) / step;
+            assert(std::max<ssize_t>(start - stop, 0) % step == 0);
         } else {
-            // this is currently disallowed by the constructor
-            assert(false && "not implemented yet");
+            assert(false && "shouldn't be reachable");
             unreachable();
         }
     }

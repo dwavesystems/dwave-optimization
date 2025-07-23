@@ -16,56 +16,6 @@
 
 namespace dwave::optimization {
 
-double Array::View::operator[](ssize_t n) const {
-    assert(0 <= n && n < size());
-    return *(begin() + n);
-}
-
-double Array::View::at(ssize_t n) const {
-    if (n < 0 || n >= size()) {
-        throw std::out_of_range(std::string("index ") + std::to_string(n) +
-                                std::string(" out of range for an Array of size ") +
-                                std::to_string(size()));
-    }
-    return (*this)[n];
-}
-
-double Array::View::back() const {
-    assert(size() >= 1);
-    return *(--end());
-}
-
-Array::const_iterator Array::View::begin() const {
-    // either both are null or neither
-    assert(static_cast<bool>(array_ptr_) == static_cast<bool>(state_ptr_));
-
-    if (!array_ptr_) return const_iterator();
-    return array_ptr_->begin(*state_ptr_);
-}
-
-bool Array::View::empty() const { return !size(); }
-
-Array::const_iterator Array::View::end() const {
-    // either both are null or neither
-    assert(static_cast<bool>(array_ptr_) == static_cast<bool>(state_ptr_));
-
-    if (!array_ptr_) return const_iterator();
-    return array_ptr_->end(*state_ptr_);
-}
-
-double Array::View::front() const {
-    assert(size() >= 1);
-    return *begin();
-}
-
-ssize_t Array::View::size() const {
-    // either both are null or neither
-    assert(static_cast<bool>(array_ptr_) == static_cast<bool>(state_ptr_));
-
-    if (!array_ptr_) return 0;
-    return array_ptr_->size(*state_ptr_);
-}
-
 std::pair<double, double> Array::minmax(
             optional_cache_type<std::pair<double, double>> cache) const {
     return {std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max()};
@@ -97,6 +47,13 @@ bool SizeInfo::operator==(const SizeInfo& other) const {
 }
 
 SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
+    if (this->array_ptr == nullptr) {
+        assert(this->min.has_value() && this->max.has_value() &&
+               this->min.value() == this->max.value() &&
+               "SizeInfo should either have an associated array or have its min and max be equal");
+        return *this;
+    }
+
     if (max_depth <= 0) return *this;
 
     SizeInfo sizeinfo = this->array_ptr->sizeinfo();
@@ -114,33 +71,28 @@ SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
     sizeinfo.offset = static_cast<ssize_t>(this->multiplier * sizeinfo.offset);
     sizeinfo.offset += this->offset;
 
-    if (this->max) {
-        if (sizeinfo.max) {
-            sizeinfo.max = std::min<ssize_t>(*max, *sizeinfo.max);
-        } else {
-            sizeinfo.max = this->max;
-        }
-    }
-
-    if (this->min) {
-        if (sizeinfo.min) {
-            sizeinfo.min = std::max<ssize_t>(*(this->min), *sizeinfo.min);
-        } else {
-            sizeinfo.min = this->min;
-        }
-    }
-
     if (sizeinfo.min) {
         if (this->multiplier != 1) {
             sizeinfo.min = static_cast<ssize_t>(this->multiplier * *sizeinfo.min);
         }
         sizeinfo.min = std::max<ssize_t>(0, *sizeinfo.min + this->offset);
+        if (this->min) {
+            sizeinfo.min = std::max<ssize_t>(*sizeinfo.min, *this->min);
+        }
+    } else if (this->min) {
+        sizeinfo.min = this->min;
     }
+
     if (sizeinfo.max) {
         if (this->multiplier != 1) {
             sizeinfo.max = static_cast<ssize_t>(this->multiplier * *sizeinfo.max);
         }
         sizeinfo.max = std::max<ssize_t>(0, *sizeinfo.max + this->offset);
+        if (this->max) {
+            sizeinfo.max = std::min<ssize_t>(*sizeinfo.max, *this->max);
+        }
+    } else if (this->max) {
+        sizeinfo.max = this->max;
     }
 
     // Adjust the minimum based on the offset

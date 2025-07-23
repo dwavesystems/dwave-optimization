@@ -111,7 +111,7 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
     // Otherwise both arrays must be the same shape and not be dynamic
     if (lhs_ptr->size() == 1 || rhs_ptr->size() == 1) {
         // this is allowed
-    } else if (lhs_ptr->sizeinfo() != rhs_ptr->sizeinfo()) {
+    } else if (lhs_ptr->sizeinfo().substitute(100) != rhs_ptr->sizeinfo().substitute(100)) {
         throw std::invalid_argument("arrays must have the same shape or one must be a scalar");
     }
 
@@ -156,7 +156,7 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
         values.reserve(lhs_ptr->size(state));
 
         auto it = lhs_ptr->begin(state);
-        for (const double& val : rhs_ptr->view(state)) {
+        for (const double val : rhs_ptr->view(state)) {
             values.emplace_back(op(*it, val));  // order is important
             ++it;
         }
@@ -164,18 +164,18 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
     } else if (lhs_ptr->size() == 1) {
         values.reserve(rhs_ptr->size(state));
 
-        const double& lhs = lhs_ptr->view(state).front();
+        const double lhs = lhs_ptr->view(state).front();
 
-        for (const double& val : rhs_ptr->view(state)) {
+        for (const double val : rhs_ptr->view(state)) {
             values.emplace_back(op(lhs, val));
         }
 
     } else if (rhs_ptr->size() == 1) {
         values.reserve(lhs_ptr->size(state));
 
-        const double& rhs = rhs_ptr->view(state).front();
+        const double rhs = rhs_ptr->view(state).front();
 
-        for (const double& val : lhs_ptr->view(state)) {
+        for (const double val : lhs_ptr->view(state)) {
             values.emplace_back(op(val, rhs));
         }
 
@@ -321,9 +321,6 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
     const Array* lhs_ptr = operands_[0];
     const Array* rhs_ptr = operands_[1];
 
-    auto& values = ptr->buffer;
-    auto& changes = ptr->updates;
-
     if (std::ranges::equal(lhs_ptr->shape(state), rhs_ptr->shape(state))) {
         // The easy case, just go through both predecessors making updates.
 
@@ -374,24 +371,20 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
             // LHS modified, but not RHS
             auto rit = rhs_ptr->begin(state);
             for (const auto& [index, _, value] : lhs_diff) {
-                double old = values[index];
-                values[index] = op(value, *(rit + index));
-                changes.emplace_back(index, old, values[index]);
+                ptr->set(index, op(value, *(rit + index)));
             }
         } else if (rhs_diff.size()) {
             // RHS modified, but not LHS
             auto lit = lhs_ptr->begin(state);
             for (const auto& [index, _, value] : rhs_diff) {
-                double old = values[index];
-                values[index] = op(*(lit + index), value);
-                changes.emplace_back(index, old, values[index]);
+                ptr->set(index, op(*(lit + index), value));
             }
         }
     } else if (lhs_ptr->size() == 1) {
         // lhs is a single value being broadcast to the rhs array.
 
         // Create a unary version of our binary op.
-        const double& lhs = lhs_ptr->view(state).front();
+        const double lhs = lhs_ptr->view(state).front();
         auto unary_func = std::bind(op, lhs, std::placeholders::_1);
 
         if (lhs_ptr->diff(state).size()) {
@@ -411,7 +404,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         // rhs is a single value being broadcast to the lhs array
 
         // create a unary version of our binary op
-        const double& rhs = rhs_ptr->view(state).front();
+        const double rhs = rhs_ptr->view(state).front();
         auto unary_func = std::bind(op, std::placeholders::_1, rhs);
 
         if (rhs_ptr->diff(state).size()) {
@@ -433,7 +426,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         unreachable();
     }
 
-    if (ptr->updates.size()) Node::propagate(state);
+    if (ptr->diff().size()) Node::propagate(state);
 }
 
 template <class BinaryOp>
@@ -479,7 +472,7 @@ SizeInfo BinaryOpNode<BinaryOp>::sizeinfo() const {
     const Array* rhs_ptr = operands_[1];
 
     if (lhs_ptr->dynamic() && rhs_ptr->dynamic()) {
-        assert(lhs_ptr->sizeinfo() == rhs_ptr->sizeinfo());
+        assert(lhs_ptr->sizeinfo().substitute(100) == rhs_ptr->sizeinfo().substitute(100));
         return lhs_ptr->sizeinfo();
     } else if (lhs_ptr->dynamic()) {
         assert(rhs_ptr->size() == 1);
@@ -726,8 +719,6 @@ template <class BinaryOp>
 void NaryOpNode<BinaryOp>::propagate(State& state) const {
     auto node_data = data_ptr<NaryOpNodeData>(state);
 
-    auto& values = node_data->buffer;
-    auto& changes = node_data->updates;
     auto& iterators = node_data->iterators;
 
     std::vector<ssize_t> recompute_indices;
@@ -747,7 +738,7 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
         for (const Array* input : operands_) {
             if (input->diff(state).size()) {
                 for (const auto& [index, old_val, new_val] : input->diff(state)) {
-                    double new_reduced_val = values[index];
+                    double new_reduced_val = node_data->get(index);
                     new_reduced_val = inv_func.op(new_reduced_val, old_val);
                     if (std::isnan(new_reduced_val) || std::isinf(new_reduced_val)) {
                         // calling the inverse has failed (such as divide by zero),
@@ -756,9 +747,7 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
                         continue;
                     }
 
-                    double old_reduced = values[index];
-                    values[index] = op(new_reduced_val, new_val);
-                    changes.emplace_back(index, old_reduced, values[index]);
+                    node_data->set(index, op(new_reduced_val, new_val));
                 }
             }
         }
@@ -772,16 +761,13 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
         }
 
         for (const auto& index : recompute_indices) {
-            double old = values[index];
-            double& val = values[index];
+            double val = node_data->get(index);
             val = *(iterators[0] + index);
             for (auto it : iterators | std::views::drop(1)) {
                 val = op(*(it + index), val);
             }
 
-            if (val != old) {
-                changes.emplace_back(index, old, val);
-            }
+            node_data->set(index, val);
         }
     }
 }
@@ -1318,7 +1304,7 @@ void ReduceNode<BinaryOp>::initialize_state(State& state) const {
 template <>
 void ReduceNode<std::logical_and<double>>::initialize_state(State& state) const {
     ssize_t num_zero = init.value_or(1) ? 0 : 1;
-    for (const double& value : array_ptr_->view(state)) {
+    for (const double value : array_ptr_->view(state)) {
         num_zero += !value;
     }
 
@@ -1328,7 +1314,7 @@ void ReduceNode<std::logical_and<double>>::initialize_state(State& state) const 
 template <>
 void ReduceNode<std::logical_or<double>>::initialize_state(State& state) const {
     ssize_t num_nonzero = init.value_or(1) ? 1 : 0;
-    for (const double& value : array_ptr_->view(state)) {
+    for (const double value : array_ptr_->view(state)) {
         num_nonzero += static_cast<bool>(value);
     }
 
@@ -1344,7 +1330,7 @@ void ReduceNode<std::multiplies<double>>::initialize_state(State& state) const {
 
     RunningProduct product(init.value_or(1));
 
-    for (const double& value : array_ptr_->view(state)) {
+    for (const double value : array_ptr_->view(state)) {
         product *= value;
     }
 
@@ -1721,7 +1707,7 @@ template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::initialize_state(State& state) const {
     std::vector<double> values;
     values.reserve(array_ptr_->size(state));
-    for (const double& val : array_ptr_->view(state)) {
+    for (const double val : array_ptr_->view(state)) {
         values.emplace_back(op(val));
     }
 
@@ -1841,17 +1827,17 @@ void UnaryOpNode<UnaryOp>::propagate(State& state) const {
         const auto& [idx, _, value] = update;
 
         if (update.placed()) {
-            assert(idx == static_cast<ssize_t>(node_data->buffer.size()));
+            assert(idx == static_cast<ssize_t>(node_data->size()));
             node_data->emplace_back(op(value));
         } else if (update.removed()) {
-            assert(idx == static_cast<ssize_t>(node_data->buffer.size()) - 1);
+            assert(idx == static_cast<ssize_t>(node_data->size()) - 1);
             node_data->pop_back();
         } else {
             node_data->set(idx, op(value));
         }
     }
 
-    if (node_data->updates.size()) Node::propagate(state);
+    if (node_data->diff().size()) Node::propagate(state);
 }
 
 template <class UnaryOp>
@@ -1866,12 +1852,18 @@ std::span<const ssize_t> UnaryOpNode<UnaryOp>::shape(const State& state) const {
 
 template <class UnaryOp>
 ssize_t UnaryOpNode<UnaryOp>::size(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buffer.size();
+    return data_ptr<ArrayNodeStateData>(state)->size();
 }
 
 template <class UnaryOp>
 ssize_t UnaryOpNode<UnaryOp>::size_diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->size_diff();
+}
+
+template <class UnaryOp>
+SizeInfo UnaryOpNode<UnaryOp>::sizeinfo() const {
+    if (dynamic()) return SizeInfo(array_ptr_);  // exactly the same as predecessor
+    return SizeInfo(size());
 }
 
 template class UnaryOpNode<functional::abs<double>>;
