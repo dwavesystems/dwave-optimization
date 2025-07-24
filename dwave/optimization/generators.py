@@ -760,7 +760,7 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     """Generate a model encoding a job-shop scheduling problem.
 
     `Job-shop scheduling <https://en.wikipedia.org/wiki/Job-shop_scheduling>`_
-    has many variant.  Here, what we have implemented is a variant of job-shop
+    has many variants.  Here, what we have implemented is a variant of job-shop
     scheduling with the additional assumption that every job makes use of
     every machine.
 
@@ -776,7 +776,7 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
 
         Now the model uses the more natural formulation where the only decision
         variables are the task start times, but with disjunctive non-overlapping
-        constraints between each pair of job on the machines.
+        constraints between each pair of jobs on the machines.
 
     .. Note::
         There are many ways to model job-shop scheduling. The model returned
@@ -895,7 +895,7 @@ def knapsack(values: numpy.typing.ArrayLike,
 
     The
     `knapsack problem <https://en.wikipedia.org/wiki/Knapsack_problem>`_
-    is, for a given set of items, each with a weight and a value, determine
+    is, for a given set of items, each with a weight and a value, to determine
     which items to include in the collection so that the total weight is less
     than or equal to a given limit and the total value is as large as possible.
 
@@ -976,7 +976,7 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
         flow_matrix:
             A array-like where ``flow_matrix[n, m]`` is the flow
             between location ``n`` and ``m``. Represents the (known and constant)
-            flow between every possible pair of facility location
+            flow between every possible pair of facility location.
 
     Returns:
         A model encoding the quadratic_assignment problem.
@@ -1018,7 +1018,7 @@ def traveling_salesperson(distance_matrix: numpy.typing.ArrayLike,
 
     The
     `traveling salesperson <https://en.wikipedia.org/wiki/Travelling_salesman_problem>`_
-    is, for a given a list of cities and distances between each pair of cities,
+    is, for a given list of cities and distances between each pair of cities,
     to find the shortest possible route that visits each city exactly once and
     returns to the city of origin.
 
@@ -1054,7 +1054,7 @@ def traveling_salesperson(distance_matrix: numpy.typing.ArrayLike,
     :math:`i_{Rome} = 2` means Rome is the third city visited, versus a model
     using an ordered list, :math:`(city_0, city_1, city_2, city_3, city_4)`.
     The first model must explicitly constrain solutions to those that select
-    a value between 0 to 4 for each decision variable with no repetitions; such
+    a value between 0 and 4 for each decision variable with no repetitions; such
     constraints are implicit to the ordered-list variable.
 
     The objective is to minimize the distance traveled. Permutations of indices

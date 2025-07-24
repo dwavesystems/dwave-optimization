@@ -82,7 +82,7 @@ a common mixed-integer linear programming formulation for solving a TSP with
                 0 \text{ otherwise} \\
             \end{cases}
 
-    If :math:`d_{i,j}` gives the distance from city :math:`i` to city :math:`j` then
+    If :math:`d_{i,j}` gives the distance from city :math:`i` to city :math:`j`, then
     the objective is to minimize the total tour length
 
     .. math::
@@ -111,7 +111,7 @@ unconstrained!
     Let :math:`x` be a list variable of length :math:`N` with :math:`x_t` giving
     the city the salesperson visits at time :math:`t`.
 
-    If :math:`d_{i,j}` gives the distance from city :math:`i` to city :math:`j` then
+    If :math:`d_{i,j}` gives the distance from city :math:`i` to city :math:`j`, then
     the objective is to minimize the total tour length
 
     .. math::
@@ -148,7 +148,7 @@ in Python. The NumPy library contains data structures for multidimensional array
 To learn more, see NumPy's excellent
 `introduction to arrays <https://numpy.org/doc/stable/user/absolute_beginners.html>`_.
 
-Working with arrays can be beneficial for readability and for performance.
+Working with arrays can be beneficial for readability and performance.
 Consider calculating the dot product of two lists of numbers ``a`` and ``b``.
 This can be accomplished in Python with
 

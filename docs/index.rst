@@ -33,8 +33,8 @@ Design Principles
 :ref:`design principles <optimization_philosophy>` from each of the following
 areas:
 
-.. developer note: this will look funny when built locally but looks fine as
-   part of the sdk
+.. developer note: this will look funny when built locally, but looks fine as
+   part of the SDK
 
 .. grid:: 2 2 3 2
     :gutter: 2
@@ -81,7 +81,7 @@ Example Usage
 Usage Information
 =================
 
-*   :ref:`index_concepts` for terminology
+*   :ref:`index_concepts` for terminology.
 *   :ref:`opt_model_construction_nl` for an introduction to using this package
     to model problems.
 *   :ref:`opt_index_get_started` for an introduction to optimizing with
