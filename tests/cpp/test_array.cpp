@@ -484,8 +484,10 @@ TEST_CASE("Test resulting_shape()") {
 TEST_CASE("Test ravel_multi_index()") {
     CHECK(ravel_multi_index({1, 0}, {2, 2}) == 2);
     CHECK(ravel_multi_index({2, 66}, {17, 94}) == 254);
+    CHECK(ravel_multi_index({2, 66}, {-1, 94}) == 254);  // dynamic
     CHECK(ravel_multi_index({2, 1, 4}, {4, 3, 6}) == (2 * 3 + 1) * 6 + 4);
     CHECK(ravel_multi_index({3, 1, 4, 1}, {6, 7, 8, 9}) == 1621);
+    CHECK(ravel_multi_index({3, 1, 4, 1}, {-1, 7, 8, 9}) == 1621);  // dynamic
 }
 TEST_CASE("Test unravel_index()") {
     CHECK_THAT(unravel_index(2, {2, 2}), RangeEquals({1, 0}));

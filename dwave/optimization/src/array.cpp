@@ -265,7 +265,7 @@ std::vector<ssize_t> unravel_index(ssize_t index, std::initializer_list<ssize_t>
 }
 
 std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape) {
-    assert(index >= 0 && "index must be positive");  // NumPy raises here so we assert
+    assert(index >= 0 && "index must be non-negative");  // NumPy raises here so we assert
 
     std::vector<ssize_t> indices;
     indices.reserve(shape.size());
@@ -277,6 +277,7 @@ std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape
 
     // we'll actually fill in the indices in reverse for simplicity
     for (const ssize_t dim : shape | std::views::drop(1) | std::views::reverse) {
+        assert(0 <= dim && "all dimensions except the first must be non-negative");
         indices.emplace_back(index % dim);
         index /= dim;
     }
@@ -305,11 +306,11 @@ ssize_t ravel_multi_index(const std::span<const ssize_t> multi_index,
     ssize_t index = 0;
     ssize_t multiplier = 1;
     for (ssize_t dim = multi_index.size() - 1; dim >= 0; --dim) {
-        assert(0 <= shape[dim] && "all dimensions should be non-negative");
+        assert((!dim || 0 <= shape[dim]) && "all dimensions except the first must be non-negative");
 
         // NumPy supports "clip" and "wrap" which we could add support for
         // but for now let's just assert.
-        assert(0 <= multi_index[dim] && multi_index[dim] < shape[dim]);
+        assert(0 <= multi_index[dim] && (!dim || multi_index[dim] < shape[dim]));
 
         index += multi_index[dim] * multiplier;
         multiplier *= shape[dim];
