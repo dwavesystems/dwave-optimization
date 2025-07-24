@@ -1,0 +1,9 @@
+---
+features:
+  - Add ``expression()`` decorator for constructing expressions.
+  - |
+    Add the ``AccumulateZip`` symbol and corresponding ``AccumulateZipNode``
+    node in the C++. This symbol computes an arbitrary accumulate operation on
+    1-d arrays, similar to ``numpy.ufunc.accumulate``, except that it takes any
+    number of operands/predecessors. The accumulate operation is supplied by
+    the user and encoded as an ``Expression``.
