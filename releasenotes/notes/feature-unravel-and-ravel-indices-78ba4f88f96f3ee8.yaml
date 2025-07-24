@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    Change the signatures of the C++ ``ravel_multi_index()`` and ``unravel_index()``
+    functions to accept shapes rather than strides. This is consistent with NumPy.

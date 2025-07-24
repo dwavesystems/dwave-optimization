@@ -12,6 +12,8 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <ranges>
+
 #include "dwave-optimization/array.hpp"
 
 namespace dwave::optimization {
@@ -258,33 +260,62 @@ std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
     return broadcast_shape(std::span(lhs), std::span(rhs));
 }
 
-std::vector<ssize_t> unravel_index(const std::span<const ssize_t> strides, ssize_t index) {
-    std::vector<ssize_t> indices;
-    indices.reserve(strides.size());
+std::vector<ssize_t> unravel_index(ssize_t index, std::initializer_list<ssize_t> shape) {
+    return unravel_index(index, std::span(shape));
+}
 
-    for (const auto& stride : strides) {
-        indices.push_back(index / (stride / sizeof(double)));
-        index = index % (stride / sizeof(double));
+std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape) {
+    assert(index >= 0 && "index must be positive");  // NumPy raises here so we assert
+
+    std::vector<ssize_t> indices;
+    indices.reserve(shape.size());
+
+    if (shape.empty()) {
+        assert(index == 0);  // otherwise it's out-of-bounds
+        return indices;
     }
+
+    // we'll actually fill in the indices in reverse for simplicity
+    for (const ssize_t dim : shape | std::views::drop(1) | std::views::reverse) {
+        indices.emplace_back(index % dim);
+        index /= dim;
+    }
+
+    // Check if the index is out of bounds for non-dynamic shapes and assert
+    assert(shape[0] < 0 || index < shape[0]);
+
+    indices.emplace_back(index);
+
+    std::reverse(indices.begin(), indices.end());
     return indices;
 }
 
-ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
-                          const std::span<const ssize_t> indices) {
-    const ssize_t ndim = static_cast<ssize_t>(strides.size());
-    ssize_t flat_index = 0;
-
-    for (ssize_t i = 0; i < ndim; ++i) {
-        auto stride = strides[i];
-        auto index = indices[i];
-        flat_index += index * stride / sizeof(double);
-    }
-    return flat_index;
+ssize_t ravel_multi_index(std::initializer_list<ssize_t> multi_index,
+                          std::initializer_list<ssize_t> shape) {
+    return ravel_multi_index(std::span(multi_index), std::span(shape));
 }
 
-ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
-                          std::initializer_list<ssize_t> indices) {
-    return ravel_multi_index(strides, std::span(indices));
+ssize_t ravel_multi_index(const std::span<const ssize_t> multi_index,
+                          const std::span<const ssize_t> shape) {
+    assert(multi_index.size() == shape.size() && "mismatched number of dimensions");
+
+    // Handle the empty case
+    if (multi_index.empty()) return 0;
+
+    ssize_t index = 0;
+    ssize_t multiplier = 1;
+    for (ssize_t dim = multi_index.size() - 1; dim >= 0; --dim) {
+        assert(0 <= shape[dim] && "all dimensions should be non-negative");
+
+        // NumPy supports "clip" and "wrap" which we could add support for
+        // but for now let's just assert.
+        assert(0 <= multi_index[dim] && multi_index[dim] < shape[dim]);
+
+        index += multi_index[dim] * multiplier;
+        multiplier *= shape[dim];
+    }
+
+    return index;
 }
 
 }  // namespace dwave::optimization

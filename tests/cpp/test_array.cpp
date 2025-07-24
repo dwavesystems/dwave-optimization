@@ -479,35 +479,20 @@ TEST_CASE("Test resulting_shape()") {
     }
 }
 
-TEST_CASE("Ravelling-unravelling indices") {
-    SECTION("On constant array of shape (3, 4, 5)") {
-        auto state = State();
-        class Array3d : public ArrayOutputMixin<Array> {
-         public:
-            Array3d() : ArrayOutputMixin({3, 4, 5}) {}
-
-            double const* buff(const State&) const override { return state_.data(); }
-
-            using ArrayOutputMixin::size;  // for stateless overload
-            ssize_t size(const State&) const noexcept override {
-                return shape_[0] * shape_[1] * shape_[2];
-            }
-
-            std::span<const ssize_t> shape(const State&) const override { return shape_; }
-            using ArrayOutputMixin::shape;  // for the stateless overload
-
-            std::span<const Update> diff(const State&) const override { return {}; }
-
-            // Normally this would be stored in the State, but for testing we just keep it here
-            std::vector<double> state_ = {};
-            std::vector<ssize_t> shape_ = {3, 4, 5};
-        };
-        auto arr = Array3d();
-        auto last_element_flat = arr.size() - 1;
-        CHECK(ravel_multi_index(arr.strides(), {2, 3, 4}) == last_element_flat);
-        CHECK(ravel_multi_index(arr.strides(), unravel_index(arr.strides(), last_element_flat)) ==
-              last_element_flat);
-    }
+// Adapted from NumPy
+// https://github.com/numpy/numpy/blob/d02611a/numpy/lib/tests/test_index_tricks.py#L29
+TEST_CASE("Test ravel_multi_index()") {
+    CHECK(ravel_multi_index({1, 0}, {2, 2}) == 2);
+    CHECK(ravel_multi_index({2, 66}, {17, 94}) == 254);
+    CHECK(ravel_multi_index({2, 1, 4}, {4, 3, 6}) == (2 * 3 + 1) * 6 + 4);
+    CHECK(ravel_multi_index({3, 1, 4, 1}, {6, 7, 8, 9}) == 1621);
+}
+TEST_CASE("Test unravel_index()") {
+    CHECK_THAT(unravel_index(2, {2, 2}), RangeEquals({1, 0}));
+    CHECK_THAT(unravel_index(254, {17, 94}), RangeEquals({2, 66}));
+    CHECK_THAT(unravel_index(4, {-1, 2}), RangeEquals({2, 0}));  // dynamic
+    CHECK_THAT(unravel_index((2 * 3 + 1) * 6 + 4, {4, 3, 6}), RangeEquals({2, 1, 4}));
+    CHECK_THAT(unravel_index(1621, {6, 7, 8, 9}), RangeEquals({3, 1, 4, 1}));
 }
 
 }  // namespace dwave::optimization
