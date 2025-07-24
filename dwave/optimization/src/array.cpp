@@ -305,15 +305,16 @@ ssize_t ravel_multi_index(const std::span<const ssize_t> multi_index,
 
     ssize_t index = 0;
     ssize_t multiplier = 1;
-    for (ssize_t dim = multi_index.size() - 1; dim >= 0; --dim) {
-        assert((!dim || 0 <= shape[dim]) && "all dimensions except the first must be non-negative");
+    for (ssize_t axis = multi_index.size() - 1; axis >= 0; --axis) {
+        assert((!axis || 0 <= shape[axis]) &&
+               "all dimensions except the first must be non-negative");
 
         // NumPy supports "clip" and "wrap" which we could add support for
         // but for now let's just assert.
-        assert(0 <= multi_index[dim] && (!dim || multi_index[dim] < shape[dim]));
+        assert(0 <= multi_index[axis] && (!axis || multi_index[axis] < shape[axis]));
 
-        index += multi_index[dim] * multiplier;
-        multiplier *= shape[dim];
+        index += multi_index[axis] * multiplier;
+        multiplier *= shape[axis];
     }
 
     return index;
