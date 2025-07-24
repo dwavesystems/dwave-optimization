@@ -1,1 +1,1 @@
-dimod==0.12.17
+dimod==0.12.17; python_version < '3.14'

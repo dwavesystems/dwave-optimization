@@ -1,6 +1,7 @@
 # Install requirements
 numpy==1.21.6; python_version < '3.10'  # support numpy.typing
-numpy==2.1.0; python_version >= '3.10'
+numpy==2.1.0; python_version >= '3.10' and python_version < '3.14'
+numpy==2.3.2; python_version >= '3.14'  # first that supports 3.14
 
 # Build requirements
 cython~=3.1.0
