@@ -28,6 +28,7 @@ Design Principles
   :hidden:
 
   philosophy
+  best_practices
 
 `dwave-optimization` and the hybrid nonlinear solver incorporate features and
 :ref:`design principles <optimization_philosophy>` from each of the following

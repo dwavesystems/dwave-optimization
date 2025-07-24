@@ -1,45 +1,45 @@
-.. _`sec:summary`:
+.. _optimization_nonlinear_vars:
 
-Summary
-=======
+=====================================
+Nonlinear Models: Selecting Variables
+=====================================
 
 When formulating optimization problems, the choice of decision variables
-significantly impacts the model’s clarity, the size of the solution
-space, and ultimately, the solver’s performance. D-Wave’s
-``dwave.optimization.Model`` provides several specialized constructors
-for decision variables that carry "implicit constraints." These symbols
-inherently represent common combinatorial structures like permutations,
-subsets, or partitions, guiding the solver to explore only valid
-configurations.
+significantly impacts the model's clarity, size of the solution space, and,
+ultimately, the solver's performance.
+
+Ocean software's :class:`~dwave.optimization.model.Model` class provides several
+specialized constructors for decision variables that carry
+"implicit constraints." These :ref:`symbols <optimization_symbols>` inherently
+represent common combinatorial structures such as permutations, subsets, or
+partitions, guiding the solver to explore only valid configurations.
 
 Using these implicitly constrained symbols offers several advantages:
 
-- **Simplified Model Formulation:** Complex constraints (e.g., ensuring
-  all elements are unique and used in a sequence) are handled implicitly
-  by the variable type itself, leading to more concise and readable
-  models.
+*   **Simplified Model Formulation:** Complex constraints (e.g., ensuring
+    all elements are unique and used in a sequence) are handled implicitly
+    by the variable type itself, leading to more concise and readable
+    models.
 
-- **Reduced Solution Space:** The solver’s search space is drastically
-  reduced because it only considers arrangements that satisfy the
-  inherent nature of the symbol (e.g., permutations instead of all
-  possible lists).
+*   **Reduced Solution Space:** The solver's search space is drastically
+    reduced because it only considers arrangements that satisfy the
+    inherent nature of the symbol (e.g., permutations instead of all
+    possible lists).
 
-- **Potential for Improved Performance:** A smaller, more structured
-  search space can lead to faster solution times and better quality
-  solutions.
+*   **Potential for Improved Performance:** A smaller, more structured search
+    space can lead to faster solution times and better quality solutions.
 
-This report details these specialized symbols, providing their
-descriptions, creation methods, practical examples, and common use
-cases. These symbols are directly available as methods on the
-``dwave.optimization.Model`` object.
+This page details these specialized symbols, providing descriptions, creation
+methods, practical examples, and common use cases. These symbols are directly
+available as methods on the :class:`~dwave.optimization.model.Model` object.
 
-.. _`sec:model_list`:
+.. _optimization_nonlinear_vars_list:
 
-The Permutation Symbol: ``model.list()``
-========================================
+Permutation: ``list()``
+=======================
 
-The ``model.list(N)`` constructor creates a decision variable
-representing an ordered arrangement (a permutation) of :math:`N`
+The :meth:`~dwave.optimization.model.Model.list` constructor creates a decision
+variable representing an ordered arrangement (a permutation) of :math:`N`
 distinct items. These items are implicitly the integers
 :math:`[0, 1, \ldots, N-1]`.
 
@@ -47,163 +47,165 @@ Symbol Overview
 ---------------
 
 .. container::
-   :name: tab:list_overview
+    :name: tab:list_overview
 
-   .. table:: Symbol Overview for ``model.list(N)``
+    .. table:: Symbol Overview for ``model.list(N)``
 
-      +----------------------+-----------------------------------------------+
-      | **Feature**          | **Description**                               |
-      +======================+===============================================+
-      | Conceptual Name      | ``ListVariable`` (for understanding its role) |
-      +----------------------+-----------------------------------------------+
-      | Creation Method      | ``variable = model.list(N)``                  |
-      +----------------------+-----------------------------------------------+
-      | Purpose              | Represents an ordered sequence (permutation)  |
-      |                      | of :math:`N` distinct items.                  |
-      +----------------------+-----------------------------------------------+
-      | Implicit Constraints | - All :math:`N` items (integers :math:`0` to  |
-      |                      |   :math:`N-1`) are present exactly once.      |
-      |                      |                                               |
-      |                      | - Order matters.                              |
-      |                      |                                               |
-      |                      | - Elements are unique.                        |
-      +----------------------+-----------------------------------------------+
-      | ``N`` is             | The number of items in the permutation.       |
-      +----------------------+-----------------------------------------------+
-      | Output in Solution   | A NumPy array of length :math:`N` containing  |
-      |                      | a permutation of :math:`[0, 1, \ldots, N-1]`. |
-      |                      | May contain floats close to integers.         |
-      +----------------------+-----------------------------------------------+
+        +----------------------+---------------------------------------------------+
+        | **Feature**          | **Description**                                   |
+        +======================+===================================================+
+        | Conceptual Name      | :class:`~dwave.optimization.symbols.ListVariable` |
+        |                      | (for understanding its role)                      |
+        +----------------------+---------------------------------------------------+
+        | Creation Method      | ``variable = model.list(N)``                      |
+        +----------------------+---------------------------------------------------+
+        | Purpose              | Represents an ordered sequence (permutation)      |
+        |                      | of :math:`N` distinct items.                      |
+        +----------------------+---------------------------------------------------+
+        | Implicit Constraints | - All :math:`N` items (integers :math:`0` to      |
+        |                      |   :math:`N-1`) are present exactly once.          |
+        |                      |                                                   |
+        |                      | - Order matters.                                  |
+        |                      |                                                   |
+        |                      | - Elements are unique.                            |
+        +----------------------+---------------------------------------------------+
+        | ``N`` Represents     | The number of items in the permutation.           |
+        +----------------------+---------------------------------------------------+
+        | Output in Solution   | A NumPy array of length :math:`N` containing      |
+        |                      | a permutation of :math:`[0, 1, \ldots, N-1]`.     |
+        |                      | May contain floats close to integers.             |
+        +----------------------+---------------------------------------------------+
 
-Detailed Explanation
---------------------
 
-``model.list(N)`` is ideal for problems where the core decision involves
-finding the optimal order or sequence of a set of items. Instead of
-creating :math:`N` integer variables and adding ``AllDifferent``
+Description
+-----------
+
+:meth:`~dwave.optimization.model.Model.list` is ideal for problems where the
+core decision involves finding the optimal order or sequence of a set of items.
+Instead of creating :math:`N` integer variables and adding ``AllDifferent``
 constraints along with range constraints, ``model.list(N)`` encapsulates
-this. The solver will explore the :math:`N!` possible permutations,
-rather than the :math:`N^N` combinations possible with :math:`N`
-unrestricted integer variables. If your actual items are not integers
-:math:`0` to :math:`N-1` (e.g., city names), you should map them to
-these integer indices before defining the model and map them back when
-interpreting the solution. Note that the solver might return indices as
-floats, requiring casting to int.
+this. The solver explores the :math:`N!` possible permutations rather than the
+:math:`N^N` combinations possible with :math:`N` unrestricted integer variables.
+If your actual items are not integers :math:`0` to :math:`N-1` (e.g., city
+names), you should map them to these integer indices before defining the model
+and map them back when interpreting the solution. Note that the solver might
+return indices as floats, requiring casting to ``int``.
 
-Practical Example: Traveling Salesperson Problem (TSP)
-------------------------------------------------------
+Example: Traveling Salesperson Problem
+--------------------------------------
 
-The TSP requires finding the shortest possible route that visits each
-city exactly once and returns to the origin city.
+The `traveling salesperson problem (TSP) <https://en.wikipedia.org/wiki/Travelling_salesman_problem>`_`
+requires finding the shortest possible route that visits each city exactly once
+and returns to the origin city.
 
 .. code:: python
 
-   import dwave.optimization as do
-   import numpy as np
-   # Import the correct sampler from dwave.system
-   from dwave.system import LeapHybridNLSampler 
+    import dwave.optimization as do
+    import numpy as np
+    # Import the correct sampler from dwave.system
+    from dwave.system import LeapHybridNLSampler
 
-   # --- Problem Data ---
-   city_names = ['A', 'B', 'C', 'D']
-   num_cities = len(city_names) # This corresponds to N
+    # --- Problem Data ---
+    city_names = ['A', 'B', 'C', 'D']
+    num_cities = len(city_names) # This corresponds to N
 
-   # Distances: A-A, A-B, A-C, A-D
-   #            B-A, B-B, B-C, B-D
-   #            ...
-   distance_matrix_data = np.array([
-       [0, 10, 15, 20],  # Distances from A
-       [10, 0, 35, 25],  # Distances from B
-       [15, 35, 0, 30],  # Distances from C
-       [20, 25, 30, 0]   # Distances from D
-   ])
+    # Distances: A-A, A-B, A-C, A-D
+    #            B-A, B-B, B-C, B-D
+    #            ...
+    distance_matrix_data = np.array([
+        [0, 10, 15, 20],  # Distances from A
+        [10, 0, 35, 25],  # Distances from B
+        [15, 35, 0, 30],  # Distances from C
+        [20, 25, 30, 0]   # Distances from D
+    ])
 
-   # --- Model Definition ---
-   model = do.Model()
+    # --- Model Definition ---
+    model = do.Model()
 
-   # 'ordered_cities' will be a permutation of [0, 1, ..., num_cities-1]
-   ordered_cities = model.list(num_cities) # N = num_cities
+    # 'ordered_cities' will be a permutation of [0, 1, ..., num_cities-1]
+    ordered_cities = model.list(num_cities) # N = num_cities
 
-   # Add constants to the model
-   DISTANCE_MATRIX = model.constant(distance_matrix_data)
+    # Add constants to the model
+    DISTANCE_MATRIX = model.constant(distance_matrix_data)
 
-   # --- Objective Function ---
-   # Cost of legs between cities in the permuted order
-   itinerary_cost = DISTANCE_MATRIX[ordered_cities[:-1], ordered_cities[1:]].sum()
-   # Cost of returning from the last city to the first city
-   return_to_origin_cost = DISTANCE_MATRIX[ordered_cities[-1], ordered_cities[0]].sum()
-   total_travel_distance = itinerary_cost + return_to_origin_cost
-   model.minimize(total_travel_distance)
+    # --- Objective Function ---
+    # Cost of legs between cities in the permuted order
+    itinerary_cost = DISTANCE_MATRIX[ordered_cities[:-1], ordered_cities[1:]].sum()
+    # Cost of returning from the last city to the first city
+    return_to_origin_cost = DISTANCE_MATRIX[ordered_cities[-1], ordered_cities[0]].sum()
+    total_travel_distance = itinerary_cost + return_to_origin_cost
+    model.minimize(total_travel_distance)
 
-   model.lock()
-   print("--- model.list() Example: Traveling Salesperson Problem ---")
-   print(f"Cities (mapped to indices 0-{num_cities-1}): {city_names}")
-   print(f"Decision Variable: ordered_cities = model.list(N={num_cities})")
+    model.lock()
+    print("--- model.list() Example: Traveling Salesperson Problem ---")
+    print(f"Cities (mapped to indices 0-{num_cities-1}): {city_names}")
+    print(f"Decision Variable: ordered_cities = model.list(N={num_cities})")
 
-   # Example of solving using .state(0) (requires Leap account and environment configuration)
-   try:
-       # Instantiate the Leap Hybrid Nonlinear Sampler
-       sampler = LeapHybridNLSampler() 
+    # Example of solving using .state(0) (requires Leap account and environment configuration)
+    try:
+        # Instantiate the Leap Hybrid Nonlinear Sampler
+        sampler = LeapHybridNLSampler()
 
-       # Submit the model to the sampler
-       results = sampler.sample(model, label='Example - TSP') 
+        # Submit the model to the sampler
+        results = sampler.sample(model, label='Example - TSP')
 
-       # Wait for results if asynchronous (sampler might return a Future)
-       if hasattr(results, 'result'): # Basic check if it might be a Future
-            job_result_object = results.result() # Wait and get the actual results object.
-            print(f"Future resolved.")
-            # We assume this has implicitly populated the model state cache.
-       else:
-            job_result_object = results # Assume results are already available
-            print(f"Synchronous result received.")
+        # Wait for results if asynchronous (sampler might return a Future)
+        if hasattr(results, 'result'): # Basic check if it might be a Future
+                job_result_object = results.result() # Wait and get the actual results object.
+                print(f"Future resolved.")
+                # We assume this has implicitly populated the model state cache.
+        else:
+                job_result_object = results # Assume results are already available
+                print(f"Synchronous result received.")
 
-       # Now attempt to access the best state (index 0) via model symbols
-       print("\n--- Solution (via model.state(0)) ---")
-       # Using model.lock() based on user's provided analysis snippet
-       with model.lock(): 
-           try:
-               objective_value = model.objective.state(0)
-               print(f"Objective Value (State 0): {objective_value:.2f}")
+        # Now attempt to access the best state (index 0) via model symbols
+        print("\n--- Solution (via model.state(0)) ---")
+        # Using model.lock() based on user's provided analysis snippet
+        with model.lock():
+            try:
+                objective_value = model.objective.state(0)
+                print(f"Objective Value (State 0): {objective_value:.2f}")
 
-               route_indices_float = ordered_cities.state(0) # Access state (might be float)
-               # Cast indices to int before using them to index Python lists
-               route_indices = [int(idx) for idx in route_indices_float] 
-               
-               named_route = [city_names[idx] for idx in route_indices] 
-               named_route_loop = named_route + [named_route[0]]
-               print(f"Optimal route indices (float): {route_indices_float}")
-               print(f"Optimal route indices (int): {route_indices}")
-               print(f"Optimal route: {' -> '.join(named_route_loop)}")
+                route_indices_float = ordered_cities.state(0) # Access state (might be float)
+                # Cast indices to int before using them to index Python lists
+                route_indices = [int(idx) for idx in route_indices_float]
 
-           except IndexError:
-                print("State 0 not found. Solver might have failed or returned no solutions.")
-           except Exception as e_state:
-                print(f"Error accessing state 0: {e_state}")
+                named_route = [city_names[idx] for idx in route_indices]
+                named_route_loop = named_route + [named_route[0]]
+                print(f"Optimal route indices (float): {route_indices_float}")
+                print(f"Optimal route indices (int): {route_indices}")
+                print(f"Optimal route: {' -> '.join(named_route_loop)}")
 
-   except Exception as e:
-       print(f"\nSolver execution failed or requires configuration: {e}")
+            except IndexError:
+                    print("State 0 not found. Solver might have failed or returned no solutions.")
+            except Exception as e_state:
+                    print(f"Error accessing state 0: {e_state}")
 
-   # --- Solution (via model.state(0)) ---
-   # Objective Value (State 0): 80.00
-   # Optimal route indices (float): [3. 1. 0. 2.]
-   # Optimal route indices (int): [3, 1, 0, 2]
-   # Optimal route: D -> B -> A -> C -> D
+    except Exception as e:
+        print(f"\nSolver execution failed or requires configuration: {e}")
 
-Common Use Cases for ``model.list()``
--------------------------------------
+    # --- Solution (via model.state(0)) ---
+    # Objective Value (State 0): 80.00
+    # Optimal route indices (float): [3. 1. 0. 2.]
+    # Optimal route indices (int): [3, 1, 0, 2]
+    # Optimal route: D -> B -> A -> C -> D
 
-- **Traveling Salesperson Problem (TSP):** Finding the shortest tour.
+Common Use Cases
+----------------
 
-- **Quadratic Assignment Problem (QAP):** Assigning :math:`N` facilities
-  to :math:`N` locations where the interaction cost depends on flow and
-  distance, and the assignment is a permutation.
+*   **Traveling Salesperson Problem (TSP):** Finding the shortest tour.
 
-- **Flow Shop Scheduling:** Determining the sequence of jobs on a series
-  of machines to minimize makespan.
+*   **Quadratic Assignment Problem (QAP):** Assigning :math:`N` facilities
+    to :math:`N` locations where the interaction cost depends on flow and
+    distance, and the assignment is a permutation.
 
-- **Single Machine Scheduling:** Ordering tasks on a single resource.
+*   **Flow Shop Scheduling:** Determining the sequence of jobs on a series
+    of machines to minimize makespan.
 
-- Any problem requiring the determination of an optimal sequence or
-  permutation.
+*   **Single Machine Scheduling:** Ordering tasks on a single resource.
+
+*   Any problem requiring the determination of an optimal sequence or
+    permutation.
 
 .. _`sec:model_set`:
 
