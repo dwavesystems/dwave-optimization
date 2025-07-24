@@ -43,39 +43,36 @@ variable representing an ordered arrangement (a permutation) of :math:`N`
 distinct items. These items are implicitly the integers
 :math:`[0, 1, \ldots, N-1]`.
 
-Symbol Overview
----------------
+Overview
+--------
 
-.. container::
-    :name: tab:list_overview
+.. table:: ``model.list(N)`` Overview
+    :name: list_overview
 
-    .. table:: Symbol Overview for ``model.list(N)``
-
-        +----------------------+---------------------------------------------------+
-        | **Feature**          | **Description**                                   |
-        +======================+===================================================+
-        | Conceptual Name      | :class:`~dwave.optimization.symbols.ListVariable` |
-        |                      | (for understanding its role)                      |
-        +----------------------+---------------------------------------------------+
-        | Creation Method      | ``variable = model.list(N)``                      |
-        +----------------------+---------------------------------------------------+
-        | Purpose              | Represents an ordered sequence (permutation)      |
-        |                      | of :math:`N` distinct items.                      |
-        +----------------------+---------------------------------------------------+
-        | Implicit Constraints | - All :math:`N` items (integers :math:`0` to      |
-        |                      |   :math:`N-1`) are present exactly once.          |
-        |                      |                                                   |
-        |                      | - Order matters.                                  |
-        |                      |                                                   |
-        |                      | - Elements are unique.                            |
-        +----------------------+---------------------------------------------------+
-        | ``N`` Represents     | The number of items in the permutation.           |
-        +----------------------+---------------------------------------------------+
-        | Output in Solution   | A NumPy array of length :math:`N` containing      |
-        |                      | a permutation of :math:`[0, 1, \ldots, N-1]`.     |
-        |                      | May contain floats close to integers.             |
-        +----------------------+---------------------------------------------------+
-
+    +----------------------+---------------------------------------------------+
+    | **Feature**          | **Description**                                   |
+    +======================+===================================================+
+    | Conceptual Name      | :class:`~dwave.optimization.symbols.ListVariable` |
+    |                      | (for understanding its role)                      |
+    +----------------------+---------------------------------------------------+
+    | Creation Method      | ``variable = model.list(N)``                      |
+    +----------------------+---------------------------------------------------+
+    | Purpose              | Represents an ordered sequence (permutation)      |
+    |                      | of :math:`N` distinct items.                      |
+    +----------------------+---------------------------------------------------+
+    | Implicit Constraints | - All :math:`N` items (integers :math:`0` to      |
+    |                      |   :math:`N-1`) are present exactly once.          |
+    |                      |                                                   |
+    |                      | - Order matters.                                  |
+    |                      |                                                   |
+    |                      | - Elements are unique.                            |
+    +----------------------+---------------------------------------------------+
+    | ``N`` Represents     | The number of items in the permutation.           |
+    +----------------------+---------------------------------------------------+
+    | Output in Solution   | A NumPy array of length :math:`N` containing      |
+    |                      | a permutation of :math:`[0, 1, \ldots, N-1]`.     |
+    |                      | May contain floats close to integers.             |
+    +----------------------+---------------------------------------------------+
 
 Description
 -----------
@@ -94,9 +91,9 @@ return indices as floats, requiring casting to ``int``.
 Example: Traveling Salesperson Problem
 --------------------------------------
 
-The `traveling salesperson problem (TSP) <https://en.wikipedia.org/wiki/Travelling_salesman_problem>`_`
-requires finding the shortest possible route that visits each city exactly once
-and returns to the origin city.
+The `traveling salesperson problem <https://en.wikipedia.org/wiki/Travelling_salesman_problem>`_
+(TSP) requires finding the shortest possible route that visits each city exactly
+once and returns to the origin city.
 
 .. code:: python
 
@@ -207,416 +204,406 @@ Common Use Cases
 *   Any problem requiring the determination of an optimal sequence or
     permutation.
 
-.. _`sec:model_set`:
+.. _optimization_nonlinear_vars_set:
 
-The Subset Symbol: ``model.set()``
-==================================
+Subset: ``set()``
+=================
 
-The ``model.set(N)`` constructor creates a decision variable
-representing an unordered collection (a subset) of unique items chosen
+The :meth:`~dwave.optimization.model.Model.set` constructor creates a decision
+variable representing an unordered collection (a subset) of unique items chosen
 from a universe of :math:`N` items (integers :math:`0` to :math:`N-1`).
 
-.. _symbol-overview-1:
+Overview
+--------
 
-Symbol Overview
----------------
+.. table:: ``model.set(N)`` Overview
+    :name: set_overview
 
-.. container::
-   :name: tab:set_overview
+    +----------------------+---------------------------------------------------+
+    | **Feature**          | **Description**                                   |
+    +======================+===================================================+
+    | Conceptual Name      | :class:`~dwave.optimization.symbols.SetVariable`  |
+    +----------------------+---------------------------------------------------+
+    | Creation Method      | ``variable = model.set(N)``                       |
+    +----------------------+---------------------------------------------------+
+    | Purpose              | Represents an unordered subset of unique          |
+    |                      | items chosen from a universe of :math:`N`         |
+    |                      | items.                                            |
+    +----------------------+---------------------------------------------------+
+    | Implicit Constraints | - Elements selected are unique.                   |
+    |                      |                                                   |
+    |                      | - Order of elements within the set does not       |
+    |                      |   matter.                                         |
+    |                      |                                                   |
+    |                      | - Items are chosen from the universe              |
+    |                      |   :math:`[0, \ldots, N-1]`.                       |
+    +----------------------+---------------------------------------------------+
+    | ``N`` Represents     | The size of the universe from which items are     |
+    |                      | chosen.                                           |
+    +----------------------+---------------------------------------------------+
+    | Output in Solution   | A NumPy array containing the unique integer       |
+    |                      | indices of selected items, typically sorted.      |
+    |                      | May contain floats close to integers.             |
+    +----------------------+---------------------------------------------------+
 
-   .. table:: Symbol Overview for ``model.set(N)``
+Description
+-----------
 
-      +----------------------+-----------------------------------------------+
-      | **Feature**          | **Description**                               |
-      +======================+===============================================+
-      | Conceptual Name      | ``SetVariable``                               |
-      +----------------------+-----------------------------------------------+
-      | Creation Method      | ``variable = model.set(N)``                   |
-      +----------------------+-----------------------------------------------+
-      | Purpose              | Represents an unordered subset of unique      |
-      |                      | items chosen from a universe of :math:`N`     |
-      |                      | items.                                        |
-      +----------------------+-----------------------------------------------+
-      | Implicit Constraints | - Elements selected are unique.               |
-      |                      |                                               |
-      |                      | - Order of elements within the set does not   |
-      |                      |   matter.                                     |
-      |                      |                                               |
-      |                      | - Items are chosen from the universe          |
-      |                      |   :math:`[0, \ldots, N-1]`.                   |
-      +----------------------+-----------------------------------------------+
-      | ``N`` is             | The size of the universe from which items are |
-      |                      | chosen.                                       |
-      +----------------------+-----------------------------------------------+
-      | Output in Solution   | A NumPy array containing the unique integer   |
-      |                      | indices of selected items, typically sorted.  |
-      |                      | May contain floats close to integers.         |
-      +----------------------+-----------------------------------------------+
+:meth:`~dwave.optimization.model.Model.set` is used when the decision involves
+selecting a group of items, and the order of selection is irrelevant. The symbol
+inherently handles the uniqueness of selected items. Constraints on the size
+(cardinality) of the set or other properties based on the selected items are
+typically added explicitly. As with
+:meth:`~dwave.optimization.model.Model.list`, if the actual items are not
+:math:`0` to :math:`N-1`, a mapping is necessary. Note that the solver might
+return indices as floats, requiring casting to ``int``.
 
-.. _detailed-explanation-1:
+Example: Knapsack Problem
+--------------------------
 
-Detailed Explanation
---------------------
-
-``model.set(N)`` is used when the decision involves selecting a group of
-items, and the order of selection is irrelevant. The symbol inherently
-handles the uniqueness of selected items. Constraints on the size
-(cardinality) of the set or other properties based on the selected items
-are typically added explicitly. As with ``model.list()``, if the actual
-items are not :math:`0` to :math:`N-1`, a mapping is necessary. Note
-that the solver might return indices as floats, requiring casting to
-int.
-
-Practical Example: Knapsack Problem
------------------------------------
-
-Given a set of items, each with a weight and a value, determine which
-items to include in a collection so that the total weight is less than
-or equal to a given limit (capacity) and the total value is maximized.
+The `knapsack_problem <https://en.wikipedia.org/wiki/Knapsack_problem>`_
+requires that for a given a set of items, each with a weight and a value, you
+determine which items to include in a collection so that the total weight is
+less than or equal to a given limit (capacity) and the total value is maximized.
 
 .. code:: python
 
-   import dwave.optimization as do
-   import numpy as np
-   # Import the correct sampler from dwave.system
-   from dwave.system import LeapHybridNLSampler 
+    import dwave.optimization as do
+    import numpy as np
+    # Import the correct sampler from dwave.system
+    from dwave.system import LeapHybridNLSampler 
 
-   # --- Problem Data ---
-   item_names = ['item0', 'item1', 'item2', 'item3', 'item4']
-   num_items_universe = len(item_names) # This corresponds to N
+    # --- Problem Data ---
+    item_names = ['item0', 'item1', 'item2', 'item3', 'item4']
+    num_items_universe = len(item_names) # This corresponds to N
 
-   weights_data = np.array([10, 20, 30, 40, 50]) # Weight of each item
-   values_data = np.array([60, 100, 120, 200, 210]) # Value of each item
-   knapsack_capacity = 70 # Maximum weight the knapsack can hold
+    weights_data = np.array([10, 20, 30, 40, 50]) # Weight of each item
+    values_data = np.array([60, 100, 120, 200, 210]) # Value of each item
+    knapsack_capacity = 70 # Maximum weight the knapsack can hold
 
-   # --- Model Definition ---
-   model = do.Model()
+    # --- Model Definition ---
+    model = do.Model()
 
-   # 'selected_items' will be a subset of [0, 1, ..., num_items_universe-1]
-   selected_items = model.set(num_items_universe) # N = num_items_universe
+    # 'selected_items' will be a subset of [0, 1, ..., num_items_universe-1]
+    selected_items = model.set(num_items_universe) # N = num_items_universe
 
-   # Add constants
-   WEIGHTS = model.constant(weights_data)
-   VALUES = model.constant(values_data) 
-   CAPACITY = model.constant(knapsack_capacity)
+    # Add constants
+    WEIGHTS = model.constant(weights_data)
+    VALUES = model.constant(values_data)
+    CAPACITY = model.constant(knapsack_capacity)
 
-   # --- Constraints ---
-   # The sum of weights of selected items must not exceed capacity.
-   total_weight_of_selected = WEIGHTS[selected_items].sum()
-   model.add_constraint(total_weight_of_selected <= CAPACITY, label="capacity_constraint")
+    # --- Constraints ---
+    # The sum of weights of selected items must not exceed capacity.
+    total_weight_of_selected = WEIGHTS[selected_items].sum()
+    model.add_constraint(total_weight_of_selected <= CAPACITY, label="capacity_constraint")
 
-   # --- Objective Function ---
-   # Maximize the total value of selected items.
-   total_value_of_selected = VALUES[selected_items].sum()
-   model.maximize(total_value_of_selected)
+    # --- Objective Function ---
+    # Maximize the total value of selected items.
+    total_value_of_selected = VALUES[selected_items].sum()
+    model.maximize(total_value_of_selected)
 
-   model.lock()
-   print("\n--- model.set() Example: Knapsack Problem ---")
-   print(f"Universe of items (indices 0-{num_items_universe-1}): {item_names}")
-   print(f"Decision Variable: selected_items = model.set(N={num_items_universe})")
+    model.lock()
+    print("\n--- model.set() Example: Knapsack Problem ---")
+    print(f"Universe of items (indices 0-{num_items_universe-1}): {item_names}")
+    print(f"Decision Variable: selected_items = model.set(N={num_items_universe})")
 
-   # Example of solving using .state(0) (requires Leap account and environment configuration)
-   try:
-       # Instantiate the Leap Hybrid Nonlinear Sampler
-       sampler = LeapHybridNLSampler()
+    # Example of solving using .state(0) (requires Leap account and environment configuration)
+    try:
+        # Instantiate the Leap Hybrid Nonlinear Sampler
+        sampler = LeapHybridNLSampler()
 
-       # Submit the model to the sampler
-       results = sampler.sample(model, label='Example - Knapsack')
+        # Submit the model to the sampler
+        results = sampler.sample(model, label='Example - Knapsack')
 
-       # Wait for results if asynchronous
-       if hasattr(results, 'result'): 
-           job_result_object = results.result()
-           print(f"Future resolved.")
-       else:
-           job_result_object = results
-           print(f"Synchronous result received.")
+        # Wait for results if asynchronous
+        if hasattr(results, 'result'):
+            job_result_object = results.result()
+            print(f"Future resolved.")
+        else:
+            job_result_object = results
+            print(f"Synchronous result received.")
 
-       # Access the best state (index 0) via model symbols
-       print("\n--- Solution (via model.state(0)) ---")
-       with model.lock():
-           try:
-               # Maximization objective value might need interpretation from energy
-               objective_value = model.objective.state(0) 
-               print(f"Objective Value (State 0 - check interpretation): {objective_value}")
+        # Access the best state (index 0) via model symbols
+        print("\n--- Solution (via model.state(0)) ---")
+        with model.lock():
+            try:
+                # Maximization objective value might need interpretation from energy
+                objective_value = model.objective.state(0)
+                print(f"Objective Value (State 0 - check interpretation): {objective_value}")
 
-               chosen_item_indices_float = selected_items.state(0) # Access state (might be float)
-               # Cast indices to int for processing
-               chosen_item_indices = [int(idx) for idx in chosen_item_indices_float]
+                chosen_item_indices_float = selected_items.state(0) # Access state (might be float)
+                # Cast indices to int for processing
+                chosen_item_indices = [int(idx) for idx in chosen_item_indices_float]
 
-               chosen_item_names = [item_names[idx] for idx in chosen_item_indices]
-               print(f"Selected item indices (float): {chosen_item_indices_float}")
-               print(f"Selected item indices (int): {chosen_item_indices}")
-               print(f"Selected items: {chosen_item_names}")
-               
-               # Re-calculate value and weight from solution indices for clarity
-               # Use the integer indices for NumPy array indexing
-               actual_value = values_data[chosen_item_indices].sum()
-               actual_weight = weights_data[chosen_item_indices].sum()
-               print(f"Recalculated Value: {actual_value}")
-               print(f"Recalculated Weight: {actual_weight} (Capacity: {knapsack_capacity})")
+                chosen_item_names = [item_names[idx] for idx in chosen_item_indices]
+                print(f"Selected item indices (float): {chosen_item_indices_float}")
+                print(f"Selected item indices (int): {chosen_item_indices}")
+                print(f"Selected items: {chosen_item_names}")
 
-           except IndexError:
-                print("State 0 not found. Solver might have failed or returned no solutions.")
-           except Exception as e_state:
-                print(f"Error accessing state 0: {e_state}")
+                # Re-calculate value and weight from solution indices for clarity
+                # Use the integer indices for NumPy array indexing
+                actual_value = values_data[chosen_item_indices].sum()
+                actual_weight = weights_data[chosen_item_indices].sum()
+                print(f"Recalculated Value: {actual_value}")
+                print(f"Recalculated Weight: {actual_weight} (Capacity: {knapsack_capacity})")
 
-   except Exception as e:
-       print(f"\nSolver execution failed or requires configuration: {e}")
+            except IndexError:
+                    print("State 0 not found. Solver might have failed or returned no solutions.")
+            except Exception as e_state:
+                    print(f"Error accessing state 0: {e_state}")
 
-   # --- Solution (via model.state(0)) ---
-   # Objective Value (State 0 - check interpretation): 360.0
-   # Selected item indices (float): [0. 1. 3.]
-   # Selected item indices (int): [0, 1, 3]
-   # Selected items: ['item0', 'item1', 'item3']
-   # Recalculated Value: 360
-   # Recalculated Weight: 70 (Capacity: 70)
+    except Exception as e:
+        print(f"\nSolver execution failed or requires configuration: {e}")
 
-Common Use Cases for ``model.set()``
-------------------------------------
+    # --- Solution (via model.state(0)) ---
+    # Objective Value (State 0 - check interpretation): 360.0
+    # Selected item indices (float): [0. 1. 3.]
+    # Selected item indices (int): [0, 1, 3]
+    # Selected items: ['item0', 'item1', 'item3']
+    # Recalculated Value: 360
+    # Recalculated Weight: 70 (Capacity: 70)
 
-- **Knapsack Problem:** Selecting items to maximize value/utility within
-  a budget/capacity.
+Common Use Cases
+----------------
 
-- **Set Covering / Packing / Partitioning Problems:** Selecting subsets
-  to satisfy coverage or disjointness requirements.
+*   **Knapsack Problem:** Selecting items to maximize value/utility within
+    a budget/capacity.
 
-- **Feature Selection:** Choosing a subset of features in machine
-  learning.
+*   **Set-Covering, Packing, and Partitioning Problems:** Selecting subsets
+    to satisfy coverage or disjointness requirements.
 
-- **Committee Selection:** Forming a team or committee with specific
-  properties from a larger pool.
+*   **Feature Selection:** Choosing a subset of features in machine
+    learning.
 
-- Resource allocation problems where a selection of resources is needed.
+*   **Committee Selection:** Forming a team or committee with specific
+    properties from a larger pool.
 
-.. _`sec:model_disjoint_lists`:
+*   Resource allocation problems where a selection of resources is needed.
 
-The Disjoint Ordered Lists Symbol: ``model.disjoint_lists()``
-=============================================================
+.. _optimization_nonlinear_vars_disjoint_lists:
 
-The ``model.disjoint_lists(primary_set_size, num_disjoint_lists)``
-constructor creates a complex decision variable. It partitions items
-from a primary set (integers :math:`0` to ``primary_set_size-1``) into a
-specified number of ``num_disjoint_lists``. Each of these lists is an
-ordered sequence (permutation) of a subset of the primary set, and no
-item from the primary set can appear in more than one list.
+Disjoint Ordered Lists: ``disjoint_lists()``
+============================================
 
-.. _symbol-overview-2:
+The :meth:`~dwave.optimization.model.Model.disjoint_lists` constructor creates a
+complex decision variable. It partitions items from a primary set (integers
+:math:`0` to ``primary_set_size-1``) into a specified number of lists,
+``num_disjoint_lists``. Each of these lists is an ordered sequence (permutation)
+of a subset of the primary set, and no item from the primary set can appear in
+more than one list.
 
-Symbol Overview
----------------
+Overview
+---------
 
-.. container::
-   :name: tab:disjoint_lists_overview
+.. table:: ``model.disjoint_lists(primary_set_size, num_disjoint_lists)`` Overview
+    :name: disjoint_lists_overview
 
-   .. table:: Symbol Overview for
-   ``model.disjoint_lists(primary_set_size, num_disjoint_lists)``
+    +------------------------+---------------------------------------------------------------------+
+    | **Feature**            | **Description**                                                     |
+    +========================+=====================================================================+
+    | Conceptual Name        | :class:`~dwave.optimization.symbols.DisjointLists`                  |
+    +------------------------+---------------------------------------------------------------------+
+    | Creation Method        | ``decision_var, list_collection =                                   |
+    |                        | model.disjoint_lists(primary_set_size, num_disjoint_lists)``        |
+    +------------------------+---------------------------------------------------------------------+
+    | Purpose                | Partitions items from a primary set into several mutually exclusive |
+    |                        | ordered lists.                                                      |
+    +------------------------+---------------------------------------------------------------------+
+    | Implicit Constraints   | - Each item from the primary set (indices :math:`0` to              |
+    |                        |   ``primary_set_size-1``) appears in at most one list.              |
+    |                        |                                                                     |
+    |                        | - Order matters within each list.                                   |
+    |                        |                                                                     |
+    |                        | - Lists are disjoint regarding item membership.                     |
+    +------------------------+---------------------------------------------------------------------+
+    | ``primary_set_size``   | The number of unique items in the overall pool (universe            |
+    |                        | ``range(primary_set_size)``) to be distributed and ordered.         |
+    +------------------------+---------------------------------------------------------------------+
+    | ``num_disjoint_lists`` | The number of separate, ordered lists to create.                    |
+    +------------------------+---------------------------------------------------------------------+
+    | Output in Solution     | ``list_collection`` provides access to the individual lists. Each   |
+    |                        | list (e.g., ``list_collection[i]``) is a NumPy array of ordered item|
+    |                        | indices. May contain floats close to integers. Accessing state      |
+    |                        | requires care (see example).                                        |
+    +------------------------+---------------------------------------------------------------------+
 
-      +------------------------+------------------------------------------------------------------------------------------------+
-      | **Feature**            | **Description**                                                                                |
-      +========================+================================================================================================+
-      | Conceptual Name        | ``DisjointListsVariable``                                                                      |
-      +------------------------+------------------------------------------------------------------------------------------------+
-      | Creation Method        | ``decision_var, list_collection = model.disjoint_lists(primary_set_size, num_disjoint_lists)`` |
-      +------------------------+------------------------------------------------------------------------------------------------+
-      | Purpose                | Partitions items from a primary set into several mutually exclusive ordered lists.             |
-      +------------------------+------------------------------------------------------------------------------------------------+
-      | Implicit Constraints   | - Each item from the primary set (indices :math:`0` to ``primary_set_size-1``) appears in at   |
-      |                        |   most one list.                                                                               |
-      |                        |                                                                                                |
-      |                        | - Order matters within each list.                                                              |
-      |                        |                                                                                                |
-      |                        | - Lists are disjoint regarding item membership.                                                |
-      +------------------------+------------------------------------------------------------------------------------------------+
-      | ``primary_set_size``   | The number of unique items in the overall pool (universe ``range(primary_set_size)``) to be    |
-      |                        | distributed and ordered.                                                                       |
-      +------------------------+------------------------------------------------------------------------------------------------+
-      | ``num_disjoint_lists`` | The number of separate, ordered lists to create.                                               |
-      +------------------------+------------------------------------------------------------------------------------------------+
-      | Output in Solution     | ``list_collection`` provides access to the individual lists. Each list (e.g.,                  |
-      |                        | ``list_collection[i]``) is a NumPy array of ordered item indices. May contain floats close to  |
-      |                        | integers. Accessing state requires care (see example).                                         |
-      +------------------------+------------------------------------------------------------------------------------------------+
+Description
+-----------
 
-.. _detailed-explanation-2:
+This symbol is exceptionally powerful for problems like vehicle routing, where a
+set of customers needs to be divided among several vehicles, and each vehicle
+follows a specific ordered route. The ``list_collection`` object returned allows
+you to access and constrain each list individually (e.g., ``list_collection[0]``
+for the first vehicle's route). Note that the solver might return indices as
+floats, requiring casting to ``int``.
 
-Detailed Explanation
---------------------
+Example: Capacitated Vehicle Routing Problem
+--------------------------------------------
 
-This symbol is exceptionally powerful for problems like vehicle routing,
-where a set of customers needs to be divided among several vehicles, and
-each vehicle follows a specific ordered route. The ``list_collection``
-object returned allows you to access and constrain each list
-individually (e.g., ``list_collection[0]`` for the first vehicle’s
-route). Note that the solver might return indices as floats, requiring
-casting to int.
-
-Practical Example: Capacitated Vehicle Routing Problem (Simplified)
--------------------------------------------------------------------
-
-Assign customers to vehicles, where each vehicle has a capacity, and
-minimize total distance. Each vehicle follows an ordered route.
+The `capacitated vehicle routing problem <https://en.wikipedia.org/wiki/Vehicle_routing_problem>`_
+(simplified CVRP) is to assign customers to vehicles, where each vehicle has a
+capacity, and to minimize total distance. Each vehicle follows an ordered route.
 
 .. code:: python
 
-   import dwave.optimization as do
-   import numpy as np
-   # Import the correct sampler from dwave.system
-   from dwave.system import LeapHybridNLSampler 
+    import dwave.optimization as do
+    import numpy as np
+    # Import the correct sampler from dwave.system
+    from dwave.system import LeapHybridNLSampler
 
-   # --- Problem Data ---
-   num_customers = 5 # This is primary_set_size
-   num_vehicles = 2  # This is num_disjoint_lists
-   customer_demands_data = np.array([10, 15, 8, 12, 20])
-   vehicle_capacity = 35
+    # --- Problem Data ---
+    num_customers = 5 # This is primary_set_size
+    num_vehicles = 2  # This is num_disjoint_lists
+    customer_demands_data = np.array([10, 15, 8, 12, 20])
+    vehicle_capacity = 35
 
-   # --- Model Definition ---
-   model = do.Model()
+    # --- Model Definition ---
+    model = do.Model()
 
-   # routes_decision is the core variable.
-   # routes provides accessors like routes[k] which are symbolic lists.
-   routes_decision, routes = model.disjoint_lists(
-       primary_set_size=num_customers,
-       num_disjoint_lists=num_vehicles
-   )
+    # routes_decision is the core variable.
+    # routes provides accessors like routes[k] which are symbolic lists.
+    routes_decision, routes = model.disjoint_lists(
+        primary_set_size=num_customers,
+        num_disjoint_lists=num_vehicles
+    )
 
-   DEMANDS = model.constant(customer_demands_data)
-   CAPACITY = model.constant(vehicle_capacity)
+    DEMANDS = model.constant(customer_demands_data)
+    CAPACITY = model.constant(vehicle_capacity)
 
-   # --- Constraints ---
-   all_route_costs = []
-   for k in range(num_vehicles):
-       vehicle_route_k = routes[k] # Symbolic representation of the k-th route
-       demand_on_route_k = DEMANDS[vehicle_route_k].sum()
-       model.add_constraint(demand_on_route_k <= CAPACITY, label=f"capacity_vehicle_{k}")
-       
-       num_cust_on_route_k = vehicle_route_k.size()
-       # Placeholder cost: a real model uses distance matrices
-       cost_for_route_k = num_cust_on_route_k 
-       all_route_costs.append(cost_for_route_k)
+    # --- Constraints ---
+    all_route_costs = []
+    for k in range(num_vehicles):
+        vehicle_route_k = routes[k] # Symbolic representation of the k-th route
+        demand_on_route_k = DEMANDS[vehicle_route_k].sum()
+        model.add_constraint(demand_on_route_k <= CAPACITY, label=f"capacity_vehicle_{k}")
 
-   # --- Objective Function ---
-   total_cost = do.add(*all_route_costs) 
-   model.minimize(total_cost)
+        num_cust_on_route_k = vehicle_route_k.size()
+        # Placeholder cost: a real model uses distance matrices
+        cost_for_route_k = num_cust_on_route_k
+        all_route_costs.append(cost_for_route_k)
 
-   model.lock()
-   print("\n--- model.disjoint_lists() Example: Simplified Vehicle Routing ---")
-   print(f"Customers (indices 0-{num_customers-1}), Vehicles: {num_vehicles}")
-   print(f"Decision: routes_decision, routes = model.disjoint_lists(primary_set_size={num_customers}, num_disjoint_lists={num_vehicles})")
+    # --- Objective Function ---
+    total_cost = do.add(*all_route_costs)
+    model.minimize(total_cost)
 
-   # Example of solving using .state(0) (requires Leap account and environment configuration)
-   try:
-       # Instantiate the Leap Hybrid Nonlinear Sampler
-       sampler = LeapHybridNLSampler()
+    model.lock()
+    print("\n--- model.disjoint_lists() Example: Simplified Vehicle Routing ---")
+    print(f"Customers (indices 0-{num_customers-1}), Vehicles: {num_vehicles}")
+    print(f"Decision: routes_decision, routes = model.disjoint_lists(primary_set_size={num_customers}, num_disjoint_lists={num_vehicles})")
 
-       # Submit the model to the sampler
-       results = sampler.sample(model, label='Example - CVRP (Simplified)')
+    # Example of solving using .state(0) (requires Leap account and environment configuration)
+    try:
+        # Instantiate the Leap Hybrid Nonlinear Sampler
+        sampler = LeapHybridNLSampler()
 
-       # Wait for results if asynchronous
-       if hasattr(results, 'result'): 
-           job_result_object = results.result()
-           print(f"Future resolved.")
-       else:
-           job_result_object = results
-           print(f"Synchronous result received.")
+        # Submit the model to the sampler
+        results = sampler.sample(model, label='Example - CVRP (Simplified)')
 
-       # Access the best state (index 0) via model symbols
-       print("\n--- Solution (via model.state(0)) ---")
-       with model.lock():
-           try:
-               objective_value = model.objective.state(0) 
-               print(f"Objective Value (State 0 - placeholder cost): {objective_value:.2f}")
+        # Wait for results if asynchronous
+        if hasattr(results, 'result'):
+            job_result_object = results.result()
+            print(f"Future resolved.")
+        else:
+            job_result_object = results
+            print(f"Synchronous result received.")
 
-               # Accessing state for collection: Try getting state for each sub-list
-               print("CVRP Routes (State 0):")
-               resolved_routes = []
-               for v_idx in range(num_vehicles):
-                   # Attempt to get state of the symbolic list routes[v_idx]
-                   route_indices_float = routes[v_idx].state(0) 
-                   # Cast indices to int
-                   route_indices = [int(idx) for idx in route_indices_float]
-                   resolved_routes.append(route_indices)
-                   print(f"  Vehicle {v_idx} route (indices): {route_indices}")
-                   if len(route_indices) > 0:
-                       # Use integer indices for NumPy indexing
-                       route_demands = customer_demands_data[route_indices].sum()
-                       print(f"    Demand: {route_demands} (Capacity: {vehicle_capacity})")
+        # Access the best state (index 0) via model symbols
+        print("\n--- Solution (via model.state(0)) ---")
+        with model.lock():
+            try:
+                objective_value = model.objective.state(0)
+                print(f"Objective Value (State 0 - placeholder cost): {objective_value:.2f}")
 
-           except IndexError:
-                print("State 0 not found. Solver might have failed or returned no solutions.")
-           except Exception as e_state:
-                print(f"Error accessing state 0: {e_state}")
+                # Accessing state for collection: Try getting state for each sub-list
+                print("CVRP Routes (State 0):")
+                resolved_routes = []
+                for v_idx in range(num_vehicles):
+                    # Attempt to get state of the symbolic list routes[v_idx]
+                    route_indices_float = routes[v_idx].state(0)
+                    # Cast indices to int
+                    route_indices = [int(idx) for idx in route_indices_float]
+                    resolved_routes.append(route_indices)
+                    print(f"  Vehicle {v_idx} route (indices): {route_indices}")
+                    if len(route_indices) > 0:
+                        # Use integer indices for NumPy indexing
+                        route_demands = customer_demands_data[route_indices].sum()
+                        print(f"    Demand: {route_demands} (Capacity: {vehicle_capacity})")
 
-   except Exception as e:
-       print(f"\nSolver execution failed or requires configuration: {e}")
+            except IndexError:
+                    print("State 0 not found. Solver might have failed or returned no solutions.")
+            except Exception as e_state:
+                    print(f"Error accessing state 0: {e_state}")
 
-   # --- Solution (via model.state(0)) ---
-   # Objective Value (State 0 - placeholder cost): 5.00
-   # CVRP Routes (State 0):
-   #   Vehicle 0 route (indices): [0, 2, 3]
-   #     Demand: 30 (Capacity: 35)
-   #   Vehicle 1 route (indices): [1, 4]
-   #     Demand: 35 (Capacity: 35)
+    except Exception as e:
+        print(f"\nSolver execution failed or requires configuration: {e}")
 
-Common Use Cases for ``model.disjoint_lists()``
------------------------------------------------
+    # --- Solution (via model.state(0)) ---
+    # Objective Value (State 0 - placeholder cost): 5.00
+    # CVRP Routes (State 0):
+    #   Vehicle 0 route (indices): [0, 2, 3]
+    #     Demand: 30 (Capacity: 35)
+    #   Vehicle 1 route (indices): [1, 4]
+    #     Demand: 35 (Capacity: 35)
 
-- **Vehicle Routing Problems (CVRP, CVRPTW):** Assigning customers to
-  vehicles and determining the optimal sequence of visits for each
-  vehicle.
+Common Use Cases
+----------------
 
-- **Multi-Agent Task Assignment and Scheduling:** Allocating tasks to
-  different agents/robots where each agent performs a sequence of
-  assigned tasks.
+*   **Vehicle Routing Problems (CVRP, CVRPTW):** Assigning customers to
+    vehicles and determining the optimal sequence of visits for each vehicle.
 
-- **Parallel Machine Scheduling:** Assigning jobs to different machines
-  and sequencing them on each machine.
+*   **Multi-Agent Task Assignment and Scheduling:** Allocating tasks to
+    different agents/robots where each agent performs a sequence of assigned
+    tasks.
 
-.. _`sec:model_disjoint_bit_sets`:
+*   **Parallel Machine Scheduling:** Assigning jobs to different machines and
+    sequencing them on each machine.
 
-The Disjoint Unordered Sets Symbol: ``model.disjoint_bit_sets()``
-=================================================================
+.. _optimization_nonlinear_vars_disjoint_bit_sets:
 
-The ``model.disjoint_bit_sets(primary_set_size, num_disjoint_sets)``
-constructor is used to partition a universe of ``primary_set_size``
-items (integers :math:`0` to ``primary_set_size-1``) into
-``num_disjoint_sets`` mutually exclusive, unordered sets.
+Disjoint Unordered Sets: ``disjoint_bit_sets()``
+================================================
 
-.. _symbol-overview-3:
+The :meth:`~dwave.optimization.model.Model.disjoint_bit_sets` constructor is
+used to partition a universe of ``primary_set_size`` items (integers :math:`0`
+to ``primary_set_size-1``) into ``num_disjoint_sets`` mutually exclusive,
+unordered sets.
 
-Symbol Overview
----------------
+Overview
+--------
 
-.. container::
-   :name: tab:disjoint_bit_sets_overview
+.. table:: ``model.disjoint_bit_sets(primary_set_size, num_disjoint_sets)`` Overview
+    :name: disjoint_bit_sets_overview
 
-   .. table:: Symbol Overview for
-   ``model.disjoint_bit_sets(primary_set_size, num_disjoint_sets)``
-
-      +--------------------------+-------------------------------------------------------------------------------------------------+
-      | **Feature**              | **Description**                                                                                 |
-      +==========================+=================================================================================================+
-      | Conceptual Name          | ``DisjointBitSetsVariable`` (or ``DisjointSetVariables``)                                       |
-      +--------------------------+-------------------------------------------------------------------------------------------------+
-      | Creation Method          | ``decision_var, set_collection = model.disjoint_bit_sets(primary_set_size, num_disjoint_sets)`` |
-      +--------------------------+-------------------------------------------------------------------------------------------------+
-      | Purpose                  | Partitions items from a universe into several mutually exclusive, unordered sets.               |
-      +--------------------------+-------------------------------------------------------------------------------------------------+
-      | Implicit Constraints     | - Each item from the universe (indices :math:`0` to ``primary_set_size-1``) appears in at most  |
-      |                          |   one set.                                                                                      |
-      |                          |                                                                                                 |
-      |                          | - Order does not matter within each set.                                                        |
-      |                          |                                                                                                 |
-      |                          | - Sets are disjoint.                                                                            |
-      +--------------------------+-------------------------------------------------------------------------------------------------+
-      | ``primary_set_size`` is  | The number of unique items (universe ``range(primary_set_size)``) in the overall pool to be     |
-      |                          | distributed.                                                                                    |
-      +--------------------------+-------------------------------------------------------------------------------------------------+
-      | ``num_disjoint_sets`` is | The number of separate, unordered sets (e.g., bins, clusters) to create.                        |
-      +--------------------------+-------------------------------------------------------------------------------------------------+
-      | Output in Solution       | ``set_collection`` provides access to individual sets. Each set (e.g., ``set_collection[i]``)   |
-      |                          | is a NumPy array of unique, unordered item indices. May contain floats close to integers.       |
-      |                          | Accessing state requires care (see example).                                                    |
-      +--------------------------+-------------------------------------------------------------------------------------------------+
+    +--------------------------+-------------------------------------------------------------------+
+    | **Feature**              | **Description**                                                   |
+    +==========================+===================================================================+
+    | Conceptual Name          | :class:`~dwave.optimization.symbols.DisjointBitSet` (or           |
+    |                          | ``DisjointSetVariables``)                                         |
+    +--------------------------+-------------------------------------------------------------------+
+    | Creation Method          | ``decision_var, set_collection =                                  |
+    |                          | model.disjoint_bit_sets(primary_set_size, num_disjoint_sets)``    |
+    +--------------------------+-------------------------------------------------------------------+
+    | Purpose                  | Partitions items from a universe into several mutually exclusive, |
+    |                          | unordered sets.                                                   |
+    +--------------------------+-------------------------------------------------------------------+
+    | Implicit Constraints     | - Each item from the universe (indices :math:`0` to               |
+    |                          |   ``primary_set_size-1``) appears in at most one set.             |
+    |                          |                                                                   |
+    |                          | - Order does not matter within each set.                          |
+    |                          |                                                                   |
+    |                          | - Sets are disjoint.                                              |
+    +--------------------------+-------------------------------------------------------------------+
+    | ``primary_set_size`` is  | The number of unique items (universe ``range(primary_set_size)``) |
+    |                          | in the overall pool to be distributed.                            |
+    +--------------------------+-------------------------------------------------------------------+
+    | ``num_disjoint_sets`` is | The number of separate, unordered sets (e.g., bins, clusters) to  |
+    |                          | create.                                                           |
+    +--------------------------+-------------------------------------------------------------------+
+    | Output in Solution       | ``set_collection`` provides access to individual sets. Each set   |
+    |                          | (e.g., ``set_collection[i]``) is a NumPy array of unique,         |
+    |                          | unordered item indices. May contain floats close to integers.     |
+    |                          | Accessing state requires care (see example).                      |
+    +--------------------------+-------------------------------------------------------------------+
 
 .. _detailed-explanation-3:
 
