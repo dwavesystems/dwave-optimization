@@ -92,7 +92,9 @@ class TestAccumulateZip(utils.SymbolTests):
             return a + b + c
 
         acc = dwave.optimization.symbols.AccumulateZip(expr, (c0, c1), initial=7)
-        acc_with_initial_node = dwave.optimization.symbols.AccumulateZip(expr, (c0, c1), initial=model.constant(7))
+        acc_with_initial_node = dwave.optimization.symbols.AccumulateZip(
+            expr, (c0, c1), initial=model.constant(7)
+        )
 
         with model.lock():
             yield acc

@@ -28,7 +28,7 @@ __all__ = ["expression"]
 class Expression:
     """An expression that can be used as an input to other symbols.
 
-    .. versionadded:: 0.6.3
+    .. versionadded:: 0.6.4
     """
     _function: collections.abc.Callable  # todo: better typing?
     _model: Model
@@ -63,7 +63,7 @@ def expression(*args, **kwargs):
         ... def func(a, b, c):
         ...     return (a + b) * c
 
-    .. versionadded:: 0.6.3
+    .. versionadded:: 0.6.4
     """
     if len(args) == 0:
         def _decorator(function):

@@ -255,6 +255,7 @@ cdef class AccumulateZip(ArraySymbol):
             will be used to set the last input of the expression on the very
             first iteration.
 
+    .. versionadded:: 0.6.4
     """
 
     def __init__(self, expression, operands, object initial = 0):
@@ -297,7 +298,8 @@ cdef class AccumulateZip(ArraySymbol):
                 <double?>(initial)
             except TypeError:
                 raise TypeError(
-                    f"expected type of `initial` to be either an int, float or an ArraySymbol, got {type(initial)}"
+                    "expected type of `initial` to be either an int, float or an ArraySymbol, got "
+                    f"{type(initial)}"
                 )
 
             self.ptr = model._graph.emplace_node[cppAccumulateZipNode](
