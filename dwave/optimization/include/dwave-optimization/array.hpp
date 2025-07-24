@@ -611,15 +611,15 @@ std::vector<ssize_t> broadcast_shape(const std::span<const ssize_t> lhs,
 std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
                                      std::initializer_list<ssize_t> rhs);
 
+/// Convert a multi index to a flat index
+/// The behavior of out-of-bounds indices is undefined. Bounds are enforced via asserts.
+ssize_t ravel_multi_index(std::initializer_list<ssize_t> multi_index,
+                          std::initializer_list<ssize_t> shape);
+ssize_t ravel_multi_index(std::span<const ssize_t> multi_index, std::span<const ssize_t> shape);
+
 /// Convert a flat index to multi-index
-std::vector<ssize_t> unravel_index(const std::span<const ssize_t> strides, ssize_t index);
-
-/// Convert multi index to flat index
-ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
-                          const std::span<const ssize_t> indices);
-
-ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
-                          std::initializer_list<ssize_t> indices);
+std::vector<ssize_t> unravel_index(ssize_t index, std::initializer_list<ssize_t> shape);
+std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape);
 
 // Represent a shape (or strides) as a string in NumPy-style format.
 std::string shape_to_string(const std::span<const ssize_t> shape);
