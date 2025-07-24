@@ -9,7 +9,7 @@ project(
         'pkgconfig.relocatable=true',
         'warning_level=1',  # equivalent to -Wall. We should consider cranking it up to 3
     ],
-
+    meson_version: '>= 1.2.0',
     # As of August 2024, there is no nicer way that I know of to dynamically get the version
     version: run_command(
         ['dwave/optimization/_build/_version.py'],
