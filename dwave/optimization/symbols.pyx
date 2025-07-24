@@ -2763,7 +2763,20 @@ _register(Maximum, typeid(cppMaximumNode))
 
 
 cdef class Mean(ArraySymbol):
-    """Mean value of the elements of a symbol.
+    """Mean value of the elements of a symbol. If symbol is empty, 
+        mean defaults to (minimum + maximum) / 2 of symbol.
+
+    Examples:
+        This example takes the mean of one symbol.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import mean
+        ...
+        >>> model = Model()
+        >>> i = model.integer(4)
+        >>> m = mean(i)
+        >>> type(m)
+        <class 'dwave.optimization.symbols.Mean'>
     
     .. versionadded:: 0.6.4
     """

@@ -946,9 +946,8 @@ def mean(array: ArraySymbol) -> Mean:
         array: Input array symbol.
 
     Returns:
-        A symbol that is the mean of given symbol. 
-        If given symbol is empty, mean defaults to (minimum + maximum) / 2 of 
-        given symbol.
+        A symbol that is the mean of given symbol. If given symbol is empty, 
+        mean defaults to (minimum + maximum) / 2 of given symbol.
 
     Examples:
         This example takes the mean of one symbol.

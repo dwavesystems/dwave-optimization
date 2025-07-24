@@ -26,24 +26,7 @@ namespace dwave::optimization {
 TEST_CASE("MeanNode") {
     auto graph = Graph();
 
-    GIVEN("An empty integer constant node and a mean node") {
-        auto a_ptr = graph.emplace_node<ConstantNode>();
-        auto mean_ptr = graph.emplace_node<MeanNode>(a_ptr);
-        graph.emplace_node<ArrayValidationNode>(mean_ptr);
-
-        WHEN("We initialize a state") {
-            auto state = graph.initialize_state();
-
-            THEN("The initial mean is correct") {
-                // empty constant node has min and max = 0
-                // in this case, mean = (min + max) / 2 = 0
-                CHECK(mean_ptr->view(state)[0] == 0.0);
-            }
-        }
-    }
-
-    GIVEN("A non-empty integer constant node (with integer mean) and a mean "
-          "node") {
+    GIVEN("A non-empty integer constant node (with integer mean) and a mean node") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{4.0, 2.0});
         auto mean_ptr = graph.emplace_node<MeanNode>(a_ptr);
         graph.emplace_node<ArrayValidationNode>(mean_ptr);
@@ -54,8 +37,7 @@ TEST_CASE("MeanNode") {
             THEN("The initial mean is correct") { CHECK(mean_ptr->view(state)[0] == 3.0); }
         }
     }
-    GIVEN("A non-empty integer constant node (with non-integer mean) and a mean "
-          "node") {
+    GIVEN("A non-empty integer constant node (with non-integer mean) and a mean node") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{4.0, 3.0, 1.0, 2.0});
         auto mean_ptr = graph.emplace_node<MeanNode>(a_ptr);
         graph.emplace_node<ArrayValidationNode>(mean_ptr);
@@ -66,8 +48,7 @@ TEST_CASE("MeanNode") {
             THEN("The initial mean is correct") { CHECK(mean_ptr->view(state)[0] == 2.5); }
         }
     }
-    GIVEN("A non-empty mixed constant node (with non-integer mean) and a mean "
-          "node") {
+    GIVEN("A non-empty mixed constant node (with non-integer mean) and a mean node") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-4.5, 3.2, 1.0, -2.7});
         auto mean_ptr = graph.emplace_node<MeanNode>(a_ptr);
         graph.emplace_node<ArrayValidationNode>(mean_ptr);
@@ -79,18 +60,30 @@ TEST_CASE("MeanNode") {
         }
     }
 
-    GIVEN("An empty integer node and a mean node") {
-        auto i_ptr = graph.emplace_node<IntegerNode>(4);
+    GIVEN("An integer node with upper/lower bounds below zero and a mean node") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(4, -10, -1);
         auto mean_ptr = graph.emplace_node<MeanNode>(i_ptr);
         graph.emplace_node<ArrayValidationNode>(mean_ptr);
 
         WHEN("We initialize a state") {
             auto state = graph.initialize_state();
 
-            THEN("The initial mean is correct") { CHECK(mean_ptr->view(state)[0] == 0.0); }
+            // i_ptr has four integers each assigned -10
+            THEN("The initial mean is correct") { CHECK(mean_ptr->view(state)[0] == -10); }
         }
     }
+    GIVEN("An empty integer node with upper/lower bounds above zero and a mean node") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(0, 1, 10);
+        auto mean_ptr = graph.emplace_node<MeanNode>(i_ptr);
+        graph.emplace_node<ArrayValidationNode>(mean_ptr);
 
+        WHEN("We initialize a state") {
+            auto state = graph.initialize_state();
+
+            // empty integer node and mean should be (min + max) / 2
+            THEN("The initial mean is correct") { CHECK(mean_ptr->view(state)[0] == 5.5); }
+        }
+    }
     GIVEN("A non-empty integer node and a mean node") {
         auto i_ptr = graph.emplace_node<IntegerNode>(3);
         auto mean_ptr = graph.emplace_node<MeanNode>(i_ptr);
@@ -111,6 +104,14 @@ TEST_CASE("MeanNode") {
 
                 THEN("The mean is correct") { CHECK(mean_ptr->view(state)[0] == 3.0); }
             }
+            AND_WHEN("We make some changes to the integer node and propagate") {
+                i_ptr->set_value(state, 1, 0.0);
+                i_ptr->set_value(state, 2, 3.0);
+                // i_ptr should now be [6.0, 0.0, 3.0]
+                graph.propagate(state);
+
+                THEN("The mean is correct") { CHECK(mean_ptr->view(state)[0] == 3.0); }
+            }
         }
     }
 
@@ -123,8 +124,7 @@ TEST_CASE("MeanNode") {
             auto state = graph.initialize_state();
 
             THEN("The initial mean is correct") {
-                // set_ptr->min() = 0 and set_ptr->.max() = 8
-                // array is empty, therefore mean (min + max) / 2
+                // set node is empty, therefore mean = (min + max) / 2
                 CHECK(mean_ptr->view(state)[0] == 4.0);
             }
 
@@ -136,7 +136,6 @@ TEST_CASE("MeanNode") {
 
                 AND_WHEN("We commit, shrink the set node, and propagate") {
                     graph.commit(state);
-
                     set_ptr->shrink(state);
                     set_ptr->shrink(state);
                     // set should be [5, 8]
@@ -146,15 +145,13 @@ TEST_CASE("MeanNode") {
 
                     AND_WHEN("We commit, shrink the set node to nothing, and propagate") {
                         graph.commit(state);
-
                         set_ptr->shrink(state);
                         set_ptr->shrink(state);
-                        // set should be []
+                        // set should empty
                         graph.propagate(state);
 
                         THEN("The mean is correct") {
-                            // set_ptr->min() = 0 and set_ptr->.max() = 8
-                            // array is empty, therefore mean (min + max) / 2
+                            // set node is empty, therefore mean = (min + max) / 2
                             CHECK(mean_ptr->view(state)[0] == 4.0);
                         }
                     }
