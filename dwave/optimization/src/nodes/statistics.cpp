@@ -41,14 +41,7 @@ bool MeanNode::integral() const { return false; }
 
 std::pair<double, double> MeanNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        if (arr_ptr_->size() == 0) {
-            return std::make_pair((arr_ptr_->min() + arr_ptr_->max()) / 2.0,
-                                  (arr_ptr_->min() + arr_ptr_->max()) / 2.0);
-        }
-        // Othwerwise, ArrayNode is non-empty and therefore has min and max
-        return std::make_pair(arr_ptr_->min(), arr_ptr_->max());
-    });
+    return memoize(cache, [&]() { return std::make_pair(arr_ptr_->min(), arr_ptr_->max()); });
 }
 
 void MeanNode::propagate(State &state) const {
