@@ -479,6 +479,129 @@ TEST_CASE("Test resulting_shape()") {
     }
 }
 
+TEST_CASE("Test deduplicate_diff") {
+    GIVEN("An empty vector of updates") {
+        std::vector<Update> updates;
+
+        WHEN("We call deduplicate_diff") {
+            deduplicate_diff(updates);
+            THEN("deduplicate_diff() doesn't do anything") { CHECK(updates.size() == 0); }
+        }
+
+        THEN("Iteration over it with a view does nothing") {
+            for ([[maybe_unused]] const Update& v : deduplicate_diff_view(updates)) {
+                CHECK(false);  // shouldn't get here
+            }
+            for ([[maybe_unused]] const Update& v : deduplicate_diff_view(std::span(updates))) {
+                CHECK(false);  // shouldn't get here
+            }
+        }
+    }
+
+    GIVEN("A list of updates with no duplicates or noop Updates") {
+        std::vector<Update> updates = {Update(3, 0, 1), Update(5, 0, -1), Update(2, 1, 0)};
+
+        WHEN("We call deduplicate_diff") {
+            deduplicate_diff(updates);
+            CHECK_THAT(updates, RangeEquals({Update(2, 1, 0), Update(3, 0, 1), Update(5, 0, -1)}));
+        }
+
+        THEN("We can use deduplicate_diff_view in a for-loop") {
+            std::vector<Update> deduped;
+            for (const auto& u : deduplicate_diff_view(updates)) {
+                deduped.emplace_back(u);
+            }
+            CHECK_THAT(deduped, RangeEquals({Update(2, 1, 0), Update(3, 0, 1), Update(5, 0, -1)}));
+        }
+    }
+
+    GIVEN("A list of updates with no duplicates and noop Updates") {
+        std::vector<Update> updates = {Update(3, 0, 1), Update(5, -1, -1), Update(2, 1, 0)};
+
+        WHEN("We call deduplicate_diff") {
+            deduplicate_diff(updates);
+            THEN("deduplicate_diff() sorts them and removes noops") {
+                CHECK_THAT(updates, RangeEquals({Update(2, 1, 0), Update(3, 0, 1)}));
+            }
+        }
+    }
+
+    GIVEN("A list of update of one noop Updates") {
+        std::vector<Update> updates = {Update(3, 1, 1)};
+
+        WHEN("We call deduplicate_diff") {
+            deduplicate_diff(updates);
+            THEN("deduplicate_diff() removes the noop") { CHECK(updates.size() == 0); }
+        }
+    }
+
+    GIVEN("A list of update of many noop Updates") {
+        std::vector<Update> updates = {Update(3, 1, 1), Update(3, 1, 1), Update(4, -1, -1),
+                                       Update(0, 57, 57)};
+
+        WHEN("We call deduplicate_diff") {
+            deduplicate_diff(updates);
+            THEN("deduplicate_diff() removes all the noops") { CHECK(updates.size() == 0); }
+        }
+    }
+
+    GIVEN("A list of updates with no duplicates and one noop at the beginning") {
+        std::vector<Update> updates = {Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2),
+                                       Update(0, 57, 57)};
+
+        WHEN("We call deduplicate_diff") {
+            deduplicate_diff(updates);
+            THEN("deduplicate_diff() removes the noop") {
+                CHECK(std::ranges::equal(
+                        updates,
+                        std::vector<Update>{Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2)}));
+            }
+        }
+    }
+
+    GIVEN("A list of updates with no duplicates and one noop at the end") {
+        std::vector<Update> updates = {Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2),
+                                       Update(8, 57, 57)};
+
+        WHEN("We call deduplicate_diff") {
+            deduplicate_diff(updates);
+            THEN("deduplicate_diff() removes the noop") {
+                CHECK(std::ranges::equal(
+                        updates,
+                        std::vector<Update>{Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2)}));
+            }
+        }
+    }
+
+    GIVEN("A list of updates with duplicates") {
+        std::vector<Update> updates = {Update(3, 1, 5),   Update(3, 5, -3),  Update(6, -1, -2),
+                                       Update(6, -2, 57), Update(3, -3, -4), Update(2, 0, 1)};
+
+        WHEN("We call deduplicate_diff") {
+            deduplicate_diff(updates);
+            THEN("deduplicate_diff() removes the noop") {
+                CHECK(std::ranges::equal(
+                        updates,
+                        std::vector<Update>{Update(2, 0, 1), Update(3, 1, -4), Update(6, -1, 57)}));
+            }
+        }
+    }
+
+    GIVEN("A list of updates that grows and shrinks") {
+        std::vector<Update> updates = {Update(3, 1, 5), Update::placement(5, 7),
+                                       Update::placement(6, 7), Update(5, 7, 4),
+                                       Update::removal(6, 7)};
+
+        WHEN("We call deduplicate_diff") {
+            deduplicate_diff(updates);
+            THEN("deduplicate_diff() trims the diff properly") {
+                CHECK(std::ranges::equal(
+                        updates, std::vector<Update>{Update(3, 1, 5), Update::placement(5, 4)}));
+            }
+        }
+    }
+}
+
 // Adapted from NumPy
 // https://github.com/numpy/numpy/blob/d02611a/numpy/lib/tests/test_index_tricks.py#L29
 TEST_CASE("Test ravel_multi_index()") {
