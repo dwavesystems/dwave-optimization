@@ -1,18 +1,18 @@
-.. _optimization_nonlinear_vars:
+.. _optimization_implicit_vars:
 
-=====================================
-Nonlinear Models: Selecting Variables
-=====================================
+====================
+Implicit Constraints
+====================
 
 When formulating optimization problems, the choice of decision variables
 significantly impacts the model's clarity, size of the solution space, and,
 ultimately, the solver's performance.
 
 Ocean software's :class:`~dwave.optimization.model.Model` class provides several
-specialized constructors for decision variables that carry
-"implicit constraints." These :ref:`symbols <optimization_symbols>` inherently
-represent common combinatorial structures such as permutations, subsets, or
-partitions, guiding the solver to explore only valid configurations.
+specialized constructors for decision variables that encode "implicit
+constraints." These :ref:`symbols <optimization_symbols>` inherently represent
+common combinatorial structures such as permutations, subsets, or partitions,
+guiding the solver to explore only valid configurations.
 
 Using these implicitly constrained symbols offers several advantages:
 
@@ -33,10 +33,66 @@ This page details these specialized symbols, providing descriptions, creation
 methods, practical examples, and common use cases. These symbols are directly
 available as methods on the :class:`~dwave.optimization.model.Model` object.
 
-.. _optimization_nonlinear_vars_list:
 
-Permutation: ``list()``
-=======================
+.. _optimization_implicit_vars_comparison:
+
+Summary Comparison
+==================
+
+To assist in selecting the implicitly constrained symbol most appropriate for a
+given problem, the table below compares the key characteristics and typical
+applications of each.
+
+.. list-table:: Comparative Summary of Implicitly Constrained Symbols
+    :widths: 15 20 20 22 22
+    :header-rows: 1
+
+    *   - **Feature**
+        - ``list(N)``
+        - ``set(N)``
+        - ``disjoint_lists(...)``
+        - ``disjoint_bit_sets(...)``
+    *   - **Primary Purpose**
+        - Ordered permutation of ``range(N)``
+        - Unordered subset of ``range(N)``
+        - Disjoint ordered partitions of ``range(primary_set_size)``
+        - Disjoint unordered partitions of ``range(primary_set_size)``
+    *   - **Order Within Group/List**
+        - Yes
+        - No
+        - Yes (within each list)
+        - No (within each set)
+    *   - **Item Uniqueness**
+        - All ``N`` items appear exactly once in the list
+        - Unique subset from universe
+        - Each item appears in at most one list; lists are permutations
+        - Each item appears in at most one set; sets contain unique items
+    *   - **Number of Collections**
+        - 1 list
+        - 1 set
+        - ``num_disjoint_lists``
+        - ``num_disjoint_sets``
+    *   - **Creation Returns**
+        - Single decision variable
+        - Single decision variable
+        - Main variable + collection of lists
+        - Main variable + collection of sets
+    *   - **Typical Problem Type**
+        - TSP, QAP, sequencing
+        - Knapsack, feature selection
+        - CVRP, task assignment, multi-machine scheduling
+        - Bin packing, clustering, set partitioning
+    *   - **Input Parameters**
+        - ``N``
+        - ``N``
+        - ``primary_set_size``, ``num_disjoint_lists``
+        - ``primary_set_size``, ``num_disjoint_sets``
+
+
+.. _optimization_implicit_vars_list:
+
+Permutation
+===========
 
 The :meth:`~dwave.optimization.model.Model.list` constructor creates a decision
 variable representing an ordered arrangement (a permutation) of :math:`N`
@@ -204,10 +260,11 @@ Common Use Cases
 *   Any problem requiring the determination of an optimal sequence or
     permutation.
 
-.. _optimization_nonlinear_vars_set:
 
-Subset: ``set()``
-=================
+.. _optimization_implicit_vars_set:
+
+Subset
+======
 
 The :meth:`~dwave.optimization.model.Model.set` constructor creates a decision
 variable representing an unordered collection (a subset) of unique items chosen
@@ -380,10 +437,11 @@ Common Use Cases
 
 *   Resource allocation problems where a selection of resources is needed.
 
-.. _optimization_nonlinear_vars_disjoint_lists:
 
-Disjoint Ordered Lists: ``disjoint_lists()``
-============================================
+.. _optimization_implicit_vars_disjoint_lists:
+
+Disjoint Ordered Lists
+======================
 
 The :meth:`~dwave.optimization.model.Model.disjoint_lists` constructor creates a
 complex decision variable. It partitions items from a primary set (integers
@@ -558,10 +616,11 @@ Common Use Cases
 *   **Parallel Machine Scheduling:** Assigning jobs to different machines and
     sequencing them on each machine.
 
-.. _optimization_nonlinear_vars_disjoint_bit_sets:
 
-Disjoint Unordered Sets: ``disjoint_bit_sets()``
-================================================
+.. _optimization_implicit_vars_disjoint_bit_sets:
+
+Disjoint Unordered Sets
+=======================
 
 The :meth:`~dwave.optimization.model.Model.disjoint_bit_sets` constructor is
 used to partition a universe of ``primary_set_size`` items (integers :math:`0`
@@ -577,8 +636,7 @@ Overview
     +--------------------------+-------------------------------------------------------------------+
     | **Feature**              | **Description**                                                   |
     +==========================+===================================================================+
-    | Conceptual Name          | :class:`~dwave.optimization.symbols.DisjointBitSet` (or           |
-    |                          | ``DisjointSetVariables``)                                         |
+    | Conceptual Name          | :class:`~dwave.optimization.symbols.DisjointBitSet`               |
     +--------------------------+-------------------------------------------------------------------+
     | Creation Method          | ``decision_var, set_collection =                                  |
     |                          | model.disjoint_bit_sets(primary_set_size, num_disjoint_sets)``    |
@@ -605,258 +663,196 @@ Overview
     |                          | Accessing state requires care (see example).                      |
     +--------------------------+-------------------------------------------------------------------+
 
-.. _detailed-explanation-3:
 
-Detailed Explanation
---------------------
+Description
+-----------
 
-This is suited for problems where items need to be grouped into distinct
-categories or containers, and the order of items within a category does
-not matter. The ``set_collection`` object allows individual manipulation
-and constraint of each set (e.g., ``set_collection[0]`` for the first
-bin’s contents). The items to be partitioned are integers from
+This symbol is suited for problems where items need to be grouped into distinct
+categories or containers, and the order of items within a category does not
+matter. The ``set_collection`` object allows individual manipulation and
+constraint of each set (e.g., ``set_collection[0]`` for the first bin's
+contents). The items to be partitioned are integers from
 ``range(primary_set_size)``. Note that the solver might return indices
-as floats, requiring casting to int.
+as floats, requiring casting to ``int``.
 
-Practical Example: Bin Packing Problem
---------------------------------------
+Example: Bin Packing Problem
+----------------------------
 
-Given a set of items with specified weights, pack them into the minimum
-number of bins, each with a fixed capacity.
+The `bin packing problem <https://en.wikipedia.org/wiki/Bin_packing_problem>`_
+is, for a given a set of items with specified weights, to pack them into the
+minimum number of bins, each with a fixed capacity.
 
 .. code:: python
 
-   import dwave.optimization as do
-   import numpy as np
-   # Import the correct sampler from dwave.system
-   from dwave.system import LeapHybridNLSampler
-   # Import the symbolic 'add' function
-   from dwave.optimization.mathematical import add # Keep 'where' import if needed elsewhere
+    import dwave.optimization as do
+    import numpy as np
+    # Import the correct sampler from dwave.system
+    from dwave.system import LeapHybridNLSampler
+    # Import the symbolic 'add' function
+    from dwave.optimization.mathematical import add # Keep 'where' import if needed elsewhere
 
-   # --- Problem Data ---
-   item_weights_data = np.array([4, 8, 1, 4, 2, 1])
-   num_items_to_pack = len(item_weights_data) # This is 'primary_set_size'
-   bin_capacity = 10
-   max_possible_bins = num_items_to_pack    # This is 'num_disjoint_sets'
+    # --- Problem Data ---
+    item_weights_data = np.array([4, 8, 1, 4, 2, 1])
+    num_items_to_pack = len(item_weights_data) # This is 'primary_set_size'
+    bin_capacity = 10
+    max_possible_bins = num_items_to_pack    # This is 'num_disjoint_sets'
 
-   # --- Model Definition ---
-   model = do.Model()
+    # --- Model Definition ---
+    model = do.Model()
 
-   # main_decision is the variable; bins_collection allows access to each set
-   main_decision, bins_collection = model.disjoint_bit_sets(
-       primary_set_size=num_items_to_pack,
-       num_disjoint_sets=max_possible_bins
-   )
+    # main_decision is the variable; bins_collection allows access to each set
+    main_decision, bins_collection = model.disjoint_bit_sets(
+        primary_set_size=num_items_to_pack,
+        num_disjoint_sets=max_possible_bins
+    )
 
-   WEIGHTS = model.constant(item_weights_data)
-   CAPACITY = model.constant(bin_capacity)
-   ONE = model.constant(1)
-   ZERO = model.constant(0)
+    WEIGHTS = model.constant(item_weights_data)
+    CAPACITY = model.constant(bin_capacity)
+    ONE = model.constant(1)
+    ZERO = model.constant(0)
 
-   # --- Constraints ---
-   # Each bin's total weight must not exceed capacity
-   for i in range(max_possible_bins):
-       bin_i_contents = bins_collection[i] # Symbolic representation of items in bin i
-       weight_in_bin_i = WEIGHTS[bin_i_contents].sum()
-       model.add_constraint(weight_in_bin_i <= CAPACITY) # Removed label
+    # --- Constraints ---
+    # Each bin's total weight must not exceed capacity
+    for i in range(max_possible_bins):
+        bin_i_contents = bins_collection[i] # Symbolic representation of items in bin i
+        weight_in_bin_i = WEIGHTS[bin_i_contents].sum()
+        model.add_constraint(weight_in_bin_i <= CAPACITY) # Removed label
 
-   # --- Objective Function (Mirroring generator logic) ---
-   # Minimize the number of bins used
-   num_bins_used_symbol = model.constant(0.0) # Initialize as float constant
+    # --- Objective Function (Mirroring generator logic) ---
+    # Minimize the number of bins used
+    num_bins_used_symbol = model.constant(0.0) # Initialize as float constant
 
-   for i in range(max_possible_bins):
-       # Assume .sum() gives symbolic count (size) of items in bin i
-       symbolic_size = bins_collection[i].sum()
-       # Condition: bin contains at least one item (Symbolic Boolean)
-       is_bin_i_used = (symbolic_size >= ONE)
-       # Add the symbolic boolean directly to the objective accumulator
-       num_bins_used_symbol = num_bins_used_symbol + is_bin_i_used
+    for i in range(max_possible_bins):
+        # Assume .sum() gives symbolic count (size) of items in bin i
+        symbolic_size = bins_collection[i].sum()
+        # Condition: bin contains at least one item (Symbolic Boolean)
+        is_bin_i_used = (symbolic_size >= ONE)
+        # Add the symbolic boolean directly to the objective accumulator
+        num_bins_used_symbol = num_bins_used_symbol + is_bin_i_used
 
-   # Minimize the resulting symbolic sum
-   model.minimize(num_bins_used_symbol)
+    # Minimize the resulting symbolic sum
+    model.minimize(num_bins_used_symbol)
 
-   model.lock()
-   # Update print statement to reflect correct parameter names used
-   print("\n--- model.disjoint_bit_sets() Example: Bin Packing Problem ---")
-   print(f"Items (indices 0-{num_items_to_pack-1}) with weights: {item_weights_data}")
-   print(f"Decision: main_decision, bins_collection = model.disjoint_bit_sets(primary_set_size={num_items_to_pack}, num_disjoint_sets={max_possible_bins})")
+    model.lock()
+    # Update print statement to reflect correct parameter names used
+    print("\n--- model.disjoint_bit_sets() Example: Bin Packing Problem ---")
+    print(f"Items (indices 0-{num_items_to_pack-1}) with weights: {item_weights_data}")
+    print(f"Decision: main_decision, bins_collection = model.disjoint_bit_sets(primary_set_size={num_items_to_pack}, num_disjoint_sets={max_possible_bins})")
 
-   # Example of solving using .state(0) (requires Leap account and environment configuration)
-   try:
-       # Instantiate the Leap Hybrid Nonlinear Sampler
-       sampler = LeapHybridNLSampler()
+    # Example of solving using .state(0) (requires Leap account and environment configuration)
+    try:
+        # Instantiate the Leap Hybrid Nonlinear Sampler
+        sampler = LeapHybridNLSampler()
 
-       # Submit the model to the sampler
-       results = sampler.sample(model, label='Example - Bin Packing')
+        # Submit the model to the sampler
+        results = sampler.sample(model, label='Example - Bin Packing')
 
-       # Wait for results if asynchronous
-       if hasattr(results, 'result'):
-           job_result_object = results.result()
-           print(f"Future resolved.")
-       else:
-           job_result_object = results
-           print(f"Synchronous result received.")
+        # Wait for results if asynchronous
+        if hasattr(results, 'result'):
+            job_result_object = results.result()
+            print(f"Future resolved.")
+        else:
+            job_result_object = results
+            print(f"Synchronous result received.")
 
-       # Access the best state (index 0) via model symbols
-       print("\n--- Solution (via model.state(0)) ---")
-       with model.lock():
-           try:
-               objective_value = model.objective.state(0)
-               print(f"Minimum bins used (State 0): {objective_value:.0f}")
+        # Access the best state (index 0) via model symbols
+        print("\n--- Solution (via model.state(0)) ---")
+        with model.lock():
+            try:
+                objective_value = model.objective.state(0)
+                print(f"Minimum bins used (State 0): {objective_value:.0f}")
 
-               # Accessing state for collection:
-               for b_idx in range(max_possible_bins):
-                   # Attempt to get state of the symbolic set bins_collection[b_idx]
-                   # This returns the BIT VECTOR representation (array of 0s/1s, possibly float)
-                   bin_contents_bit_vector = bins_collection[b_idx].state(0)
+                # Accessing state for collection:
+                for b_idx in range(max_possible_bins):
+                    # Attempt to get state of the symbolic set bins_collection[b_idx]
+                    # This returns the BIT VECTOR representation (array of 0s/1s, possibly float)
+                    bin_contents_bit_vector = bins_collection[b_idx].state(0)
 
-                   # Convert bit vector to list of integer indices
-                   # Find indices where the value is close to 1 (handle potential floats)
-                   indices_where_one = np.where(np.array(bin_contents_bit_vector) > 0.5)[0]
-                   # Cast these indices to int
-                   bin_contents_indices = [int(idx) for idx in indices_where_one]
+                    # Convert bit vector to list of integer indices
+                    # Find indices where the value is close to 1 (handle potential floats)
+                    indices_where_one = np.where(np.array(bin_contents_bit_vector) > 0.5)[0]
+                    # Cast these indices to int
+                    bin_contents_indices = [int(idx) for idx in indices_where_one]
 
-                   if len(bin_contents_indices) > 0: # Only print used bins
-                       # Use the derived integer indices for NumPy indexing
-                       bin_item_weights = item_weights_data[bin_contents_indices]
-                       actual_bin_weight = bin_item_weights.sum()
-                       # Check if capacity constraint holds for this state
-                       violation_flag = "*" if actual_bin_weight > bin_capacity else ""
-                       print(f"  Bin {b_idx} (item indices): {bin_contents_indices}")
-                       print(f"    Weights: {bin_item_weights}, Sum: {actual_bin_weight} (Capacity: {bin_capacity}) {violation_flag}")
+                    if len(bin_contents_indices) > 0: # Only print used bins
+                        # Use the derived integer indices for NumPy indexing
+                        bin_item_weights = item_weights_data[bin_contents_indices]
+                        actual_bin_weight = bin_item_weights.sum()
+                        # Check if capacity constraint holds for this state
+                        violation_flag = "*" if actual_bin_weight > bin_capacity else ""
+                        print(f"  Bin {b_idx} (item indices): {bin_contents_indices}")
+                        print(f"    Weights: {bin_item_weights}, Sum: {actual_bin_weight} (Capacity: {bin_capacity}) {violation_flag}")
 
-           except IndexError:
-                print("State 0 not found. Solver might have failed or returned no solutions.")
-           except Exception as e_state:
-                print(f"Error accessing state 0: {e_state}")
+            except IndexError:
+                    print("State 0 not found. Solver might have failed or returned no solutions.")
+            except Exception as e_state:
+                    print(f"Error accessing state 0: {e_state}")
 
-   except Exception as e:
-       print(f"\nSolver execution failed or requires configuration: {e}")
+    except Exception as e:
+        print(f"\nSolver execution failed or requires configuration: {e}")
 
-   # --- Solution (via model.state(0)) ---
-   # Minimum bins used (State 0): 3
-   #   Bin 0 (item indices): [0, 2, 4, 5]
-   #     Weights: [4 1 2 1], Sum: 8 (Capacity: 10) 
-   #   Bin 1 (item indices): [1]
-   #     Weights: [8], Sum: 8 (Capacity: 10) 
-   #   Bin 4 (item indices): [3]
-   #     Weights: [4], Sum: 4 (Capacity: 10) 
+    # --- Solution (via model.state(0)) ---
+    # Minimum bins used (State 0): 3
+    #   Bin 0 (item indices): [0, 2, 4, 5]
+    #     Weights: [4 1 2 1], Sum: 8 (Capacity: 10)
+    #   Bin 1 (item indices): [1]
+    #     Weights: [8], Sum: 8 (Capacity: 10)
+    #   Bin 4 (item indices): [3]
+    #     Weights: [4], Sum: 4 (Capacity: 10)
 
-Common Use Cases for ``model.disjoint_bit_sets()``
---------------------------------------------------
+Common Use Cases
+----------------
 
-- **Bin Packing:** Assigning items to a minimum number of bins.
+*   **Bin Packing:** Assigning items to a minimum number of bins.
 
-- **Set Partitioning / Clustering:** Dividing items into disjoint,
-  unordered groups.
+*   **Set-Partitioning and Clustering:** Dividing items into disjoint,
+    unordered groups.
 
-- **Resource Allocation:** Grouping resources into pools where order
-  within a pool doesn’t matter.
+*   **Resource Allocation:** Grouping resources into pools where order
+    within a pool doesn’t matter.
 
-- **Graph Coloring (Vertex Coloring variant):** Assigning vertices
-  (items) to color classes (sets) such that no two adjacent vertices
-  share the same color.
+*   **Graph Coloring (Vertex Coloring Variant):** Assigning vertices
+    (items) to color classes (sets) such that no two adjacent vertices
+    share the same color.
 
-.. _`sec:comparative_overview`:
 
-Comparative Overview of Implicit Symbols
-========================================
+.. _optimization_implicit_vars_guidelines:
 
-To assist in selecting the most appropriate implicitly constrained
-symbol for a given problem, this section provides a side-by-side
-comparison of their key characteristics and typical applications. The
-table below summarizes these aspects.
+Selection Guidelines
+====================
 
-.. raw:: html
+*   **Identify Core Combinatorial Structure:** Analyze your problem. Does
+    it fundamentally involve:
 
-   <div style="overflow-x: auto; max-width: 100%;">
+    -   Finding an optimal order/sequence? :math:`\rightarrow`
+        ``model.list(N)``
 
-.. list-table:: Comparative Summary of Implicitly Constrained Symbols
-   :widths: 15 20 20 22 22
-   :header-rows: 1
+    -   Choosing a group of items without order? :math:`\rightarrow`
+        ``model.set(N)``
 
-   * - **Feature**
-     - ``list(N)``
-     - ``set(N)``
-     - ``disjoint_lists(...)``
-     - ``disjoint_bit_sets(...)``
-   * - **Primary Purpose**
-     - Ordered permutation of ``range(N)``
-     - Unordered subset of ``range(N)``
-     - Disjoint ordered partitions of ``range(primary_set_size)``
-     - Disjoint unordered partitions of ``range(primary_set_size)``
-   * - **Order Within Group/List**
-     - Yes
-     - No
-     - Yes (within each list)
-     - No (within each set)
-   * - **Item Uniqueness**
-     - All ``N`` items appear exactly once in the list
-     - Unique subset from universe
-     - Each item appears in at most one list; lists are permutations
-     - Each item appears in at most one set; sets contain unique items
-   * - **Number of Collections**
-     - 1 list
-     - 1 set
-     - ``num_disjoint_lists``
-     - ``num_disjoint_sets``
-   * - **Creation Returns**
-     - Single decision variable
-     - Single decision variable
-     - Main variable + collection of lists
-     - Main variable + collection of sets
-   * - **Typical Problem Type**
-     - TSP, QAP, sequencing
-     - Knapsack, feature selection
-     - CVRP, task assignment, multi-machine scheduling
-     - Bin packing, clustering, set partitioning
-   * - **Input Parameters**
-     - ``N``
-     - ``N``
-     - ``primary_set_size``, ``num_disjoint_lists``
-     - ``primary_set_size``, ``num_disjoint_sets``
+    -   Partitioning items into distinct ordered sequences?
+        :math:`\rightarrow`
+        ``model.disjoint_lists(primary_set_size, num_disjoint_lists)``
 
-.. raw:: html
+    -   Grouping items into distinct unordered collections?
+        :math:`\rightarrow`
+        ``model.disjoint_bit_sets(primary_set_size, num_disjoint_sets)``
 
-   </div>
+*   **Prefer Implicit Constraints:** When a specialized symbol naturally
+    fits the problem’s structure, prefer it over defining basic variables
+    (like ``model.integer()`` or ``model.binary()``) and then adding many
+    explicit constraints (e.g., ``AllDifferent``, pairwise inequalities
+    for ordering, etc.). This often leads to more robust and performant
+    models.
 
-.. _`sec:general_guidelines`:
+*   **Mapping to Indices:** Remember that these symbols operate on integer
+    indices (e.g., :math:`0` to :math:`N-1`, :math:`0` to ``size-1``,
+    etc.). If your problem involves named items or other data types,
+    create a mapping to these indices before model construction and map
+    the solution indices back to your original item identifiers for
+    interpretation.
 
-General Guidelines for Choosing Implicitly Constrained Symbols
-==============================================================
-
-- **Identify Core Combinatorial Structure:** Analyze your problem. Does
-  it fundamentally involve:
-
-  - Finding an optimal order/sequence? :math:`\rightarrow`
-    ``model.list(N)``
-
-  - Choosing a group of items without order? :math:`\rightarrow`
-    ``model.set(N)``
-
-  - Partitioning items into distinct ordered sequences?
-    :math:`\rightarrow`
-    ``model.disjoint_lists(primary_set_size, num_disjoint_lists)``
-
-  - Grouping items into distinct unordered collections?
-    :math:`\rightarrow`
-    ``model.disjoint_bit_sets(primary_set_size, num_disjoint_sets)``
-
-- **Prefer Implicit Constraints:** When a specialized symbol naturally
-  fits the problem’s structure, prefer it over defining basic variables
-  (like ``model.integer()`` or ``model.binary()``) and then adding many
-  explicit constraints (e.g., ``AllDifferent``, pairwise inequalities
-  for ordering, etc.). This often leads to more robust and performant
-  models.
-
-- **Mapping to Indices:** Remember that these symbols operate on integer
-  indices (e.g., :math:`0` to :math:`N-1`, :math:`0` to ``size-1``,
-  etc.). If your problem involves named items or other data types,
-  create a mapping to these indices before model construction and map
-  the solution indices back to your original item identifiers for
-  interpretation.
-
-- **Start Simple:** If unsure, start with the symbol that seems most
-  appropriate. You can always refine or change the model structure if
-  needed. The ``dwave.optimization.generators`` module provides
-  excellent examples of these symbols in action for classic problems.
+*   **Start Simple:** If unsure, start with the symbol that seems most
+    appropriate. You can always refine or change the model structure if
+    needed. The :ref:`optimization_generators` source code provides
+    excellent examples of these symbols in action for classic problems.

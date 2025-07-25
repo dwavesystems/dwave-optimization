@@ -10,6 +10,13 @@ dwave-optimization
 
     api_ref
 
+.. toctree::
+    :maxdepth: 1
+    :hidden:
+
+    philosophy
+    implicit_constraints
+
 About dwave-optimization
 ========================
 
@@ -22,13 +29,6 @@ For explanations of the terminology, see the
 
 Design Principles
 =================
-
-.. toctree::
-  :maxdepth: 1
-  :hidden:
-
-  philosophy
-  best_practices
 
 `dwave-optimization` and the hybrid nonlinear solver incorporate features and
 :ref:`design principles <optimization_philosophy>` from each of the following
@@ -63,8 +63,6 @@ areas:
 
         Explore how lists, sets, and other combinatorial structures make
         optimization simpler and more performant.
-
-.. include:: ImplicitlyConstrainedSymbols.rst
 
     .. grid-item-card:: Tensor Programming
         :img-top: /_images/optimization_tensor_icon.svg
