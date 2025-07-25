@@ -614,6 +614,8 @@ std::vector<ssize_t> broadcast_shape(const std::span<const ssize_t> lhs,
 std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
                                      std::initializer_list<ssize_t> rhs);
 
+void deduplicate_diff(std::vector<Update>& diff);
+
 /// Convert a multi index to a flat index
 /// The behavior of out-of-bounds indices is undefined. Bounds are enforced via asserts.
 ssize_t ravel_multi_index(std::initializer_list<ssize_t> multi_index,
