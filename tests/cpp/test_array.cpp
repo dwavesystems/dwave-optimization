@@ -487,6 +487,15 @@ TEST_CASE("Test deduplicate_diff") {
             deduplicate_diff(updates);
             THEN("deduplicate_diff() doesn't do anything") { CHECK(updates.size() == 0); }
         }
+
+        THEN("Iteration over it with a view does nothing") {
+            for ([[maybe_unused]] const Update& v : deduplicate_diff_view(updates)) {
+                CHECK(false);  // shouldn't get here
+            }
+            for ([[maybe_unused]] const Update& v : deduplicate_diff_view(std::span(updates))) {
+                CHECK(false);  // shouldn't get here
+            }
+        }
     }
 
     GIVEN("A list of updates with no duplicates or noop Updates") {
@@ -494,11 +503,15 @@ TEST_CASE("Test deduplicate_diff") {
 
         WHEN("We call deduplicate_diff") {
             deduplicate_diff(updates);
-            THEN("deduplicate_diff() sorts them") {
-                CHECK(std::ranges::equal(
-                        updates,
-                        std::vector<Update>{Update(2, 1, 0), Update(3, 0, 1), Update(5, 0, -1)}));
+            CHECK_THAT(updates, RangeEquals({Update(2, 1, 0), Update(3, 0, 1), Update(5, 0, -1)}));
+        }
+
+        THEN("We can use deduplicate_diff_view in a for-loop") {
+            std::vector<Update> deduped;
+            for (const auto& u : deduplicate_diff_view(updates)) {
+                deduped.emplace_back(u);
             }
+            CHECK_THAT(deduped, RangeEquals({Update(2, 1, 0), Update(3, 0, 1), Update(5, 0, -1)}));
         }
     }
 

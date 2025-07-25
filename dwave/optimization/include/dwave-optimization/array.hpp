@@ -24,6 +24,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <utility>
@@ -615,6 +616,26 @@ std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
                                      std::initializer_list<ssize_t> rhs);
 
 void deduplicate_diff(std::vector<Update>& diff);
+
+template <std::ranges::range V>
+requires(std::same_as<std::ranges::range_value_t<V>, Update>)
+class deduplicate_diff_view : public std::ranges::view_interface<deduplicate_diff_view<V>> {
+ public:
+    explicit deduplicate_diff_view(const V& diff) : diff_(diff.begin(), diff.end()) {
+        deduplicate_diff(diff_);
+    }
+    explicit deduplicate_diff_view(const V&& diff) : diff_(diff.begin(), diff.end()) {
+        deduplicate_diff(diff_);
+    }
+
+    auto begin() const { return diff_.begin(); }
+    auto end() const { return diff_.end(); }
+
+ private:
+    std::vector<Update> diff_;
+};
+// todo: In C++23 once we have std::ranges::range_adaptor_closure, we should
+// make this work with a range adaptor.
 
 /// Convert a multi index to a flat index
 /// The behavior of out-of-bounds indices is undefined. Bounds are enforced via asserts.
