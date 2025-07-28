@@ -198,6 +198,64 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     const Array* array_ptr_;
 };
 
+/// Reshape a node to a specific non-dynamic shape. Use fill_value for any missing
+/// values.
+class ResizeNode : public ArrayOutputMixin<ArrayNode> {
+ public:
+    /// Constructor for ResizeNode.
+    ///
+    /// @param array_ptr The array to be resized.
+    /// @param shape The new shape. Must not be dynamic.
+    /// @param fill_value The value to use for missing values.
+    ResizeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape, double fill_value = 0);
+
+    /// Constructor for ResizeNode.
+    ///
+    /// @param array_ptr The array to be resized.
+    /// @param shape The new shape. Must not be dynamic.
+    /// @param fill_value The value to use for missing values.
+    template <std::ranges::range Range>
+    ResizeNode(ArrayNode* node_ptr, Range&& shape, double fill_value = 0)
+            : ResizeNode(node_ptr, std::vector<ssize_t>(shape.begin(), shape.end()), fill_value) {}
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// The fill value.
+    double fill_value() const { return fill_value_; }
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+
+    /// @copydoc Node::initialize_state()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+ private:
+    const Array* array_ptr_;
+
+    double fill_value_;
+
+    // In some cases the fill value will never be used. This matters for min/max
+    // calculation for instance, so we track that information.
+    bool fill_never_used_;
+};
+
 class SizeNode : public ScalarOutputMixin<ArrayNode, true> {
  public:
     explicit SizeNode(ArrayNode* node_ptr);

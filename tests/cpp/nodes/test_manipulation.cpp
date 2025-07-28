@@ -859,6 +859,95 @@ TEST_CASE("ReshapeNode") {
     }
 }
 
+TEST_CASE("ResizeNode") {
+    GIVEN("A set(10) resized to size 5") {
+        auto graph = Graph();
+
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto resize_ptr = graph.emplace_node<ResizeNode>(set_ptr, std::array{5}, 15.1);
+        graph.emplace_node<ArrayValidationNode>(resize_ptr);
+
+        CHECK(resize_ptr->min() == 0);
+        CHECK(resize_ptr->max() == 15.1);  // the fill value
+        CHECK(!resize_ptr->integral());
+
+        WHEN("The set is smaller than the desired size") {
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {0, 1, 2});
+            graph.initialize_state(state);
+
+            CHECK_THAT(resize_ptr->view(state), RangeEquals({0., 1., 2., 15.1, 15.1}));
+
+            AND_WHEN("We grow the set past the size of our resize") {
+                set_ptr->assign(state, {0, 1, 2, 3, 4, 5, 6});  // larger than our window
+                graph.propagate(state);
+
+                CHECK_THAT(resize_ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
+            }
+        }
+
+        WHEN("The set is larger than the desired size") {
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5, 6});
+            graph.initialize_state(state);
+
+            CHECK_THAT(resize_ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
+
+            AND_WHEN("We shrink the set down to less than our size") {
+                set_ptr->assign(state, {0, 1});  // smaller than our window
+                graph.propagate(state);
+
+                CHECK_THAT(resize_ptr->view(state), RangeEquals({0., 1., 15.1, 15.1, 15.1}));
+            }
+        }
+    }
+
+    GIVEN("A set(10, 5, 10) resized to size 5") {
+        auto graph = Graph();
+
+        auto set_ptr = graph.emplace_node<SetNode>(10, 5, 10);
+        auto resize_ptr = graph.emplace_node<ResizeNode>(set_ptr, std::array{5}, 15.1);
+        graph.emplace_node<ArrayValidationNode>(resize_ptr);
+
+        CHECK(resize_ptr->min() == 0);
+        CHECK(resize_ptr->max() == 9);  // doesn't use the fill value
+        CHECK(resize_ptr->integral());  // doesn't use the fill value
+    }
+
+    GIVEN("A constant(range(5)) resized to size 2x2") {
+        auto graph = Graph();
+
+        auto c_ptr = graph.emplace_node<ConstantNode>(std::array{0, 1, 2, 3, 4});
+        auto resize_ptr = graph.emplace_node<ResizeNode>(c_ptr, std::array{2, 2}, -1);
+        graph.emplace_node<ArrayValidationNode>(resize_ptr);
+
+        CHECK(resize_ptr->min() == 0);  // doesn't use the fill value
+        CHECK(resize_ptr->max() == 4);  // doesn't use the fill value,
+                                        // also not smart enough to know it's a constant
+        CHECK(resize_ptr->integral());  // doesn't use the fill value
+
+        CHECK_THAT(resize_ptr->shape(), RangeEquals({2, 2}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(resize_ptr->view(state), RangeEquals({0, 1, 2, 3}));
+    }
+
+    GIVEN("A constant(range(5)) resized to size 3x2") {
+        auto graph = Graph();
+
+        auto c_ptr = graph.emplace_node<ConstantNode>(std::array{0, 1, 2, 3, 4});
+        auto resize_ptr = graph.emplace_node<ResizeNode>(c_ptr, std::array{3, 2}, -1);
+        graph.emplace_node<ArrayValidationNode>(resize_ptr);
+
+        CHECK(resize_ptr->min() == -1);  // always has a fill value
+        CHECK(resize_ptr->max() == 4);
+        CHECK_THAT(resize_ptr->shape(), RangeEquals({3, 2}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(resize_ptr->view(state), RangeEquals({0, 1, 2, 3, 4, -1}));
+    }
+}
+
 TEST_CASE("SizeNode") {
     GIVEN("A 0d node") {
         auto C = ConstantNode(5);

@@ -146,6 +146,9 @@ cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::o
     cdef cppclass ReshapeNode(ArrayNode):
         pass
 
+    cdef cppclass ResizeNode(ArrayNode):
+        double fill_value() const
+
     cdef cppclass SizeNode(ArrayNode):
         pass
 

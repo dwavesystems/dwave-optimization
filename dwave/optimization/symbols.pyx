@@ -112,6 +112,7 @@ from dwave.optimization.libcpp.nodes cimport (
     QuadraticModel as cppQuadraticModel,
     QuadraticModelNode as cppQuadraticModelNode,
     ReshapeNode as cppReshapeNode,
+    ResizeNode as cppResizeNode,
     SafeDivideNode as cppSafeDivideNode,
     SetNode as cppSetNode,
     SizeNode as cppSizeNode,
@@ -190,6 +191,7 @@ __all__ = [
     "Put",
     "QuadraticModel",
     "Reshape",
+    "Resize",
     "Subtract",
     "SetVariable",
     "Size",
@@ -3748,6 +3750,67 @@ cdef class Reshape(ArraySymbol):
     cdef cppReshapeNode* ptr
 
 _register(Reshape, typeid(cppReshapeNode))
+
+
+cdef class Resize(ArraySymbol):
+    """Resize symbol.
+
+    See also:
+        :func:`~dwave.optimization.mathematical.resize`: equivalent function.
+
+        :meth:`ArraySymbol.resize() <dwave.optimization.model.ArraySymbol.resize>`: equivalent method.
+
+    .. versionadded:: 0.6.4
+    """
+    def __init__(self, ArraySymbol symbol, shape, fill_value=None):
+        cdef _Graph model = symbol.model
+
+        if fill_value is None:
+            self.ptr = model._graph.emplace_node[cppResizeNode](
+                symbol.array_ptr,
+                as_cppshape(shape, nonnegative=True),
+            )
+        else:
+            self.ptr = model._graph.emplace_node[cppResizeNode](
+                symbol.array_ptr,
+                as_cppshape(shape, nonnegative=True),
+                <double>fill_value,
+            )
+
+        self.initialize_arraynode(model, self.ptr)
+
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
+        cdef cppResizeNode* ptr = dynamic_cast_ptr[cppResizeNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+
+        cdef Resize m = Resize.__new__(Resize)
+        m.ptr = ptr
+        m.initialize_arraynode(symbol.model, ptr)
+        return m
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        if len(predecessors) != 1:
+            raise ValueError("Resize must have exactly one predecessor")
+
+        with zf.open(directory + "shape.json", "r") as f:
+            shape = json.load(f)
+        with zf.open(directory + "fill_value.npy", "r") as f:
+            fill_value = np.load(f)
+
+        return Resize(*predecessors, shape, fill_value)
+
+    def _into_zipfile(self, zf, directory):
+        encoder = json.JSONEncoder(separators=(',', ':'))
+        zf.writestr(directory + "shape.json", encoder.encode(self.shape()))
+        with zf.open(directory + "fill_value.npy", mode="w", force_zip64=True) as f:
+            np.save(f, self.ptr.fill_value(), allow_pickle=False)
+
+    cdef cppResizeNode* ptr
+
+_register(Resize, typeid(cppResizeNode))
 
 
 cdef class SetVariable(ArraySymbol):
