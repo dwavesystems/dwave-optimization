@@ -12,7 +12,12 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <ranges>
+
 #include "dwave-optimization/array.hpp"
+
+#include <array>
+#include <ranges>
 
 namespace dwave::optimization {
 
@@ -176,37 +181,46 @@ std::string shape_to_string(const std::span<const ssize_t> shape) {
     return out;
 }
 
-bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr) {
-    auto lhs_size = lhs_ptr->sizeinfo();
-    auto rhs_size = rhs_ptr->sizeinfo();
-
-    if (lhs_size == rhs_size) return true;
-    if (lhs_size.array_ptr == nullptr || rhs_size.array_ptr == nullptr) return false;
-
-    // This first loop is redundant, but often we get diamond structures
-    // of predecessors so by going back together we might get to short circuit the
-    // dfs
-    while (lhs_size.array_ptr != lhs_ptr && rhs_size.array_ptr != rhs_ptr) {
-        lhs_ptr = lhs_size.array_ptr;
-        lhs_size = lhs_size.substitute();
-        rhs_ptr = rhs_size.array_ptr;
-        rhs_size = rhs_size.substitute();
-        if (lhs_size == rhs_size) return true;
-    }
-    while (lhs_size.array_ptr != lhs_ptr) {
-        lhs_ptr = lhs_size.array_ptr;
-        lhs_size = lhs_size.substitute();
-        if (lhs_size == rhs_size) return true;
-    }
-    while (rhs_size.array_ptr != rhs_ptr) {
-        rhs_ptr = rhs_size.array_ptr;
-        rhs_size = rhs_size.substitute();
-        if (lhs_size == rhs_size) return true;
+bool array_shape_equal(const std::span<const Array* const> array_ptrs) {
+    if (array_ptrs.size() == 0) {
+        return false;
+    } else if (array_ptrs.size() == 1) {
+        return true;
     }
 
-    return false;
+    const Array* first_ptr = array_ptrs[0];
+    auto first_size = first_ptr->sizeinfo();
+    while (first_size.array_ptr != nullptr && first_size.array_ptr != first_ptr) {
+        first_ptr = first_size.array_ptr;
+        first_size = first_size.substitute();
+    }
+
+    for (const Array* array_ptr : array_ptrs | std::views::drop(1)) {
+        auto this_size = array_ptr->sizeinfo();
+
+        if (first_size == this_size) continue;
+        if (this_size.array_ptr == nullptr) return false;
+
+        while (this_size.array_ptr != nullptr && this_size.array_ptr != array_ptr) {
+            array_ptr = this_size.array_ptr;
+            this_size = this_size.substitute();
+            if (first_size == this_size) break;
+        }
+
+        // Have to check again as it's possible that `this_size.array_ptr` is nullptr
+        if (first_size != this_size) return false;
+    }
+
+    return true;
 }
-bool array_shape_equal(const Array& lhs, const Array& rhs) { return array_shape_equal(&lhs, &rhs); }
+
+bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr) {
+    return array_shape_equal(std::array<const Array*, 2>{lhs_ptr, rhs_ptr});
+}
+
+bool array_shape_equal(const Array& lhs, const Array& rhs) {
+    return array_shape_equal(&lhs, &rhs);
+}
 
 // We follow NumPy's broadcasting rules
 // See https://numpy.org/doc/stable/user/basics.broadcasting.html
@@ -258,33 +272,121 @@ std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
     return broadcast_shape(std::span(lhs), std::span(rhs));
 }
 
-std::vector<ssize_t> unravel_index(const std::span<const ssize_t> strides, ssize_t index) {
-    std::vector<ssize_t> indices;
-    indices.reserve(strides.size());
+void deduplicate_diff(std::vector<Update>& diff) {
+    if (diff.empty()) return;
 
-    for (const auto& stride : strides) {
-        indices.push_back(index / (stride / sizeof(double)));
-        index = index % (stride / sizeof(double));
+    std::ranges::stable_sort(diff);
+
+    // Find the index of first non-noop Update. If there are none, leave it as -1
+    // to represent no final updates.
+    ssize_t new_index = -1;
+    for (size_t i = 0; i < diff.size(); ++i) {
+        if (!diff[i].identity()) {
+            new_index = i;
+            break;
+        }
     }
+    ssize_t start = 1;
+    if (new_index > 0) {
+        assert(new_index < static_cast<ssize_t>(diff.size()));
+        // Move the first non-noop update into the first spot
+        diff[0] = diff[new_index];
+        start = new_index + 1;
+        new_index = 0;
+    }
+
+    if (new_index >= 0) {
+        for (size_t i = start; i < diff.size(); ++i) {
+            if (diff[i].index == diff[new_index].index) {
+                diff[new_index].value = diff[i].value;
+            } else if (diff[new_index].null()) {
+                // We have finished processing the update at that index, but both the
+                // old and new value are NaN which means it was added and then deleted,
+                // and should be discarded.
+                // At this point we are done because all updates at following indices
+                // should also have been added and deleted.
+                new_index--;
+                break;
+            } else if (!diff[i].identity()) {
+                // Move to the next update only if the final state of the update is not a noop
+                new_index++;
+                diff[new_index] = diff[i];
+            }
+        }
+
+        // In case the very last value is a place and removal, discard it
+        if (diff[new_index].null()) {
+            new_index--;
+        }
+    }
+
+    assert(new_index >= -1);
+    assert(new_index + 1 <= static_cast<ssize_t>(diff.size()));
+
+    // Shrink the final diff array if necessary. Since this is always reszing smaller,
+    // the value passed to resize doesn't matter (just to avoid implementing a
+    // construct_at method for Update)
+    diff.resize(new_index + 1, Update::placement(-666, 666));
+}
+
+std::vector<ssize_t> unravel_index(ssize_t index, std::initializer_list<ssize_t> shape) {
+    return unravel_index(index, std::span(shape));
+}
+
+std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape) {
+    assert(index >= 0 && "index must be non-negative");  // NumPy raises here so we assert
+
+    std::vector<ssize_t> indices;
+    indices.reserve(shape.size());
+
+    if (shape.empty()) {
+        assert(index == 0);  // otherwise it's out-of-bounds
+        return indices;
+    }
+
+    // we'll actually fill in the indices in reverse for simplicity
+    for (const ssize_t dim : shape | std::views::drop(1) | std::views::reverse) {
+        assert(0 <= dim && "all dimensions except the first must be non-negative");
+        indices.emplace_back(index % dim);
+        index /= dim;
+    }
+
+    // Check if the index is out of bounds for non-dynamic shapes and assert
+    assert(shape[0] < 0 || index < shape[0]);
+
+    indices.emplace_back(index);
+
+    std::reverse(indices.begin(), indices.end());
     return indices;
 }
 
-ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
-                          const std::span<const ssize_t> indices) {
-    const ssize_t ndim = static_cast<ssize_t>(strides.size());
-    ssize_t flat_index = 0;
-
-    for (ssize_t i = 0; i < ndim; ++i) {
-        auto stride = strides[i];
-        auto index = indices[i];
-        flat_index += index * stride / sizeof(double);
-    }
-    return flat_index;
+ssize_t ravel_multi_index(std::initializer_list<ssize_t> multi_index,
+                          std::initializer_list<ssize_t> shape) {
+    return ravel_multi_index(std::span(multi_index), std::span(shape));
 }
 
-ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
-                          std::initializer_list<ssize_t> indices) {
-    return ravel_multi_index(strides, std::span(indices));
+ssize_t ravel_multi_index(const std::span<const ssize_t> multi_index,
+                          const std::span<const ssize_t> shape) {
+    assert(multi_index.size() == shape.size() && "mismatched number of dimensions");
+
+    // Handle the empty case
+    if (multi_index.empty()) return 0;
+
+    ssize_t index = 0;
+    ssize_t multiplier = 1;
+    for (ssize_t axis = multi_index.size() - 1; axis >= 0; --axis) {
+        assert((!axis || 0 <= shape[axis]) &&
+               "all dimensions except the first must be non-negative");
+
+        // NumPy supports "clip" and "wrap" which we could add support for
+        // but for now let's just assert.
+        assert(0 <= multi_index[axis] && (!axis || multi_index[axis] < shape[axis]));
+
+        index += multi_index[axis] * multiplier;
+        multiplier *= shape[axis];
+    }
+
+    return index;
 }
 
 }  // namespace dwave::optimization

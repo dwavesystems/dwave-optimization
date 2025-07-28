@@ -996,7 +996,7 @@ void PartialReduceNode<BinaryOp>::initialize_state(State& state) const {
         /// 4. We use the above iterators to perform the reduction.
 
         // 1. Unravel the index we are trying to fill
-        std::vector<ssize_t> indices = unravel_index(this->strides(), index);
+        std::vector<ssize_t> indices = unravel_index(index, this->shape());
         assert(static_cast<ssize_t>(indices.size()) == this->ndim());
 
         // 2. Find the respective starting index in the parent

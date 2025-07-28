@@ -120,9 +120,11 @@ class TestArraySymbol(unittest.TestCase):
         operators = [
             (operator.add, "__add__", dwave.optimization.symbols.Add),
             (operator.eq, "__eq__", dwave.optimization.symbols.Equal),
+            (operator.ge, "__ge__", dwave.optimization.symbols.LessEqual),  # we invert
             (operator.iadd, "__iadd__", dwave.optimization.symbols.NaryAdd),
             (operator.imul, "__imul__", dwave.optimization.symbols.NaryMultiply),
             (operator.le, "__le__", dwave.optimization.symbols.LessEqual),
+            (operator.mod, "__mod__", dwave.optimization.symbols.Modulus),
             (operator.mul, "__mul__", dwave.optimization.symbols.Multiply),
             (operator.sub, "__sub__", dwave.optimization.symbols.Subtract),
         ]
@@ -136,7 +138,7 @@ class TestArraySymbol(unittest.TestCase):
                 x_ = model_.binary()
                 self.assertIsInstance(op(x_, 5.7), cls)
                 self.assertEqual(model_.num_symbols(), 3)
-                op(x_, 5.7)  # equivalent scalar should be cached
+                op(5.7, x_)  # equivalent scalar should be cached
                 self.assertEqual(model_.num_symbols(), 4)
                 op(x_, 5.6)
                 self.assertEqual(model_.num_symbols(), 6)
@@ -170,6 +172,19 @@ class TestArraySymbol(unittest.TestCase):
             self.assertIsInstance(x ** 4, dwave.optimization.symbols.NaryMultiply)
             self.assertIsInstance(x ** 5, dwave.optimization.symbols.NaryMultiply)
             self.assertIs(x.__pow__(UnknownType()), NotImplemented)
+
+        with self.subTest("__truediv__"):
+            model_ = Model()
+            x_ = model.integer(lower_bound=1, upper_bound=5)  # strictly positive
+            x_over_two = x_ / 2
+            self.assertIsInstance(x_over_two, dwave.optimization.symbols.Divide)
+            numerator, denominator = x_over_two.iter_predecessors()
+            self.assertEqual(numerator.id(), x_.id())
+
+            two_over_x = 2 / x_
+            self.assertIsInstance(two_over_x, dwave.optimization.symbols.Divide)
+            numerator, denominator = two_over_x.iter_predecessors()
+            self.assertEqual(denominator.id(), x_.id())
 
     class IndexTester:
         def __init__(self, array):

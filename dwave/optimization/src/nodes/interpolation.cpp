@@ -33,8 +33,9 @@ BSplineNode::BSplineNode(ArrayNode* array_ptr, const int k, const std::vector<do
                 }
 
                 // bspline node does not extrapolate outside of the base interval
-                double pred_min = array_ptr->minmax().first;
-                double pred_max = array_ptr->minmax().second;
+                cache_type<std::pair<double, double>> cache;
+                double pred_min = array_ptr->minmax(cache).first;
+                double pred_max = array_ptr->minmax(cache).second;
                 double base_interval_min = t[k];
                 double base_interval_max = t[c.size()];
                 if (pred_min < base_interval_min || pred_max > base_interval_max) {

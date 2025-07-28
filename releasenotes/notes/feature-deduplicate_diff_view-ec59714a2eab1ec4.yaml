@@ -1,0 +1,7 @@
+---
+features:
+  - Add C++ ``deduplicate_diff_view`` range view.
+upgrade:
+  - |
+    Move C++ ``deduplicate_diff()`` function from ``dwave-optimization/utils.hpp``
+    to ``dwave-optimization/array.hpp``.

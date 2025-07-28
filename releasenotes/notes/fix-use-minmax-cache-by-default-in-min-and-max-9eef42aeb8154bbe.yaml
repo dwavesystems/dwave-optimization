@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    There was an issue on some models with "diamonds" in the multi-DAG
+    structure where adding subsequent nodes could trigger a exponential
+    recursion of calling ``Array::min()/max()``. This has been fixed by using
+    a min/max cache by default in these methods.

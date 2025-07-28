@@ -24,6 +24,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <utility>
@@ -342,10 +343,16 @@ class Array {
     virtual SizeInfo sizeinfo() const { return dynamic() ? SizeInfo(this) : SizeInfo(size()); }
 
     /// The minimum value that elements in the array may take.
-    double min() const { return minmax().first; }
+    double min() const {
+        cache_type<std::pair<double, double>> cache;
+        return minmax(cache).first;
+    }
 
     /// The maximum value that elements in the array may take.
-    double max() const { return minmax().second; }
+    double max() const {
+        cache_type<std::pair<double, double>> cache;
+        return minmax(cache).second;
+    }
 
     /// The smallest and largest values that elements in the array may take.
     virtual std::pair<double, double> minmax(
@@ -597,6 +604,9 @@ std::ostream& operator<<(std::ostream& os, const Array::View& view);
 bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr);
 bool array_shape_equal(const Array& lhs, const Array& rhs);
 
+// Test whether multiple arrays all have the same shape.
+bool array_shape_equal(const std::span<const Array* const> array_ptrs);
+
 /// Get the shape induced by broadcasting two arrays together.
 /// See https://numpy.org/doc/stable/user/basics.broadcasting.html.
 /// Raises an exception if the two arrays cannot be broadcast together
@@ -605,15 +615,37 @@ std::vector<ssize_t> broadcast_shape(const std::span<const ssize_t> lhs,
 std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
                                      std::initializer_list<ssize_t> rhs);
 
+void deduplicate_diff(std::vector<Update>& diff);
+
+template <std::ranges::range V>
+requires(std::same_as<std::ranges::range_value_t<V>, Update>)
+class deduplicate_diff_view : public std::ranges::view_interface<deduplicate_diff_view<V>> {
+ public:
+    explicit deduplicate_diff_view(const V& diff) : diff_(diff.begin(), diff.end()) {
+        deduplicate_diff(diff_);
+    }
+    explicit deduplicate_diff_view(const V&& diff) : diff_(diff.begin(), diff.end()) {
+        deduplicate_diff(diff_);
+    }
+
+    auto begin() const { return diff_.begin(); }
+    auto end() const { return diff_.end(); }
+
+ private:
+    std::vector<Update> diff_;
+};
+// todo: In C++23 once we have std::ranges::range_adaptor_closure, we should
+// make this work with a range adaptor.
+
+/// Convert a multi index to a flat index
+/// The behavior of out-of-bounds indices is undefined. Bounds are enforced via asserts.
+ssize_t ravel_multi_index(std::initializer_list<ssize_t> multi_index,
+                          std::initializer_list<ssize_t> shape);
+ssize_t ravel_multi_index(std::span<const ssize_t> multi_index, std::span<const ssize_t> shape);
+
 /// Convert a flat index to multi-index
-std::vector<ssize_t> unravel_index(const std::span<const ssize_t> strides, ssize_t index);
-
-/// Convert multi index to flat index
-ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
-                          const std::span<const ssize_t> indices);
-
-ssize_t ravel_multi_index(const std::span<const ssize_t> strides,
-                          std::initializer_list<ssize_t> indices);
+std::vector<ssize_t> unravel_index(ssize_t index, std::initializer_list<ssize_t> shape);
+std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape);
 
 // Represent a shape (or strides) as a string in NumPy-style format.
 std::string shape_to_string(const std::span<const ssize_t> shape);

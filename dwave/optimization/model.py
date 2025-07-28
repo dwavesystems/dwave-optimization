@@ -322,8 +322,8 @@ class Model(_Graph):
     def input(
         self,
         shape: tuple[int, ...] = (),
-        lower_bound: typing.Optional[float] = None,
-        upper_bound: typing.Optional[float] = None,
+        lower_bound: typing.Optional[float] = -float("inf"),
+        upper_bound: typing.Optional[float] = float("inf"),
         integral: typing.Optional[bool] = None,
     ) -> Input:
         """Create an "input" symbol.
@@ -337,10 +337,6 @@ class Model(_Graph):
         Provided bounds and integrality are used to supply information for
         min/max/integral/logical properties of the resulting node, and will be used to
         validate the state when set manually.
-
-        Note that the order in which inputs are added to the model matters and is
-        used by other symbols (see :class:`~dwave.optimization.symbols.NaryReduce`) to
-        infer how arguments are supplied to the model during evaluation.
 
         Args:
             shape: the shape of the output array.
