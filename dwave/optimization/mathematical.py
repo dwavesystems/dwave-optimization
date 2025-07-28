@@ -45,6 +45,7 @@ from dwave.optimization.symbols import (
     Not,
     Or,
     Put,
+    Resize,
     Rint,
     SafeDivide,
     SquareRoot,
@@ -78,6 +79,7 @@ __all__ = [
     "mod",
     "multiply",
     "put",
+    "resize",
     "rint",
     "safe_divide",
     "sqrt",
@@ -1123,6 +1125,47 @@ def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
     .. versionadded:: 0.4.4
     """
     return Put(array, indices, values)
+
+
+def resize(
+        array: ArraySymbol,
+        shape: typing.Union[int, collections.abc.Sequence[int]],
+        fill_value: typing.Optional[float] = None,
+) -> Resize:
+    """Return a new :class:`~dwave.optimization.symbols.Resize` symbol with the given shape.
+
+    Args:
+        array: An array symbol.
+        shape: Shape of the new array. All dimension sizes must be non-negative.
+        fill_value: The value to be used if the resulting array is larger than
+            the given one. Defaults to 0.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import resize
+        ...
+        >>> model = Model()
+        >>> s = model.set(10)  # subsets of range(10)
+        >>> s_2x2 = resize(s, (2, 2), fill_value=-1)
+        ...
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     s.set_state(0, [0, 1, 2])
+        ...     print(s_2x2.state(0))
+        [[ 0.  1.]
+         [ 2. -1.]]
+
+    Returns:
+        A :class:`~dwave.optimization.symbols.Resize` symbol.
+
+    See also:
+        :class:`~dwave.optimization.symbols.Resize`: equivalent symbol.
+
+        :meth:`ArraySymbol.resize() <dwave.optimization.model.ArraySymbol.resize>`: equivalent method.
+
+    .. versionadded:: 0.6.4
+    """
+    return Resize(array, shape, fill_value=fill_value)
 
 
 def rint(x: ArraySymbol) -> Rint:

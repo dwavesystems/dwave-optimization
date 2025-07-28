@@ -2848,6 +2848,35 @@ class TestReshape(utils.SymbolTests):
             )
 
 
+class TestResize(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        s = model.set(10)
+        s_2x2 = s.resize((2, 2))
+        c = model.constant(range(6))
+        c_3 = dwave.optimization.mathematical.resize(c, 3)
+        c_3x2 = c.resize((3, 2))
+        with model.lock():
+            yield from [s_2x2, c_3, c_3x2]
+
+    def test_set(self):
+        model = Model()
+        model.states.resize(1)
+
+        s = model.set(10)
+        s_2x2 = s.resize((2, 2))
+        s_5 = s.resize(5, fill_value=-1)
+
+        with model.lock():
+            s.set_state(0, [0, 1, 2])
+            np.testing.assert_array_equal(s_2x2.state(), [[0, 1], [2, 0]])
+            np.testing.assert_array_equal(s_5.state(), [0, 1, 2, -1, -1])
+
+            s.set_state(0, list(reversed(range(10))))
+            np.testing.assert_array_equal(s_2x2.state(), [[9, 8], [7, 6]])
+            np.testing.assert_array_equal(s_5.state(), [9, 8, 7, 6, 5])
+
+
 class TestRint(utils.SymbolTests):
     rng = np.random.default_rng(1)
 

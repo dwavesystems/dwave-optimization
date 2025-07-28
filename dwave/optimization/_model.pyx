@@ -1835,7 +1835,42 @@ cdef class ArraySymbol(Symbol):
             return Reshape(self.copy(), shape)
 
         return Reshape(self, shape)
-    
+
+    def resize(self, shape, fill_value=None):
+        """Return a new :class:`~dwave.optimization.symbols.Resize` symbol with the given shape.
+
+        Args:
+            shape: Shape of the new array. All dimension sizes must be non-negative.
+            fill_value: The value to be used if the resulting array is larger than
+                the given one. Defaults to 0.
+
+        Returns:
+            A :class:`~dwave.optimization.symbols.Resize` symbol.
+
+        Examples:
+            >>> from dwave.optimization import Model
+            ...
+            >>> model = Model()
+            >>> s = model.set(10)  # subsets of range(10)
+            >>> s_2x2 = s.resize((2, 2), fill_value=-1)
+            ...
+            >>> model.states.resize(1)
+            >>> with model.lock():
+            ...     s.set_state(0, [0, 1, 2])
+            ...     print(s_2x2.state(0))
+            [[ 0.  1.]
+             [ 2. -1.]]
+
+        See also:
+            :func:`~dwave.optimization.mathematical.resize`: equivalent function.
+
+            :class:`~dwave.optimization.symbols.Resize`: equivalent symbol.
+
+        .. versionadded:: 0.6.4
+        """
+        from dwave.optimization.mathematical import resize  # avoid circular import
+        return resize(self, shape, fill_value)
+
     def shape(self):
         """Return the shape of the symbol.
 

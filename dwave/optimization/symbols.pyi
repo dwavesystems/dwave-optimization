@@ -241,6 +241,10 @@ class Reshape(ArraySymbol):
     ...
 
 
+class Resize(ArraySymbol):
+    ...
+
+
 class Rint(ArraySymbol):
     ...
 

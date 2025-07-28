@@ -578,6 +578,107 @@ std::pair<double, double> ReshapeNode::minmax(
 
 void ReshapeNode::revert(State& state) const {}  // stateless node
 
+ResizeNode::ResizeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape, double fill_value)
+        : ArrayOutputMixin(shape), array_ptr_(array_ptr), fill_value_(fill_value) {
+    // our incoming array can be any shape/size, but we cannot be dynamic
+    if (this->dynamic()) throw std::invalid_argument("cannot resize to a dynamic shape");
+
+    // determine whether our fill value will ever matter. We need this info later for
+    // min/max/integral. We could do this lazily, but let's just be proactive for
+    // simplicity
+    if (array_ptr_->dynamic()) {
+        // We'll never use the fill value if the minimum size of our predecessor
+        // array is greater than or equal to our size.
+        const ssize_t min_size = array_ptr_->sizeinfo().substitute(100).min.value_or(0);
+        fill_never_used_ = min_size >= this->size();
+    } else {
+        // If our predecessor is not dynamic, then this is simple to figure out
+        fill_never_used_ = array_ptr_->size() >= this->size();
+    }
+
+    add_predecessor(array_ptr);
+}
+
+double const* ResizeNode::buff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->buff();
+}
+
+void ResizeNode::commit(State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->commit();
+}
+
+std::span<const Update> ResizeNode::diff(const State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->diff();
+}
+
+void ResizeNode::initialize_state(State& state) const {
+    const ssize_t size = this->size();  // the desired size of our state
+    assert(size >= 0);                  // we're never dynamic
+
+    std::vector<double> values;
+    values.reserve(size);
+
+    // Fill in from our predecessor, up to our size.
+    // In c++23 we could use append_range(...) which would be nicer.
+    for (const auto& v : array_ptr_->view(state) | std::views::take(size)) {
+        values.emplace_back(v);
+    }
+
+    // Now fill in everything else with our fill value
+    assert(!fill_never_used_ || values.size() == static_cast<std::size_t>(size));
+    values.resize(size, fill_value_);
+
+    // Finally create the state
+    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
+}
+
+bool ResizeNode::integral() const {
+    if (fill_never_used_) return array_ptr_->integral();
+    return is_integer(fill_value_) && array_ptr_->integral();
+}
+
+std::pair<double, double> ResizeNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() {
+        auto [min, max] = array_ptr_->minmax(cache);
+
+        if (!fill_never_used_) {
+            min = std::min(min, fill_value_);
+            max = std::max(max, fill_value_);
+        }
+
+        return std::make_pair(min, max);
+    });
+}
+
+void ResizeNode::propagate(State& state) const {
+    const ssize_t size = this->size();  // the desired size of our state
+    assert(size >= 0);                  // we're never dynamic
+
+    auto data_ptr = this->data_ptr<ArrayNodeStateData>(state);
+    assert(data_ptr);  // should never be nullptr
+
+    for (const Update& update : array_ptr_->diff(state)) {
+        const auto& [index, _, value] = update;
+
+        if (index >= size) continue;  // don't care, it's out of range
+
+        if (update.removed()) {
+            // replace anything that was removed with our fill value
+            data_ptr->set(index, fill_value_);
+        } else {
+            // either a placement or a change. We don't care either way!
+            data_ptr->set(index, value);
+        }
+    }
+
+    if (data_ptr->diff().size()) Node::propagate(state);
+}
+
+void ResizeNode::revert(State& state) const {
+    return data_ptr<ArrayNodeStateData>(state)->revert();
+}
+
 SizeNode::SizeNode(ArrayNode* node_ptr) : array_ptr_(node_ptr) { this->add_predecessor(node_ptr); }
 
 void SizeNode::initialize_state(State& state) const {
