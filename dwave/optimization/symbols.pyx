@@ -238,12 +238,14 @@ cdef class AccumulateZip(ArraySymbol):
     `C`, and an initial value `init`, this node is equivalent to the
     pseudocode:
 
-    r = [0] * len(A)
-    t = init
-    for args in zip(A, B, C):
-        t = expr(t, *args)
-        r[i] = t
-    return r
+    .. code-block::
+
+        r = [0] * len(A)
+        t = init
+        for args in zip(A, B, C):
+            t = expr(t, *args)
+            r[i] = t
+        return r
 
     Args:
         expression:
