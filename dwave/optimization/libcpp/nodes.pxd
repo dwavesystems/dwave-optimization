@@ -246,6 +246,9 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
     cdef cppclass SafeDivideNode(ArrayNode):
         pass
 
+    cdef cppclass SoftMaxNode(ArrayNode):
+        pass
+
     cdef cppclass SquareNode(ArrayNode):
         pass
         
