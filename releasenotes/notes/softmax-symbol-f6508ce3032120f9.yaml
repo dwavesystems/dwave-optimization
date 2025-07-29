@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    Added ``SoftMax`` symbol/node which returns the softmax of its predecessor.

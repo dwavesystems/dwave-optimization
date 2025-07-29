@@ -50,7 +50,11 @@ from dwave.optimization.symbols import (
     Resize,
     Rint,
     SafeDivide,
+<<<<<<< HEAD
     Sin,
+=======
+    SoftMax,
+>>>>>>> ee2c371 (Add SoftMaxNode/Symbol)
     SquareRoot,
     Where,
     Xor,
@@ -87,7 +91,11 @@ __all__ = [
     "resize",
     "rint",
     "safe_divide",
+<<<<<<< HEAD
     "sin",
+=======
+    "softmax",
+>>>>>>> ee2c371 (Add SoftMaxNode/Symbol)
     "sqrt",
     "stack",
     "vstack",
@@ -1334,6 +1342,39 @@ def sin(x) -> Sin:
     .. versionadded:: 0.6.5
     """
     return Sin(x)
+
+
+def softmax(array: ArraySymbol) -> SoftMax:
+    """Return softmax of a given symbol. Given a flattened array 
+    x: [x_1, x_2, ..., x_n], softmax(x) returns an array [y_1, y_2, ..., y_n] 
+    such that y_i = exp(x_i) / (exp(x_1) + exp(x_2) + ... + exp(x_n)).
+
+    Args:
+        array: Input array symbol.
+
+    Example:
+        This example computes the softmax of one symbol.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import softmax
+        >>> import numpy as np
+        ...
+        >>> model = Model()
+        >>> i = model.integer(3)
+        >>> sm = softmax(i)
+        >>> expected = np.array([0.0900305731703, 0.6652409557748, 0.244728471054])
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [1, 3, 2])
+        ...     print(np.isclose(sm.state(), expected).all())
+        True
+
+    See Also:
+        :class:`~dwave.optimization.symbols.SoftMax`: equivalent symbol.
+
+    .. versionadded:: 0.6.4
+    """
+    return SoftMax(array)
 
 
 def sqrt(x: ArraySymbol) -> SquareRoot:
