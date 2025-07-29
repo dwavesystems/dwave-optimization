@@ -2764,7 +2764,7 @@ _register(Maximum, typeid(cppMaximumNode))
 
 cdef class Mean(ArraySymbol):
     """Mean value of the elements of a symbol. If symbol is empty, 
-        mean defaults to (minimum + maximum) / 2 of symbol.
+        mean defaults to 0.0.
 
     Examples:
         This example takes the mean of one symbol.

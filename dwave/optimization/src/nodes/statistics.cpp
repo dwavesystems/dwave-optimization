@@ -26,7 +26,7 @@ MeanNode::MeanNode(ArrayNode *arr_ptr) : ScalarOutputMixin<ArrayNode, true>(), a
 
 void MeanNode::initialize_state(State &state) const {
     if (arr_ptr_->size(state) == 0) {
-        emplace_state(state, (arr_ptr_->min() + arr_ptr_->max()) / 2.0);
+        emplace_state(state, 0.0);
         return;
     }
     // Otherwise, compute mean of values in array
@@ -41,7 +41,28 @@ bool MeanNode::integral() const { return false; }
 
 std::pair<double, double> MeanNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() { return std::make_pair(arr_ptr_->min(), arr_ptr_->max()); });
+    return memoize(cache, [&]() {
+        // Predecessor is static or dynamic but always non-empty. Therefore,
+        // mean is always computed and will fall within min/max of predecessor.
+        if ((arr_ptr_->size() > 0) || (arr_ptr_->sizeinfo().min.value_or(0) > 0)) {
+            return std::make_pair(arr_ptr_->min(), arr_ptr_->max());
+        }
+        // Predecessor is static and empty. Therefore, mean will always be
+        // default of 0.0.
+        if (arr_ptr_->size() == 0) {
+            return std::make_pair(0.0, 0.0);
+        }
+        // Predecessor is dynamic and possibly empty. Therefore, mean will be
+        // default value of 0.0 (i.e. predecessor is empty) or fall within the
+        // min/max of predecessor. Base on predecessor's min/max, we extend
+        // meannode min/max.
+        if (arr_ptr_->min() > 0) {
+            return std::make_pair(0.0, arr_ptr_->max());
+        } else if (arr_ptr_->max() < 0) {
+            return std::make_pair(arr_ptr_->min(), 0.0);
+        }
+        return std::make_pair(arr_ptr_->min(), arr_ptr_->max());
+    });
 }
 
 void MeanNode::propagate(State &state) const {
@@ -55,7 +76,7 @@ void MeanNode::propagate(State &state) const {
     const ssize_t state_size = arr_ptr_->size(state);
 
     if (state_size == 0) {
-        set_state(state, (arr_ptr_->min() + arr_ptr_->max()) / 2.0);
+        set_state(state, 0.0);
         return;
     }
 
@@ -63,8 +84,8 @@ void MeanNode::propagate(State &state) const {
     const ssize_t state_size_prior = state_size - arr_ptr_->size_diff(state);
 
     // Compute the sum of ArrayNode prior to change
-    const double mean = data_ptr<ScalarOutputMixinStateData>(state)->update.value;
-    double sum = mean * static_cast<double>(state_size_prior);
+    double sum = data_ptr<ScalarOutputMixinStateData>(state)->update.value *
+                 static_cast<double>(state_size_prior);
 
     for (const Update &u : arr_updates) {
         if (u.removed()) {
