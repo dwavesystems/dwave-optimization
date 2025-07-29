@@ -11,6 +11,7 @@ tests_all = executable(
         'nodes/indexing/test_basic.cpp',
         'nodes/mathematical/test_binaryop.cpp',
         'nodes/mathematical/test_functional.cpp',
+        'nodes/mathematical/test_softmax.cpp',
         'nodes/mathematical/test_naryop.cpp',
         'nodes/mathematical/test_reduce.cpp',
         'nodes/mathematical/test_unaryop.cpp',

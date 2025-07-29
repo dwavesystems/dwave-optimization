@@ -23,6 +23,7 @@ import unittest
 import numpy as np
 
 import dwave.optimization
+from dwave.optimization.mathematical import softmax
 import dwave.optimization.symbols
 from dwave.optimization import (
     Model,
@@ -3020,6 +3021,34 @@ class TestSin(utils.UnaryOpTests):
 
     def symbol_op(self, x):
         return dwave.optimization.sin(x)
+
+
+class TestSoftMax(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        c = model.constant([-1.9, -2, 1.7, 1.6])
+        sm = dwave.optimization.symbols.SoftMax(c)
+
+        with model.lock():
+            yield sm
+
+    def test(self):
+        from dwave.optimization.symbols import SoftMax
+        model = Model()
+        c = model.constant([-1.9, -2, 1.7, 1.6])
+        sm = dwave.optimization.softmax(c)
+
+        self.assertIsInstance(sm, SoftMax)
+
+    def test_state(self):
+        model = Model()
+        c = model.constant([-1.9, -2, 1.7, 1.6])
+        sm = dwave.optimization.symbols.SoftMax(c)
+        model.states.resize(1)
+        with model.lock():
+            expected = np.array([0.0139628680773, 0.012634125499,  
+                                 0.5110163194015, 0.4623866870215])
+            np.testing.assert_array_almost_equal(sm.state(0), expected)
 
 
 class TestSquare(utils.UnaryOpTests):

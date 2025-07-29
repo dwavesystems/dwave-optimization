@@ -264,7 +264,7 @@ std::pair<double, double> BinaryOpNode<BinaryOp>::minmax(
         std::vector<double> combos = {op(lhs_low, rhs_low), op(lhs_low, rhs_high),
                                       op(lhs_high, rhs_low), op(lhs_high, rhs_high)};
 
-       if (rhs_ptr->integral()) {
+        if (rhs_ptr->integral()) {
             if (rhs_low < 0 && 0 < rhs_high) {
                 combos.emplace_back(op(1, 0));
             }
@@ -348,7 +348,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
             auto lit = lhs_ptr->begin(state);
             auto rit = rhs_ptr->begin(state);
 
-            auto apply_op = [this, &lit, &rit](const Update& up){
+            auto apply_op = [this, &lit, &rit](const Update& up) {
                 if (up.removed()) {
                     return up;
                 }
@@ -364,9 +364,8 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
             ptr->update(lhs_diff | std::views::transform(apply_op));
             // For the RHS, we have already dealt with growing/shrinking the array,
             // so we just ignore all updates that are placements/removals.
-            ptr->update(
-                rhs_diff | std::views::filter(is_standard_update) | std::views::transform(apply_op)
-            );
+            ptr->update(rhs_diff | std::views::filter(is_standard_update) |
+                        std::views::transform(apply_op));
         } else if (lhs_diff.size()) {
             // LHS modified, but not RHS
             auto rit = rhs_ptr->begin(state);
@@ -1671,6 +1670,147 @@ template class ReduceNode<std::logical_or<double>>;
 template class ReduceNode<std::multiplies<double>>;
 template class ReduceNode<std::plus<double>>;
 
+// SoftMaxNode *****************************************************************
+
+struct SoftMaxNodeDataHelper_ {
+    SoftMaxNodeDataHelper_(std::vector<double> input) {
+        // Compute softmax.
+        denominator = 0.0;
+        for (ssize_t i = 0, stop = input.size(); i < stop; ++i) {
+            double exp_val = std::exp(input[i]);
+            values.push_back(exp_val);
+            denominator += exp_val;
+        }
+        for (double& val : values) {
+            val /= denominator;
+        }
+        // Give prior_denominator an initial value.
+        prior_denominator = denominator;
+    }
+
+    std::vector<double> values;
+    double denominator, prior_denominator;
+};
+
+struct SoftMaxNodeStateData : public ArrayNodeStateData {
+    SoftMaxNodeStateData(std::vector<double> input)
+            : SoftMaxNodeStateData(SoftMaxNodeDataHelper_(std::move(input))) {}
+
+    SoftMaxNodeStateData(SoftMaxNodeDataHelper_&& helper)
+            : ArrayNodeStateData(std::move(helper.values)),
+              denominator(helper.denominator),
+              prior_denominator(helper.prior_denominator) {}
+
+    double denominator, prior_denominator;
+};
+
+SoftMaxNode::SoftMaxNode(ArrayNode* arr_ptr)
+        : ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr) {
+    add_predecessor(arr_ptr);
+}
+
+double const* SoftMaxNode::buff(const State& state) const {
+    return data_ptr<SoftMaxNodeStateData>(state)->buff();
+}
+
+void SoftMaxNode::commit(State& state) const {
+    return data_ptr<SoftMaxNodeStateData>(state)->commit();
+}
+
+std::span<const Update> SoftMaxNode::diff(const State& state) const {
+    return data_ptr<SoftMaxNodeStateData>(state)->diff();
+}
+
+void SoftMaxNode::initialize_state(State& state) const {
+    const Array::View arr = arr_ptr_->view(state);
+    emplace_data_ptr<SoftMaxNodeStateData>(state, std::vector<double>{arr.begin(), arr.end()});
+}
+
+bool SoftMaxNode::integral() const { return false; }
+
+std::pair<double, double> SoftMaxNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() {
+        // Softmax function forms probability space, the values of which sum to 1.0.
+        return std::make_pair(0.0, 1.0);
+    });
+}
+
+void SoftMaxNode::propagate(State& state) const {
+    const std::span<const Update> arr_updates = arr_ptr_->diff(state);
+
+    if (arr_updates.empty()) {
+        return;
+    }
+
+    // To update node, we need to compute the new softmax denominator
+    auto node_data = data_ptr<SoftMaxNodeStateData>(state);
+    const double prior_denominator = node_data->denominator;
+    double new_denominator = prior_denominator;
+
+    for (const Update& u : arr_updates) {
+        // Offset by contribution to prior_denominator
+        // When possible, avoid calling exp() function by multiplying
+        // elements by their denominator.
+        if (u.removed()) {
+            new_denominator -= node_data->get(u.index) * prior_denominator;
+        } else if (u.placed()) {
+            double exp_val = std::exp(u.value);
+            new_denominator += exp_val;
+            // Temporarily store in format of unmodified elements. Will multiply
+            // all elements by prior_denominator / new_denominator after.
+            node_data->set(u.index, exp_val / prior_denominator, true);
+        } else {
+            double exp_val = std::exp(u.value);
+            new_denominator += exp_val - node_data->get(u.index) * prior_denominator;
+            // Temporarily store in format of unmodified elements. Will multiply
+            // all elements by prior_denominator / new_denominator after.
+            node_data->set(u.index, exp_val / prior_denominator, true);
+        }
+    }
+
+    // Resize if necessary
+    if (arr_ptr_->size_diff(state) != 0) {
+        node_data->trim_to(arr_ptr_->size(state));
+    }
+
+    // TODO: Define allowable epsilon of difference when comparing doubles.
+    if (prior_denominator != new_denominator) {
+        // Scale all elements.
+        const double scale = prior_denominator / new_denominator;
+        for (ssize_t i = 0, stop = node_data->size(); i < stop; ++i) {
+            node_data->set(i, node_data->get(i) * scale);
+        }
+    }
+    node_data->denominator = new_denominator;
+    node_data->prior_denominator = prior_denominator;
+}
+
+void SoftMaxNode::revert(State& state) const {
+    auto node_data = data_ptr<SoftMaxNodeStateData>(state);
+    node_data->revert();
+    // Manually reset denominator
+    node_data->denominator = node_data->prior_denominator;
+}
+
+std::span<const ssize_t> SoftMaxNode::shape(const State& state) const {
+    return arr_ptr_->shape(state);
+}
+
+ssize_t SoftMaxNode::size(const State& state) const {
+    return data_ptr<SoftMaxNodeStateData>(state)->size();
+}
+
+ssize_t SoftMaxNode::size_diff(const State& state) const {
+    return data_ptr<SoftMaxNodeStateData>(state)->size_diff();
+}
+
+SizeInfo SoftMaxNode::sizeinfo() const { return arr_ptr_->sizeinfo(); }
+
+double SoftMaxNode::get_denominator(const State& state) const {
+    return data_ptr<SoftMaxNodeStateData>(state)->denominator;
+}
+
 // UnaryOpNode *****************************************************************
 
 template <class UnaryOp>
@@ -1818,9 +1958,9 @@ std::pair<double, double> UnaryOpNode<UnaryOp>::minmax(
     }
     if constexpr (std::same_as<UnaryOp, functional::square<double>>) {
         const auto [_, highest] = Array::minmax();
-        return memoize(cache, std::make_pair(
-            std::min({low * low, high * high, highest}),
-            std::min(std::max({low * low, high * high}), highest)));  // prevent inf
+        return memoize(cache, std::make_pair(std::min({low * low, high * high, highest}),
+                                             std::min(std::max({low * low, high * high}),
+                                                      highest)));  // prevent inf
     }
     if constexpr (std::same_as<UnaryOp, functional::square_root<double>>) {
         assert(low >= 0);  // checked by constructor

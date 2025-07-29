@@ -119,6 +119,7 @@ from dwave.optimization.libcpp.nodes cimport (
     SetNode as cppSetNode,
     SinNode as cppSinNode,
     SizeNode as cppSizeNode,
+    SoftMaxNode as cppSoftMaxNode,
     SubtractNode as cppSubtractNode,
     RintNode as cppRintNode,
     SquareNode as cppSquareNode,
@@ -203,6 +204,7 @@ __all__ = [
     "Size",
     "Rint",
     "SafeDivide",
+    "SoftMax",
     "Square",
     "SquareRoot",
     "Sum",
@@ -4043,6 +4045,35 @@ cdef class Sin(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(Sin, typeid(cppSinNode))
+
+
+cdef class SoftMax(ArraySymbol):
+    """Softmax of a symbol.
+
+    Example:
+        This example computes the softmax of one symbol.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import softmax
+        ...
+        >>> model = Model()
+        >>> i = model.integer(3)
+        >>> sm = softmax(i)
+        >>> type(sm)
+        <class 'dwave.optimization.symbols.SoftMax'>
+
+    See Also:
+        :meth:`~dwave.optimization.mathematical.softmax`: equivalent method.
+
+    .. versionadded:: 0.6.4
+    """
+    def __init__(self, ArraySymbol arr):
+        cdef _Graph model = arr.model
+
+        cdef cppSoftMaxNode* ptr = model._graph.emplace_node[cppSoftMaxNode](arr.array_ptr)
+        self.initialize_arraynode(model, ptr)
+
+_register(SoftMax, typeid(cppSoftMaxNode))
 
 
 cdef class Square(ArraySymbol):
