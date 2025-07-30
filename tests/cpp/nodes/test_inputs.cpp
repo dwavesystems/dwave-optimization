@@ -13,6 +13,7 @@
 //    limitations under the License.
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_all.hpp>
 #include <dwave-optimization/graph.hpp>
 #include <dwave-optimization/nodes/collections.hpp>
 #include <dwave-optimization/nodes/constants.hpp>
@@ -21,6 +22,8 @@
 #include <dwave-optimization/nodes/mathematical.hpp>
 #include <dwave-optimization/nodes/numbers.hpp>
 #include <dwave-optimization/nodes/testing.hpp>
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -47,6 +50,17 @@ TEST_CASE("InputNode") {
             CHECK(ptr->min() == 10);
             CHECK(ptr->max() == 50);
             CHECK(ptr->integral());
+        }
+
+        THEN("We can initialize and set the state with initializer_lists") {
+            auto state = graph.empty_state();
+            ptr->initialize_state(state, {20, 10, 25, 30});
+            graph.initialize_state(state);
+
+            CHECK_THAT(ptr->view(state), RangeEquals({20, 10, 25, 30}));
+
+            ptr->assign(state, {30, 25, 10, 20});
+            CHECK_THAT(ptr->view(state), RangeEquals({30, 25, 10, 20}));
         }
 
         THEN("initializing the graph state (without initializing the InputNode) throws an error") {
@@ -103,11 +117,12 @@ TEST_CASE("InputNode") {
             }
         }
 
-        AND_GIVEN("Another node, and another input") {
+        AND_GIVEN("Another node, and two more inputs") {
             graph.emplace_node<IntegerNode>();
             graph.emplace_node<InputNode>(std::vector<ssize_t>{1}, 10, 50, false);
+            graph.emplace_node<InputNode>(std::vector<ssize_t>{1});
 
-            THEN("Graph.num_inputs() is correct") { CHECK(graph.num_inputs() == 2); }
+            THEN("Graph.num_inputs() is correct") { CHECK(graph.num_inputs() == 3); }
         }
     }
 }

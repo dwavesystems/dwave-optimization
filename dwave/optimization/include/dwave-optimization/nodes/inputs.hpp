@@ -40,6 +40,8 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
 
     explicit InputNode(std::initializer_list<ssize_t> shape)
             : InputNode(shape, std::nullopt, std::nullopt, std::nullopt) {}
+    explicit InputNode(std::span<const ssize_t> shape)
+            : InputNode(shape, std::nullopt, std::nullopt, std::nullopt) {}
 
     struct unbounded_scalar {};
     explicit InputNode(unbounded_scalar)
@@ -47,6 +49,7 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
                         std::numeric_limits<double>::infinity(), std::nullopt) {}
 
     /// Assign new values to the input node (must be the same size)
+    void assign(State& state, std::initializer_list<double> new_values) const;
     void assign(State& state, std::span<const double> new_values) const;
 
     /// @copydoc Array::buff()
@@ -71,6 +74,7 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     }
 
     /// Initialize a state with the given data as the values for the input node
+    void initialize_state(State& state, std::initializer_list<double> data) const;
     void initialize_state(State& state, std::span<const double> data) const;
 
     /// @copydoc Array::minmax()

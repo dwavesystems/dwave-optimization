@@ -1,0 +1,3 @@
+---
+features:
+  - Add ``std::initializer_list`` and ``std::span`` overloads to several ``InputNode`` methods.
