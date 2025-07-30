@@ -54,14 +54,8 @@ std::pair<double, double> MeanNode::minmax(
         }
         // Predecessor is dynamic and possibly empty. Therefore, mean will be
         // default value of 0.0 (i.e. predecessor is empty) or fall within the
-        // min/max of predecessor. Base on predecessor's min/max, we extend
-        // meannode min/max.
-        if (arr_ptr_->min() > 0) {
-            return std::make_pair(0.0, arr_ptr_->max());
-        } else if (arr_ptr_->max() < 0) {
-            return std::make_pair(arr_ptr_->min(), 0.0);
-        }
-        return std::make_pair(arr_ptr_->min(), arr_ptr_->max());
+        // min/max of predecessor. If necessary, extend meannode min/max.
+        return std::make_pair(std::min(arr_ptr_->min(), 0.0), std::max(arr_ptr_->max(), 0.0));
     });
 }
 

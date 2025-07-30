@@ -964,6 +964,9 @@ def mean(array: ArraySymbol) -> Mean:
         ...     print(m.state(0))
         5.0
 
+    See Also:
+        :class:`~dwave.optimization.symbols.Mean`: equivalent symbol.
+
     .. versionadded:: 0.6.4
     """
     return Mean(array)

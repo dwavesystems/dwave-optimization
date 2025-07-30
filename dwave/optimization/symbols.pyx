@@ -2778,6 +2778,9 @@ cdef class Mean(ArraySymbol):
         >>> type(m)
         <class 'dwave.optimization.symbols.Mean'>
     
+    See Also:
+        :meth:`~dwave.optimization.mathematical.mean`: equivalent method.
+
     .. versionadded:: 0.6.4
     """
     def __init__(self, ArraySymbol arr):
