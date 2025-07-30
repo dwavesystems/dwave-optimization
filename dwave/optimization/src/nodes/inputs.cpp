@@ -39,6 +39,9 @@ InputNode::InputNode(std::span<const ssize_t> shape, std::optional<double> min,
     }
 }
 
+void InputNode::assign(State& state, std::initializer_list<double> new_values) const {
+    return assign(state, std::span(new_values));
+}
 void InputNode::assign(State& state, std::span<const double> new_values) const {
     check_values(new_values);
 
@@ -75,6 +78,9 @@ std::span<const Update> InputNode::diff(const State& state) const noexcept {
     return data_ptr<ArrayNodeStateData>(state)->diff();
 }
 
+void InputNode::initialize_state(State& state, std::initializer_list<double> data) const {
+    return initialize_state(state, std::span(data));
+}
 void InputNode::initialize_state(State& state, std::span<const double> data) const {
     if (static_cast<ssize_t>(data.size()) != this->size()) {
         throw std::invalid_argument("data size does not match size of InputNode");
