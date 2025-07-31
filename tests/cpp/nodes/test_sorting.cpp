@@ -36,6 +36,9 @@ TEST_CASE("ArgSortNode") {
 
         graph.emplace_node<ArrayValidationNode>(argsort_ptr);
 
+        CHECK(argsort_ptr->min() == 0.0);
+        CHECK(argsort_ptr->max() == 3.0);
+
         WHEN("We initialize a state") {
             auto state = graph.initialize_state();
 
