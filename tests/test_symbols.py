@@ -501,6 +501,18 @@ class TestArgSort(utils.SymbolTests):
         with model.lock():
             yield argsort
 
+    def test_indexing(self):
+        model = Model()
+        s = model.set(5)
+        c = model.constant(range(5))
+        a = dwave.optimization.mathematical.argsort(s)
+        b = c[a]
+
+        with model.lock():
+            model.states.resize(1)
+            s.set_state(0, [1, 4, 2])
+            np.testing.assert_array_equal(b.state(), [0, 2, 1])
+
 
 class TestBasicIndexing(utils.SymbolTests):
     def generate_symbols(self):

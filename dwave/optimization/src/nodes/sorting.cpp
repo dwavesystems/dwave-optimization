@@ -74,7 +74,7 @@ std::pair<double, double> ArgSortNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return memoize(cache, [&]() {
         return std::make_pair(0.0, static_cast<double>(arr_ptr_->sizeinfo().max.value_or(
-                                           std::numeric_limits<ssize_t>::max())));
+                                           std::numeric_limits<ssize_t>::max()) - 1));
     });
 }
 
