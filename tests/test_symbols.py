@@ -2135,6 +2135,32 @@ class TestMaximum(utils.SymbolTests):
         np.testing.assert_array_equal(m.state(0), np.arange(5, 10))
 
 
+class TestMean(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        c = model.constant([2, 3, 5, 1])
+        mean = dwave.optimization.symbols.Mean(c)
+
+        with model.lock():
+            yield mean
+
+    def test(self):
+        from dwave.optimization.symbols import Mean
+        model = Model()
+        c = model.constant([2, 3, 5, 1])
+        mean = dwave.optimization.mean(c)
+
+        self.assertIsInstance(mean, Mean)
+
+    def test_state(self):
+        model = Model()
+        c = model.constant([2, 3, 5, 1])
+        mean = dwave.optimization.symbols.Mean(c)
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(mean.state(0), np.array([2.75]))
+
+
 class TestMin(utils.ReduceTests):
     empty_requires_initial = True
 

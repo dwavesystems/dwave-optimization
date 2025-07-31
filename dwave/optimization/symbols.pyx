@@ -93,6 +93,7 @@ from dwave.optimization.libcpp.nodes cimport (
     LogicalNode as cppLogicalNode,
     MaxNode as cppMaxNode,
     MaximumNode as cppMaximumNode,
+    MeanNode as cppMeanNode,
     MinNode as cppMinNode,
     MinimumNode as cppMinimumNode,
     ModulusNode as cppModulusNode,
@@ -173,6 +174,7 @@ __all__ = [
     "Logical",
     "Max",
     "Maximum",
+    "Mean",
     "Min",
     "Minimum",
     "Modulus",
@@ -2758,6 +2760,48 @@ cdef class Maximum(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(Maximum, typeid(cppMaximumNode))
+
+
+cdef class Mean(ArraySymbol):
+    """Mean value of the elements of a symbol. If symbol is empty, 
+        mean defaults to 0.0.
+
+    Examples:
+        This example takes the mean of one symbol.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import mean
+        ...
+        >>> model = Model()
+        >>> i = model.integer(4)
+        >>> m = mean(i)
+        >>> type(m)
+        <class 'dwave.optimization.symbols.Mean'>
+    
+    See Also:
+        :meth:`~dwave.optimization.mathematical.mean`: equivalent method.
+
+    .. versionadded:: 0.6.4
+    """
+    def __init__(self, ArraySymbol arr):
+        cdef _Graph model = arr.model
+
+        self.ptr = model._graph.emplace_node[cppMeanNode](arr.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
+        cdef cppMeanNode* ptr = dynamic_cast_ptr[cppMeanNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+        cdef Mean x = Mean.__new__(Mean)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppMeanNode* ptr
+
+_register(Mean, typeid(cppMeanNode))
 
 
 cdef class Min(ArraySymbol):
