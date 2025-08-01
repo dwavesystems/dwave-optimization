@@ -9,19 +9,14 @@ commands:
     parameters:
       cibw-version:
         type: string
-        default: 2.23.2
+        default: 3.1.2
     steps:
       - run:
           name: run cibuildwheel
           shell: bash -eo pipefail
           command: |
-            if [[ $OS == Windows_NT ]]; then
-              python -m pip install --user cibuildwheel==<< parameters.cibw-version >>
-              python -m cibuildwheel --output-dir dist
-            else
-              python3 -m pip install --user cibuildwheel==<< parameters.cibw-version >>
-              python3 -m cibuildwheel --output-dir dist
-            fi
+            python -m pip install --user cibuildwheel==<< parameters.cibw-version >>
+            python -m cibuildwheel --output-dir dist
 
       - store_artifacts: &store-artifacts
           path: ./dist
@@ -39,7 +34,7 @@ jobs:
         type: string
 
     docker:
-      - image: cimg/python:3.9
+      - image: cimg/python:3.13  # just need a version that can install cibuildwheel
 
     environment:
       <<: *global-environment
@@ -72,7 +67,7 @@ jobs:
 
   python-linux-debug:
     docker:
-      - image: cimg/python:3.9
+      - image: cimg/python:3.10
 
     steps:
       - checkout
@@ -111,7 +106,7 @@ jobs:
 
   python-macOS:
     macos:
-      xcode: 16.1.0
+      xcode: 16.4.0  # latest as of August 2025
     resource_class: macos.m1.medium.gen1
 
     parameters:
@@ -149,7 +144,7 @@ jobs:
 
   python-sdist:
     docker:
-      - image: cimg/python:3.9
+      - image: cimg/python:3.10
 
     steps:
       - checkout
@@ -324,7 +319,7 @@ jobs:
 
   deploy:
     docker:
-      - image: cimg/python:3.9
+      - image: cimg/python:3.10
 
     steps:
       - attach_workspace:
@@ -348,7 +343,7 @@ workflows:
           matrix:
             parameters:
               # versions are built with ~= so the patch version doesn't matter
-              python-version: &python-versions [3.9.0, 3.10.0, 3.11.0, 3.12.0, 3.13.0]
+              python-version: &python-versions [3.9.0, 3.10.0, 3.11.0, 3.12.0, 3.13.0, 3.14.0]
           filters: &tags
             # also run on tags so the deploy pipeline works
             tags:
@@ -377,7 +372,7 @@ workflows:
             - python-linux
       - python-dependencies:
           name: python-dependencies-latest
-          python-version: "3.12"  # should be updated to 3.13 once there is a non-rc image
+          python-version: "3.13"  # should be updated to 3.14 once there is a non-rc image
           dependency-versions: numpy
           only-binary: numpy
           requires:
