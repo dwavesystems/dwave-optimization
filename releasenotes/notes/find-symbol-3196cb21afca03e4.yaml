@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Added ``FirstInstanceNode`` cpp base class which returns the smallest index
+    (should it exist) of element of an array where the `condition` is true. The
+    `condition` must be defined by derived class.  Returns -1 if no such index
+    exists.
+    Added ``Find`` symbol/node which returns the smallest index (should it
+    exist) of a non-zero element of predecessor. This class is derived from
+    FirstInstanceNode.
