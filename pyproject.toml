@@ -30,7 +30,7 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     'Programming Language :: Python :: Implementation :: CPython',
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.14"  # temp
 dependencies = [
     "numpy>=1.20.0",  # numpy.typing support
 ]
@@ -49,6 +49,16 @@ build-verbosity = "1"
 skip = "pp* *musllinux*"
 before-test = "pip install -r {project}/tests/requirements.txt"
 test-command = "python -Werror -m unittest discover {project}/tests/"
+
+[[tool.cibuildwheel.overrides]]
+# We don't build an limited api wheel on Python<3.12
+select = "cp3{9,10,11}-*"
+build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=false"] }
+
+[[tool.cibuildwheel.overrides]]
+# Likewise limited API doesn't work for free-threaded builds (as of August 2025)
+select = "cp*t-*"
+build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=false"] }
 
 [tool.cibuildwheel.config-settings]
 compile-args = ["-v"]
@@ -79,3 +89,6 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
+
+[tool.meson-python]
+limited-api = true
