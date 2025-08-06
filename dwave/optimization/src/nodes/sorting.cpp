@@ -43,8 +43,9 @@ struct ArgSortNodeData : public ArrayNodeStateData {
     ArgSortNodeData(ArgSortNodeDataHelper_&& helper)
             : ArrayNodeStateData(std::move(helper.indices)), order(std::move(helper.order)) {}
 
-    /// First is the value in the original array, second is the index of the value
+    /// Pairs are <value in the original array, index of the value>
     std::set<std::pair<double, ssize_t>> order;
+    std::vector<Update> predecessor_updates;
 };
 
 ArgSortNode::ArgSortNode(ArrayNode* arr_ptr)
@@ -73,16 +74,24 @@ bool ArgSortNode::integral() const { return arr_ptr_->integral(); }
 std::pair<double, double> ArgSortNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return memoize(cache, [&]() {
-        return std::make_pair(0.0, static_cast<double>(arr_ptr_->sizeinfo().max.value_or(
-                                           std::numeric_limits<ssize_t>::max()) - 1));
+        return std::make_pair(0.0,
+                              static_cast<double>(arr_ptr_->sizeinfo().max.value_or(
+                                                          std::numeric_limits<ssize_t>::max()) -
+                                                  1));
     });
 }
 
 void ArgSortNode::propagate(State& state) const {
     auto node_data = data_ptr<ArgSortNodeData>(state);
 
+    auto pred_diff = arr_ptr_->diff(state);
+
+    // Save a copy of the predecessor's updates so we can use them in case we
+    // need to revert the changes to the ordering
+    node_data->predecessor_updates.assign(pred_diff.begin(), pred_diff.end());
+
     // Make the modifications to the std::set based on the updates.
-    for (const Update& update : arr_ptr_->diff(state)) {
+    for (const Update& update : pred_diff) {
         if (!update.placed()) {
             node_data->order.erase(std::make_pair(update.old, update.index));
         }
@@ -100,7 +109,22 @@ void ArgSortNode::propagate(State& state) const {
             std::views::transform([](const std::pair<double, ssize_t>& p) { return p.second; }));
 }
 
-void ArgSortNode::revert(State& state) const { data_ptr<ArgSortNodeData>(state)->revert(); }
+void ArgSortNode::revert(State& state) const {
+    auto node_data = data_ptr<ArgSortNodeData>(state);
+
+    // Revert the changes to `order` by going over the predecessor's previous updates in reverse
+    for (const Update& update : node_data->predecessor_updates | std::views::reverse) {
+        if (!update.placed()) {
+            node_data->order.insert(std::make_pair(update.old, update.index));
+        }
+        if (!update.removed()) {
+            node_data->order.erase(std::make_pair(update.value, update.index));
+        }
+    }
+
+    node_data->predecessor_updates.clear();
+    node_data->revert();
+}
 
 std::span<const ssize_t> ArgSortNode::shape(const State& state) const {
     return arr_ptr_->shape(state);

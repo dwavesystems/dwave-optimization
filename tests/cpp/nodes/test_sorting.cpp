@@ -137,6 +137,17 @@ TEST_CASE("ArgSortNode") {
                         CHECK_THAT(argsort_ptr->view(state), RangeEquals({0, 1}));
                     }
                 }
+
+                AND_WHEN("We revert and propagate again") {
+                    graph.revert(state);
+
+                    set_ptr->assign(state, std::vector<double>{4, 8, 7, 2});
+                    graph.propagate(state);
+
+                    THEN("The argsort's state is correct") {
+                        CHECK_THAT(argsort_ptr->view(state), RangeEquals({3, 0, 2, 1}));
+                    }
+                }
             }
         }
     }
