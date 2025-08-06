@@ -29,16 +29,11 @@ environment: &global-environment
 
 jobs:
   python-linux:
-    parameters:
-      python-version:
-        type: string
-
     docker:
       - image: cimg/python:3.13  # just need a version that can install cibuildwheel
 
     environment:
       <<: *global-environment
-      CIBW_PROJECT_REQUIRES_PYTHON: ~=<< parameters.python-version>>
       CIBW_ARCHS_LINUX: x86_64
 
     steps:
@@ -47,10 +42,6 @@ jobs:
       - run-cibuildwheel
 
   python-linux-aarch64:
-    parameters:
-      python-version:
-        type: string
-
     machine:
       image: default
 
@@ -58,7 +49,6 @@ jobs:
 
     environment:
       <<: *global-environment
-      CIBW_PROJECT_REQUIRES_PYTHON: ~=<< parameters.python-version>>
       CIBW_ARCHS_LINUX: aarch64
 
     steps:
@@ -110,14 +100,11 @@ jobs:
     resource_class: macos.m1.medium.gen1
 
     parameters:
-      python-version:
-        type: string
       cibw-arch:
         type: string
 
     environment:
       <<: *global-environment
-      CIBW_PROJECT_REQUIRES_PYTHON: ~=<< parameters.python-version>>
       CIBW_ARCHS_MACOS: << parameters.cibw-arch >>
 
     steps:
@@ -126,16 +113,11 @@ jobs:
       - run-cibuildwheel
 
   python-windows:
-    parameters:
-      python-version:
-        type: string
-
     executor:
       name: win/default
 
     environment:
       <<: *global-environment
-      CIBW_PROJECT_REQUIRES_PYTHON: ~=<< parameters.python-version>>
       CIBW_ARCHS_WINDOWS: AMD64
 
     steps:
@@ -336,45 +318,24 @@ jobs:
             python -m pip install twine
             twine upload -u "$PYPI_USERNAME" -p "$PYPI_PASSWORD" --skip-existing ./dist/*
 
-  test-limited-api:
-    docker:
-      - image: cimg/python:3.13
-
-    environment:
-      <<: *global-environment
-      CIBW_ARCHS_LINUX: x86_64
-
-    steps:
-      - checkout
-      - setup_remote_docker
-      - run-cibuildwheel
-
 workflows:
   tests:
     jobs:
-      - test-limited-api
-      # - python-linux: &build-linux
-      #     matrix:
-      #       parameters:
-      #         # versions are built with ~= so the patch version doesn't matter
-      #         python-version: &python-versions [3.9.0, 3.10.0, 3.11.0, 3.12.0, 3.13.0, 3.14.0]
-      #     filters: &tags
-      #       # also run on tags so the deploy pipeline works
-      #       tags:
-      #         only: &version-string /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
-      # - python-linux-aarch64: *build-linux
+      - python-linux:
+          filters: &tags
+            # also run on tags so the deploy pipeline works
+            tags:
+              only: &version-string /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
+      - python-linux-aarch64:
+          filters: *tags
       # - python-linux-debug
-      # - python-macOS:
-      #     matrix:
-      #       parameters:
-      #         python-version: *python-versions
-      #         cibw-arch: [x86_64, arm64]
-      #     filters: *tags
-      # - python-windows:
-      #     matrix:
-      #       parameters:
-      #         python-version: *python-versions
-      #     filters: *tags
+      - python-macOS:
+          matrix:
+            parameters:
+              cibw-arch: [x86_64, arm64]
+          filters: *tags
+      - python-windows:
+          filters: *tags
       # - python-sdist:
       #     filters: *tags
       # - python-dependencies:

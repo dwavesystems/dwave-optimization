@@ -50,23 +50,11 @@ skip = "pp* *musllinux*"
 before-test = "pip install -r {project}/tests/requirements.txt"
 test-command = "python -Werror -m unittest discover {project}/tests/"
 
-[[tool.cibuildwheel.overrides]]
-# We don't build an limited api wheel on Python<3.12
-select = "cp3{9,10,11}-*"
-build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=false"] }
-
-[[tool.cibuildwheel.overrides]]
-# Likewise limited API doesn't work for free-threaded builds (as of August 2025)
-select = "cp*t-*"
-build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=false"] }
-
 [tool.cibuildwheel.config-settings]
 compile-args = ["-v"]
 
 [tool.cibuildwheel.linux]
 archs = "x86_64 aarch64"
-manylinux-x86_64-image = "manylinux_2_28"
-manylinux-aarch64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.macos]
 # We follow NumPy and don't build universal wheels, see https://github.com/numpy/numpy/pull/20787
@@ -78,7 +66,29 @@ environment = "MACOSX_DEPLOYMENT_TARGET=10.13"
 [tool.cibuildwheel.windows]
 archs = "AMD64"
 before-build = "pip install delvewheel>=1.4.0"
-repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg dwave"
+repair-wheel-command = [
+  "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg dwave",
+]
+
+[[tool.cibuildwheel.overrides]]
+# We don't build an limited api wheel on Python<3.12
+select = "cp3{9,10,11}-*"
+build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=false"] }
+
+[[tool.cibuildwheel.overrides]]
+# Likewise limited API doesn't work for free-threaded builds (as of August 2025)
+select = "cp*t-*"
+build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=false"] }
+
+[[tool.cibuildwheel.overrides]]
+# For the other versions though, we *do* want to run abi3audit. Unfortunately we need to call
+# them out by version explicitly. Luckily only the first will actually be run so if we forget
+# to keep the updated it should be fine.
+select = "cp3{12,13,14}-*"
+inherit.before-build = "append"
+before-build = ["pip install abi3audit"]
+inherit.repair-wheel-command = "append"
+repair-wheel-command = ["abi3audit --strict --report {wheel}"]
 
 [tool.coverage.run]
 source = ["dwave/optimization"]
