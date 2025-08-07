@@ -82,6 +82,7 @@ from dwave.optimization.libcpp.nodes cimport (
     ExtractNode as cppExtractNode,
     InputNode as cppInputNode,
     IntegerNode as cppIntegerNode,
+    IsInNode as cppIsInNode,
     LessEqualNode as cppLessEqualNode,
     LinearProgramFeasibleNode as cppLinearProgramFeasibleNode,
     LinearProgramNode as cppLinearProgramNode,
@@ -164,6 +165,7 @@ __all__ = [
     "Extract",
     "Input",
     "IntegerVariable",
+    "IsIn",
     "LessEqual",
     "LinearProgram",
     "LinearProgramFeasible",
@@ -2274,6 +2276,66 @@ cdef class IntegerVariable(ArraySymbol):
     cdef cppIntegerNode* ptr
 
 _register(IntegerVariable, typeid(cppIntegerNode))
+
+
+cdef class IsIn(ArraySymbol):
+    """ Determine element-wise containment between two symbols. Given two
+    symbols: element and test_elements, returns an array of the same shape
+    as element such that element[index] = True if element[index] is in
+    test_elements and False otherwise.
+
+    Example:
+        These examples determines the element-wise containment of one symbol
+        (element) with another symbol (test_elements).
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.symbols import IsIn
+        >>> model = Model()
+        >>> model.states.resize(1)
+        >>> element = model.constant([1, 2, 3])
+        >>> test_elements = model.constant([3, 4, 5, 6, 7])
+        >>> contains = IsIn(element, test_elements)
+        >>> with model.lock():
+        ...     print(contains.state(0))
+        [0. 0. 1.]
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import isin
+        ...
+        >>> model = Model()
+        >>> element = model.integer(2)
+        >>> test_elements = model.integer(4)
+        >>> contains = isin(element, test_elements)
+        >>> type(contains)
+        <class 'dwave.optimization.symbols.IsIn'>
+
+    See Also:
+        :meth:`~dwave.optimization.mathematical.isin`: equivalent method.
+
+    .. versionadded:: 0.6.5
+    """
+    def __init__(self, ArraySymbol element, ArraySymbol test_elements):
+        cdef _Graph model = element.model
+
+        if element.model is not test_elements.model:
+            raise ValueError("element and test_elements do not share the same underlying model")
+
+        cdef cppIsInNode* ptr = model._graph.emplace_node[cppIsInNode](element.array_ptr, test_elements.array_ptr)
+        self.initialize_arraynode(model, ptr)
+
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
+        cdef cppIsInNode* ptr = dynamic_cast_ptr[cppIsInNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+        cdef IsIn x = IsIn.__new__(IsIn)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppIsInNode* ptr
+
+_register(IsIn, typeid(cppIsInNode))
 
 
 cdef class LessEqual(ArraySymbol):
