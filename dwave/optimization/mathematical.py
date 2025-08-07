@@ -32,6 +32,7 @@ from dwave.optimization.symbols import (
     Exp,
     Expit,
     Extract,
+    IsIn,
     LinearProgram,
     LinearProgramFeasible,
     LinearProgramObjectiveValue,
@@ -77,6 +78,7 @@ __all__ = [
     "expit",
     "extract",
     "hstack",
+    "isin",
     "linprog",
     "log",
     "logical",
@@ -711,6 +713,37 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
         return concatenate(arrays, 0)
     else:
         return concatenate(arrays, 1)
+
+
+def isin(element: ArraySymbol, test_elements: ArraySymbol) -> IsIn:
+    """ Determine element-wise containment between two symbols. Given two
+    symbols: element and test_elements, returns an array of the same shape
+    as element such that element[index] = True if element[index] is in
+    test_elements and False otherwise.
+
+    Args:
+        element: Input array.
+        test_elements: Input array containing the values against which to test
+                       each value of element. 
+
+    Examples:
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import isin
+        >>> model = Model()
+        >>> model.states.resize(1)
+        >>> element = model.constant([1.3, -1.0, 3.0])
+        >>> test_elements = model.constant([3.0, -1.1, -2.0, 4.1, -1.0])
+        >>> contains = isin(element, test_elements)
+        >>> with model.lock():
+        ...     print(contains.state(0))
+        [0. 1. 1.]
+
+    See Also:
+        :class:`~dwave.optimization.IsIn`: equivalent symbol.
+
+    .. versionadded:: 0.6.5
+    """
+    return IsIn(element, test_elements)
 
 
 class LPResult:
