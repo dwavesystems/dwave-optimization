@@ -41,6 +41,7 @@ dwave_optimization_src = [
     'dwave/optimization/src/nodes/numbers.cpp',
     'dwave/optimization/src/nodes/quadratic_model.cpp',
     'dwave/optimization/src/nodes/reduce.cpp',
+    'dwave/optimization/src/nodes/set_routines.cpp',
     'dwave/optimization/src/nodes/softmax.cpp',
     'dwave/optimization/src/nodes/sorting.cpp',
     'dwave/optimization/src/nodes/statistics.cpp',
