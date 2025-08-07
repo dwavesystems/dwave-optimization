@@ -266,6 +266,11 @@ cdef extern from "dwave-optimization/nodes/reduce.hpp" namespace "dwave::optimiz
         optional[double] init
 
 
+cdef extern from "dwave-optimization/nodes/set_routines.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass IsInNode(ArrayNode):
+        pass
+
+
 cdef extern from "dwave-optimization/nodes/softmax.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass SoftMaxNode(ArrayNode):
         pass
