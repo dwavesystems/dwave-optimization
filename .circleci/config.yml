@@ -238,7 +238,7 @@ jobs:
           command: |
             python -m venv env_latest
             . env_latest/bin/activate
-            pip install dist/*optimization*cp313*.whl
+            pip install dist/*optimization*abi3*.whl
       - run:
           name: save models with latest and load with 0.5.2
           command: |
@@ -328,7 +328,7 @@ workflows:
               only: &version-string /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
       - python-linux-aarch64:
           filters: *tags
-      # - python-linux-debug
+      - python-linux-debug
       - python-macOS:
           matrix:
             parameters:
@@ -336,47 +336,47 @@ workflows:
           filters: *tags
       - python-windows:
           filters: *tags
-      # - python-sdist:
-      #     filters: *tags
-      # - python-dependencies:
-      #     name: python-dependencies-oldest
-      #     python-version: "3.9"
-      #     dependency-versions: numpy==1.20.0
-      #     only-binary: numpy
-      #     requires:
-      #       - python-linux
-      # - python-dependencies:
-      #     name: python-dependencies-latest
-      #     python-version: "3.13"  # should be updated to 3.14 once there is a non-rc image
-      #     dependency-versions: numpy
-      #     only-binary: numpy
-      #     requires:
-      #       - python-linux
-      # - cpp-gcc:
-      #     name: cpp-gcc-<< matrix.gcc-version >>-<< matrix.cpp-standard >>
-      #     matrix:
-      #       parameters:
-      #         gcc-version: ["11", "12", "13", "14", "15"]
-      #         cpp-standard: ["c++20", "c++23"]
-      # - cpp-macOS:
-      #     matrix:
-      #       parameters:
-      #         cpp-standard: ["c++20", "c++23"]
-      # - serialization:
-      #     requires:
-      #       - python-linux
-      # - docs:
-      #     requires:
-      #       - python-linux
-      # - deploy:
-      #     filters:
-      #       tags:
-      #         only: *version-string
-      #       branches:
-      #         ignore: /.*/
-      #     requires:
-      #       - python-linux
-      #       - python-linux-aarch64
-      #       - python-macOS
-      #       - python-windows
-      #       - python-sdist
+      - python-sdist:
+          filters: *tags
+      - python-dependencies:
+          name: python-dependencies-oldest
+          python-version: "3.9"
+          dependency-versions: numpy==1.20.0
+          only-binary: numpy
+          requires:
+            - python-linux
+      - python-dependencies:
+          name: python-dependencies-latest
+          python-version: "3.13"  # should be updated to 3.14 once there is a non-rc image
+          dependency-versions: numpy
+          only-binary: numpy
+          requires:
+            - python-linux
+      - cpp-gcc:
+          name: cpp-gcc-<< matrix.gcc-version >>-<< matrix.cpp-standard >>
+          matrix:
+            parameters:
+              gcc-version: ["11", "12", "13", "14", "15"]
+              cpp-standard: ["c++20", "c++23"]
+      - cpp-macOS:
+          matrix:
+            parameters:
+              cpp-standard: ["c++20", "c++23"]
+      - serialization:
+          requires:
+            - python-linux
+      - docs:
+          requires:
+            - python-linux
+      - deploy:
+          filters:
+            tags:
+              only: *version-string
+            branches:
+              ignore: /.*/
+          requires:
+            - python-linux
+            - python-linux-aarch64
+            - python-macOS
+            - python-windows
+            - python-sdist

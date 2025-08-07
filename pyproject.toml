@@ -66,19 +66,19 @@ environment = "MACOSX_DEPLOYMENT_TARGET=10.13"
 [tool.cibuildwheel.windows]
 archs = "AMD64"
 repair-wheel-command = [
-  "pip install delvewheel",
-  "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg dwave",
+    "pip install delvewheel",
+    "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg dwave",
 ]
 
 [[tool.cibuildwheel.overrides]]
 # For Python3.12+, rather than building individual wheels we build an abi3
 # wheel. 313t and 314t do not support abi wheels yet.
-select = "cp3{12,13,14}-*"
+select = "cp31[!01]-*"  # uses fnmatch, will fail for 3.20+ but good enough for now
 build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=true"] }
 inherit.repair-wheel-command = "append"
 repair-wheel-command = [
-  "pip install abi3audit",
-  "abi3audit --strict --report {wheel}",
+    "pip install abi3audit",
+    "abi3audit --strict --report {wheel}",
 ]
 
 [tool.coverage.run]
