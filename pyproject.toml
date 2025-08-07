@@ -65,30 +65,21 @@ environment = "MACOSX_DEPLOYMENT_TARGET=10.13"
 
 [tool.cibuildwheel.windows]
 archs = "AMD64"
-before-build = "pip install delvewheel>=1.4.0"
 repair-wheel-command = [
+  "pip install delvewheel",
   "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg dwave",
 ]
 
 [[tool.cibuildwheel.overrides]]
-# We don't build an limited api wheel on Python<3.12
-select = "cp3{9,10,11}-*"
-build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=false"] }
-
-[[tool.cibuildwheel.overrides]]
-# Likewise limited API doesn't work for free-threaded builds (as of August 2025)
-select = "cp*t-*"
-build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=false"] }
-
-[[tool.cibuildwheel.overrides]]
-# For the other versions though, we *do* want to run abi3audit. Unfortunately we need to call
-# them out by version explicitly. Luckily only the first will actually be run so if we forget
-# to keep the updated it should be fine.
+# For Python3.12+, rather than building individual wheels we build an abi3
+# wheel. 313t and 314t do not support abi wheels yet.
 select = "cp3{12,13,14}-*"
-inherit.before-build = "append"
-before-build = ["pip install abi3audit"]
+build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=true"] }
 inherit.repair-wheel-command = "append"
-repair-wheel-command = ["abi3audit --strict --report {wheel}"]
+repair-wheel-command = [
+  "pip install abi3audit",
+  "abi3audit --strict --report {wheel}",
+]
 
 [tool.coverage.run]
 source = ["dwave/optimization"]
@@ -100,5 +91,8 @@ exclude_lines = [
     "if __name__ == .__main__.:",
 ]
 
+# This is, by default, overriden in meson.build. We then override the override
+# in cibuildwheel. It's a bit convoluted, but (as of August 2025) it's the only
+# way to get it to work, see https://github.com/mesonbuild/meson-python/issues/787
 [tool.meson-python]
 limited-api = true
