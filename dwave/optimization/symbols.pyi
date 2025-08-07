@@ -84,6 +84,10 @@ class Constant(ArraySymbol):
     def __le__(self, rhs: numpy.typing.ArrayLike) -> numpy.typing.NDArray[numpy.bool]: ...
 
 
+class Cos(ArraySymbol):
+    ...
+
+
 class Copy(ArraySymbol):
     ...
 
@@ -251,6 +255,10 @@ class Rint(ArraySymbol):
 
 class SetVariable(ArraySymbol):
     def set_state(self, index: int, values: numpy.typing.ArrayLike): ...
+
+
+class Sin(ArraySymbol):
+    ...
 
 
 class Size(ArraySymbol):

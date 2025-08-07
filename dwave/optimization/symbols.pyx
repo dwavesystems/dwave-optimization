@@ -71,6 +71,7 @@ from dwave.optimization.libcpp.nodes cimport (
     ConcatenateNode as cppConcatenateNode,
     ConstantNode as cppConstantNode,
     CopyNode as cppCopyNode,
+    CosNode as cppCosNode,
     DisjointBitSetNode as cppDisjointBitSetNode,
     DisjointBitSetsNode as cppDisjointBitSetsNode,
     DisjointListNode as cppDisjointListNode,
@@ -116,6 +117,7 @@ from dwave.optimization.libcpp.nodes cimport (
     ResizeNode as cppResizeNode,
     SafeDivideNode as cppSafeDivideNode,
     SetNode as cppSetNode,
+    SinNode as cppSinNode,
     SizeNode as cppSizeNode,
     SubtractNode as cppSubtractNode,
     RintNode as cppRintNode,
@@ -153,6 +155,7 @@ __all__ = [
     "Concatenate",
     "Constant",
     "Copy",
+    "Cos",
     "DisjointBitSets",
     "DisjointBitSet",
     "DisjointLists",
@@ -194,6 +197,7 @@ __all__ = [
     "QuadraticModel",
     "Reshape",
     "Resize",
+    "Sin",
     "Subtract",
     "SetVariable",
     "Size",
@@ -1415,6 +1419,23 @@ cdef class Copy(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(Copy, typeid(cppCopyNode))
+
+
+cdef class Cos(ArraySymbol):
+    """Cosine element-wise on a symbol.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.cos`: equivalent function.
+
+    .. versionadded:: 0.6.5
+    """
+    def __init__(self, ArraySymbol x):
+        cdef _Graph model = x.model
+
+        cdef cppCosNode* ptr = model._graph.emplace_node[cppCosNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
+
+_register(Cos, typeid(cppCosNode))
 
 
 cdef class DisjointBitSets(Symbol):
@@ -4010,6 +4031,23 @@ cdef class SafeDivide(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(SafeDivide, typeid(cppSafeDivideNode))
+
+
+cdef class Sin(ArraySymbol):
+    """Sine element-wise on a symbol.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.sin`: equivalent function.
+
+    .. versionadded:: 0.6.5
+    """
+    def __init__(self, ArraySymbol x):
+        cdef _Graph model = x.model
+
+        cdef cppSinNode* ptr = model._graph.emplace_node[cppSinNode](x.array_ptr)
+        self.initialize_arraynode(model, ptr)
+
+_register(Sin, typeid(cppSinNode))
 
 
 cdef class Square(ArraySymbol):

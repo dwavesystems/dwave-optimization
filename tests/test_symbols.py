@@ -1042,6 +1042,14 @@ class TestCopy(utils.SymbolTests):
             np.testing.assert_array_equal(copy.state(), np.arange(25).reshape(5, 5)[::2, 1:4])
 
 
+class TestCos(utils.UnaryOpTests):
+    def op(self, x):
+        return np.cos(x)
+
+    def symbol_op(self, x):
+        return dwave.optimization.cos(x)
+
+
 class TestDisjointBitSetsVariable(utils.SymbolTests):
     def test_inequality(self):
         # TODO re-enable this once equality has been fixed
@@ -2989,6 +2997,14 @@ class TestSafeDivide(utils.BinaryOpTests):
         model.states.resize(1)
         with model.lock():
             np.testing.assert_array_equal(x.state(), [-.5, 0, 0, -2])
+
+
+class TestSin(utils.UnaryOpTests):
+    def op(self, x):
+        return np.sin(x)
+
+    def symbol_op(self, x):
+        return dwave.optimization.sin(x)
 
 
 class TestSquare(utils.UnaryOpTests):

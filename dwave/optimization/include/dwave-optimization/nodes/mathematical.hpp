@@ -35,6 +35,11 @@ struct abs {
 };
 
 template <class T>
+struct cos {
+    auto operator()(const T& num) const { return std::cos(num); }
+};
+
+template <class T>
 struct exp {
     constexpr auto operator()(const T& x) const { return std::exp(x); }
 };
@@ -104,6 +109,11 @@ struct safe_divides {
         if (!rhs) return 0;
         return lhs / rhs;
     }
+};
+
+template <class T>
+struct sin {
+    auto operator()(const T& num) const { return std::sin(num); }
 };
 
 template <class T>
@@ -408,6 +418,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
 };
 
 using AbsoluteNode = UnaryOpNode<functional::abs<double>>;
+using CosNode = UnaryOpNode<functional::cos<double>>;
 using ExpitNode = UnaryOpNode<functional::expit<double>>;
 using ExpNode = UnaryOpNode<functional::exp<double>>;
 using LogNode = UnaryOpNode<functional::log<double>>;
@@ -415,6 +426,7 @@ using LogicalNode = UnaryOpNode<functional::logical<double>>;
 using NegativeNode = UnaryOpNode<std::negate<double>>;
 using NotNode = UnaryOpNode<std::logical_not<double>>;
 using RintNode = UnaryOpNode<functional::rint<double>>;
+using SinNode = UnaryOpNode<functional::sin<double>>;
 using SquareNode = UnaryOpNode<functional::square<double>>;
 using SquareRootNode = UnaryOpNode<functional::square_root<double>>;
 

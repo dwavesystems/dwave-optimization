@@ -24,6 +24,7 @@ from dwave.optimization.symbols import (
     ArgSort,
     BSpline,
     Concatenate,
+    Cos,
     Divide,
     Exp,
     Expit,
@@ -49,6 +50,7 @@ from dwave.optimization.symbols import (
     Resize,
     Rint,
     SafeDivide,
+    Sin,
     SquareRoot,
     Where,
     Xor,
@@ -63,6 +65,7 @@ __all__ = [
     "atleast_2d",
     "bspline",
     "concatenate",
+    "cos",
     "divide",
     "exp",
     "expit",
@@ -84,6 +87,7 @@ __all__ = [
     "resize",
     "rint",
     "safe_divide",
+    "sin",
     "sqrt",
     "stack",
     "vstack",
@@ -411,6 +415,36 @@ def concatenate(arrays: typing.Sequence[ArraySymbol],
     .. versionadded:: 0.4.3
     """
     return Concatenate(arrays, axis=axis)
+
+
+def cos(x) -> Cos:
+    """Return an element-wise trigonometric cosine on the given symbol.
+
+    Args:
+        x: Array giving the angles, in radians.
+
+    Returns:
+        A symbol that propagates the trigonometric cosine of the values in ``x``.
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Cos`: equivalent symbol.
+
+    Examples:
+        >>> import numpy as np
+        >>> from dwave.optimization import Model, cos
+        ...
+        >>> model = Model()
+        >>> x = model.constant([0, np.pi / 2])
+        >>> y = cos(x)
+        ...
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(y.state())
+        [1.000000e+00 6.123234e-17]
+
+    .. versionadded:: 0.6.5
+    """
+    return Cos(x)
 
 
 def divide(x1: ArraySymbol, x2: ArraySymbol) -> Divide:
@@ -1270,6 +1304,36 @@ def safe_divide(x1: ArraySymbol, x2: ArraySymbol) -> SafeDivide:
     .. versionadded:: 0.6.2
     """
     return SafeDivide(x1, x2)
+
+
+def sin(x) -> Sin:
+    """Return an element-wise trigonometric sine on the given symbol.
+
+    Args:
+        x: Array giving the angles, in radians.
+
+    Returns:
+        A symbol that propagates the trigonometric sine of the values in ``x``.
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Sin`: equivalent symbol.
+
+    Examples:
+        >>> import numpy as np
+        >>> from dwave.optimization import Model, sin
+        ...
+        >>> model = Model()
+        >>> x = model.constant([0, np.pi / 2])
+        >>> y = sin(x)
+        ...
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(y.state())
+        [0. 1.]
+
+    .. versionadded:: 0.6.5
+    """
+    return Sin(x)
 
 
 def sqrt(x: ArraySymbol) -> SquareRoot:
