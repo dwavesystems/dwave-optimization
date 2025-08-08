@@ -1372,7 +1372,7 @@ def softmax(array: ArraySymbol) -> SoftMax:
     See Also:
         :class:`~dwave.optimization.symbols.SoftMax`: equivalent symbol.
 
-    .. versionadded:: 0.6.4
+    .. versionadded:: 0.6.5
     """
     return SoftMax(array)
 
