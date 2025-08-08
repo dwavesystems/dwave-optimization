@@ -91,6 +91,18 @@ TEST_CASE("IsInNode") {
                     THEN("The isin state is correct") {
                         CHECK_THAT(isin_ptr->view(state), RangeEquals({0.0, 0.0, 1.0}));
                     }
+                    AND_WHEN("We commit, make changes to test_elements integer node, and propagate") {
+                        graph.commit(state);
+                        i1_ptr->set_value(state, 5, 3);
+                        i1_ptr->set_value(state, 5, 10);
+                        // i1_ptr should now be [5, 2, 7, 4, 2, 10]
+
+                        graph.propagate(state);
+
+                        THEN("The isin state is correct") {
+                            CHECK_THAT(isin_ptr->view(state), RangeEquals({0.0, 0.0, 1.0}));
+                        }
+                    }
                 }
             }
         }
