@@ -155,7 +155,6 @@ class PutNode : public ArrayOutputMixin<ArrayNode> {
     const Array* values_ptr_;
 };
 
-
 /// Propagates the values of its predecessor, interpreted into a different shape.
 class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
  public:
@@ -182,6 +181,9 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
 
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
     /// @copydoc Array::integral()
     bool integral() const override;
 
@@ -189,8 +191,24 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
+    /// @copydoc Node::initialize_state()
+    void propagate(State& state) const override;
+
     /// @copydoc Node::revert()
     void revert(State& state) const override;
+
+    using ArrayOutputMixin::shape;
+
+    /// @copydoc Array::shape()
+    std::span<const ssize_t> shape(const State& state) const override;
+
+    using ArrayOutputMixin::size;
+
+    /// @copydoc Array::size()
+    ssize_t size(const State& state) const override;
+
+    /// @copydoc Array::size_diff()
+    ssize_t size_diff(const State& state) const override;
 
  private:
     // we could dynamically cast each time, but it's easier to just keep separate
