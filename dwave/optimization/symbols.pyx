@@ -4051,7 +4051,20 @@ cdef class SoftMax(ArraySymbol):
     """Softmax of a symbol.
 
     Example:
-        This example computes the softmax of one symbol.
+        These examples compute the softmax of one symbol.
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.symbols import SoftMax
+        >>> import numpy as np
+        ...
+        >>> model = Model()
+        >>> model.states.resize(1)
+        >>> c = model.constant([1, 2, 3])
+        >>> sm = SoftMax(c)
+        >>> expected = np.array([0.09003057, 0.24472847, 0.66524096])
+        >>> with model.lock():
+        ...     print(np.isclose(sm.state(0), expected).all())
+        True
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import softmax
@@ -4065,7 +4078,7 @@ cdef class SoftMax(ArraySymbol):
     See Also:
         :meth:`~dwave.optimization.mathematical.softmax`: equivalent method.
 
-    .. versionadded:: 0.6.4
+    .. versionadded:: 0.6.5
     """
     def __init__(self, ArraySymbol arr):
         cdef _Graph model = arr.model

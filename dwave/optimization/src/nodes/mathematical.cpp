@@ -17,6 +17,7 @@
 #include <ranges>
 
 #include "_state.hpp"
+#include "dwave-optimization/typing.hpp"
 #include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
@@ -1689,7 +1690,8 @@ struct SoftMaxNodeDataHelper_ {
     }
 
     std::vector<double> values;
-    double denominator, prior_denominator;
+    double denominator;
+    double prior_denominator;
 };
 
 struct SoftMaxNodeStateData : public ArrayNodeStateData {
@@ -1701,7 +1703,8 @@ struct SoftMaxNodeStateData : public ArrayNodeStateData {
               denominator(helper.denominator),
               prior_denominator(helper.prior_denominator) {}
 
-    double denominator, prior_denominator;
+    double denominator;
+    double prior_denominator;
 };
 
 SoftMaxNode::SoftMaxNode(ArrayNode* arr_ptr)
@@ -1747,25 +1750,44 @@ void SoftMaxNode::propagate(State& state) const {
     auto node_data = data_ptr<SoftMaxNodeStateData>(state);
     const double prior_denominator = node_data->denominator;
     double new_denominator = prior_denominator;
+    std::vector<double> temp_exp(arr_ptr_->size(state));
+    std::vector<ssize_t> need_denominator(arr_ptr_->size(state));
 
     for (const Update& u : arr_updates) {
-        // Offset by contribution to prior_denominator
-        // When possible, avoid calling exp() function by multiplying
-        // elements by their denominator.
+        // Offset by contribution to prior_denominator When possible, avoid
+        // calling exp() function by multiplying elements by their denominator.
         if (u.removed()) {
             new_denominator -= node_data->get(u.index) * prior_denominator;
         } else if (u.placed()) {
             double exp_val = std::exp(u.value);
             new_denominator += exp_val;
-            // Temporarily store in format of unmodified elements. Will multiply
-            // all elements by prior_denominator / new_denominator after.
-            node_data->set(u.index, exp_val / prior_denominator, true);
+            // Store to save recomputing exp(). Will divide by denominator later.
+            temp_exp[u.index] = exp_val;
+            need_denominator[u.index] = 1;
         } else {
             double exp_val = std::exp(u.value);
             new_denominator += exp_val - node_data->get(u.index) * prior_denominator;
-            // Temporarily store in format of unmodified elements. Will multiply
-            // all elements by prior_denominator / new_denominator after.
-            node_data->set(u.index, exp_val / prior_denominator, true);
+            // Store to save recomputing exp(). Will divide by denominator later.
+            temp_exp[u.index] = exp_val;
+            need_denominator[u.index] = 1;
+        }
+    }
+
+    // TODO: Define allowable epsilon of difference when comparing doubles.
+    if (prior_denominator != new_denominator) {
+        const double scale = prior_denominator / new_denominator;
+        for (ssize_t i = 0, stop = arr_ptr_->size(state); i < stop; ++i) {
+            if (need_denominator[i]) {
+                node_data->set(i, temp_exp[i] / new_denominator, true);
+            } else {
+                node_data->set(i, node_data->get(i) * scale);
+            }
+        }
+    } else {
+        for (ssize_t i = 0, stop = arr_ptr_->size(state); i < stop; ++i) {
+            if (need_denominator[i]) {
+                node_data->set(i, temp_exp[i] / new_denominator, true);
+            }
         }
     }
 
@@ -1774,14 +1796,6 @@ void SoftMaxNode::propagate(State& state) const {
         node_data->trim_to(arr_ptr_->size(state));
     }
 
-    // TODO: Define allowable epsilon of difference when comparing doubles.
-    if (prior_denominator != new_denominator) {
-        // Scale all elements.
-        const double scale = prior_denominator / new_denominator;
-        for (ssize_t i = 0, stop = node_data->size(); i < stop; ++i) {
-            node_data->set(i, node_data->get(i) * scale);
-        }
-    }
     node_data->denominator = new_denominator;
     node_data->prior_denominator = prior_denominator;
 }
