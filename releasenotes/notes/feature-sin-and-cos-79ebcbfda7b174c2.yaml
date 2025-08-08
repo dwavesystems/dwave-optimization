@@ -1,0 +1,4 @@
+---
+features:
+  - Add ``Cos`` and ``Sin`` symbols to support trigonometric sine and cosine.
+  - Add C++ ``CosNode`` and ``SinNode`` to support trigonometric sine and cosine.

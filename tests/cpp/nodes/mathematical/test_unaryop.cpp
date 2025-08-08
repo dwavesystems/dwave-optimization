@@ -28,9 +28,9 @@ using Catch::Matchers::RangeEquals;
 namespace dwave::optimization {
 
 // NOTE: square_root and log should also be included but the templated tests need to be updated first.
-TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::exp<double>,
-                   functional::expit<double>,
-                   functional::logical<double>, functional::rint<double>, functional::square<double>,
+TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::cos<double>,
+                   functional::exp<double>, functional::expit<double>, functional::logical<double>,
+                   functional::rint<double>, functional::sin<double>, functional::square<double>,
                    std::negate<double>, std::logical_not<double>) {
     auto graph = Graph();
 
@@ -262,6 +262,21 @@ TEST_CASE("UnaryOpNode - AbsoluteNode") {
         }
 
         THEN("abs(i) is integral") { CHECK(abs_ptr->integral()); }
+    }
+}
+
+TEST_CASE("UnaryOpNode - CosNode and SinNode") {
+    auto graph = Graph();
+
+    GIVEN("x with min/max of -100/+100, y = cos(x), z = sin(x)") {
+        auto x = graph.emplace_node<ConstantNode>(std::vector<double>{-100, 1.5, +100});
+        auto y = graph.emplace_node<CosNode>(x);
+        auto z = graph.emplace_node<SinNode>(x);
+
+        CHECK(!y->integral());
+        CHECK(!z->integral());
+        CHECK(y->minmax() == std::pair<double, double>{-1, +1});
+        CHECK(z->minmax() == std::pair<double, double>{-1, +1});
     }
 }
 

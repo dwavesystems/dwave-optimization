@@ -1719,6 +1719,10 @@ bool UnaryOpNode<functional::abs<double>>::integral() const {
     return array_ptr_->integral();
 }
 template <>
+bool UnaryOpNode<functional::cos<double>>::integral() const {
+    return false;
+}
+template <>
 bool UnaryOpNode<functional::exp<double>>::integral() const {
     return false;
 }
@@ -1737,6 +1741,10 @@ bool UnaryOpNode<std::negate<double>>::integral() const {
 template <>
 bool UnaryOpNode<functional::rint<double>>::integral() const {
     return true;
+}
+template <>
+bool UnaryOpNode<functional::sin<double>>::integral() const {
+    return false;
 }
 template <>
 bool UnaryOpNode<functional::square<double>>::integral() const {
@@ -1760,6 +1768,13 @@ std::pair<double, double> UnaryOpNode<UnaryOp>::minmax(
     using result_type = typename std::invoke_result<UnaryOp, double&>::type;
     if constexpr (std::same_as<result_type, bool>) {
         return {false, true};
+    }
+
+    // Likewise for sin/cos the minmax is -1/+1. We could tighten it if the domain
+    // of our predecessor is smaller than 2pi, but let's keep it simple for now
+    if constexpr (std::same_as<UnaryOp, functional::cos<double>> ||
+                  std::same_as<UnaryOp, functional::sin<double>>) {
+        return {-1, +1};
     }
 
     // Otherwise the min and max depend on the predecessor, so we want to cache
@@ -1867,11 +1882,13 @@ SizeInfo UnaryOpNode<UnaryOp>::sizeinfo() const {
 }
 
 template class UnaryOpNode<functional::abs<double>>;
+template class UnaryOpNode<functional::cos<double>>;
 template class UnaryOpNode<functional::exp<double>>;
 template class UnaryOpNode<functional::expit<double>>;
 template class UnaryOpNode<functional::log<double>>;
 template class UnaryOpNode<functional::logical<double>>;
 template class UnaryOpNode<functional::rint<double>>;
+template class UnaryOpNode<functional::sin<double>>;
 template class UnaryOpNode<functional::square<double>>;
 template class UnaryOpNode<functional::square_root<double>>;
 template class UnaryOpNode<std::negate<double>>;
