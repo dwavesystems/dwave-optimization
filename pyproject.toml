@@ -55,8 +55,6 @@ compile-args = ["-v"]
 
 [tool.cibuildwheel.linux]
 archs = "x86_64 aarch64"
-manylinux-x86_64-image = "manylinux_2_28"
-manylinux-aarch64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.macos]
 # We follow NumPy and don't build universal wheels, see https://github.com/numpy/numpy/pull/20787
@@ -67,8 +65,21 @@ environment = "MACOSX_DEPLOYMENT_TARGET=10.13"
 
 [tool.cibuildwheel.windows]
 archs = "AMD64"
-before-build = "pip install delvewheel>=1.4.0"
-repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg dwave"
+repair-wheel-command = [
+    "pip install delvewheel",
+    "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg dwave",
+]
+
+[[tool.cibuildwheel.overrides]]
+# For Python3.12+, rather than building individual wheels we build an abi3
+# wheel. 313t and 314t do not support abi wheels yet.
+select = "cp31[!01]-*"  # uses fnmatch, will fail for 3.20+ but good enough for now
+build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=true"] }
+inherit.repair-wheel-command = "append"
+repair-wheel-command = [
+    "pip install abi3audit",
+    "abi3audit --strict --report {wheel}",
+]
 
 [tool.coverage.run]
 source = ["dwave/optimization"]
@@ -79,3 +90,9 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
+
+# This is, by default, overriden in meson.build. We then override the override
+# in cibuildwheel. It's a bit convoluted, but (as of August 2025) it's the only
+# way to get it to work, see https://github.com/mesonbuild/meson-python/issues/787
+[tool.meson-python]
+limited-api = true

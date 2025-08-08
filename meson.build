@@ -8,8 +8,9 @@ project(
         'optimization=3',
         'pkgconfig.relocatable=true',
         'warning_level=1',  # equivalent to -Wall. We should consider cranking it up to 3
+        'python.allow_limited_api=false',  # Our build system can then opt-in for Python 3.12+
     ],
-    meson_version: '>= 1.2.0',
+    meson_version: '>= 1.3.0',
     # As of August 2024, there is no nicer way that I know of to dynamically get the version
     version: run_command(
         ['dwave/optimization/_build/_version.py'],
@@ -72,6 +73,18 @@ else
     )
 endif
 
+# We build the limited API when we have Python>=3.12, which is the lowest
+# version that Cython makes use of vectorcall.
+# See https://cython.readthedocs.io/en/stable/src/userguide/limited_api.html
+# By default this will do nothing unless the user overrides the
+# python.allow_limited_api=false we specify above, which we do when building
+# with cibuildwheel
+if py.version().version_compare('>=3.12')
+    limited_api = '3.12'
+else
+    limited_api = ''  # i.e. no limited api
+endif
+
 py.extension_module(
     '_model',
     'dwave/optimization/_model.pyx',
@@ -82,6 +95,7 @@ py.extension_module(
     override_options : ['cython_language=cpp'],
     cython_args : ['-Xfreethreading_compatible=True'],
     subdir: 'dwave/optimization/',
+    limited_api: limited_api,
 )
 
 py.extension_module(
@@ -94,6 +108,7 @@ py.extension_module(
     override_options : ['cython_language=cpp'],
     cython_args : ['-Xfreethreading_compatible=True'],
     subdir: 'dwave/optimization/',
+    limited_api: limited_api,
 )
 
 py.extension_module(
@@ -106,6 +121,7 @@ py.extension_module(
     override_options : ['cython_language=cpp'],
     cython_args : ['-Xfreethreading_compatible=True'],
     subdir: 'dwave/optimization/',
+    limited_api: limited_api,
 )
 
 py.extension_module(
@@ -117,6 +133,7 @@ py.extension_module(
     override_options : ['cython_language=cpp'],
     cython_args : ['-Xfreethreading_compatible=True'],
     subdir: 'dwave/optimization/',
+    limited_api: limited_api,
 )
 
 install_subdir('dwave/optimization', install_dir: py.get_install_dir(pure: false) / 'dwave')
