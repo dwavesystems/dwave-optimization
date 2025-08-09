@@ -15,9 +15,9 @@
 #include "dwave-optimization/nodes/mathematical.hpp"
 
 #include <ranges>
+#include <unordered_map>
 
 #include "_state.hpp"
-#include "dwave-optimization/typing.hpp"
 #include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
@@ -1750,8 +1750,7 @@ void SoftMaxNode::propagate(State& state) const {
     auto node_data = data_ptr<SoftMaxNodeStateData>(state);
     const double prior_denominator = node_data->denominator;
     double new_denominator = prior_denominator;
-    std::vector<double> temp_exp(arr_ptr_->size(state));
-    std::vector<ssize_t> need_denominator(arr_ptr_->size(state));
+    std::unordered_map<ssize_t, double> temp_exp;
 
     for (const Update& u : arr_updates) {
         // Offset by contribution to prior_denominator When possible, avoid
@@ -1763,13 +1762,11 @@ void SoftMaxNode::propagate(State& state) const {
             new_denominator += exp_val;
             // Store to save recomputing exp(). Will divide by denominator later.
             temp_exp[u.index] = exp_val;
-            need_denominator[u.index] = 1;
         } else {
             double exp_val = std::exp(u.value);
             new_denominator += exp_val - node_data->get(u.index) * prior_denominator;
             // Store to save recomputing exp(). Will divide by denominator later.
             temp_exp[u.index] = exp_val;
-            need_denominator[u.index] = 1;
         }
     }
 
@@ -1777,17 +1774,15 @@ void SoftMaxNode::propagate(State& state) const {
     if (prior_denominator != new_denominator) {
         const double scale = prior_denominator / new_denominator;
         for (ssize_t i = 0, stop = arr_ptr_->size(state); i < stop; ++i) {
-            if (need_denominator[i]) {
+            if (temp_exp.contains(i)) {
                 node_data->set(i, temp_exp[i] / new_denominator, true);
             } else {
                 node_data->set(i, node_data->get(i) * scale);
             }
         }
     } else {
-        for (ssize_t i = 0, stop = arr_ptr_->size(state); i < stop; ++i) {
-            if (need_denominator[i]) {
-                node_data->set(i, temp_exp[i] / new_denominator, true);
-            }
+        for (const auto& [i, val] : temp_exp) {
+            node_data->set(i, val / new_denominator, true);
         }
     }
 

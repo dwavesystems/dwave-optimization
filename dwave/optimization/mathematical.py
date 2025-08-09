@@ -50,11 +50,8 @@ from dwave.optimization.symbols import (
     Resize,
     Rint,
     SafeDivide,
-<<<<<<< HEAD
     Sin,
-=======
     SoftMax,
->>>>>>> ee2c371 (Add SoftMaxNode/Symbol)
     SquareRoot,
     Where,
     Xor,
@@ -91,11 +88,8 @@ __all__ = [
     "resize",
     "rint",
     "safe_divide",
-<<<<<<< HEAD
     "sin",
-=======
     "softmax",
->>>>>>> ee2c371 (Add SoftMaxNode/Symbol)
     "sqrt",
     "stack",
     "vstack",

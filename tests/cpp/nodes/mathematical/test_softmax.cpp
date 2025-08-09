@@ -84,6 +84,31 @@ TEST_CASE("SoftMaxNode") {
                 }
             }
         }
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            i_ptr->initialize_state(state, {2.0, 5.0});
+            graph.initialize_state(state);
+
+            THEN("The initial softmax state and size is correct") {
+                CHECK_THAT(softmax_ptr->view(state)[0], WithinRel(0.04742587317757, 1e-9));
+                CHECK_THAT(softmax_ptr->view(state)[1], WithinRel(0.95257412682243, 1e-9));
+                CHECK(softmax_ptr->size() == 2);
+            }
+            AND_WHEN(
+                    "We commit, make changes to integer node that result in the same "
+                    "denominator and propagate") {
+                graph.commit(state);
+                i_ptr->set_value(state, 0, 5.0);
+                i_ptr->set_value(state, 1, 2.0);
+                // i_ptr should be [5.0, 2.0]
+                graph.propagate(state);
+
+                THEN("The softmax state is correct") {
+                    CHECK_THAT(softmax_ptr->view(state)[0], WithinRel(0.95257412682243, 1e-9));
+                    CHECK_THAT(softmax_ptr->view(state)[1], WithinRel(0.04742587317757, 1e-9));
+                }
+            }
+        }
     }
     GIVEN("A dynamic array node and a softmax node") {
         auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
