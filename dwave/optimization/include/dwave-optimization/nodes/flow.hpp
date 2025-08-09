@@ -77,6 +77,45 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
     const Array* arr_ptr_;
 };
 
+// FirstInstanceNode *****************************************************************
+//
+// A base class that returns the smallest index (should it exist) of element of
+// an array where the `condition` is true. The `condition` must be defined by
+// derived class.
+class FirstInstanceNode : public ScalarOutputMixin<ArrayNode, true> {
+ public:
+    explicit FirstInstanceNode(ArrayNode* arr_ptr);
+
+    // @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    // @copydoc Array::integral()
+    bool integral() const override;
+
+    // @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+
+    // @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
+    // Returns true if given value satisfies condition and false otherwise.
+    virtual bool satisfies_condition(const double value) const = 0;
+
+ protected:
+    // these are redundant, but convenient
+    const Array* arr_ptr_;
+};
+
+// FirstInstanceNode derived classes
+// Returns smallest index (should it exist) of non-zero element of predecessor
+class FindNode : public FirstInstanceNode {
+ public:
+    explicit FindNode(ArrayNode* arr_ptr);
+
+    bool satisfies_condition(const double value) const override { return value != 0; }
+};
+
 /// Choose elements from x or y depending on condition.
 ///
 /// `condition` must be either a scalar array or the same shape as `x` and `y`.

@@ -20,6 +20,7 @@
 #include <dwave-optimization/nodes/numbers.hpp>
 #include <dwave-optimization/nodes/testing.hpp>
 
+#include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
 
 using Catch::Matchers::RangeEquals;
@@ -192,6 +193,119 @@ TEST_CASE("ExtractNode") {
                     CHECK(std::ranges::equal(extract_ptr->view(state),
                                              std::vector<double>{3, 3.5}));
                 }
+            }
+        }
+    }
+}
+
+TEST_CASE("FindNode") {
+    auto graph = Graph();
+
+    GIVEN("A constant node and a find node") {
+        auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{0.0, 0.0, 0.0, 5.0});
+        auto f_ptr = graph.emplace_node<FindNode>(c_ptr);
+        graph.emplace_node<ArrayValidationNode>(f_ptr);
+
+        WHEN("We initialize a state") {
+            auto state = graph.initialize_state();
+
+            THEN("The initial find node state, size, max, and min are correct") {
+                CHECK(f_ptr->view(state)[0] == 3);
+                CHECK(f_ptr->size() == 1);
+                CHECK(f_ptr->max() == 3);
+                CHECK(f_ptr->min() == -1);
+            }
+        }
+    }
+    GIVEN("An integer node and a find node") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(4);
+        auto f_ptr = graph.emplace_node<FindNode>(i_ptr);
+        graph.emplace_node<ArrayValidationNode>(f_ptr);
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            i_ptr->initialize_state(state, {0.0, 1.0, 0.0, 0.0});
+            graph.initialize_state(state);
+
+            THEN("The initial find node state, size, max, and min are correct") {
+                CHECK(f_ptr->view(state)[0] == 1);
+                CHECK(f_ptr->size() == 1);
+                CHECK(f_ptr->max() == 3);
+                CHECK(f_ptr->min() == -1);
+            }
+            AND_WHEN("We make changes to integer node and propagate") {
+                i_ptr->set_value(state, 0, 2.0);
+                // i_ptr should be [2.0, 1.0, 0.0, 0.0]
+                graph.propagate(state);
+
+                THEN("The find node state is correct") { CHECK(f_ptr->view(state)[0] == 0); }
+                AND_WHEN("We commit, make changes to integer node, and propagate") {
+                    graph.commit(state);
+                    i_ptr->set_value(state, 0, 0.0);
+                    i_ptr->set_value(state, 1, 0.0);
+                    i_ptr->set_value(state, 3, 3.0);
+                    // i_ptr should be [0.0, 0.0, 0.0, 3.0]
+                    graph.propagate(state);
+
+                    THEN("The find node state is correct") { CHECK(f_ptr->view(state)[0] == 3); }
+                }
+            }
+        }
+    }
+    GIVEN("A dynamic array node and a find node") {
+        auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+                std::initializer_list<ssize_t>{-1}, -10.0, 10.0, true);
+        auto f_ptr = graph.emplace_node<FindNode>(dyn_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(f_ptr);
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            dyn_ptr->initialize_state(state, {1.2, -3.0, 1.5});
+            // array should be [1.2, -3.0, 1.5]
+            graph.initialize_state(state);
+
+            THEN("The initial find node state, size, max, and min are correct") {
+                CHECK(f_ptr->view(state)[0] == 0);
+                CHECK(f_ptr->size() == 1);
+                CHECK(f_ptr->max() == std::numeric_limits<ssize_t>::max() - 1);
+                CHECK(f_ptr->min() == -1);
+            }
+            AND_WHEN("We shrink array, make changes to array, and then propagate") {
+                dyn_ptr->shrink(state);
+                dyn_ptr->set(state, 0, 0.0);
+                dyn_ptr->set(state, 1, 0.0);
+                // array should be [0.0, 0.0]
+                graph.propagate(state);
+
+                THEN("The find node state is correct") { CHECK(f_ptr->view(state)[0] == -1); }
+                AND_WHEN("We commit state, make changes to array, and then propagate") {
+                    graph.commit(state);
+                    dyn_ptr->set(state, 1, 1.2);
+                    // array should be [0.0, 1.2]
+                    graph.propagate(state);
+                    THEN("The find node state is correct") { CHECK(f_ptr->view(state)[0] == 1); }
+                }
+            }
+        }
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            dyn_ptr->initialize_state(state, {0.0, 0.0});
+            // array should be [0.0, 0.0]
+            graph.initialize_state(state);
+
+            THEN("The initial find node state, size, max, and min are correct") {
+                CHECK(f_ptr->view(state)[0] == -1);
+                CHECK(f_ptr->size() == 1);
+                CHECK(f_ptr->max() == std::numeric_limits<ssize_t>::max() - 1);
+                CHECK(f_ptr->min() == -1);
+            }
+            AND_WHEN("We grow array and then propagate") {
+                dyn_ptr->grow(state, {0.0});
+                // array should be [0.0, 0.0, 0.0]
+                graph.propagate(state);
+
+                THEN("The find node state is correct") { CHECK(f_ptr->view(state)[0] == -1); }
             }
         }
     }
@@ -422,7 +536,8 @@ TEST_CASE("WhereNode") {
     }
 
     GIVEN("Three dynamic nodes and a where node") {
-        auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 3});
+        auto dyn_ptr =
+                graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 3});
 
         auto condition_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
         auto x_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 1);
@@ -436,12 +551,20 @@ TEST_CASE("WhereNode") {
         // initialize the state to an interesting starting point
         auto state = graph.empty_state();
         dyn_ptr->initialize_state(state, {
-            // condition, x, y
-            0, 1, 1,
-            1, 2, 1,
-            0, 3, 1,
-            2, 4, 1,
-        });
+                                                 // condition, x, y
+                                                 0,
+                                                 1,
+                                                 1,
+                                                 1,
+                                                 2,
+                                                 1,
+                                                 0,
+                                                 3,
+                                                 1,
+                                                 2,
+                                                 4,
+                                                 1,
+                                         });
         graph.initialize_state(state);
 
         THEN("`where` has the expected sizeinfo") {
