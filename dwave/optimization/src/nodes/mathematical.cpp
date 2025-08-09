@@ -1750,39 +1750,37 @@ void SoftMaxNode::propagate(State& state) const {
     auto node_data = data_ptr<SoftMaxNodeStateData>(state);
     const double prior_denominator = node_data->denominator;
     double new_denominator = prior_denominator;
-    std::unordered_map<ssize_t, double> temp_exp;
+    std::unordered_map<ssize_t, double> exp_cache;
 
     for (const Update& u : arr_updates) {
-        // Offset by contribution to prior_denominator When possible, avoid
+        // Offset by contribution to prior_denominator. When possible, avoid
         // calling exp() function by multiplying elements by their denominator.
-        if (u.removed()) {
-            new_denominator -= node_data->get(u.index) * prior_denominator;
-        } else if (u.placed()) {
+        if (!u.placed()) {  // i.e. removed or changed.
+            if (!exp_cache.contains(u.index)) {
+                // If we have not recorded an update at u.index, offset
+                // new_denominator by contribution to prior_denominator.
+                new_denominator -= node_data->get(u.index) * prior_denominator;
+            } else {
+                // The value at u.index has already been updated in this loop.
+                // Offset new_denominator by the previous contribution.
+                new_denominator -= exp_cache[u.index];
+            }
+        }
+        if (!u.removed()) {  // i.e. placed or changed
             double exp_val = std::exp(u.value);
             new_denominator += exp_val;
-            // Store to save recomputing exp(). Will divide by denominator later.
-            temp_exp[u.index] = exp_val;
-        } else {
-            double exp_val = std::exp(u.value);
-            new_denominator += exp_val - node_data->get(u.index) * prior_denominator;
-            // Store to save recomputing exp(). Will divide by denominator later.
-            temp_exp[u.index] = exp_val;
+            exp_cache[u.index] = exp_val;
         }
     }
 
-    // TODO: Define allowable epsilon of difference when comparing doubles.
-    if (prior_denominator != new_denominator) {
-        const double scale = prior_denominator / new_denominator;
-        for (ssize_t i = 0, stop = arr_ptr_->size(state); i < stop; ++i) {
-            if (temp_exp.contains(i)) {
-                node_data->set(i, temp_exp[i] / new_denominator, true);
-            } else {
-                node_data->set(i, node_data->get(i) * scale);
-            }
-        }
-    } else {
-        for (const auto& [i, val] : temp_exp) {
-            node_data->set(i, val / new_denominator, true);
+    // Technically, we could check whether prior_denominator == denominator
+    // to avoid extra updates. However, this edge case is unlikely.
+    const double scale = prior_denominator / new_denominator;
+    for (ssize_t i = 0, stop = arr_ptr_->size(state); i < stop; ++i) {
+        if (exp_cache.contains(i)) {
+            node_data->set(i, exp_cache[i] / new_denominator, true);
+        } else {
+            node_data->set(i, node_data->get(i) * scale);
         }
     }
 
@@ -1815,10 +1813,6 @@ ssize_t SoftMaxNode::size_diff(const State& state) const {
 }
 
 SizeInfo SoftMaxNode::sizeinfo() const { return arr_ptr_->sizeinfo(); }
-
-double SoftMaxNode::get_denominator(const State& state) const {
-    return data_ptr<SoftMaxNodeStateData>(state)->denominator;
-}
 
 // UnaryOpNode *****************************************************************
 

@@ -62,7 +62,7 @@ TEST_CASE("SoftMaxNode") {
                 CHECK_THAT(softmax_ptr->view(state)[1], WithinRel(0.95257412682243, 1e-9));
                 CHECK(softmax_ptr->size() == 2);
             }
-            AND_WHEN("We make some changes to integer node and propagate") {
+            AND_WHEN("We make changes to integer node and propagate") {
                 i_ptr->set_value(state, 1, 1.0);
                 // i_ptr should be [2.0, 1.0]
                 graph.propagate(state);
@@ -120,15 +120,13 @@ TEST_CASE("SoftMaxNode") {
         WHEN("We initialize a state") {
             auto state = graph.empty_state();
             dyn_ptr->initialize_state(state, {3.0, -3.0, 1.5});
-            // array should be [3.0, -3, 1.5]
+            // array should be [3.0, -3.0, 1.5]
             graph.initialize_state(state);
 
             THEN("The initial softmax state and size is correct") {
                 CHECK_THAT(softmax_ptr->view(state)[0], WithinRel(0.81592095973169, 1e-9));
                 CHECK_THAT(softmax_ptr->view(state)[1], WithinRel(0.00202246585492, 1e-9));
                 CHECK_THAT(softmax_ptr->view(state)[2], WithinRel(0.18205657441339, 1e-9));
-                CHECK_THAT(softmax_ptr->get_denominator(state),
-                           WithinRel(24.617013061893594, 1e-9));
                 CHECK(softmax_ptr->size() == -1);
                 CHECK(softmax_ptr->size(state) == 3);
             }
@@ -136,7 +134,7 @@ TEST_CASE("SoftMaxNode") {
                 dyn_ptr->set(state, 0, 2.1);
                 dyn_ptr->shrink(state);
                 dyn_ptr->grow(state, {1.0, 2.1});
-                // array should be [2.1, -3, 1.0, 2.1]
+                // array should be [2.1, -3.0, 1.0, 2.1]
                 graph.propagate(state);
 
                 THEN("The softmax state and size is correct") {
@@ -148,15 +146,28 @@ TEST_CASE("SoftMaxNode") {
                 }
                 AND_WHEN("We revert") {
                     graph.revert(state, graph.descendants(state, {dyn_ptr}));
-                    // array should be [3.0, -3, 1.5]
+                    // array should be [3.0, -3.0, 1.5]
 
-                    THEN("The softmax state, size, and denominator are correct") {
+                    THEN("The softmax state and size are correct") {
                         CHECK_THAT(softmax_ptr->view(state)[0], WithinRel(0.81592095973169, 1e-9));
                         CHECK_THAT(softmax_ptr->view(state)[1], WithinRel(0.00202246585492, 1e-9));
                         CHECK_THAT(softmax_ptr->view(state)[2], WithinRel(0.18205657441339, 1e-9));
-                        CHECK_THAT(softmax_ptr->get_denominator(state),
-                                   WithinRel(24.617013061893594, 1e-9));
                         CHECK(softmax_ptr->size(state) == 3);
+                    }
+                    AND_WHEN("We make changes to array values") {
+                        dyn_ptr->set(state, 0, 1.01);
+                        dyn_ptr->set(state, 1, -2.0);
+                        // array should be [1.01, -2.0, 1.5]
+                        graph.propagate(state);
+
+                        THEN("The softmax state is correct") {
+                            CHECK_THAT(softmax_ptr->view(state)[0],
+                                       WithinRel(0.37291059609381, 1e-9));
+                            CHECK_THAT(softmax_ptr->view(state)[1],
+                                       WithinRel(0.01838138930903, 1e-9));
+                            CHECK_THAT(softmax_ptr->view(state)[2],
+                                       WithinRel(0.60870801459716, 1e-9));
+                        }
                     }
                 }
             }
@@ -176,10 +187,10 @@ TEST_CASE("SoftMaxNode") {
                     CHECK_THAT(softmax_ptr->view(state)[1], WithinRel(0.94784643692158, 1e-9));
                     CHECK(softmax_ptr->size(state) == 2);
                 }
-                AND_WHEN("We commite state then grow array and then propagate") {
+                AND_WHEN("We commite state, grow array, and then propagate") {
                     graph.commit(state);
                     dyn_ptr->grow(state, {1.7, -3.33});
-                    // array should be [-2.0, 0.9 1.7, -3.33]
+                    // array should be [-2.0, 0.9, 1.7, -3.33]
                     graph.propagate(state);
 
                     THEN("The softmax state and size are correct") {
@@ -188,6 +199,30 @@ TEST_CASE("SoftMaxNode") {
                         CHECK_THAT(softmax_ptr->view(state)[2], WithinRel(0.67540583226297, 1e-9));
                         CHECK_THAT(softmax_ptr->view(state)[3], WithinRel(0.00441635079541, 1e-9));
                         CHECK(softmax_ptr->size(state) == 4);
+                    }
+                    AND_WHEN(
+                            "We commite state, repeatedly change the same index in array, and then "
+                            "propagate") {
+                        graph.commit(state);
+                        dyn_ptr->set(state, 0, 1.1);
+                        dyn_ptr->set(state, 0, 1.2);
+                        dyn_ptr->set(state, 0, 1.3);
+                        dyn_ptr->set(state, 0, 1.4);
+                        dyn_ptr->set(state, 0, 1.5);
+                        // array should be [1.5, 0.9, 1.7, -3.33]
+                        graph.propagate(state);
+
+                        THEN("The softmax state and size are correct") {
+                            CHECK_THAT(softmax_ptr->view(state)[0],
+                                       WithinRel(0.35994516970087, 1e-9));
+                            CHECK_THAT(softmax_ptr->view(state)[1],
+                                       WithinRel(0.19754209748767, 1e-9));
+                            CHECK_THAT(softmax_ptr->view(state)[2],
+                                       WithinRel(0.43963802305907, 1e-9));
+                            CHECK_THAT(softmax_ptr->view(state)[3],
+                                       WithinRel(0.00287470975239, 1e-9));
+                            CHECK(softmax_ptr->size(state) == 4);
+                        }
                     }
                 }
             }

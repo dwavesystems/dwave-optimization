@@ -421,8 +421,6 @@ class SoftMaxNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::sizeinfo()
     SizeInfo sizeinfo() const override;
 
-    double get_denominator(const State& state) const;
-
  private:
     // these are redundant, but convenient
     const Array* arr_ptr_;
