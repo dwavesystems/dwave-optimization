@@ -248,6 +248,17 @@ TEST_CASE("FindNode") {
                     graph.propagate(state);
 
                     THEN("The find node state is correct") { CHECK(f_ptr->view(state)[0] == 3); }
+                    AND_WHEN("We commit, make changes to integer node, and propagate") {
+                        graph.commit(state);
+                        i_ptr->set_value(state, 3, 0.0);
+                        i_ptr->set_value(state, 3, 1.0);
+                        // i_ptr should be [0.0, 0.0, 0.0, 1.0]
+                        graph.propagate(state);
+
+                        THEN("The find node state is correct") {
+                            CHECK(f_ptr->view(state)[0] == 3);
+                        }
+                    }
                 }
             }
         }
