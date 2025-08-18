@@ -175,7 +175,7 @@ std::string shape_to_string(const std::span<const ssize_t> shape) {
 
     std::string out = "(";
     for (std::size_t i = 0, n = shape.size() - 1; i < n; ++i) {
-        out += std::to_string(shape[i]) + ",";
+        out += std::to_string(shape[i]) + ", ";
     }
     out += std::to_string(shape.back()) + ")";
     return out;

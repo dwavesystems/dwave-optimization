@@ -160,13 +160,13 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
  public:
     /// Constructor for ReshapeNode.
     ///
-    /// @param array_ptr The array to be reshaped. May not be dynamic.
+    /// @param array_ptr The array to be reshaped.
     /// @param shape The new shape. Must have the same size as the original shape.
     ReshapeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape);
 
     /// Constructor for ReshapeNode.
     ///
-    /// @param array_ptr The array to be reshaped. May not be dynamic.
+    /// @param array_ptr The array to be reshaped.
     /// @param shape The new shape. Must have the same size as the original shape.
     template <std::ranges::range Range>
     ReshapeNode(ArrayNode* node_ptr, Range&& shape)
