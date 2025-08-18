@@ -10,6 +10,13 @@ dwave-optimization
 
     api_ref
 
+.. toctree::
+    :maxdepth: 1
+    :hidden:
+
+    philosophy
+    implicit_constraints
+
 About dwave-optimization
 ========================
 
@@ -22,12 +29,6 @@ For explanations of the terminology, see the
 
 Design Principles
 =================
-
-.. toctree::
-  :maxdepth: 1
-  :hidden:
-
-  philosophy
 
 `dwave-optimization` and the hybrid nonlinear solver incorporate features and
 :ref:`design principles <optimization_philosophy>` from each of the following
