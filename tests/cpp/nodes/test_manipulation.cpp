@@ -867,6 +867,8 @@ TEST_CASE("ReshapeNode") {
 
         CHECK_THAT(reshape_ptr->shape(), RangeEquals({-1, 1}));
 
+        CHECK(reshape_ptr->sizeinfo() == SizeInfo(set_ptr));
+
         auto state = graph.empty_state();
         set_ptr->initialize_state(state, {0, 1, 2, 3});  // size 4
         graph.initialize_state(state);

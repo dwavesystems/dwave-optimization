@@ -31,7 +31,7 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
     explicit ConcatenateNode(std::ranges::contiguous_range auto&& array_ptrs, ssize_t axis)
             : ConcatenateNode(std::span<ArrayNode*>(array_ptrs), axis) {}
 
-    double const* buff(const State& state) const override;
+    double const* buff(const State& statfe) const override;
     void commit(State& state) const override;
     std::span<const Update> diff(const State& state) const override;
     void initialize_state(State& state) const override;
@@ -191,7 +191,7 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
-    /// @copydoc Node::initialize_state()
+    /// @copydoc Node::propagate()
     void propagate(State& state) const override;
 
     /// @copydoc Node::revert()
@@ -206,6 +206,9 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::size()
     ssize_t size(const State& state) const override;
+
+    /// @copydoc Array::sizeinfo()
+    SizeInfo sizeinfo() const override;
 
     /// @copydoc Array::size_diff()
     ssize_t size_diff(const State& state) const override;

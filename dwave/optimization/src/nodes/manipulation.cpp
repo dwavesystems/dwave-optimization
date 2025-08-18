@@ -658,6 +658,11 @@ ssize_t ReshapeNode::size(const State& state) const {
     return data_ptr<DynamicReshapeNodeData>(state)->size();
 }
 
+SizeInfo ReshapeNode::sizeinfo() const {
+    if (this->dynamic()) return SizeInfo(array_ptr_);
+    return SizeInfo(this->size());
+}
+
 ssize_t ReshapeNode::size_diff(const State& state) const {
     if (!this->dynamic()) return 0;  // stateless
     return data_ptr<DynamicReshapeNodeData>(state)->size_diff();
