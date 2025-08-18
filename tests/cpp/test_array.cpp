@@ -475,7 +475,7 @@ TEST_CASE("Test resulting_shape()") {
     }
     SECTION("(2,1) x (8,4,3)") {
         CHECK_THROWS_WITH(broadcast_shape({2, 1}, {8, 4, 3}),
-                          "operands could not be broadcast together with shapes (2,1) (8,4,3)");
+                          "operands could not be broadcast together with shapes (2, 1) (8, 4, 3)");
     }
 }
 

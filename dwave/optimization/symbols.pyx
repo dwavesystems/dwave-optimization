@@ -3771,15 +3771,10 @@ _register(QuadraticModel, typeid(cppQuadraticModelNode))
 cdef class Reshape(ArraySymbol):
     """Reshaped symbol.
 
-    Examples:
-        This example adds a reshaped binary symbol.
+    See Also:
+        :meth:`ArraySymbol.reshape() <dwave.optimization.model.ArraySymbol.reshape>`: equivalent method.
 
-        >>> from dwave.optimization.model import Model
-        >>> model = Model()
-        >>> x = model.binary((2, 3))
-        >>> x_t = x.reshape((3, 2))
-        >>> type(x_t)
-        <class 'dwave.optimization.symbols.Reshape'>
+    .. versionadded:: 0.5.1
     """
     def __init__(self, ArraySymbol node, shape):
         cdef _Graph model = node.model

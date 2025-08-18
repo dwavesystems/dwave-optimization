@@ -857,6 +857,51 @@ TEST_CASE("ReshapeNode") {
             }
         }
     }
+
+    GIVEN("A set(10) reshaped to shape (-1,1)") {
+        auto graph = Graph();
+
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto reshape_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::array{-1, 1});
+        graph.emplace_node<ArrayValidationNode>(reshape_ptr);
+
+        CHECK_THAT(reshape_ptr->shape(), RangeEquals({-1, 1}));
+
+        CHECK(reshape_ptr->sizeinfo() == SizeInfo(set_ptr));
+
+        auto state = graph.empty_state();
+        set_ptr->initialize_state(state, {0, 1, 2, 3});  // size 4
+        graph.initialize_state(state);
+        CHECK_THAT(reshape_ptr->shape(state), RangeEquals({4, 1}));
+
+        set_ptr->grow(state);
+        graph.propagate(state);
+        CHECK_THAT(reshape_ptr->shape(state), RangeEquals({5, 1}));
+
+        AND_WHEN("We commit") {
+            graph.commit(state);
+            CHECK_THAT(reshape_ptr->shape(state), RangeEquals({5, 1}));
+        }
+        AND_WHEN("We revert") {
+            graph.revert(state);
+            CHECK_THAT(reshape_ptr->shape(state), RangeEquals({4, 1}));
+        }
+    }
+
+    // todo: once we support BroadcastToNode we can test some other more interesting reshapes
+
+    GIVEN("A set(10) that we try to do several invalid reshapes on") {
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+
+        CHECK_THROWS_AS(graph.emplace_node<ReshapeNode>(set_ptr, std::array{-1, 2}),
+                        std::invalid_argument);
+
+        CHECK_THROWS_AS(graph.emplace_node<ReshapeNode>(set_ptr, std::array{-1, 1, -1, 1}),
+                        std::invalid_argument);
+
+        CHECK(graph.num_nodes() == 1);  // no side effects
+    }
 }
 
 TEST_CASE("ResizeNode") {

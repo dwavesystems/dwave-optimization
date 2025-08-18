@@ -1809,14 +1809,24 @@ cdef class ArraySymbol(Symbol):
     def reshape(self, *shape):
         """Create a :class:`~dwave.optimization.symbols.Reshape` symbol.
 
-        Args:
-            shape: Shape of the created symbol.
+        The new symbol reshapes without changing the antecedent symbol's data.
 
-        The new symbol reshapes without changing the antecedent symbol's
-        data.
+        Args:
+            shape:
+                Shape of the created symbol.
+                May be specified either as a single argument defining the shape
+                or as the elements of the shape passed in as separate arguments.
+                E.g., :code:`a.reshape((1, 2))` is equivalent to
+                :code:`a.reshape(1, 2)`.
+                One dimension can be -1, in which case it's size is inferred
+                from the other dimensions.
+                For dynamically sized array symbols, the first dimension must
+                be specified as -1 and the size of each "row" of the new array
+                symbol cannot be a fraction of the size of each "row" of the
+                antecedent array symbol. See examples below.
 
         Examples:
-            This example reshapes a column vector into a row vector.
+            This example reshapes a 1D vector into a 3x1 matrix.
 
             >>> from dwave.optimization import Model
             >>> model = Model()
@@ -1826,6 +1836,34 @@ cdef class ArraySymbol(Symbol):
             >>> k = j.reshape((1, 3))
             >>> k.shape()
             (1, 3)
+
+            This example reshapes a dynamic 2d array symbol.
+
+            >>> import numpy as np
+            ...
+            >>> model = Model()
+            >>> a = model.constant(np.ones((10, 4)))[model.set(10), :]
+            >>> a.shape()
+            (-1, 4)
+            >>> b = a.reshape(-1, 2, 2)  # OK because 2*2 = 4 
+            >>> b.shape()
+            (-1, 2, 2)
+            >>> c = a.reshape(-1, 4, 1, 1)  # OK because 4*1*1 = 4
+            >>> c.shape()
+            (-1, 4, 1, 1)
+            >>> d = a.reshape(-1, 2)  # OK because 2 evenly divides 4
+            >>> d.shape()
+            (-1, 2)
+            >>> a.reshape(-1, 8)  # Fails because 8 does not evenly divide 4 # doctest: +IGNORE_EXCEPTION_DETAIL
+            Traceback (most recent call last):
+            ValueError: cannot reshape array of shape (-1, 4) into shape (-1, 8)
+
+        See also:
+            :class:`~dwave.optimization.symbols.Reshape`: equivalent symbol.
+
+        .. versionadded:: 0.5.1
+        .. versionadded:: 0.6.5
+            Add support for reshaping dynamic array symbols.
         """
         from dwave.optimization.symbols import Reshape  # avoid circular import
         if len(shape) <= 1:

@@ -31,7 +31,7 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
     explicit ConcatenateNode(std::ranges::contiguous_range auto&& array_ptrs, ssize_t axis)
             : ConcatenateNode(std::span<ArrayNode*>(array_ptrs), axis) {}
 
-    double const* buff(const State& state) const override;
+    double const* buff(const State& statfe) const override;
     void commit(State& state) const override;
     std::span<const Update> diff(const State& state) const override;
     void initialize_state(State& state) const override;
@@ -155,19 +155,18 @@ class PutNode : public ArrayOutputMixin<ArrayNode> {
     const Array* values_ptr_;
 };
 
-
 /// Propagates the values of its predecessor, interpreted into a different shape.
 class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
  public:
     /// Constructor for ReshapeNode.
     ///
-    /// @param array_ptr The array to be reshaped. May not be dynamic.
+    /// @param array_ptr The array to be reshaped.
     /// @param shape The new shape. Must have the same size as the original shape.
     ReshapeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape);
 
     /// Constructor for ReshapeNode.
     ///
-    /// @param array_ptr The array to be reshaped. May not be dynamic.
+    /// @param array_ptr The array to be reshaped.
     /// @param shape The new shape. Must have the same size as the original shape.
     template <std::ranges::range Range>
     ReshapeNode(ArrayNode* node_ptr, Range&& shape)
@@ -182,6 +181,9 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
 
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
     /// @copydoc Array::integral()
     bool integral() const override;
 
@@ -189,8 +191,27 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     std::pair<double, double> minmax(
             optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
 
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
     /// @copydoc Node::revert()
     void revert(State& state) const override;
+
+    using ArrayOutputMixin::shape;
+
+    /// @copydoc Array::shape()
+    std::span<const ssize_t> shape(const State& state) const override;
+
+    using ArrayOutputMixin::size;
+
+    /// @copydoc Array::size()
+    ssize_t size(const State& state) const override;
+
+    /// @copydoc Array::sizeinfo()
+    SizeInfo sizeinfo() const override;
+
+    /// @copydoc Array::size_diff()
+    ssize_t size_diff(const State& state) const override;
 
  private:
     // we could dynamically cast each time, but it's easier to just keep separate

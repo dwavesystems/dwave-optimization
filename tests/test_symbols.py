@@ -2860,8 +2860,23 @@ class TestReshape(utils.SymbolTests):
         model = Model()
         A = model.constant(np.arange(12))
         syms = [A.reshape(12), A.reshape((2, 6)), A.reshape(3, 4)]
+
+        B = model.constant(np.arange(12).reshape(3, 4))[model.set(3), :]
+        syms.extend([B.reshape(-1), B.reshape(-1, 2, 2)])
+
         model.lock()
         yield from syms
+
+    def test_dynamic(self):
+        model = Model()
+        s = model.set(10)
+        r = s.reshape(-1, 1)
+        self.assertEqual(r.shape(), (-1, 1))
+
+        model.states.resize(1)
+        with model.lock():
+            s.set_state(0, [0, 1, 2])
+            np.testing.assert_array_equal(r.state(), [[0], [1], [2]])
 
     def test_implicit_reshape(self):
         model = Model()

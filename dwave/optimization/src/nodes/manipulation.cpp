@@ -496,8 +496,8 @@ void PutNode::revert(State& state) const { return data_ptr<PutNodeState>(state)-
 // Reshape allows one shape dimension to be -1. In that case the size is inferred.
 // We do that inference here.
 std::vector<ssize_t> infer_reshape(Array* array_ptr, std::vector<ssize_t>&& shape) {
-    // if the base array is dynamic, we might allow the first dimension to be negative
-    // 1. So let's defer to the various constructors.
+    // If the base array is dynamic, we might allow the first dimension to be -1.
+    // So let's defer to the various constructors to check correctness.
     if (array_ptr->dynamic()) return shape;
 
     // Check if there are any -1s, and if not fallback to other input checking.
@@ -519,29 +519,82 @@ std::vector<ssize_t> infer_reshape(Array* array_ptr, std::vector<ssize_t>&& shap
     return shape;
 }
 
+class DynamicReshapeNodeData : public NodeStateData {
+ public:
+    // shape is the dynamic shape, i.e. leads with a -1
+    // size is the actual size, used to infer the actual shape
+    DynamicReshapeNodeData(std::span<const ssize_t> shape, ssize_t size)
+            : shape_(shape.begin(), shape.end()),
+              size_(size),
+              row_size_(std::accumulate(shape_.begin() + 1, shape_.end(), 1,
+                                        std::multiplies<ssize_t>())) {
+        assert(size_ % row_size_ == 0);
+        if (shape_.size()) shape_[0] = size_ / row_size_;
+    }
+
+    void commit() { old_size_ = size_; }
+
+    void revert() { set_size(old_size_); }
+
+    void set_size(ssize_t size) {
+        assert(size % row_size_ == 0);
+        size_ = size;
+        if (shape_.size()) shape_[0] = size / row_size_;
+    }
+
+    std::span<const ssize_t> shape() const { return shape_; }
+
+    ssize_t size() const { return size_; }
+
+    ssize_t size_diff() const { return size_ - old_size_; }
+
+ private:
+    std::vector<ssize_t> shape_;
+    ssize_t size_;
+    ssize_t old_size_ = size_;
+
+    ssize_t row_size_;
+};
+
 ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::vector<ssize_t>&& shape)
         : ArrayOutputMixin(infer_reshape(node_ptr, std::move(shape))), array_ptr_(node_ptr) {
     // Don't (yet) support non-contiguous predecessors.
     // In some cases with non-contiguous predecessors we need to make a copy.
-    // See https://github.com/dwavesystems/dwave-optimization/issues/200
+    // See https://github.com/dwavesystems/dwave-optimization/issues/16
     // There are also cases where we want reshape non-contiguous nodes.
     if (!array_ptr_->contiguous()) {
         throw std::invalid_argument("cannot reshape a non-contiguous array");
     }
 
-    // Don't (yet) support dynamic predecessors.
-    // We could support reshaping "down", e.g. (-1, 2) -> (-1,).
-    // But we cannot support reshaping "up", e.g. (-1,) -> (-1, 2).
-    // This is because in that case we would need the predecessor to grow/shrink
-    // by a multiple of two each time.
     if (array_ptr_->dynamic()) {
-        throw std::invalid_argument("cannot reshape a dynamic array");
-    }
+        // We allow reshaping dyanamic arrays if the size of each "row" of the new shape evenly
+        // divides the size of each "row" of the old. E.g.,
+        // * (-1, 2) -> (-1,)
+        // * (-1, 4) -> (-1, 2)
+        // * (-1, 4) -> (-1, 2, 2)
+        // are all OK, but
+        // * (-1, 2) -> (-1, 4)
+        // is not.
 
-    // NumPy let's you use -1 in exactly one axis which is then inferred from
-    // the others. We could support that in the future, including the dynamic
-    // case.
-    if (this->dynamic()) {
+        if (!this->dynamic()) {
+            throw std::invalid_argument("cannot reshape a dynamic array to a fixed size");
+        }
+
+        const auto array_shape = array_ptr_->shape();
+        const auto new_shape = this->shape();
+
+        ssize_t array_row_size = std::reduce(array_shape.begin() + 1, array_shape.end(), 1,
+                                             std::multiplies<ssize_t>());
+        ssize_t new_row_size =
+                std::reduce(new_shape.begin() + 1, new_shape.end(), 1, std::multiplies<ssize_t>());
+
+        if (array_row_size % new_row_size) {
+            throw std::invalid_argument("cannot reshape array of shape " +
+                                        shape_to_string(array_shape) + " into shape " +
+                                        shape_to_string(new_shape));
+        }
+    } else if (this->dynamic()) {
+        // If our base array is not dynamic but the user is trying to make it dynamic
         throw std::invalid_argument("cannot reshape to a dynamic array");
     }
 
@@ -551,6 +604,7 @@ ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::vector<ssize_t>&& shape)
         throw std::invalid_argument("can only specify one unknown dimension");
     }
 
+    // works for dynamic as well
     if (this->size() != array_ptr_->size()) {
         // Use the same error message as NumPy
         throw std::invalid_argument("cannot reshape array of size " +
@@ -563,10 +617,18 @@ ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::vector<ssize_t>&& shape)
 
 double const* ReshapeNode::buff(const State& state) const { return array_ptr_->buff(state); }
 
-void ReshapeNode::commit(State& state) const {}  // stateless node
+void ReshapeNode::commit(State& state) const {
+    if (!this->dynamic()) return;  // stateless
+    return data_ptr<DynamicReshapeNodeData>(state)->commit();
+}
 
 std::span<const Update> ReshapeNode::diff(const State& state) const {
     return array_ptr_->diff(state);
+}
+
+void ReshapeNode::initialize_state(State& state) const {
+    if (!this->dynamic()) return Node::initialize_state(state);  // stateless
+    emplace_data_ptr<DynamicReshapeNodeData>(state, this->shape(), array_ptr_->size(state));
 }
 
 bool ReshapeNode::integral() const { return array_ptr_->integral(); }
@@ -576,7 +638,35 @@ std::pair<double, double> ReshapeNode::minmax(
     return memoize(cache, [&]() { return array_ptr_->minmax(cache); });
 }
 
-void ReshapeNode::revert(State& state) const {}  // stateless node
+void ReshapeNode::propagate(State& state) const {
+    if (!this->dynamic()) return;  // stateless
+    data_ptr<DynamicReshapeNodeData>(state)->set_size(array_ptr_->size(state));
+}
+
+void ReshapeNode::revert(State& state) const {
+    if (!this->dynamic()) return;  // stateless
+    return data_ptr<DynamicReshapeNodeData>(state)->revert();
+}
+
+std::span<const ssize_t> ReshapeNode::shape(const State& state) const {
+    if (!this->dynamic()) return this->shape();  // stateless
+    return data_ptr<DynamicReshapeNodeData>(state)->shape();
+}
+
+ssize_t ReshapeNode::size(const State& state) const {
+    if (!this->dynamic()) return this->size();  // stateless
+    return data_ptr<DynamicReshapeNodeData>(state)->size();
+}
+
+SizeInfo ReshapeNode::sizeinfo() const {
+    if (this->dynamic()) return SizeInfo(array_ptr_);
+    return SizeInfo(this->size());
+}
+
+ssize_t ReshapeNode::size_diff(const State& state) const {
+    if (!this->dynamic()) return 0;  // stateless
+    return data_ptr<DynamicReshapeNodeData>(state)->size_diff();
+}
 
 ResizeNode::ResizeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape, double fill_value)
         : ArrayOutputMixin(shape), array_ptr_(array_ptr), fill_value_(fill_value) {
