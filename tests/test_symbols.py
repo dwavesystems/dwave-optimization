@@ -27,6 +27,7 @@ import dwave.optimization.symbols
 from dwave.optimization import (
     Model,
     arange,
+    broadcast_to,
     bspline,
     exp,
     expit,
@@ -690,6 +691,37 @@ class TestBinaryVariable(utils.SymbolTests):
             # wrong size
             with self.assertRaises(ValueError):
                 x.set_state(0, [0, 1, 2])
+
+
+class TestBroadcastTo(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        x = model.constant(np.asarray([[0], [1], [2]]))
+        b0 = broadcast_to(x, (3, 4))
+        b1 = broadcast_to(x, (2, 3, 1))
+        y = model.constant(5)
+        b2 = broadcast_to(y, 10)
+        with model.lock():
+            yield from [b0, b1, b2]
+
+    def test_exceptions(self):
+        model = Model()
+        x = model.integer(5)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"array of shape \(5,\) could not be broadcast to \(3,\)",
+        ):
+            broadcast_to(x, 3)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"array of shape \(5,\) could not be broadcast to \(5, 1\)",
+        ):
+            broadcast_to(x, (5, 1))
+
+        with self.assertRaises(ValueError):
+            broadcast_to(x, "hello")
+
+        self.assertEqual(model.num_symbols(), 1)  # no side effects
 
 
 class TestBSpline(utils.SymbolTests):

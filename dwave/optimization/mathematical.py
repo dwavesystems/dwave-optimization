@@ -16,12 +16,15 @@ import collections
 import functools
 import typing
 
+import numpy as np
+
 from dwave.optimization._model import ArraySymbol
 from dwave.optimization.symbols import (
     Add,
     And,
     ARange,
     ArgSort,
+    BroadcastTo,
     BSpline,
     Concatenate,
     Cos,
@@ -63,6 +66,8 @@ __all__ = [
     "arange",
     "atleast_1d",
     "atleast_2d",
+    "broadcast_symbols",
+    "broadcast_to",
     "bspline",
     "concatenate",
     "cos",
@@ -354,6 +359,91 @@ def atleast_2d(*arrays):
     if len(result) == 1:
         return result[0]
     return tuple(result)
+
+
+def broadcast_symbols(*args: ArraySymbol) -> tuple[ArraySymbol, ...]:
+    """Broadcast array symbols to the same shape.
+
+    See NumPy's `broadcasting <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_
+    documentation for more information about broadcasting.
+
+    Args:
+        *args: Array symbols.
+
+    Returns:
+        A tuple of array symbols, all with the same shape.
+        If any given symbol already has the desired shape, then it is returned.
+        Otherwise a new :class:`~dwave.optimization.symbols.BroadcastTo` symbol
+        is returned.
+
+    Examples:
+        >>> from dwave.optimization import broadcast_symbols, Model
+        ...
+        >>> model = Model()
+        >>> x = model.integer(3)  # shape = (3,)
+        >>> y = model.constant([[0], [1]])  # shape = (2, 1)
+        >>> xb, yb = broadcast_symbols(x, y)
+        >>> xb.shape()
+        (2, 3)
+        >>> yb.shape()
+        (2, 3)
+
+    See Also:
+        :func:`numpy.broadcast_shapes`
+
+        :func:`~dwave.optimization.mathematical.broadcast_to`
+
+    .. versionadded:: 0.6.5
+    """
+    shape = np.broadcast_shapes(*(x.shape() for x in args))
+    return tuple(broadcast_to(x, shape) for x in args)
+
+
+def broadcast_to(x: ArraySymbol, shape: typing.Union[int, tuple[int, ...]]) -> ArraySymbol:
+    """Broadcast an array symbol to a new shape.
+
+    See NumPy's `broadcasting <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_
+    documentation for more information about broadcasting.
+
+    Args:
+        x: An array symbol.
+        shape: The desired shape. A single integer ``i`` is interpreted as ``(i,)``.
+
+    Returns:
+        If ``x`` already has the desired shape, then ``x`` is returned.
+        Otherwise a new :class:`~dwave.optimization.symbols.BroadcastTo` symbol
+        is returned.
+
+    Examples:
+        >>> from dwave.optimization import broadcast_to, Model
+        ...
+        >>> model = Model()
+        >>> x = model.constant([0, 1, 2, 3, 4])
+        >>> x.shape()
+        (5,)
+        >>> y = broadcast_to(x, (2, 5))
+        >>> y.shape()
+        (2, 5)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     y.state()
+        array([[0., 1., 2., 3., 4.], 
+               [0., 1., 2., 3., 4.]])
+
+    See Also:
+        :class:`~dwave.optimization.symbols.BroadcastTo`: equivalent symbol.
+
+        :func:`numpy.broadcast_shapes`
+
+        :func:`~dwave.optimization.mathematical.broadcast_symbols`
+
+    .. versionadded:: 0.6.5
+    """
+    # We only create a new symbol if necessary
+    if x.shape() == shape or (isinstance(shape, int) and x.shape() == (shape,)):
+        return x
+
+    return BroadcastTo(x, shape)
 
 
 def bspline(x: ArraySymbol, k: int, t: list, c: list) -> ArraySymbol:
