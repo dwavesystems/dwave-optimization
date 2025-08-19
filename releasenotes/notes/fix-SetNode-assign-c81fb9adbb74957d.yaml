@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fix ``SetNode::assign()`` method. Previously it would sometimes propagate
+    incorrect updates when assigned a smaller state.
