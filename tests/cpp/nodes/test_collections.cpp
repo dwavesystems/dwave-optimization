@@ -419,6 +419,22 @@ TEST_CASE("ListNode") {
 TEST_CASE("SetNode") {
     auto graph = Graph();
 
+    GIVEN("A set(10) initialized to {0, 1, 2}") {
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        graph.emplace_node<ArrayValidationNode>(set_ptr);
+
+        auto state = graph.empty_state();
+        set_ptr->initialize_state(state, {0, 1, 2});
+        graph.initialize_state(state);
+
+        CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1, 2}));
+
+        set_ptr->assign(state, {0, 5});
+        graph.propagate(state);
+
+        CHECK_THAT(set_ptr->view(state), RangeEquals({0, 5}));
+    }
+
     GIVEN("A SetNode representing subsets of 10 elements") {
         const int num_elements = 10;
 

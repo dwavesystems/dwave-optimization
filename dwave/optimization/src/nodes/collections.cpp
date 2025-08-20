@@ -90,9 +90,12 @@ struct CollectionStateData : NodeStateData {
         // this should have been checked already by the CollectionNode
         assert(values.size() == elements.size());
 
-        // First, let's note the public changes to the visible part of the buffer
-        const ssize_t overlap_length = std::min(this->size, size);
-        for (ssize_t i = 0; i < overlap_length; ++i) {
+        // First shrink the visible part down so that we're correctly tracking
+        // our visible/invisible changes.
+        while (this->size > size) shrink();
+
+        // Then, let's note the public changes to the visible part of the buffer
+        for (ssize_t i = 0, stop = std::min(this->size, size); i < stop; ++i) {
             updates.emplace_back(i, elements[i], values[i]);
         }
 
@@ -103,9 +106,8 @@ struct CollectionStateData : NodeStateData {
         }
         std::swap(elements, values);
 
-        // Finally do the resize until we're at the correct size
+        // Finally do any growing we need to do.
         while (this->size < size) grow();
-        while (this->size > size) shrink();
 
         assert(this->size == size);
     }
