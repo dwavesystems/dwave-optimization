@@ -187,7 +187,7 @@ TEST_CASE("SoftMaxNode") {
                     CHECK_THAT(softmax_ptr->view(state)[1], WithinRel(0.94784643692158, 1e-9));
                     CHECK(softmax_ptr->size(state) == 2);
                 }
-                AND_WHEN("We commite state, grow array, and then propagate") {
+                AND_WHEN("We commit state, grow array, and then propagate") {
                     graph.commit(state);
                     dyn_ptr->grow(state, {1.7, -3.33});
                     // array should be [-2.0, 0.9, 1.7, -3.33]
@@ -201,7 +201,7 @@ TEST_CASE("SoftMaxNode") {
                         CHECK(softmax_ptr->size(state) == 4);
                     }
                     AND_WHEN(
-                            "We commite state, repeatedly change the same index in array, and then "
+                            "We commit state, repeatedly change the same index in array, and then "
                             "propagate") {
                         graph.commit(state);
                         dyn_ptr->set(state, 0, 1.1);
