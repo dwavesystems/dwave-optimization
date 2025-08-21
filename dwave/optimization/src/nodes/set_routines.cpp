@@ -31,11 +31,12 @@ struct IsInNodeDataHelper_ {
             element_indices[element[index]].insert(index);
         }
     }
-    // # of test_elements per value
+    // # of elements from `test_elements` with a given value (key)
     std::unordered_map<double, ssize_t> test_elements_counter;
-    // all indices of elements with a given value
+    // All indices of `element` with a given value (key)
     std::unordered_map<double, std::unordered_set<ssize_t>> element_indices;
-    // Indicator vector: element_isin[i] == true iff element[i] is in test_elements
+    // Indicator vector: element_isin[i] == true iff `element[i]` is in
+    // `test_elements`
     std::vector<ssize_t> element_isin;
 };
 
@@ -49,6 +50,13 @@ struct IsInNodeData : public ArrayNodeStateData {
 
     std::unordered_map<double, ssize_t> test_elements_counter;
     std::unordered_map<double, std::unordered_set<ssize_t>> element_indices;
+
+    // Used to track if elements are added/removed from `test_elements`
+    // during propagate
+    std::unordered_set<double> rm_test_elements;
+    std::unordered_set<double> add_test_elements;
+
+    // Needed for IsInNode::revert()
     std::vector<Update> element_updates;
     std::vector<Update> test_element_updates;
 };
@@ -79,33 +87,31 @@ void IsInNode::initialize_state(State& state) const {
                                    std::vector<double>{test_elements.begin(), test_elements.end()});
 }
 
-bool IsInNode::integral() const { return true; }  // all values are True/False
+bool IsInNode::integral() const { return true; }  // All values are true/false
 
 std::pair<double, double> IsInNode::minmax(
         optional_cache_type<std::pair<double, double>> cache) const {
     return memoize(cache, [&]() {
-        return std::make_pair(0.0, 1.0);  // all values are True/False
+        return std::make_pair(0.0, 1.0);  // All values are true/false
     });
 }
 
 void IsInNode::propagate(State& state) const {
-    auto test_elements_diff = test_elements_ptr_->diff(state);
-    auto element_diff = element_ptr_->diff(state);
+    const std::span<const Update> test_elements_diff = test_elements_ptr_->diff(state);
+    const std::span<const Update> element_diff = element_ptr_->diff(state);
 
     if (test_elements_diff.empty() && element_diff.empty()) {
-        return;  // nothing to do
+        return;  // Nothing to do
     }
 
     // Current node data
     auto node_data = data_ptr<IsInNodeData>(state);
-    auto& element_indices = node_data->element_indices;
     auto& test_elements_counter = node_data->test_elements_counter;
+    auto& element_indices = node_data->element_indices;
+    auto& rm_test_elements = node_data->rm_test_elements;
+    auto& add_test_elements = node_data->add_test_elements;
 
-    // Used to track if elements are added/removed from test_elements
-    std::unordered_set<double> del_test_elements;
-    std::unordered_set<double> add_test_elements;
-
-    // Save a copy of updates so we can use them in case we need to revert
+    // Save a copy of the updates so we can use them in case we need to revert
     node_data->test_element_updates.assign(test_elements_diff.begin(), test_elements_diff.end());
     node_data->element_updates.assign(element_diff.begin(), element_diff.end());
 
@@ -113,30 +119,26 @@ void IsInNode::propagate(State& state) const {
     for (const Update& update : test_elements_diff) {
         if (!update.placed()) {  // i.e. changed or removed
             test_elements_counter[update.old] -= 1;
-            // Deleting `update.old` from test_elements results in no index of
-            // test_elements having the value `update.old`. Record it to update
-            // the containment of values from element later.
+            // Deleting `update.old` from `test_elements` results in no index
+            // of `test_elements` having the value `update.old`. Record it to
+            // update the containment of values from `element` later.
             if (test_elements_counter[update.old] == 0) {
-                del_test_elements.insert(update.old);
+                rm_test_elements.insert(update.old);
                 // This catches the case of a user changing the same index of
-                // test_elements multiple times.
-                if (add_test_elements.contains(update.old)) {
-                    add_test_elements.erase(update.old);
-                }
+                // `test_elements` multiple times.
+                add_test_elements.erase(update.old);
             }
         }
         if (!update.removed()) {  // i.e. changed or added
             test_elements_counter[update.value] += 1;
-            // Previously, `update.value` did not occur in test_elements.
+            // Previously, `update.value` did not occur in `test_elements`.
             // Therefore, we record it to update the containment of values from
-            // element later.
+            // `element` later.
             if (test_elements_counter[update.value] == 1) {
                 add_test_elements.insert(update.value);
                 // This catches the case of a user changing the same index of
                 // test_elements multiple times.
-                if (del_test_elements.contains(update.value)) {
-                    del_test_elements.erase(update.value);
-                }
+                rm_test_elements.erase(update.value);
             }
         }
     }
@@ -152,12 +154,15 @@ void IsInNode::propagate(State& state) const {
         }
         if (!update.removed()) {  // i.e. changed or added
             element_indices[update.value].insert(update.index);
-            node_data->set(update.index, test_elements_counter[update.value], true);
+            // Record whether or not the value of `element` at update.index is
+            // in `test_elements`
+            node_data->set(update.index, test_elements_counter.contains(update.value), true);
         }
     }
 
-    // Handle del_test_elements and add_test_elements
-    for (const double& key : del_test_elements) {
+    // rm_test_elements contains all unique elements that are fully removed from
+    // `test_elements` during the update to the predecessor
+    for (const double& key : rm_test_elements) {
         // Each index of `element` with the value `key` is no longer in `test_elements`
         if (element_indices.contains(key)) {
             for (const auto index : element_indices[key]) {
@@ -167,6 +172,10 @@ void IsInNode::propagate(State& state) const {
         // Remove key to reduce bloating
         test_elements_counter.erase(key);
     }
+    rm_test_elements.clear();
+
+    // add_test_elements contains all unique elements that are newly added to
+    // `test_elements` during the update to the predecessor
     for (const double& key : add_test_elements) {
         // Each index of `element` with the value `key` is now in `test_elements`
         if (element_indices.contains(key)) {
@@ -175,6 +184,7 @@ void IsInNode::propagate(State& state) const {
             }
         }
     }
+    add_test_elements.clear();
 
     // Resize if necessary
     if (element_ptr_->size_diff(state) != 0) {
