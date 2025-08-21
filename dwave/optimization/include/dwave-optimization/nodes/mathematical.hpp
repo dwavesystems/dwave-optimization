@@ -374,6 +374,58 @@ using MinNode = ReduceNode<functional::min<double>>;
 using ProdNode = ReduceNode<std::multiplies<double>>;
 using SumNode = ReduceNode<std::plus<double>>;
 
+// SoftMaxNode *****************************************************************
+
+class SoftMaxNode : public ArrayOutputMixin<ArrayNode> {
+ public:
+    SoftMaxNode(ArrayNode* arr_ptr);
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+    using Array::shape;
+
+    /// @copydoc Array::shape()
+    std::span<const ssize_t> shape(const State& state) const override;
+
+    using Array::size;
+
+    /// @copydoc Array::size()
+    ssize_t size(const State& state) const override;
+
+    /// @copydoc Array::size_diff()
+    ssize_t size_diff(const State& state) const override;
+
+    /// @copydoc Array::sizeinfo()
+    SizeInfo sizeinfo() const override;
+
+ private:
+    // these are redundant, but convenient
+    const Array* arr_ptr_;
+};
+
 template <class UnaryOp>
 class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
  public:
