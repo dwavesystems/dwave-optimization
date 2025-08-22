@@ -723,6 +723,16 @@ class TestBroadcastTo(utils.SymbolTests):
 
         self.assertEqual(model.num_symbols(), 1)  # no side effects
 
+    def test_state_size(self):
+        for symbol in self.generate_symbols():
+            self.assertEqual(symbol.state_size(), 0)
+
+        model = Model()
+        x = model.constant(5)
+        dwave.optimization.broadcast_to(x, (10, 5))
+        self.assertEqual(model.num_symbols(), 2)
+        self.assertEqual(model.state_size(), x.state_size())
+
 
 class TestBSpline(utils.SymbolTests):
     def generate_symbols(self):

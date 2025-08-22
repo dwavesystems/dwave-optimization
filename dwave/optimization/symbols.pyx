@@ -1059,6 +1059,10 @@ cdef class BroadcastTo(ArraySymbol):
         encoder = json.JSONEncoder(separators=(',', ':'))
         zf.writestr(directory + "shape.json", encoder.encode(self.shape()))
 
+    def state_size(self):
+        """Broadcasting symbols are stateless"""
+        return 0
+
 _register(BroadcastTo, typeid(cppBroadcastToNode))
 
 

@@ -48,7 +48,7 @@ std::vector<ssize_t> diff_offsets(std::span<const ssize_t> from_shape,
     ssize_t multiplier = 1;
     for (const auto stop = from_shape.rend(); from_it != stop; ++from_it, ++to_it) {
         if (*from_it == *to_it) {
-            // The shapes matche, there is no broadcasting here
+            // The shapes match, there is no broadcasting here
 
             // In the case that we're dynamic, this will result in a negative multiplier,
             // but that's OK because it's only the 0th dimension so we'll never use it.
