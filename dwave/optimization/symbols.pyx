@@ -67,6 +67,7 @@ from dwave.optimization.libcpp.nodes cimport (
     ArrayValidationNode as cppArrayValidationNode,
     BasicIndexingNode as cppBasicIndexingNode,
     BinaryNode as cppBinaryNode,
+    BroadcastToNode as cppBroadcastToNode,
     BSplineNode as cppBSplineNode,
     ConcatenateNode as cppConcatenateNode,
     ConstantNode as cppConstantNode,
@@ -152,6 +153,7 @@ __all__ = [
     "ArgSort",
     "BasicIndexing",
     "BinaryVariable",
+    "BroadcastTo",
     "BSpline",
     "Concatenate",
     "Constant",
@@ -1027,6 +1029,43 @@ cdef class BinaryVariable(ArraySymbol):
     cdef cppBinaryNode* ptr
 
 _register(BinaryVariable, typeid(cppBinaryNode))
+
+
+cdef class BroadcastTo(ArraySymbol):
+    """BroadcastTo symbol.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.broadcast_to`: equivalent function.
+
+    .. versionadded:: 0.6.5
+    """
+    def __init__(self, ArraySymbol node, shape):
+        cdef _Graph model = node.model
+
+        cdef cppBroadcastToNode* ptr = model._graph.emplace_node[cppBroadcastToNode](
+            node.array_ptr,
+            as_cppshape(shape, nonnegative=False),
+        )
+
+        self.initialize_arraynode(model, ptr)
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        if len(predecessors) != 1:
+            raise ValueError(f"{cls.__name__} must have exactly one predecessor")
+
+        with zf.open(directory + "shape.json", "r") as f:
+            return BroadcastTo(*predecessors, json.load(f))
+
+    def _into_zipfile(self, zf, directory):
+        encoder = json.JSONEncoder(separators=(',', ':'))
+        zf.writestr(directory + "shape.json", encoder.encode(self.shape()))
+
+    def state_size(self):
+        """Broadcasting symbols are stateless"""
+        return 0
+
+_register(BroadcastTo, typeid(cppBroadcastToNode))
 
 
 cdef class BSpline(ArraySymbol):

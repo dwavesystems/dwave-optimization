@@ -95,6 +95,30 @@ class Test_atleast_2d(unittest.TestCase):
             np.testing.assert_array_equal(out.state(), [[1, 2], [3, 4]])
 
 
+class Test_broadcast_symbols(unittest.TestCase):
+    def test(self):
+        model = Model()
+        x = model.constant([0, 1, 2])  # (3,)
+        y = model.constant([[0], [1]])  # (2, 1)
+
+        xb, yb = dwave.optimization.broadcast_symbols(x, y)
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(xb.state(), [[0, 1, 2], [0, 1, 2]])
+            np.testing.assert_array_equal(yb.state(), [[0, 0, 0], [1, 1, 1]])
+
+    def test_identity(self):
+        model = Model()
+        x = model.integer()
+        y = model.constant(0)
+
+        xb, yb = dwave.optimization.broadcast_symbols(x, y)
+
+        self.assertEqual(xb.id(), x.id())
+        self.assertEqual(yb.id(), y.id())
+
+
 class TestHStack(unittest.TestCase):
     def test_0d(self):
         model = Model()

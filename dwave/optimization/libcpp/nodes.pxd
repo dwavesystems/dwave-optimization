@@ -134,6 +134,9 @@ cdef extern from "dwave-optimization/nodes/lambda.hpp" namespace "dwave::optimiz
 
 
 cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass BroadcastToNode(ArrayNode):
+        pass
+
     cdef cppclass ConcatenateNode(ArrayNode):
         Py_ssize_t axis()
 

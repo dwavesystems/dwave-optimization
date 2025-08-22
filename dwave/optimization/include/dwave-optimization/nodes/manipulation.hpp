@@ -25,6 +25,68 @@
 
 namespace dwave::optimization {
 
+class BroadcastToNode : public ArrayNode {
+ public:
+    BroadcastToNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> shape);
+    BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> shape);
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// Broadcast nodes are always treated as non-contiguous.
+    bool contiguous() const override { return false; }
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::minmax()
+    std::pair<double, double> minmax(
+            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+
+    /// @copydoc Array::ndim()
+    ssize_t ndim() const override;
+
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+    /// @copydoc Array::shape()
+    std::span<const ssize_t> shape() const override;
+    std::span<const ssize_t> shape(const State& state) const override;
+
+    /// @copydoc Array::size()
+    ssize_t size() const override;
+    ssize_t size(const State& state) const override;
+
+    /// @copydoc Array::size_diff()
+    ssize_t size_diff(const State& state) const override;
+
+    /// @copydoc Array::strides()
+    std::span<const ssize_t> strides() const override;
+
+ private:
+    /// Translate a linear index of the predecessor into a linear index of the
+    /// BroadcastToNode.
+    ssize_t reindex(ssize_t index) const;
+
+    ArrayNode* array_ptr_;
+
+    ssize_t ndim_;
+    std::unique_ptr<ssize_t[]> shape_;
+    std::unique_ptr<ssize_t[]> strides_;
+};
+
 class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
  public:
     explicit ConcatenateNode(std::span<ArrayNode*> array_ptrs, ssize_t axis);

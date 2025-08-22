@@ -22,6 +22,281 @@
 
 namespace dwave::optimization {
 
+// Return the linear offsets that need to be applied to each update when broadcasting from
+// `from_shape` to `to_shape`.
+std::vector<ssize_t> diff_offsets(std::span<const ssize_t> from_shape,
+                                  std::span<const ssize_t> to_shape) {
+    std::vector<ssize_t> offsets{0};  // for an identity broadcast there is only one offset
+
+    auto expand = [](const std::vector<ssize_t>& offsets, ssize_t size, ssize_t multiplier) {
+        assert(size > 0);
+        assert(multiplier > 0);
+        std::vector<ssize_t> new_offsets;
+        for (const ssize_t& offset : offsets) {
+            for (ssize_t i = 0; i < size; ++i) {
+                new_offsets.emplace_back(offset + i * multiplier);
+            }
+        }
+
+        return new_offsets;
+    };
+
+    assert(from_shape.size() <= to_shape.size());
+
+    auto from_it = from_shape.rbegin();
+    auto to_it = to_shape.rbegin();
+    ssize_t multiplier = 1;
+    for (const auto stop = from_shape.rend(); from_it != stop; ++from_it, ++to_it) {
+        if (*from_it == *to_it) {
+            // The shapes match, there is no broadcasting here
+
+            // In the case that we're dynamic, this will result in a negative multiplier,
+            // but that's OK because it's only the 0th dimension so we'll never use it.
+            multiplier *= *from_it;
+        } else {
+            assert(*from_it == 1);  // should be checked in constructor
+            offsets = expand(offsets, *to_it, multiplier);
+        }
+    }
+
+    // all of the dimensions we're prepending need offsets
+    for (auto stop = to_shape.rend(); to_it != stop; ++to_it) {
+        offsets = expand(offsets, *to_it, multiplier);
+    }
+
+    // We need it to be sorted in order to potentially support dynamic nodes
+    // Also it's more convenient to debug.
+    std::ranges::sort(offsets);
+
+    return offsets;
+}
+
+class BroadcastToNodeData : public NodeStateData {
+ public:
+    BroadcastToNodeData(std::vector<ssize_t>&& diff_offsets)
+            : diff_offsets(std::move(diff_offsets)) {}
+
+    virtual void commit() { diff.clear(); }
+    virtual void revert() { diff.clear(); }
+
+    const std::vector<ssize_t> diff_offsets;
+
+    std::vector<Update> diff;
+};
+
+class DynamicBroadcastToNodeData : public BroadcastToNodeData {
+ public:
+    DynamicBroadcastToNodeData(std::vector<ssize_t>&& diff_offsets, std::vector<ssize_t>&& shape)
+            : BroadcastToNodeData(std::move(diff_offsets)), shape(std::move(shape)) {}
+
+    virtual void commit() {
+        BroadcastToNodeData::commit();
+        old_shape = shape;
+        size_diff = 0;
+    }
+
+    virtual void revert() {
+        BroadcastToNodeData::revert();
+        shape = old_shape;
+        size_diff = 0;
+    }
+
+    std::vector<ssize_t> shape;
+    std::vector<ssize_t> old_shape = shape;  // for easy reverting
+
+    ssize_t size_diff = 0;
+};
+
+BroadcastToNode::BroadcastToNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> shape)
+        : BroadcastToNode(array_ptr, std::span(shape)) {}
+
+BroadcastToNode::BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> shape)
+        : array_ptr_(array_ptr),
+          ndim_(shape.size()),
+          shape_(std::make_unique<ssize_t[]>(ndim_)),
+          strides_(std::make_unique<ssize_t[]>(ndim_)) {
+    // Fill in our shape_ and then make it accessible locally as a span
+    std::copy(shape.begin(), shape.end(), shape_.get());
+    const std::span<const ssize_t> target_shape(shape_.get(), ndim_);
+
+    // Make our strides locally accessible as a span.
+    std::span<ssize_t> target_strides(strides_.get(), ndim_);
+
+    // Finally get our source shape and strides
+    const auto source_shape = array_ptr_->shape();
+    const auto source_strides = array_ptr_->strides();
+
+    // Alright, let's check that our source and target shapes are compatible
+    // and at the same time fill in our strides
+
+    if (source_shape.size() > target_shape.size()) {
+        throw std::invalid_argument("array has more dimensions (" +
+                                    std::to_string(source_shape.size()) +
+                                    ") than can be broadast to " + shape_to_string(target_shape));
+    }
+
+    if (array_ptr_->dynamic() &&
+        (source_shape.size() != target_shape.size() || target_shape[0] >= 0)) {
+        throw std::invalid_argument(
+                "dynamic arrays can only be broadcast to another dynamic shape with the same "
+                "number of dimensions");
+    }
+
+    // Walk backwards through all four arrays. Zip would be nice here...
+    auto rit_sshape = source_shape.rbegin();
+    auto rit_sstrides = source_strides.rbegin();
+    auto rit_tshape = target_shape.rbegin();
+    auto rit_tstrides = target_strides.rbegin();
+    for (const auto stop = source_shape.rend(); rit_sshape != stop;
+         ++rit_tshape, ++rit_tstrides, ++rit_sshape, ++rit_sstrides) {
+        if (*rit_sshape == *rit_tshape) {
+            // source and target match in dimension size, strides are therefore
+            // preserved
+            *rit_tstrides = *rit_sstrides;
+        } else if (*rit_sshape == 1) {
+            // source dimension size is 1, so we can stretch it out
+            *rit_tstrides = 0;  // stretched
+        } else {
+            // not compatible!
+            throw std::invalid_argument("array of shape " + shape_to_string(source_shape) +
+                                        " could not be broadcast to " +
+                                        shape_to_string(target_shape));
+        }
+    }
+
+    // All of the dimensions we're adding at the "front" get 0 strides
+    for (auto stop = target_shape.rend(); rit_tshape != stop; ++rit_tshape, ++rit_tstrides) {
+        *rit_tstrides = 0;
+    }
+
+    add_predecessor(array_ptr);
+}
+
+double const* BroadcastToNode::buff(const State& state) const { return array_ptr_->buff(state); }
+
+void BroadcastToNode::commit(State& state) const { data_ptr<BroadcastToNodeData>(state)->commit(); }
+
+std::span<const Update> BroadcastToNode::diff(const State& state) const {
+    return data_ptr<BroadcastToNodeData>(state)->diff;
+}
+
+bool BroadcastToNode::integral() const { return array_ptr_->integral(); }
+
+void BroadcastToNode::initialize_state(State& state) const {
+    std::vector<ssize_t> offsets = diff_offsets(array_ptr_->shape(), this->shape());
+
+    if (ndim_ && shape_[0] < 0) {
+        // dynamic
+        // In addition to storing the offsets, when we're dynamic we need to store our current
+        // shape/size as well. Luckily, they are easy to calculate because we cannot broadcast
+        // along shape[0].
+
+        std::vector<ssize_t> shape(this->shape().begin(), this->shape().end());
+        assert(this->ndim() > 0);
+        assert(array_ptr_->ndim() > 0);
+        assert(shape[0] == -1);
+        shape[0] = array_ptr_->shape(state)[0];
+        assert(shape[0] >= 0);
+
+        emplace_data_ptr<DynamicBroadcastToNodeData>(state, std::move(offsets), std::move(shape));
+    } else {
+        // not dynamic
+        emplace_data_ptr<BroadcastToNodeData>(state, std::move(offsets));
+    }
+}
+
+std::pair<double, double> BroadcastToNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() { return array_ptr_->minmax(cache); });
+}
+
+ssize_t BroadcastToNode::ndim() const { return ndim_; }
+
+void BroadcastToNode::propagate(State& state) const {
+    BroadcastToNodeData* data_ptr = this->data_ptr<BroadcastToNodeData>(state);
+
+    const auto from_diff = array_ptr_->diff(state);
+    if (from_diff.empty()) return;  // exit early if nothing to propagate
+
+    auto& to_diff = data_ptr->diff;
+    assert(to_diff.empty());  // should be cleared between propagations
+
+    const auto& diff_offsets = data_ptr->diff_offsets;
+
+    ssize_t size_diff = 0;
+    for (Update update : deduplicate_diff_view(from_diff)) {
+        // we need to convert from our predecessor's index to ours 
+        const ssize_t index = reindex(update.index);
+
+        if (update.placed()) {
+            for (const ssize_t offset : diff_offsets) {
+                update.index = index + offset;
+                to_diff.emplace_back(update);
+                size_diff += 1;
+            }
+        } else if (update.removed()) {
+            for (const ssize_t offset : diff_offsets | std::views::reverse) {
+                update.index = index + offset;
+                to_diff.emplace_back(update);
+                size_diff -= 1;
+            }
+        } else {
+            for (const ssize_t offset : diff_offsets) {
+                update.index = index + offset;
+                to_diff.emplace_back(update);
+            }
+        }
+    }
+
+    // we also need to update the shape/sizediff, if we're dynamic
+    if (dynamic()) {
+        auto* dynamic_data_ptr = this->data_ptr<DynamicBroadcastToNodeData>(state);
+        dynamic_data_ptr->shape[0] = array_ptr_->shape(state)[0];
+        dynamic_data_ptr->size_diff = size_diff;
+    }
+
+    if (to_diff.size()) Node::propagate(state);
+}
+
+ssize_t BroadcastToNode::reindex(const ssize_t index) const {
+    std::vector<ssize_t> multi_index = unravel_index(index, array_ptr_->shape());
+    assert(this->ndim() >= array_ptr_->ndim());
+    multi_index.insert(multi_index.begin(), this->ndim() - array_ptr_->ndim(), 0);
+    return ravel_multi_index(multi_index, this->shape());
+}
+
+void BroadcastToNode::revert(State& state) const { data_ptr<BroadcastToNodeData>(state)->revert(); }
+
+std::span<const ssize_t> BroadcastToNode::shape() const {
+    return std::span<const ssize_t>(shape_.get(), ndim_);
+}
+
+std::span<const ssize_t> BroadcastToNode::shape(const State& state) const {
+    if (!ndim_ || shape_[0] >= 0) return shape();  // not dynamic
+    return data_ptr<DynamicBroadcastToNodeData>(state)->shape;
+}
+
+ssize_t BroadcastToNode::size() const {
+    if (ndim_ && shape_[0] < 0) return -1;  // dynamic
+    return std::accumulate(shape_.get(), shape_.get() + ndim_, 1, std::multiplies<ssize_t>());
+}
+
+ssize_t BroadcastToNode::size(const State& state) const {
+    if (!ndim_ || shape_[0] >= 0) return size();  // not dynamic
+    const auto& shape = data_ptr<DynamicBroadcastToNodeData>(state)->shape;
+    assert(shape.size() > 0 && shape[0] >= 0);
+    return std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<ssize_t>());
+}
+
+ssize_t BroadcastToNode::size_diff(const State& state) const {
+    if (!ndim_ || shape_[0] >= 0) return 0;  // not dynamic
+    return data_ptr<DynamicBroadcastToNodeData>(state)->size_diff;
+}
+
+std::span<const ssize_t> BroadcastToNode::strides() const {
+    return std::span<const ssize_t>(strides_.get(), ndim_);
+}
+
 std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ssize_t axis);
 
 double const* ConcatenateNode::buff(const State& state) const {
