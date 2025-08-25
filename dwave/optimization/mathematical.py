@@ -32,6 +32,7 @@ from dwave.optimization.symbols import (
     Exp,
     Expit,
     Extract,
+    Find,
     LinearProgram,
     LinearProgramFeasible,
     LinearProgramObjectiveValue,
@@ -76,6 +77,7 @@ __all__ = [
     "exp",
     "expit",
     "extract",
+    "find",
     "hstack",
     "linprog",
     "log",
@@ -659,6 +661,45 @@ def extract(condition: ArraySymbol, arr: ArraySymbol) -> Extract:
     .. versionadded:: 0.6.3
     """
     return Extract(condition, arr)
+
+
+def find(arr: ArraySymbol) -> Find:
+    """Returns smallest index (should it exist) of a non-zero element of
+       predecessor. Returns -1 if no such index exists.
+
+    Args:
+        array: Input array symbol.
+
+    Examples:
+        These examples perform find on a integer symbol
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import find
+        ...
+        >>> model = Model()
+        >>> i = model.integer(3)
+        >>> f = find(i)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [0, 0, 3])
+        ...     print(f.state(0))
+        2.0
+
+        >>> model = Model()
+        >>> i = model.integer(3)
+        >>> f = find(i)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [0, 0, 0])
+        ...     print(f.state(0))
+        -1.0
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Find`: equivalent symbol.
+
+    .. versionadded:: 0.6.4
+    """
+    return Find(arr)
 
 
 def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:

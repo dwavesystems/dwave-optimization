@@ -35,6 +35,7 @@ from libcpp.cast cimport dynamic_cast, reinterpret_cast
 from libcpp.memory cimport make_unique, unique_ptr
 from libcpp.optional cimport nullopt, optional
 from libcpp.span cimport span
+from libcpp.string cimport string as cpp_string
 from libcpp.typeindex cimport type_index
 from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
@@ -82,6 +83,7 @@ from dwave.optimization.libcpp.nodes cimport (
     ExpitNode as cppExpitNode,
     ExpNode as cppExpNode,
     ExtractNode as cppExtractNode,
+    FindNode as cppFindNode,
     InputNode as cppInputNode,
     IntegerNode as cppIntegerNode,
     LessEqualNode as cppLessEqualNode,
@@ -168,6 +170,7 @@ __all__ = [
     "Exp",
     "Expit",
     "Extract",
+    "Find",
     "Input",
     "IntegerVariable",
     "LessEqual",
@@ -2132,6 +2135,48 @@ cdef class Extract(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(Extract, typeid(cppExtractNode))
+
+
+cdef class Find(ArraySymbol):
+    """Returns smallest index (should it exist) of a non-zero element of
+       predecessor. Returns -1 if no such index exists.
+
+    Examples:
+        This example performs find on one symbol.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import find
+        ...
+        >>> model = Model()
+        >>> i = model.integer(4)
+        >>> f = find(i)
+        >>> type(f)
+        <class 'dwave.optimization.symbols.Find'>
+    
+    See Also:
+        :meth:`~dwave.optimization.mathematical.find`: equivalent method.
+
+    .. versionadded:: 0.6.4
+    """
+    def __init__(self, ArraySymbol arr):
+        cdef _Graph model = arr.model
+
+        self.ptr = model._graph.emplace_node[cppFindNode](arr.array_ptr)
+        self.initialize_arraynode(model, self.ptr)
+
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
+        cdef cppFindNode* ptr = dynamic_cast_ptr[cppFindNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+        cdef Find x = Find.__new__(Find)
+        x.ptr = ptr
+        x.initialize_arraynode(symbol.model, ptr)
+        return x
+
+    cdef cppFindNode* ptr
+
+_register(Find, typeid(cppFindNode))
 
 
 cdef class Input(ArraySymbol):
