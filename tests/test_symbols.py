@@ -2921,6 +2921,11 @@ class TestReshape(utils.SymbolTests):
             s.set_state(0, [0, 1, 2])
             np.testing.assert_array_equal(r.state(), [[0], [1], [2]])
 
+    def test_identity(self):
+        model = Model()
+        x = model.constant(np.arange(15).reshape(3, 5))
+        self.assertEqual(x.id(), x.reshape(3, 5).id())
+
     def test_implicit_reshape(self):
         model = Model()
         A = model.constant(np.arange(12).reshape(3, 4))

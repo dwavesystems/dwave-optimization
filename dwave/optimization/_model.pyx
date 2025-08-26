@@ -1825,6 +1825,11 @@ cdef class ArraySymbol(Symbol):
                 symbol cannot be a fraction of the size of each "row" of the
                 antecedent array symbol. See examples below.
 
+        Returns:
+            A :class:`~dwave.optimization.symbols.Reshape` symbol, except when
+            the provided shape exactly matches the shape of the symbol. In that
+            case the symbol is returned.
+
         Examples:
             This example reshapes a 1D vector into a 3x1 matrix.
 
@@ -1866,8 +1871,19 @@ cdef class ArraySymbol(Symbol):
             Add support for reshaping dynamic array symbols.
         """
         from dwave.optimization.symbols import Reshape  # avoid circular import
+
+        # Handle .reshape(0, 1) vs .reshape((0, 1))
         if len(shape) <= 1:
             shape = shape[0]
+
+        # If the given shape exactly matches self.shape() then we don't need
+        # any sort of reshape. This doesn't handle the case where we're inferring
+        # -1s, but I think that's enough of an edge case that it's not worth
+        # duplicating the logic here.
+        if isinstance(shape, int):
+            shape = (shape,)
+        if shape == self.shape():
+            return self
 
         if not self.array_ptr.contiguous():
             return Reshape(self.copy(), shape)
