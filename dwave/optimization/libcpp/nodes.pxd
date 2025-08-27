@@ -300,6 +300,11 @@ cdef extern from "dwave-optimization/nodes/quadratic_model.hpp" namespace "dwave
         QuadraticModel* get_quadratic_model()
 
 
+cdef extern from "dwave-optimization/nodes/set_routines.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass IsInNode(ArrayNode):
+        pass
+
+
 cdef extern from "dwave-optimization/nodes/sorting.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ArgSortNode(ArrayNode):
         pass
