@@ -179,8 +179,6 @@ jobs:
     parameters:
       gcc-version:
         type: string
-      cpp-standard:
-        type: string
 
     docker:
       - image: gcc:<< parameters.gcc-version >>
@@ -202,14 +200,17 @@ jobs:
           name: run c++ tests with meson
           command: |
             . env/bin/activate
-            meson setup _build -Dbuildtype=debug -Dwerror=true -Dcpp_std=<< parameters.cpp-standard >>
+            meson setup _build -Dbuildtype=debug -Dwerror=true
+            meson test -C _build
+
+      - run: &run-cpp23-tests
+          name: run c++23 tests with meson
+          command: |
+            . env/bin/activate
+            meson configure _build -Dcpp_std=c++23
             meson test -C _build
 
   cpp-macOS:
-    parameters:
-      cpp-standard:
-        type: string
-
     macos:
       xcode: 15.3.0
     resource_class: macos.m1.medium.gen1
@@ -218,6 +219,7 @@ jobs:
       - checkout
       - run: *install-requirements
       - run: *run-cpp-tests
+      - run: *run-cpp23-tests
 
   serialization:
     docker:
@@ -353,15 +355,11 @@ workflows:
           requires:
             - python-linux
       - cpp-gcc:
-          name: cpp-gcc-<< matrix.gcc-version >>-<< matrix.cpp-standard >>
+          name: cpp-gcc-<< matrix.gcc-version >>
           matrix:
             parameters:
-              gcc-version: ["11", "12", "13", "14", "15"]
-              cpp-standard: ["c++20", "c++23"]
-      - cpp-macOS:
-          matrix:
-            parameters:
-              cpp-standard: ["c++20", "c++23"]
+              gcc-version: ["11", "latest"]
+      - cpp-macOS
       - serialization:
           requires:
             - python-linux
