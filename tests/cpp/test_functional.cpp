@@ -14,7 +14,7 @@
 
 #include "catch2/catch_template_test_macros.hpp"
 #include "catch2/catch_test_macros.hpp"
-#include "dwave-optimization/nodes/mathematical.hpp"
+#include "dwave-optimization/functional.hpp"
 
 namespace dwave::optimization::functional {
 
