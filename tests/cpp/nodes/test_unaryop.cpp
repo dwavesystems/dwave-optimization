@@ -14,14 +14,14 @@
 
 #include "catch2/catch_template_test_macros.hpp"
 #include "catch2/catch_test_macros.hpp"
-#include "catch2/matchers/catch_matchers_all.hpp"
+#include "catch2/matchers/catch_matchers_range_equals.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
-#include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
+#include "dwave-optimization/nodes/unaryop.hpp"
 
 using Catch::Matchers::RangeEquals;
 

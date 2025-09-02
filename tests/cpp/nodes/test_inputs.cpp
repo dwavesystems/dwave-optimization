@@ -19,7 +19,6 @@
 #include <dwave-optimization/nodes/constants.hpp>
 #include <dwave-optimization/nodes/flow.hpp>
 #include <dwave-optimization/nodes/inputs.hpp>
-#include <dwave-optimization/nodes/mathematical.hpp>
 #include <dwave-optimization/nodes/numbers.hpp>
 #include <dwave-optimization/nodes/testing.hpp>
 

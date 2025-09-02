@@ -31,6 +31,47 @@ ctypedef const Array* ArrayPtr
 ctypedef ArrayNode* ArrayNodePtr
 
 
+cdef extern from "dwave-optimization/nodes/binaryop.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass AddNode(ArrayNode):
+        pass
+
+    cdef cppclass AndNode(ArrayNode):
+        pass
+
+    cdef cppclass DivideNode(ArrayNode):
+        pass
+
+    cdef cppclass EqualNode(ArrayNode):
+        pass
+
+    cdef cppclass LessEqualNode(ArrayNode):
+        pass
+
+    cdef cppclass MaximumNode(ArrayNode):
+        pass
+
+    cdef cppclass MinimumNode(ArrayNode):
+        pass
+
+    cdef cppclass ModulusNode(ArrayNode):
+        pass
+
+    cdef cppclass MultiplyNode(ArrayNode):
+        pass
+
+    cdef cppclass OrNode(ArrayNode):
+        pass
+
+    cdef cppclass SafeDivideNode(ArrayNode):
+        pass
+
+    cdef cppclass SubtractNode(ArrayNode):
+        pass
+
+    cdef cppclass XorNode(ArrayNode):
+        pass
+
+
 cdef extern from "dwave-optimization/nodes/collections.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass DisjointBitSetsNode(Node):
         void initialize_state(State&, vector[vector[double]]) except+
@@ -156,64 +197,7 @@ cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::o
         pass
 
 
-cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass AbsoluteNode(ArrayNode):
-        pass
-
-    cdef cppclass AddNode(ArrayNode):
-        pass
-
-    cdef cppclass AllNode(ArrayNode):
-        pass
-
-    cdef cppclass AndNode(ArrayNode):
-        pass
-
-    cdef cppclass AnyNode(ArrayNode):
-        pass
-
-    cdef cppclass CosNode(ArrayNode):
-        pass
-
-    cdef cppclass DivideNode(ArrayNode):
-        pass
-
-    cdef cppclass EqualNode(ArrayNode):
-        pass
-
-    cdef cppclass ExpitNode(ArrayNode):
-        pass
-
-    cdef cppclass ExpNode(ArrayNode):
-        pass
-
-    cdef cppclass LessEqualNode(ArrayNode):
-        pass
-
-    cdef cppclass LogNode(ArrayNode):
-        pass
-
-    cdef cppclass LogicalNode(ArrayNode):
-        pass
-
-    cdef cppclass MaximumNode(ArrayNode):
-        pass
-
-    cdef cppclass MaxNode(ArrayNode):
-        optional[double] init
-
-    cdef cppclass MinimumNode(ArrayNode):
-        pass
-
-    cdef cppclass MinNode(ArrayNode):
-        optional[double] init
-
-    cdef cppclass ModulusNode(ArrayNode):
-        pass
-
-    cdef cppclass MultiplyNode(ArrayNode):
-        pass
-
+cdef extern from "dwave-optimization/nodes/naryop.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass NaryAddNode(ArrayNode):
         void add_node(ArrayNode*) except+
 
@@ -225,53 +209,6 @@ cdef extern from "dwave-optimization/nodes/mathematical.hpp" namespace "dwave::o
 
     cdef cppclass NaryMultiplyNode(ArrayNode):
         void add_node(ArrayNode*) except+
-
-    cdef cppclass NegativeNode(ArrayNode):
-        pass
-
-    cdef cppclass NotNode(ArrayNode):
-        pass
-
-    cdef cppclass OrNode(ArrayNode):
-        pass
-
-    cdef cppclass PartialProdNode(ArrayNode):
-        span[const Py_ssize_t] axes() const
-        optional[double] init
-
-    cdef cppclass PartialSumNode(ArrayNode):
-        span[const Py_ssize_t] axes() const
-        optional[double] init
-
-    cdef cppclass ProdNode(ArrayNode):
-        optional[double] init
-
-    cdef cppclass RintNode(ArrayNode):
-        pass
-
-    cdef cppclass SafeDivideNode(ArrayNode):
-        pass
-
-    cdef cppclass SinNode(ArrayNode):
-        pass
-
-    cdef cppclass SoftMaxNode(ArrayNode):
-        pass
-
-    cdef cppclass SquareNode(ArrayNode):
-        pass
-        
-    cdef cppclass SquareRootNode(ArrayNode):
-        pass
-
-    cdef cppclass SubtractNode(ArrayNode):
-        pass
-
-    cdef cppclass SumNode(ArrayNode):
-        optional[double] init
-
-    cdef cppclass XorNode(ArrayNode):
-        pass
 
 
 cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimization" nogil:
@@ -300,6 +237,40 @@ cdef extern from "dwave-optimization/nodes/quadratic_model.hpp" namespace "dwave
         QuadraticModel* get_quadratic_model()
 
 
+cdef extern from "dwave-optimization/nodes/reduce.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass AllNode(ArrayNode):
+        pass
+
+    cdef cppclass AnyNode(ArrayNode):
+        pass
+
+    cdef cppclass MaxNode(ArrayNode):
+        optional[double] init
+
+    cdef cppclass MinNode(ArrayNode):
+        optional[double] init
+
+    cdef cppclass PartialProdNode(ArrayNode):
+        span[const Py_ssize_t] axes() const
+        optional[double] init
+
+    cdef cppclass PartialSumNode(ArrayNode):
+        span[const Py_ssize_t] axes() const
+        optional[double] init
+
+    cdef cppclass ProdNode(ArrayNode):
+        optional[double] init
+
+
+    cdef cppclass SumNode(ArrayNode):
+        optional[double] init
+
+
+cdef extern from "dwave-optimization/nodes/softmax.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass SoftMaxNode(ArrayNode):
+        pass
+
+
 cdef extern from "dwave-optimization/nodes/sorting.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ArgSortNode(ArrayNode):
         pass
@@ -312,4 +283,41 @@ cdef extern from "dwave-optimization/nodes/statistics.hpp" namespace "dwave::opt
 
 cdef extern from "dwave-optimization/nodes/testing.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ArrayValidationNode(Node):
+        pass
+
+cdef extern from "dwave-optimization/nodes/unaryop.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass AbsoluteNode(ArrayNode):
+        pass
+
+    cdef cppclass CosNode(ArrayNode):
+        pass
+
+    cdef cppclass ExpitNode(ArrayNode):
+        pass
+
+    cdef cppclass ExpNode(ArrayNode):
+        pass
+
+    cdef cppclass LogNode(ArrayNode):
+        pass
+
+    cdef cppclass LogicalNode(ArrayNode):
+        pass
+
+    cdef cppclass NegativeNode(ArrayNode):
+        pass
+
+    cdef cppclass NotNode(ArrayNode):
+        pass
+
+    cdef cppclass RintNode(ArrayNode):
+        pass
+
+    cdef cppclass SinNode(ArrayNode):
+        pass
+
+    cdef cppclass SquareNode(ArrayNode):
+        pass
+        
+    cdef cppclass SquareRootNode(ArrayNode):
         pass

@@ -12,14 +12,11 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#include <catch2/benchmark/catch_benchmark_all.hpp>
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_all.hpp>
-
+#include "catch2/catch_test_macros.hpp"
 #include "catch2/matchers/catch_matchers_floating_point.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
-#include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
+#include "dwave-optimization/nodes/softmax.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
 
 namespace dwave::optimization {
