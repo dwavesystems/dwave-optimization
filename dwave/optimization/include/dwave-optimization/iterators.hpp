@@ -67,7 +67,7 @@ class BufferIterator {
     template <DType T>
     explicit BufferIterator(const T* ptr) noexcept
         requires(!DType<From>)
-            : ptr_(ptr), format_(format_of(ptr)), shape_() {}
+            : ptr_(ptr), format_(format_of<T>()), shape_() {}
 
     /// Construct a contiguous iterator pointing to ptr when the type of ptr is
     /// known at compile-time.
@@ -88,7 +88,7 @@ class BufferIterator {
             noexcept
         requires(!DType<From>)
             : ptr_(ptr),
-              format_(format_of(ptr)),
+              format_(format_of<T>()),
               shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
 
     /// Construct a non-contiguous iterator from a shape/strides defined as
@@ -158,19 +158,21 @@ class BufferIterator {
         } else {
             // In this case we need to do some switch behavior at runtime
             switch (format_) {
-                case FormatCharacter::f:
+                case FormatCharacter::float_:
                     return *static_cast<const float*>(ptr_);
-                case FormatCharacter::d:
+                case FormatCharacter::double_:
                     return *static_cast<const double*>(ptr_);
-                case FormatCharacter::i:
+                case FormatCharacter::bool_:
+                    return *static_cast<const bool*>(ptr_);
+                case FormatCharacter::int_:
                     return *static_cast<const int*>(ptr_);
-                case FormatCharacter::b:
+                case FormatCharacter::signedchar_:
                     return *static_cast<const signed char*>(ptr_);
-                case FormatCharacter::h:
+                case FormatCharacter::signedshort_:
                     return *static_cast<const signed short*>(ptr_);
-                case FormatCharacter::l:
+                case FormatCharacter::signedlong_:
                     return *static_cast<const signed long*>(ptr_);
-                case FormatCharacter::Q:
+                case FormatCharacter::signedlonglong_:
                     return *static_cast<const signed long long*>(ptr_);
             }
             unreachable();
@@ -288,19 +290,21 @@ class BufferIterator {
         } else {
             // Otherwise we do a runtime check
             switch (format_) {
-                case FormatCharacter::f:
+                case FormatCharacter::float_:
                     return sizeof(float);
-                case FormatCharacter::d:
+                case FormatCharacter::double_:
                     return sizeof(double);
-                case FormatCharacter::i:
+                case FormatCharacter::bool_:
+                    return sizeof(bool);
+                case FormatCharacter::int_:
                     return sizeof(int);
-                case FormatCharacter::b:
+                case FormatCharacter::signedchar_:
                     return sizeof(signed char);
-                case FormatCharacter::h:
+                case FormatCharacter::signedshort_:
                     return sizeof(signed short);
-                case FormatCharacter::l:
+                case FormatCharacter::signedlong_:
                     return sizeof(signed long);
-                case FormatCharacter::Q:
+                case FormatCharacter::signedlonglong_:
                     return sizeof(signed long long);
             }
         }
@@ -474,24 +478,6 @@ class BufferIterator {
     std::conditional<DType<From>, empty, FormatCharacter>::type format_;
 
     std::unique_ptr<ShapeInfo> shape_ = nullptr;
-
-    // Convenience functions for getting the format character from a compile-time type.
-    // todo: move into the outer namespace.
-    static constexpr FormatCharacter format_of(const float* const) { return FormatCharacter::f; }
-    static constexpr FormatCharacter format_of(const double* const) { return FormatCharacter::d; }
-    static constexpr FormatCharacter format_of(const int* const) { return FormatCharacter::i; }
-    static constexpr FormatCharacter format_of(const signed char* const) {
-        return FormatCharacter::b;
-    }
-    static constexpr FormatCharacter format_of(const signed short* const) {
-        return FormatCharacter::h;
-    }
-    static constexpr FormatCharacter format_of(const signed long* const) {
-        return FormatCharacter::l;
-    }
-    static constexpr FormatCharacter format_of(const signed long long* const) {
-        return FormatCharacter::Q;
-    }
 };
 
 }  // namespace dwave::optimization

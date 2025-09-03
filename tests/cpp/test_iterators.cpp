@@ -12,6 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <array>
 #include <cstdint>
 #include <vector>
 
@@ -25,6 +26,7 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
+// note: we don't test bool here because it's a bit of an edge case
 TEMPLATE_TEST_CASE("BufferIterator - templated", "",  //
                    float, double, std::int8_t, std::int16_t, std::int32_t, std::int64_t) {
     // Check that we can interpret buffers of each type as a double
@@ -90,6 +92,25 @@ TEMPLATE_TEST_CASE("BufferIterator - templated", "",  //
 
             CHECK_THAT(std::ranges::subrange(it, it + 5), RangeEquals({0, 2, 4, 6, 8}));
         }
+    }
+}
+
+TEST_CASE("BufferIterator - bool") {
+    GIVEN("An array of bools") {
+        std::array<bool, 5> buffer{false, true, false, false, true};
+
+        auto it = BufferIterator<double, bool>(buffer.data());
+
+        CHECK_THAT(std::ranges::subrange(it, it + 5), RangeEquals({0, 1, 0, 0, 1}));
+    }
+
+    GIVEN("An array of doubles") {
+        std::array<double, 10> buffer{0, 1, 2, 3, 0, 1, 2, 3, 0, 1};
+
+        auto it = BufferIterator<bool, double>(buffer.data());
+
+        CHECK_THAT(std::ranges::subrange(it, it + 10),
+                   RangeEquals({false, true, true, true, false, true, true, true, false, true}));
     }
 }
 

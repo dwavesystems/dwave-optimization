@@ -1,0 +1,3 @@
+---
+features:
+  - Add support for ``bool`` dtype to the C++ ``BufferIterator``.
