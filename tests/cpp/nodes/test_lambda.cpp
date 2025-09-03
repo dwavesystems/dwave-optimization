@@ -19,8 +19,8 @@
 #include <dwave-optimization/nodes/flow.hpp>
 #include <dwave-optimization/nodes/inputs.hpp>
 #include <dwave-optimization/nodes/lambda.hpp>
-#include <dwave-optimization/nodes/mathematical.hpp>
 #include <dwave-optimization/nodes/numbers.hpp>
+#include <dwave-optimization/nodes/reduce.hpp>
 #include <dwave-optimization/nodes/testing.hpp>
 
 #include "catch2/matchers/catch_matchers_all.hpp"

@@ -26,6 +26,7 @@ py = import('python').find_installation(pure: false)
 
 dwave_optimization_include = include_directories('dwave/optimization/include/')
 dwave_optimization_src = [
+    'dwave/optimization/src/nodes/binaryop.cpp',
     'dwave/optimization/src/nodes/collections.cpp',
     'dwave/optimization/src/nodes/constants.cpp',
     'dwave/optimization/src/nodes/creation.cpp',
@@ -36,12 +37,15 @@ dwave_optimization_src = [
     'dwave/optimization/src/nodes/lambda.cpp',
     'dwave/optimization/src/nodes/lp.cpp',
     'dwave/optimization/src/nodes/manipulation.cpp',
-    'dwave/optimization/src/nodes/mathematical.cpp',
+    'dwave/optimization/src/nodes/naryop.cpp',
     'dwave/optimization/src/nodes/numbers.cpp',
     'dwave/optimization/src/nodes/quadratic_model.cpp',
+    'dwave/optimization/src/nodes/reduce.cpp',
+    'dwave/optimization/src/nodes/softmax.cpp',
     'dwave/optimization/src/nodes/sorting.cpp',
     'dwave/optimization/src/nodes/statistics.cpp',
     'dwave/optimization/src/nodes/testing.cpp',
+    'dwave/optimization/src/nodes/unaryop.cpp',
     'dwave/optimization/src/array.cpp',
     'dwave/optimization/src/graph.cpp',
     'dwave/optimization/src/simplex.cpp',

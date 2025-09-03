@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "dwave-optimization/nodes/binaryop.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/creation.hpp"
@@ -23,7 +24,9 @@
 #include "dwave-optimization/nodes/lambda.hpp"
 #include "dwave-optimization/nodes/lp.hpp"
 #include "dwave-optimization/nodes/manipulation.hpp"
-#include "dwave-optimization/nodes/mathematical.hpp"
+#include "dwave-optimization/nodes/naryop.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/quadratic_model.hpp"
+#include "dwave-optimization/nodes/reduce.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
+#include "dwave-optimization/nodes/unaryop.hpp"

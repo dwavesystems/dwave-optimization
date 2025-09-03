@@ -20,8 +20,9 @@
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
+#include "dwave-optimization/nodes/binaryop.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
-#include "dwave-optimization/nodes/mathematical.hpp"
+#include "dwave-optimization/nodes/unaryop.hpp"
 #include "dwave-optimization/type_list.hpp"
 
 namespace dwave::optimization {

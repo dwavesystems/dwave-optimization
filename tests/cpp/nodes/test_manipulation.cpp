@@ -17,13 +17,14 @@
 
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/matchers/catch_matchers_all.hpp"
+#include "dwave-optimization/nodes/binaryop.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
 #include "dwave-optimization/nodes/inputs.hpp"
 #include "dwave-optimization/nodes/manipulation.hpp"
-#include "dwave-optimization/nodes/mathematical.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
+#include "dwave-optimization/nodes/reduce.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
 
 using Catch::Matchers::RangeEquals;
