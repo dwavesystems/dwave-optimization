@@ -79,9 +79,9 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
 
 // FirstInstanceNode *****************************************************************
 //
-// A base class that returns the smallest index (should it exist) of element of
-// an array where the `condition` is true. The `condition` must be defined by
-// derived class.
+// A base class that returns the smallest index (should it exist) of the
+// element of an array where the `condition` is true. The `condition` must be
+// defined by derived class.
 class FirstInstanceNode : public ScalarOutputMixin<ArrayNode, true> {
  public:
     explicit FirstInstanceNode(ArrayNode* arr_ptr);
@@ -99,11 +99,12 @@ class FirstInstanceNode : public ScalarOutputMixin<ArrayNode, true> {
     // @copydoc Node::propagate()
     void propagate(State& state) const override;
 
+ protected:
     // Returns true if given value satisfies condition and false otherwise.
     virtual bool satisfies_condition(const double value) const = 0;
 
- protected:
-    // these are redundant, but convenient
+ private:
+    // These are redundant, but convenient
     const Array* arr_ptr_;
 };
 
@@ -113,6 +114,7 @@ class FindNode : public FirstInstanceNode {
  public:
     explicit FindNode(ArrayNode* arr_ptr);
 
+ private:
     bool satisfies_condition(const double value) const override { return value != 0; }
 };
 
