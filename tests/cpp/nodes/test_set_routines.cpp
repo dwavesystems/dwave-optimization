@@ -15,6 +15,7 @@
 #include <catch2/benchmark/catch_benchmark_all.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
+#include <vector>
 
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
@@ -91,7 +92,9 @@ TEST_CASE("IsInNode") {
                     THEN("The isin state is correct") {
                         CHECK_THAT(isin_ptr->view(state), RangeEquals({0.0, 0.0, 1.0}));
                     }
-                    AND_WHEN("We commit, make changes to test_elements integer node, and propagate") {
+                    AND_WHEN(
+                            "We commit, make changes to test_elements integer node, and "
+                            "propagate") {
                         graph.commit(state);
                         i1_ptr->set_value(state, 5, 3);
                         i1_ptr->set_value(state, 5, 10);
