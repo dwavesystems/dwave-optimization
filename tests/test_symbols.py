@@ -1471,6 +1471,32 @@ class TestExtract(utils.SymbolTests):
             dwave.optimization.extract(model.binary(4), arr)
 
 
+class TestFind(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        c = model.constant([2, 3, 5, 1])
+        f = dwave.optimization.symbols.Find(c)
+
+        with model.lock():
+            yield f
+
+    def test(self):
+        from dwave.optimization.symbols import Find
+        model = Model()
+        c = model.constant([2, 3, 5, 1])
+        f = dwave.optimization.find(c)
+
+        self.assertIsInstance(f, Find)
+
+    def test_state(self):
+        model = Model()
+        c = model.constant([0, 0, 5, 1])
+        f = dwave.optimization.symbols.Find(c)
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(f.state(0), np.array([2]))
+
+
 class TestInput(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

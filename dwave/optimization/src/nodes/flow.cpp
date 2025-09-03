@@ -150,6 +150,113 @@ ssize_t ExtractNode::size_diff(const State& state) const {
 
 SizeInfo ExtractNode::sizeinfo() const { return SizeInfo(this, 0, condition_ptr_->sizeinfo().max); }
 
+// FirstInstanceNode *****************************************************************
+
+FirstInstanceNode::FirstInstanceNode(ArrayNode* arr_ptr)
+        : ScalarOutputMixin<ArrayNode, true>(), arr_ptr_(arr_ptr) {
+    add_predecessor(arr_ptr);
+}
+
+void FirstInstanceNode::initialize_state(State& state) const {
+    // Find smallest index (should it exist) of predecessor whose value
+    // satisfies condition
+    for (ssize_t i = 0, stop = arr_ptr_->size(state); i < stop; ++i) {
+        if (satisfies_condition(arr_ptr_->view(state)[i])) {
+            emplace_state(state, i);
+            return;
+        }
+    }
+    // No value in predecessor satisfies condition
+    emplace_state(state, -1);
+}
+
+bool FirstInstanceNode::integral() const {
+    return true;  // returned index is always integer
+}
+
+std::pair<double, double> FirstInstanceNode::minmax(
+        optional_cache_type<std::pair<double, double>> cache) const {
+    return memoize(cache, [&]() {
+        // Min is -1.0 since there may not exist an index in predecessor that
+        // satisfies condition.
+        // Max is either max index of predecessor (should it exist) or -1.0.
+        const double max = static_cast<double>(
+                arr_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max()) - 1);
+        return std::make_pair(-1.0, max);
+    });
+}
+
+void FirstInstanceNode::propagate(State& state) const {
+    const std::span<const Update> arr_updates = arr_ptr_->diff(state);
+
+    if (arr_updates.empty()) {
+        return;  // Nothing to change
+    }
+
+    const ssize_t prior_smallest_index = data_ptr<ScalarOutputMixinStateData>(state)->update.value;
+    ssize_t smallest_index;
+
+    // Prior to update, no index of predecessor had value that satisfied condition
+    if (prior_smallest_index == -1) {
+        // It suffices to simply check the updates.
+        smallest_index = std::numeric_limits<ssize_t>::max();
+        for (const Update& u : arr_updates) {
+            if ((u.index < smallest_index) && (satisfies_condition(u.value))) {
+                smallest_index = u.index;
+            }
+        }
+        if (smallest_index == std::numeric_limits<ssize_t>::max()) {
+            // No index in predecessor has value that satisfies condition.
+            // Therefore, no update.
+            return;
+        }
+        // Smallest index in predecessor that satisfies condition found
+        set_state(state, smallest_index);
+        return;
+    }  // Note: This `if` statement always `returns`
+
+    // Prior to update, there existed an index of predecessor with a value that
+    // satisfied condition
+    if (prior_smallest_index <= static_cast<ssize_t>(arr_updates.size())) {
+        // In this case, it is simply faster to check each index i <=
+        // `prior_smallest_index` of predecessor than to check the updates
+        for (ssize_t i = 0; i <= prior_smallest_index; ++i) {
+            if (satisfies_condition(arr_ptr_->view(state)[i])) {
+                set_state(state, i);
+                return;
+            }
+        }
+    } else {
+        // In this case, we check whether there exists an update at an index i
+        // < `prior_smallest_index` that satisfies condition since every
+        // non-updated index in this range necessarily does not
+        smallest_index = prior_smallest_index;
+        for (const Update& u : arr_updates) {
+            if ((u.index < smallest_index) && (satisfies_condition(u.value))) {
+                smallest_index = u.index;
+            }
+        }
+        if (smallest_index < prior_smallest_index) {
+            set_state(state, smallest_index);
+            return;
+        }
+    }
+    // All values of predecessor at indices i < `prior_smallest_index` do not
+    // satisfy condition. It suffices to check indices >= `prior_smallest_index`
+    for (ssize_t i = prior_smallest_index, stop = arr_ptr_->size(state); i < stop; ++i) {
+        if (satisfies_condition(arr_ptr_->view(state)[i])) {
+            set_state(state, i);
+            return;
+        }
+    }
+    // No value in predecessor satisfies condition
+    set_state(state, -1);
+}
+
+// FirstInstanceNode derived classes
+
+FindNode::FindNode(ArrayNode* arr_ptr) : FirstInstanceNode(arr_ptr) {}
+
 /// WhereNode
 
 struct WhereNodeData : ArrayNodeStateData {
