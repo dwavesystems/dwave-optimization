@@ -20,7 +20,24 @@
 
 namespace dwave::optimization {
 
-MeanNode::MeanNode(ArrayNode *arr_ptr) : ScalarOutputMixin<ArrayNode, true>(), arr_ptr_(arr_ptr) {
+std::pair<double, double> calculate_values_minmax_(const Array* arr_ptr) {
+    // Predecessor is static or dynamic but always non-empty. Therefore,
+    // mean is always computed and will fall within min/max of predecessor.
+    if ((arr_ptr->size() > 0) || (arr_ptr->sizeinfo().min.value_or(0) > 0)) {
+        return std::make_pair(arr_ptr->min(), arr_ptr->max());
+    }
+    // Predecessor is static and empty. Therefore, mean will always be
+    // default of 0.0.
+    if (arr_ptr->size() == 0) {
+        return std::make_pair(0.0, 0.0);
+    }
+    // Predecessor is dynamic and possibly empty. Therefore, mean will be
+    // default value of 0.0 (i.e. predecessor is empty) or fall within the
+    // min/max of predecessor. If necessary, extend meannode min/max.
+    return std::make_pair(std::min(arr_ptr->min(), 0.0), std::max(arr_ptr->max(), 0.0));
+}
+
+MeanNode::MeanNode(ArrayNode *arr_ptr) : ScalarOutputMixin<ArrayNode, true>(), arr_ptr_(arr_ptr), minmax_(calculate_values_minmax_(arr_ptr_)) {
     add_predecessor(arr_ptr);
 }
 
@@ -39,25 +56,9 @@ void MeanNode::initialize_state(State &state) const {
 
 bool MeanNode::integral() const { return false; }
 
-std::pair<double, double> MeanNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        // Predecessor is static or dynamic but always non-empty. Therefore,
-        // mean is always computed and will fall within min/max of predecessor.
-        if ((arr_ptr_->size() > 0) || (arr_ptr_->sizeinfo().min.value_or(0) > 0)) {
-            return std::make_pair(arr_ptr_->min(), arr_ptr_->max());
-        }
-        // Predecessor is static and empty. Therefore, mean will always be
-        // default of 0.0.
-        if (arr_ptr_->size() == 0) {
-            return std::make_pair(0.0, 0.0);
-        }
-        // Predecessor is dynamic and possibly empty. Therefore, mean will be
-        // default value of 0.0 (i.e. predecessor is empty) or fall within the
-        // min/max of predecessor. If necessary, extend meannode min/max.
-        return std::make_pair(std::min(arr_ptr_->min(), 0.0), std::max(arr_ptr_->max(), 0.0));
-    });
-}
+double MeanNode::min() const { return this->minmax_.first; }
+
+double MeanNode::max() const { return this->minmax_.second; }
 
 void MeanNode::propagate(State &state) const {
     const std::span<const Update> arr_updates = arr_ptr_->diff(state);

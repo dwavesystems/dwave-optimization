@@ -77,11 +77,11 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     void initialize_state(State& state, std::initializer_list<double> data) const;
     void initialize_state(State& state, std::span<const double> data) const;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache) const override {
-        return {min_, max_};
-    }
+    /// @copydoc Array::max()
+    double max() const override { return max_; }
+
+    /// @copydoc Array::min()
+    double min() const override { return min_; }
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const noexcept override{};

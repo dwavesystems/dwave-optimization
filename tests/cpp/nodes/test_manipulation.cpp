@@ -301,20 +301,10 @@ TEST_CASE("ConcatenateNode") {
         auto a_copy_ptr = graph.emplace_node<CopyNode>(a_ptr);
         auto c_ptr = graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_copy_ptr, b_ptr}, 0);
 
-        THEN("We can get the minmax() and integral() as expected") {
+        THEN("We can get the min(), max() and integral() as expected") {
             CHECK(c_ptr->integral());
-            CHECK(c_ptr->minmax() == std::pair<double, double>{-10, 100});
-
-            auto cache = Array::cache_type<std::pair<double, double>>();
-            CHECK(c_ptr->minmax(cache) == std::pair<double, double>{-10, 100});
-
-            CHECK(cache.contains(c_ptr));
-            // mutating the cache should also mutate the output
-            cache[c_ptr].first = -1000;
-            CHECK(c_ptr->minmax(cache).first == -1000);
-            CHECK(c_ptr->minmax().first == -10);  // ignores the cache
-
-            CHECK(cache.contains(a_copy_ptr));
+            CHECK(c_ptr->min() == -10);
+            CHECK(c_ptr->max() == 100);
         }
     }
 

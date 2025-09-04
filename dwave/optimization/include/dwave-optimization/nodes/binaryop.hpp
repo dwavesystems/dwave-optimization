@@ -36,11 +36,15 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     using ArrayOutputMixin::shape;
     std::span<const ssize_t> shape(const State& state) const override;
@@ -73,6 +77,8 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     // There are redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
     std::array<Array* const, 2> operands_;
+
+    const std::pair<double, double> minmax_;
 };
 
 // We follow NumPy naming convention rather than C++ to distinguish between

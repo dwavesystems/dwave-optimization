@@ -71,6 +71,22 @@ struct SizeInfo {
     std::optional<ssize_t> max;
 };
 
+/// Struct for the common use case of saving statistics about an ArrayNode's output values
+struct ValuesInfo {
+    ValuesInfo() = delete;
+    ValuesInfo(double min, double max, bool integral) : min(min), max(max), integral(integral) {}
+    /// Copy the min/max/integral from the array
+    ValuesInfo(const Array* array_ptr);
+    /// Take the min of the mins, etc for all the arrays
+    ValuesInfo(std::span<const Array* const> array_ptrs);
+
+    static ValuesInfo integral_output() { return {false, true, true}; };
+
+    double min;
+    double max;
+    bool integral;
+};
+
 // A slice represents a set of indices specified by range(start, stop, step).
 struct Slice {
     constexpr Slice() noexcept : Slice(std::nullopt, std::nullopt, std::nullopt) {}
@@ -343,20 +359,10 @@ class Array {
     virtual SizeInfo sizeinfo() const { return dynamic() ? SizeInfo(this) : SizeInfo(size()); }
 
     /// The minimum value that elements in the array may take.
-    double min() const {
-        cache_type<std::pair<double, double>> cache;
-        return minmax(cache).first;
-    }
+    virtual double min() const = 0;
 
     /// The maximum value that elements in the array may take.
-    double max() const {
-        cache_type<std::pair<double, double>> cache;
-        return minmax(cache).second;
-    }
-
-    /// The smallest and largest values that elements in the array may take.
-    virtual std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const;
+    virtual double max() const = 0;
 
     /// Whether the values in the array can be interpreted as integers.
     virtual bool integral() const { return false; }
@@ -381,6 +387,9 @@ class Array {
                "size_diff(const State&) must be overloaded if the size is state-dependent");
         return 0;
     }
+
+    static constexpr double default_min() { return std::numeric_limits<double>::lowest(); }
+    static constexpr double default_max() { return std::numeric_limits<double>::max(); }
 
  protected:
     // Some utility methods that might be useful to subclasses

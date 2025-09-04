@@ -60,8 +60,6 @@ double const* AccumulateZipNode::buff(const State& state) const {
 
 void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode* const> operands,
                               array_or_double initial) {
-    Array::cache_type<std::pair<double, double>> minmax_cache;  // we'll be doing a lot of checks
-
     // First, let's check that the expression is valid
     {
         if (!expression.topologically_sorted()) {
@@ -127,11 +125,7 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
                     ", operands.size()=" + std::to_string(operands.size()));
         }
 
-        // For array_shape_equal we need Array*, not ArrayNode* so we do a copy.
-        // In the future we should consider another overload
-        std::vector<const Array*> array_operands;
-        for (const ArrayNode* op : operands) array_operands.emplace_back(op);
-        if (!array_shape_equal(array_operands)) {
+        if (!array_shape_equal(cast_to_array(operands))) {
             throw std::invalid_argument("all operands must have the same shape");
         }
 
@@ -140,8 +134,10 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
         for (ssize_t op_idx = 0, stop = operands.size(); op_idx < stop; ++op_idx) {
             // make sure the values provided by the array don't exceed the values allowed by
             // the expression
-            const auto [outmin, outmax] = operands[op_idx]->minmax(minmax_cache);
-            const auto [inmin, inmax] = operand_inputs[op_idx]->minmax(minmax_cache);
+            const auto outmin = operands[op_idx]->min();
+            const auto outmax = operands[op_idx]->max();
+            const auto inmin = operand_inputs[op_idx]->min();
+            const auto inmax = operand_inputs[op_idx]->max();
 
             if (outmin < inmin) {
                 throw std::invalid_argument(std::string("the ") + std::to_string(op_idx) +
@@ -158,8 +154,10 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
             }
         }
 
-        const auto [expmin, expmax] = expression.objective()->minmax(minmax_cache);
-        const auto [accmin, accmax] = expression.inputs()[0]->minmax(minmax_cache);
+        const auto expmin = expression.objective()->min();
+        const auto expmax = expression.objective()->max();
+        const auto accmin = expression.inputs()[0]->min();
+        const auto accmax = expression.inputs()[0]->max();
         if (expression.inputs()[0]->integral() && !expression.objective()->integral()) {
             throw std::invalid_argument(
                     "if expression output can be non-integral, first input must not be integral");
@@ -172,7 +170,8 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
         }
 
         if (std::holds_alternative<ArrayNode*>(initial)) {
-            const auto [initmin, initmax] = std::get<ArrayNode*>(initial)->minmax(minmax_cache);
+            const auto initmin = std::get<ArrayNode*>(initial)->min();
+            const auto initmax = std::get<ArrayNode*>(initial)->max();
             if (initmin < accmin) {
                 throw std::invalid_argument(
                         "initial value must not have a lower min than the first input");
@@ -268,13 +267,9 @@ void AccumulateZipNode::initialize_state(State& state) const {
 
 bool AccumulateZipNode::integral() const { return expression_ptr_->objective()->integral(); }
 
-std::pair<double, double> AccumulateZipNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        return std::make_pair(expression_ptr_->objective()->min(),
-                              expression_ptr_->objective()->max());
-    });
-}
+double AccumulateZipNode::max() const { return expression_ptr_->objective()->max(); }
+
+double AccumulateZipNode::min() const { return expression_ptr_->objective()->min(); }
 
 std::span<const InputNode* const> AccumulateZipNode::operand_inputs() const {
     return expression_ptr_->inputs().subspan(1);

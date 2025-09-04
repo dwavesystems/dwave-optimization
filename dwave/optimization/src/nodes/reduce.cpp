@@ -201,6 +201,51 @@ std::span<const ssize_t> nonempty(std::span<const ssize_t> span) {
     return span;
 }
 
+template <class BinaryOp>
+bool partial_reduce_calculate_integral(const Array* array_ptr, const std::optional<double>& init) {
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+
+    if constexpr (std::is_integral<result_type>::value) {
+        return true;
+    }
+    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
+        return array_ptr->integral() && is_integer(init.value_or(1));
+    }
+    if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
+        return array_ptr->integral() && is_integer(init.value_or(0));
+    }
+
+    assert(false && "not implemented yet");
+    unreachable();
+}
+
+template <class BinaryOp>
+ValuesInfo partial_reduce_calculate_values_info(const Array* array_ptr, ssize_t axis, const std::optional<double>& init) {
+    // If the output of the operation is boolean, then the min/max is simple
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+    if constexpr (std::same_as<result_type, bool>) {
+        return {false, true, true};
+    }
+
+    // Otherwise the min and max depend on the predecessors
+
+    bool integral = partial_reduce_calculate_integral<BinaryOp>(array_ptr, init);
+
+    // Get the size of the axis we're reducing on
+    const ssize_t size = array_ptr->shape()[axis];
+
+    if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
+        return {init.value_or(0) + size * array_ptr->min(), init.value_or(0) + size * array_ptr->max(), integral};
+    }
+    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
+        const auto& [low, high] = product_minmax(size, init.value_or(1), array_ptr->min(), array_ptr->max());
+        return {low, high, integral};
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
+}
+
 /// TODO: support multiple axes
 template <class BinaryOp>
 PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, std::span<const ssize_t> axes,
@@ -209,7 +254,8 @@ PartialReduceNode<BinaryOp>::PartialReduceNode(ArrayNode* node_ptr, std::span<co
           init(init),
           array_ptr_(node_ptr),
           axes_(make_axes(axes)),
-          parent_strides_c_(as_contiguous_strides(array_ptr_->shape())) {
+          parent_strides_c_(as_contiguous_strides(array_ptr_->shape())),
+          values_info_(partial_reduce_calculate_values_info<BinaryOp>(array_ptr_, axes_[0], init)) {
     if (array_ptr_->dynamic()) {
         throw std::invalid_argument("cannot do a partial reduction on a dynamic array");
     } else if (array_ptr_->size() < 1) {
@@ -374,24 +420,6 @@ void PartialReduceNode<BinaryOp>::initialize_state(State& state) const {
 }
 
 template <class BinaryOp>
-bool PartialReduceNode<BinaryOp>::integral() const {
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_integral<result_type>::value) {
-        return true;
-    }
-    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
-        return array_ptr_->integral() && is_integer(init.value_or(1));
-    }
-    if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
-        return array_ptr_->integral() && is_integer(init.value_or(0));
-    }
-
-    assert(false && "not implemented yet");
-    unreachable();
-}
-
-template <class BinaryOp>
 ssize_t PartialReduceNode<BinaryOp>::map_parent_index(const State& state,
                                                       ssize_t parent_flat_index) const {
     ssize_t axis = this->axes_[0];
@@ -426,41 +454,13 @@ ssize_t PartialReduceNode<BinaryOp>::map_parent_index(const State& state,
 }
 
 template <class BinaryOp>
-std::pair<double, double> PartialReduceNode<BinaryOp>::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    // If the output of the operation is boolean, then don't bother caching the result.
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-    if constexpr (std::same_as<result_type, bool>) {
-        return {false, true};
-    }
+bool PartialReduceNode<BinaryOp>::integral() const { return values_info_.integral; }
 
-    // Otherwise the min and max depend on the predecessors, so we want to cache
+template <class BinaryOp>
+double PartialReduceNode<BinaryOp>::min() const { return values_info_.min; }
 
-    // First check if we've already calculated it.
-    if (cache.has_value()) {
-        if (auto it = cache->get().find(this); it != cache->get().end()) {
-            return it->second;
-        }
-    }
-
-    assert(!this->dynamic());  // checked by constructor
-
-    auto [low, high] = array_ptr_->minmax(cache);
-
-    // Get the size of the axis we're reducing on
-    const ssize_t size = array_ptr_->shape()[axes_[0]];
-
-    if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
-        return memoize(cache, std::make_pair(init.value_or(0) + size * low,
-                                             init.value_or(0) + size * high));
-    }
-    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
-        return memoize(cache, product_minmax(size, init.value_or(1), low, high));
-    }
-
-    assert(false && "not implemeted yet");
-    unreachable();
-}
+template <class BinaryOp>
+double PartialReduceNode<BinaryOp>::max() const { return values_info_.max; }
 
 template <class BinaryOp>
 void PartialReduceNode<BinaryOp>::propagate(State& state) const {
@@ -570,8 +570,124 @@ struct ReduceNodeData : NodeStateData {
 };
 
 template <class BinaryOp>
+bool reduce_calculate_integral(const Array* array_ptr, const std::optional<double>& init) {
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+
+    if constexpr (std::is_integral<result_type>::value) {
+        return true;
+    }
+
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
+                  std::is_same<BinaryOp, functional::min<double>>::value ||
+                  std::is_same<BinaryOp, std::multiplies<double>>::value ||
+                  std::is_same<BinaryOp, std::plus<double>>::value) {
+        // the actual value of init doesn't matter, all of the above have no default
+        // or an integer default init
+        return array_ptr->integral() && is_integer(init.value_or(0));
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
+}
+
+template <class BinaryOp>
+ValuesInfo reduce_calculate_values_info(const Array* array_ptr, const std::optional<double>& init) {
+    // If the output of the operation is boolean, the min/max are just [false, true]
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+    if constexpr (std::same_as<result_type, bool>) {
+        return ValuesInfo::integral_output();
+    }
+
+    // Otherwise the min and max depend on the predecessors
+
+    auto op = BinaryOp();
+
+    bool integral = reduce_calculate_integral<BinaryOp>(array_ptr, init);
+
+    auto low = array_ptr->min();
+    auto high = array_ptr->max();
+
+    // These can results in inf. If we fix that in initialization/propagation we
+    // should also fix it here.
+    if constexpr (std::same_as<BinaryOp, functional::max<double>> ||
+                  std::same_as<BinaryOp, functional::min<double>>) {
+        if (init.has_value()) {
+            low = op(low, init.value());
+            high = op(high, init.value());
+        }
+        return {low, high, integral};
+    }
+    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
+        // the dynamic case. For now let's just fall back to Array's default
+        // implementation because this gets even more complicated
+        if (array_ptr->dynamic()) {
+            return {Array::default_min(), Array::default_max(), integral};
+        }
+
+        auto const& [this_low, this_high] = product_minmax(array_ptr->size(), init.value_or(1), low, high);
+        return {this_low, this_high, integral};
+    }
+    if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
+        const double init_ = init.value_or(0);
+
+        // if the array has a finite fixed size, then just multuply the largest value
+        // by that size
+        if (const ssize_t size = array_ptr->size(); size >= 0) {
+            return {init_ + size * low, init_ + size * high, integral};
+        }
+
+        // our predecessor array is dynamic. So there are a few more cases
+        // we need to check
+
+        // 100 is a magic number. It's how far back in the predecessor
+        // chain to check to get good bounds on the size for the given array.
+        // This will exit early if it converges.
+        const SizeInfo sizeinfo = array_ptr->sizeinfo().substitute(100);
+
+        if (high > 0) {
+            // if high is positive, then we're interested in the maxmum size
+            // of the array
+
+            // if the array is arbitrarily large, then just fall back to the
+            // default max.
+            if (!sizeinfo.max.has_value()) {
+                high = Array::default_max();
+            } else {
+                high = init_ + sizeinfo.max.value() * high;
+            }
+        } else {
+            // if high is negative, then we're interested in the minimum size
+            // of the array
+            high = init_ + sizeinfo.min.value_or(0) * high;
+        }
+
+        if (low < 0) {
+            // if low is negative, then we're interested in the maximum size
+            // of the array
+
+            // if the array is arbitrarily large, then just fall back to the
+            // default min.
+            if (!sizeinfo.max.has_value()) {
+                low = Array::default_min();
+            } else {
+                low = init_ + sizeinfo.max.value() * low;
+            }
+        } else {
+            // if low is positive, then we're interested in the minimum size
+            // of the array
+            low = init_ + sizeinfo.min.value_or(0) * low;
+        }
+
+        return {low, high, integral};
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
+}
+
+template <class BinaryOp>
 ReduceNode<BinaryOp>::ReduceNode(ArrayNode* node_ptr, double init)
-        : init(init), array_ptr_(node_ptr) {
+        : init(init), array_ptr_(node_ptr), values_info_(reduce_calculate_values_info<BinaryOp>(array_ptr_, init)) {
     add_predecessor(node_ptr);
 }
 
@@ -588,7 +704,7 @@ template <>
 ReduceNode<std::plus<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 0) {}
 
 template <class BinaryOp>
-ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr) : init(), array_ptr_(array_ptr) {
+ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr) : init(), array_ptr_(array_ptr), values_info_(reduce_calculate_values_info<BinaryOp>(array_ptr_, init)) {
     if (array_ptr_->dynamic()) {
         throw std::invalid_argument(
                 "cannot do a reduction on a dynamic array with an operation that has no identity "
@@ -662,124 +778,13 @@ void ReduceNode<std::multiplies<double>>::initialize_state(State& state) const {
 }
 
 template <class BinaryOp>
-bool ReduceNode<BinaryOp>::integral() const {
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_integral<result_type>::value) {
-        return true;
-    }
-
-    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
-                  std::is_same<BinaryOp, functional::min<double>>::value ||
-                  std::is_same<BinaryOp, std::multiplies<double>>::value ||
-                  std::is_same<BinaryOp, std::plus<double>>::value) {
-        // the actual value of init doesn't matter, all of the above have no default
-        // or an integer default init
-        return array_ptr_->integral() && is_integer(init.value_or(0));
-    }
-
-    assert(false && "not implemeted yet");
-    unreachable();
-}
+bool ReduceNode<BinaryOp>::integral() const { return values_info_.integral; }
 
 template <class BinaryOp>
-std::pair<double, double> ReduceNode<BinaryOp>::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    // If the output of the operation is boolean, then don't bother caching the result.
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-    if constexpr (std::same_as<result_type, bool>) {
-        return {false, true};
-    }
+double ReduceNode<BinaryOp>::min() const { return values_info_.min; }
 
-    // Otherwise the min and max depend on the predecessors, so we want to cache
-
-    // First check if we've already calculated it.
-    if (cache.has_value()) {
-        if (auto it = cache->get().find(this); it != cache->get().end()) {
-            return it->second;
-        }
-    }
-
-    auto op = BinaryOp();
-
-    auto [low, high] = array_ptr_->minmax(cache);
-
-    // These can results in inf. If we fix that in initialization/propagation we
-    // should also fix it here.
-    if constexpr (std::same_as<BinaryOp, functional::max<double>> ||
-                  std::same_as<BinaryOp, functional::min<double>>) {
-        if (init.has_value()) {
-            low = op(low, init.value());
-            high = op(high, init.value());
-        }
-        return memoize(cache, std::make_pair(low, high));
-    }
-    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
-        // the dynamic case. For now let's just fall back to Array's default
-        // implementation because this gets even more complicated
-        if (array_ptr_->dynamic()) {
-            return memoize(cache, Array::minmax());
-        }
-
-        return memoize(cache, product_minmax(array_ptr_->size(), init.value_or(1), low, high));
-    }
-    if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
-        const double init = this->init.value_or(0);
-
-        // if the array has a finite fixed size, then just multuply the largest value
-        // by that size
-        if (const ssize_t size = array_ptr_->size(); size >= 0) {
-            return memoize(cache, std::make_pair(init + size * low, init + size * high));
-        }
-
-        // our predecessor array is dynamic. So there are a few more cases
-        // we need to check
-
-        // 100 is a magic number. It's how far back in the predecessor
-        // chain to check to get good bounds on the size for the given array.
-        // This will exit early if it converges.
-        const SizeInfo sizeinfo = array_ptr_->sizeinfo().substitute(100);
-
-        if (high > 0) {
-            // if high is positive, then we're interested in the maxmum size
-            // of the array
-
-            // if the array is arbitrarily large, then just fall back to the
-            // default max.
-            if (!sizeinfo.max.has_value()) {
-                high = Array::minmax().second;
-            } else {
-                high = init + sizeinfo.max.value() * high;
-            }
-        } else {
-            // if high is negative, then we're interested in the minimum size
-            // of the array
-            high = init + sizeinfo.min.value_or(0) * high;
-        }
-
-        if (low < 0) {
-            // if low is negative, then we're interested in the maximum size
-            // of the array
-
-            // if the array is arbitrarily large, then just fall back to the
-            // default min.
-            if (!sizeinfo.max.has_value()) {
-                low = Array::minmax().first;
-            } else {
-                low = init + sizeinfo.max.value() * low;
-            }
-        } else {
-            // if low is positive, then we're interested in the minimum size
-            // of the array
-            low = init + sizeinfo.min.value_or(0) * low;
-        }
-
-        return memoize(cache, std::make_pair(low, high));
-    }
-
-    assert(false && "not implemeted yet");
-    unreachable();
-}
+template <class BinaryOp>
+double ReduceNode<BinaryOp>::max() const { return values_info_.max; }
 
 template <>
 void ReduceNode<std::logical_and<double>>::propagate(State& state) const {

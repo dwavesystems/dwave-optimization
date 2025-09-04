@@ -54,11 +54,14 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const override;
     void initialize_state(State& state) const override;
 
+    /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     // The predecessor of the reduction, as an Array*.
     std::span<Array* const> operands() {
@@ -105,6 +108,8 @@ class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
 
     /// Convert linear index to indices for each dimension
     std::vector<ssize_t> parent_strides_c_;
+
+    const ValuesInfo values_info_;
 };
 
 using PartialProdNode = PartialReduceNode<std::multiplies<double>>;
@@ -122,11 +127,15 @@ class ReduceNode : public ScalarOutputMixin<ArrayNode> {
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     void commit(State& state) const override;
     void revert(State& state) const override;
@@ -154,6 +163,8 @@ class ReduceNode : public ScalarOutputMixin<ArrayNode> {
     // There are redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
     Array* const array_ptr_;
+
+    const ValuesInfo values_info_;
 };
 
 // We follow NumPy naming convention rather than C++ to distinguish between

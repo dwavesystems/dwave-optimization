@@ -66,6 +66,82 @@ struct NaryOpNodeData : public ArrayNodeStateData {
 };
 
 template <class BinaryOp>
+bool calculate_integral(const std::vector<Array*>& operands) {
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+
+    if constexpr (std::is_integral<result_type>::value) {
+        return true;
+    }
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
+                  std::is_same<BinaryOp, functional::min<double>>::value ||
+                  std::is_same<BinaryOp, std::multiplies<double>>::value ||
+                  std::is_same<BinaryOp, std::plus<double>>::value) {
+        return std::ranges::all_of(operands, [](const Array* ptr) { return ptr->integral(); });
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
+}
+
+template <class BinaryOp>
+ValuesInfo calculate_values_info(const std::vector<Array*>& operands) {
+    // If the output of the operation is boolean, this is simple
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+    if constexpr (std::same_as<result_type, bool>) {
+        return ValuesInfo::integral_output();
+    }
+
+    // Otherwise the min and max depend on the predecessors
+
+    auto op = BinaryOp();
+
+    bool integral = calculate_integral<BinaryOp>(operands);
+
+    // these can result in inf. If we update propagation/initialization to handle
+    // that case we should update these as well.
+    if constexpr (std::same_as<BinaryOp, functional::max<double>> ||
+                  std::same_as<BinaryOp, functional::min<double>> ||
+                  std::same_as<BinaryOp, std::plus<double>>) {
+        assert(operands.size() >= 1);  // checked by constructor
+
+        auto low = operands[0]->min();
+        auto high = operands[0]->max();
+        for (const Array* rhs_ptr : operands | std::views::drop(1)) {
+            const auto rhs_low = rhs_ptr->min();
+            const auto rhs_high = rhs_ptr->max();
+            low = op(low, rhs_low);
+            high = op(high, rhs_high);
+        }
+
+        assert(low <= high);
+        return {low, high, integral};
+    }
+    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
+        assert(operands.size() >= 1);  // checked by constructor
+
+        auto low = operands[0]->min();
+        auto high = operands[0]->max();
+        for (const Array* rhs_ptr : operands | std::views::drop(1)) {
+            const auto rhs_low = rhs_ptr->min();
+            const auto rhs_high = rhs_ptr->max();
+
+            std::array<double, 4> combos{op(low, rhs_low), op(low, rhs_high), op(high, rhs_low),
+                                         op(high, rhs_high)};
+
+            low = std::ranges::min(combos);
+            high = std::ranges::max(combos);
+        }
+
+        assert(low <= high);
+        return {low, high, integral};
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
+}
+
+
+template <class BinaryOp>
 NaryOpNode<BinaryOp>::NaryOpNode(ArrayNode* node_ptr) : ArrayOutputMixin(node_ptr->shape()) {
     add_node(node_ptr);
 }
@@ -82,12 +158,13 @@ template <class BinaryOp>
 NaryOpNode<BinaryOp>::NaryOpNode(std::span<ArrayNode*> node_ptrs)
         : ArrayOutputMixin(nonempty(node_ptrs)->shape()) {
     for (ArrayNode* ptr : node_ptrs) {
-        add_node(ptr);
+        add_node(ptr, false);
     }
+    values_info_ = calculate_values_info<BinaryOp>(operands_);
 }
 
 template <class BinaryOp>
-void NaryOpNode<BinaryOp>::add_node(ArrayNode* node_ptr) {
+void NaryOpNode<BinaryOp>::add_node(ArrayNode* node_ptr, bool recompute_statistics) {
     if (this->topological_index() >= 0 && node_ptr->topological_index() >= 0 &&
         this->topological_index() < node_ptr->topological_index()) {
         throw std::logic_error("this operation would invalidate the topological ordering");
@@ -103,6 +180,10 @@ void NaryOpNode<BinaryOp>::add_node(ArrayNode* node_ptr) {
 
     this->add_predecessor(node_ptr);
     operands_.emplace_back(node_ptr);
+
+    if (recompute_statistics) {
+        values_info_ = calculate_values_info<BinaryOp>(operands_);
+    }
 }
 
 template <class BinaryOp>
@@ -116,81 +197,13 @@ std::span<const Update> NaryOpNode<BinaryOp>::diff(const State& state) const {
 }
 
 template <class BinaryOp>
-bool NaryOpNode<BinaryOp>::integral() const {
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_integral<result_type>::value) {
-        return true;
-    }
-    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
-                  std::is_same<BinaryOp, functional::min<double>>::value ||
-                  std::is_same<BinaryOp, std::multiplies<double>>::value ||
-                  std::is_same<BinaryOp, std::plus<double>>::value) {
-        return std::ranges::all_of(operands_, [](const Array* ptr) { return ptr->integral(); });
-    }
-
-    assert(false && "not implemeted yet");
-    unreachable();
-}
+bool NaryOpNode<BinaryOp>::integral() const { return values_info_.integral; }
 
 template <class BinaryOp>
-std::pair<double, double> NaryOpNode<BinaryOp>::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    // If the output of the operation is boolean, then don't bother caching the result.
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-    if constexpr (std::same_as<result_type, bool>) {
-        return {false, true};
-    }
+double NaryOpNode<BinaryOp>::min() const { return values_info_.min; }
 
-    // Otherwise the min and max depend on the predecessors, so we want to cache
-
-    // First check if we've already calculated it.
-    if (cache.has_value()) {
-        if (auto it = cache->get().find(this); it != cache->get().end()) {
-            return it->second;
-        }
-    }
-
-    auto op = BinaryOp();
-
-    // these can result in inf. If we update propagation/initialization to handle
-    // that case we should update these as well.
-    if constexpr (std::same_as<BinaryOp, functional::max<double>> ||
-                  std::same_as<BinaryOp, functional::min<double>> ||
-                  std::same_as<BinaryOp, std::plus<double>>) {
-        assert(operands_.size() >= 1);  // checked by constructor
-
-        auto [low, high] = operands_[0]->minmax(cache);
-        for (const Array* rhs_ptr : operands_ | std::views::drop(1)) {
-            const auto [rhs_low, rhs_high] = rhs_ptr->minmax(cache);
-            low = op(low, rhs_low);
-            high = op(high, rhs_high);
-        }
-
-        assert(low <= high);
-        return memoize(cache, std::make_pair(low, high));
-    }
-    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
-        assert(operands_.size() >= 1);  // checked by constructor
-
-        auto [low, high] = operands_[0]->minmax(cache);
-        for (const Array* rhs_ptr : operands_ | std::views::drop(1)) {
-            const auto [rhs_low, rhs_high] = rhs_ptr->minmax(cache);
-
-            std::array<double, 4> combos{op(low, rhs_low), op(low, rhs_high), op(high, rhs_low),
-                                         op(high, rhs_high)};
-
-            low = std::ranges::min(combos);
-            high = std::ranges::max(combos);
-        }
-
-        assert(low <= high);
-        return memoize(cache, std::make_pair(low, high));
-    }
-
-    assert(false && "not implemeted yet");
-    unreachable();
-}
+template <class BinaryOp>
+double NaryOpNode<BinaryOp>::max() const { return values_info_.max; }
 
 template <class BinaryOp>
 void NaryOpNode<BinaryOp>::commit(State& state) const {

@@ -48,7 +48,7 @@ std::span<const ssize_t> same_shape(const Array* node_ptr,
 /// ExtractNode
 
 ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr)
-        : ArrayOutputMixin({-1}), condition_ptr_(condition_ptr), arr_ptr_(arr_ptr) {
+        : ArrayOutputMixin({-1}), condition_ptr_(condition_ptr), arr_ptr_(arr_ptr), values_info_(arr_ptr_) {
     if (condition_ptr_->sizeinfo().substitute(100) != arr_ptr_->sizeinfo().substitute(100)) {
         throw std::invalid_argument("condition and arr must have the same size");
     }
@@ -84,12 +84,11 @@ void ExtractNode::initialize_state(State& state) const {
     emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
 }
 
-bool ExtractNode::integral() const { return arr_ptr_->integral(); }
+bool ExtractNode::integral() const { return values_info_.integral; }
 
-std::pair<double, double> ExtractNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return arr_ptr_->minmax(cache);
-}
+double ExtractNode::max() const { return values_info_.max; }
+
+double ExtractNode::min() const { return values_info_.min; }
 
 void ExtractNode::propagate(State& state) const {
     auto node_data = data_ptr<ArrayNodeStateData>(state);
@@ -218,7 +217,8 @@ WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_pt
         : ArrayOutputMixin(same_shape(x_ptr, y_ptr)),
           condition_ptr_(condition_ptr),
           x_ptr_(x_ptr),
-          y_ptr_(y_ptr) {
+          y_ptr_(y_ptr),
+          values_info_(cast_to_array({x_ptr, y_ptr})) {
     // x and y where checked for nullptr by same_shape() above
     if (!condition_ptr_) throw std::invalid_argument("node pointer cannot be nullptr");
 
@@ -277,16 +277,11 @@ void WhereNode::initialize_state(State& state) const {
     }
 }
 
-bool WhereNode::integral() const { return x_ptr_->integral() && y_ptr_->integral(); }
+bool WhereNode::integral() const { return values_info_.integral; }
 
-std::pair<double, double> WhereNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        const auto [x_min, x_max] = x_ptr_->minmax(cache);
-        const auto [y_min, y_max] = y_ptr_->minmax(cache);
-        return std::make_pair(std::min(x_min, y_min), std::max(x_max, y_max));
-    });
-}
+double WhereNode::max() const { return values_info_.max; }
+
+double WhereNode::min() const { return values_info_.min; }
 
 // Given a list of updates on a single `conditional`, did we end up flipping?
 bool _flipped(std::span<const Update> diff) {
