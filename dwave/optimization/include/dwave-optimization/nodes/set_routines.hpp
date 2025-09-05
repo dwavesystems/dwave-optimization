@@ -74,8 +74,7 @@ class IsInNode : public ArrayOutputMixin<ArrayNode> {
     const Array* element_ptr_;
     const Array* test_elements_ptr_;
 
-    inline void rm_index_from_element_indices_key(IsInNodeData*& node_data, const ssize_t rm_index,
-                                                  const double key) const;
+    inline void rm_index(IsInNodeData*& node_data, const ssize_t rm_index, const double key) const;
 };
 
 }  // namespace dwave::optimization
