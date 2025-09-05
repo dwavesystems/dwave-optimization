@@ -48,19 +48,13 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
 
     // A pointer to another array or similar. In this case the ConstantNode will be a *view*
     // rather than a container. That is it does not manage the lifespan of the array data.
-    ConstantNode(const double* data_ptr, std::initializer_list<ssize_t> shape)
-            : ArrayOutputMixin(shape), buffer_ptr_(data_ptr), values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))) {}
-    ConstantNode(const double* data_ptr, const std::span<const ssize_t> shape)
-            : ArrayOutputMixin(shape), buffer_ptr_(data_ptr), values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))) {}
+    ConstantNode(const double* data_ptr, std::initializer_list<ssize_t> shape);
+    ConstantNode(const double* data_ptr, const std::span<const ssize_t> shape);
 
     // For use from Python, where we will pass in a PyDataSource which manages the python reference
     // to the original object (a numpy array) that holds the data.
     ConstantNode(std::unique_ptr<DataSource> data_source, const double* data_ptr,
-                 const std::span<const ssize_t> shape)
-            : ArrayOutputMixin(shape),
-              buffer_ptr_(data_ptr),
-              values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),
-              data_source_(std::move(data_source)) {}
+                 const std::span<const ssize_t> shape);
 
     /// Create a ConstantNode by copying the contents of a range
     template <std::ranges::sized_range Range>
@@ -125,17 +119,9 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
 
     // An owning pointer to an array. In this case the ConstantNode will manage the lifespan
     // of the array.
-    ConstantNode(OwningDataSource&& data_source, std::initializer_list<ssize_t> shape)
-            : ArrayOutputMixin(shape),
-              buffer_ptr_(data_source.get()),
-              values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),
-              data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
+    ConstantNode(OwningDataSource&& data_source, std::initializer_list<ssize_t> shape);
 
-    ConstantNode(OwningDataSource&& data_source, const std::span<const ssize_t> shape)
-            : ArrayOutputMixin(shape),
-              buffer_ptr_(data_source.get()),
-              values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),
-              data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
+    ConstantNode(OwningDataSource&& data_source, const std::span<const ssize_t> shape);
 
     // Create a unique_ptr<double[]> built from the given range of values holding
     // the values of the array.
@@ -158,8 +144,6 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     // The beginning of the array data. The ConstantNode is unusual because it
     // holds its values on the object itself rather than in a State.
     const double* buffer_ptr_;
-
-    ValuesInfo calculate_values_info(std::span<const double> buffer);
 
     const ValuesInfo values_info_;
 
