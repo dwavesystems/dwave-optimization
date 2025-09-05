@@ -218,7 +218,7 @@ WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_pt
           condition_ptr_(condition_ptr),
           x_ptr_(x_ptr),
           y_ptr_(y_ptr),
-          values_info_(cast_to_array({x_ptr, y_ptr})) {
+          values_info_({x_ptr, y_ptr}) {
     // x and y where checked for nullptr by same_shape() above
     if (!condition_ptr_) throw std::invalid_argument("node pointer cannot be nullptr");
 

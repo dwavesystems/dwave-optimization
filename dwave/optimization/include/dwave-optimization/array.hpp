@@ -77,10 +77,14 @@ struct ValuesInfo {
     ValuesInfo(double min, double max, bool integral) : min(min), max(max), integral(integral) {}
     /// Copy the min/max/integral from the array
     ValuesInfo(const Array* array_ptr);
-    /// Take the min of the mins, etc for all the arrays
-    ValuesInfo(std::span<const Array* const> array_ptrs);
 
-    static ValuesInfo integral_output() { return {false, true, true}; };
+    /// These two constructors take the min of the mins, etc for all the arrays
+    ValuesInfo(std::initializer_list<const Array*> array_ptrs);
+
+    template <std::ranges::viewable_range R>
+    ValuesInfo(R&& array_ptrs);
+
+    static ValuesInfo logical_output() { return {false, true, true}; };
 
     double min;
     double max;
@@ -417,35 +421,6 @@ class Array {
         return true;
     }
 
-    // Return a cached value if available, and otherwise return the value returned
-    // by ``func()``.
-    // If the ``cache.has_value()`` returns ``false``, then the cache is ignored
-    // entirely.
-    template <class T, class Func>
-    requires (std::same_as<std::invoke_result_t<Func>, T>)
-    T memoize(optional_cache_type<T> cache, Func&& func) const {
-        // If there is no cache, then just evaluate the function
-        if (!cache.has_value()) return func();
-
-        cache_type<T>& cache_ = cache->get();
-
-        // Otherwise, check if we've already cached a value and return it if so
-        if (auto it = cache_.find(this); it != cache_.end()) {
-            return it->second;
-        }
-
-        // Finally, if we have a cache but we haven't already cached anything, call
-        // the function and cache the output.
-        auto [it, _] = cache_.emplace(this, func());
-        return it->second;
-    }
-    template <class T>
-    T memoize(optional_cache_type<T> cache, T value) const {
-        if (!cache.has_value()) return value;
-        auto [it, _] = cache->get().emplace(this, value);
-        return it->second;
-    }
-
     // Determine the size by the shape. For a node with a fixed size, it is simply
     // the product of the shape.
     // Expects the shape to be stored in a C-style array of length ndim.
@@ -658,5 +633,11 @@ std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape
 
 // Represent a shape (or strides) as a string in NumPy-style format.
 std::string shape_to_string(const std::span<const ssize_t> shape);
+
+template <std::ranges::viewable_range R>
+ValuesInfo::ValuesInfo(R&& array_ptrs)
+    : min(std::ranges::min(array_ptrs | std::views::transform([](const Array* ptr) { return ptr->min(); }))),
+      max(std::ranges::max(array_ptrs | std::views::transform([](const Array* ptr) { return ptr->max(); }))),
+      integral(std::ranges::all_of(array_ptrs, [](const Array* ptr) { return ptr->integral(); })) {}
 
 }  // namespace dwave::optimization

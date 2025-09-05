@@ -595,7 +595,7 @@ ValuesInfo reduce_calculate_values_info(const Array* array_ptr, const std::optio
     // If the output of the operation is boolean, the min/max are just [false, true]
     using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
     if constexpr (std::same_as<result_type, bool>) {
-        return ValuesInfo::integral_output();
+        return ValuesInfo::logical_output();
     }
 
     // Otherwise the min and max depend on the predecessors

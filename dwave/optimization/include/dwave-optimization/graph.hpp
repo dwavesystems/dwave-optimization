@@ -374,8 +374,4 @@ class DecisionNode : public Decision, public virtual Node {
     bool removable() const override { return false; }
 };
 
-std::vector<const Array*> cast_to_array(std::span<const ArrayNode* const> node_ptrs);
-
-std::vector<const Array*> cast_to_array(std::initializer_list<const ArrayNode* const> node_ptrs);
-
 }  // namespace dwave::optimization

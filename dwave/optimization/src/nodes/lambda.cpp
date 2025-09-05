@@ -125,7 +125,11 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
                     ", operands.size()=" + std::to_string(operands.size()));
         }
 
-        if (!array_shape_equal(cast_to_array(operands))) {
+        // For array_shape_equal we need Array*, not ArrayNode* so we do a copy.
+        // In the future we should consider another overload
+        std::vector<const Array*> array_operands;
+        for (const ArrayNode* op : operands) array_operands.emplace_back(op);
+        if (!array_shape_equal(array_operands)) {
             throw std::invalid_argument("all operands must have the same shape");
         }
 

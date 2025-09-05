@@ -309,7 +309,7 @@ ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t
         : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)),
           axis_(axis),
           array_ptrs_(array_ptrs.begin(), array_ptrs.end()),
-          values_info_(cast_to_array(array_ptrs_)) {
+          values_info_(std::ranges::transform_view(array_ptrs, [](auto ptr) -> const Array* { return ptr; })) {
     // Compute buffer start position for each input array
     array_starts_.reserve(array_ptrs.size());
     array_starts_.emplace_back(0);
@@ -595,7 +595,7 @@ PutNode::PutNode(ArrayNode* array_ptr, ArrayNode* indices_ptr, ArrayNode* values
           array_ptr_(array_ptr),
           indices_ptr_(indices_ptr),
           values_ptr_(values_ptr),
-          values_info_(cast_to_array({array_ptr, values_ptr})) {
+          values_info_({array_ptr, values_ptr}) {
     if (!array_ptr_ || !indices_ptr_ || !values_ptr_) {
         throw std::invalid_argument("given ArrayNodes cannot be nullptr");
     }

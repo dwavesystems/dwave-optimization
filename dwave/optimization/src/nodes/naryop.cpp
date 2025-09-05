@@ -88,7 +88,7 @@ ValuesInfo calculate_values_info(const std::vector<Array*>& operands) {
     // If the output of the operation is boolean, this is simple
     using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
     if constexpr (std::same_as<result_type, bool>) {
-        return ValuesInfo::integral_output();
+        return ValuesInfo::logical_output();
     }
 
     // Otherwise the min and max depend on the predecessors

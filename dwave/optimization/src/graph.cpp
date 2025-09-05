@@ -449,26 +449,6 @@ std::string Node::str() const { return classname(); }
 
 std::ostream& operator<<(std::ostream& os, const Node& node) { return os << node.repr(); }
 
-// ArrayNode ******************************************************************
-
-std::vector<const Array*> cast_to_array(std::span<const ArrayNode* const> node_ptrs) {
-    std::vector<const Array*> arrays;
-    arrays.reserve(node_ptrs.size());
-    for (const auto& ptr : node_ptrs) {
-        arrays.emplace_back(ptr);
-    }
-    return arrays;
-}
-
-std::vector<const Array*> cast_to_array(std::initializer_list<const ArrayNode* const> node_ptrs) {
-    std::vector<const Array*> arrays;
-    arrays.reserve(node_ptrs.size());
-    for (const auto& ptr : node_ptrs) {
-        arrays.emplace_back(ptr);
-    }
-    return arrays;
-}
-
 // DecisionNode ***************************************************************
 
 [[noreturn]] void DecisionNode::update(State& state, int index) const {
