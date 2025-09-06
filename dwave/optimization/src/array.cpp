@@ -12,8 +12,6 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#include <ranges>
-
 #include "dwave-optimization/array.hpp"
 
 #include <array>
@@ -27,10 +25,19 @@ SizeInfo::SizeInfo(const Array* array_ptr, std::optional<ssize_t> min, std::opti
     assert(!min.has_value() || !max.has_value() || *min <= *max);
 }
 
-ValuesInfo::ValuesInfo(const Array* array_ptr) : min(array_ptr->min()), max(array_ptr->max()), integral(array_ptr->integral()) {}
+ValuesInfo::ValuesInfo(const Array* array_ptr)
+        : min(array_ptr->min()), max(array_ptr->max()), integral(array_ptr->integral()) {}
 
 ValuesInfo::ValuesInfo(std::initializer_list<const Array*> array_ptrs)
-    : ValuesInfo(std::vector<const Array*>(array_ptrs)) {}
+        : ValuesInfo(std::vector<const Array*>(array_ptrs)) {}
+
+ValuesInfo::ValuesInfo(std::span<const Array* const> array_ptrs)
+        : min(std::ranges::min(array_ptrs |
+                               std::views::transform([](const Array* ptr) { return ptr->min(); }))),
+          max(std::ranges::max(array_ptrs |
+                               std::views::transform([](const Array* ptr) { return ptr->max(); }))),
+          integral(std::ranges::all_of(array_ptrs,
+                                       [](const Array* ptr) { return ptr->integral(); })) {}
 
 bool SizeInfo::operator==(const SizeInfo& other) const {
     // if one or the other is a fixed number, then this is straightforward

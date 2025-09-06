@@ -78,8 +78,12 @@ struct ValuesInfo {
     /// Copy the min/max/integral from the array
     ValuesInfo(const Array* array_ptr);
 
-    /// These two constructors take the min of the mins, etc for all the arrays
+    /// These constructors take the min of the mins, etc for all the arrays
     ValuesInfo(std::initializer_list<const Array*> array_ptrs);
+
+    // Unfortunately it seems we still need this span constructor for GCC11 which doesn't
+    // like a vector being passed to the viewable_range constructor
+    ValuesInfo(std::span<const Array* const> array_ptrs);
 
     template <std::ranges::viewable_range R>
     ValuesInfo(R&& array_ptrs);
