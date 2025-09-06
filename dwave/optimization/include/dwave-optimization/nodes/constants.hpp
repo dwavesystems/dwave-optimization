@@ -16,7 +16,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <optional>
 #include <span>
 #include <utility>
 #include <vector>
@@ -49,18 +48,13 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
 
     // A pointer to another array or similar. In this case the ConstantNode will be a *view*
     // rather than a container. That is it does not manage the lifespan of the array data.
-    ConstantNode(const double* data_ptr, std::initializer_list<ssize_t> shape)
-            : ArrayOutputMixin(shape), buffer_ptr_(data_ptr) {}
-    ConstantNode(const double* data_ptr, const std::span<const ssize_t> shape)
-            : ArrayOutputMixin(shape), buffer_ptr_(data_ptr) {}
+    ConstantNode(const double* data_ptr, std::initializer_list<ssize_t> shape);
+    ConstantNode(const double* data_ptr, const std::span<const ssize_t> shape);
 
     // For use from Python, where we will pass in a PyDataSource which manages the python reference
     // to the original object (a numpy array) that holds the data.
     ConstantNode(std::unique_ptr<DataSource> data_source, const double* data_ptr,
-                 const std::span<const ssize_t> shape)
-            : ArrayOutputMixin(shape),
-              buffer_ptr_(data_ptr),
-              data_source_(std::move(data_source)) {}
+                 const std::span<const ssize_t> shape);
 
     /// Create a ConstantNode by copying the contents of a range
     template <std::ranges::sized_range Range>
@@ -90,19 +84,16 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     // There are never any updates to propagate
     std::span<const Update> diff(const State& state) const noexcept override { return {}; }
 
-    // Whether the values in the array can be interpreted as integers.
+    /// @copydoc Array::integral()
     // Returns ``true`` for an empty array. This has the slightly odd effect of
     // making empty arrays logical, because we also return 0 for min/max.
-    // Note that this is an O(size) function call, whereas for most other nodes it
-    // is O(1).
     bool integral() const override;
 
-    // The maximum and minimum values of elements in the array.
-    // Returns ``0.0`` for an empty array.
-    // Note that this is an O(size) function call, whereas for most other nodes it
-    // is O(1).
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     // Overloads required by the Node ABC *************************************
 
@@ -128,14 +119,9 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
 
     // An owning pointer to an array. In this case the ConstantNode will manage the lifespan
     // of the array.
-    ConstantNode(OwningDataSource&& data_source, std::initializer_list<ssize_t> shape)
-            : ArrayOutputMixin(shape),
-              buffer_ptr_(data_source.get()),
-              data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
-    ConstantNode(OwningDataSource&& data_source, const std::span<const ssize_t> shape)
-            : ArrayOutputMixin(shape),
-              buffer_ptr_(data_source.get()),
-              data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
+    ConstantNode(OwningDataSource&& data_source, std::initializer_list<ssize_t> shape);
+
+    ConstantNode(OwningDataSource&& data_source, const std::span<const ssize_t> shape);
 
     // Create a unique_ptr<double[]> built from the given range of values holding
     // the values of the array.
@@ -159,18 +145,9 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     // holds its values on the object itself rather than in a State.
     const double* buffer_ptr_;
 
+    const ValuesInfo values_info_;
+
     std::unique_ptr<DataSource> data_source_;
-
-    // Information about the values in the buffer
-    struct BufferStats {
-        BufferStats() = delete;
-        explicit BufferStats(std::span<const double> buffer);
-
-        bool integral;
-        double min;
-        double max;
-    };
-    mutable std::optional<BufferStats> buffer_stats_;
 };
 
 }  // namespace dwave::optimization

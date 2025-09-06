@@ -90,9 +90,11 @@ class ARangeNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -129,6 +131,8 @@ class ARangeNode : public ArrayOutputMixin<ArrayNode> {
     array_or_int start_;
     array_or_int stop_;
     array_or_int step_;
+
+    const std::pair<double, double> values_minmax_;
 };
 
 }  // namespace dwave::optimization

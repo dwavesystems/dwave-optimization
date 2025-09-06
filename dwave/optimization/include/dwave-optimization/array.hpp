@@ -71,6 +71,30 @@ struct SizeInfo {
     std::optional<ssize_t> max;
 };
 
+/// Struct for the common use case of saving statistics about an ArrayNode's output values
+struct ValuesInfo {
+    ValuesInfo() = delete;
+    ValuesInfo(double min, double max, bool integral) : min(min), max(max), integral(integral) {}
+    /// Copy the min/max/integral from the array
+    ValuesInfo(const Array* array_ptr);
+
+    /// These constructors take the min of the mins, etc for all the arrays
+    ValuesInfo(std::initializer_list<const Array*> array_ptrs);
+
+    // Unfortunately it seems we still need this span constructor for GCC11 which doesn't
+    // like a vector being passed to the viewable_range constructor
+    ValuesInfo(std::span<const Array* const> array_ptrs);
+
+    template <std::ranges::viewable_range R>
+    ValuesInfo(R&& array_ptrs);
+
+    static ValuesInfo logical_output() { return {false, true, true}; };
+
+    double min;
+    double max;
+    bool integral;
+};
+
 // A slice represents a set of indices specified by range(start, stop, step).
 struct Slice {
     constexpr Slice() noexcept : Slice(std::nullopt, std::nullopt, std::nullopt) {}
@@ -343,20 +367,10 @@ class Array {
     virtual SizeInfo sizeinfo() const { return dynamic() ? SizeInfo(this) : SizeInfo(size()); }
 
     /// The minimum value that elements in the array may take.
-    double min() const {
-        cache_type<std::pair<double, double>> cache;
-        return minmax(cache).first;
-    }
+    virtual double min() const = 0;
 
     /// The maximum value that elements in the array may take.
-    double max() const {
-        cache_type<std::pair<double, double>> cache;
-        return minmax(cache).second;
-    }
-
-    /// The smallest and largest values that elements in the array may take.
-    virtual std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const;
+    virtual double max() const = 0;
 
     /// Whether the values in the array can be interpreted as integers.
     virtual bool integral() const { return false; }
@@ -382,6 +396,9 @@ class Array {
         return 0;
     }
 
+    static constexpr double default_min() { return std::numeric_limits<double>::lowest(); }
+    static constexpr double default_max() { return std::numeric_limits<double>::max(); }
+
  protected:
     // Some utility methods that might be useful to subclasses
 
@@ -406,35 +423,6 @@ class Array {
         }
 
         return true;
-    }
-
-    // Return a cached value if available, and otherwise return the value returned
-    // by ``func()``.
-    // If the ``cache.has_value()`` returns ``false``, then the cache is ignored
-    // entirely.
-    template <class T, class Func>
-    requires (std::same_as<std::invoke_result_t<Func>, T>)
-    T memoize(optional_cache_type<T> cache, Func&& func) const {
-        // If there is no cache, then just evaluate the function
-        if (!cache.has_value()) return func();
-
-        cache_type<T>& cache_ = cache->get();
-
-        // Otherwise, check if we've already cached a value and return it if so
-        if (auto it = cache_.find(this); it != cache_.end()) {
-            return it->second;
-        }
-
-        // Finally, if we have a cache but we haven't already cached anything, call
-        // the function and cache the output.
-        auto [it, _] = cache_.emplace(this, func());
-        return it->second;
-    }
-    template <class T>
-    T memoize(optional_cache_type<T> cache, T value) const {
-        if (!cache.has_value()) return value;
-        auto [it, _] = cache->get().emplace(this, value);
-        return it->second;
     }
 
     // Determine the size by the shape. For a node with a fixed size, it is simply
@@ -649,5 +637,11 @@ std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape
 
 // Represent a shape (or strides) as a string in NumPy-style format.
 std::string shape_to_string(const std::span<const ssize_t> shape);
+
+template <std::ranges::viewable_range R>
+ValuesInfo::ValuesInfo(R&& array_ptrs)
+    : min(std::ranges::min(array_ptrs | std::views::transform([](const Array* ptr) { return ptr->min(); }))),
+      max(std::ranges::max(array_ptrs | std::views::transform([](const Array* ptr) { return ptr->max(); }))),
+      integral(std::ranges::all_of(array_ptrs, [](const Array* ptr) { return ptr->integral(); })) {}
 
 }  // namespace dwave::optimization

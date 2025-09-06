@@ -15,7 +15,6 @@
 #pragma once
 
 #include <span>
-#include <vector>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
@@ -36,9 +35,11 @@ class LinearProgramFeasibleNode : public ScalarOutputMixin<ArrayNode, true> {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -162,6 +163,8 @@ class LinearProgramNode : public LinearProgramNodeBase {
     // lb <= x <= ub
     const ArrayNode* lb_ptr_;
     const ArrayNode* ub_ptr_;
+
+    const std::pair<double, double> variables_minmax_;
 };
 
 /// A scalar node that propagates the objective value of the solution found by the
@@ -172,6 +175,15 @@ class LinearProgramObjectiveValueNode : public ScalarOutputMixin<ArrayNode, true
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override { return false; }
+
+    /// @copydoc Array::max()
+    double max() const override { return Array::default_max(); }
+
+    /// @copydoc Array::min()
+    double min() const override { return Array::default_min(); }
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -201,9 +213,11 @@ class LinearProgramSolutionNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;

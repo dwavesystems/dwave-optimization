@@ -30,7 +30,8 @@ TEST_CASE("ARangeNode") {
         CHECK_THAT(arange.predecessors(), RangeEquals(std::vector<Node*>{}));
 
         CHECK(arange.sizeinfo() == SizeInfo(0));
-        CHECK(arange.minmax() == std::pair<double, double>(0, 0));
+        CHECK(arange.min() == 0);
+        CHECK(arange.max() == 0);
     }
 
     GIVEN("arange = ARangeNode(5)") {
@@ -43,7 +44,8 @@ TEST_CASE("ARangeNode") {
         CHECK_THAT(arange_ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
 
         CHECK(arange_ptr->sizeinfo() == SizeInfo(5));
-        CHECK(arange_ptr->minmax() == std::pair<double, double>(0, 4));
+        CHECK(arange_ptr->min() == 0);
+        CHECK(arange_ptr->max() == 4);
     }
 
     GIVEN("arange = ARangeNode(-2, -5, -1)") {
@@ -56,7 +58,8 @@ TEST_CASE("ARangeNode") {
         CHECK_THAT(arange_ptr->view(state), RangeEquals({-2, -3, -4}));
 
         CHECK(arange_ptr->sizeinfo() == SizeInfo(3));
-        CHECK(arange_ptr->minmax() == std::pair<double, double>(-4, -2));
+        CHECK(arange_ptr->min() == -4);
+        CHECK(arange_ptr->max() == -2);
     }
 
     GIVEN("i = IntegerNode({}, -5, 5), arange = ARangeNode(i)") {
@@ -71,7 +74,8 @@ TEST_CASE("ARangeNode") {
         CHECK_THAT(arange_ptr->shape(), RangeEquals({-1}));
         CHECK_THAT(arange_ptr->predecessors(), RangeEquals(std::vector<Node*>{i_ptr}));
         CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 0, 5));
-        CHECK(arange_ptr->minmax() == std::pair<double, double>(0, 4));
+        CHECK(arange_ptr->min() == 0);
+        CHECK(arange_ptr->max() == 4);
 
         auto state = graph.empty_state();
         i_ptr->initialize_state(state, {3});
@@ -139,7 +143,8 @@ TEST_CASE("ARangeNode") {
         CHECK_THAT(arange_ptr->predecessors(), RangeEquals(std::vector<Node*>{i_ptr}));
 
         CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 0, 7));
-        CHECK(arange_ptr->minmax() == std::pair<double, double>(-6, 0));
+        CHECK(arange_ptr->min() == -6);
+        CHECK(arange_ptr->max() == 0);
 
         auto state = graph.empty_state();
         i_ptr->initialize_state(state, {-5});
@@ -227,7 +232,8 @@ TEST_CASE("ARangeNode") {
         CHECK_THAT(arange_ptr->predecessors(), RangeEquals(std::vector<Node*>{i_ptr}));
 
         CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 0, 10));
-        CHECK(arange_ptr->minmax() == std::pair<double, double>(-5, 4));
+        CHECK(arange_ptr->min() == -5);
+        CHECK(arange_ptr->max() == 4);
 
         auto state = graph.empty_state();
         i_ptr->initialize_state(state, {3});
@@ -297,7 +303,8 @@ TEST_CASE("ARangeNode") {
         CHECK_THAT(arange_ptr->predecessors(), RangeEquals(std::vector<Node*>{stop_ptr, step_ptr}));
 
         CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 0, 5));
-        CHECK(arange_ptr->minmax() == std::pair<double, double>(0, 4));
+        CHECK(arange_ptr->min() == 0);
+        CHECK(arange_ptr->max() == 4);
 
         auto state = graph.empty_state();
         stop_ptr->initialize_state(state, {5});
@@ -338,9 +345,8 @@ TEST_CASE("ARangeNode") {
         auto arange_ptr = graph.emplace_node<ARangeNode>(start_ptr, 15, 7);
 
         THEN("The min/max are correct") {
-            const auto [low, high] = arange_ptr->minmax();
-            CHECK(low == 0);
-            CHECK(high == 14);
+            CHECK(arange_ptr->min() == 0);
+            CHECK(arange_ptr->max() == 14);
         }
     }
 
@@ -354,9 +360,8 @@ TEST_CASE("ARangeNode") {
         auto arange_ptr = graph.emplace_node<ARangeNode>(start_ptr, 15, 10);
 
         THEN("The min/max are correct") {
-            const auto [low, high] = arange_ptr->minmax();
-            CHECK(low == 0);
-            CHECK(high == 11);
+            CHECK(arange_ptr->min() == 0);
+            CHECK(arange_ptr->max() == 11);
         }
     }
 
@@ -370,9 +375,8 @@ TEST_CASE("ARangeNode") {
         auto arange_ptr = graph.emplace_node<ARangeNode>(0, 15, step_ptr);
 
         THEN("The min/max are correct") {
-            const auto [low, high] = arange_ptr->minmax();
-            CHECK(low == 0);
-            CHECK(high == 14);
+            CHECK(arange_ptr->min() == 0);
+            CHECK(arange_ptr->max() == 14);
         }
     }
 
@@ -385,9 +389,8 @@ TEST_CASE("ARangeNode") {
         auto arange_ptr = graph.emplace_node<ARangeNode>(start_ptr, -15, -7);
 
         THEN("The min/max are correct") {
-            const auto [low, high] = arange_ptr->minmax();
-            CHECK(low == -14);
-            CHECK(high == 0);
+            CHECK(arange_ptr->min() == -14);
+            CHECK(arange_ptr->max() == 0);
         }
     }
 }

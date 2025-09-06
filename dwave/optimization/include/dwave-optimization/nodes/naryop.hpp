@@ -40,15 +40,19 @@ class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
         (add_node(node_ptrs), ...);
     }
 
-    void add_node(ArrayNode* node_ptr);
+    void add_node(ArrayNode* node_ptr, bool recompute_statistics = true);
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     void commit(State& state) const override;
     void revert(State& state) const override;
@@ -69,6 +73,9 @@ class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
     BinaryOp op;
 
     std::vector<Array*> operands_;
+
+    // Note that this is not const as it may change as we add nodes
+    ValuesInfo values_info_ = ValuesInfo(0, 0, true);
 };
 
 using NaryAddNode = NaryOpNode<std::plus<double>>;

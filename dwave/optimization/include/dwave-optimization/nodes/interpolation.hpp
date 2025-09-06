@@ -35,11 +35,15 @@ class BSplineNode : public ArrayOutputMixin<ArrayNode> {
     void commit(State& state) const override;
     std::span<const Update> diff(const State&) const override;
     void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
 
     void propagate(State& state) const override;
     void revert(State& state) const override;
@@ -61,6 +65,8 @@ class BSplineNode : public ArrayOutputMixin<ArrayNode> {
 
     std::vector<double> bspline_basis(double variable) const;
     double compute_value(double variable) const;
+
+    const std::pair<double, double> minmax_;
 };
 
 }  // namespace dwave::optimization

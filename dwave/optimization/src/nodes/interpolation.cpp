@@ -19,8 +19,19 @@
 
 namespace dwave::optimization {
 
+std::pair<double, double> calculate_minmax(const std::vector<double>& c) {
+    if (c.size() == 0) {
+        return std::make_pair(0.0, 0.0);
+    }
+
+    double low = *std::min_element(c.begin(), c.end());
+    double high = *std::max_element(c.begin(), c.end());
+
+    return std::make_pair(low, high);
+}
+
 BSplineNode::BSplineNode(ArrayNode* array_ptr, const int k, const std::vector<double> t, const std::vector<double> c)
-            :ArrayOutputMixin(array_ptr->size()), array_ptr_(array_ptr), k_(k), t_(std::move(t)), c_(std::move(c)) {
+            :ArrayOutputMixin(array_ptr->size()), array_ptr_(array_ptr), k_(k), t_(std::move(t)), c_(std::move(c)), minmax_(calculate_minmax(c_)) {
                 if (!array_ptr) throw std::invalid_argument("node pointer cannot be nullptr");
                 if (array_ptr->ndim() > 1) throw std::invalid_argument("node pointer cannot be multi-d array");
 
@@ -33,9 +44,9 @@ BSplineNode::BSplineNode(ArrayNode* array_ptr, const int k, const std::vector<do
                 }
 
                 // bspline node does not extrapolate outside of the base interval
-                cache_type<std::pair<double, double>> cache;
-                double pred_min = array_ptr->minmax(cache).first;
-                double pred_max = array_ptr->minmax(cache).second;
+                double pred_min = array_ptr->min();
+                double pred_max = array_ptr->max();
+
                 double base_interval_min = t[k];
                 double base_interval_max = t[c.size()];
                 if (pred_min < base_interval_min || pred_max > base_interval_max) {
@@ -112,16 +123,9 @@ void BSplineNode::revert(State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->revert();
 }
 
-std::pair<double, double> BSplineNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
+double BSplineNode::max() const { return minmax_.second; }
 
-        double low = *std::min_element(c_.begin(), c_.end());
-        double high = *std::max_element(c_.begin(), c_.end());
-
-        return std::make_pair(low, high);
-    });
-}
+double BSplineNode::min() const { return minmax_.first; }
 
 void BSplineNode::initialize_state(State& state) const {
     std::vector<double> bspline_values;

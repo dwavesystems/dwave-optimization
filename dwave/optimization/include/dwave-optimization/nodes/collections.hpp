@@ -38,11 +38,14 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
 
-    bool integral() const override { return true; }
+    /// @copydoc Array::integral()
+    bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     using ArrayOutputMixin::size;  // for size()
     ssize_t size(const State& state) const override;
@@ -162,11 +165,14 @@ class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
     double const* buff(const State&) const override;
     std::span<const Update> diff(const State& state) const override;
 
-    bool integral() const override { return true; };
+    /// @copydoc Array::integral()
+    bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     // Overloads required by the Node ABC *************************************
 
@@ -238,11 +244,14 @@ class DisjointListNode : public ArrayOutputMixin<ArrayNode> {
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
 
-    bool integral() const override { return true; }
+    /// @copydoc Array::integral()
+    bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     using ArrayOutputMixin::size;  // for size()
     ssize_t size(const State& state) const override;

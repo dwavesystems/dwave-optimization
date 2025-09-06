@@ -82,13 +82,10 @@ void SoftMaxNode::initialize_state(State& state) const {
 
 bool SoftMaxNode::integral() const { return false; }
 
-std::pair<double, double> SoftMaxNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        // Softmax function forms probability space, the values of which sum to 1.0.
-        return std::make_pair(0.0, 1.0);
-    });
-}
+// Softmax function forms probability space, the values of which sum to 1.0.
+double SoftMaxNode::min() const { return 0.0; }
+
+double SoftMaxNode::max() const { return 1.0; }
 
 void SoftMaxNode::propagate(State& state) const {
     // Store updates to predecessor in vector

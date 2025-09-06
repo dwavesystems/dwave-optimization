@@ -35,15 +35,10 @@ struct get_diff {
 };
 
 struct get_minmax {
-    explicit get_minmax(Array::optional_cache_type<std::pair<double, double>> cache = std::nullopt)
-            : cache(cache) {}
-
     std::pair<ssize_t, ssize_t> operator()(ssize_t value) const { return {value, value}; }
     std::pair<ssize_t, ssize_t> operator()(const Array* array_ptr) const {
-        return array_ptr->minmax(cache);
+        return std::make_pair(array_ptr->min(), array_ptr->max());
     }
-
-    Array::optional_cache_type<std::pair<double, double>> cache;
 };
 
 struct get_value {
@@ -124,6 +119,55 @@ std::vector<double> arange(const State& state, array_or_int start_, array_or_int
     return arange(start, stop, step);
 }
 
+std::pair<double, double> calculate_values_minmax(array_or_int start_, array_or_int stop_, array_or_int step_) {
+    auto visitor = get_minmax();
+    const auto [start_low, start_high] = std::visit(visitor, start_);
+    const auto [stop_low, stop_high] = std::visit(visitor, stop_);
+    const auto [step_low, step_high] = std::visit(visitor, step_);
+
+    // just sanity check because we can't specify in the structured binding
+    // and it matters later that we're integral when calculating max
+    static_assert(std::same_as<decltype(start_low), const ssize_t>);
+    static_assert(std::same_as<decltype(start_high), const ssize_t>);
+
+    // checked on construction.
+    assert(!(step_low <= 0 && step_high >= 0));
+
+    // The direction that we're stepping determines the min/max
+    if (step_low > 0) {
+        if (start_low >= stop_high) return std::pair<double, double>(0, 0);
+
+        // Our max value will always use the largest stop, but we do need
+        // to check several combinations of start/step.
+        const double high = std::max({
+                start_low + ((stop_high - start_low - 1) / step_low) * step_low,
+                start_low + ((stop_high - start_low - 1) / step_high) * step_high,
+                start_high + ((stop_high - start_high - 1) / step_low) * step_low,
+                start_high + ((stop_high - start_high - 1) / step_high) * step_high,
+        });
+
+        return std::pair<double, double>{start_low, high};
+    }
+    if (step_high < 0) {
+        if (start_high <= stop_low) return std::pair<double, double>(0, 0);
+
+        // Our min value will always use the smallest stop, but we do need
+        // to check several combinations of start/step.
+        const double low = std::min({
+                start_low + ((start_low - stop_low - 1) / -step_low) * step_low,
+                start_low + ((start_low - stop_low - 1) / -step_high) * step_high,
+                start_high + ((start_high - stop_low - 1) / -step_low) * step_low,
+                start_high + ((start_high - stop_low - 1) / -step_high) * step_high,
+        });
+
+        return std::pair<double, double>{low, start_high};
+    }
+
+    assert(false && "zero step not allowed");
+    unreachable();
+}
+
+
 // For all of the constructors, we force them to use the array_or_int overload
 // by casting explicitly. That's the one that does the error checking etc.
 // In a lot of cases, it's almost certainly redundant, but for now let's do
@@ -136,26 +180,31 @@ ARangeNode::ARangeNode(ssize_t start, ssize_t stop, ssize_t step)
         : ArrayOutputMixin(range_shape(start, stop, step)),
           start_(start),
           stop_(stop),
-          step_(step) {}
+          step_(step),
+          values_minmax_(calculate_values_minmax(start, stop, step)) {}
+
 ARangeNode::ARangeNode(ssize_t start, ssize_t stop, ArrayNode* step)
         : ArrayOutputMixin(range_shape(start, stop, step)),
           start_(start),
           stop_(stop),
-          step_(step) {
+          step_(step),
+          values_minmax_(calculate_values_minmax(start, stop, step)) {
     add_predecessor(step);
 }
 ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ssize_t step)
         : ArrayOutputMixin(range_shape(start, stop, step)),
           start_(start),
           stop_(stop),
-          step_(step) {
+          step_(step),
+          values_minmax_(calculate_values_minmax(start, stop, step)) {
     add_predecessor(stop);
 }
 ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ArrayNode* step)
         : ArrayOutputMixin(range_shape(start, stop, step)),
           start_(start),
           stop_(stop),
-          step_(step) {
+          step_(step),
+          values_minmax_(calculate_values_minmax(start, stop, step)) {
     add_predecessor(stop);
     add_predecessor(step);
 }
@@ -163,14 +212,16 @@ ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ssize_t step)
         : ArrayOutputMixin(range_shape(start, stop, step)),
           start_(start),
           stop_(stop),
-          step_(step) {
+          step_(step),
+          values_minmax_(calculate_values_minmax(start, stop, step)) {
     add_predecessor(start);
 }
 ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ArrayNode* step)
         : ArrayOutputMixin(range_shape(start, stop, step)),
           start_(start),
           stop_(stop),
-          step_(step) {
+          step_(step),
+          values_minmax_(calculate_values_minmax(start, stop, step)) {
     add_predecessor(start);
     add_predecessor(step);
 }
@@ -178,7 +229,8 @@ ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ssize_t step)
         : ArrayOutputMixin(range_shape(start, stop, step)),
           start_(start),
           stop_(stop),
-          step_(step) {
+          step_(step),
+          values_minmax_(calculate_values_minmax(start, stop, step)) {
     add_predecessor(start);
     add_predecessor(stop);
 }
@@ -186,7 +238,8 @@ ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ArrayNode* step)
         : ArrayOutputMixin(range_shape(start, stop, step)),
           start_(start),
           stop_(stop),
-          step_(step) {
+          step_(step),
+          values_minmax_(calculate_values_minmax(start, stop, step)) {
     add_predecessor(start);
     add_predecessor(stop);
     add_predecessor(step);
@@ -208,56 +261,9 @@ void ARangeNode::initialize_state(State& state) const {
     emplace_data_ptr<ArrayNodeStateData>(state, arange(state, start_, stop_, step_));
 }
 
-std::pair<double, double> ARangeNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        auto visitor = get_minmax(cache);
-        const auto [start_low, start_high] = std::visit(visitor, start_);
-        const auto [stop_low, stop_high] = std::visit(visitor, stop_);
-        const auto [step_low, step_high] = std::visit(visitor, step_);
+double ARangeNode::min() const { return values_minmax_.first; }
 
-        // just sanity check because we can't specify in the structured binding
-        // and it matters later that we're integral when calculating max
-        static_assert(std::same_as<decltype(start_low), const ssize_t>);
-        static_assert(std::same_as<decltype(start_high), const ssize_t>);
-
-        // checked on construction.
-        assert(!(step_low <= 0 && step_high >= 0));
-
-        // The direction that we're stepping determines the min/max
-        if (step_low > 0) {
-            if (start_low >= stop_high) return std::pair<double, double>(0, 0);
-
-            // Our max value will always use the largest stop, but we do need
-            // to check several combinations of start/step.
-            const double high = std::max({
-                    start_low + ((stop_high - start_low - 1) / step_low) * step_low,
-                    start_low + ((stop_high - start_low - 1) / step_high) * step_high,
-                    start_high + ((stop_high - start_high - 1) / step_low) * step_low,
-                    start_high + ((stop_high - start_high - 1) / step_high) * step_high,
-            });
-
-            return std::pair<double, double>{start_low, high};
-        }
-        if (step_high < 0) {
-            if (start_high <= stop_low) return std::pair<double, double>(0, 0);
-
-            // Our min value will always use the smallest stop, but we do need
-            // to check several combinations of start/step.
-            const double low = std::min({
-                    start_low + ((start_low - stop_low - 1) / -step_low) * step_low,
-                    start_low + ((start_low - stop_low - 1) / -step_high) * step_high,
-                    start_high + ((start_high - stop_low - 1) / -step_low) * step_low,
-                    start_high + ((start_high - stop_low - 1) / -step_high) * step_high,
-            });
-
-            return std::pair<double, double>{low, start_high};
-        }
-
-        assert(false && "zero step not allowed");
-        unreachable();
-    });
-}
+double ARangeNode::max() const { return values_minmax_.second; }
 
 void ARangeNode::propagate(State& state) const {
     auto visitor = get_diff(state);

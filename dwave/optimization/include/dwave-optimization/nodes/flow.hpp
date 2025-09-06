@@ -45,9 +45,11 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -75,6 +77,8 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
     // these are redundant, but convenient
     const Array* condition_ptr_;
     const Array* arr_ptr_;
+
+    const ValuesInfo values_info_;
 };
 
 /// Choose elements from x or y depending on condition.
@@ -90,11 +94,15 @@ class WhereNode : public ArrayOutputMixin<ArrayNode> {
     void commit(State& state) const override;
     std::span<const Update> diff(const State& state) const override;
     void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
 
     void propagate(State& state) const override;
     void revert(State& state) const override;
@@ -112,6 +120,8 @@ class WhereNode : public ArrayOutputMixin<ArrayNode> {
     const Array* condition_ptr_;
     const Array* x_ptr_;
     const Array* y_ptr_;
+
+    const ValuesInfo values_info_;
 };
 
 }  // namespace dwave::optimization

@@ -238,17 +238,6 @@ TEST_CASE("UnaryOpNode - AbsoluteNode") {
             CHECK(abs_ptr->min() == 0);
             CHECK(abs_ptr->max() == 3);
             CHECK(abs_ptr->integral());
-
-            // check that the cache is populated with minmax
-            Array::cache_type<std::pair<double, double>> cache;
-            abs_ptr->minmax(cache);
-            // the output of a node depends on the inputs, so it shows
-            // up in cache
-            CHECK(cache.contains(abs_ptr));
-            // mutating the cache should also mutate the output
-            cache[abs_ptr].first = -1000;
-            CHECK(abs_ptr->minmax(cache).first == -1000);
-            CHECK(abs_ptr->minmax().first == 0);  // ignores the cache
         }
     }
 
@@ -275,8 +264,10 @@ TEST_CASE("UnaryOpNode - CosNode and SinNode") {
 
         CHECK(!y->integral());
         CHECK(!z->integral());
-        CHECK(y->minmax() == std::pair<double, double>{-1, +1});
-        CHECK(z->minmax() == std::pair<double, double>{-1, +1});
+        CHECK(y->min() == -1);
+        CHECK(y->max() == +1);
+        CHECK(z->min() == -1);
+        CHECK(z->max() == +1);
     }
 }
 
