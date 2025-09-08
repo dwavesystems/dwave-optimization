@@ -79,7 +79,7 @@ std::pair<double, double> calculate_values_minmax_(Array* const array_ptr) {
         return std::make_pair(std::rint(low), std::rint(high));
     }
     if constexpr (std::same_as<UnaryOp, functional::square<double>>) {
-        const auto highest = Array::default_max();
+        const auto highest = std::numeric_limits<double>::max();
         return std::make_pair(std::min({low * low, high * high, highest}),
                 std::min(std::max({low * low, high * high}),
                     highest));  // prevent inf

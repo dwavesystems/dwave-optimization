@@ -396,9 +396,6 @@ class Array {
         return 0;
     }
 
-    static constexpr double default_min() { return std::numeric_limits<double>::lowest(); }
-    static constexpr double default_max() { return std::numeric_limits<double>::max(); }
-
  protected:
     // Some utility methods that might be useful to subclasses
 

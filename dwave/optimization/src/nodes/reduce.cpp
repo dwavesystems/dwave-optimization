@@ -621,7 +621,7 @@ ValuesInfo reduce_calculate_values_info(const Array* array_ptr, const std::optio
         // the dynamic case. For now let's just fall back to Array's default
         // implementation because this gets even more complicated
         if (array_ptr->dynamic()) {
-            return {Array::default_min(), Array::default_max(), integral};
+            return {std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max(), integral};
         }
 
         auto const& [this_low, this_high] = product_minmax(array_ptr->size(), init.value_or(1), low, high);
@@ -651,7 +651,7 @@ ValuesInfo reduce_calculate_values_info(const Array* array_ptr, const std::optio
             // if the array is arbitrarily large, then just fall back to the
             // default max.
             if (!sizeinfo.max.has_value()) {
-                high = Array::default_max();
+                high = std::numeric_limits<double>::max();
             } else {
                 high = init_ + sizeinfo.max.value() * high;
             }
@@ -668,7 +668,7 @@ ValuesInfo reduce_calculate_values_info(const Array* array_ptr, const std::optio
             // if the array is arbitrarily large, then just fall back to the
             // default min.
             if (!sizeinfo.max.has_value()) {
-                low = Array::default_min();
+                low = std::numeric_limits<double>::lowest();
             } else {
                 low = init_ + sizeinfo.max.value() * low;
             }

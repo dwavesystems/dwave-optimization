@@ -359,11 +359,11 @@ ssize_t DynamicArrayTestingNode::size_diff(const State& state) const {
 bool DynamicArrayTestingNode::integral() const { return integral_; }
 
 double DynamicArrayTestingNode::min() const {
-    return min_.value_or(Array::default_min());
+    return min_.value_or(std::numeric_limits<double>::lowest());
 }
 
 double DynamicArrayTestingNode::max() const {
-    return max_.value_or(Array::default_max());
+    return max_.value_or(std::numeric_limits<double>::max());
 }
 
 SizeInfo DynamicArrayTestingNode::sizeinfo() const { return sizeinfo_.value_or(SizeInfo(this)); }
