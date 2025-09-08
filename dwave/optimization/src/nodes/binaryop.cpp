@@ -27,12 +27,8 @@
 namespace dwave::optimization {
 
 template <class BinaryOp>
-BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
-        : ArrayOutputMixin(broadcast_shape(a_ptr->shape(), b_ptr->shape())),
-          operands_({a_ptr, b_ptr}) {
-    const Array* lhs_ptr = operands_[0];
-    const Array* rhs_ptr = operands_[1];
-
+std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Array* rhs_ptr) {
+    // Do some checks to ensure these array nodes can be used together with this op
     // We support limited broadcasting - one side must be a scalar.
     // If one size is a scalar, we also support dynamic arrays.
     // Otherwise both arrays must be the same shape and not be dynamic
@@ -52,6 +48,96 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
         }
     }
 
+    // If the output of the operation is boolean, then min/max is simple
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+    if constexpr (std::same_as<result_type, bool>) {
+        return {false, true};
+    }
+
+    // Otherwise the min and max depend on the predecessors
+
+    const auto lhs_low = lhs_ptr->min();
+    const auto lhs_high = lhs_ptr->max();
+    const auto rhs_low = rhs_ptr->min();
+    const auto rhs_high = rhs_ptr->max();
+
+    auto op = BinaryOp();
+
+    // these can result in inf. If we update propagation/initialization to handle
+    // that case we should update these as well.
+    if constexpr (std::same_as<BinaryOp, std::divides<double>> ||
+                  std::same_as<BinaryOp, std::multiplies<double>>) {
+        // The constructor should prevent us from getting here, but just in case...
+        assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_low != 0));
+        assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_high != 0));
+
+        // just get all possible combinations of values
+        std::array<double, 4> combos{op(lhs_low, rhs_low), op(lhs_low, rhs_high),
+                                     op(lhs_high, rhs_low), op(lhs_high, rhs_high)};
+
+        return std::make_pair(std::ranges::min(combos), std::ranges::max(combos));
+    }
+    if constexpr (std::same_as<BinaryOp, functional::safe_divides<double>>) {
+        // safe_divide is, well, safe. So we start by calculating all combos.
+        // Though there are some possible other values depending on our rhs.
+        std::vector<double> combos = {op(lhs_low, rhs_low), op(lhs_low, rhs_high),
+                                      op(lhs_high, rhs_low), op(lhs_high, rhs_high)};
+
+        if (rhs_ptr->integral()) {
+            if (rhs_low < 0 && 0 < rhs_high) {
+                combos.emplace_back(op(1, 0));
+            }
+            if (rhs_low < -1 && -1 < rhs_high) {
+                combos.emplace_back(op(lhs_low, -1));
+                combos.emplace_back(op(lhs_high, -1));
+            }
+            if (rhs_low < 1 && 1 < rhs_high) {
+                combos.emplace_back(op(lhs_low, 1));
+                combos.emplace_back(op(lhs_high, 1));
+            }
+        } else {
+            if (rhs_low < 0 && 0 < rhs_high) {
+                // rhs's range includes zero, but it's not currently accounted for
+                // so let's do that.
+                // combos.emplace_back(op(1, 0));  // redundant because we're already max range
+                combos.emplace_back(std::numeric_limits<double>::max());
+                combos.emplace_back(std::numeric_limits<double>::lowest());
+            } else if (rhs_low == 0 && rhs_high != 0) {
+                // We can get very close to dividing by 0
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_low));
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_high));
+            } else if (rhs_low != 0 && rhs_high == 0) {
+                // We can get very close to dividing by -0
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_low));
+                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_high));
+            }
+        }
+
+        return std::make_pair(std::ranges::min(combos), std::ranges::max(combos));
+    }
+    if constexpr (std::same_as<BinaryOp, functional::max<double>> ||
+                  std::same_as<BinaryOp, functional::min<double>> ||
+                  std::same_as<BinaryOp, std::plus<double>>) {
+        return std::make_pair(op(lhs_low, rhs_low), op(lhs_high, rhs_high));
+    }
+    if constexpr (std::same_as<BinaryOp, std::minus<double>>) {
+        return std::make_pair(lhs_low - rhs_high, lhs_high - rhs_low);
+    }
+    if constexpr (std::same_as<BinaryOp, functional::modulus<double>>) {
+        // Lower bound is the smallest negative absolute value
+        return std::make_pair(-rhs_high < rhs_low ? -rhs_high : rhs_low,
+                              -rhs_low > rhs_high ? -rhs_low : rhs_high);
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
+}
+
+template <class BinaryOp>
+BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
+        : ArrayOutputMixin(broadcast_shape(a_ptr->shape(), b_ptr->shape())),
+          operands_({a_ptr, b_ptr}),
+          minmax_(calculate_values_minmax<BinaryOp>(operands_[0], operands_[1])) {
     this->add_predecessor(a_ptr);
     this->add_predecessor(b_ptr);
 }
@@ -146,99 +232,13 @@ bool BinaryOpNode<BinaryOp>::integral() const {
 }
 
 template <class BinaryOp>
-std::pair<double, double> BinaryOpNode<BinaryOp>::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    // If the output of the operation is boolean, then don't bother caching the result.
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-    if constexpr (std::same_as<result_type, bool>) {
-        return {false, true};
-    }
+double BinaryOpNode<BinaryOp>::min() const {
+    return this->minmax_.first;
+}
 
-    // Otherwise the min and max depend on the predecessors, so we want to cache
-
-    // First check if we've already calculated it.
-    if (cache.has_value()) {
-        if (auto it = cache->get().find(this); it != cache->get().end()) {
-            return it->second;
-        }
-    }
-
-    auto lhs_ptr = operands_[0];
-    auto rhs_ptr = operands_[1];
-
-    const auto& [lhs_low, lhs_high] = lhs_ptr->minmax(cache);
-    const auto& [rhs_low, rhs_high] = rhs_ptr->minmax(cache);
-
-    auto op = BinaryOp();
-
-    // these can result in inf. If we update propagation/initialization to handle
-    // that case we should update these as well.
-    if constexpr (std::same_as<BinaryOp, std::divides<double>> ||
-                  std::same_as<BinaryOp, std::multiplies<double>>) {
-        // The constructor should prevent us from getting here, but just in case...
-        assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_low != 0));
-        assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_high != 0));
-
-        // just get all possible combinations of values
-        std::array<double, 4> combos{op(lhs_low, rhs_low), op(lhs_low, rhs_high),
-                                     op(lhs_high, rhs_low), op(lhs_high, rhs_high)};
-
-        return memoize(cache, std::make_pair(std::ranges::min(combos), std::ranges::max(combos)));
-    }
-    if constexpr (std::same_as<BinaryOp, functional::safe_divides<double>>) {
-        // safe_divide is, well, safe. So we start by calculating all combos.
-        // Though there are some possible other values depending on our rhs.
-        std::vector<double> combos = {op(lhs_low, rhs_low), op(lhs_low, rhs_high),
-                                      op(lhs_high, rhs_low), op(lhs_high, rhs_high)};
-
-        if (rhs_ptr->integral()) {
-            if (rhs_low < 0 && 0 < rhs_high) {
-                combos.emplace_back(op(1, 0));
-            }
-            if (rhs_low < -1 && -1 < rhs_high) {
-                combos.emplace_back(op(lhs_low, -1));
-                combos.emplace_back(op(lhs_high, -1));
-            }
-            if (rhs_low < 1 && 1 < rhs_high) {
-                combos.emplace_back(op(lhs_low, 1));
-                combos.emplace_back(op(lhs_high, 1));
-            }
-        } else {
-            if (rhs_low < 0 && 0 < rhs_high) {
-                // rhs's range includes zero, but it's not currently accounted for
-                // so let's do that.
-                // combos.emplace_back(op(1, 0));  // redundant because we're already max range
-                combos.emplace_back(std::numeric_limits<double>::max());
-                combos.emplace_back(std::numeric_limits<double>::lowest());
-            } else if (rhs_low == 0 && rhs_high != 0) {
-                // We can get very close to dividing by 0
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_low));
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_high));
-            } else if (rhs_low != 0 && rhs_high == 0) {
-                // We can get very close to dividing by -0
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_low));
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_high));
-            }
-        }
-
-        return memoize(cache, std::make_pair(std::ranges::min(combos), std::ranges::max(combos)));
-    }
-    if constexpr (std::same_as<BinaryOp, functional::max<double>> ||
-                  std::same_as<BinaryOp, functional::min<double>> ||
-                  std::same_as<BinaryOp, std::plus<double>>) {
-        return memoize(cache, std::make_pair(op(lhs_low, rhs_low), op(lhs_high, rhs_high)));
-    }
-    if constexpr (std::same_as<BinaryOp, std::minus<double>>) {
-        return memoize(cache, std::make_pair(lhs_low - rhs_high, lhs_high - rhs_low));
-    }
-    if constexpr (std::same_as<BinaryOp, functional::modulus<double>>) {
-        // Lower bound is the smallest negative absolute value
-        return memoize(cache, std::make_pair(-rhs_high < rhs_low ? -rhs_high : rhs_low,
-                                             -rhs_low > rhs_high ? -rhs_low : rhs_high));
-    }
-
-    assert(false && "not implemeted yet");
-    unreachable();
+template <class BinaryOp>
+double BinaryOpNode<BinaryOp>::max() const {
+    return this->minmax_.second;
 }
 
 template <class BinaryOp>

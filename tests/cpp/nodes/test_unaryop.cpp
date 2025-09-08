@@ -27,7 +27,8 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
-// NOTE: square_root and log should also be included but the templated tests need to be updated first.
+// NOTE: square_root and log should also be included but the templated tests need to be updated
+// first.
 TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::cos<double>,
                    functional::exp<double>, functional::expit<double>, functional::logical<double>,
                    functional::rint<double>, functional::sin<double>, functional::square<double>,
@@ -238,17 +239,6 @@ TEST_CASE("UnaryOpNode - AbsoluteNode") {
             CHECK(abs_ptr->min() == 0);
             CHECK(abs_ptr->max() == 3);
             CHECK(abs_ptr->integral());
-
-            // check that the cache is populated with minmax
-            Array::cache_type<std::pair<double, double>> cache;
-            abs_ptr->minmax(cache);
-            // the output of a node depends on the inputs, so it shows
-            // up in cache
-            CHECK(cache.contains(abs_ptr));
-            // mutating the cache should also mutate the output
-            cache[abs_ptr].first = -1000;
-            CHECK(abs_ptr->minmax(cache).first == -1000);
-            CHECK(abs_ptr->minmax().first == 0);  // ignores the cache
         }
     }
 
@@ -275,8 +265,10 @@ TEST_CASE("UnaryOpNode - CosNode and SinNode") {
 
         CHECK(!y->integral());
         CHECK(!z->integral());
-        CHECK(y->minmax() == std::pair<double, double>{-1, +1});
-        CHECK(z->minmax() == std::pair<double, double>{-1, +1});
+        CHECK(y->min() == -1);
+        CHECK(y->max() == +1);
+        CHECK(z->min() == -1);
+        CHECK(z->max() == +1);
     }
 }
 
@@ -490,8 +482,8 @@ TEST_CASE("UnaryOpNode - RintNode") {
 
         double c3 = 2.8;
         auto c3_ptr = graph.emplace_node<ConstantNode>(c3);
-        auto rint3_ptr = graph.emplace_node<RintNode>(c3_ptr);;
-
+        auto rint3_ptr = graph.emplace_node<RintNode>(c3_ptr);
+        ;
 
         auto arr_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 10, 20, 30});
 

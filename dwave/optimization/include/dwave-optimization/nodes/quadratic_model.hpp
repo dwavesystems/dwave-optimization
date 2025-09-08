@@ -83,6 +83,16 @@ class QuadraticModelNode : public ScalarOutputMixin<ArrayNode> {
     void commit(State& state) const override;
     void revert(State& state) const override;
     void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override { return false; }
+
+    /// @copydoc Array::max()
+    double max() const override { return std::numeric_limits<double>::max(); }
+
+    /// @copydoc Array::min()
+    double min() const override { return std::numeric_limits<double>::lowest(); }
+
     void propagate(State& state) const override;
     QuadraticModel* get_quadratic_model();
 

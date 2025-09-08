@@ -470,7 +470,8 @@ AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& 
           indexing_arrays_ndim_(parser.indexing_arrays_ndim),
           bullet1mode_(parser.bullet1mode),
           first_array_index_(parser.first_array_index),
-          subspace_stride_(parser.subspace_stride) {
+          subspace_stride_(parser.subspace_stride),
+          values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()) {
     assert(!array_ptr->ndim() || array_item_strides_);
 
     // Now actually add them. This way if there is an error thrown we're not
@@ -638,10 +639,11 @@ void AdvancedIndexingNode::revert(State& state) const {
     if (dynamic()) update_dynamic_shape(state);
 }
 
-std::pair<double, double> AdvancedIndexingNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() { return array_ptr_->minmax(cache); });
-}
+bool AdvancedIndexingNode::integral() const { return this->values_info_.integral; }
+
+double AdvancedIndexingNode::min() const { return this->values_info_.min; }
+
+double AdvancedIndexingNode::max() const { return this->values_info_.max; }
 
 ssize_t AdvancedIndexingNode::size(const State& state) const {
     return dynamic() ? data_ptr<AdvancedIndexingNodeData>(state)->data.size() : this->size();
@@ -1096,7 +1098,8 @@ BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser
           start_(parser.start),
           size_(Array::shape_to_size(ndim_, shape_.get())),
           axis0_slice_(parser.axis0_slice),
-          contiguous_(Array::is_contiguous(ndim_, shape_.get(), strides_.get())) {
+          contiguous_(Array::is_contiguous(ndim_, shape_.get(), strides_.get())),
+          values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()) {
     add_predecessor(array_ptr);
 }
 
@@ -1265,10 +1268,11 @@ ssize_t get_smallest_size_during_diff(ssize_t initial_size, const std::span<cons
     return minimum_size;
 }
 
-std::pair<double, double> BasicIndexingNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() { return array_ptr_->minmax(cache); });
-}
+bool BasicIndexingNode::integral() const { return this->values_info_.integral; }
+
+double BasicIndexingNode::min() const { return this->values_info_.min; }
+
+double BasicIndexingNode::max() const { return this->values_info_.max; }
 
 void BasicIndexingNode::propagate(State& state) const {
     auto node_data = data_ptr<BasicIndexingNodeData>(state);
@@ -1705,7 +1709,10 @@ std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
 // PermutationNode ************************************************************
 
 PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr)
-        : ArrayOutputMixin(array_ptr->shape()), array_ptr_(array_ptr), order_ptr_(order_ptr) {
+        : ArrayOutputMixin(array_ptr->shape()),
+          array_ptr_(array_ptr),
+          order_ptr_(order_ptr),
+          values_info_(array_ptr_) {
     std::span<const ssize_t> array_shape = array_ptr_->shape();
 
     // For now, we are only going to support permutation on constant nodes
@@ -1750,6 +1757,12 @@ double const* PermutationNode::buff(const State& state) const {
 std::span<const Update> PermutationNode::diff(const State& state) const {
     return data_ptr<IndexingNodeData>(state)->diff;
 }
+
+bool PermutationNode::integral() const { return values_info_.integral; }
+
+double PermutationNode::max() const { return values_info_.max; }
+
+double PermutationNode::min() const { return values_info_.min; }
 
 void PermutationNode::initialize_state(State& state) const {
     const std::span<const ssize_t> strides = array_ptr_->strides();

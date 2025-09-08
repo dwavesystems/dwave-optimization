@@ -25,7 +25,7 @@ namespace dwave::optimization {
 class AccumulateZipNodeData : public ArrayNodeStateData {
  public:
     explicit AccumulateZipNodeData(std::vector<double>&& values,
-                                std::vector<Array::const_iterator>&& iterators, State&& state)
+                                   std::vector<Array::const_iterator>&& iterators, State&& state)
             : ArrayNodeStateData(std::move(values)),
               iterators(std::move(iterators)),
               register_(std::move(state)) {}
@@ -60,8 +60,6 @@ double const* AccumulateZipNode::buff(const State& state) const {
 
 void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode* const> operands,
                               array_or_double initial) {
-    Array::cache_type<std::pair<double, double>> minmax_cache;  // we'll be doing a lot of checks
-
     // First, let's check that the expression is valid
     {
         if (!expression.topologically_sorted()) {
@@ -140,8 +138,10 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
         for (ssize_t op_idx = 0, stop = operands.size(); op_idx < stop; ++op_idx) {
             // make sure the values provided by the array don't exceed the values allowed by
             // the expression
-            const auto [outmin, outmax] = operands[op_idx]->minmax(minmax_cache);
-            const auto [inmin, inmax] = operand_inputs[op_idx]->minmax(minmax_cache);
+            const auto outmin = operands[op_idx]->min();
+            const auto outmax = operands[op_idx]->max();
+            const auto inmin = operand_inputs[op_idx]->min();
+            const auto inmax = operand_inputs[op_idx]->max();
 
             if (outmin < inmin) {
                 throw std::invalid_argument(std::string("the ") + std::to_string(op_idx) +
@@ -158,8 +158,10 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
             }
         }
 
-        const auto [expmin, expmax] = expression.objective()->minmax(minmax_cache);
-        const auto [accmin, accmax] = expression.inputs()[0]->minmax(minmax_cache);
+        const auto expmin = expression.objective()->min();
+        const auto expmax = expression.objective()->max();
+        const auto accmin = expression.inputs()[0]->min();
+        const auto accmax = expression.inputs()[0]->max();
         if (expression.inputs()[0]->integral() && !expression.objective()->integral()) {
             throw std::invalid_argument(
                     "if expression output can be non-integral, first input must not be integral");
@@ -172,7 +174,8 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
         }
 
         if (std::holds_alternative<ArrayNode*>(initial)) {
-            const auto [initmin, initmax] = std::get<ArrayNode*>(initial)->minmax(minmax_cache);
+            const auto initmin = std::get<ArrayNode*>(initial)->min();
+            const auto initmax = std::get<ArrayNode*>(initial)->max();
             if (initmin < accmin) {
                 throw std::invalid_argument(
                         "initial value must not have a lower min than the first input");
@@ -194,7 +197,9 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
     }
 }
 
-void AccumulateZipNode::commit(State& state) const { data_ptr<AccumulateZipNodeData>(state)->commit(); }
+void AccumulateZipNode::commit(State& state) const {
+    data_ptr<AccumulateZipNodeData>(state)->commit();
+}
 
 std::span<const Update> AccumulateZipNode::diff(const State& state) const {
     return data_ptr<AccumulateZipNodeData>(state)->diff();
@@ -262,19 +267,15 @@ void AccumulateZipNode::initialize_state(State& state) const {
         values.push_back(val);
     }
 
-    state[node_idx] = std::make_unique<AccumulateZipNodeData>(std::move(values), std::move(iterators),
-                                                           std::move(reg));
+    state[node_idx] = std::make_unique<AccumulateZipNodeData>(std::move(values),
+                                                              std::move(iterators), std::move(reg));
 }
 
 bool AccumulateZipNode::integral() const { return expression_ptr_->objective()->integral(); }
 
-std::pair<double, double> AccumulateZipNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        return std::make_pair(expression_ptr_->objective()->min(),
-                              expression_ptr_->objective()->max());
-    });
-}
+double AccumulateZipNode::max() const { return expression_ptr_->objective()->max(); }
+
+double AccumulateZipNode::min() const { return expression_ptr_->objective()->min(); }
 
 std::span<const InputNode* const> AccumulateZipNode::operand_inputs() const {
     return expression_ptr_->inputs().subspan(1);
@@ -319,9 +320,13 @@ void AccumulateZipNode::propagate(State& state) const {
     if (data->diff().size()) Node::propagate(state);
 }
 
-const InputNode* const AccumulateZipNode::accumulate_input() const { return expression_ptr_->inputs()[0]; }
+const InputNode* const AccumulateZipNode::accumulate_input() const {
+    return expression_ptr_->inputs()[0];
+}
 
-void AccumulateZipNode::revert(State& state) const { data_ptr<AccumulateZipNodeData>(state)->revert(); }
+void AccumulateZipNode::revert(State& state) const {
+    data_ptr<AccumulateZipNodeData>(state)->revert();
+}
 
 std::span<const ssize_t> AccumulateZipNode::shape(const State& state) const {
     return operands_[0]->shape(state);

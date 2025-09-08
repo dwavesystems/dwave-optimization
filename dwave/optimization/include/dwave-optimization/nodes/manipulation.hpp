@@ -48,9 +48,11 @@ class BroadcastToNode : public ArrayNode {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     /// @copydoc Array::ndim()
     ssize_t ndim() const override;
@@ -85,6 +87,8 @@ class BroadcastToNode : public ArrayNode {
     ssize_t ndim_;
     std::unique_ptr<ssize_t[]> shape_;
     std::unique_ptr<ssize_t[]> strides_;
+
+    const ValuesInfo values_info_;
 };
 
 class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
@@ -97,11 +101,15 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
     void commit(State& state) const override;
     std::span<const Update> diff(const State& state) const override;
     void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     void propagate(State& state) const override;
     void revert(State& state) const override;
@@ -112,6 +120,8 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t axis_;
     std::vector<ArrayNode*> array_ptrs_;
     std::vector<ssize_t> array_starts_;
+
+    const ValuesInfo values_info_;
 };
 
 /// An array node that is a contiguous copy of its predecessor.
@@ -134,9 +144,11 @@ class CopyNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -159,6 +171,8 @@ class CopyNode : public ArrayOutputMixin<ArrayNode> {
 
  private:
     const Array* array_ptr_;
+
+    const ValuesInfo values_info_;
 };
 
 /// Replaces specified elements of an array with the given values.
@@ -201,9 +215,11 @@ class PutNode : public ArrayOutputMixin<ArrayNode> {
     /// Return the number of indices currently "covering" each element in the array.
     std::span<const ssize_t> mask(const State& state) const;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -215,6 +231,8 @@ class PutNode : public ArrayOutputMixin<ArrayNode> {
     const Array* array_ptr_;
     const Array* indices_ptr_;
     const Array* values_ptr_;
+
+    const ValuesInfo values_info_;
 };
 
 /// Propagates the values of its predecessor, interpreted into a different shape.
@@ -249,9 +267,11 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -279,6 +299,8 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     // we could dynamically cast each time, but it's easier to just keep separate
     // pointer to the "array" part of the predecessor
     const Array* array_ptr_;
+
+    const ValuesInfo values_info_;
 };
 
 /// Reshape a node to a specific non-dynamic shape. Use fill_value for any missing
@@ -319,9 +341,11 @@ class ResizeNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     /// @copydoc Node::initialize_state()
     void propagate(State& state) const override;
@@ -332,11 +356,9 @@ class ResizeNode : public ArrayOutputMixin<ArrayNode> {
  private:
     const Array* array_ptr_;
 
-    double fill_value_;
+    const double fill_value_;
 
-    // In some cases the fill value will never be used. This matters for min/max
-    // calculation for instance, so we track that information.
-    bool fill_never_used_;
+    const ValuesInfo values_info_;
 };
 
 class SizeNode : public ScalarOutputMixin<ArrayNode, true> {
@@ -348,9 +370,11 @@ class SizeNode : public ScalarOutputMixin<ArrayNode, true> {
     // SizeNode's value is always a non-negative integer.
     bool integral() const override { return true; }
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     void propagate(State& state) const override;
 
@@ -358,6 +382,8 @@ class SizeNode : public ScalarOutputMixin<ArrayNode, true> {
     // we could dynamically cast each time, but it's easier to just keep separate
     // pointer to the "array" part of the predecessor
     const Array* array_ptr_;
+
+    const std::pair<double, double> minmax_;
 };
 
 }  // namespace dwave::optimization

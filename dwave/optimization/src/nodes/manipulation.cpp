@@ -12,11 +12,11 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include "dwave-optimization/nodes/manipulation.hpp"
+
 #include <cstdint>
 #include <tuple>
 #include <unordered_set>
-
-#include "dwave-optimization/nodes/manipulation.hpp"
 
 #include "_state.hpp"
 
@@ -114,7 +114,8 @@ BroadcastToNode::BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> 
         : array_ptr_(array_ptr),
           ndim_(shape.size()),
           shape_(std::make_unique<ssize_t[]>(ndim_)),
-          strides_(std::make_unique<ssize_t[]>(ndim_)) {
+          strides_(std::make_unique<ssize_t[]>(ndim_)),
+          values_info_(array_ptr) {
     // Fill in our shape_ and then make it accessible locally as a span
     std::copy(shape.begin(), shape.end(), shape_.get());
     const std::span<const ssize_t> target_shape(shape_.get(), ndim_);
@@ -180,8 +181,6 @@ std::span<const Update> BroadcastToNode::diff(const State& state) const {
     return data_ptr<BroadcastToNodeData>(state)->diff;
 }
 
-bool BroadcastToNode::integral() const { return array_ptr_->integral(); }
-
 void BroadcastToNode::initialize_state(State& state) const {
     std::vector<ssize_t> offsets = diff_offsets(array_ptr_->shape(), this->shape());
 
@@ -205,10 +204,11 @@ void BroadcastToNode::initialize_state(State& state) const {
     }
 }
 
-std::pair<double, double> BroadcastToNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() { return array_ptr_->minmax(cache); });
-}
+bool BroadcastToNode::integral() const { return values_info_.integral; }
+
+double BroadcastToNode::min() const { return values_info_.min; }
+
+double BroadcastToNode::max() const { return values_info_.max; }
 
 ssize_t BroadcastToNode::ndim() const { return ndim_; }
 
@@ -225,7 +225,7 @@ void BroadcastToNode::propagate(State& state) const {
 
     ssize_t size_diff = 0;
     for (Update update : deduplicate_diff_view(from_diff)) {
-        // we need to convert from our predecessor's index to ours 
+        // we need to convert from our predecessor's index to ours
         const ssize_t index = reindex(update.index);
 
         if (update.placed()) {
@@ -308,7 +308,9 @@ void ConcatenateNode::commit(State& state) const { data_ptr<ArrayNodeStateData>(
 ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t axis)
         : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)),
           axis_(axis),
-          array_ptrs_(array_ptrs.begin(), array_ptrs.end()) {
+          array_ptrs_(array_ptrs.begin(), array_ptrs.end()),
+          values_info_(std::ranges::transform_view(array_ptrs,
+                                                   [](auto ptr) -> const Array* { return ptr; })) {
     // Compute buffer start position for each input array
     array_starts_.reserve(array_ptrs.size());
     array_starts_.emplace_back(0);
@@ -346,10 +348,6 @@ void ConcatenateNode::initialize_state(State& state) const {
     }
 
     emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
-}
-
-bool ConcatenateNode::integral() const {
-    return std::ranges::all_of(array_ptrs_, [](ArrayNode* ptr){ return ptr->integral(); });
 }
 
 std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ssize_t axis) {
@@ -411,23 +409,19 @@ std::vector<ssize_t> make_concatenate_shape(std::span<ArrayNode*> array_ptrs, ss
     return shape;
 }
 
-std::pair<double, double> ConcatenateNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        auto min = [&cache](const ArrayNode* ptr) { return ptr->minmax(cache).first; };
-        auto max = [&cache](const ArrayNode* ptr) { return ptr->minmax(cache).second; };
-        return std::make_pair(std::ranges::min(array_ptrs_ | std::views::transform(min)),
-                              std::ranges::max(array_ptrs_ | std::views::transform(max)));
-    });
-}
+bool ConcatenateNode::integral() const { return values_info_.integral; }
+
+double ConcatenateNode::min() const { return values_info_.min; }
+
+double ConcatenateNode::max() const { return values_info_.max; }
 
 void ConcatenateNode::propagate(State& state) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);
 
     for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
-        auto view_it = Array::const_iterator(ptr->buff() + array_starts_[arr_i], this->ndim(),
-                                             array_ptrs_[arr_i]->shape().data(),
-                                             this->strides().data());
+        auto view_it =
+                Array::const_iterator(ptr->buff() + array_starts_[arr_i], this->ndim(),
+                                      array_ptrs_[arr_i]->shape().data(), this->strides().data());
 
         for (auto update : array_ptrs_[arr_i]->diff(state)) {
             assert(!update.placed() && !update.removed() && "no dynamic support implemented");
@@ -442,7 +436,7 @@ void ConcatenateNode::propagate(State& state) const {
 void ConcatenateNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
 
 CopyNode::CopyNode(ArrayNode* array_ptr)
-        : ArrayOutputMixin(array_ptr->shape()), array_ptr_(array_ptr) {
+        : ArrayOutputMixin(array_ptr->shape()), array_ptr_(array_ptr), values_info_(array_ptr_) {
     this->add_predecessor(array_ptr);
 }
 
@@ -456,16 +450,15 @@ std::span<const Update> CopyNode::diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->diff();
 }
 
-bool CopyNode::integral() const { return array_ptr_->integral(); }
-
 void CopyNode::initialize_state(State& state) const {
     emplace_data_ptr<ArrayNodeStateData>(state, array_ptr_->view(state));
 }
 
-std::pair<double, double> CopyNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() { return array_ptr_->minmax(cache); });
-}
+bool CopyNode::integral() const { return values_info_.integral; }
+
+double CopyNode::min() const { return values_info_.min; }
+
+double CopyNode::max() const { return values_info_.max; }
 
 void CopyNode::propagate(State& state) const {
     data_ptr<ArrayNodeStateData>(state)->update(array_ptr_->diff(state));
@@ -602,7 +595,8 @@ PutNode::PutNode(ArrayNode* array_ptr, ArrayNode* indices_ptr, ArrayNode* values
         : ArrayOutputMixin(array_ptr ? array_ptr->shape() : std::span<ssize_t>{}),
           array_ptr_(array_ptr),
           indices_ptr_(indices_ptr),
-          values_ptr_(values_ptr) {
+          values_ptr_(values_ptr),
+          values_info_({array_ptr, values_ptr}) {
     if (!array_ptr_ || !indices_ptr_ || !values_ptr_) {
         throw std::invalid_argument("given ArrayNodes cannot be nullptr");
     }
@@ -673,25 +667,15 @@ void PutNode::initialize_state(State& state) const {
     emplace_data_ptr<PutNodeState>(state, std::move(values), std::move(mask));
 }
 
-bool PutNode::integral() const {
-    // Because our underlying storage medium is double, we need both sources of
-    // values to be integral. If we had a typed array then we could coerce values
-    // to match.
-    return array_ptr_->integral() && values_ptr_->integral();
-}
-
 std::span<const ssize_t> PutNode::mask(const State& state) const {
     return data_ptr<PutNodeState>(state)->mask();
 }
 
-std::pair<double, double> PutNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        auto [alow, ahigh] = array_ptr_->minmax(cache);
-        auto [vlow, vhigh] = values_ptr_->minmax(cache);
-        return std::make_pair(std::min<double>(alow, vlow), std::max<double>(ahigh, vhigh));
-    });
-}
+bool PutNode::integral() const { return values_info_.integral; }
+
+double PutNode::min() const { return values_info_.min; }
+
+double PutNode::max() const { return values_info_.max; }
 
 void PutNode::propagate(State& state) const {
     auto ptr = data_ptr<PutNodeState>(state);
@@ -832,7 +816,9 @@ class DynamicReshapeNodeData : public NodeStateData {
 };
 
 ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::vector<ssize_t>&& shape)
-        : ArrayOutputMixin(infer_reshape(node_ptr, std::move(shape))), array_ptr_(node_ptr) {
+        : ArrayOutputMixin(infer_reshape(node_ptr, std::move(shape))),
+          array_ptr_(node_ptr),
+          values_info_(array_ptr_) {
     // Don't (yet) support non-contiguous predecessors.
     // In some cases with non-contiguous predecessors we need to make a copy.
     // See https://github.com/dwavesystems/dwave-optimization/issues/16
@@ -906,12 +892,11 @@ void ReshapeNode::initialize_state(State& state) const {
     emplace_data_ptr<DynamicReshapeNodeData>(state, this->shape(), array_ptr_->size(state));
 }
 
-bool ReshapeNode::integral() const { return array_ptr_->integral(); }
+bool ReshapeNode::integral() const { return values_info_.integral; }
 
-std::pair<double, double> ReshapeNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() { return array_ptr_->minmax(cache); });
-}
+double ReshapeNode::min() const { return values_info_.min; }
+
+double ReshapeNode::max() const { return values_info_.max; }
 
 void ReshapeNode::propagate(State& state) const {
     if (!this->dynamic()) return;  // stateless
@@ -943,23 +928,44 @@ ssize_t ReshapeNode::size_diff(const State& state) const {
     return data_ptr<DynamicReshapeNodeData>(state)->size_diff();
 }
 
-ResizeNode::ResizeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape, double fill_value)
-        : ArrayOutputMixin(shape), array_ptr_(array_ptr), fill_value_(fill_value) {
-    // our incoming array can be any shape/size, but we cannot be dynamic
-    if (this->dynamic()) throw std::invalid_argument("cannot resize to a dynamic shape");
-
+bool is_fill_never_used(const Array* array_ptr, ssize_t this_size) {
     // determine whether our fill value will ever matter. We need this info later for
     // min/max/integral. We could do this lazily, but let's just be proactive for
     // simplicity
-    if (array_ptr_->dynamic()) {
+    if (array_ptr->dynamic()) {
         // We'll never use the fill value if the minimum size of our predecessor
         // array is greater than or equal to our size.
-        const ssize_t min_size = array_ptr_->sizeinfo().substitute(100).min.value_or(0);
-        fill_never_used_ = min_size >= this->size();
-    } else {
-        // If our predecessor is not dynamic, then this is simple to figure out
-        fill_never_used_ = array_ptr_->size() >= this->size();
+        const ssize_t min_size = array_ptr->sizeinfo().substitute(100).min.value_or(0);
+        return min_size >= this_size;
     }
+
+    // If our predecessor is not dynamic, then this is simple to figure out
+    return array_ptr->size() >= this_size;
+}
+
+ValuesInfo resize_compute_values_info(const Array* array_ptr, ssize_t size, double fill_value) {
+    bool fill_never_used = is_fill_never_used(array_ptr, size);
+
+    bool integral = (fill_never_used || is_integer(fill_value)) && array_ptr->integral();
+
+    auto min = array_ptr->min();
+    auto max = array_ptr->max();
+
+    if (!fill_never_used) {
+        min = std::min(min, fill_value);
+        max = std::max(max, fill_value);
+    }
+
+    return {min, max, integral};
+}
+
+ResizeNode::ResizeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape, double fill_value)
+        : ArrayOutputMixin(shape),
+          array_ptr_(array_ptr),
+          fill_value_(fill_value),
+          values_info_(resize_compute_values_info(array_ptr_, this->size(), fill_value_)) {
+    // our incoming array can be any shape/size, but we cannot be dynamic
+    if (this->dynamic()) throw std::invalid_argument("cannot resize to a dynamic shape");
 
     add_predecessor(array_ptr);
 }
@@ -990,31 +996,19 @@ void ResizeNode::initialize_state(State& state) const {
     }
 
     // Now fill in everything else with our fill value
-    assert(!fill_never_used_ || values.size() == static_cast<std::size_t>(size));
+    assert(!is_fill_never_used(array_ptr_, size) ||
+           values.size() == static_cast<std::size_t>(size));
     values.resize(size, fill_value_);
 
     // Finally create the state
     emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
 }
 
-bool ResizeNode::integral() const {
-    if (fill_never_used_) return array_ptr_->integral();
-    return is_integer(fill_value_) && array_ptr_->integral();
-}
+bool ResizeNode::integral() const { return values_info_.integral; }
 
-std::pair<double, double> ResizeNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        auto [min, max] = array_ptr_->minmax(cache);
+double ResizeNode::min() const { return values_info_.min; }
 
-        if (!fill_never_used_) {
-            min = std::min(min, fill_value_);
-            max = std::max(max, fill_value_);
-        }
-
-        return std::make_pair(min, max);
-    });
-}
+double ResizeNode::max() const { return values_info_.max; }
 
 void ResizeNode::propagate(State& state) const {
     const ssize_t size = this->size();  // the desired size of our state
@@ -1044,24 +1038,20 @@ void ResizeNode::revert(State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->revert();
 }
 
-SizeNode::SizeNode(ArrayNode* node_ptr) : array_ptr_(node_ptr) { this->add_predecessor(node_ptr); }
+SizeNode::SizeNode(ArrayNode* node_ptr)
+        : array_ptr_(node_ptr),
+          minmax_(array_ptr_->sizeinfo().min.value_or(0),
+                  array_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max())) {
+    this->add_predecessor(node_ptr);
+}
 
 void SizeNode::initialize_state(State& state) const {
     emplace_state(state, array_ptr_->size(state));
 }
 
-std::pair<double, double> SizeNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        const ssize_t size = array_ptr_->size();
-        if (size >= 0) return std::pair<double, double>(size, size);
+double SizeNode::min() const { return minmax_.first; }
 
-        double low = array_ptr_->sizeinfo().min.value_or(0);
-        double high = array_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max());
-
-        return std::make_pair(low, high);
-    });
-}
+double SizeNode::max() const { return minmax_.second; }
 
 void SizeNode::propagate(State& state) const { set_state(state, array_ptr_->size(state)); }
 

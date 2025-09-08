@@ -49,7 +49,11 @@ struct ArgSortNodeData : public ArrayNodeStateData {
 };
 
 ArgSortNode::ArgSortNode(ArrayNode* arr_ptr)
-        : ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr) {
+        : ArrayOutputMixin(arr_ptr->shape()),
+          arr_ptr_(arr_ptr),
+          minmax_(0, static_cast<double>(arr_ptr_->sizeinfo().max.value_or(
+                                                 std::numeric_limits<ssize_t>::max()) -
+                                         1)) {
     add_predecessor(arr_ptr);
 }
 
@@ -69,17 +73,11 @@ void ArgSortNode::initialize_state(State& state) const {
     emplace_data_ptr<ArgSortNodeData>(state, std::vector<double>{arr.begin(), arr.end()});
 }
 
-bool ArgSortNode::integral() const { return arr_ptr_->integral(); }
+bool ArgSortNode::integral() const { return true; }
 
-std::pair<double, double> ArgSortNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        return std::make_pair(0.0,
-                              static_cast<double>(arr_ptr_->sizeinfo().max.value_or(
-                                                          std::numeric_limits<ssize_t>::max()) -
-                                                  1));
-    });
-}
+double ArgSortNode::min() const { return minmax_.first; }
+
+double ArgSortNode::max() const { return minmax_.second; }
 
 void ArgSortNode::propagate(State& state) const {
     auto node_data = data_ptr<ArgSortNodeData>(state);

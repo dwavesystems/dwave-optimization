@@ -28,9 +28,7 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
-TEMPLATE_TEST_CASE("PartialReduceNode", "",
-        std::multiplies<double>,
-        std::plus<double>) {
+TEMPLATE_TEST_CASE("PartialReduceNode", "", std::multiplies<double>, std::plus<double>) {
     GIVEN("A 1D array of 5 integers, and a reduction over axis 0 and an explicit initial value") {
         const double init = GENERATE(-1, 0, 1);
 
@@ -683,17 +681,6 @@ TEST_CASE("ReduceNode - MaxNode") {
             CHECK(y_ptr->min() == -5);
             CHECK(y_ptr->max() == 2);
             CHECK(y_ptr->integral());
-
-            // check that the cache is populated with minmax
-            Array::cache_type<std::pair<double, double>> cache;
-            y_ptr->minmax(cache);
-            // the output of a node depends on the inputs, so it shows
-            // up in cache
-            CHECK(cache.contains(y_ptr));
-            // mutating the cache should also mutate the output
-            cache[y_ptr].first = -1000;
-            CHECK(y_ptr->minmax(cache).first == -1000);
-            CHECK(y_ptr->minmax().first == -5);  // ignores the cache
         }
     }
 

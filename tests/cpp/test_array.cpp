@@ -163,6 +163,10 @@ TEST_CASE("Scalar") {
 
         std::span<const Update> diff(const State&) const override { return std::span(&update_, 1); }
 
+        bool integral() const override { return false; }
+        double max() const override { return std::numeric_limits<double>::max(); }
+        double min() const override { return std::numeric_limits<double>::lowest(); }
+
      private:
         // We use a trick where we just store the value in an Update
         Update update_;
@@ -197,6 +201,10 @@ TEST_CASE("Scalar") {
         double const* buff(const State&) const override { return &update_.value; }
 
         std::span<const Update> diff(const State&) const override { return std::span(&update_, 1); }
+
+        bool integral() const override { return false; }
+        double max() const override { return std::numeric_limits<double>::max(); }
+        double min() const override { return std::numeric_limits<double>::lowest(); }
 
      private:
         // We use a trick where we just store the value in an Update
@@ -253,6 +261,10 @@ TEST_CASE("Dynamically Sized 1d Array") {
         using ArrayOutputMixin::shape;  // for the stateless overload
 
         std::span<const Update> diff(const State&) const override { return {}; }
+
+        bool integral() const override { return false; }
+        double max() const override { return std::numeric_limits<double>::max(); }
+        double min() const override { return std::numeric_limits<double>::lowest(); }
 
         // Normally this would be stored in the State, but for testing we just keep it here
         std::vector<double> state_ = {0, 1, 2, 3};
@@ -326,6 +338,10 @@ TEST_CASE("Dynamically Sized 2d Array") {
         using ArrayOutputMixin::shape;  // for the stateless overload
 
         std::span<const Update> diff(const State&) const override { return {}; }
+
+        bool integral() const override { return false; }
+        double max() const override { return std::numeric_limits<double>::max(); }
+        double min() const override { return std::numeric_limits<double>::lowest(); }
 
         // Normally this would be stored in the State, but for testing we just keep it here
         std::vector<double> state_ = {};

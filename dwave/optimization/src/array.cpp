@@ -12,8 +12,6 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#include <ranges>
-
 #include "dwave-optimization/array.hpp"
 
 #include <array>
@@ -21,16 +19,25 @@
 
 namespace dwave::optimization {
 
-std::pair<double, double> Array::minmax(
-            optional_cache_type<std::pair<double, double>> cache) const {
-    return {std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max()};
-}
-
 SizeInfo::SizeInfo(const Array* array_ptr, std::optional<ssize_t> min, std::optional<ssize_t> max)
         : array_ptr(array_ptr), multiplier(1), offset(0), min(min), max(max) {
     assert(array_ptr->dynamic());
     assert(!min.has_value() || !max.has_value() || *min <= *max);
 }
+
+ValuesInfo::ValuesInfo(const Array* array_ptr)
+        : min(array_ptr->min()), max(array_ptr->max()), integral(array_ptr->integral()) {}
+
+ValuesInfo::ValuesInfo(std::initializer_list<const Array*> array_ptrs)
+        : ValuesInfo(std::vector<const Array*>(array_ptrs)) {}
+
+ValuesInfo::ValuesInfo(std::span<const Array* const> array_ptrs)
+        : min(std::ranges::min(array_ptrs |
+                               std::views::transform([](const Array* ptr) { return ptr->min(); }))),
+          max(std::ranges::max(array_ptrs |
+                               std::views::transform([](const Array* ptr) { return ptr->max(); }))),
+          integral(std::ranges::all_of(array_ptrs,
+                                       [](const Array* ptr) { return ptr->integral(); })) {}
 
 bool SizeInfo::operator==(const SizeInfo& other) const {
     // if one or the other is a fixed number, then this is straightforward
@@ -218,9 +225,7 @@ bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr) {
     return array_shape_equal(std::array<const Array*, 2>{lhs_ptr, rhs_ptr});
 }
 
-bool array_shape_equal(const Array& lhs, const Array& rhs) {
-    return array_shape_equal(&lhs, &rhs);
-}
+bool array_shape_equal(const Array& lhs, const Array& rhs) { return array_shape_equal(&lhs, &rhs); }
 
 // We follow NumPy's broadcasting rules
 // See https://numpy.org/doc/stable/user/basics.broadcasting.html

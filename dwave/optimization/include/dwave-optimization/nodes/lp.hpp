@@ -15,7 +15,6 @@
 #pragma once
 
 #include <span>
-#include <vector>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
@@ -36,9 +35,11 @@ class LinearProgramFeasibleNode : public ScalarOutputMixin<ArrayNode, true> {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -95,10 +96,8 @@ class LinearProgramNode : public LinearProgramNodeBase {
     /// Construct a LinearProgramNode
     ///
     /// Note: parameter names are chosen to match scipy.optimize.lingprog()
-    LinearProgramNode(ArrayNode* c_ptr,
-                      ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,
-                      ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr,
-                      ArrayNode* lb_ptr,
+    LinearProgramNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,
+                      ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr, ArrayNode* lb_ptr,
                       ArrayNode* ub_ptr);
 
     /// @copydoc Node::commit()
@@ -162,6 +161,8 @@ class LinearProgramNode : public LinearProgramNodeBase {
     // lb <= x <= ub
     const ArrayNode* lb_ptr_;
     const ArrayNode* ub_ptr_;
+
+    const std::pair<double, double> variables_minmax_;
 };
 
 /// A scalar node that propagates the objective value of the solution found by the
@@ -172,6 +173,15 @@ class LinearProgramObjectiveValueNode : public ScalarOutputMixin<ArrayNode, true
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override { return false; }
+
+    /// @copydoc Array::max()
+    double max() const override { return std::numeric_limits<double>::max(); }
+
+    /// @copydoc Array::min()
+    double min() const override { return std::numeric_limits<double>::lowest(); }
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -201,9 +211,11 @@ class LinearProgramSolutionNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;

@@ -69,12 +69,14 @@ class AdvancedIndexingNode : public ArrayNode {
     std::span<const ssize_t> strides() const override { return std::span(strides_.get(), ndim_); }
     bool contiguous() const override { return true; }
 
-    // Information about the values are all inherited from the array
-    bool integral() const override { return array_ptr_->integral(); }
+    /// @copydoc Array::integral()
+    bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     // Node overloads
     void commit(State& state) const override;
@@ -144,6 +146,8 @@ class AdvancedIndexingNode : public ArrayNode {
 
     const ssize_t first_array_index_;  // first axis indexed by an array
     const ssize_t subspace_stride_;
+
+    const ValuesInfo values_info_;
 };
 
 // Basic indexing is indexing by some combination of ints and slices.
@@ -177,12 +181,14 @@ class BasicIndexingNode : public ArrayNode {
     ssize_t size(const State& state) const override;
     ssize_t size() const override { return size_; }
 
-    // Information about the values are all inherited from the array
-    bool integral() const override { return array_ptr_->integral(); }
+    /// @copydoc Array::integral()
+    bool integral() const override;
 
-    /// @copydoc Array::minmax()
-    std::pair<double, double> minmax(
-            optional_cache_type<std::pair<double, double>> cache = std::nullopt) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
 
     double const* buff(const State& state) const override;
 
@@ -257,6 +263,8 @@ class BasicIndexingNode : public ArrayNode {
     const std::optional<Slice> axis0_slice_;
 
     const bool contiguous_;
+
+    const ValuesInfo values_info_;
 };
 
 class PermutationNode : public ArrayOutputMixin<ArrayNode> {
@@ -266,6 +274,15 @@ class PermutationNode : public ArrayOutputMixin<ArrayNode> {
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
 
     void initialize_state(State& state) const override;
     void commit(State& state) const override;
@@ -278,6 +295,8 @@ class PermutationNode : public ArrayOutputMixin<ArrayNode> {
     // pointers to the "array" part of the two predecessors
     const Array* array_ptr_;
     const Array* order_ptr_;
+
+    const ValuesInfo values_info_;
 };
 
 }  // namespace dwave::optimization
