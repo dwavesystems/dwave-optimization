@@ -2425,6 +2425,7 @@ class TestNaryAdd(utils.NaryOpTests):
     def test_iadd(self):
         model = Model()
         x: dwave.optimization.model.ArraySymbol = model.binary()  # typing is for mypy
+        binary = x
         a = model.constant(5)
         b = model.constant(4)
 
@@ -2437,6 +2438,17 @@ class TestNaryAdd(utils.NaryOpTests):
 
         x += 5
         self.assertIs(x, y)  # subsequent should be in-place
+
+        # Now we test adding an indexing node that depends on the output range
+        i = model.constant(np.arange(20))[x]
+        x += 1000000000
+        self.assertIsNot(x, y)
+
+        with model.lock():
+            model.states.resize(1)
+            binary.set_state(0, 0)
+            self.assertEqual(x.state(), 1000000000 + 14)
+            self.assertEqual(i.state(), 14)
 
     def test_mismatched_shape(self):
         model = Model()
@@ -2490,6 +2502,7 @@ class TestNaryMultiply(utils.NaryOpTests):
     def test_imul(self):
         model = Model()
         x: dwave.optimization.model.ArraySymbol = model.binary()  # typing is for mypy
+        binary = x
         a = model.constant(5)
         b = model.constant(4)
 
@@ -2502,6 +2515,17 @@ class TestNaryMultiply(utils.NaryOpTests):
 
         x *= 5
         self.assertIs(x, y)  # subsequent should be in-place
+
+        # Now we test adding an indexing node that depends on the output range
+        i = model.constant(np.arange(101))[x]
+        x *= 10
+        self.assertIsNot(x, y)
+
+        with model.lock():
+            model.states.resize(1)
+            binary.set_state(0, 1)
+            self.assertEqual(x.state(), 1000)
+            self.assertEqual(i.state(), 100)
 
     def test_mismatched_shape(self):
         model = Model()

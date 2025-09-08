@@ -3060,6 +3060,9 @@ cdef class NaryAdd(ArraySymbol):
         return x
 
     def __iadd__(self, rhs):
+        if not self.node_ptr.successors().empty():
+            return super().__iadd__(rhs)
+
         try:
             rhs = _as_array_symbol(self.model, rhs)
             self.ptr.add_node((<ArraySymbol>rhs).array_ptr)
@@ -3196,6 +3199,9 @@ cdef class NaryMultiply(ArraySymbol):
         return x
 
     def __imul__(self, rhs):
+        if not self.node_ptr.successors().empty():
+            return super().__imul__(rhs)
+
         try:
             rhs = _as_array_symbol(self.model, rhs)
             self.ptr.add_node((<ArraySymbol>rhs).array_ptr)
