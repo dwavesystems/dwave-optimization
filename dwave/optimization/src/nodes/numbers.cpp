@@ -39,13 +39,9 @@ void NumberNode::revert(State& state) const noexcept {
 double NumberNode::lower_bound() const { return lower_bound_; }
 double NumberNode::upper_bound() const { return upper_bound_; }
 
-double NumberNode::min() const {
-    return lower_bound_;
-}
+double NumberNode::min() const { return lower_bound_; }
 
-double NumberNode::max() const {
-    return upper_bound_;
-}
+double NumberNode::max() const { return upper_bound_; }
 
 void NumberNode::initialize_state(State& state, std::vector<double>&& number_data) const {
     if (number_data.size() != static_cast<size_t>(this->size())) {

@@ -220,7 +220,8 @@ bool partial_reduce_calculate_integral(const Array* array_ptr, const std::option
 }
 
 template <class BinaryOp>
-ValuesInfo partial_reduce_calculate_values_info(const Array* array_ptr, ssize_t axis, const std::optional<double>& init) {
+ValuesInfo partial_reduce_calculate_values_info(const Array* array_ptr, ssize_t axis,
+                                                const std::optional<double>& init) {
     // If the output of the operation is boolean, then the min/max is simple
     using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
     if constexpr (std::same_as<result_type, bool>) {
@@ -235,10 +236,12 @@ ValuesInfo partial_reduce_calculate_values_info(const Array* array_ptr, ssize_t 
     const ssize_t size = array_ptr->shape()[axis];
 
     if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
-        return {init.value_or(0) + size * array_ptr->min(), init.value_or(0) + size * array_ptr->max(), integral};
+        return {init.value_or(0) + size * array_ptr->min(),
+                init.value_or(0) + size * array_ptr->max(), integral};
     }
     if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
-        const auto& [low, high] = product_minmax(size, init.value_or(1), array_ptr->min(), array_ptr->max());
+        const auto& [low, high] =
+                product_minmax(size, init.value_or(1), array_ptr->min(), array_ptr->max());
         return {low, high, integral};
     }
 
@@ -454,13 +457,19 @@ ssize_t PartialReduceNode<BinaryOp>::map_parent_index(const State& state,
 }
 
 template <class BinaryOp>
-bool PartialReduceNode<BinaryOp>::integral() const { return values_info_.integral; }
+bool PartialReduceNode<BinaryOp>::integral() const {
+    return values_info_.integral;
+}
 
 template <class BinaryOp>
-double PartialReduceNode<BinaryOp>::min() const { return values_info_.min; }
+double PartialReduceNode<BinaryOp>::min() const {
+    return values_info_.min;
+}
 
 template <class BinaryOp>
-double PartialReduceNode<BinaryOp>::max() const { return values_info_.max; }
+double PartialReduceNode<BinaryOp>::max() const {
+    return values_info_.max;
+}
 
 template <class BinaryOp>
 void PartialReduceNode<BinaryOp>::propagate(State& state) const {
@@ -621,10 +630,12 @@ ValuesInfo reduce_calculate_values_info(const Array* array_ptr, const std::optio
         // the dynamic case. For now let's just fall back to Array's default
         // implementation because this gets even more complicated
         if (array_ptr->dynamic()) {
-            return {std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max(), integral};
+            return {std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max(),
+                    integral};
         }
 
-        auto const& [this_low, this_high] = product_minmax(array_ptr->size(), init.value_or(1), low, high);
+        auto const& [this_low, this_high] =
+                product_minmax(array_ptr->size(), init.value_or(1), low, high);
         return {this_low, this_high, integral};
     }
     if constexpr (std::same_as<BinaryOp, std::plus<double>>) {
@@ -687,7 +698,9 @@ ValuesInfo reduce_calculate_values_info(const Array* array_ptr, const std::optio
 
 template <class BinaryOp>
 ReduceNode<BinaryOp>::ReduceNode(ArrayNode* node_ptr, double init)
-        : init(init), array_ptr_(node_ptr), values_info_(reduce_calculate_values_info<BinaryOp>(array_ptr_, init)) {
+        : init(init),
+          array_ptr_(node_ptr),
+          values_info_(reduce_calculate_values_info<BinaryOp>(array_ptr_, init)) {
     add_predecessor(node_ptr);
 }
 
@@ -704,7 +717,10 @@ template <>
 ReduceNode<std::plus<double>>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, 0) {}
 
 template <class BinaryOp>
-ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr) : init(), array_ptr_(array_ptr), values_info_(reduce_calculate_values_info<BinaryOp>(array_ptr_, init)) {
+ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr)
+        : init(),
+          array_ptr_(array_ptr),
+          values_info_(reduce_calculate_values_info<BinaryOp>(array_ptr_, init)) {
     if (array_ptr_->dynamic()) {
         throw std::invalid_argument(
                 "cannot do a reduction on a dynamic array with an operation that has no identity "
@@ -778,13 +794,19 @@ void ReduceNode<std::multiplies<double>>::initialize_state(State& state) const {
 }
 
 template <class BinaryOp>
-bool ReduceNode<BinaryOp>::integral() const { return values_info_.integral; }
+bool ReduceNode<BinaryOp>::integral() const {
+    return values_info_.integral;
+}
 
 template <class BinaryOp>
-double ReduceNode<BinaryOp>::min() const { return values_info_.min; }
+double ReduceNode<BinaryOp>::min() const {
+    return values_info_.min;
+}
 
 template <class BinaryOp>
-double ReduceNode<BinaryOp>::max() const { return values_info_.max; }
+double ReduceNode<BinaryOp>::max() const {
+    return values_info_.max;
+}
 
 template <>
 void ReduceNode<std::logical_and<double>>::propagate(State& state) const {

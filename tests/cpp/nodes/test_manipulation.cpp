@@ -299,7 +299,8 @@ TEST_CASE("ConcatenateNode") {
         auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, 0, 50);
         auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -10, 100);
         auto a_copy_ptr = graph.emplace_node<CopyNode>(a_ptr);
-        auto c_ptr = graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_copy_ptr, b_ptr}, 0);
+        auto c_ptr =
+                graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_copy_ptr, b_ptr}, 0);
 
         THEN("We can get the min(), max() and integral() as expected") {
             CHECK(c_ptr->integral());
@@ -509,9 +510,7 @@ TEST_CASE("ConcatenateNode") {
         WHEN("Concatenated") {
             auto c = ConcatenateNode(std::vector<ArrayNode*>{&a, &b}, 0);
 
-            THEN("The concatenated node is not integral") {
-                CHECK(c.integral() == false);
-            }
+            THEN("The concatenated node is not integral") { CHECK(c.integral() == false); }
         }
     }
 }

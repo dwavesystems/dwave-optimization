@@ -96,10 +96,8 @@ class LinearProgramNode : public LinearProgramNodeBase {
     /// Construct a LinearProgramNode
     ///
     /// Note: parameter names are chosen to match scipy.optimize.lingprog()
-    LinearProgramNode(ArrayNode* c_ptr,
-                      ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,
-                      ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr,
-                      ArrayNode* lb_ptr,
+    LinearProgramNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,
+                      ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr, ArrayNode* lb_ptr,
                       ArrayNode* ub_ptr);
 
     /// @copydoc Node::commit()

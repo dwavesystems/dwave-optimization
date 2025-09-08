@@ -26,9 +26,7 @@
 namespace dwave::optimization {
 class BSplineNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    explicit BSplineNode(ArrayNode* array_ptr,
-                         const int k,
-                         const std::vector<double> t,
+    explicit BSplineNode(ArrayNode* array_ptr, const int k, const std::vector<double> t,
                          const std::vector<double> c);
 
     double const* buff(const State& state) const override;

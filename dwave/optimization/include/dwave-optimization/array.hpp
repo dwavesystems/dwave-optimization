@@ -281,10 +281,10 @@ class Array {
     /// A std::random_access_iterator over the values in the array.
     using const_iterator = BufferIterator<double, double, true>;
 
-    template<class T>
+    template <class T>
     using cache_type = std::unordered_map<const Array*, T>;
 
-    template<class T>
+    template <class T>
     using optional_cache_type = std::optional<std::reference_wrapper<cache_type<T>>>;
 
     using View = std::ranges::subrange<const_iterator>;
@@ -603,8 +603,8 @@ std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
 void deduplicate_diff(std::vector<Update>& diff);
 
 template <std::ranges::range V>
-requires(std::same_as<std::ranges::range_value_t<V>, Update>)
-class deduplicate_diff_view : public std::ranges::view_interface<deduplicate_diff_view<V>> {
+requires(std::same_as<std::ranges::range_value_t<V>, Update>) class deduplicate_diff_view
+        : public std::ranges::view_interface<deduplicate_diff_view<V>> {
  public:
     explicit deduplicate_diff_view(const V& diff) : diff_(diff.begin(), diff.end()) {
         deduplicate_diff(diff_);
@@ -637,8 +637,11 @@ std::string shape_to_string(const std::span<const ssize_t> shape);
 
 template <std::ranges::viewable_range R>
 ValuesInfo::ValuesInfo(R&& array_ptrs)
-    : min(std::ranges::min(array_ptrs | std::views::transform([](const Array* ptr) { return ptr->min(); }))),
-      max(std::ranges::max(array_ptrs | std::views::transform([](const Array* ptr) { return ptr->max(); }))),
-      integral(std::ranges::all_of(array_ptrs, [](const Array* ptr) { return ptr->integral(); })) {}
+        : min(std::ranges::min(array_ptrs |
+                               std::views::transform([](const Array* ptr) { return ptr->min(); }))),
+          max(std::ranges::max(array_ptrs |
+                               std::views::transform([](const Array* ptr) { return ptr->max(); }))),
+          integral(std::ranges::all_of(array_ptrs,
+                                       [](const Array* ptr) { return ptr->integral(); })) {}
 
 }  // namespace dwave::optimization

@@ -639,17 +639,11 @@ void AdvancedIndexingNode::revert(State& state) const {
     if (dynamic()) update_dynamic_shape(state);
 }
 
-bool AdvancedIndexingNode::integral() const {
-    return this->values_info_.integral;
-}
+bool AdvancedIndexingNode::integral() const { return this->values_info_.integral; }
 
-double AdvancedIndexingNode::min() const {
-    return this->values_info_.min;
-}
+double AdvancedIndexingNode::min() const { return this->values_info_.min; }
 
-double AdvancedIndexingNode::max() const {
-    return this->values_info_.max;
-}
+double AdvancedIndexingNode::max() const { return this->values_info_.max; }
 
 ssize_t AdvancedIndexingNode::size(const State& state) const {
     return dynamic() ? data_ptr<AdvancedIndexingNodeData>(state)->data.size() : this->size();
@@ -1274,17 +1268,11 @@ ssize_t get_smallest_size_during_diff(ssize_t initial_size, const std::span<cons
     return minimum_size;
 }
 
-bool BasicIndexingNode::integral() const {
-    return this->values_info_.integral;
-}
+bool BasicIndexingNode::integral() const { return this->values_info_.integral; }
 
-double BasicIndexingNode::min() const {
-    return this->values_info_.min;
-}
+double BasicIndexingNode::min() const { return this->values_info_.min; }
 
-double BasicIndexingNode::max() const {
-    return this->values_info_.max;
-}
+double BasicIndexingNode::max() const { return this->values_info_.max; }
 
 void BasicIndexingNode::propagate(State& state) const {
     auto node_data = data_ptr<BasicIndexingNodeData>(state);
@@ -1721,7 +1709,10 @@ std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
 // PermutationNode ************************************************************
 
 PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr)
-        : ArrayOutputMixin(array_ptr->shape()), array_ptr_(array_ptr), order_ptr_(order_ptr), values_info_(array_ptr_) {
+        : ArrayOutputMixin(array_ptr->shape()),
+          array_ptr_(array_ptr),
+          order_ptr_(order_ptr),
+          values_info_(array_ptr_) {
     std::span<const ssize_t> array_shape = array_ptr_->shape();
 
     // For now, we are only going to support permutation on constant nodes

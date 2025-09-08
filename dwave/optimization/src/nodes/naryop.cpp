@@ -140,7 +140,6 @@ ValuesInfo calculate_values_info(const std::vector<Array*>& operands) {
     unreachable();
 }
 
-
 template <class BinaryOp>
 NaryOpNode<BinaryOp>::NaryOpNode(ArrayNode* node_ptr) : ArrayOutputMixin(node_ptr->shape()) {
     add_node(node_ptr);
@@ -197,13 +196,19 @@ std::span<const Update> NaryOpNode<BinaryOp>::diff(const State& state) const {
 }
 
 template <class BinaryOp>
-bool NaryOpNode<BinaryOp>::integral() const { return values_info_.integral; }
+bool NaryOpNode<BinaryOp>::integral() const {
+    return values_info_.integral;
+}
 
 template <class BinaryOp>
-double NaryOpNode<BinaryOp>::min() const { return values_info_.min; }
+double NaryOpNode<BinaryOp>::min() const {
+    return values_info_.min;
+}
 
 template <class BinaryOp>
-double NaryOpNode<BinaryOp>::max() const { return values_info_.max; }
+double NaryOpNode<BinaryOp>::max() const {
+    return values_info_.max;
+}
 
 template <class BinaryOp>
 void NaryOpNode<BinaryOp>::commit(State& state) const {

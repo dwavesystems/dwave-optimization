@@ -126,7 +126,7 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
     if constexpr (std::same_as<BinaryOp, functional::modulus<double>>) {
         // Lower bound is the smallest negative absolute value
         return std::make_pair(-rhs_high < rhs_low ? -rhs_high : rhs_low,
-                                             -rhs_low > rhs_high ? -rhs_low : rhs_high);
+                              -rhs_low > rhs_high ? -rhs_low : rhs_high);
     }
 
     assert(false && "not implemeted yet");
@@ -232,10 +232,14 @@ bool BinaryOpNode<BinaryOp>::integral() const {
 }
 
 template <class BinaryOp>
-double BinaryOpNode<BinaryOp>::min() const { return this->minmax_.first; }
+double BinaryOpNode<BinaryOp>::min() const {
+    return this->minmax_.first;
+}
 
 template <class BinaryOp>
-double BinaryOpNode<BinaryOp>::max() const { return this->minmax_.second; }
+double BinaryOpNode<BinaryOp>::max() const {
+    return this->minmax_.second;
+}
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::propagate(State& state) const {

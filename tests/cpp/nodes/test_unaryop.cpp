@@ -27,7 +27,8 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
-// NOTE: square_root and log should also be included but the templated tests need to be updated first.
+// NOTE: square_root and log should also be included but the templated tests need to be updated
+// first.
 TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::cos<double>,
                    functional::exp<double>, functional::expit<double>, functional::logical<double>,
                    functional::rint<double>, functional::sin<double>, functional::square<double>,
@@ -481,8 +482,8 @@ TEST_CASE("UnaryOpNode - RintNode") {
 
         double c3 = 2.8;
         auto c3_ptr = graph.emplace_node<ConstantNode>(c3);
-        auto rint3_ptr = graph.emplace_node<RintNode>(c3_ptr);;
-
+        auto rint3_ptr = graph.emplace_node<RintNode>(c3_ptr);
+        ;
 
         auto arr_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 10, 20, 30});
 

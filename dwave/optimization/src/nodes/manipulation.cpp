@@ -12,11 +12,11 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include "dwave-optimization/nodes/manipulation.hpp"
+
 #include <cstdint>
 #include <tuple>
 #include <unordered_set>
-
-#include "dwave-optimization/nodes/manipulation.hpp"
 
 #include "_state.hpp"
 
@@ -225,7 +225,7 @@ void BroadcastToNode::propagate(State& state) const {
 
     ssize_t size_diff = 0;
     for (Update update : deduplicate_diff_view(from_diff)) {
-        // we need to convert from our predecessor's index to ours 
+        // we need to convert from our predecessor's index to ours
         const ssize_t index = reindex(update.index);
 
         if (update.placed()) {
@@ -309,7 +309,8 @@ ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t
         : ArrayOutputMixin(make_concatenate_shape(array_ptrs, axis)),
           axis_(axis),
           array_ptrs_(array_ptrs.begin(), array_ptrs.end()),
-          values_info_(std::ranges::transform_view(array_ptrs, [](auto ptr) -> const Array* { return ptr; })) {
+          values_info_(std::ranges::transform_view(array_ptrs,
+                                                   [](auto ptr) -> const Array* { return ptr; })) {
     // Compute buffer start position for each input array
     array_starts_.reserve(array_ptrs.size());
     array_starts_.emplace_back(0);
@@ -418,9 +419,9 @@ void ConcatenateNode::propagate(State& state) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);
 
     for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
-        auto view_it = Array::const_iterator(ptr->buff() + array_starts_[arr_i], this->ndim(),
-                                             array_ptrs_[arr_i]->shape().data(),
-                                             this->strides().data());
+        auto view_it =
+                Array::const_iterator(ptr->buff() + array_starts_[arr_i], this->ndim(),
+                                      array_ptrs_[arr_i]->shape().data(), this->strides().data());
 
         for (auto update : array_ptrs_[arr_i]->diff(state)) {
             assert(!update.placed() && !update.removed() && "no dynamic support implemented");
@@ -815,7 +816,9 @@ class DynamicReshapeNodeData : public NodeStateData {
 };
 
 ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::vector<ssize_t>&& shape)
-        : ArrayOutputMixin(infer_reshape(node_ptr, std::move(shape))), array_ptr_(node_ptr), values_info_(array_ptr_) {
+        : ArrayOutputMixin(infer_reshape(node_ptr, std::move(shape))),
+          array_ptr_(node_ptr),
+          values_info_(array_ptr_) {
     // Don't (yet) support non-contiguous predecessors.
     // In some cases with non-contiguous predecessors we need to make a copy.
     // See https://github.com/dwavesystems/dwave-optimization/issues/16
@@ -993,7 +996,8 @@ void ResizeNode::initialize_state(State& state) const {
     }
 
     // Now fill in everything else with our fill value
-    assert(!is_fill_never_used(array_ptr_, size) || values.size() == static_cast<std::size_t>(size));
+    assert(!is_fill_never_used(array_ptr_, size) ||
+           values.size() == static_cast<std::size_t>(size));
     values.resize(size, fill_value_);
 
     // Finally create the state
@@ -1035,8 +1039,9 @@ void ResizeNode::revert(State& state) const {
 }
 
 SizeNode::SizeNode(ArrayNode* node_ptr)
-    : array_ptr_(node_ptr),
-      minmax_(array_ptr_->sizeinfo().min.value_or(0), array_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max())) {
+        : array_ptr_(node_ptr),
+          minmax_(array_ptr_->sizeinfo().min.value_or(0),
+                  array_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max())) {
     this->add_predecessor(node_ptr);
 }
 

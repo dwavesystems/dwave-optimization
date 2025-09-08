@@ -48,8 +48,8 @@ std::vector<double> augment_collection(std::vector<double> values, const ssize_t
         const size_t i = static_cast<std::size_t>(val);  // should be safe due to previous checks
 
         if (count[i]) {
-            throw std::invalid_argument("values must be a subset of range(" +
-                                        std::to_string(n) + ")");
+            throw std::invalid_argument("values must be a subset of range(" + std::to_string(n) +
+                                        ")");
         }
 
         ++count[i];
@@ -256,17 +256,11 @@ void CollectionNode::initialize_state(State& state, std::vector<double> values) 
     emplace_data_ptr<CollectionStateData>(state, std::move(augemented), size);
 }
 
-bool CollectionNode::integral() const {
-    return true;
-}
+bool CollectionNode::integral() const { return true; }
 
-double CollectionNode::min() const {
-    return 0;
-}
+double CollectionNode::min() const { return 0; }
 
-double CollectionNode::max() const {
-    return max_size_ - 1;
-}
+double CollectionNode::max() const { return max_size_ - 1; }
 
 void CollectionNode::revert(State& state) const { data_ptr<CollectionStateData>(state)->revert(); }
 
@@ -444,17 +438,11 @@ std::span<const Update> DisjointBitSetNode::diff(const State& state) const {
     return pred_data->diffs[set_index_];
 }
 
-bool DisjointBitSetNode::integral() const {
-    return true;
-}
+bool DisjointBitSetNode::integral() const { return true; }
 
-double DisjointBitSetNode::min() const {
-    return 0;
-}
+double DisjointBitSetNode::min() const { return 0; }
 
-double DisjointBitSetNode::max() const {
-    return 1;
-}
+double DisjointBitSetNode::max() const { return 1; }
 
 struct DisjointListStateData : NodeStateData {
     DisjointListStateData(ssize_t primary_set_size, ssize_t num_disjoint_lists)
@@ -767,17 +755,11 @@ std::span<const Update> DisjointListNode::diff(const State& state) const {
     return data->all_list_updates[list_index_];
 }
 
-bool DisjointListNode::integral() const {
-    return true;
-}
+bool DisjointListNode::integral() const { return true; }
 
-double DisjointListNode::min() const {
-    return 0;
-}
+double DisjointListNode::min() const { return 0; }
 
-double DisjointListNode::max() const {
-    return primary_set_size_ - 1;
-}
+double DisjointListNode::max() const { return primary_set_size_ - 1; }
 
 ssize_t DisjointListNode::size(const State& state) const {
     int index = disjoint_list_node_ptr->topological_index();

@@ -225,9 +225,7 @@ bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr) {
     return array_shape_equal(std::array<const Array*, 2>{lhs_ptr, rhs_ptr});
 }
 
-bool array_shape_equal(const Array& lhs, const Array& rhs) {
-    return array_shape_equal(&lhs, &rhs);
-}
+bool array_shape_equal(const Array& lhs, const Array& rhs) { return array_shape_equal(&lhs, &rhs); }
 
 // We follow NumPy's broadcasting rules
 // See https://numpy.org/doc/stable/user/basics.broadcasting.html

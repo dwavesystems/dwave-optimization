@@ -119,7 +119,8 @@ void LinearProgramNodeBase::check_input_arguments(const ArrayNode* c_ptr, const 
         // none provided, this is OK
     } else {
         throw std::invalid_argument(
-                "if A is given then b_lb and/or b_ub must also be given ""and vice versa");
+                "if A is given then b_lb and/or b_ub must also be given "
+                "and vice versa");
     }
 
     // A_eq, b_eq
@@ -130,7 +131,6 @@ void LinearProgramNodeBase::check_input_arguments(const ArrayNode* c_ptr, const 
     } else {
         throw std::invalid_argument("if A_eq is given then b_eq must also be given and vice versa");
     }
-
 
     // lb/ub can be null, scalar, or 1d of length num_variables
     if (lb_ptr == nullptr) {
@@ -166,10 +166,8 @@ LinearProgramNode::LinearProgramNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, Arra
           b_eq_ptr_(b_eq_ptr),
           lb_ptr_(lb_ptr),
           ub_ptr_(ub_ptr),
-          variables_minmax_(
-                  lb_ptr_ ? lb_ptr_->min() : LinearProgramNode::default_lower_bound(),
-                  ub_ptr_ ? ub_ptr_->max() : LinearProgramNode::default_upper_bound()
-        ) {
+          variables_minmax_(lb_ptr_ ? lb_ptr_->min() : LinearProgramNode::default_lower_bound(),
+                            ub_ptr_ ? ub_ptr_->max() : LinearProgramNode::default_upper_bound()) {
     check_input_arguments(c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, A_eq_ptr, b_eq_ptr, lb_ptr, ub_ptr);
 
     // Finally, add the nodes (if they were passed in) as predecessors. This does
@@ -308,9 +306,7 @@ std::span<const double> LinearProgramNode::solution(const State& state) const {
     return data_ptr<LinearProgramNodeData>(state)->result.solution();
 }
 
-std::pair<double, double> LinearProgramNode::variables_minmax() const {
-    return variables_minmax_;
-}
+std::pair<double, double> LinearProgramNode::variables_minmax() const { return variables_minmax_; }
 
 std::span<const ssize_t> LinearProgramNode::variables_shape() const { return c_ptr_->shape(); }
 

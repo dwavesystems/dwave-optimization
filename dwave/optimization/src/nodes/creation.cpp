@@ -119,7 +119,8 @@ std::vector<double> arange(const State& state, array_or_int start_, array_or_int
     return arange(start, stop, step);
 }
 
-std::pair<double, double> calculate_values_minmax(array_or_int start_, array_or_int stop_, array_or_int step_) {
+std::pair<double, double> calculate_values_minmax(array_or_int start_, array_or_int stop_,
+                                                  array_or_int step_) {
     auto visitor = get_minmax();
     const auto [start_low, start_high] = std::visit(visitor, start_);
     const auto [stop_low, stop_high] = std::visit(visitor, stop_);
@@ -166,7 +167,6 @@ std::pair<double, double> calculate_values_minmax(array_or_int start_, array_or_
     assert(false && "zero step not allowed");
     unreachable();
 }
-
 
 // For all of the constructors, we force them to use the array_or_int overload
 // by casting explicitly. That's the one that does the error checking etc.

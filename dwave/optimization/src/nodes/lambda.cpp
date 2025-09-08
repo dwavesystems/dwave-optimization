@@ -25,7 +25,7 @@ namespace dwave::optimization {
 class AccumulateZipNodeData : public ArrayNodeStateData {
  public:
     explicit AccumulateZipNodeData(std::vector<double>&& values,
-                                std::vector<Array::const_iterator>&& iterators, State&& state)
+                                   std::vector<Array::const_iterator>&& iterators, State&& state)
             : ArrayNodeStateData(std::move(values)),
               iterators(std::move(iterators)),
               register_(std::move(state)) {}
@@ -197,7 +197,9 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
     }
 }
 
-void AccumulateZipNode::commit(State& state) const { data_ptr<AccumulateZipNodeData>(state)->commit(); }
+void AccumulateZipNode::commit(State& state) const {
+    data_ptr<AccumulateZipNodeData>(state)->commit();
+}
 
 std::span<const Update> AccumulateZipNode::diff(const State& state) const {
     return data_ptr<AccumulateZipNodeData>(state)->diff();
@@ -265,8 +267,8 @@ void AccumulateZipNode::initialize_state(State& state) const {
         values.push_back(val);
     }
 
-    state[node_idx] = std::make_unique<AccumulateZipNodeData>(std::move(values), std::move(iterators),
-                                                           std::move(reg));
+    state[node_idx] = std::make_unique<AccumulateZipNodeData>(std::move(values),
+                                                              std::move(iterators), std::move(reg));
 }
 
 bool AccumulateZipNode::integral() const { return expression_ptr_->objective()->integral(); }
@@ -318,9 +320,13 @@ void AccumulateZipNode::propagate(State& state) const {
     if (data->diff().size()) Node::propagate(state);
 }
 
-const InputNode* const AccumulateZipNode::accumulate_input() const { return expression_ptr_->inputs()[0]; }
+const InputNode* const AccumulateZipNode::accumulate_input() const {
+    return expression_ptr_->inputs()[0];
+}
 
-void AccumulateZipNode::revert(State& state) const { data_ptr<AccumulateZipNodeData>(state)->revert(); }
+void AccumulateZipNode::revert(State& state) const {
+    data_ptr<AccumulateZipNodeData>(state)->revert();
+}
 
 std::span<const ssize_t> AccumulateZipNode::shape(const State& state) const {
     return operands_[0]->shape(state);

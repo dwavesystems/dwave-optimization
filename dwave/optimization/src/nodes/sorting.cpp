@@ -49,7 +49,11 @@ struct ArgSortNodeData : public ArrayNodeStateData {
 };
 
 ArgSortNode::ArgSortNode(ArrayNode* arr_ptr)
-        : ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr), minmax_(0, static_cast<double>(arr_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max()) - 1))  {
+        : ArrayOutputMixin(arr_ptr->shape()),
+          arr_ptr_(arr_ptr),
+          minmax_(0, static_cast<double>(arr_ptr_->sizeinfo().max.value_or(
+                                                 std::numeric_limits<ssize_t>::max()) -
+                                         1)) {
     add_predecessor(arr_ptr);
 }
 

@@ -81,8 +81,8 @@ std::pair<double, double> calculate_values_minmax_(Array* const array_ptr) {
     if constexpr (std::same_as<UnaryOp, functional::square<double>>) {
         const auto highest = std::numeric_limits<double>::max();
         return std::make_pair(std::min({low * low, high * high, highest}),
-                std::min(std::max({low * low, high * high}),
-                    highest));  // prevent inf
+                              std::min(std::max({low * low, high * high}),
+                                       highest));  // prevent inf
     }
     if constexpr (std::same_as<UnaryOp, functional::square_root<double>>) {
         assert(low >= 0);  // checked by constructor
@@ -98,7 +98,9 @@ std::pair<double, double> calculate_values_minmax_(Array* const array_ptr) {
 
 template <class UnaryOp>
 UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
-        : ArrayOutputMixin(node_ptr->shape()), array_ptr_(node_ptr), minmax_(calculate_values_minmax_<UnaryOp>(array_ptr_)) {
+        : ArrayOutputMixin(node_ptr->shape()),
+          array_ptr_(node_ptr),
+          minmax_(calculate_values_minmax_<UnaryOp>(array_ptr_)) {
     add_predecessor(node_ptr);
 }
 

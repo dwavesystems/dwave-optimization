@@ -28,9 +28,7 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
-TEMPLATE_TEST_CASE("PartialReduceNode", "",
-        std::multiplies<double>,
-        std::plus<double>) {
+TEMPLATE_TEST_CASE("PartialReduceNode", "", std::multiplies<double>, std::plus<double>) {
     GIVEN("A 1D array of 5 integers, and a reduction over axis 0 and an explicit initial value") {
         const double init = GENERATE(-1, 0, 1);
 
