@@ -164,6 +164,9 @@ NaryOpNode<BinaryOp>::NaryOpNode(std::span<ArrayNode*> node_ptrs)
 
 template <class BinaryOp>
 void NaryOpNode<BinaryOp>::add_node(ArrayNode* node_ptr, bool recompute_statistics) {
+    if (!this->successors().empty()) {
+        throw std::logic_error("cannot add predecessors to a NaryOp that already has successors");
+    }
     if (this->topological_index() >= 0 && node_ptr->topological_index() >= 0 &&
         this->topological_index() < node_ptr->topological_index()) {
         throw std::logic_error("this operation would invalidate the topological ordering");

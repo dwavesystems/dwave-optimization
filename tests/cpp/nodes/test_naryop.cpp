@@ -15,6 +15,7 @@
 #include "catch2/catch_template_test_macros.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "dwave-optimization/graph.hpp"
+#include "dwave-optimization/nodes/binaryop.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
@@ -60,6 +61,15 @@ TEMPLATE_TEST_CASE("NaryOpNode", "", functional::max<double>, functional::min<do
 
             // we can cast to a non-const ptr if we're not const
             CHECK(static_cast<Array*>(p_ptr->operands()[0]) == static_cast<Array*>(a_ptr));
+        }
+
+        WHEN("We add a successor to the NaryOp") {
+            auto e_ptr = graph.emplace_node<ConstantNode>(9);
+            graph.emplace_node<AddNode>(p_ptr, e_ptr);
+
+            THEN("We can no longer add predecessors to the NaryOp") {
+                CHECK_THROWS_AS(p_ptr->add_node(e_ptr), std::logic_error);
+            }
         }
 
         WHEN("We make a state") {
