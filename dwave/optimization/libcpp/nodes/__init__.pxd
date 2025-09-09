@@ -24,6 +24,7 @@ from libcpp cimport bool
 from dwave.optimization.libcpp cimport  variant
 from dwave.optimization.libcpp.array cimport Array, Slice
 from dwave.optimization.libcpp.graph cimport ArrayNode, Graph, Node
+from dwave.optimization.libcpp.nodes.unaryop cimport *
 from dwave.optimization.libcpp.state cimport State
 
 # Cython gets confused when templating pointers
@@ -283,41 +284,4 @@ cdef extern from "dwave-optimization/nodes/statistics.hpp" namespace "dwave::opt
 
 cdef extern from "dwave-optimization/nodes/testing.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass ArrayValidationNode(Node):
-        pass
-
-cdef extern from "dwave-optimization/nodes/unaryop.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass AbsoluteNode(ArrayNode):
-        pass
-
-    cdef cppclass CosNode(ArrayNode):
-        pass
-
-    cdef cppclass ExpitNode(ArrayNode):
-        pass
-
-    cdef cppclass ExpNode(ArrayNode):
-        pass
-
-    cdef cppclass LogNode(ArrayNode):
-        pass
-
-    cdef cppclass LogicalNode(ArrayNode):
-        pass
-
-    cdef cppclass NegativeNode(ArrayNode):
-        pass
-
-    cdef cppclass NotNode(ArrayNode):
-        pass
-
-    cdef cppclass RintNode(ArrayNode):
-        pass
-
-    cdef cppclass SinNode(ArrayNode):
-        pass
-
-    cdef cppclass SquareNode(ArrayNode):
-        pass
-        
-    cdef cppclass SquareRootNode(ArrayNode):
         pass

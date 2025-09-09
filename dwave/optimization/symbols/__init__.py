@@ -14,4 +14,5 @@
 
 from dwave.optimization.symbols._cysymbols import *
 from dwave.optimization.symbols._cysymbols import _ArrayValidation  # todo: remove
-from dwave.optimization.symbols._pysymbols import *
+
+from dwave.optimization.symbols.unaryop import *
