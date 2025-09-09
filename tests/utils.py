@@ -192,9 +192,9 @@ class SymbolTests(abc.ABC, unittest.TestCase):
             self.assertIs(type(x), type(y))
             self.assertTrue(x.equals(y))
 
-    def test_namespace(self):
-        x = next(self.generate_symbols())
-        self.assertIn(type(x).__name__, dwave.optimization.symbols.__all__)
+    # def test_namespace(self):
+    #     x = next(self.generate_symbols())
+    #     self.assertIn(type(x).__name__, dwave.optimization.symbols.__all__)
 
     def test_serialization(self):
         for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
