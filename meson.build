@@ -116,15 +116,15 @@ py.extension_module(
 )
 
 py.extension_module(
-    'symbols',
-    'dwave/optimization/symbols.pyx',
+    '_cysymbols',
+    'dwave/optimization/symbols/_cysymbols.pyx',
     dependencies: libdwave_optimization,
     gnu_symbol_visibility: 'default',
     install: true,
     install_rpath: '$ORIGIN',
     override_options : ['cython_language=cpp'],
     cython_args : ['-Xfreethreading_compatible=True'],
-    subdir: 'dwave/optimization/',
+    subdir: 'dwave/optimization/symbols/',
     limited_api: limited_api,
 )
 
