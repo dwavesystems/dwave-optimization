@@ -11,3 +11,22 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+
+from dwave.optimization.model import ArraySymbol as _ArraySymbol
+
+class _UnaryOpNodeType:
+    Absolute: int
+    Cos: int
+    Exp: int
+    Expit: int
+    Log: int
+    Logical: int
+    Negative: int
+    Not: int
+    Rint: int
+    Sin: int
+    Square: int
+    SquareRoot: int
+
+class _UnaryOpSymbol(_ArraySymbol):
+	def __init_subclass__(cls, /, node_type: _UnaryOpNodeType): ...
