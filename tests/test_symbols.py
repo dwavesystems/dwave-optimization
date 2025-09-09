@@ -2732,7 +2732,19 @@ class TestPermutation(utils.SymbolTests):
         model.lock()
         yield p
 
-    def test(self):
+    def test_constant_integer(self):
+        from dwave.optimization.symbols import Permutation
+
+        model = Model()
+
+        A = model.constant(np.arange(25).reshape((5, 5)))
+        x = model.constant(np.arange(5))
+
+        self.assertIsInstance(A[x, :][:, x], Permutation)
+        self.assertIsInstance(A[:, x][x, :], Permutation)
+        self.assertIsInstance(A[:, x][x], Permutation)
+
+    def test_list_indexer(self):
         from dwave.optimization.symbols import Permutation
 
         model = Model()
@@ -2742,11 +2754,38 @@ class TestPermutation(utils.SymbolTests):
 
         self.assertIsInstance(A[x, :][:, x], Permutation)
         self.assertIsInstance(A[:, x][x, :], Permutation)
+        self.assertIsInstance(A[:, x][x], Permutation)
 
-        b = model.constant(np.arange(30).reshape((5, 6)))
+    def test_not_permutation(self):
+        # Some "near" permutations that aren't quite right
+        from dwave.optimization.symbols import Permutation
 
-        self.assertNotIsInstance(b[x, :][:, x], Permutation)
-        self.assertNotIsInstance(b[:, x][x, :], Permutation)
+        with self.subTest("A not square"):
+            model = Model()
+
+            A = model.constant(np.arange(30).reshape((5, 6)))
+            x = model.list(5)
+
+            self.assertNotIsInstance(A[x, :][:, x], Permutation)
+            self.assertNotIsInstance(A[:, x][x, :], Permutation)
+
+        with self.subTest("A not 2d"):
+            model = Model()
+
+            A = model.constant(np.arange(25).reshape((5, 5, 1)))
+            x = model.list(5)
+
+            self.assertNotIsInstance(A[x, :][:, x], Permutation)
+            self.assertNotIsInstance(A[:, x][x, :], Permutation)
+
+        with self.subTest("indexer wrong size"):
+            model = Model()
+
+            A = model.constant(np.arange(25).reshape((5, 5)))
+            x = model.list(4)
+
+            self.assertNotIsInstance(A[x, :][:, x], Permutation)
+            self.assertNotIsInstance(A[:, x][x, :], Permutation)
 
 
 class TestProd(utils.ReduceTests):

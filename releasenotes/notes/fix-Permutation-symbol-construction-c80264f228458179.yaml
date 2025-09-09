@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fix indexing operations sometimes raising an error when it should
+    create a ``Permutation`` symbol.
