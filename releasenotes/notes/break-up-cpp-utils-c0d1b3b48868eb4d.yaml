@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Add new ``dwave-optimization/common.hpp`` for compiler support and backports
+    from C++23.
+  - Add new ``dwave-optimization/fraction.hpp`` for C++ ``fraction`` class.
+upgrade:
+  - Remove ``dwave-optimization/utils.hpp`` header.
+  - Move C++ ``double_kahan`` implementation behind the compilation barrier.

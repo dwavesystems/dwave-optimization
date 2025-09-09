@@ -1,4 +1,4 @@
-// Copyright 2023 D-Wave Systems Inc.
+// Copyright 2025 D-Wave
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -14,65 +14,14 @@
 
 #pragma once
 
-#include <iostream>
+#include <concepts>
+#include <iosfwd>
 #include <numeric>
-#include <vector>
+#include <stdexcept>
+
+#include "dwave-optimization/common.hpp"  // for ssize_t
 
 namespace dwave::optimization {
-
-// ssize_t is a posix definition. So let's add it for Windows.
-// Match Python's Py_ssize_t definition which is itself defined to match ssize_t if it's present.
-// https://github.com/python/cpython/blob/17cba55786a1b1e6b715b1a88ae1f9088f5d5999/PC/pyconfig.h.in#L200-L208
-#if defined(_MSC_VER)
-typedef __int64 ssize_t;
-#endif
-
-static_assert(sizeof(ssize_t) >= 1);  // check ssize_t exists
-
-// backport unreachable from c++23
-#if defined(_MSC_VER)
-[[noreturn]] inline void unreachable() { __assume(false); }
-#elif defined(__GNUC__) || defined(__GNUG__) || defined(__clang__)
-[[noreturn]] inline void unreachable() { __builtin_unreachable(); }
-#else
-[[noreturn]] inline void unreachable() {}
-#endif
-
-class double_kahan {
- public:
-    constexpr double_kahan() noexcept : value_(0), compensator_(0) {}
-    constexpr double_kahan(double value) noexcept : value_(value), compensator_(0) {}
-
-    constexpr double_kahan& operator+=(double other) noexcept {
-        double y = other - compensator_;
-        double t = value_ + y;
-        compensator_ = (t - value_) - y;
-        value_ = t;
-        return *this;
-    }
-
-    constexpr double_kahan& operator-=(double other) noexcept {
-        (*this += -other);
-        return *this;
-    }
-
-    constexpr explicit operator double() const noexcept { return value_; }
-
-    // We do not consider the compensator for checking equality.
-    constexpr bool operator==(const double_kahan& other) const noexcept {
-        return (this->value_ == other.value_);
-    }
-    constexpr friend bool operator==(const double_kahan& lhs, double rhs) noexcept {
-        return lhs.value_ == rhs;
-    }
-
-    constexpr const double& value() const noexcept { return value_; }
-    constexpr const double& compensator() const noexcept { return compensator_; }
-
- private:
-    double value_;
-    double compensator_;
-};
 
 // A simple fraction class
 class fraction {
@@ -144,13 +93,7 @@ class fraction {
     }
 
     /// Fractions can be printed
-    friend std::ostream& operator<<(std::ostream& os, const fraction& rhs) {
-        os << "fraction(" << rhs.numerator();
-        if (rhs.denominator() != 1) {
-            os << ", " << rhs.denominator();
-        }
-        return os << ")";
-    }
+    friend std::ostream& operator<<(std::ostream& os, const fraction& rhs);
 
     // dev note: obviously there are many more operators that we could add,
     // but they should be added as needed rather than eagerly.
@@ -173,8 +116,5 @@ class fraction {
     ssize_t numerator_;
     ssize_t denominator_;
 };
-
-// Return whether the given double encodes an integer.
-bool is_integer(const double& value);
 
 }  // namespace dwave::optimization

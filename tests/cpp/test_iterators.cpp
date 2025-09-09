@@ -14,6 +14,7 @@
 
 #include <array>
 #include <cstdint>
+#include <numeric>
 #include <vector>
 
 #include "catch2/catch_template_test_macros.hpp"

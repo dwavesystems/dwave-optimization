@@ -19,8 +19,8 @@
 #include <memory>
 #include <span>
 
+#include "dwave-optimization/common.hpp"
 #include "dwave-optimization/typing.hpp"
-#include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
 

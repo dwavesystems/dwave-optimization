@@ -16,8 +16,6 @@
 
 #include <algorithm>
 
-#include "dwave-optimization/utils.hpp"
-
 namespace dwave::optimization {
 
 ValuesInfo calculate_values_info(std::span<const double> buffer) {

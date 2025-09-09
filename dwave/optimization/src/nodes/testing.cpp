@@ -16,8 +16,6 @@
 
 #include <iostream>
 
-#include "dwave-optimization/utils.hpp"
-
 namespace dwave::optimization {
 
 class ArrayValidationNodeData : public dwave::optimization::NodeStateData {

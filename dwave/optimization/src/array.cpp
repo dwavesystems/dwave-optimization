@@ -334,6 +334,11 @@ void deduplicate_diff(std::vector<Update>& diff) {
     diff.resize(new_index + 1, Update::placement(-666, 666));
 }
 
+bool is_integer(const double& value) {
+    static double dummy = 0;
+    return std::modf(value, &dummy) == 0.0;
+}
+
 std::vector<ssize_t> unravel_index(ssize_t index, std::initializer_list<ssize_t> shape) {
     return unravel_index(index, std::span(shape));
 }

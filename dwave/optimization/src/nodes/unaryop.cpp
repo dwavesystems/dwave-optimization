@@ -15,7 +15,6 @@
 #include "dwave-optimization/nodes/unaryop.hpp"
 
 #include "_state.hpp"
-#include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
 

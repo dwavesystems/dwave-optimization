@@ -21,7 +21,6 @@
 #include "_state.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/state.hpp"
-#include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
 

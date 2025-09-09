@@ -27,8 +27,8 @@
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
+#include "dwave-optimization/common.hpp"
 #include "dwave-optimization/state.hpp"
-#include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
 
