@@ -19,7 +19,6 @@
 #include "_state.hpp"
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/state.hpp"
-#include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
 

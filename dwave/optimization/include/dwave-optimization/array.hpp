@@ -30,10 +30,11 @@
 #include <utility>
 #include <vector>
 
+#include "dwave-optimization/common.hpp"
+#include "dwave-optimization/fraction.hpp"
 #include "dwave-optimization/iterators.hpp"
 #include "dwave-optimization/state.hpp"
 #include "dwave-optimization/typing.hpp"
-#include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
 
@@ -621,6 +622,9 @@ requires(std::same_as<std::ranges::range_value_t<V>, Update>) class deduplicate_
 };
 // todo: In C++23 once we have std::ranges::range_adaptor_closure, we should
 // make this work with a range adaptor.
+
+// Return whether the given double encodes an integer.
+bool is_integer(const double& value);
 
 /// Convert a multi index to a flat index
 /// The behavior of out-of-bounds indices is undefined. Bounds are enforced via asserts.

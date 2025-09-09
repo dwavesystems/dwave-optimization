@@ -15,6 +15,8 @@
 #include "simplex.hpp"
 
 #include <algorithm>
+#include <numeric>
+#include <stdexcept>
 #include <string>
 
 namespace dwave::optimization {

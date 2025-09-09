@@ -18,8 +18,6 @@
 #include <unordered_set>
 #include <utility>
 
-#include "dwave-optimization/utils.hpp"
-
 namespace dwave::optimization {
 
 // Given a collection, check that it is a valid sub-permutation of range(n),

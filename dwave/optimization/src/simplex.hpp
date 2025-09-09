@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-#include "dwave-optimization/utils.hpp"
+#include "dwave-optimization/common.hpp"
 
 namespace dwave::optimization {
 

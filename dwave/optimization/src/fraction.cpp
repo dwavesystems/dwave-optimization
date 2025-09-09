@@ -1,4 +1,4 @@
-// Copyright 2024 D-Wave Systems Inc.
+// Copyright 2025 D-Wave
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -12,17 +12,18 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#include "dwave-optimization/utils.hpp"
+#include "dwave-optimization/fraction.hpp"
 
-#include <cmath>
-
-#include "dwave-optimization/array.hpp"
+#include <iostream>
 
 namespace dwave::optimization {
 
-bool is_integer(const double& value) {
-    static double dummy = 0;
-    return std::modf(value, &dummy) == 0.0;
+std::ostream& operator<<(std::ostream& os, const fraction& rhs) {
+    os << "fraction(" << rhs.numerator();
+    if (rhs.denominator() != 1) {
+        os << ", " << rhs.denominator();
+    }
+    return os << ")";
 }
 
-};  // namespace dwave::optimization
+}  // namespace dwave::optimization

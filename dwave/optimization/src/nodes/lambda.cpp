@@ -18,7 +18,6 @@
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/nodes/inputs.hpp"
 #include "dwave-optimization/state.hpp"
-#include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
 

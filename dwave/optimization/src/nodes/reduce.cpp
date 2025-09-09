@@ -23,7 +23,6 @@
 #include <type_traits>
 
 #include "_state.hpp"
-#include "dwave-optimization/utils.hpp"
 
 namespace dwave::optimization {
 
