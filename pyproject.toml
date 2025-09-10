@@ -81,6 +81,16 @@ repair-wheel-command = [
     "abi3audit --strict --report {wheel}",
 ]
 
+[[tool.cibuildwheel.overrides]]
+select = "*-????linux_*"
+inherit.repair-wheel-command = "prepend"
+repair-wheel-command = "python /project/dwave/optimization/_build/_fix_rpath.py {wheel}"
+
+[[tool.cibuildwheel.overrides]]
+select = "*-macosx_*"
+inherit.repair-wheel-command = "prepend"
+repair-wheel-command = "python ./dwave/optimization/_build/_fix_rpath.py {wheel}"
+
 [tool.coverage.run]
 source = ["dwave/optimization"]
 
