@@ -116,6 +116,9 @@ cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimizat
     cdef cppclass ExtractNode(ArrayNode):
         pass
 
+    cdef cppclass FindNode(ArrayNode):
+        pass
+
     cdef cppclass WhereNode(ArrayNode):
         pass
 
