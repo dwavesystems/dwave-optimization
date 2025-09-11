@@ -21,8 +21,8 @@
 namespace dwave::optimization {
 
 // IsInNode *****************************************************************
-struct IsInNodePredData {
-    IsInNodePredData() = default;
+struct IsInNodeSetData {
+    IsInNodeSetData() = default;
 
     // # of indices from `test_elements` with a given value
     ssize_t test_elements_count;
@@ -35,16 +35,16 @@ struct IsInNodeDataHelper_ {
         element_isin.reserve(element.size());
 
         for (const double& val : test_elements) {
-            pred_data[val].test_elements_count += 1;
+            set_data[val].test_elements_count += 1;
         }
         for (ssize_t index = 0, stop = element.size(); index < stop; index++) {
-            IsInNodePredData& pred_data_struct = pred_data[element[index]];
-            pred_data_struct.element_indices.push_back(index);
-            element_isin.emplace_back(pred_data_struct.test_elements_count > 0);
+            IsInNodeSetData& set_data_struct = set_data[element[index]];
+            set_data_struct.element_indices.push_back(index);
+            element_isin.emplace_back(set_data_struct.test_elements_count > 0);
         }
     }
 
-    std::unordered_map<double, IsInNodePredData> pred_data;
+    std::unordered_map<double, IsInNodeSetData> set_data;
     // element_isin[i] == true iff `element[i]` is in`test_elements`
     std::vector<bool> element_isin;
 };
@@ -54,14 +54,14 @@ struct IsInNodeData : public ArrayNodeStateData {
             : IsInNodeData(IsInNodeDataHelper_(std::move(element), std::move(test_elements))) {}
     IsInNodeData(IsInNodeDataHelper_&& helper)
             : ArrayNodeStateData(std::move(helper.element_isin)),
-              pred_data(std::move(helper.pred_data)) {}
+              set_data(std::move(helper.set_data)) {}
 
     // Used to track if elements are added/removed from `test_elements`
     // during IsInNode::propagate()
     std::unordered_map<double, bool> add_or_rm_test_elements;
     // For each value (key) in `element` and `test_elements`, store a
-    // IsInNodePredData struct.
-    std::unordered_map<double, IsInNodePredData> pred_data;
+    // IsInNodeSetData struct.
+    std::unordered_map<double, IsInNodeSetData> set_data;
     // Needed for IsInNode::revert()
     std::vector<Update> element_updates;
     std::vector<Update> test_element_updates;
@@ -104,11 +104,11 @@ std::pair<double, double> IsInNode::minmax(
 
 inline void IsInNode::rm_index(IsInNodeData*& node_data, const ssize_t rm_index,
                                const double key) const {
-    auto pred_data_it = node_data->pred_data.find(key);
+    auto set_data_it = node_data->set_data.find(key);
     // find() should be successful since we need to remove the index
-    assert(pred_data_it != node_data->pred_data.end());
+    assert(set_data_it != node_data->set_data.end());
     // Vector containing indices of `element` with value `key`
-    std::vector<ssize_t>& indices_vec = pred_data_it->second.element_indices;
+    std::vector<ssize_t>& indices_vec = set_data_it->second.element_indices;
     // Find index of `indices_vec` equal to `rm_index`
     auto index_ptr = std::find(indices_vec.begin(), indices_vec.end(), rm_index);
     // find() should be successful since we need to remove the index
@@ -118,8 +118,8 @@ inline void IsInNode::rm_index(IsInNodeData*& node_data, const ssize_t rm_index,
     indices_vec.pop_back();
 
     // Reduce bloating
-    if (indices_vec.empty() && pred_data_it->second.test_elements_count == 0) {
-        node_data->pred_data.erase(pred_data_it);
+    if (indices_vec.empty() && set_data_it->second.test_elements_count == 0) {
+        node_data->set_data.erase(set_data_it);
     }
 }
 
@@ -141,7 +141,7 @@ void IsInNode::propagate(State& state) const {
     for (const Update& update : test_elements_diff) {
         if (!update.placed()) {
             // i.e. changed or removed.
-            ssize_t& count = node_data->pred_data[update.old].test_elements_count;
+            ssize_t& count = node_data->set_data[update.old].test_elements_count;
             // `update.old` must be in `test_elements_counter`
             assert(count > 0);
             count -= 1;
@@ -155,7 +155,7 @@ void IsInNode::propagate(State& state) const {
         }
         if (!update.removed()) {
             // i.e. changed or added.
-            ssize_t& count = node_data->pred_data[update.value].test_elements_count;
+            ssize_t& count = node_data->set_data[update.value].test_elements_count;
             count += 1;
 
             if (count == 1) {
@@ -172,22 +172,22 @@ void IsInNode::propagate(State& state) const {
             rm_index(node_data, update.index, update.old);
         }
         if (!update.removed()) {  // i.e. changed or added
-            IsInNodePredData& pred_data_struct = node_data->pred_data[update.value];
-            pred_data_struct.element_indices.push_back(update.index);
+            IsInNodeSetData& set_data_struct = node_data->set_data[update.value];
+            set_data_struct.element_indices.push_back(update.index);
             // Record whether or not the value of `element` at `update.index` is
             // in `test_elements`. Allow emplace_back()
-            node_data->set(update.index, pred_data_struct.test_elements_count > 0, true);
+            node_data->set(update.index, set_data_struct.test_elements_count > 0, true);
         }
     }
 
     // `add_or_rm_test_elements` contains all unique values of `test_elements`
     // that are new or fully removed
     for (const auto& [key, assignment] : node_data->add_or_rm_test_elements) {
-        auto pred_data_it = node_data->pred_data.find(key);
+        auto set_data_it = node_data->set_data.find(key);
         // find() should be successful since we need to remove the index
-        assert(pred_data_it != node_data->pred_data.end());
+        assert(set_data_it != node_data->set_data.end());
         // Vector containing indices of `element` with value `key`
-        const std::vector<ssize_t>& indices_vec = pred_data_it->second.element_indices;
+        const std::vector<ssize_t>& indices_vec = set_data_it->second.element_indices;
 
         if (!indices_vec.empty()) {
             for (const ssize_t& index : indices_vec) {
@@ -195,7 +195,7 @@ void IsInNode::propagate(State& state) const {
             }
             // Reduce bloating
         } else if (!assignment) {
-            node_data->pred_data.erase(pred_data_it);
+            node_data->set_data.erase(set_data_it);
         }
     }
     node_data->add_or_rm_test_elements.clear();
@@ -212,17 +212,17 @@ void IsInNode::revert(State& state) const {
     // Revert the changes to `test_elements`
     for (const Update& update : node_data->test_element_updates | std::views::reverse) {
         if (!update.placed()) {  // i.e. removed or changed
-            node_data->pred_data[update.old].test_elements_count += 1;
+            node_data->set_data[update.old].test_elements_count += 1;
         }
         if (!update.removed()) {  // i.e. changed or removed.
-            auto pred_data_it = node_data->pred_data.find(update.value);
+            auto set_data_it = node_data->set_data.find(update.value);
             // find() should be successful since we need to remove the index
-            assert(pred_data_it != node_data->pred_data.end());
-            pred_data_it->second.test_elements_count -= 1;
+            assert(set_data_it != node_data->set_data.end());
+            set_data_it->second.test_elements_count -= 1;
             // Reduce bloating
-            if (pred_data_it->second.test_elements_count == 0 &&
-                pred_data_it->second.element_indices.empty()) {
-                node_data->pred_data.erase(pred_data_it);
+            if (set_data_it->second.test_elements_count == 0 &&
+                set_data_it->second.element_indices.empty()) {
+                node_data->set_data.erase(set_data_it);
             }
         }
     }
@@ -230,7 +230,7 @@ void IsInNode::revert(State& state) const {
     // Revert the changes to `element`
     for (const Update& update : node_data->element_updates | std::views::reverse) {
         if (!update.placed()) {  // i.e. removed or changed
-            node_data->pred_data[update.old].element_indices.push_back(update.index);
+            node_data->set_data[update.old].element_indices.push_back(update.index);
         }
         if (!update.removed()) {  // i.e. placed or changed
             rm_index(node_data, update.index, update.value);
