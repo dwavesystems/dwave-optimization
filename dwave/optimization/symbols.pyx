@@ -1758,8 +1758,11 @@ cdef class DisjointLists(Symbol):
 
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> l = model.disjoint_lists(primary_set_size=10, num_disjoint_lists=2)
-        >>> type(l[0])
+        >>> lists_symbol, lists_array = model.disjoint_lists(
+        ...     primary_set_size=5,
+        ...     num_disjoint_lists=3
+        ... )
+        >>> type(lists_symbol)
         <class 'dwave.optimization.symbols.DisjointLists'>
     """
     def __init__(
@@ -1852,6 +1855,29 @@ cdef class DisjointLists(Symbol):
                 Index of the state to set
             state:
                 Assignment of values for the state.
+        
+        Examples:
+            This example sets the state of a disjoint-lists symbol. You can
+            inspect the state of each list individually.
+            
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> lists_symbol, lists_array = model.disjoint_lists(
+            ...     primary_set_size=5,
+            ...     num_disjoint_lists=3
+            ... )
+            >>> with model.lock():
+            ...     model.states.resize(1)
+            ...     lists_symbol.set_state(0, [[0, 1, 2, 3], [4], []])
+            ...     for index, disjoint_list in enumerate(lists_array):
+            ...         print(f"DisjointList {index}:")
+            ...         print(disjoint_list.state(0))
+            DisjointList 0:
+            [0. 1. 2. 3.]
+            DisjointList 1:
+            [4.]
+            DisjointList 2:
+            []
         """
         # Reset our state, and check whether that's possible
         self.reset_state(index)
@@ -1917,12 +1943,17 @@ cdef class DisjointList(ArraySymbol):
     """Disjoint-lists successor symbol.
 
     Examples:
-        This example adds a disjoint-lists symbol to a model.
+        This example adds a disjoint-lists symbol to a model and shows how to 
+        access an individual disjoint list.
+
 
         >>> from dwave.optimization.model import Model
         >>> model = Model()
-        >>> l = model.disjoint_lists(primary_set_size=10, num_disjoint_lists=2)
-        >>> type(l[1][0])
+        >>> lists_symbol, lists_array = model.disjoint_lists(
+        ...     primary_set_size=5,
+        ...     num_disjoint_lists=3
+        ... )
+        >>> type(lists_array[0])
         <class 'dwave.optimization.symbols.DisjointList'>
     """
     def __init__(self, DisjointLists parent, Py_ssize_t list_index):
