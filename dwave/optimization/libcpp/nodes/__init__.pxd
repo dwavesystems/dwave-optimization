@@ -24,53 +24,14 @@ from libcpp cimport bool
 from dwave.optimization.libcpp cimport  variant
 from dwave.optimization.libcpp.array cimport Array, Slice
 from dwave.optimization.libcpp.graph cimport ArrayNode, Graph, Node
-from dwave.optimization.libcpp.nodes.unaryop cimport *
 from dwave.optimization.libcpp.state cimport State
 
 # Cython gets confused when templating pointers
 ctypedef const Array* ArrayPtr
 ctypedef ArrayNode* ArrayNodePtr
 
-
-cdef extern from "dwave-optimization/nodes/binaryop.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass AddNode(ArrayNode):
-        pass
-
-    cdef cppclass AndNode(ArrayNode):
-        pass
-
-    cdef cppclass DivideNode(ArrayNode):
-        pass
-
-    cdef cppclass EqualNode(ArrayNode):
-        pass
-
-    cdef cppclass LessEqualNode(ArrayNode):
-        pass
-
-    cdef cppclass MaximumNode(ArrayNode):
-        pass
-
-    cdef cppclass MinimumNode(ArrayNode):
-        pass
-
-    cdef cppclass ModulusNode(ArrayNode):
-        pass
-
-    cdef cppclass MultiplyNode(ArrayNode):
-        pass
-
-    cdef cppclass OrNode(ArrayNode):
-        pass
-
-    cdef cppclass SafeDivideNode(ArrayNode):
-        pass
-
-    cdef cppclass SubtractNode(ArrayNode):
-        pass
-
-    cdef cppclass XorNode(ArrayNode):
-        pass
+from dwave.optimization.libcpp.nodes.binaryop cimport *
+from dwave.optimization.libcpp.nodes.unaryop cimport *
 
 
 cdef extern from "dwave-optimization/nodes/collections.hpp" namespace "dwave::optimization" nogil:

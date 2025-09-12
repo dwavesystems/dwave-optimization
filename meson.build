@@ -115,7 +115,7 @@ py.extension_module(
     limited_api: limited_api,
 )
 
-foreach name : ['_cysymbols', '_unaryop']
+foreach name : ['_binaryop', '_cysymbols', '_unaryop']
     py.extension_module(
         name,
         'dwave/optimization/symbols/' + name + '.pyx',

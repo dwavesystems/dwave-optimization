@@ -12,8 +12,22 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.symbols._cysymbols import *
-from dwave.optimization.symbols._cysymbols import _ArrayValidation  # todo: remove
+from dwave.optimization.model import ArraySymbol as _ArraySymbol
 
-from dwave.optimization.symbols.unaryop import *
-from dwave.optimization.symbols.binaryop import *
+class _BinaryOpNodeType:
+    Add: int
+    And: int
+    Divide: int
+    Equal: int
+    LessEqual: int
+    Maximum: int
+    Minimum: int
+    Modulus: int
+    Multiply: int
+    Or: int
+    SafeDivide: int
+    Subtract: int
+    Xor: int
+
+class _BinaryOpSymbol(_ArraySymbol):
+    def __init_subclass__(cls, /, node_type: _BinaryOpNodeType): ...
