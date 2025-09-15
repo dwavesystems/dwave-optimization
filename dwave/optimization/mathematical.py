@@ -488,8 +488,6 @@ def concatenate(arrays: typing.Sequence[ArraySymbol],
         >>> a_b = concatenate((a,b), axis=0)
         >>> a_b.shape()
         (3, 2)
-        >>> type(a_b)
-        <class 'dwave.optimization.symbols.Concatenate'>
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     print(a_b.state(0))

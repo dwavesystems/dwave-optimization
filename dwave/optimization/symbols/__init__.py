@@ -15,7 +15,6 @@
 from dwave.optimization.symbols._deprecated import *
 from dwave.optimization.symbols._deprecated import _ArrayValidation
 
-
 __all__ = [
     "Absolute",
     "AccumulateZip",

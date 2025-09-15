@@ -574,8 +574,7 @@ cdef class _Graph:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant(5)
-            >>> model.add_constraint(i <= c) # doctest: +ELLIPSIS
-            <dwave.optimization.symbols.LessEqual at ...>
+            >>> _ = model.add_constraint(i <= c)
             >>> constraints = next(model.iter_constraints())
         """
         for ptr in self._graph.constraints():
@@ -591,8 +590,7 @@ cdef class _Graph:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant(5)
-            >>> model.add_constraint(i <= c) # doctest: +ELLIPSIS
-            <dwave.optimization.symbols.LessEqual at ...>
+            >>> _ = model.add_constraint(i <= c)
             >>> decisions = next(model.iter_decisions())
         """
         for ptr in self._graph.decisions():
@@ -688,10 +686,8 @@ cdef class _Graph:
             >>> model = Model()
             >>> i = model.integer()
             >>> c = model.constant([5, -14])
-            >>> model.add_constraint(i <= c[0]) # doctest: +ELLIPSIS
-            <dwave.optimization.symbols.LessEqual at ...>
-            >>> model.add_constraint(c[1] <= i) # doctest: +ELLIPSIS
-            <dwave.optimization.symbols.LessEqual at ...>
+            >>> _ = model.add_constraint(i <= c[0])
+            >>> _ = model.add_constraint(c[1] <= i)
             >>> model.num_constraints()
             2
         """
@@ -824,7 +820,7 @@ cdef class _Graph:
             >>> model = Model()
             >>> x = model.binary(5)
             >>> x.sum()  # create a symbol that will never be used # doctest: +ELLIPSIS
-            <dwave.optimization.symbols.Sum at ...>
+            <dwave.optimization...Sum at ...>
             >>> model.minimize(x.prod())
             >>> model.num_symbols()
             3
@@ -1323,19 +1319,6 @@ cdef class Symbol:
         """Topological index of the symbol.
 
         Return ``None`` if the model is not topologically sorted.
-
-        Examples:
-            This example prints the indices of a two-symbol model.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(100, lower_bound=20)
-            >>> sum_i = i.sum()
-            >>> with model.lock():
-            ...     for symbol in model.iter_symbols():
-            ...         print(f"Symbol {type(symbol)} is node {symbol.topological_index()}")
-            Symbol <class 'dwave.optimization.symbols.IntegerVariable'> is node 0
-            Symbol <class 'dwave.optimization.symbols.Sum'> is node 1
         """
         index = self.node_ptr.topological_index()
         return index if index >= 0 else None
@@ -1708,8 +1691,8 @@ cdef class ArraySymbol(Symbol):
             >>> model = Model()
             >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
             >>> i_max = i.max()
-            >>> type(i_max)
-            <class 'dwave.optimization.symbols.Max'>
+            >>> type(i_max)  # doctest: +ELLIPSIS
+            <class 'dwave.optimization.symbols...Max'>
 
         See Also:
             :class:`~dwave.optimization.symbols.Max`
@@ -1756,8 +1739,8 @@ cdef class ArraySymbol(Symbol):
             >>> model = Model()
             >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
             >>> i_min = i.min()
-            >>> type(i_min)
-            <class 'dwave.optimization.symbols.Min'>
+            >>> type(i_min)  # doctest: +ELLIPSIS
+            <class 'dwave.optimization.symbols...Min'>
 
         See Also:
             :class:`~dwave.optimization.symbols.Min`
@@ -1793,7 +1776,7 @@ cdef class ArraySymbol(Symbol):
             >>> model = Model()
             >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
             >>> i.prod()  # doctest: +ELLIPSIS
-            <dwave.optimization.symbols.Prod at ...>
+            <dwave.optimization.symbols...Prod at ...>
 
         See Also:
             :class:`~dwave.optimization.symbols.PartialProd`
@@ -2162,7 +2145,7 @@ cdef class ArraySymbol(Symbol):
             >>> model = Model()
             >>> i = model.integer(100, lower_bound=-50, upper_bound=50)
             >>> i.sum()  # doctest: +ELLIPSIS
-            <dwave.optimization.symbols.Sum at ...>
+            <dwave.optimization.symbols...Sum at ...>
 
         See Also:
             :class:`~dwave.optimization.symbols.PartialSum`
