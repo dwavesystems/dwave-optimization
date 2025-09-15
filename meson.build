@@ -93,6 +93,7 @@ foreach name : [
     '_deprecated',
     '_binaryop',
     '_unaryop',
+    'accumulate_zip',
 ]
     py.extension_module(
         name,

@@ -21,10 +21,6 @@ from dwave.optimization.model import Symbol, ArraySymbol
 __all__: list[str]
 
 
-class AccumulateZip(ArraySymbol):
-    ...
-
-
 class All(ArraySymbol):
     ...
 
