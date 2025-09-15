@@ -142,8 +142,6 @@ from dwave.optimization._utilities cimport as_cppshape, as_span
 
 
 __all__ = [
-    "All",
-    "Any",
     "AdvancedIndexing",
     "ARange",
     "ArgSort",
@@ -166,17 +164,12 @@ __all__ = [
     "LinearProgramObjectiveValue",
     "LinearProgramSolution",
     "ListVariable",
-    "Max",
     "Mean",
-    "Min",
     "NaryAdd",
     "NaryMaximum",
     "NaryMinimum",
     "NaryMultiply",
-    "PartialProd",
-    "PartialSum",
     "Permutation",
-    "Prod",
     "Put",
     "QuadraticModel",
     "Reshape",
@@ -184,48 +177,8 @@ __all__ = [
     "SetVariable",
     "Size",
     "SoftMax",
-    "Sum",
     "Where",
     ]
-
-
-cdef class All(ArraySymbol):
-    """Tests whether all elements evaluate to True."""
-    def __init__(self, ArraySymbol array):
-        cdef _Graph model = array.model
-        cdef cppAllNode* ptr = model._graph.emplace_node[cppAllNode](array.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(All, typeid(cppAllNode))
-
-
-cdef class Any(ArraySymbol):
-    """Tests whether any elements evaluate to True.
-
-    Examples:
-        This example checks the elements of a binary array.
-
-        >>> from dwave.optimization.model import Model
-        >>> model = Model()
-        >>> model.states.resize(1)
-        >>> x = model.constant([True, False, False])
-        >>> a = x.any()
-        >>> with model.lock():
-        ...     assert a.state()
-
-        >>> y = model.constant([False, False, False])
-        >>> b = y.any()
-        >>> with model.lock():
-        ...     assert not b.state()
-
-    .. versionadded:: 0.4.1
-    """
-    def __init__(self, ArraySymbol array):
-        cdef _Graph model = array.model
-        cdef cppAnyNode* ptr = model._graph.emplace_node[cppAnyNode](array.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Any, typeid(cppAnyNode))
 
 
 cdef class _ArrayValidation(Symbol):
@@ -2228,74 +2181,6 @@ cdef class ListVariable(ArraySymbol):
 _register(ListVariable, typeid(cppListNode))
 
 
-cdef class Max(ArraySymbol):
-    """Maximum value in the elements of a symbol.
-
-    See also:
-        :meth:`~dwave.optimization.model.ArraySymbol.max()` equivalent method.
-    """
-    def __init__(self, ArraySymbol node, *, initial=None):
-        cdef _Graph model = node.model
-
-        if initial is None:
-            self.ptr = model._graph.emplace_node[cppMaxNode](node.array_ptr)
-        else:
-            self.ptr = model._graph.emplace_node[cppMaxNode](node.array_ptr, <double?>initial)
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @property
-    def initial(self):
-        """The initial value to the operation. Returns ``None`` if not provided.
-
-        .. versionadded:: 0.6.4
-        """
-        return self.ptr.init.value() if self.ptr.init.has_value() else None
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppMaxNode* ptr = dynamic_cast_ptr[cppMaxNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef Max sym = Max.__new__(Max)
-        sym.ptr = ptr
-        sym.initialize_arraynode(symbol.model, ptr)
-        return sym
-
-    @classmethod
-    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        # Test whether we have any states saved.
-        try:
-            info = zf.getinfo(directory + "initial.npy")
-        except KeyError:
-            # No states, so nothing to load
-            initial = None
-        else:
-            with zf.open(info, "r") as f:
-                initial = np.load(f)
-
-        return cls(*predecessors, initial=initial)
-
-    def _into_zipfile(self, zf, directory):
-        if (init := self.initial) is not None:
-            # NumPy serialization is overkill but it's type-safe
-            with zf.open(directory + "initial.npy", mode="w", force_zip64=True) as f:
-                np.save(f, init, allow_pickle=False)
-
-    def maybe_equals(self, other):
-        maybe = super().maybe_equals(other)
-
-        # mismatched initial values can turn uncertainty into a definite no
-        if maybe == 1 and self.initial != other.initial:
-            return 0
-
-        return maybe
-
-    cdef cppMaxNode* ptr
-
-_register(Max, typeid(cppMaxNode))
-
-
 cdef class Mean(ArraySymbol):
     """Mean value of the elements of a symbol. If symbol is empty, 
         mean defaults to 0.0.
@@ -2324,74 +2209,6 @@ cdef class Mean(ArraySymbol):
     cdef cppMeanNode* ptr
 
 _register(Mean, typeid(cppMeanNode))
-
-
-cdef class Min(ArraySymbol):
-    """Minimum value in the elements of a symbol.
-
-    See also:
-        :meth:`~dwave.optimization.model.ArraySymbol.min()` equivalent method.
-    """
-    def __init__(self, ArraySymbol node, *, initial=None):
-        cdef _Graph model = node.model
-
-        if initial is None:
-            self.ptr = model._graph.emplace_node[cppMinNode](node.array_ptr)
-        else:
-            self.ptr = model._graph.emplace_node[cppMinNode](node.array_ptr, <double?>initial)
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @property
-    def initial(self):
-        """The initial value to the operation. Returns ``None`` if not provided.
-
-        .. versionadded:: 0.6.4
-        """
-        return self.ptr.init.value() if self.ptr.init.has_value() else None
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppMinNode* ptr = dynamic_cast_ptr[cppMinNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef Min sym = Min.__new__(Min)
-        sym.ptr = ptr
-        sym.initialize_arraynode(symbol.model, ptr)
-        return sym
-
-    @classmethod
-    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        # Test whether we have any states saved.
-        try:
-            info = zf.getinfo(directory + "initial.npy")
-        except KeyError:
-            # Nothing to load
-            initial = None
-        else:
-            with zf.open(info, "r") as f:
-                initial = np.load(f)
-
-        return cls(*predecessors, initial=initial)
-
-    def _into_zipfile(self, zf, directory):
-        if (init := self.initial) is not None:
-            # NumPy serialization is overkill but it's type-safe
-            with zf.open(directory + "initial.npy", mode="w", force_zip64=True) as f:
-                np.save(f, init, allow_pickle=False)
-
-    def maybe_equals(self, other):
-        maybe = super().maybe_equals(other)
-
-        # mismatched initial values can turn uncertainty into a definite no
-        if maybe == 1 and self.initial != other.initial:
-            return 0
-
-        return maybe
-
-    cdef cppMinNode* ptr
-
-_register(Min, typeid(cppMinNode))
 
 
 cdef class NaryAdd(ArraySymbol):
@@ -2534,200 +2351,6 @@ cdef class NaryMultiply(ArraySymbol):
 _register(NaryMultiply, typeid(cppNaryMultiplyNode))
 
 
-cdef class PartialProd(ArraySymbol):
-    """Multiply of the elements of a symbol along an axis.
-
-    See also:
-        :meth:`~dwave.optimization.model.ArraySymbol.prod()` equivalent method.
-
-    .. versionadded:: 0.5.1
-    """
-    def __init__(self, ArraySymbol array, int axis, *, initial=None):
-        cdef _Graph model = array.model
-
-        if not isinstance(axis, numbers.Integral):
-            raise TypeError("axis should be an int")
-
-        if not (0 <= axis < array.ndim()):
-            raise ValueError("axis should be 0 <= axis < ndim()")
-
-        if initial is None:
-            self.ptr = model._graph.emplace_node[cppPartialProdNode](
-                array.array_ptr,
-                <int?>axis,
-            )
-        else:
-            self.ptr = model._graph.emplace_node[cppPartialProdNode](
-                array.array_ptr,
-                <int?>axis,
-                <double?>initial,
-            )
-        self.initialize_arraynode(model, self.ptr)
-
-    def axes(self):
-        axes = self.ptr.axes()
-        return tuple(axes[i] for i in range(axes.size()))
-
-    @property
-    def initial(self):
-        """The initial value to the operation. Returns ``None`` if not provided.
-
-        .. versionadded:: 0.6.4
-        """
-        return self.ptr.init.value() if self.ptr.init.has_value() else None
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppPartialProdNode* ptr = dynamic_cast_ptr[cppPartialProdNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef PartialProd ps = PartialProd.__new__(PartialProd)
-        ps.ptr = ptr
-        ps.initialize_arraynode(symbol.model, ptr)
-        return ps
-
-    @classmethod
-    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        if len(predecessors) != 1:
-            raise ValueError("PartialProd must have exactly one predecessor")
-
-        with zf.open(directory + "axes.json", "r") as f:
-            axis = json.load(f)[0]
-
-        try:
-            info = zf.getinfo(directory + "initial.npy")
-        except KeyError:
-            # Nothing to load
-            initial = None
-        else:
-            with zf.open(info, "r") as f:
-                initial = np.load(f)
-
-        return cls(*predecessors, axis=axis, initial=initial)
-
-    def _into_zipfile(self, zf, directory):
-        encoder = json.JSONEncoder(separators=(',', ':'))
-
-        # Save information about the axes (always present)
-        zf.writestr(directory + "axes.json", encoder.encode(self.axes()))
-
-        # If we have an initial value, save that too
-        if (init := self.initial) is not None:
-            # NumPy serialization is overkill but it's type-safe
-            with zf.open(directory + "initial.npy", mode="w", force_zip64=True) as f:
-                np.save(f, init, allow_pickle=False)
-
-    def maybe_equals(self, other):
-        maybe = super().maybe_equals(other)
-
-        # mismatched initial values can turn uncertainty into a definite no
-        if maybe == 1 and self.initial != other.initial:
-            return 0
-
-        return maybe
-
-    cdef cppPartialProdNode* ptr
-
-_register(PartialProd, typeid(cppPartialProdNode))
-
-
-cdef class PartialSum(ArraySymbol):
-    """Sum of the elements of a symbol along an axis.
-
-    See also:
-        :meth:`~dwave.optimization.model.ArraySymbol.sum()` equivalent method.
-
-    .. versionadded:: 0.4.1
-    """
-    def __init__(self, ArraySymbol array, int axis, *, initial=None):
-        cdef _Graph model = array.model
-
-        if not isinstance(axis, numbers.Integral):
-            raise TypeError("axis should be an int")
-
-        if not (0 <= axis < array.ndim()):
-            raise ValueError("axis should be 0 <= axis < ndim()")
-
-        if initial is None:
-            self.ptr = model._graph.emplace_node[cppPartialSumNode](
-                array.array_ptr,
-                <int?>axis,
-            )
-        else:
-            self.ptr = model._graph.emplace_node[cppPartialSumNode](
-                array.array_ptr,
-                <int?>axis,
-                <double?>initial,
-            )
-        self.initialize_arraynode(model, self.ptr)
-
-    def axes(self):
-        axes = self.ptr.axes()
-        return tuple(axes[i] for i in range(axes.size()))
-
-    @property
-    def initial(self):
-        """The initial value to the operation. Returns ``None`` if not provided.
-
-        .. versionadded:: 0.6.4
-        """
-        return self.ptr.init.value() if self.ptr.init.has_value() else None
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppPartialSumNode* ptr = dynamic_cast_ptr[cppPartialSumNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef PartialSum ps = PartialSum.__new__(PartialSum)
-        ps.ptr = ptr
-        ps.initialize_arraynode(symbol.model, ptr)
-        return ps
-
-    @classmethod
-    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        if len(predecessors) != 1:
-            raise ValueError("PartialSum must have exactly one predecessor")
-
-        with zf.open(directory + "axes.json", "r") as f:
-            axis = json.load(f)[0]
-
-        try:
-            info = zf.getinfo(directory + "initial.npy")
-        except KeyError:
-            # Nothing to load
-            initial = None
-        else:
-            with zf.open(info, "r") as f:
-                initial = np.load(f)
-
-        return cls(*predecessors, axis=axis, initial=initial)
-
-    def _into_zipfile(self, zf, directory):
-        encoder = json.JSONEncoder(separators=(',', ':'))
-
-        # Save information about the axes (always present)
-        zf.writestr(directory + "axes.json", encoder.encode(self.axes()))
-
-        # If we have an initial value, save that too
-        if (init := self.initial) is not None:
-            # NumPy serialization is overkill but it's type-safe
-            with zf.open(directory + "initial.npy", mode="w", force_zip64=True) as f:
-                np.save(f, init, allow_pickle=False)
-
-    def maybe_equals(self, other):
-        maybe = super().maybe_equals(other)
-
-        # mismatched initial values can turn uncertainty into a definite no
-        if maybe == 1 and self.initial != other.initial:
-            return 0
-
-        return maybe
-
-    cdef cppPartialSumNode* ptr
-
-_register(PartialSum, typeid(cppPartialSumNode))
-
-
 cdef class Permutation(ArraySymbol):
     """Permutation of the elements of a symbol."""
     def __init__(self, Constant array, ListVariable x):
@@ -2742,74 +2365,6 @@ cdef class Permutation(ArraySymbol):
         self.initialize_arraynode(array.model, ptr)
 
 _register(Permutation, typeid(cppPermutationNode))
-
-
-cdef class Prod(ArraySymbol):
-    """Product of the elements of a symbol.
-
-    See also:
-        :meth:`~dwave.optimization.model.ArraySymbol.prod()` equivalent method.
-    """
-    def __init__(self, ArraySymbol node, *, initial=None):
-        cdef _Graph model = node.model
-
-        if initial is None:
-            self.ptr = model._graph.emplace_node[cppProdNode](node.array_ptr)
-        else:
-            self.ptr = model._graph.emplace_node[cppProdNode](node.array_ptr, <double?>initial)
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @property
-    def initial(self):
-        """The initial value to the operation. Returns ``None`` if not provided.
-
-        .. versionadded:: 0.6.4
-        """
-        return self.ptr.init.value() if self.ptr.init.has_value() else None
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppProdNode* ptr = dynamic_cast_ptr[cppProdNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef Prod sym = Prod.__new__(Prod)
-        sym.ptr = ptr
-        sym.initialize_arraynode(symbol.model, ptr)
-        return sym
-
-    @classmethod
-    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        # Test whether we have any states saved.
-        try:
-            info = zf.getinfo(directory + "initial.npy")
-        except KeyError:
-            # Nothing to load
-            initial = None
-        else:
-            with zf.open(info, "r") as f:
-                initial = np.load(f)
-
-        return cls(*predecessors, initial=initial)
-
-    def _into_zipfile(self, zf, directory):
-        if (init := self.initial) is not None:
-            # NumPy serialization is overkill but it's type-safe
-            with zf.open(directory + "initial.npy", mode="w", force_zip64=True) as f:
-                np.save(f, init, allow_pickle=False)
-
-    def maybe_equals(self, other):
-        maybe = super().maybe_equals(other)
-
-        # mismatched initial values can turn uncertainty into a definite no
-        if maybe == 1 and self.initial != other.initial:
-            return 0
-
-        return maybe
-
-    cdef cppProdNode* ptr
-
-_register(Prod, typeid(cppProdNode))
 
 
 cdef class Put(ArraySymbol):
@@ -3271,74 +2826,6 @@ cdef class SoftMax(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(SoftMax, typeid(cppSoftMaxNode))
-
-
-cdef class Sum(ArraySymbol):
-    """Sum of the elements of a symbol.
-
-    See Also:
-        :meth:`~dwave.optimization.model.ArraySymbol.sum()` equivalent method.
-    """
-    def __init__(self, ArraySymbol node, *, initial=None):
-        cdef _Graph model = node.model
-
-        if initial is None:
-            self.ptr = model._graph.emplace_node[cppSumNode](node.array_ptr)
-        else:
-            self.ptr = model._graph.emplace_node[cppSumNode](node.array_ptr, <double?>initial)
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @property
-    def initial(self):
-        """The initial value to the operation. Returns ``None`` if not provided.
-
-        .. versionadded:: 0.6.4
-        """
-        return self.ptr.init.value() if self.ptr.init.has_value() else None
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppSumNode* ptr = dynamic_cast_ptr[cppSumNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef Sum sym = Sum.__new__(Sum)
-        sym.ptr = ptr
-        sym.initialize_arraynode(symbol.model, ptr)
-        return sym
-
-    @classmethod
-    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        # Test whether we have any states saved.
-        try:
-            info = zf.getinfo(directory + "initial.npy")
-        except KeyError:
-            # No states, so nothing to load
-            initial = None
-        else:
-            with zf.open(info, "r") as f:
-                initial = np.load(f)
-
-        return cls(*predecessors, initial=initial)
-
-    def _into_zipfile(self, zf, directory):
-        if (init := self.initial) is not None:
-            # NumPy serialization is overkill but it's type-safe
-            with zf.open(directory + "initial.npy", mode="w", force_zip64=True) as f:
-                np.save(f, init, allow_pickle=False)
-
-    def maybe_equals(self, other):
-        maybe = super().maybe_equals(other)
-
-        # mismatched initial values can turn uncertainty into a definite no
-        if maybe == 1 and self.initial != other.initial:
-            return 0
-
-        return maybe
-
-    cdef cppSumNode* ptr
-
-_register(Sum, typeid(cppSumNode))
 
 
 cdef class Where(ArraySymbol):

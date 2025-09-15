@@ -21,14 +21,6 @@ from dwave.optimization.model import Symbol, ArraySymbol
 __all__: list[str]
 
 
-class All(ArraySymbol):
-    ...
-
-
-class Any(ArraySymbol):
-    ...
-
-
 class AdvancedIndexing(ArraySymbol):
     ...
 
@@ -125,14 +117,6 @@ class ListVariable(ArraySymbol):
     def set_state(self, index: int, values: numpy.typing.ArrayLike): ...
 
 
-class Max(ArraySymbol):
-    ...
-
-
-class Min(ArraySymbol):
-    ...
-
-
 class NaryAdd(ArraySymbol):
     ...
 
@@ -149,15 +133,7 @@ class NaryMultiply(ArraySymbol):
     ...
 
 
-class PartialSum(ArraySymbol):
-    ...
-
-
 class Permutation(ArraySymbol):
-    ...
-
-
-class Prod(ArraySymbol):
     ...
 
 
@@ -178,10 +154,6 @@ class SetVariable(ArraySymbol):
 
 
 class Size(ArraySymbol):
-    ...
-
-
-class Sum(ArraySymbol):
     ...
 
 
