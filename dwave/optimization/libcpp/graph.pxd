@@ -37,12 +37,8 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
     cdef cppclass DecisionNode(Node):
         pass
 
-# This would usually be defined in nodes.pxd, but we need it for Graph.inputs() so to
-# avoid the circular dependency we define it here.
-cdef extern from "dwave-optimization/nodes/inputs.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass InputNode(ArrayNode):
-        const double* buff() const
-        void initialize_state(State&, span[const double] data) except+
+# Must come after the declaration of ArrayNode to avoid circular imports
+from dwave.optimization.libcpp.nodes.inputs cimport InputNode
 
 # Sometimes Cython isn't able to reason about pointers as template inputs, so
 # we make a few aliases for convenience
