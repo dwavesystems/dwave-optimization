@@ -97,22 +97,6 @@ class IntegerVariable(ArraySymbol):
     def upper_bound(self) -> float: ...
 
 
-class LinearProgram(Symbol):
-    ...
-
-
-class LinearProgramFeasible(ArraySymbol):
-    ...
-
-
-class LinearProgramObjectiveValue(ArraySymbol):
-    ...
-
-
-class LinearProgramSolution(ArraySymbol):
-    ...
-
-
 class ListVariable(ArraySymbol):
     def set_state(self, index: int, values: numpy.typing.ArrayLike): ...
 

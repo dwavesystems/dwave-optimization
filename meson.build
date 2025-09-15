@@ -94,6 +94,7 @@ foreach name : [
     '_binaryop',
     '_unaryop',
     'accumulate_zip',
+    'lp',
     'reduce',
 ]
     py.extension_module(
