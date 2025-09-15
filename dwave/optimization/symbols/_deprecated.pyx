@@ -142,7 +142,6 @@ from dwave.optimization._utilities cimport as_cppshape, as_span
 
 
 __all__ = [
-    "Absolute",
     "AccumulateZip",
     "All",
     "Any",
@@ -156,13 +155,10 @@ __all__ = [
     "Concatenate",
     "Constant",
     "Copy",
-    "Cos",
     "DisjointBitSets",
     "DisjointBitSet",
     "DisjointLists",
     "DisjointList",
-    "Exp",
-    "Expit",
     "Extract",
     "Input",
     "IntegerVariable",
@@ -171,8 +167,6 @@ __all__ = [
     "LinearProgramObjectiveValue",
     "LinearProgramSolution",
     "ListVariable",
-    "Log",
-    "Logical",
     "Max",
     "Mean",
     "Min",
@@ -180,8 +174,6 @@ __all__ = [
     "NaryMaximum",
     "NaryMinimum",
     "NaryMultiply",
-    "Negative",
-    "Not",
     "PartialProd",
     "PartialSum",
     "Permutation",
@@ -190,31 +182,12 @@ __all__ = [
     "QuadraticModel",
     "Reshape",
     "Resize",
-    "Sin",
     "SetVariable",
     "Size",
-    "Rint",
     "SoftMax",
-    "Square",
-    "SquareRoot",
     "Sum",
     "Where",
     ]
-
-
-cdef class Absolute(ArraySymbol):
-    """Absolute value element-wise on a symbol.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.absolute`: equivalent function.
-    """
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppAbsoluteNode* ptr = model._graph.emplace_node[cppAbsoluteNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Absolute, typeid(cppAbsoluteNode))
 
 
 cdef class AccumulateZip(ArraySymbol):
@@ -1354,23 +1327,6 @@ cdef class Copy(ArraySymbol):
 _register(Copy, typeid(cppCopyNode))
 
 
-cdef class Cos(ArraySymbol):
-    """Cosine element-wise on a symbol.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.cos`: equivalent function.
-
-    .. versionadded:: 0.6.5
-    """
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppCosNode* ptr = model._graph.emplace_node[cppCosNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Cos, typeid(cppCosNode))
-
-
 cdef class DisjointBitSets(Symbol):
     """Disjoint-sets decision-variable symbol.
 
@@ -1906,40 +1862,6 @@ cdef class DisjointList(ArraySymbol):
     cdef cppDisjointListNode* ptr
 
 _register(DisjointList, typeid(cppDisjointListNode))
-
-
-cdef class Exp(ArraySymbol):
-    """Takes the values of a symbol and returns the corresponding base-e exponential.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.exp`: equivalent function.
-
-    .. versionadded:: 0.6.2
-    """
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppExpNode* ptr = model._graph.emplace_node[cppExpNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Exp, typeid(cppExpNode))
-
-
-cdef class Expit(ArraySymbol):
-    """Takes the values of a symbol and returns the corresponding logistic sigmoid (expit).
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.expit`: equivalent function.
-
-    .. versionadded:: 0.5.2
-    """
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppExpitNode* ptr = model._graph.emplace_node[cppExpitNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Expit, typeid(cppExpitNode))
 
 
 cdef class Extract(ArraySymbol):
@@ -2484,38 +2406,6 @@ cdef class ListVariable(ArraySymbol):
 _register(ListVariable, typeid(cppListNode))
 
 
-cdef class Log(ArraySymbol):
-    """Takes the values of a symbol and returns the corresponding natural logarithm (log).
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.log`: equivalent function.
-
-    .. versionadded:: 0.5.2
-    """
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppLogNode* ptr = model._graph.emplace_node[cppLogNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Log, typeid(cppLogNode))
-
-
-cdef class Logical(ArraySymbol):
-    """Logical truth value element-wise on a symbol.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.logical`: equivalent function.
-    """
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppLogicalNode* ptr = model._graph.emplace_node[cppLogicalNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Logical, typeid(cppLogicalNode))
-
-
 cdef class Max(ArraySymbol):
     """Maximum value in the elements of a symbol.
 
@@ -2820,32 +2710,6 @@ cdef class NaryMultiply(ArraySymbol):
     cdef cppNaryMultiplyNode* ptr
 
 _register(NaryMultiply, typeid(cppNaryMultiplyNode))
-
-
-cdef class Negative(ArraySymbol):
-    """Numerical negative element-wise on a symbol."""
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppNegativeNode* ptr = model._graph.emplace_node[cppNegativeNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Negative, typeid(cppNegativeNode))
-
-
-cdef class Not(ArraySymbol):
-    """Logical negation element-wise on a symbol.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.logical_not`: equivalent function.
-    """
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppNotNode* ptr = model._graph.emplace_node[cppNotNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Not, typeid(cppNotNode))
 
 
 cdef class PartialProd(ArraySymbol):
@@ -3570,38 +3434,6 @@ cdef class Size(ArraySymbol):
 _register(Size, typeid(cppSizeNode))
 
 
-cdef class Rint(ArraySymbol):
-    """Takes the values of a symbol and rounds them to the nearest integer.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.rint()` equivalent function.
-    """
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppRintNode* ptr = model._graph.emplace_node[cppRintNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Rint, typeid(cppRintNode))
-
-
-cdef class Sin(ArraySymbol):
-    """Sine element-wise on a symbol.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.sin`: equivalent function.
-
-    .. versionadded:: 0.6.5
-    """
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppSinNode* ptr = model._graph.emplace_node[cppSinNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Sin, typeid(cppSinNode))
-
-
 cdef class SoftMax(ArraySymbol):
     """Softmax of a symbol.
 
@@ -3617,28 +3449,6 @@ cdef class SoftMax(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(SoftMax, typeid(cppSoftMaxNode))
-
-
-cdef class Square(ArraySymbol):
-    """Squares element-wise of a symbol."""
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppSquareNode* ptr = model._graph.emplace_node[cppSquareNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Square, typeid(cppSquareNode))
-
-
-cdef class SquareRoot(ArraySymbol):
-    """Square root of a symbol."""
-    def __init__(self, ArraySymbol x):
-        cdef _Graph model = x.model
-
-        cdef cppSquareRootNode* ptr = model._graph.emplace_node[cppSquareRootNode](x.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(SquareRoot, typeid(cppSquareRootNode))
 
 
 cdef class Sum(ArraySymbol):

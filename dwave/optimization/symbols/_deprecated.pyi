@@ -21,10 +21,6 @@ from dwave.optimization.model import Symbol, ArraySymbol
 __all__: list[str]
 
 
-class Absolute(ArraySymbol):
-    ...
-
-
 class AccumulateZip(ArraySymbol):
     ...
 
@@ -76,10 +72,6 @@ class Constant(ArraySymbol):
     def __le__(self, rhs: numpy.typing.ArrayLike) -> numpy.typing.NDArray[numpy.bool]: ...
 
 
-class Cos(ArraySymbol):
-    ...
-
-
 class Copy(ArraySymbol):
     ...
 
@@ -97,14 +89,6 @@ class DisjointLists(Symbol):
 
 
 class DisjointList(ArraySymbol):
-    ...
-
-
-class Exp(ArraySymbol):
-    ...
-
-
-class Expit(ArraySymbol):
     ...
 
 
@@ -145,14 +129,6 @@ class ListVariable(ArraySymbol):
     def set_state(self, index: int, values: numpy.typing.ArrayLike): ...
 
 
-class Log(ArraySymbol):
-    ...
-
-
-class Logical(ArraySymbol):
-    ...
-
-
 class Max(ArraySymbol):
     ...
 
@@ -174,14 +150,6 @@ class NaryMinimum(ArraySymbol):
 
 
 class NaryMultiply(ArraySymbol):
-    ...
-
-
-class Negative(ArraySymbol):
-    ...
-
-
-class Not(ArraySymbol):
     ...
 
 
@@ -209,27 +177,11 @@ class Resize(ArraySymbol):
     ...
 
 
-class Rint(ArraySymbol):
-    ...
-
-
 class SetVariable(ArraySymbol):
     def set_state(self, index: int, values: numpy.typing.ArrayLike): ...
 
 
-class Sin(ArraySymbol):
-    ...
-
-
 class Size(ArraySymbol):
-    ...
-
-
-class Square(ArraySymbol):
-    ...
-
-
-class SquareRoot(ArraySymbol):
     ...
 
 

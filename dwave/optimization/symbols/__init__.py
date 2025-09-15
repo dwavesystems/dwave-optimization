@@ -16,6 +16,7 @@ from dwave.optimization.symbols._deprecated import *
 from dwave.optimization.symbols._deprecated import _ArrayValidation
 
 from dwave.optimization.symbols.binaryop import *
+from dwave.optimization.symbols.unaryop import *
 
 
 __all__ = [
