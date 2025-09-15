@@ -89,6 +89,23 @@ else
     limited_api = ''  # i.e. no limited api
 endif
 
+foreach name : [
+    '_deprecated',
+]
+    py.extension_module(
+        name,
+        'dwave/optimization/symbols/' + name + '.pyx',
+        dependencies: libdwave_optimization,
+        gnu_symbol_visibility: 'default',
+        install: true,
+        install_rpath: '$ORIGIN/..',
+        override_options : ['cython_language=cpp'],
+        cython_args : ['-Xfreethreading_compatible=True'],
+        subdir: 'dwave/optimization/symbols/',
+        limited_api: limited_api,
+    )
+endforeach
+
 py.extension_module(
     '_model',
     'dwave/optimization/_model.pyx',
@@ -105,19 +122,6 @@ py.extension_module(
 py.extension_module(
     'states',
     'dwave/optimization/states.pyx',
-    dependencies: libdwave_optimization,
-    gnu_symbol_visibility: 'default',
-    install: true,
-    install_rpath: '$ORIGIN',
-    override_options : ['cython_language=cpp'],
-    cython_args : ['-Xfreethreading_compatible=True'],
-    subdir: 'dwave/optimization/',
-    limited_api: limited_api,
-)
-
-py.extension_module(
-    'symbols',
-    'dwave/optimization/symbols.pyx',
     dependencies: libdwave_optimization,
     gnu_symbol_visibility: 'default',
     install: true,
