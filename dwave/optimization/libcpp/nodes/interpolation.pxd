@@ -12,10 +12,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.symbols._cysymbols import *
-from dwave.optimization.symbols._cysymbols import _ArrayValidation  # todo: remove
+from dwave.optimization.libcpp.graph cimport ArrayNode
 
-from dwave.optimization.symbols.binaryop import *
-from dwave.optimization.symbols.quadratic_model import *
-from dwave.optimization.symbols.softmax import *
-from dwave.optimization.symbols.unaryop import *
+
+cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass ExtractNode(ArrayNode):
+        pass
+
+    cdef cppclass WhereNode(ArrayNode):
+        pass

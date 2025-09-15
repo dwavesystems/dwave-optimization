@@ -12,10 +12,14 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.symbols._cysymbols import *
-from dwave.optimization.symbols._cysymbols import _ArrayValidation  # todo: remove
+from libcpp.memory cimport shared_ptr
 
-from dwave.optimization.symbols.binaryop import *
-from dwave.optimization.symbols.quadratic_model import *
-from dwave.optimization.symbols.softmax import *
-from dwave.optimization.symbols.unaryop import *
+from dwave.optimization.libcpp cimport  variant
+from dwave.optimization.libcpp.graph cimport ArrayNode, Graph
+
+
+cdef extern from "dwave-optimization/nodes/lambda.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass AccumulateZipNode(ArrayNode):
+        ctypedef variant["ArrayNode*", double] array_or_double
+        shared_ptr[Graph] expression_ptr()
+        const array_or_double initial

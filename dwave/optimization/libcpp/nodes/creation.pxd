@@ -12,10 +12,14 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.symbols._cysymbols import *
-from dwave.optimization.symbols._cysymbols import _ArrayValidation  # todo: remove
+from dwave.optimization.libcpp cimport  variant
+from dwave.optimization.libcpp.graph cimport ArrayNode
 
-from dwave.optimization.symbols.binaryop import *
-from dwave.optimization.symbols.quadratic_model import *
-from dwave.optimization.symbols.softmax import *
-from dwave.optimization.symbols.unaryop import *
+
+cdef extern from "dwave-optimization/nodes/creation.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass ARangeNode(ArrayNode):
+        ctypedef variant["const Array*", Py_ssize_t] array_or_int
+
+        array_or_int start() const
+        array_or_int stop() const
+        array_or_int step() const

@@ -12,10 +12,17 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.symbols._cysymbols import *
-from dwave.optimization.symbols._cysymbols import _ArrayValidation  # todo: remove
+from libcpp.vector cimport vector
 
-from dwave.optimization.symbols.binaryop import *
-from dwave.optimization.symbols.quadratic_model import *
-from dwave.optimization.symbols.softmax import *
-from dwave.optimization.symbols.unaryop import *
+from dwave.optimization.libcpp.graph cimport ArrayNode
+from dwave.optimization.libcpp.state cimport State
+
+
+cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass IntegerNode(ArrayNode):
+        void initialize_state(State&, vector[double]) except+
+        double lower_bound()
+        double upper_bound()
+
+    cdef cppclass BinaryNode(ArrayNode):
+        void initialize_state(State&, vector[double]) except+
