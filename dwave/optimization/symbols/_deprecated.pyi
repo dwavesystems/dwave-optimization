@@ -29,15 +29,7 @@ class AccumulateZip(ArraySymbol):
     ...
 
 
-class Add(ArraySymbol):
-    ...
-
-
 class All(ArraySymbol):
-    ...
-
-
-class And(ArraySymbol):
     ...
 
 
@@ -108,14 +100,6 @@ class DisjointList(ArraySymbol):
     ...
 
 
-class Divide(ArraySymbol):
-    ...
-
-
-class Equal(ArraySymbol):
-    ...
-
-
 class Exp(ArraySymbol):
     ...
 
@@ -139,10 +123,6 @@ class IntegerVariable(ArraySymbol):
     def lower_bound(self) -> float: ...
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
     def upper_bound(self) -> float: ...
-
-
-class LessEqual(ArraySymbol):
-    ...
 
 
 class LinearProgram(Symbol):
@@ -177,23 +157,7 @@ class Max(ArraySymbol):
     ...
 
 
-class Maximum(ArraySymbol):
-    ...
-
-
 class Min(ArraySymbol):
-    ...
-
-
-class Minimum(ArraySymbol):
-    ...
-
-
-class Modulus(ArraySymbol):
-    ...
-    
-
-class Multiply(ArraySymbol):
     ...
 
 
@@ -218,10 +182,6 @@ class Negative(ArraySymbol):
 
 
 class Not(ArraySymbol):
-    ...
-
-
-class Or(ArraySymbol):
     ...
 
 
@@ -273,17 +233,9 @@ class SquareRoot(ArraySymbol):
     ...
 
 
-class Subtract(ArraySymbol):
-    ...
-
-
 class Sum(ArraySymbol):
     ...
 
 
 class Where(ArraySymbol):
-    ...
-
-
-class Xor(ArraySymbol):
     ...

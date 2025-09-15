@@ -144,9 +144,7 @@ from dwave.optimization._utilities cimport as_cppshape, as_span
 __all__ = [
     "Absolute",
     "AccumulateZip",
-    "Add",
     "All",
-    "And",
     "Any",
     "AdvancedIndexing",
     "ARange",
@@ -163,14 +161,11 @@ __all__ = [
     "DisjointBitSet",
     "DisjointLists",
     "DisjointList",
-    "Divide",
-    "Equal",
     "Exp",
     "Expit",
     "Extract",
     "Input",
     "IntegerVariable",
-    "LessEqual",
     "LinearProgram",
     "LinearProgramFeasible",
     "LinearProgramObjectiveValue",
@@ -179,19 +174,14 @@ __all__ = [
     "Log",
     "Logical",
     "Max",
-    "Maximum",
     "Mean",
     "Min",
-    "Minimum",
-    "Modulus",
-    "Multiply",
     "NaryAdd",
     "NaryMaximum",
     "NaryMinimum",
     "NaryMultiply",
     "Negative",
     "Not",
-    "Or",
     "PartialProd",
     "PartialSum",
     "Permutation",
@@ -201,17 +191,14 @@ __all__ = [
     "Reshape",
     "Resize",
     "Sin",
-    "Subtract",
     "SetVariable",
     "Size",
     "Rint",
-    "SafeDivide",
     "SoftMax",
     "Square",
     "SquareRoot",
     "Sum",
     "Where",
-    "Xor",
     ]
 
 
@@ -407,20 +394,6 @@ cdef class AccumulateZip(ArraySymbol):
 _register(AccumulateZip, typeid(cppAccumulateZipNode))
 
 
-cdef class Add(ArraySymbol):
-    """Addition element-wise of two symbols."""
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppAddNode* ptr = model._graph.emplace_node[cppAddNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Add, typeid(cppAddNode))
-
-
 cdef class All(ArraySymbol):
     """Tests whether all elements evaluate to True."""
     def __init__(self, ArraySymbol array):
@@ -429,24 +402,6 @@ cdef class All(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(All, typeid(cppAllNode))
-
-
-cdef class And(ArraySymbol):
-    """Boolean AND element-wise between two symbols.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.logical_and`: equivalent function.
-    """
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppAndNode* ptr = model._graph.emplace_node[cppAndNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(And, typeid(cppAndNode))
 
 
 cdef class Any(ArraySymbol):
@@ -1953,50 +1908,6 @@ cdef class DisjointList(ArraySymbol):
 _register(DisjointList, typeid(cppDisjointListNode))
 
 
-cdef class Divide(ArraySymbol):
-    """Division element-wise between two symbols.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.divide()` equivalent function.
-    """
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        self.ptr = model._graph.emplace_node[cppDivideNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppDivideNode* ptr = dynamic_cast_ptr[cppDivideNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef Divide x = Divide.__new__(Divide)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppDivideNode* ptr
-
-_register(Divide, typeid(cppDivideNode))
-
-
-cdef class Equal(ArraySymbol):
-    """Equality comparison element-wise between two symbols."""
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppEqualNode* ptr = model._graph.emplace_node[cppEqualNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Equal, typeid(cppEqualNode))
-
-
 cdef class Exp(ArraySymbol):
     """Takes the values of a symbol and returns the corresponding base-e exponential.
 
@@ -2246,20 +2157,6 @@ cdef class IntegerVariable(ArraySymbol):
     cdef cppIntegerNode* ptr
 
 _register(IntegerVariable, typeid(cppIntegerNode))
-
-
-cdef class LessEqual(ArraySymbol):
-    """Smaller-or-equal comparison element-wise between two symbols."""
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppLessEqualNode* ptr = model._graph.emplace_node[cppLessEqualNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(LessEqual, typeid(cppLessEqualNode))
 
 
 cdef class LinearProgram(Symbol):
@@ -2687,24 +2584,6 @@ cdef class Max(ArraySymbol):
 _register(Max, typeid(cppMaxNode))
 
 
-cdef class Maximum(ArraySymbol):
-    """Maximum values in an element-wise comparison of two symbols.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.maximum()` equivalent function.
-    """
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppMaximumNode* ptr = model._graph.emplace_node[cppMaximumNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Maximum, typeid(cppMaximumNode))
-
-
 cdef class Mean(ArraySymbol):
     """Mean value of the elements of a symbol. If symbol is empty, 
         mean defaults to 0.0.
@@ -2801,60 +2680,6 @@ cdef class Min(ArraySymbol):
     cdef cppMinNode* ptr
 
 _register(Min, typeid(cppMinNode))
-
-
-cdef class Minimum(ArraySymbol):
-    """Minimum values in an element-wise comparison of two symbols.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.minimum()` equivalent function.
-    """
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppMinimumNode* ptr = model._graph.emplace_node[cppMinimumNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Minimum, typeid(cppMinimumNode))
-
-
-cdef class Modulus(ArraySymbol):
-    """Modulus element-wise between two symbols.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.modulus()` equivalent function.
-    """
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppModulusNode* ptr = model._graph.emplace_node[cppModulusNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Modulus, typeid(cppModulusNode))
-
-
-cdef class Multiply(ArraySymbol):
-    """Multiplication element-wise between two symbols.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.multiply()` equivalent function.
-    """
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppMultiplyNode* ptr = model._graph.emplace_node[cppMultiplyNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Multiply, typeid(cppMultiplyNode))
 
 
 cdef class NaryAdd(ArraySymbol):
@@ -3021,24 +2846,6 @@ cdef class Not(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(Not, typeid(cppNotNode))
-
-
-cdef class Or(ArraySymbol):
-    """Boolean OR element-wise between two symbols.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.logical_or`: equivalent function.
-    """
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppOrNode* ptr = model._graph.emplace_node[cppOrNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Or, typeid(cppOrNode))
 
 
 cdef class PartialProd(ArraySymbol):
@@ -3778,27 +3585,6 @@ cdef class Rint(ArraySymbol):
 _register(Rint, typeid(cppRintNode))
 
 
-cdef class SafeDivide(ArraySymbol):
-    """Safe division element-wise between two symbols.
-
-    See also:
-        :func:`~dwave.optimization.mathematical.safe_divide`: equivalent function.
-
-    .. versionadded:: 0.6.2
-    """
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppSafeDivideNode* ptr = model._graph.emplace_node[cppSafeDivideNode](
-            lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(SafeDivide, typeid(cppSafeDivideNode))
-
-
 cdef class Sin(ArraySymbol):
     """Sine element-wise on a symbol.
 
@@ -3853,20 +3639,6 @@ cdef class SquareRoot(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(SquareRoot, typeid(cppSquareRootNode))
-
-
-cdef class Subtract(ArraySymbol):
-    """Subtraction element-wise of two symbols."""
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppSubtractNode* ptr = model._graph.emplace_node[cppSubtractNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Subtract, typeid(cppSubtractNode))
 
 
 cdef class Sum(ArraySymbol):
@@ -3956,23 +3728,3 @@ cdef class Where(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(Where, typeid(cppWhereNode))
-
-
-cdef class Xor(ArraySymbol):
-    """Boolean XOR element-wise between two symbols.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.logical_xor`: equivalent function.
-
-        .. versionadded:: 0.4.1
-    """
-    def __init__(self, ArraySymbol lhs, ArraySymbol rhs):
-        if lhs.model is not rhs.model:
-            raise ValueError("lhs and rhs do not share the same underlying model")
-
-        cdef _Graph model = lhs.model
-
-        cdef cppXorNode* ptr = model._graph.emplace_node[cppXorNode](lhs.array_ptr, rhs.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Xor, typeid(cppXorNode))

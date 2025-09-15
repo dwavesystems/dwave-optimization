@@ -91,6 +91,7 @@ endif
 
 foreach name : [
     '_deprecated',
+    '_binaryop',
 ]
     py.extension_module(
         name,
