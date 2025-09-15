@@ -30,6 +30,7 @@ import contextlib
 import functools
 import hashlib
 import math
+from multiprocessing.sharedctypes import Array
 import numpy as np
 import tempfile
 import typing
@@ -163,24 +164,65 @@ class Model(_Graph):
     def objective(self, value: ArraySymbol):
         self.minimize(value)
 
-    def binary(self, shape: typing.Optional[_ShapeLike] = None) -> BinaryVariable:
+    def binary(self, shape: typing.Optional[_ShapeLike] = None,
+               lower_bound: typing.Optional[np.typing.ArrayLike] = None,
+               upper_bound: typing.Optional[np.typing.ArrayLike] = None) -> BinaryVariable:
         r"""Create a binary symbol as a decision variable.
 
         Args:
-            shape: Shape of the binary array to create.
+            shape (optional): Shape of the binary array to create.
+            lower_bound (optional): Lower bound(s) for the symbol. Can be
+                scalar (one bound for all variables) or an array (one bound for
+                each variable). Non-boolean values are rounded up to the domain
+                [0,1]. If None, the default value of 0 is used.
+            upper_bound (optional): Upper bound(s) for the symbol. Can be
+                scalar (one bound for all variables) or an array (one bound for
+                each variable). Non-boolean values are rounded down to the domain
+                [0,1]. If None, the default value of 1 is used.
 
         Returns:
             A binary symbol.
 
         Examples:
-            This example creates a :math:`1 \times 20`-sized binary symbol.
+            This example adds a :math:`20 \time 30`-sized binary variable to a model.
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> x = model.binary((1,20))
+            >>> x = model.binary((20, 30))
+            >>> type(x)
+            <class 'dwave.optimization.symbols.numbers.BinaryVariable'>
+
+            This example adds a :math:`5`-sized binary symbol and index-wise
+            bounds to a model.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> b = model.binary(5, lower_bound=[-1, 0, 1, 0, 1], upper_bound=[1, 0, 1, 1, 1])
+            >>> [0, 0, 1, 0, 1] == [b.lower_bound(i) for i in range(b.size())]
+            True
+            >>> [1, 0, 1, 1, 1] == [b.upper_bound(i) for i in range(b.size())]
+            True
+
+            This example adds a :math:`2`-sized binary symbol with a scalar lower
+            bound and index-wise upper bounds to a model.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> b = model.binary(2, lower_bound=-1.1, upper_bound=[1.1, 0.9])
+            >>> [0, 0] == [b.lower_bound(i) for i in range(b.size())]
+            True
+            >>> [1, 0] == [b.upper_bound(i) for i in range(b.size())]
+            True
+
+        See Also:
+            :class:`~dwave.optimization.symbols.numbers.BinaryVariable`: equivalent symbol.
+
+        .. versionchanged:: 0.6.7
+            Beginning in version 0.6.7, user-defined bounds and index-wise
+            bounds are supported.
         """
         from dwave.optimization.symbols import BinaryVariable  # avoid circular import
-        return BinaryVariable(self, shape)
+        return BinaryVariable(self, shape, lower_bound, upper_bound)
 
     def constant(self, array_like: numpy.typing.ArrayLike) -> Constant:
         r"""Create a constant symbol.
@@ -379,30 +421,63 @@ class Model(_Graph):
     def integer(
             self,
             shape: typing.Optional[_ShapeLike] = None,
-            lower_bound: typing.Optional[int] = None,
-            upper_bound: typing.Optional[int] = None,
+            lower_bound: typing.Optional[numpy.typing.ArrayLike] = None,
+            upper_bound: typing.Optional[numpy.typing.ArrayLike] = None,
             ) -> IntegerVariable:
         r"""Create an integer symbol as a decision variable.
 
         Args:
-            shape: Shape of the integer array to create.
-
-            lower_bound: Lower bound for the symbol, which is the
-                smallest allowed integer value. If None, the default
-                value is used.
-            upper_bound: Upper bound for the symbol, which is the
-                largest allowed integer value. If None, the default
-                value is used.
+            shape (optional): Shape of the integer array to create.
+            lower_bound (optional): Lower bound(s) for the symbol. Can be
+                scalar (one bound for all variables) or an array (one bound for
+                each variable). Non-integer values are rounded up. If None, the
+                default value is used.
+            upper_bound (optional): Upper bound(s) for the symbol. Can be
+                scalar (one bound for all variables) or an array (one bound for
+                each variable). Non-integer values are down up. If None, the
+                default value is used.
 
         Returns:
             An integer symbol.
 
         Examples:
-            This example creates a :math:`20 \times 20`-sized integer symbol.
+            This example adds a :math:`25`-sized integer symbol with a scalar lower
+            bound and index-wise upper bounds to a model.
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> i = model.integer((20,20), lower_bound=-100, upper_bound=100)
+            >>> i = model.integer(25, upper_bound=100)
+            >>> type(i)
+            <class 'dwave.optimization.symbols.numbers.IntegerVariable'>
+
+            This example adds a :math:`5`-sized integer symbol with index-wise
+            bounds to a model.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer(5, lower_bound=[-1, 0, 3, 0, 2], upper_bound=[1, 2, 3, 4, 5])
+            >>> [-1, 0, 3, 0, 2] == [i.lower_bound(j) for j in range(i.size())]
+            True
+            >>> [1, 2, 3, 4, 5] == [i.upper_bound(j) for j in range(i.size())]
+            True
+
+            This example adds a :math:`2`-sized integer symbol with a scalar lower
+            bound and index-wise upper bounds to a model.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer(2, lower_bound=-1.1, upper_bound=[1.1, 2.9])
+            >>> [-1, -1] == [i.lower_bound(j) for j in range(i.size())]
+            True
+            >>> [1, 2] == [i.upper_bound(j) for j in range(i.size())]
+            True
+
+        See Also:
+            :class:`~dwave.optimization.symbols.numbers.IntegerVariable`: equivalent symbol.
+
+        .. versionchanged:: 0.6.7
+            Beginning in version 0.6.7, user-defined index-wise bounds are
+            supported.
         """
         from dwave.optimization.symbols import IntegerVariable  # avoid circular import
         return IntegerVariable(self, shape, lower_bound, upper_bound)

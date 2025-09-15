@@ -12,6 +12,8 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <optional>
+
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/graph.hpp"
@@ -27,9 +29,7 @@ TEST_CASE("BinaryNode") {
     GIVEN("A Binary Node representing an 1d array of 10 elements") {
         auto ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{10});
 
-        THEN("The state is not deterministic") {
-            CHECK(!ptr->deterministic_state());
-        }
+        THEN("The state is not deterministic") { CHECK(!ptr->deterministic_state()); }
 
         THEN("The shape is fixed") {
             CHECK(ptr->ndim() == 1);
@@ -250,6 +250,91 @@ TEST_CASE("BinaryNode") {
             }
         }
     }
+    GIVEN("Binary node with index-wise bounds") {
+        auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
+                3, std::vector<ssize_t>{-1, 0, 1}, std::vector<ssize_t>{2, 1, 1});
+
+        THEN("The shape, max, min, and index-wise bounds are correct") {
+            CHECK(bnode_ptr->size() == 3);
+            CHECK(bnode_ptr->ndim() == 1);
+
+            CHECK(bnode_ptr->max() == 1.0);
+            CHECK(bnode_ptr->min() == 0.0);
+
+            CHECK(bnode_ptr->lower_bound(0) == 0.0);
+            CHECK(bnode_ptr->lower_bound(1) == 0.0);
+            CHECK(bnode_ptr->lower_bound(2) == 1.0);
+            CHECK(bnode_ptr->upper_bound(0) == 1.0);
+            CHECK(bnode_ptr->upper_bound(1) == 1.0);
+            CHECK(bnode_ptr->upper_bound(2) == 1.0);
+        }
+
+        AND_WHEN("We set the state at one of the indices") {
+            auto state = graph.initialize_state();
+            THEN("An exception is raised if it's out of bounds") {
+                REQUIRE_THROWS(bnode_ptr->set_value(state, 2, 1.9));
+            }
+
+            THEN("The value is within bounds") { CHECK(bnode_ptr->is_valid(2, 1.0)); }
+
+            bnode_ptr->set_value(state, 2, 1.0);
+
+            THEN("The value is correct") { CHECK(bnode_ptr->get_value(state, 2) == 1.0); }
+        }
+        AND_WHEN("We set the state at indices using clip") {
+            auto state = graph.initialize_state();
+
+            bnode_ptr->clip_and_set_value(state, 0, -2);
+            bnode_ptr->clip_and_set_value(state, 1, 0);
+            bnode_ptr->clip_and_set_value(state, 2, 2);
+
+            THEN("Clip set the values correctly") {
+                CHECK(bnode_ptr->get_value(state, 0) == 0);
+                CHECK(bnode_ptr->get_value(state, 1) == 0);
+                CHECK(bnode_ptr->get_value(state, 2) == 1);
+            }
+        }
+    }
+
+    GIVEN("Binary node with index-wise upper bound and general lower bound") {
+        auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
+                2, -2.0, std::vector<double>{0.0, 1.1});
+
+        THEN("The max, min, and index-wise bounds are correct") {
+            CHECK(bnode_ptr->max() == 1.0);
+            CHECK(bnode_ptr->min() == 0.0);
+
+            CHECK(bnode_ptr->lower_bound(0) == 0.0);
+            CHECK(bnode_ptr->lower_bound(1) == 0.0);
+            CHECK(bnode_ptr->upper_bound(0) == 0.0);
+            CHECK(bnode_ptr->upper_bound(1) == 1.0);
+        }
+    }
+
+    GIVEN("Binary node with index-wise lower bound and general upper bound") {
+        auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
+                2, std::vector<double>{-1.0, 1.0}, 100.0);
+
+        THEN("The max, min, and index-wise bounds are correct") {
+            CHECK(bnode_ptr->max() == 1.0);
+            CHECK(bnode_ptr->min() == 0.0);
+
+            CHECK(bnode_ptr->lower_bound(0) == 0.0);
+            CHECK(bnode_ptr->lower_bound(1) == 1.0);
+            CHECK(bnode_ptr->upper_bound(0) == 1.0);
+            CHECK(bnode_ptr->upper_bound(1) == 1.0);
+        }
+    }
+
+    GIVEN("Binary node with invalid index-wise lower bounds at index 0") {
+        REQUIRE_THROWS(graph.emplace_node<dwave::optimization::BinaryNode>(
+                2, std::vector<ssize_t>{2, 0}, std::vector<ssize_t>{1, 1}));
+    }
+
+    GIVEN("Binary node with invalid index-wise upper bounds at index 1") {
+        REQUIRE_THROWS(graph.emplace_node<dwave::optimization::BinaryNode>(
+                2, std::vector<ssize_t>{0, 0}, std::vector<ssize_t>{1, -1}));
+    }
 }
 
 TEST_CASE("IntegerNode") {
@@ -258,19 +343,17 @@ TEST_CASE("IntegerNode") {
     GIVEN("Double precision numbers, which may fall outside integer range or are not integral") {
         IntegerNode inode({1});
 
-        THEN("The state is not deterministic") {
-            CHECK(!inode.deterministic_state());
-        }
+        THEN("The state is not deterministic") { CHECK(!inode.deterministic_state()); }
 
         THEN("The function to check valid integers works") {
             CHECK(inode.max() == 2000000000);
             CHECK(inode.min() == 0);
-            CHECK(inode.is_valid(inode.min() - 1) == false);
-            CHECK(inode.is_valid(inode.max() + 1) == false);
-            CHECK(inode.is_valid(10.5) == false);
-            CHECK(inode.is_valid(inode.min()) == true);
-            CHECK(inode.is_valid(inode.max()) == true);
-            CHECK(inode.is_valid(10) == true);
+            CHECK(inode.is_valid(0, inode.min() - 1) == false);
+            CHECK(inode.is_valid(0, inode.max() + 1) == false);
+            CHECK(inode.is_valid(0, 10.5) == false);
+            CHECK(inode.is_valid(0, inode.min()) == true);
+            CHECK(inode.is_valid(0, inode.max()) == true);
+            CHECK(inode.is_valid(0, 10) == true);
         }
     }
 
@@ -280,21 +363,21 @@ TEST_CASE("IntegerNode") {
         THEN("The function to check valid integers works") {
             CHECK(inode.max() == 10);
             CHECK(inode.min() == -5);
-            CHECK(inode.is_valid(inode.min() - 1) == false);
-            CHECK(inode.is_valid(inode.max() + 1) == false);
-            CHECK(inode.is_valid(5.5) == false);
-            CHECK(inode.is_valid(inode.min()) == true);
-            CHECK(inode.is_valid(inode.max()) == true);
-            CHECK(inode.is_valid(5) == true);
+            CHECK(inode.is_valid(0, inode.min() - 1) == false);
+            CHECK(inode.is_valid(0, inode.max() + 1) == false);
+            CHECK(inode.is_valid(0, 5.5) == false);
+            CHECK(inode.is_valid(0, inode.min()) == true);
+            CHECK(inode.is_valid(0, inode.max()) == true);
+            CHECK(inode.is_valid(0, 5) == true);
         }
     }
 
     GIVEN("Integer with an upper bound specified, but no lower bound") {
-        IntegerNode inode({1}, {}, 10);
+        IntegerNode inode({1}, std::nullopt, 10);
 
         THEN("The lower bound takes the default we expect") {
-            CHECK(inode.lower_bound() == IntegerNode::default_lower_bound);
-            CHECK(inode.upper_bound() == 10);
+            CHECK(inode.lower_bound(0) == IntegerNode::default_lower_bound);
+            CHECK(inode.upper_bound(0) == 10);
         }
     }
 
@@ -302,18 +385,84 @@ TEST_CASE("IntegerNode") {
         IntegerNode inode1({1}, 5);
 
         THEN("The lower bound takes the default we expect") {
-            CHECK(inode1.lower_bound() == 5);
-            CHECK(inode1.upper_bound() == IntegerNode::default_upper_bound);
+            CHECK(inode1.lower_bound(0) == 5);
+            CHECK(inode1.upper_bound(0) == IntegerNode::default_upper_bound);
         }
     }
 
     GIVEN("Integer with a lower bound specified, but with unspecified upper bound provided") {
-        IntegerNode inode1({1}, 5, {});
+        IntegerNode inode1({1}, 5, std::nullopt);
 
         THEN("The lower bound takes the default we expect") {
-            CHECK(inode1.lower_bound() == 5);
-            CHECK(inode1.upper_bound() == IntegerNode::default_upper_bound);
+            CHECK(inode1.lower_bound(0) == 5);
+            CHECK(inode1.upper_bound(0) == IntegerNode::default_upper_bound);
         }
+    }
+
+    GIVEN("Integer node with index-wise bounds") {
+        auto inode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
+                3, std::vector<ssize_t>{-1, 3, 5}, std::vector<ssize_t>{1, 6, 7});
+
+        THEN("The shape, max, min, and index-wise bounds are correct") {
+            CHECK(inode_ptr->size() == 3);
+            CHECK(inode_ptr->ndim() == 1);
+
+            CHECK(inode_ptr->max() == 7.0);
+            CHECK(inode_ptr->min() == -1.0);
+
+            CHECK(inode_ptr->lower_bound(0) == -1.0);
+            CHECK(inode_ptr->lower_bound(1) == 3.0);
+            CHECK(inode_ptr->lower_bound(2) == 5.0);
+            CHECK(inode_ptr->upper_bound(0) == 1.0);
+            CHECK(inode_ptr->upper_bound(1) == 6.0);
+            CHECK(inode_ptr->upper_bound(2) == 7.0);
+        }
+
+        AND_WHEN("We set the state at one of the indices") {
+            auto state = graph.initialize_state();
+            THEN("An exception is raised if it's out of bounds") {
+                REQUIRE_THROWS(inode_ptr->set_value(state, 2, -1.0));
+            }
+
+            THEN("The value is within bounds") { CHECK(inode_ptr->is_valid(2, 6.0)); }
+
+            inode_ptr->set_value(state, 2, 6.0);
+
+            THEN("The value is correct") { CHECK(inode_ptr->get_value(state, 2) == 6.0); }
+        }
+        AND_WHEN("We set the state at indices using clip") {
+            auto state = graph.initialize_state();
+
+            inode_ptr->clip_and_set_value(state, 0, -2);
+            inode_ptr->clip_and_set_value(state, 1, 4);
+            inode_ptr->clip_and_set_value(state, 2, 9);
+
+            THEN("Clip set the values correctly") {
+                CHECK(inode_ptr->get_value(state, 0) == -1);
+                CHECK(inode_ptr->get_value(state, 1) == 4);
+                CHECK(inode_ptr->get_value(state, 2) == 7);
+            }
+        }
+    }
+
+    GIVEN("Integer node with index-wise upper bound and general integer lower bound") {
+        auto inode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
+                2, 10, std::vector<ssize_t>{20, 10});
+
+        THEN("The max, min, and index-wise bounds are correct") {
+            CHECK(inode_ptr->max() == 20.0);
+            CHECK(inode_ptr->min() == 10.0);
+
+            CHECK(inode_ptr->lower_bound(0) == 10.0);
+            CHECK(inode_ptr->lower_bound(1) == 10.0);
+            CHECK(inode_ptr->upper_bound(0) == 20.0);
+            CHECK(inode_ptr->upper_bound(1) == 10.0);
+        }
+    }
+
+    GIVEN("Integer node with invalid index-wise bounds at index 0") {
+        REQUIRE_THROWS(graph.emplace_node<dwave::optimization::IntegerNode>(
+                2, std::vector<ssize_t>{19, 12}, std::vector<ssize_t>{20, 11}));
     }
 
     GIVEN("An Integer Node representing an 1d array of 10 elements with lower bound -10") {
@@ -344,9 +493,14 @@ TEST_CASE("IntegerNode") {
             auto state_view = ptr->view(state);
 
             THEN("Then all elements are integral and within range") {
-                CHECK(std::find_if(state_view.begin(), state_view.end(), [&](double i) {
-                          return !ptr->is_valid(i);
-                      }) == state_view.end());
+                bool found_invalid = false;
+                for (ssize_t i = 0, stop = state_view.size(); i < stop; i++) {
+                    if (!ptr->is_valid(i, state_view[i])) {
+                        found_invalid = true;
+                        break;
+                    }
+                }
+                CHECK(!found_invalid);
             }
         }
 
