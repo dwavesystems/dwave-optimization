@@ -33,18 +33,114 @@ from dwave.optimization.libcpp.nodes.numbers cimport (
 from dwave.optimization.states cimport States
 
 
+# because Cython can't handle this in a template
+ctypedef const vector[double] const_vector_double
+
+
 cdef class BinaryVariable(ArraySymbol):
     """Binary decision-variable symbol.
 
+    Args:
+        model: The model.
+        shape (optional): Shape of the binary array to create.
+        lower_bound (optional): Lower bound(s) for the symbol. Can be
+            scalar (one bound for all variables) or an array (one bound for
+            each variable). Non-boolean values are rounded up to the domain
+            [0,1]. If None, the default value of 0 is used.
+        upper_bound (optional): Upper bound(s) for the symbol. Can be
+            scalar (one bound for all variables) or an array (one bound for
+            each variable). Non-boolean values are rounded down to the domain
+            [0,1]. If None, the default value of 1 is used.
+
+    Returns:
+        A binary symbol.
+
+    Examples:
+        This example adds a :math:`20 \time 30`-sized binary variable to a model.
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.symbols import BinaryVariable
+        >>> model = Model()
+        >>> x = BinaryVariable(model, (20, 30))
+        >>> type(x)
+        <class 'dwave.optimization.symbols.numbers.BinaryVariable'>
+
+        This example adds a :math:`5`-sized binary symbol and index-wise
+        bounds to a model.
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.symbols import BinaryVariable
+        >>> model = Model()
+        >>> b = BinaryVariable(model, 5, lower_bound=[-1, 0, 1, 0, 1], 
+        ...                    upper_bound=[1, 0, 1, 1, 1])
+        >>> [0, 0, 1, 0, 1] == [b.lower_bound(i) for i in range(b.size())]
+        True
+        >>> [1, 0, 1, 1, 1] == [b.upper_bound(i) for i in range(b.size())]
+        True
+
+        This example adds a :math:`2`-sized binary symbol with a scalar lower
+        bound and index-wise upper bounds to a model.
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.symbols import BinaryVariable
+        >>> model = Model()
+        >>> b = BinaryVariable(model, 2, lower_bound=-1.1, upper_bound=[1.1, 0.9])
+        >>> [0, 0] == [b.lower_bound(i) for i in range(b.size())]
+        True
+        >>> [1, 0] == [b.upper_bound(i) for i in range(b.size())]
+        True
+
     See also:
         :meth:`~dwave.optimization.model.Model.binary`: equivalent method.
+
+    .. versionchanged:: 0.6.7
+        Beginning in version 0.6.7, user-defined bounds and index-wise bounds
+        are supported.
     """
-    def __init__(self, _Graph model, shape=None):
-        # Get an observing pointer to the node
-        cdef vector[Py_ssize_t] vshape = as_cppshape(tuple() if shape is None else shape)
+    def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
+        cdef vector[Py_ssize_t] vshape = as_cppshape(
+            tuple() if shape is None else shape
+        )
 
-        self.ptr = model._graph.emplace_node[BinaryNode](vshape)
+        cdef IntegerNode.bounds_t cpplower_bound
+        cdef IntegerNode.bounds_t cppupper_bound
+        cdef const double[:] mem
 
+        if lower_bound is None:
+            cpplower_bound = nullopt
+        else:
+            # Allow users to input doubles
+            lower_bound_arr = np.asarray_chkfinite(lower_bound,
+                                                   dtype=np.double, order="C")
+            # For lower bounds, round up
+            lower_bound_arr = np.ceil(lower_bound_arr).astype(np.double)
+            if lower_bound_arr.ndim == 0:
+                cpplower_bound = <double>lower_bound_arr
+            elif lower_bound_arr.shape == vshape:
+                mem = lower_bound_arr.ravel()
+                cpplower_bound.emplace[const_vector_double](&mem[0], (&mem[-1]) + 1)
+            else:
+                raise ValueError("lower_bound should be None, scalar, or the same shape")
+
+        if upper_bound is None:
+            cppupper_bound = nullopt
+        else:
+            # Allow users to input doubles
+            upper_bound_arr = np.asarray_chkfinite(upper_bound,
+                                                   dtype=np.double, order="C")
+            # For upper bounds, round down
+            upper_bound_arr = np.floor(upper_bound_arr).astype(np.double)
+            if upper_bound_arr.ndim == 0:
+                cppupper_bound = <double>upper_bound_arr
+            elif upper_bound_arr.shape == vshape:
+                mem = upper_bound_arr.ravel()
+                cppupper_bound.emplace[const_vector_double](&mem[0], (&mem[-1]) + 1)
+            else:
+                raise ValueError("upper bound should be None, scalar, or the same shape")
+
+        self.ptr = model._graph.emplace_node[BinaryNode](
+            vshape, cpplower_bound, cppupper_bound
+        )
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
@@ -60,79 +156,108 @@ cdef class BinaryVariable(ArraySymbol):
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        """Construct a binary symbol from a compressed file.
-
-        Args:
-            zf:
-                File pointer to a compressed file encoding
-                a binary symbol. Strings are interpreted as a file name.
-            directory:
-                Directory where the file is located.
-            model:
-                The relevant :class:`~dwave.optimization.model.Model`.
-            predecessors:
-                Not currently supported.
-        Returns:
-            A binary symbol.
-
-        See also:
-            :meth:`._into_zipfile`
-        """
         if predecessors:
             raise ValueError(f"{cls.__name__} cannot have predecessors")
 
         with zf.open(directory + "shape.json", "r") as f:
             shape_info = json.load(f)
 
-        return BinaryVariable(model, shape_info["shape"])
+        # needs to be compatible with older versions
+        try:
+            info = zf.getinfo(directory + "lower_bound.npy")
+        except KeyError:
+            lower_bound = None
+        else:
+            with zf.open(info, "r") as f:
+                lower_bound = np.load(f, allow_pickle=False)
+                if (lower_bound.size == 1):
+                    lower_bound = lower_bound[0]
+
+        # needs to be compatible with older versions
+        try:
+            info = zf.getinfo(directory + "upper_bound.npy")
+        except KeyError:
+            upper_bound = None
+        else:
+            with zf.open(info, "r") as f:
+                upper_bound = np.load(f, allow_pickle=False)
+                if (upper_bound.size == 1):
+                    upper_bound = upper_bound[0]
+
+        return BinaryVariable(model,
+                              shape=shape_info["shape"],
+                              lower_bound=lower_bound,
+                              upper_bound=upper_bound,
+                              )
 
     def _into_zipfile(self, zf, directory):
-        """Store a binary symbol as a compressed file.
-
-        Args:
-            zf:
-                File pointer to a compressed file to store the
-                binary symbol. Strings are interpreted as a file name.
-            directory:
-                Directory where the file is located.
-        Returns:
-            A compressed file.
-
-        See also:
-            :meth:`._from_zipfile`
-        """
-        # the additional data we want to encode
-
-        shape_info = dict(
-            shape=self.shape()
-            )
-
+        shape_info = dict(shape=self.shape())
         encoder = json.JSONEncoder(separators=(',', ':'))
-
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
+
+        lower_bound = np.array([self.lower_bound(i) for i in range(self.size())], dtype=np.double)
+        # if all values in the array are the same, simply save a scalar
+        if (np.all(lower_bound == lower_bound[0])):
+            lower_bound = lower_bound[:1]
+        else:
+            lower_bound = lower_bound.reshape(self.shape())
+        # NumPy serialization is overkill but it's type-safe
+        with zf.open(directory + "lower_bound.npy", mode="w", force_zip64=True) as f:
+            np.save(f, lower_bound, allow_pickle=False)
+
+        upper_bound = np.array([self.upper_bound(i) for i in range(self.size())], dtype=np.double)
+        # if all values in the array are the same, simply save a scalar
+        if (np.all(upper_bound == upper_bound[0])):
+            upper_bound = upper_bound[:1]
+        else:
+            upper_bound = upper_bound.reshape(self.shape())
+        # NumPy serialization is overkill but it's type-safe
+        with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
+            np.save(f, upper_bound, allow_pickle=False)
+
+    def lower_bound(self, Py_ssize_t index):
+        """The lowest value allowed for the binary symbol at the given index."""
+        return int(self.ptr.lower_bound(index))
 
     def set_state(self, Py_ssize_t index, state):
         r"""Set the state of the binary symbol.
 
-        The given state must be binary array with the same shape
-        as the symbol.
-
-        Args:
-            index:
-                Index of the state to set
-            state:
-                Assignment of values for the state.
+        The given state must be binary array with the same shape as the symbol.
 
         Examples:
             This example sets two states for a :math:`2 \times 3`-sized
             binary symbol.
 
             >>> from dwave.optimization.model import Model
+            >>> from dwave.optimization.symbols import BinaryVariable
+            >>> import numpy as np
+            ...
             >>> model = Model()
-            >>> x = model.binary((2, 3))
+            >>> x = BinaryVariable(model, (2, 3))
             >>> model.states.resize(2)
             >>> x.set_state(0, [[True, True, False], [False, True, False]])
+            >>> print(np.equal(x.state(0), [[True, True, False], [False, True, False]]).all())
+            True
+            ...
             >>> x.set_state(1, [[False, True, False], [False, True, False]])
+            >>> print(np.equal(x.state(1), [[False, True, False], [False, True, False]]).all())
+            True
+
+            This example unsuccessfully sets one state for a :math:`2 \times
+            2`-sized binary symbol since the state is outside the defined
+            bounds.
+
+            >>> from dwave.optimization.model import Model
+            >>> from dwave.optimization.symbols import BinaryVariable
+            >>> import numpy as np
+            ...
+            >>> model = Model()
+            >>> x = BinaryVariable(model, (2, 2), lower_bound=0, upper_bound=[[0,1], [1, 1]])
+            >>> model.states.resize(1)
+            >>> try:
+            ...     x.set_state(0, [[1, 0], [0, 0]])
+            >>> except ValueError:
+            ...     pass
         """
         # Convert the state into something we can handle in C++.
         # This also does some type checking etc
@@ -153,6 +278,10 @@ cdef class BinaryVariable(ArraySymbol):
         # The validity of the state is checked in C++
         self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
+    def upper_bound(self, Py_ssize_t index):
+        """The highest value allowed for the binary symbol at the given index."""
+        return int(self.ptr.upper_bound(index))
+
     # An observing pointer to the C++ BinaryNode
     cdef BinaryNode* ptr
 
@@ -162,21 +291,108 @@ _register(BinaryVariable, typeid(BinaryNode))
 cdef class IntegerVariable(ArraySymbol):
     """Integer decision-variable symbol.
 
+    Args:
+        model: The model.
+        shape (optional): Shape of the integer array to create.
+        lower_bound (optional): Lower bound(s) for the symbol. Can be
+            scalar (one bound for all variables) or an array (one bound for
+            each variable). Non-integer values are rounded up. If None, the
+            default value is used.
+        upper_bound (optional): Upper bound(s) for the symbol. Can be
+            scalar (one bound for all variables) or an array (one bound for
+            each variable). Non-integer values are down up. If None, the
+            default value is used.
+
+    Returns:
+        An integer symbol.
+
+    Examples:
+        This example adds a :math:`25`-sized integer symbol with a scalar lower
+        bound and index-wise upper bounds to a model.
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.symbols import IntegerVariable
+        >>> model = Model()
+        >>> i = IntegerVariable(model, 25, upper_bound=100)
+        >>> type(i)
+        <class 'dwave.optimization.symbols.numbers.IntegerVariable'>
+
+        This example adds a :math:`5`-sized integer symbol with index-wise
+        bounds to a model.
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.symbols import IntegerVariable
+        >>> model = Model()
+        >>> i = IntegerVariable(model, 5, lower_bound=[-1, 0, 3, 0, 2], 
+        ...                     upper_bound=[1, 2, 3, 4, 5])
+        >>> [-1, 0, 3, 0, 2] == [i.lower_bound(j) for j in range(i.size())]
+        True
+        >>> [1, 2, 3, 4, 5] == [i.upper_bound(j) for j in range(i.size())]
+        True
+
+        This example adds a :math:`2`-sized integer symbol with a scalar lower
+        bound and index-wise upper bounds to a model.
+
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.symbols import IntegerVariable
+        >>> model = Model()
+        >>> i = IntegerVariable(model, 2, lower_bound=-1.1, upper_bound=[1.1, 2.9])
+        >>> [-1, -1] == [i.lower_bound(j) for j in range(i.size())]
+        True
+        >>> [1, 2] == [i.upper_bound(j) for j in range(i.size())]
+        True
+
     See Also:
         :meth:`~dwave.optimization.model.Model.integer`: equivalent method.
+
+    .. versionchanged:: 0.6.7
+        Beginning in version 0.6.7, user-defined index-wise bounds are
+        supported.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
-        cdef vector[Py_ssize_t] vshape = as_cppshape(tuple() if shape is None else shape)
+        cdef vector[Py_ssize_t] vshape = as_cppshape(
+            tuple() if shape is None else shape
+        )
 
-        if lower_bound is None and upper_bound is None:
-            self.ptr = model._graph.emplace_node[IntegerNode](vshape)
-        elif lower_bound is None:
-            self.ptr = model._graph.emplace_node[IntegerNode](vshape, nullopt, <double>upper_bound)
-        elif upper_bound is None:
-            self.ptr = model._graph.emplace_node[IntegerNode](vshape, <double>lower_bound)
+        cdef IntegerNode.bounds_t cpplower_bound
+        cdef IntegerNode.bounds_t cppupper_bound
+        cdef const double[:] mem
+
+        if lower_bound is None:
+            cpplower_bound = nullopt
         else:
-            self.ptr = model._graph.emplace_node[IntegerNode](vshape, <double>lower_bound, <double>upper_bound)
+            # Allow users to input doubles
+            lower_bound_arr = np.asarray_chkfinite(lower_bound,
+                                                   dtype=np.double, order="C")
+            # For lower bounds, round up
+            lower_bound_arr = np.ceil(lower_bound_arr).astype(np.double)
+            if lower_bound_arr.ndim == 0:
+                cpplower_bound = <double>lower_bound_arr
+            elif lower_bound_arr.shape == vshape:
+                mem = lower_bound_arr.ravel()
+                cpplower_bound.emplace[const_vector_double](&mem[0], (&mem[-1]) + 1)
+            else:
+                raise ValueError("lower_bound should be None, scalar, or the same shape")
 
+        if upper_bound is None:
+            cppupper_bound = nullopt
+        else:
+            # Allow users to input doubles
+            upper_bound_arr = np.asarray_chkfinite(upper_bound,
+                                                   dtype=np.double, order="C")
+            # For upper bounds, round down
+            upper_bound_arr = np.floor(upper_bound_arr).astype(np.double)
+            if upper_bound_arr.ndim == 0:
+                cppupper_bound = <double>upper_bound_arr
+            elif upper_bound_arr.shape == vshape:
+                mem = upper_bound_arr.ravel()
+                cppupper_bound.emplace[const_vector_double](&mem[0], (&mem[-1]) + 1)
+            else:
+                raise ValueError("upper bound should be None, scalar, or the same shape")
+
+        self.ptr = model._graph.emplace_node[IntegerNode](
+            vshape, cpplower_bound, cppupper_bound
+        )
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
@@ -198,33 +414,99 @@ cdef class IntegerVariable(ArraySymbol):
         with zf.open(directory + "shape.json", "r") as f:
             shape_info = json.load(f)
 
+        # needs to be compatible with older versions
+        try:
+            info = zf.getinfo(directory + "lower_bound.npy")
+        except KeyError:
+            lower_bound = shape_info["lb"]
+        else:
+            with zf.open(info, "r") as f:
+                lower_bound = np.load(f, allow_pickle=False)
+                if (lower_bound.size == 1):
+                    lower_bound = lower_bound[0]
+
+        # needs to be compatible with older versions
+        try:
+            info = zf.getinfo(directory + "upper_bound.npy")
+        except KeyError:
+            upper_bound = shape_info["ub"]
+        else:
+            with zf.open(info, "r") as f:
+                upper_bound = np.load(f, allow_pickle=False)
+                if (upper_bound.size == 1):
+                    upper_bound = upper_bound[0]
+
         return IntegerVariable(model,
                                shape=shape_info["shape"],
-                               lower_bound=shape_info["lb"],
-                               upper_bound=shape_info["ub"],
+                               lower_bound=lower_bound,
+                               upper_bound=upper_bound,
                                )
 
     def _into_zipfile(self, zf, directory):
-        # the additional data we want to encode
-
-        shape_info = dict(
-            shape=self.shape(),
-            lb=self.lower_bound(),
-            ub=self.upper_bound(),
-            )
-
+        shape_info = dict(shape=self.shape())
         encoder = json.JSONEncoder(separators=(',', ':'))
-
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
 
-    def lower_bound(self):
-        """The lowest value allowed for the integer symbol."""
-        return int(self.ptr.lower_bound())
+        lower_bound = np.array([self.lower_bound(i) for i in range(self.size())], dtype=np.double)
+        # if all values in the array are the same, simply save a scalar
+        if (np.all(lower_bound == lower_bound[0])):
+            lower_bound = lower_bound[:1]
+        else:
+            lower_bound = lower_bound.reshape(self.shape())
+        # NumPy serialization is overkill but it's type-safe
+        with zf.open(directory + "lower_bound.npy", mode="w", force_zip64=True) as f:
+            np.save(f, lower_bound, allow_pickle=False)
+
+        upper_bound = np.array([self.upper_bound(i) for i in range(self.size())], dtype=np.double)
+        # if all values in the array are the same, simply save a scalar
+        if (np.all(upper_bound == upper_bound[0])):
+            upper_bound = upper_bound[:1]
+        else:
+            upper_bound = upper_bound.reshape(self.shape())
+        # NumPy serialization is overkill but it's type-safe
+        with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
+            np.save(f, upper_bound, allow_pickle=False)
+
+    def lower_bound(self, Py_ssize_t index):
+        """The lowest value allowed for the integer symbol at the given index."""
+        return int(self.ptr.lower_bound(index))
 
     def set_state(self, Py_ssize_t index, state):
-        """Set the state of the integer node.
+        r"""Set the state of the integer symbol.
 
-        The given state must be integer array of the integer node shape.
+        The given state must be an integer array with the same shape as the
+        symbol.
+
+        Examples:
+            This example successfully sets one state for a :math:`2 \times
+            2`-sized integer symbol.
+
+            >>> from dwave.optimization.model import Model
+            >>> from dwave.optimization.symbols import IntegerVariable
+            >>> import numpy as np
+            ...
+            >>> model = Model()
+            >>> x = IntegerVariable(model, (2, 2), lower_bound=2, upper_bound=[[3,4], [2, 5]])
+            >>> model.states.resize(1)
+            >>> x.set_state(0, [[3, 4], [2, 3]])
+            >>> print(np.equal(x.state(0), [[3, 4], [2, 3]]).all())
+            True
+
+            This example unsuccessfully sets one state for a :math:`2 \times
+            2`-sized integer symbol since the state is outside the defined
+            bounds.
+
+            >>> from dwave.optimization.model import Model
+            >>> from dwave.optimization.symbols import IntegerVariable
+            >>> import numpy as np
+            ...
+            >>> model = Model()
+            >>> x = IntegerVariable(model, (2, 2), lower_bound=2, upper_bound=[[3,4], [2, 5]])
+            >>> model.states.resize(1)
+            >>> try:
+            ...     x.set_state(0, [[3, 4], [3, 3]])
+            >>> except ValueError:
+            ...     pass
         """
         # Convert the state into something we can handle in C++.
         # This also does some type checking etc
@@ -245,9 +527,9 @@ cdef class IntegerVariable(ArraySymbol):
         # The validity of the state is checked in C++
         self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
-    def upper_bound(self):
-        """The highest value allowed for the integer symbol."""
-        return int(self.ptr.upper_bound())
+    def upper_bound(self, Py_ssize_t index):
+        """The highest value allowed for the integer symbol at the given index."""
+        return int(self.ptr.upper_bound(index))
 
     # An observing pointer to the C++ IntegerNode
     cdef IntegerNode* ptr
