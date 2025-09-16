@@ -96,6 +96,7 @@ foreach name : [
     'accumulate_zip',
     'collections',
     'creation',
+    'flow',
     'lp',
     'manipulation',
     'reduce',

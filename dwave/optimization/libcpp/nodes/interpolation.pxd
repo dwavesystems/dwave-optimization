@@ -12,12 +12,13 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from libcpp.vector cimport vector
+
 from dwave.optimization.libcpp.graph cimport ArrayNode
 
 
-cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass ExtractNode(ArrayNode):
-        pass
-
-    cdef cppclass WhereNode(ArrayNode):
-        pass
+cdef extern from "dwave-optimization/nodes/interpolation.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass BSplineNode(ArrayNode):
+        int k()
+        vector[double] t()
+        vector[double] c()

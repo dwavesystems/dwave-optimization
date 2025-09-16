@@ -149,7 +149,6 @@ __all__ = [
     "BinaryVariable",
     "BSpline",
     "Constant",
-    "Extract",
     "Input",
     "IntegerVariable",
     "Mean",
@@ -160,7 +159,6 @@ __all__ = [
     "Permutation",
     "QuadraticModel",
     "SoftMax",
-    "Where",
     ]
 
 
@@ -834,23 +832,6 @@ cdef class Constant(ArraySymbol):
 _register(Constant, typeid(cppConstantNode))
 
 
-cdef class Extract(ArraySymbol):
-    """Return elements chosen from x or y depending on condition.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.where`: equivalent function.
-    """
-    def __init__(self, ArraySymbol condition, ArraySymbol arr):
-        cdef _Graph model = condition.model
-
-        if condition.model is not arr.model:
-            raise ValueError("condition and arr do not share the same underlying model")
-
-        cdef cppExtractNode* ptr = model._graph.emplace_node[cppExtractNode](
-            condition.array_ptr, arr.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Extract, typeid(cppExtractNode))
 
 
 cdef class Input(ArraySymbol):
@@ -1474,24 +1455,3 @@ cdef class SoftMax(ArraySymbol):
         self.initialize_arraynode(model, ptr)
 
 _register(SoftMax, typeid(cppSoftMaxNode))
-
-
-cdef class Where(ArraySymbol):
-    """Return elements chosen from x or y depending on condition.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.where`: equivalent function.
-    """
-    def __init__(self, ArraySymbol condition, ArraySymbol x, ArraySymbol y):
-        cdef _Graph model = condition.model
-
-        if condition.model is not x.model:
-            raise ValueError("condition and x do not share the same underlying model")
-        if condition.model is not y.model:
-            raise ValueError("condition and y do not share the same underlying model")
-
-        cdef cppWhereNode* ptr = model._graph.emplace_node[cppWhereNode](
-            condition.array_ptr, x.array_ptr, y.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Where, typeid(cppWhereNode))

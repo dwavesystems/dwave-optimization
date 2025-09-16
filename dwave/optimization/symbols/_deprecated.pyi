@@ -56,10 +56,6 @@ class Constant(ArraySymbol):
     def __le__(self, rhs: numpy.typing.ArrayLike) -> numpy.typing.NDArray[numpy.bool]: ...
 
 
-class Extract(ArraySymbol):
-    ...
-
-
 class Input(ArraySymbol):
     def integral(self) -> bool: ...
     def lower_bound(self) -> float: ...
@@ -94,8 +90,4 @@ class Permutation(ArraySymbol):
 
 
 class QuadraticModel(ArraySymbol):
-    ...
-
-
-class Where(ArraySymbol):
     ...
