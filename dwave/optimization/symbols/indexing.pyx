@@ -31,8 +31,8 @@ from dwave.optimization.libcpp.nodes.indexing cimport (
     BasicIndexingNode,
     PermutationNode,
 )
-from dwave.optimization.symbols._deprecated import Constant
 from dwave.optimization.symbols.collections import ListVariable
+from dwave.optimization.symbols.constants import Constant
 
 
 cdef bool _empty_slice(object slice_) noexcept:

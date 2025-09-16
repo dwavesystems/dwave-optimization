@@ -95,6 +95,7 @@ foreach name : [
     '_unaryop',
     'accumulate_zip',
     'collections',
+    'constants',
     'creation',
     'flow',
     'indexing',
