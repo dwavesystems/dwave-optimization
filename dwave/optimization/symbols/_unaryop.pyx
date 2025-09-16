@@ -16,9 +16,22 @@
 
 from cython.operator cimport typeid
 
+from dwave.optimization._model cimport _Graph, _register, ArraySymbol 
 from dwave.optimization.libcpp.graph cimport ArrayNode
-from dwave.optimization.libcpp.nodes.unaryop cimport *
-from dwave.optimization._model cimport ArraySymbol, _register, _Graph
+from dwave.optimization.libcpp.nodes.unaryop cimport (
+    AbsoluteNode,
+    CosNode,
+    ExpNode,
+    ExpitNode,
+    LogNode,
+    LogicalNode,
+    NegativeNode,
+    NotNode,
+    RintNode,
+    SinNode,
+    SquareNode,
+    SquareRootNode,
+)
 
 # We need to be able to expose the available node types to the Python level,
 # so unfortunately we need this enum and giant if-branches

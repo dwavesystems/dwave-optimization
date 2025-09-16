@@ -19,8 +19,6 @@ from cython.operator cimport typeid
 from dwave.optimization._model cimport _Graph, _register, ArraySymbol, Symbol
 from dwave.optimization.libcpp.nodes.testing cimport ArrayValidationNode
 
-__all__ = ["_ArrayValidation"]
-
 
 cdef class _ArrayValidation(Symbol):
     def __init__(self, ArraySymbol array_node):

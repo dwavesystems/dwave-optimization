@@ -25,8 +25,6 @@ from dwave.optimization.libcpp cimport dynamic_cast_ptr, get, holds_alternative
 from dwave.optimization.libcpp.graph cimport ArrayNode
 from dwave.optimization.libcpp.nodes.lambda_ cimport AccumulateZipNode
 
-__all__ = ["AccumulateZip"]
-
 
 cdef class AccumulateZip(ArraySymbol):
     """Using a supplied :class:`~dwave.optimization.model.Expression`, perform

@@ -20,12 +20,18 @@ import numpy as np
 
 from cython.operator cimport typeid
 
+from dwave.optimization._model cimport _Graph, _register, ArraySymbol, Symbol
+from dwave.optimization._utilities cimport as_span
 from dwave.optimization.libcpp cimport dynamic_cast_ptr
 from dwave.optimization.libcpp.graph cimport ArrayNode
-from dwave.optimization.libcpp.nodes.lp cimport *
-from dwave.optimization._model cimport ArraySymbol, _Graph, _register, Symbol
+from dwave.optimization.libcpp.nodes.lp cimport (
+    LinearProgramFeasibleNode,
+    LinearProgramNode,
+    LinearProgramNodeBase,
+    LinearProgramObjectiveValueNode,
+    LinearProgramSolutionNode,
+)
 from dwave.optimization.states cimport States
-from dwave.optimization._utilities cimport as_span
 
 
 cdef class LinearProgram(Symbol):
