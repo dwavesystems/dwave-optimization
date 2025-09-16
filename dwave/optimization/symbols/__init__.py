@@ -26,7 +26,9 @@ from dwave.optimization.symbols.manipulation import *
 from dwave.optimization.symbols.naryop import *
 from dwave.optimization.symbols.numbers import *
 from dwave.optimization.symbols.reduce import *
+from dwave.optimization.symbols.softmax import *
 from dwave.optimization.symbols.sorting import *
+from dwave.optimization.symbols.statistics import *
 from dwave.optimization.symbols.testing import *
 from dwave.optimization.symbols.unaryop import *
 

@@ -145,9 +145,7 @@ from dwave.optimization._utilities cimport as_cppshape, as_span
 __all__ = [
     "BSpline",
     "Input",
-    "Mean",
     "QuadraticModel",
-    "SoftMax",
     ]
 
 
@@ -328,36 +326,6 @@ cdef class Input(ArraySymbol):
     cdef cppInputNode* ptr
 
 _register(Input, typeid(cppInputNode))
-
-
-cdef class Mean(ArraySymbol):
-    """Mean value of the elements of a symbol. If symbol is empty, 
-        mean defaults to 0.0.
-
-    See Also:
-        :meth:`~dwave.optimization.mathematical.mean`: equivalent method.
-
-    .. versionadded:: 0.6.4
-    """
-    def __init__(self, ArraySymbol arr):
-        cdef _Graph model = arr.model
-
-        self.ptr = model._graph.emplace_node[cppMeanNode](arr.array_ptr)
-        self.initialize_arraynode(model, self.ptr)
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppMeanNode* ptr = dynamic_cast_ptr[cppMeanNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef Mean x = Mean.__new__(Mean)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
-
-    cdef cppMeanNode* ptr
-
-_register(Mean, typeid(cppMeanNode))
 
 
 cdef class QuadraticModel(ArraySymbol):
@@ -576,20 +544,3 @@ cdef class QuadraticModel(ArraySymbol):
     cdef cppQuadraticModelNode* ptr
 
 _register(QuadraticModel, typeid(cppQuadraticModelNode))
-
-
-cdef class SoftMax(ArraySymbol):
-    """Softmax of a symbol.
-
-    See Also:
-        :meth:`~dwave.optimization.mathematical.softmax`: equivalent method.
-
-    .. versionadded:: 0.6.5
-    """
-    def __init__(self, ArraySymbol arr):
-        cdef _Graph model = arr.model
-
-        cdef cppSoftMaxNode* ptr = model._graph.emplace_node[cppSoftMaxNode](arr.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(SoftMax, typeid(cppSoftMaxNode))

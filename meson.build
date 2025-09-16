@@ -104,7 +104,9 @@ foreach name : [
     'naryop',
     'numbers',
     'reduce',
+    'softmax',
     'sorting',
+    'statistics',
     'testing',
 ]
     py.extension_module(
