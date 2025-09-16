@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <concepts>
 #include <iosfwd>
 #include <numeric>
@@ -69,6 +70,10 @@ class fraction {
         rhs *= lhs;
         return rhs;
     }
+    constexpr friend fraction operator*(const fraction lhs, fraction rhs) noexcept {
+        rhs *= lhs;
+        return rhs;
+    }
     constexpr fraction& operator/=(const std::integral auto n) {
         if (!n) throw std::invalid_argument("cannot divide by 0");
         denominator_ *= n;
@@ -88,9 +93,36 @@ class fraction {
     constexpr friend fraction operator+(const fraction& lhs, const std::integral auto& rhs) {
         return lhs + fraction(rhs);
     }
-    constexpr friend fraction operator+(const std::integral auto& lhs, fraction& rhs) {
+    constexpr friend fraction operator+(const std::integral auto& lhs, const fraction& rhs) {
         return fraction(lhs) + rhs;
     }
+
+    // fractions can be added inplace
+    constexpr fraction& operator+=(const std::integral auto n) noexcept {
+        this->operator+=(fraction(n));
+        return *this;
+    }
+
+    constexpr fraction& operator+=(const fraction& other) noexcept {
+        this->numerator_ =
+                this->numerator_ * other.denominator_ + other.numerator_ * this->denominator_;
+        this->denominator_ *= other.denominator_;
+        reduce();
+        return *this;
+    }
+
+    // fractions can be subtracted inplace
+    constexpr fraction& operator-=(const std::integral auto n) noexcept {
+        this->operator-=(fraction(n));
+        return *this;
+    }
+
+    constexpr fraction& operator-=(const fraction& other) noexcept {
+        this->operator+=(fraction(-other.numerator_, other.denominator_));
+        return *this;
+    }
+
+    operator bool() const { return numerator_; }
 
     /// Fractions can be printed
     friend std::ostream& operator<<(std::ostream& os, const fraction& rhs);
@@ -100,6 +132,15 @@ class fraction {
 
     constexpr const ssize_t& numerator() const noexcept { return numerator_; }
     constexpr const ssize_t& denominator() const noexcept { return denominator_; }
+
+    ssize_t ceil() {
+        assert(denominator_ > 0);
+        if (numerator_ >= 0) {
+            return (numerator_ / denominator_) + ((numerator_ % denominator_) > 0);
+        } else {
+            return numerator_ / denominator_;
+        }
+    }
 
  private:
     constexpr void reduce() noexcept {

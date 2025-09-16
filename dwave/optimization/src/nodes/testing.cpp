@@ -199,8 +199,7 @@ void ArrayValidationNode::propagate(State& state) const {
         // reported multiplier/offset are correct
 
         [[maybe_unused]] auto predicted_size = [&state](const SizeInfo& sizeinfo) -> ssize_t {
-            ssize_t size = static_cast<ssize_t>(
-                    sizeinfo.multiplier * sizeinfo.array_ptr->size(state) + sizeinfo.offset);
+            ssize_t size = (sizeinfo.multiplier * (fraction(sizeinfo.array_ptr->size(state)) + sizeinfo.offset)).ceil();
             size = std::max(size, sizeinfo.min.value_or(0));
             if (sizeinfo.max) size = std::min(size, *sizeinfo.max);
             return size;

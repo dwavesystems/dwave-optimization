@@ -56,6 +56,9 @@ struct SizeInfo {
     friend bool operator==(const SizeInfo& lhs, const std::integral auto rhs) {
         return lhs.multiplier == 0 && lhs.offset == rhs;
     }
+    friend bool operator==(const SizeInfo& lhs, const fraction rhs) {
+        return lhs.multiplier == 0 && lhs.offset == rhs;
+    }
     bool operator==(const SizeInfo& other) const;
 
     // SizeInfos are printable
@@ -66,7 +69,7 @@ struct SizeInfo {
     const Array* array_ptr;
 
     fraction multiplier;
-    ssize_t offset;
+    fraction offset;
 
     std::optional<ssize_t> min;
     std::optional<ssize_t> max;

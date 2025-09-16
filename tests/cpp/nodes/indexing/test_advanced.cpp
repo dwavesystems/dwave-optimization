@@ -636,7 +636,8 @@ TEST_CASE("AdvancedIndexingNode") {
 
                 THEN("We can read out the state of the nodes") {
                     CHECK(std::ranges::equal(arr_ptr->view(state), values));
-                    CHECK_THAT(adv->view(state), RangeEquals({81, 85, 89, 93, 97, 22, 26, 30, 34, 38}));
+                    CHECK_THAT(adv->view(state),
+                               RangeEquals({81, 85, 89, 93, 97, 22, 26, 30, 34, 38}));
                 }
             }
         }
@@ -775,7 +776,8 @@ TEST_CASE("AdvancedIndexingNode") {
 
                     THEN("The state has the expected values and the diff is correct") {
                         CHECK(adv->size(state) == 8);
-                        CHECK_THAT(adv->view(state), RangeEquals({36, 37, 38, 39, 116, 117, 118, 119}));
+                        CHECK_THAT(adv->view(state),
+                                   RangeEquals({36, 37, 38, 39, 116, 117, 118, 119}));
                     }
 
                     AND_WHEN("We shrink the indexing nodes and propagate") {

@@ -1159,7 +1159,7 @@ double const* BasicIndexingNode::buff(const State& state) const {
     }
 
     const auto node_data = data_ptr<BasicIndexingNodeData>(state);
-    return array_ptr_->buff(state) + start_ + dynamic_start(node_data->fitted_first_slice.start);
+    return array_ptr_->buff(state) + start_ + node_data->fitted_first_slice.start;
 }
 
 void BasicIndexingNode::commit(State& state) const {
@@ -1533,7 +1533,7 @@ void BasicIndexingNode::propagate(State& state) const {
         }
         assert(static_cast<ssize_t>(shape_strides.size()) == this->ndim());
 
-        const ssize_t start = this->start_;
+        const ssize_t start = this->start_ + (dynamic() ? this->axis0_slice_->start : 0);
         assert(array_ptr_->contiguous());
 
         // A few sanity checks...

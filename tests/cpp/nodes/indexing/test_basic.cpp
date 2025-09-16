@@ -750,6 +750,43 @@ TEST_CASE("BasicIndexingNode") {
         }
     }
 
+    GIVEN("x = Set(10); y = x[1::3]") {
+        auto x_ptr = graph.emplace_node<SetNode>(10);
+        auto y_ptr = graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(1, std::nullopt, 3));
+
+        graph.emplace_node<ArrayValidationNode>(x_ptr);
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+
+        auto state = graph.empty_state();
+        x_ptr->initialize_state(state, {});
+        graph.initialize_state(state);
+
+        THEN("We get the default states we expect") {
+            REQUIRE(x_ptr->size(state) == 0);
+            CHECK(y_ptr->size(state) == 0);
+
+            AND_WHEN("We grow the set") {
+                x_ptr->assign(state, {0, 1, 2});
+                graph.propagate(state);
+                graph.commit(state);
+
+                THEN("The state is as expected") {
+                    CHECK_THAT(y_ptr->view(state), RangeEquals({1}));
+                }
+
+                AND_WHEN("We shrink back to nothing") {
+                    x_ptr->assign(state, {});
+                    graph.propagate(state);
+                    graph.commit(state);
+
+                    THEN("The state is as expected") {
+                        CHECK(y_ptr->size(state) == 0);
+                    }
+                }
+            }
+        }
+    }
+
     GIVEN("x = Binary((3, 3)); y = x[::2, 1:]") {
         auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{3, 3});
         auto y_ptr = graph.emplace_node<BasicIndexingNode>(
