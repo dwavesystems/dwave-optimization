@@ -69,22 +69,6 @@ class IntegerVariable(ArraySymbol):
     def upper_bound(self) -> float: ...
 
 
-class NaryAdd(ArraySymbol):
-    ...
-
-
-class NaryMaximum(ArraySymbol):
-    ...
-
-
-class NaryMinimum(ArraySymbol):
-    ...
-
-
-class NaryMultiply(ArraySymbol):
-    ...
-
-
 class Permutation(ArraySymbol):
     ...
 

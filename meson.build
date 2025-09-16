@@ -99,6 +99,7 @@ foreach name : [
     'flow',
     'lp',
     'manipulation',
+    'naryop',
     'reduce',
     'testing',
 ]
