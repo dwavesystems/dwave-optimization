@@ -96,6 +96,7 @@ foreach name : [
     'accumulate_zip',
     'lp',
     'reduce',
+    'testing',
 ]
     py.extension_module(
         name,

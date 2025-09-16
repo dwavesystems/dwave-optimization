@@ -176,17 +176,6 @@ __all__ = [
     "Where",
     ]
 
-
-cdef class _ArrayValidation(Symbol):
-    def __init__(self, ArraySymbol array_node):
-        cdef _Graph model = array_node.model
-
-        cdef cppArrayValidationNode* ptr = model._graph.emplace_node[cppArrayValidationNode](array_node.array_ptr)
-        self.initialize_node(model, ptr)
-
-_register(_ArrayValidation, typeid(cppArrayValidationNode))
-
-
 ctypedef fused _start_type:
     ArraySymbol
     Py_ssize_t

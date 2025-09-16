@@ -13,12 +13,12 @@
 #    limitations under the License.
 
 from dwave.optimization.symbols._deprecated import *
-from dwave.optimization.symbols._deprecated import _ArrayValidation
 
 from dwave.optimization.symbols.accumulate_zip import *
 from dwave.optimization.symbols.binaryop import *
 from dwave.optimization.symbols.lp import *
 from dwave.optimization.symbols.reduce import *
+from dwave.optimization.symbols.testing import *
 from dwave.optimization.symbols.unaryop import *
 
 
