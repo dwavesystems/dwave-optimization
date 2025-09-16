@@ -21,14 +21,6 @@ from dwave.optimization.model import Symbol, ArraySymbol
 __all__: list[str]
 
 
-class AdvancedIndexing(ArraySymbol):
-    ...
-
-
-class BasicIndexing(ArraySymbol):
-    ...
-
-
 class BinaryVariable(ArraySymbol):
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
 
@@ -67,10 +59,6 @@ class IntegerVariable(ArraySymbol):
     def lower_bound(self) -> float: ...
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
     def upper_bound(self) -> float: ...
-
-
-class Permutation(ArraySymbol):
-    ...
 
 
 class QuadraticModel(ArraySymbol):

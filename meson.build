@@ -97,6 +97,7 @@ foreach name : [
     'collections',
     'creation',
     'flow',
+    'indexing',
     'lp',
     'manipulation',
     'naryop',
