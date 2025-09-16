@@ -103,6 +103,7 @@ foreach name : [
     'manipulation',
     'naryop',
     'numbers',
+    'quadratic_model',
     'reduce',
     'softmax',
     'sorting',
