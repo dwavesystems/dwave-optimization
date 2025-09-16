@@ -663,10 +663,6 @@ cdef class ArgSort(ArraySymbol):
 _register(ArgSort, typeid(cppArgSortNode))
 
 
-cdef bool _empty_slice(object slice_) noexcept:
-    return slice_.start is None and slice_.stop is None and slice_.step is None
-
-
 cdef class AdvancedIndexing(ArraySymbol):
     """Advanced indexing.
 
@@ -711,35 +707,50 @@ cdef class AdvancedIndexing(ArraySymbol):
 
         array = next(self.iter_predecessors())
 
-        if (
-            isinstance(array, Constant)
-            and array.ndim() == 2
-            and array.shape()[0] == array.shape()[1]  # square matrix
-            and self.ptr.indices().size() == 2
-            and isinstance(index, tuple)
-            and len(index) == 2
-        ):
-            i0, i1 = index
-
-            # check the [x, :][:, x] case
-            if (isinstance(i0, slice) and _empty_slice(i0) and
-                    isinstance(i1, ArraySymbol) and
-                    holds_alternative[cppArrayNodePtr](self.ptr.indices()[0]) and
-                    get[cppArrayNodePtr](self.ptr.indices()[0]) == (<ArraySymbol>i1).array_ptr and
-                    holds_alternative[cppSlice](self.ptr.indices()[1])):
-
-                return Permutation(array, i1)
-
-            # check the [:, x][x, :] case
-            if (isinstance(i1, slice) and _empty_slice(i1) and
-                    isinstance(i0, ArraySymbol) and
-                    holds_alternative[cppArrayNodePtr](self.ptr.indices()[1]) and
-                    get[cppArrayNodePtr](self.ptr.indices()[1]) == (<ArraySymbol>i0).array_ptr and
-                    holds_alternative[cppSlice](self.ptr.indices()[0])):
-
-                return Permutation(array, i0)
+        if (perm := self._check_permutation(index)) is not None:
+            return perm
 
         return super().__getitem__(index)
+
+    cdef object _check_permutation(self, index):
+        """Return a Permutation symbol if the indexing the symbol results in
+        a permutation, otherwise return None.
+        """
+
+        # The indexed array must be a Constant square matrix
+        array =  next(self.iter_predecessors())
+        if not isinstance(array, Constant):
+            return None
+        if array.ndim() != 2 or array.shape()[0] != array.shape()[1]:
+            return None
+
+        # The total operation must of the form A[i0, i1][i2, i3]
+
+        i0, i1 = self._iter_indices()
+        i2, i3 = index if isinstance(index, tuple) else (index, slice(None, None, None))
+
+        # It also must be of the form A[outer, inner][inner, outer]
+
+        if (
+            isinstance(i0, slice) and isinstance(i3, slice)  # outer is a slice
+            and i0 == i3 and i0 == slice(None)  # and those slices are empty
+            and isinstance(i1, ArraySymbol) and isinstance(i2, ArraySymbol)  # inner is an array
+            and i1.id() == i2.id()  # and those arrays are the same array
+            and i1.shape() == (array.shape()[0],)  # and the shape of the array is correct
+        ):
+            return Permutation(array, i1)
+
+        if (
+            isinstance(i1, slice) and isinstance(i2, slice)  # inner is a slice
+            and i1 == i2 and i1 == slice(None)  # and those slices are empty
+            and isinstance(i0, ArraySymbol) and isinstance(i3, ArraySymbol)  # outer is an array
+            and i0.id() == i3.id()  # and those arrays are the same array
+            and i0.shape() == (array.shape()[0],)  # and the shape of the array is correct
+        ):
+            return Permutation(array, i0)
+
+        return None
+
 
     @classmethod
     def _from_symbol(cls, Symbol symbol):
@@ -790,6 +801,17 @@ cdef class AdvancedIndexing(ArraySymbol):
                 raise RuntimeError
 
         zf.writestr(directory + "indices.json", encoder.encode(indices))
+
+    def _iter_indices(self):
+        for variant in self.ptr.indices():
+            if holds_alternative[cppSlice](variant):
+                cppslice = <cppSlice>get[cppSlice](variant)
+                yield slice(None)
+            elif holds_alternative[cppArrayNodePtr](variant):
+                array_ptr = <cppArrayNodePtr>get[cppArrayNodePtr](variant)
+                yield symbol_from_ptr(self.model, array_ptr)
+            else:
+                raise RuntimeError("unexpected variant contents")
 
     cdef cppAdvancedIndexingNode* ptr
 
@@ -3511,10 +3533,7 @@ cdef class Permutation(ArraySymbol):
         >>> type(p)
         <class 'dwave.optimization.symbols.Permutation'>
     """
-    def __init__(self, Constant array, ListVariable x):
-        # todo: Loosen the types accepted. But this Cython code doesn't yet have
-        # the type heirarchy needed so for how we specify explicitly
-
+    def __init__(self, Constant array, ArraySymbol x):
         if array.model is not x.model:
             raise ValueError("array and x do not share the same underlying model")
 
