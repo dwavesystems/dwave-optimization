@@ -99,6 +99,7 @@ foreach name : [
     'creation',
     'flow',
     'indexing',
+    'inputs',
     'lp',
     'manipulation',
     'naryop',

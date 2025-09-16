@@ -21,6 +21,7 @@ from dwave.optimization.symbols.constants import *
 from dwave.optimization.symbols.creation import *
 from dwave.optimization.symbols.flow import *
 from dwave.optimization.symbols.indexing import *
+from dwave.optimization.symbols.inputs import *
 from dwave.optimization.symbols.lp import *
 from dwave.optimization.symbols.manipulation import *
 from dwave.optimization.symbols.naryop import *
