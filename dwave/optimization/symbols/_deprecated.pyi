@@ -64,22 +64,6 @@ class Copy(ArraySymbol):
     ...
 
 
-class DisjointBitSets(Symbol):
-    def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
-
-
-class DisjointBitSet(ArraySymbol):
-    ...
-
-
-class DisjointLists(Symbol):
-    def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
-
-
-class DisjointList(ArraySymbol):
-    ...
-
-
 class Extract(ArraySymbol):
     ...
 
@@ -95,10 +79,6 @@ class IntegerVariable(ArraySymbol):
     def lower_bound(self) -> float: ...
     def set_state(self, index: int, state: numpy.typing.ArrayLike): ...
     def upper_bound(self) -> float: ...
-
-
-class ListVariable(ArraySymbol):
-    def set_state(self, index: int, values: numpy.typing.ArrayLike): ...
 
 
 class NaryAdd(ArraySymbol):
@@ -131,10 +111,6 @@ class Reshape(ArraySymbol):
 
 class Resize(ArraySymbol):
     ...
-
-
-class SetVariable(ArraySymbol):
-    def set_state(self, index: int, values: numpy.typing.ArrayLike): ...
 
 
 class Size(ArraySymbol):

@@ -94,6 +94,7 @@ foreach name : [
     '_binaryop',
     '_unaryop',
     'accumulate_zip',
+    'collections',
     'creation',
     'lp',
     'reduce',
