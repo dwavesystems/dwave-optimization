@@ -147,11 +147,8 @@ __all__ = [
     "ArgSort",
     "BasicIndexing",
     "BinaryVariable",
-    "BroadcastTo",
     "BSpline",
-    "Concatenate",
     "Constant",
-    "Copy",
     "Extract",
     "Input",
     "IntegerVariable",
@@ -161,11 +158,7 @@ __all__ = [
     "NaryMinimum",
     "NaryMultiply",
     "Permutation",
-    "Put",
     "QuadraticModel",
-    "Reshape",
-    "Resize",
-    "Size",
     "SoftMax",
     "Where",
     ]
@@ -533,43 +526,6 @@ cdef class BinaryVariable(ArraySymbol):
 _register(BinaryVariable, typeid(cppBinaryNode))
 
 
-cdef class BroadcastTo(ArraySymbol):
-    """BroadcastTo symbol.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.broadcast_to`: equivalent function.
-
-    .. versionadded:: 0.6.5
-    """
-    def __init__(self, ArraySymbol node, shape):
-        cdef _Graph model = node.model
-
-        cdef cppBroadcastToNode* ptr = model._graph.emplace_node[cppBroadcastToNode](
-            node.array_ptr,
-            as_cppshape(shape, nonnegative=False),
-        )
-
-        self.initialize_arraynode(model, ptr)
-
-    @classmethod
-    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        if len(predecessors) != 1:
-            raise ValueError(f"{cls.__name__} must have exactly one predecessor")
-
-        with zf.open(directory + "shape.json", "r") as f:
-            return BroadcastTo(*predecessors, json.load(f))
-
-    def _into_zipfile(self, zf, directory):
-        encoder = json.JSONEncoder(separators=(',', ':'))
-        zf.writestr(directory + "shape.json", encoder.encode(self.shape()))
-
-    def state_size(self):
-        """Broadcasting symbols are stateless"""
-        return 0
-
-_register(BroadcastTo, typeid(cppBroadcastToNode))
-
-
 cdef class BSpline(ArraySymbol):
     """Bspline node that takes in an array pointer, an integer degree and two vectors for knots and coefficients.
 
@@ -645,64 +601,6 @@ cdef class BSpline(ArraySymbol):
     cdef cppBSplineNode * ptr
 
 _register(BSpline, typeid(cppBSplineNode))
-
-
-cdef class Concatenate(ArraySymbol):
-    """Concatenate symbol.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.concatenate()` equivalent function.
-
-    .. versionadded:: 0.4.3
-    """
-    def __init__(self, object inputs, Py_ssize_t axis = 0):
-        if (not isinstance(inputs, collections.abc.Sequence) or
-                not all(isinstance(arr, ArraySymbol) for arr in inputs)):
-            raise TypeError("concatenate takes a sequence of array symbols")
-
-        if len(inputs) < 1:
-            raise ValueError("need at least one array symbol to concatenate")
-
-        cdef _Graph model = inputs[0].model
-        cdef vector[cppArrayNode*] cppinputs
-
-        for symbol in inputs:
-            if symbol.model is not model:
-                raise ValueError("all predecessors must be from the same model")
-            cppinputs.push_back((<ArraySymbol?>symbol).array_ptr)
-
-        self.ptr = model._graph.emplace_node[cppConcatenateNode](cppinputs, axis)
-        self.initialize_arraynode(model, self.ptr)
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppConcatenateNode* ptr = dynamic_cast_ptr[cppConcatenateNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-
-        cdef Concatenate m = Concatenate.__new__(Concatenate)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
-
-    @classmethod
-    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        if len(predecessors) < 1:
-            raise ValueError("Concatenate must have at least one predecessor")
-
-        with zf.open(directory + "axis.json", "r") as f:
-            return Concatenate(tuple(predecessors), axis=json.load(f))
-
-    def _into_zipfile(self, zf, directory):
-        encoder = json.JSONEncoder(separators=(',', ':'))
-        zf.writestr(directory + "axis.json", encoder.encode(self.axis()))
-
-    def axis(self):
-        return self.ptr.axis()
-
-    cdef cppConcatenateNode* ptr
-
-_register(Concatenate, typeid(cppConcatenateNode))
 
 
 cdef extern from *:
@@ -934,23 +832,6 @@ cdef class Constant(ArraySymbol):
     cdef cppConstantNode* ptr
 
 _register(Constant, typeid(cppConstantNode))
-
-
-cdef class Copy(ArraySymbol):
-    """An array symbol that is a copy of another array symbol.
-
-    See Also:
-        :meth:`ArraySymbol.copy` Equivalent method.
-
-    .. versionadded:: 0.5.1
-    """
-    def __init__(self, ArraySymbol node):
-        cdef _Graph model = node.model
-
-        cdef cppCopyNode* ptr = model._graph.emplace_node[cppCopyNode](node.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Copy, typeid(cppCopyNode))
 
 
 cdef class Extract(ArraySymbol):
@@ -1360,29 +1241,6 @@ cdef class Permutation(ArraySymbol):
 _register(Permutation, typeid(cppPermutationNode))
 
 
-cdef class Put(ArraySymbol):
-    """A symbol that replaces the specified elements in an array with given values.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.put`: equivalent function.
-
-    .. versionadded:: 0.4.4
-    """
-    def __init__(self, ArraySymbol array, ArraySymbol indices, ArraySymbol values):
-        cdef _Graph model = array.model
-
-        if indices.model is not model or values.model is not model:
-            raise ValueError(
-                "array, indices, and values do not all share the same underlying model"
-            )
-
-        cdef cppPutNode* ptr = model._graph.emplace_node[cppPutNode](
-            array.array_ptr, indices.array_ptr, values.array_ptr)
-        self.initialize_arraynode(model, ptr)
-
-_register(Put, typeid(cppPutNode))
-
-
 cdef class QuadraticModel(ArraySymbol):
     """Quadratic model."""
     def __init__(self, ArraySymbol x, quadratic, linear=None):
@@ -1599,123 +1457,6 @@ cdef class QuadraticModel(ArraySymbol):
     cdef cppQuadraticModelNode* ptr
 
 _register(QuadraticModel, typeid(cppQuadraticModelNode))
-
-
-cdef class Reshape(ArraySymbol):
-    """Reshaped symbol.
-
-    See Also:
-        :meth:`ArraySymbol.reshape() <dwave.optimization.model.ArraySymbol.reshape>`: equivalent method.
-
-    .. versionadded:: 0.5.1
-    """
-    def __init__(self, ArraySymbol node, shape):
-        cdef _Graph model = node.model
-
-        self.ptr = model._graph.emplace_node[cppReshapeNode](
-            node.array_ptr,
-            as_cppshape(shape, nonnegative=False),
-            )
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppReshapeNode* ptr = dynamic_cast_ptr[cppReshapeNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-
-        cdef Reshape m = Reshape.__new__(Reshape)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
-
-    @classmethod
-    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        if len(predecessors) != 1:
-            raise ValueError("Reshape must have exactly one predecessor")
-
-        with zf.open(directory + "shape.json", "r") as f:
-            return Reshape(*predecessors, json.load(f))
-
-    def _into_zipfile(self, zf, directory):
-        encoder = json.JSONEncoder(separators=(',', ':'))
-        zf.writestr(directory + "shape.json", encoder.encode(self.shape()))
-
-    cdef cppReshapeNode* ptr
-
-_register(Reshape, typeid(cppReshapeNode))
-
-
-cdef class Resize(ArraySymbol):
-    """Resize symbol.
-
-    See also:
-        :func:`~dwave.optimization.mathematical.resize`: equivalent function.
-
-        :meth:`ArraySymbol.resize() <dwave.optimization.model.ArraySymbol.resize>`: equivalent method.
-
-    .. versionadded:: 0.6.4
-    """
-    def __init__(self, ArraySymbol symbol, shape, fill_value=None):
-        cdef _Graph model = symbol.model
-
-        if fill_value is None:
-            self.ptr = model._graph.emplace_node[cppResizeNode](
-                symbol.array_ptr,
-                as_cppshape(shape, nonnegative=True),
-            )
-        else:
-            self.ptr = model._graph.emplace_node[cppResizeNode](
-                symbol.array_ptr,
-                as_cppshape(shape, nonnegative=True),
-                <double>fill_value,
-            )
-
-        self.initialize_arraynode(model, self.ptr)
-
-    @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef cppResizeNode* ptr = dynamic_cast_ptr[cppResizeNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-
-        cdef Resize m = Resize.__new__(Resize)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
-
-    @classmethod
-    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        if len(predecessors) != 1:
-            raise ValueError("Resize must have exactly one predecessor")
-
-        with zf.open(directory + "shape.json", "r") as f:
-            shape = json.load(f)
-        with zf.open(directory + "fill_value.npy", "r") as f:
-            fill_value = np.load(f)
-
-        return Resize(*predecessors, shape, fill_value)
-
-    def _into_zipfile(self, zf, directory):
-        encoder = json.JSONEncoder(separators=(',', ':'))
-        zf.writestr(directory + "shape.json", encoder.encode(self.shape()))
-        with zf.open(directory + "fill_value.npy", mode="w", force_zip64=True) as f:
-            np.save(f, self.ptr.fill_value(), allow_pickle=False)
-
-    cdef cppResizeNode* ptr
-
-_register(Resize, typeid(cppResizeNode))
-
-
-cdef class Size(ArraySymbol):
-    def __init__(self, ArraySymbol array):
-        cdef _Graph model = array.model
-
-        cdef cppSizeNode* ptr = model._graph.emplace_node[cppSizeNode](array.array_ptr)
-        self.initialize_arraynode(array.model, ptr)
-
-_register(Size, typeid(cppSizeNode))
 
 
 cdef class SoftMax(ArraySymbol):

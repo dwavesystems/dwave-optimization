@@ -97,6 +97,7 @@ foreach name : [
     'collections',
     'creation',
     'lp',
+    'manipulation',
     'reduce',
     'testing',
 ]

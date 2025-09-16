@@ -37,10 +37,6 @@ class BSpline(ArraySymbol):
     ...
 
 
-class Concatenate(ArraySymbol):
-    ...
-
-
 class Constant(ArraySymbol):
     def __bool__(self) -> bool: ...
     def __index__(self) -> int: ...
@@ -58,10 +54,6 @@ class Constant(ArraySymbol):
     def __le__(self, rhs: ArraySymbol) -> LessEqual: ...
     @typing.overload
     def __le__(self, rhs: numpy.typing.ArrayLike) -> numpy.typing.NDArray[numpy.bool]: ...
-
-
-class Copy(ArraySymbol):
-    ...
 
 
 class Extract(ArraySymbol):
@@ -102,18 +94,6 @@ class Permutation(ArraySymbol):
 
 
 class QuadraticModel(ArraySymbol):
-    ...
-
-
-class Reshape(ArraySymbol):
-    ...
-
-
-class Resize(ArraySymbol):
-    ...
-
-
-class Size(ArraySymbol):
     ...
 
 
