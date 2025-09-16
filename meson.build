@@ -101,6 +101,7 @@ foreach name : [
     'lp',
     'manipulation',
     'naryop',
+    'numbers',
     'reduce',
     'testing',
 ]

@@ -23,6 +23,7 @@ from dwave.optimization.symbols.indexing import *
 from dwave.optimization.symbols.lp import *
 from dwave.optimization.symbols.manipulation import *
 from dwave.optimization.symbols.naryop import *
+from dwave.optimization.symbols.numbers import *
 from dwave.optimization.symbols.reduce import *
 from dwave.optimization.symbols.testing import *
 from dwave.optimization.symbols.unaryop import *
