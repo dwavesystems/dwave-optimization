@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave Systems Inc.
+# Copyright 2025 D-Wave
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,14 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import typing
+from dwave.optimization.model import ArraySymbol as _ArraySymbol
 
-import numpy.typing
-
-from dwave.optimization.model import Symbol, ArraySymbol
-
-__all__: list[str]
-
-
-class BSpline(ArraySymbol):
-    ...
+class BSpline(_ArraySymbol): ...

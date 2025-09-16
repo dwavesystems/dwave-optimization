@@ -12,8 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.symbols._deprecated import *
-
 from dwave.optimization.symbols.accumulate_zip import *
 from dwave.optimization.symbols.binaryop import *
 from dwave.optimization.symbols.collections import *
@@ -22,6 +20,7 @@ from dwave.optimization.symbols.creation import *
 from dwave.optimization.symbols.flow import *
 from dwave.optimization.symbols.indexing import *
 from dwave.optimization.symbols.inputs import *
+from dwave.optimization.symbols.interpolation import *
 from dwave.optimization.symbols.lp import *
 from dwave.optimization.symbols.manipulation import *
 from dwave.optimization.symbols.naryop import *

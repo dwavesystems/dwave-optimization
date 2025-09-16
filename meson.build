@@ -90,7 +90,6 @@ else
 endif
 
 foreach name : [
-    '_deprecated',
     '_binaryop',
     '_unaryop',
     'accumulate_zip',
@@ -100,6 +99,7 @@ foreach name : [
     'flow',
     'indexing',
     'inputs',
+    'interpolation',
     'lp',
     'manipulation',
     'naryop',
