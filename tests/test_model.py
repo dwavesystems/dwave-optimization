@@ -361,6 +361,22 @@ class TestModel(unittest.TestCase):
         model.minimize(model.constant([[7]]))
         self.assertEqual(model.objective.state(), 7)
 
+    def test_objective(self):
+        model = Model()
+
+        x = model.list(5)
+        model.objective = x.sum()  # the same as minimize
+        model.objective += 1
+
+        # setting in this way should survive serialization
+        with model.to_file() as f:
+            copy = model.from_file(f)
+        self.assertIs(type(model.objective), type(copy.objective))
+
+        # It cannot be set to the wrong type
+        with self.assertRaises(TypeError):
+            model.objective = "hello"
+
     def test_remove_unused_symbols(self):
         with self.subTest("all unused"):
             model = Model()
