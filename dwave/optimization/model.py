@@ -119,28 +119,6 @@ class Model(_Graph):
         >>> model = flow_shop_scheduling(processing_times=processing_times)
     """
 
-    objective: typing.Optional[ArraySymbol]
-    """Objective to be minimized.
-
-    Examples:
-        This example prints the value of the objective of a model representing
-        the simple polynomial, :math:`y = i^2 - 4i`, for a state with value
-        :math:`i=2.0`.
-
-        >>> from dwave.optimization import Model
-        ...
-        >>> model = Model()
-        >>> i = model.integer(lower_bound=-5, upper_bound=5)
-        >>> c = model.constant(4)
-        >>> y = i**2 - c*i
-        >>> model.minimize(y)
-        >>> with model.lock():
-        ...     model.states.resize(1)
-        ...     i.set_state(0, 2.0)
-        ...     print(f"Objective = {model.objective.state(0)}")
-        Objective = -4.0
-    """
-
     states: States
     """States of the model.
 
@@ -154,8 +132,36 @@ class Model(_Graph):
     """
 
     def __init__(self):
-        self.objective = None
+        self._objective = None
         self.states = States(self)
+
+    @property
+    def objective(self) -> typing.Optional[ArraySymbol]:
+        """Objective to be minimized.
+
+        Examples:
+            This example prints the value of the objective of a model representing
+            the simple polynomial, :math:`y = i^2 - 4i`, for a state with value
+            :math:`i=2.0`.
+
+            >>> from dwave.optimization import Model
+            ...
+            >>> model = Model()
+            >>> i = model.integer(lower_bound=-5, upper_bound=5)
+            >>> c = model.constant(4)
+            >>> y = i**2 - c*i
+            >>> model.minimize(y)
+            >>> with model.lock():
+            ...     model.states.resize(1)
+            ...     i.set_state(0, 2.0)
+            ...     print(f"Objective = {model.objective.state(0)}")
+            Objective = -4.0
+        """
+        return self._objective
+
+    @objective.setter
+    def objective(self, value: ArraySymbol):
+        self.minimize(value)
 
     def binary(self, shape: typing.Optional[_ShapeLike] = None) -> BinaryVariable:
         r"""Create a binary symbol as a decision variable.
@@ -463,7 +469,7 @@ class Model(_Graph):
     def minimize(self, value: ArraySymbol):
         # inherit the docstring from _Graph
         super().minimize(value)
-        self.objective = value
+        self._objective = value
 
     # dev note: the typing is underspecified, but it would be quite complex to fully
     # specify the linear/quadratic so let's leave it alone for now.

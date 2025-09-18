@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Fix setting or mutating ``Model.objective``.
+    Until dwave-optimization 0.6.4, it was possible to set the objective of
+    a ``Model`` directly. However, in 0.6.4 and 0.6.5 doing so would result
+    in that change not being reflected in serialized models. This fix
+    restores support for setting or mutating ``Model.objective`` directly.
