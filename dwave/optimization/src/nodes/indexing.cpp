@@ -1288,11 +1288,12 @@ void BasicIndexingNode::propagate(State& state) const {
         // Do a full recompute of the output using the current data. This could be avoided
         // when the size of the parent array hasn't changed.
         auto& full_cache = node_data->full_cache_;
-        assert(full_cache.size() ==
-                       axis0_slice_.value()
-                               .fit(array_ptr_->size(state) - array_ptr_->size_diff(state))
-                               .size() &&
-               "cache is the wrong size");
+        assert(full_cache.size() == [&]() {
+            const ssize_t old_size = array_ptr_->size(state) - array_ptr_->size_diff(state);
+            const ssize_t array_num_per_row = array_ptr_->strides()[0] / array_ptr_->itemsize();
+            return axis0_slice_.value().fit(old_size / array_num_per_row).size() *
+                   array_num_per_row;
+        }() && "cache is the wrong size");
 
         update_dynamic_shape(state);
 
@@ -1384,15 +1385,20 @@ void BasicIndexingNode::propagate(State& state) const {
 
         assert(this->start_ == 0);
 
+        const ssize_t parent_row_size = array_ptr_->strides()[0] / sizeof(double);
+
         ssize_t old_parent_size = array_ptr_->size(state) - array_ptr_->size_diff(state);
-        Slice previous_slice = axis0_slice_.value().fit(old_parent_size);
+        Slice previous_slice = axis0_slice_.value().fit(old_parent_size / parent_row_size);
         if (previous_slice.size() == 0) {
             previous_slice = Slice(axis0_slice_.value().start, axis0_slice_.value().start);
         }
-        Slice new_slice = axis0_slice_.value().fit(array_ptr_->size(state));
+        Slice new_slice = axis0_slice_.value().fit(array_ptr_->size(state) / parent_row_size);
         if (new_slice.size() == 0) {
             new_slice = Slice(axis0_slice_.value().start, axis0_slice_.value().start);
         }
+        assert(new_slice.step == 1);
+        const Slice flattened_new_slice(new_slice.start * parent_row_size,
+                                        new_slice.stop * parent_row_size);
 
         ssize_t smallest_parent_size =
                 get_smallest_size_during_diff(old_parent_size, array_ptr_->diff(state));
@@ -1408,58 +1414,62 @@ void BasicIndexingNode::propagate(State& state) const {
         } else if (shrinking) {
             delta = Slice(new_slice.stop, previous_slice.stop);
         }
+        const Slice flattened_delta(delta.start * parent_row_size, delta.stop * parent_row_size);
 
-        ssize_t false_removals_start = std::max(smallest_parent_size, new_slice.start);
-        ssize_t false_removals_size = std::max(ssize_t(0), delta.start - false_removals_start);
+        ssize_t false_removals_start = std::max(smallest_parent_size, flattened_new_slice.start);
+        ssize_t false_removals_size =
+                std::max(ssize_t(0), flattened_delta.start - false_removals_start);
         assert(false_removals_size >= 0);
 
         // The first "delta size" updates will be used to track for placement/removal indices.
         // An extra `false_removals_size` updates are added after that which will handle the
         // "false" removals
-        diff.reserve(delta.size() + false_removals_size);
+        diff.reserve(flattened_delta.size() + false_removals_size);
         if (growing) {
-            for (ssize_t i = delta.start; i < delta.stop; ++i) {
-                diff.emplace_back(i - new_slice.start, Update::nothing, Update::nothing);
+            for (ssize_t i = flattened_delta.start; i < flattened_delta.stop; ++i) {
+                diff.emplace_back(i - flattened_new_slice.start, Update::nothing, Update::nothing);
             }
         } else if (shrinking) {
-            for (ssize_t i = delta.stop - 1; i >= delta.start; --i) {
-                diff.emplace_back(i - new_slice.start, Update::nothing, Update::nothing);
+            for (ssize_t i = flattened_delta.stop - 1; i >= flattened_delta.start; --i) {
+                diff.emplace_back(i - flattened_new_slice.start, Update::nothing, Update::nothing);
             }
         }
 
         for (ssize_t i = 0; i < false_removals_size; ++i) {
-            diff.emplace_back(false_removals_start + i - new_slice.start, Update::nothing,
+            diff.emplace_back(false_removals_start + i - flattened_new_slice.start, Update::nothing,
                               Update::nothing);
         }
 
         if (growing) {
             // Simply retrieve the new values from the new data of the parent
-            for (std::size_t i = 0, stop = delta.size(); i < stop; ++i) {
-                diff[i].value = array_ptr_->view(state)[delta.start + i];
+            for (std::size_t i = 0, stop = flattened_delta.size(); i < stop; ++i) {
+                diff[i].value = array_ptr_->view(state)[flattened_delta.start + i];
             }
         }
 
         for (const auto& update : array_ptr_->diff(state)) {
-            bool within_delta = update.index >= delta.start && update.index < delta.stop;
+            bool within_delta =
+                    update.index >= flattened_delta.start && update.index < flattened_delta.stop;
 
             if (shrinking && within_delta) {
                 // We're overall shrinking, and the update from the parent has an index
                 // within the delta range
-                auto delta_index = delta.stop - update.index - 1;
+                auto delta_index = flattened_delta.stop - update.index - 1;
                 // NOTE: don't want to use `placed()` here because it's unclear what
                 // that should return in the case of `Update(x, nan, nan)`
                 if (std::isnan(diff[delta_index].old)) {
                     // We haven't seen this index yet, so the `old` of this update should
                     // be the `old` of our translated index
-                    assert(diff[delta_index].index == update.index - new_slice.start);
+                    assert(diff[delta_index].index == update.index - flattened_new_slice.start);
                     diff[delta_index].old = update.old;
                 }
-            } else if (update.index < delta.start && update.index >= false_removals_start) {
+            } else if (update.index < flattened_delta.start &&
+                       update.index >= false_removals_start) {
                 // Within the "false removals" range
-                auto index = delta.size() + update.index - false_removals_start;
-                assert(index >= delta.size());
-                assert(index < delta.size() + false_removals_size);
-                assert(diff[index].index == update.index - new_slice.start);
+                auto index = flattened_delta.size() + update.index - false_removals_start;
+                assert(index >= flattened_delta.size());
+                assert(index < flattened_delta.size() + false_removals_size);
+                assert(diff[index].index == update.index - flattened_new_slice.start);
 
                 // NOTE: don't want to use `removed()` here because it's unclear what
                 // that should return in the case of `Update(x, nan, nan)`
@@ -1468,19 +1478,21 @@ void BasicIndexingNode::propagate(State& state) const {
                     diff[index].old = update.old;
                 }
                 diff[index].value = update.value;
-            } else if (update.index < delta.start && update.index >= new_slice.start) {
-                diff.emplace_back(update.index - new_slice.start, update.old, update.value);
+            } else if (update.index < flattened_delta.start &&
+                       update.index >= flattened_new_slice.start) {
+                diff.emplace_back(update.index - flattened_new_slice.start, update.old,
+                                  update.value);
             }
         }
 
         if (shrinking) {
             // Fill in the missing old values for the removals in the delta range,
             // directly using the parent array's data.
-            for (std::size_t i = 0, stop = delta.size(); i < stop; ++i) {
+            for (std::size_t i = 0, stop = flattened_delta.size(); i < stop; ++i) {
                 // NOTE: don't want to use `placed()` here because it's unclear what
                 // that should return in the case of `Update(x, nan, nan)`
                 if (std::isnan(diff[i].old)) {
-                    diff[i].old = array_ptr_->view(state)[delta.stop - i - 1];
+                    diff[i].old = array_ptr_->view(state)[flattened_delta.stop - i - 1];
                 }
             }
         }
