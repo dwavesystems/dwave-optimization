@@ -12,12 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.libcpp.graph cimport ArrayNode
+from dwave.optimization.model import ArraySymbol as _ArraySymbol
 
-
-cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass ExtractNode(ArrayNode):
-        pass
-
-    cdef cppclass WhereNode(ArrayNode):
-        pass
+class Mean(_ArraySymbol): ...

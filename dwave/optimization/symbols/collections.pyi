@@ -12,12 +12,22 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.libcpp.graph cimport ArrayNode
+import numpy as _np
 
+from dwave.optimization.model import ArraySymbol as _ArraySymbol, Symbol as _Symbol
 
-cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass ExtractNode(ArrayNode):
-        pass
+class DisjointBitSet(_ArraySymbol): ...
 
-    cdef cppclass WhereNode(ArrayNode):
-        pass
+class DisjointBitSets(_Symbol):
+    def set_state(self, index: int, state: _np.typing.ArrayLike): ...
+
+class DisjointList(_ArraySymbol): ...
+
+class DisjointLists(_Symbol):
+    def set_state(self, index: int, state: _np.typing.ArrayLike): ...
+
+class ListVariable(_ArraySymbol):
+    def set_state(self, index: int, values: _np.typing.ArrayLike): ...
+
+class SetVariable(_ArraySymbol):
+    def set_state(self, index: int, values: _np.typing.ArrayLike): ...

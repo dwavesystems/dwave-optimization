@@ -53,8 +53,7 @@ cdef class States:
         >>> # Add the decision variable
         >>> items = model.set(4)
         >>> # add the capacity constraint
-        >>> model.add_constraint(weights[items].sum() <= capacity) # doctest: +ELLIPSIS
-        <dwave.optimization.symbols.LessEqual at ...>
+        >>> _ = model.add_constraint(weights[items].sum() <= capacity)
         >>> # Set the objective
         >>> model.minimize(values[items].sum())
 

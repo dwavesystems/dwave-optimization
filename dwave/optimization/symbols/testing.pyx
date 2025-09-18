@@ -1,3 +1,5 @@
+# cython: auto_pickle=False
+
 # Copyright 2025 D-Wave
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +14,19 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.libcpp.graph cimport ArrayNode
+from cython.operator cimport typeid
+
+from dwave.optimization._model cimport _Graph, _register, ArraySymbol, Symbol
+from dwave.optimization.libcpp.nodes.testing cimport ArrayValidationNode
 
 
-cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass ExtractNode(ArrayNode):
-        pass
+cdef class _ArrayValidation(Symbol):
+    def __init__(self, ArraySymbol array_node):
+        cdef _Graph model = array_node.model
 
-    cdef cppclass WhereNode(ArrayNode):
-        pass
+        cdef ArrayValidationNode* ptr = model._graph.emplace_node[ArrayValidationNode](
+            array_node.array_ptr,
+        )
+        self.initialize_node(model, ptr)
+
+_register(_ArrayValidation, typeid(ArrayValidationNode))

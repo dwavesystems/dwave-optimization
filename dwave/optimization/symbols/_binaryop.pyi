@@ -12,12 +12,22 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.libcpp.graph cimport ArrayNode
+from dwave.optimization.model import ArraySymbol as _ArraySymbol
 
+class _BinaryOpNodeType:
+    Add: int
+    And: int
+    Divide: int
+    Equal: int
+    LessEqual: int
+    Maximum: int
+    Minimum: int
+    Modulus: int
+    Multiply: int
+    Or: int
+    SafeDivide: int
+    Subtract: int
+    Xor: int
 
-cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass ExtractNode(ArrayNode):
-        pass
-
-    cdef cppclass WhereNode(ArrayNode):
-        pass
+class _BinaryOpSymbol(_ArraySymbol):
+    def __init_subclass__(cls, /, node_type: _BinaryOpNodeType): ...

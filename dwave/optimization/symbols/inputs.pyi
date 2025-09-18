@@ -12,12 +12,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.libcpp.graph cimport ArrayNode
+import numpy as _np
 
+from dwave.optimization.model import ArraySymbol as _ArraySymbol
 
-cdef extern from "dwave-optimization/nodes/flow.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass ExtractNode(ArrayNode):
-        pass
-
-    cdef cppclass WhereNode(ArrayNode):
-        pass
+class Input(_ArraySymbol):
+    def integral(self) -> bool: ...
+    def lower_bound(self) -> float: ...
+    def set_state(self, index: int, state: _np.typing.ArrayLike): ...
+    def upper_bound(self) -> float: ...
