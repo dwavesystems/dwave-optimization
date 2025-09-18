@@ -86,9 +86,9 @@ class fraction {
     }
 
     // fractions can be added
-    constexpr friend fraction operator+(const fraction& lhs, const fraction& rhs) {
-        return fraction(lhs.numerator_ * rhs.denominator_ + rhs.numerator_ * lhs.denominator_,
-                        lhs.denominator_ * rhs.denominator_);
+    constexpr friend fraction operator+(fraction lhs, const fraction& rhs) {
+        lhs += rhs;
+        return lhs;
     }
     constexpr friend fraction operator+(const fraction& lhs, const std::integral auto& rhs) {
         return lhs + fraction(rhs);
@@ -99,7 +99,7 @@ class fraction {
 
     // fractions can be added inplace
     constexpr fraction& operator+=(const std::integral auto n) noexcept {
-        this->operator+=(fraction(n));
+        (*this) += fraction(n);
         return *this;
     }
 
@@ -133,7 +133,7 @@ class fraction {
     constexpr const ssize_t& numerator() const noexcept { return numerator_; }
     constexpr const ssize_t& denominator() const noexcept { return denominator_; }
 
-    ssize_t ceil() {
+    constexpr ssize_t ceil() const {
         assert(denominator_ > 0);
         if (numerator_ >= 0) {
             return (numerator_ / denominator_) + ((numerator_ % denominator_) > 0);

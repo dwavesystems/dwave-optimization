@@ -1745,15 +1745,9 @@ TEST_CASE("BasicIndexingNode") {
 
             THEN("The states are as expected") {
                 CHECK_THAT(y_ptr->view(state), RangeEquals({
-                                                       0,
-                                                       0,
-                                                       0,
-                                                       0,
-                                                       0,
-                                                       0,
-                                                       0,
-                                                       1,
-                                                       0,
+                                                       0, 0, 0,  //
+                                                       0, 0, 0,  //
+                                                       0, 1, 0,  //
                                                }));
             }
         }

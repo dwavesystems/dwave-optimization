@@ -1418,7 +1418,7 @@ void BasicIndexingNode::propagate(State& state) const {
 
         ssize_t false_removals_start = std::max(smallest_parent_size, flattened_new_slice.start);
         ssize_t false_removals_size =
-                std::max(ssize_t(0), flattened_delta.start - false_removals_start);
+                std::max<ssize_t>(0, flattened_delta.start - false_removals_start);
         assert(false_removals_size >= 0);
 
         // The first "delta size" updates will be used to track for placement/removal indices.
