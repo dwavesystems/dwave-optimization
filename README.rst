@@ -104,6 +104,18 @@ You can then run the tests using
 
     meson test -Cbuild
 
+To run the doctests, install the docs requirements:
+
+.. code-block:: bash
+
+    pip install -r docs/requirements.txt
+
+You can then run them using the `docs/Makefile`.
+
+.. code-block:: bash
+
+    make -C docs doctest
+
 License
 =======
 
