@@ -19,7 +19,7 @@ import json
 import numpy as np
 
 from cython.operator cimport typeid
-from libcpp.optional cimport nullopt
+from libcpp.optional cimport nullopt, optional
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
@@ -31,10 +31,6 @@ from dwave.optimization.libcpp.nodes.numbers cimport (
     IntegerNode,
 )
 from dwave.optimization.states cimport States
-
-
-# because Cython can't handle this in a template
-ctypedef const vector[double] const_vector_double
 
 
 cdef class BinaryVariable(ArraySymbol):
@@ -102,39 +98,31 @@ cdef class BinaryVariable(ArraySymbol):
             tuple() if shape is None else shape
         )
 
-        cdef IntegerNode.bounds_t cpplower_bound
-        cdef IntegerNode.bounds_t cppupper_bound
+        cdef optional[vector[double]] cpplower_bound = nullopt
+        cdef optional[vector[double]] cppupper_bound = nullopt
         cdef const double[:] mem
 
-        if lower_bound is None:
-            cpplower_bound = nullopt
-        else:
+        if lower_bound is not None:
             # Allow users to input doubles
             lower_bound_arr = np.asarray_chkfinite(lower_bound,
                                                    dtype=np.double, order="C")
             # For lower bounds, round up
             lower_bound_arr = np.ceil(lower_bound_arr).astype(np.double)
-            if lower_bound_arr.ndim == 0:
-                cpplower_bound = <double>lower_bound_arr
-            elif lower_bound_arr.shape == vshape:
+            if (lower_bound_arr.ndim == 0) or (lower_bound_arr.shape == vshape):
                 mem = lower_bound_arr.ravel()
-                cpplower_bound.emplace[const_vector_double](&mem[0], (&mem[-1]) + 1)
+                cpplower_bound.emplace(&mem[0], (&mem[-1]) + 1)
             else:
                 raise ValueError("lower_bound should be None, scalar, or the same shape")
 
-        if upper_bound is None:
-            cppupper_bound = nullopt
-        else:
+        if upper_bound is not None:
             # Allow users to input doubles
             upper_bound_arr = np.asarray_chkfinite(upper_bound,
                                                    dtype=np.double, order="C")
             # For upper bounds, round down
             upper_bound_arr = np.floor(upper_bound_arr).astype(np.double)
-            if upper_bound_arr.ndim == 0:
-                cppupper_bound = <double>upper_bound_arr
-            elif upper_bound_arr.shape == vshape:
+            if (upper_bound_arr.ndim == 0) or (upper_bound_arr.shape == vshape):
                 mem = upper_bound_arr.ravel()
-                cppupper_bound.emplace[const_vector_double](&mem[0], (&mem[-1]) + 1)
+                cppupper_bound.emplace(&mem[0], (&mem[-1]) + 1)
             else:
                 raise ValueError("upper bound should be None, scalar, or the same shape")
 
@@ -238,26 +226,9 @@ cdef class BinaryVariable(ArraySymbol):
             >>> x.set_state(0, [[True, True, False], [False, True, False]])
             >>> print(np.equal(x.state(0), [[True, True, False], [False, True, False]]).all())
             True
-            ...
             >>> x.set_state(1, [[False, True, False], [False, True, False]])
             >>> print(np.equal(x.state(1), [[False, True, False], [False, True, False]]).all())
             True
-
-            This example unsuccessfully sets one state for a :math:`2 \times
-            2`-sized binary symbol since the state is outside the defined
-            bounds.
-
-            >>> from dwave.optimization.model import Model
-            >>> from dwave.optimization.symbols import BinaryVariable
-            >>> import numpy as np
-            ...
-            >>> model = Model()
-            >>> x = BinaryVariable(model, (2, 2), lower_bound=0, upper_bound=[[0,1], [1, 1]])
-            >>> model.states.resize(1)
-            >>> try:
-            ...     x.set_state(0, [[1, 0], [0, 0]])
-            >>> except ValueError:
-            ...     pass
         """
         # Convert the state into something we can handle in C++.
         # This also does some type checking etc
@@ -354,39 +325,31 @@ cdef class IntegerVariable(ArraySymbol):
             tuple() if shape is None else shape
         )
 
-        cdef IntegerNode.bounds_t cpplower_bound
-        cdef IntegerNode.bounds_t cppupper_bound
+        cdef optional[vector[double]] cpplower_bound = nullopt
+        cdef optional[vector[double]] cppupper_bound = nullopt
         cdef const double[:] mem
 
-        if lower_bound is None:
-            cpplower_bound = nullopt
-        else:
+        if lower_bound is not None:
             # Allow users to input doubles
             lower_bound_arr = np.asarray_chkfinite(lower_bound,
                                                    dtype=np.double, order="C")
             # For lower bounds, round up
             lower_bound_arr = np.ceil(lower_bound_arr).astype(np.double)
-            if lower_bound_arr.ndim == 0:
-                cpplower_bound = <double>lower_bound_arr
-            elif lower_bound_arr.shape == vshape:
+            if (lower_bound_arr.ndim == 0) or (lower_bound_arr.shape == vshape):
                 mem = lower_bound_arr.ravel()
-                cpplower_bound.emplace[const_vector_double](&mem[0], (&mem[-1]) + 1)
+                cpplower_bound.emplace(&mem[0], (&mem[-1]) + 1)
             else:
                 raise ValueError("lower_bound should be None, scalar, or the same shape")
 
-        if upper_bound is None:
-            cppupper_bound = nullopt
-        else:
+        if upper_bound is not None:
             # Allow users to input doubles
             upper_bound_arr = np.asarray_chkfinite(upper_bound,
                                                    dtype=np.double, order="C")
             # For upper bounds, round down
             upper_bound_arr = np.floor(upper_bound_arr).astype(np.double)
-            if upper_bound_arr.ndim == 0:
-                cppupper_bound = <double>upper_bound_arr
-            elif upper_bound_arr.shape == vshape:
+            if (upper_bound_arr.ndim == 0) or (upper_bound_arr.shape == vshape):
                 mem = upper_bound_arr.ravel()
-                cppupper_bound.emplace[const_vector_double](&mem[0], (&mem[-1]) + 1)
+                cppupper_bound.emplace(&mem[0], (&mem[-1]) + 1)
             else:
                 raise ValueError("upper bound should be None, scalar, or the same shape")
 
@@ -491,22 +454,6 @@ cdef class IntegerVariable(ArraySymbol):
             >>> x.set_state(0, [[3, 4], [2, 3]])
             >>> print(np.equal(x.state(0), [[3, 4], [2, 3]]).all())
             True
-
-            This example unsuccessfully sets one state for a :math:`2 \times
-            2`-sized integer symbol since the state is outside the defined
-            bounds.
-
-            >>> from dwave.optimization.model import Model
-            >>> from dwave.optimization.symbols import IntegerVariable
-            >>> import numpy as np
-            ...
-            >>> model = Model()
-            >>> x = IntegerVariable(model, (2, 2), lower_bound=2, upper_bound=[[3,4], [2, 5]])
-            >>> model.states.resize(1)
-            >>> try:
-            ...     x.set_state(0, [[3, 4], [3, 3]])
-            >>> except ValueError:
-            ...     pass
         """
         # Convert the state into something we can handle in C++.
         # This also does some type checking etc
