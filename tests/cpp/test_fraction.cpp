@@ -53,6 +53,13 @@ TEST_CASE("Test fraction") {
 
     STATIC_REQUIRE(fraction() == 0);
 
+    STATIC_REQUIRE(fraction(0, 5).ceil() == 0);
+    STATIC_REQUIRE(fraction(1, 5).ceil() == 1);
+    STATIC_REQUIRE(fraction(11, 5).ceil() == 3);
+    STATIC_REQUIRE(fraction(-9, 5).ceil() == -1);
+    STATIC_REQUIRE(fraction(-10, 5).ceil() == -2);
+    STATIC_REQUIRE(fraction(-11, 5).ceil() == -2);
+
     GIVEN("An uninitialized fraction") {
         fraction a;
 

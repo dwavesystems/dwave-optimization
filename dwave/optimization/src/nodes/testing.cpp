@@ -199,14 +199,21 @@ void ArrayValidationNode::propagate(State& state) const {
         // reported multiplier/offset are correct
 
         [[maybe_unused]] auto predicted_size = [&state](const SizeInfo& sizeinfo) -> ssize_t {
-            ssize_t size = static_cast<ssize_t>(
-                    sizeinfo.multiplier * sizeinfo.array_ptr->size(state) + sizeinfo.offset);
+            ssize_t size = (sizeinfo.multiplier * sizeinfo.array_ptr->size(state) + sizeinfo.offset)
+                                   .ceil();
             size = std::max(size, sizeinfo.min.value_or(0));
             if (sizeinfo.max) size = std::min(size, *sizeinfo.max);
             return size;
         };
 
-        assert(array_ptr->size(state) == predicted_size(sizeinfo));
+        if (array_ptr->size(state) != predicted_size(sizeinfo)) {
+            do_logging&& std::cout
+                    << "sizeinfo = " << sizeinfo
+                    << ", sizeinfo.array_ptr->size = " << sizeinfo.array_ptr->size(state)
+                    << ", predicted_size = " << predicted_size(sizeinfo)
+                    << ", actual size = " << array_ptr->size(state) << "\n";
+            assert(false && "current size of array does not match size predicted by its sizeinfo");
+        }
     } else {
         assert(array_ptr->size(state) == sizeinfo.offset);
     }
