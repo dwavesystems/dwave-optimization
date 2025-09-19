@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <optional>
 #include <string>
+#include <utility>
 
 #include "_state.hpp"
 
@@ -91,47 +92,49 @@ bool NumberNode::clip_and_set_value(State& state, ssize_t index, double value) c
 // Integer Node ***************************************************************
 template <bool maximum>
 double get_extreme_bound(const IntegerNode::bounds_t& bound, const int default_bound) {
-    if (std::holds_alternative<std::nullopt_t>(bound)) {
+    if (!bound) {
         return static_cast<double>(default_bound);
-    } else if (std::holds_alternative<double>(bound)) {
-        return std::get<double>(bound);
     }
-
-    assert(std::holds_alternative<const std::vector<double>>(bound));
-    const std::vector<double>& bound_vec = std::get<const std::vector<double>>(bound);
     std::vector<double>::const_iterator it;
     if (maximum) {
-        it = std::max_element(bound_vec.begin(), bound_vec.end());
+        it = std::max_element(bound->begin(), bound->end());
     } else {
-        it = std::min_element(bound_vec.begin(), bound_vec.end());
+        it = std::min_element(bound->begin(), bound->end());
     }
-    if (it == bound_vec.end()) {
+    if (it == bound->end()) {
         return static_cast<double>(default_bound);
     }
 
     return *it;
 }
 
-IntegerNode::IntegerNode(std::span<const ssize_t> shape, const bounds_t lower_bound,
-                         const bounds_t upper_bound)
+void assign_bound(IntegerNode::bounds_t& bound, std::vector<double>& full_bound_,
+                  double default_bound) {
+    if (!bound) {
+        full_bound_ = std::vector<double>{default_bound};
+        return;
+    }
+    assert(!(bound->empty()));
+    full_bound_ = std::move(*bound);
+}
+
+IntegerNode::IntegerNode(std::span<const ssize_t> shape, bounds_t lower_bound, bounds_t upper_bound)
         : NumberNode(shape, get_extreme_bound<false>(lower_bound, default_lower_bound),
-                     get_extreme_bound<true>(upper_bound, default_upper_bound)),
-          full_lower_bound_(lower_bound),
-          full_upper_bound_(upper_bound) {
+                     get_extreme_bound<true>(upper_bound, default_upper_bound)) {
+    assign_bound(lower_bound, full_lower_bound_, default_lower_bound);
+    assign_bound(upper_bound, full_upper_bound_, default_upper_bound);
     bool index_wise_bound = false;
-    // If upper bound is index-wise, it must be correct size
-    if (std::holds_alternative<const std::vector<double>>(full_lower_bound_)) {
+    // If lower bound is index-wise, it must be correct size
+    if (full_lower_bound_.size() > 1) {
         index_wise_bound = true;
-        if (static_cast<ssize_t>(std::get<const std::vector<double>>(full_lower_bound_).size()) !=
-            this->size()) {
+        if (static_cast<ssize_t>(full_lower_bound_.size()) != this->size()) {
             throw std::invalid_argument("lower_bound must match size of node");
         }
     }
-    // If lower bound is index-wise, it must be correct size
-    if (std::holds_alternative<const std::vector<double>>(full_upper_bound_)) {
+    // If upper bound is index-wise, it must be correct size
+    if (full_upper_bound_.size() > 1) {
         index_wise_bound = true;
-        if (static_cast<ssize_t>(std::get<const std::vector<double>>(full_upper_bound_).size()) !=
-            this->size()) {
+        if (static_cast<ssize_t>(full_upper_bound_.size()) != this->size()) {
             throw std::invalid_argument("upper_bound must match size of node");
         }
     }
@@ -149,63 +152,55 @@ IntegerNode::IntegerNode(std::span<const ssize_t> shape, const bounds_t lower_bo
     }
 }
 
-IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, const bounds_t lower_bound,
-                         const bounds_t upper_bound)
+IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, bounds_t lower_bound,
+                         bounds_t upper_bound)
         : IntegerNode(std::span(shape), lower_bound, upper_bound) {}
-
-IntegerNode::IntegerNode(ssize_t size, const bounds_t lower_bound, const bounds_t upper_bound)
+IntegerNode::IntegerNode(ssize_t size, bounds_t lower_bound, bounds_t upper_bound)
         : IntegerNode({size}, lower_bound, upper_bound) {}
 
-// Handle user-defined integer bounds
-IntegerNode::bounds_t convert_bound_to_double_format(const IntegerNode::ssize_bounds_t& bound) {
-    if (std::holds_alternative<std::nullopt_t>(bound)) {
-        return std::nullopt;
-    } else if (std::holds_alternative<ssize_t>(bound)) {
-        return static_cast<double>(std::get<ssize_t>(bound));
-    }
-    assert(std::holds_alternative<const std::vector<ssize_t>>(bound));
-    std::vector<double> output_vec(std::get<const std::vector<ssize_t>>(bound).begin(),
-                                   std::get<const std::vector<ssize_t>>(bound).end());
-    return output_vec;
-}
+IntegerNode::IntegerNode(std::span<const ssize_t> shape, double lower_bound, bounds_t upper_bound)
+        : IntegerNode(shape, std::vector<double>{lower_bound}, upper_bound) {}
+IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound,
+                         bounds_t upper_bound)
+        : IntegerNode(std::span(shape), std::vector<double>{lower_bound}, upper_bound) {}
+IntegerNode::IntegerNode(ssize_t size, double lower_bound, bounds_t upper_bound)
+        : IntegerNode({size}, std::vector<double>{lower_bound}, upper_bound) {}
 
-IntegerNode::IntegerNode(std::span<const ssize_t> shape, const ssize_bounds_t lower_bound,
-                         const ssize_bounds_t upper_bound)
-        : IntegerNode(shape, convert_bound_to_double_format(lower_bound),
-                      convert_bound_to_double_format(upper_bound)) {}
+IntegerNode::IntegerNode(std::span<const ssize_t> shape, bounds_t lower_bound, double upper_bound)
+        : IntegerNode(shape, lower_bound, std::vector<double>{upper_bound}) {}
+IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, bounds_t lower_bound,
+                         double upper_bound)
+        : IntegerNode(std::span(shape), lower_bound, std::vector<double>{upper_bound}) {}
+IntegerNode::IntegerNode(ssize_t size, bounds_t lower_bound, double upper_bound)
+        : IntegerNode({size}, lower_bound, std::vector<double>{upper_bound}) {}
 
-IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, const ssize_bounds_t lower_bound,
-                         const ssize_bounds_t upper_bound)
-        : IntegerNode(std::span(shape), convert_bound_to_double_format(lower_bound),
-                      convert_bound_to_double_format(upper_bound)) {}
-
-IntegerNode::IntegerNode(ssize_t size, const ssize_bounds_t lower_bound,
-                         const ssize_bounds_t upper_bound)
-        : IntegerNode({size}, convert_bound_to_double_format(lower_bound),
-                      convert_bound_to_double_format(upper_bound)) {}
+IntegerNode::IntegerNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound)
+        : IntegerNode(shape, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
+IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound,
+                         double upper_bound)
+        : IntegerNode(std::span(shape), std::vector<double>{lower_bound},
+                      std::vector<double>{upper_bound}) {}
+IntegerNode::IntegerNode(ssize_t size, double lower_bound, double upper_bound)
+        : IntegerNode({size}, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
 
 bool IntegerNode::integral() const { return true; }
 
 // Depending upon user input, lower_bound() may return non-integral values
 double IntegerNode::lower_bound(ssize_t index) const {
-    if (std::holds_alternative<std::nullopt_t>(full_lower_bound_)) {
-        return static_cast<double>(default_lower_bound);
-    } else if (std::holds_alternative<double>(full_lower_bound_)) {
-        return static_cast<double>(std::get<double>(full_lower_bound_));
+    if (full_lower_bound_.size() == 1) {
+        return full_lower_bound_[0];
     }
-    assert(std::holds_alternative<const std::vector<double>>(full_lower_bound_));
-    return std::get<const std::vector<double>>(full_lower_bound_)[index];
+    assert(full_lower_bound_.size() > 1);
+    return full_lower_bound_[index];
 }
 
 // Depending upon user input, upper_bound() may return non-integral values
 double IntegerNode::upper_bound(ssize_t index) const {
-    if (std::holds_alternative<std::nullopt_t>(full_upper_bound_)) {
-        return static_cast<double>(default_upper_bound);
-    } else if (std::holds_alternative<double>(full_upper_bound_)) {
-        return std::get<double>(full_upper_bound_);
+    if (full_upper_bound_.size() == 1) {
+        return full_upper_bound_[0];
     }
-    assert(std::holds_alternative<const std::vector<double>>(full_upper_bound_));
-    return std::get<const std::vector<double>>(full_upper_bound_)[index];
+    assert(full_upper_bound_.size() > 1);
+    return full_upper_bound_[index];
 }
 
 bool IntegerNode::is_valid(ssize_t index, double value) const {
@@ -247,52 +242,53 @@ double get_bool_bound(const double bound) {
 
 template <bool upper_bound>
 IntegerNode::bounds_t limit_bound_to_bool_domain(const IntegerNode::bounds_t& bound) {
-    if (std::holds_alternative<std::nullopt_t>(bound)) {
+    if (!bound) {
         // set default boolean bounds if user does not provide bounds
         double output = (upper_bound) ? 1.0 : 0.0;
-        return output;
-    } else if (std::holds_alternative<double>(bound)) {
-        return get_bool_bound<upper_bound>(std::get<double>(bound));
+        return std::vector<double>{output};
     }
-    const ssize_t vec_size = std::get<const std::vector<double>>(bound).size();
+    const ssize_t vec_size = bound->size();
     std::vector<double> output_vec;
     output_vec.reserve(vec_size);
     for (ssize_t index = 0; index < vec_size; index++) {
-        output_vec.emplace_back(
-                get_bool_bound<upper_bound>(std::get<const std::vector<double>>(bound)[index]));
+        output_vec.emplace_back(get_bool_bound<upper_bound>((*bound)[index]));
     }
     return output_vec;
 }
 
-BinaryNode::BinaryNode(std::span<const ssize_t> shape, const bounds_t lower_bound,
-                       const bounds_t upper_bound)
+BinaryNode::BinaryNode(std::span<const ssize_t> shape, bounds_t lower_bound, bounds_t upper_bound)
         : IntegerNode(shape, limit_bound_to_bool_domain<false>(lower_bound),
                       limit_bound_to_bool_domain<true>(upper_bound)) {}
 
-BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, const bounds_t lower_bound,
-                       const bounds_t upper_bound)
-        : IntegerNode(std::span(shape), limit_bound_to_bool_domain<false>(lower_bound),
-                      limit_bound_to_bool_domain<true>(upper_bound)) {}
+BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, bounds_t lower_bound,
+                       bounds_t upper_bound)
+        : BinaryNode(std::span(shape), lower_bound, upper_bound) {}
+BinaryNode::BinaryNode(ssize_t size, bounds_t lower_bound, bounds_t upper_bound)
+        : BinaryNode({size}, lower_bound, upper_bound) {}
 
-BinaryNode::BinaryNode(ssize_t size, const bounds_t lower_bound, const bounds_t upper_bound)
-        : IntegerNode({size}, limit_bound_to_bool_domain<false>(lower_bound),
-                      limit_bound_to_bool_domain<true>(upper_bound)) {}
+BinaryNode::BinaryNode(std::span<const ssize_t> shape, double lower_bound, bounds_t upper_bound)
+        : BinaryNode(shape, std::vector<double>{lower_bound}, upper_bound) {}
+BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound,
+                       bounds_t upper_bound)
+        : BinaryNode(std::span(shape), std::vector<double>{lower_bound}, upper_bound) {}
+BinaryNode::BinaryNode(ssize_t size, double lower_bound, bounds_t upper_bound)
+        : BinaryNode({size}, std::vector<double>{lower_bound}, upper_bound) {}
 
-// handle integer inputs
-BinaryNode::BinaryNode(std::span<const ssize_t> shape, const ssize_bounds_t lower_bound,
-                       const ssize_bounds_t upper_bound)
-        : BinaryNode(shape, convert_bound_to_double_format(lower_bound),
-                     convert_bound_to_double_format(upper_bound)) {}
+BinaryNode::BinaryNode(std::span<const ssize_t> shape, bounds_t lower_bound, double upper_bound)
+        : BinaryNode(shape, lower_bound, std::vector<double>{upper_bound}) {}
+BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, bounds_t lower_bound,
+                       double upper_bound)
+        : BinaryNode(std::span(shape), lower_bound, std::vector<double>{upper_bound}) {}
+BinaryNode::BinaryNode(ssize_t size, bounds_t lower_bound, double upper_bound)
+        : BinaryNode({size}, lower_bound, std::vector<double>{upper_bound}) {}
 
-BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, const ssize_bounds_t lower_bound,
-                       const ssize_bounds_t upper_bound)
-        : BinaryNode(std::span(shape), convert_bound_to_double_format(lower_bound),
-                     convert_bound_to_double_format(upper_bound)) {}
-
-BinaryNode::BinaryNode(ssize_t size, const ssize_bounds_t lower_bound,
-                       const ssize_bounds_t upper_bound)
-        : BinaryNode({size}, convert_bound_to_double_format(lower_bound),
-                     convert_bound_to_double_format(upper_bound)) {}
+BinaryNode::BinaryNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound)
+        : BinaryNode(shape, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
+BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound)
+        : BinaryNode(std::span(shape), std::vector<double>{lower_bound},
+                     std::vector<double>{upper_bound}) {}
+BinaryNode::BinaryNode(ssize_t size, double lower_bound, double upper_bound)
+        : BinaryNode({size}, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
 
 void BinaryNode::flip(State& state, ssize_t i) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);

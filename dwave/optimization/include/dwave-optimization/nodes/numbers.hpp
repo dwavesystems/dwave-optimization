@@ -18,7 +18,6 @@
 #include <ranges>
 #include <span>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
@@ -128,10 +127,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 /// A contiguous block of integer numbers.
 class IntegerNode : public NumberNode {
  public:
-    // nullopt_t represents default
-    using bounds_t = std::variant<const std::vector<double>, double, std::nullopt_t>;
-    // nullopt_t represents default, used to handle *integer format* inputs
-    using ssize_bounds_t = std::variant<const std::vector<ssize_t>, ssize_t, std::nullopt_t>;
+    using bounds_t = std::optional<std::vector<double>>;
 
     static constexpr int minimum_lower_bound = -2000000000;
     static constexpr int maximum_upper_bound = -minimum_lower_bound;
@@ -139,9 +135,9 @@ class IntegerNode : public NumberNode {
     static constexpr int default_upper_bound = maximum_upper_bound;
 
     // Default to a single scalar integer with default bounds
-    IntegerNode() : IntegerNode({}) {}
+    IntegerNode() : IntegerNode(1) {}
 
-    // Create an integer array with the user-defined *double format* bounds.
+    // Create an integer array with the user-defined bounds.
     // Defaulting to the specified default bounds.
     IntegerNode(std::span<const ssize_t> shape, bounds_t lower_bound = std::nullopt,
                 bounds_t upper_bound = std::nullopt);
@@ -149,22 +145,20 @@ class IntegerNode : public NumberNode {
                 bounds_t upper_bound = std::nullopt);
     IntegerNode(ssize_t size, bounds_t lower_bound = std::nullopt,
                 bounds_t upper_bound = std::nullopt);
-    // Create an integer array with the user-defined *integer format* bounds.
-    // Defaulting to the specified default bounds.
-    IntegerNode(std::span<const ssize_t> shape, ssize_bounds_t lower_bound,
-                ssize_bounds_t upper_bound = std::nullopt);
-    IntegerNode(std::initializer_list<ssize_t> shape, ssize_bounds_t lower_bound,
-                ssize_bounds_t upper_bound = std::nullopt);
-    IntegerNode(ssize_t size, ssize_bounds_t lower_bound,
-                ssize_bounds_t upper_bound = std::nullopt);
-    // Create an integer array for these edge cases.
-    // Defaulting to the specified default bounds.
-    IntegerNode(std::span<const ssize_t> shape, std::nullopt_t, std::nullopt_t = std::nullopt)
-            : IntegerNode(shape) {};
-    IntegerNode(std::initializer_list<ssize_t> shape, std::nullopt_t, std::nullopt_t = std::nullopt)
-            : IntegerNode(std::span(shape)) {};
-    IntegerNode(ssize_t size, std::nullopt_t, std::nullopt_t = std::nullopt)
-            : IntegerNode({size}) {};
+
+    IntegerNode(std::span<const ssize_t> shape, double lower_bound,
+                bounds_t upper_bound = std::nullopt);
+    IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound,
+                bounds_t upper_bound = std::nullopt);
+    IntegerNode(ssize_t size, double lower_bound, bounds_t upper_bound = std::nullopt);
+
+    IntegerNode(std::span<const ssize_t> shape, bounds_t lower_bound, double upper_bound);
+    IntegerNode(std::initializer_list<ssize_t> shape, bounds_t lower_bound, double upper_bound);
+    IntegerNode(ssize_t size, bounds_t lower_bound, double upper_bound);
+
+    IntegerNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound);
+    IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound);
+    IntegerNode(ssize_t size, double lower_bound, double upper_bound);
 
     // Overloads needed by the Node ABC ***************************************
 
@@ -184,16 +178,17 @@ class IntegerNode : public NumberNode {
     bool set_value(State& state, ssize_t index, double value) const;
 
  private:
-    bounds_t full_lower_bound_;
-    bounds_t full_upper_bound_;
+    std::vector<double> full_lower_bound_;
+    std::vector<double> full_upper_bound_;
 };
 
 /// A contiguous block of binary numbers.
 class BinaryNode : public IntegerNode {
  public:
     /// A binary scalar variable with lower_bound = 0.0 and upper_bound = 1.0
-    BinaryNode() : BinaryNode({}) {}
-    // Create a binary array with the user-defined *double format* bounds.
+    BinaryNode() : BinaryNode(1) {}
+
+    // Create a binary array with the user-defined bounds.
     // Defaulting to lower_bound = 0.0 and upper_bound = 1.0
     BinaryNode(std::span<const ssize_t> shape, bounds_t lower_bound = std::nullopt,
                bounds_t upper_bound = std::nullopt);
@@ -201,20 +196,20 @@ class BinaryNode : public IntegerNode {
                bounds_t upper_bound = std::nullopt);
     BinaryNode(ssize_t size, bounds_t lower_bound = std::nullopt,
                bounds_t upper_bound = std::nullopt);
-    // Create a binary array with the given *integer format* bounds.
-    // Defaulting to lower_bound = 0.0 and upper_bound = 1.0
-    BinaryNode(std::span<const ssize_t> shape, ssize_bounds_t lower_bound,
-               ssize_bounds_t upper_bound = std::nullopt);
-    BinaryNode(std::initializer_list<ssize_t> shape, ssize_bounds_t lower_bound,
-               ssize_bounds_t upper_bound = std::nullopt);
-    BinaryNode(ssize_t size, ssize_bounds_t lower_bound, ssize_bounds_t upper_bound = std::nullopt);
-    // Create a binary array for these edge cases.
-    // Defaulting to lower_bound = 0.0 and upper_bound = 1.0
-    BinaryNode(std::span<const ssize_t> shape, std::nullopt_t, std::nullopt_t = std::nullopt)
-            : BinaryNode(shape) {};
-    BinaryNode(std::initializer_list<ssize_t> shape, std::nullopt_t, std::nullopt_t = std::nullopt)
-            : BinaryNode(std::span(shape)) {};
-    BinaryNode(ssize_t size, std::nullopt_t, std::nullopt_t = std::nullopt) : BinaryNode({size}) {};
+
+    BinaryNode(std::span<const ssize_t> shape, double lower_bound,
+               bounds_t upper_bound = std::nullopt);
+    BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound,
+               bounds_t upper_bound = std::nullopt);
+    BinaryNode(ssize_t size, double lower_bound, bounds_t upper_bound = std::nullopt);
+
+    BinaryNode(std::span<const ssize_t> shape, bounds_t lower_bound, double upper_bound);
+    BinaryNode(std::initializer_list<ssize_t> shape, bounds_t lower_bound, double upper_bound);
+    BinaryNode(ssize_t size, bounds_t lower_bound, double upper_bound);
+
+    BinaryNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound);
+    BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound);
+    BinaryNode(ssize_t size, double lower_bound, double upper_bound);
 
     // Specializations for the linear case
     void flip(State& state, ssize_t i) const;

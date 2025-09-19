@@ -16,29 +16,6 @@ from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.graph cimport ArrayNode
 from dwave.optimization.libcpp.state cimport State
-from libcpp.optional cimport nullopt_t, nullopt
-
-
-cdef extern from *:
-    """
-    #include <variant>
-
-    template<typename T, typename U, typename V>
-    using variant3 = std::variant<T, U, V>;
-    """
-
-    cdef cppclass variant3[T, U, V]:
-        variant3()
-        variant3(T)
-        variant3(U)
-        variant3(V)
-
-        variant3& operator=(variant3&)
-        T& emplace[T](...)
-
-cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace \
-        "dwave::optimization::IntegerNode" nogil:
-    ctypedef variant3[const vector[double], double, nullopt_t] bounds_t
 
 
 cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimization" nogil:
