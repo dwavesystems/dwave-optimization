@@ -1655,6 +1655,354 @@ TEST_CASE("BasicIndexingNode") {
         }
     }
 
+    GIVEN("x = Dynamic(n, 2)[slice, 1:] for several slices on the first dim and expected outputs") {
+        // These tests were generated with this python script
+        //
+        // ---- BEGIN PYTHON SCRIPT ----
+        //
+        // import numpy as np
+        //
+        //
+        // slices = [
+        //     (None, None, None),
+        //     (1, None, None),
+        //     (-2, None, None),
+        //     (None, 2, None),
+        //     (None, -3, None),
+        //     (None, None, 2),
+        //     (None, None, 3),
+        //     (None, None, -2),
+        //     (None, None, -3),
+        //     (1, 4, None),
+        //     (-4, 5, None),
+        //     (-4, 8, None),
+        //     (3, -3, None),
+        //     (7, -5, None),
+        //     (-4, -2, None),
+        //     (-4, -6, None),
+        //     (1, 8, 2),
+        //     (1, 8, 3),
+        //     (1, 8, -1),
+        //     (1, 8, -3),
+        //     (8, 1, -2),
+        //     (8, 1, -3),
+        //     (5, 15, None),
+        //     (5, 15, 2),
+        //     (-5, 15, 3),
+        //     (12, 15, None),
+        //     (-15, 5, None),
+        //     (-10, 5, 3),
+        //     (-15, 5, 3),
+        //     (-15, -5, None),
+        //     (-15, -12, 3),
+        //     (-15, -20, 3),
+        // ]
+        //
+        //
+        // def fmt(v):
+        //     return "std::nullopt" if v is None else f"{v}"
+        //
+        //
+        // for start, stop, step in slices:
+        //     outputs = [np.arange(i * 2).reshape(i, 2)[start:stop:step, 1:] for i in range(1, 11)]
+        //     # some of these cases are not supported yet, so we expect the constructor to throw
+        //     should_throw = step is not None and (step < 0 or (step != 1 and start is not None and
+        //     start < 0)) should_throw |= (start or 0) < 0 or (stop or 0) < 0
+        //     formatted_should_throw = "true" if should_throw else "false"
+        //     slice_args = "{" + f"{fmt(start)}, {fmt(stop)}, {fmt(step)}" + "}"
+        //     formatted_outputs = ", ".join("{" + ", ".join(str(v) for v in a.flatten()) + "}" for
+        //     a in outputs) print("{ " + slice_args + ", {{ " + formatted_outputs + "}}, " +
+        //     formatted_should_throw + "},")
+        //
+        // ---- END PYTHON SCRIPT ----
+
+        const ssize_t dim0_max = 10;
+        const ssize_t dim1 = 2;
+
+        std::tuple<Slice, std::array<std::vector<int>, dim0_max>, bool> tests[] = {
+                {{std::nullopt, std::nullopt, std::nullopt},
+                 {{{1},
+                   {1, 3},
+                   {1, 3, 5},
+                   {1, 3, 5, 7},
+                   {1, 3, 5, 7, 9},
+                   {1, 3, 5, 7, 9, 11},
+                   {1, 3, 5, 7, 9, 11, 13},
+                   {1, 3, 5, 7, 9, 11, 13, 15},
+                   {1, 3, 5, 7, 9, 11, 13, 15, 17},
+                   {1, 3, 5, 7, 9, 11, 13, 15, 17, 19}}},
+                 false},
+                {{1, std::nullopt, std::nullopt},
+                 {{{},
+                   {3},
+                   {3, 5},
+                   {3, 5, 7},
+                   {3, 5, 7, 9},
+                   {3, 5, 7, 9, 11},
+                   {3, 5, 7, 9, 11, 13},
+                   {3, 5, 7, 9, 11, 13, 15},
+                   {3, 5, 7, 9, 11, 13, 15, 17},
+                   {3, 5, 7, 9, 11, 13, 15, 17, 19}}},
+                 false},
+                {{-2, std::nullopt, std::nullopt},
+                 {{{1},
+                   {1, 3},
+                   {3, 5},
+                   {5, 7},
+                   {7, 9},
+                   {9, 11},
+                   {11, 13},
+                   {13, 15},
+                   {15, 17},
+                   {17, 19}}},
+                 true},
+                {{std::nullopt, 2, std::nullopt},
+                 {{{1}, {1, 3}, {1, 3}, {1, 3}, {1, 3}, {1, 3}, {1, 3}, {1, 3}, {1, 3}, {1, 3}}},
+                 false},
+                {{std::nullopt, -3, std::nullopt},
+                 {{{},
+                   {},
+                   {},
+                   {1},
+                   {1, 3},
+                   {1, 3, 5},
+                   {1, 3, 5, 7},
+                   {1, 3, 5, 7, 9},
+                   {1, 3, 5, 7, 9, 11},
+                   {1, 3, 5, 7, 9, 11, 13}}},
+                 true},
+                {{std::nullopt, std::nullopt, 2},
+                 {{{1},
+                   {1},
+                   {1, 5},
+                   {1, 5},
+                   {1, 5, 9},
+                   {1, 5, 9},
+                   {1, 5, 9, 13},
+                   {1, 5, 9, 13},
+                   {1, 5, 9, 13, 17},
+                   {1, 5, 9, 13, 17}}},
+                 false},
+                {{std::nullopt, std::nullopt, 3},
+                 {{{1},
+                   {1},
+                   {1},
+                   {1, 7},
+                   {1, 7},
+                   {1, 7},
+                   {1, 7, 13},
+                   {1, 7, 13},
+                   {1, 7, 13},
+                   {1, 7, 13, 19}}},
+                 false},
+                {{std::nullopt, std::nullopt, -2},
+                 {{{1},
+                   {3},
+                   {5, 1},
+                   {7, 3},
+                   {9, 5, 1},
+                   {11, 7, 3},
+                   {13, 9, 5, 1},
+                   {15, 11, 7, 3},
+                   {17, 13, 9, 5, 1},
+                   {19, 15, 11, 7, 3}}},
+                 true},
+                {{std::nullopt, std::nullopt, -3},
+                 {{{1},
+                   {3},
+                   {5},
+                   {7, 1},
+                   {9, 3},
+                   {11, 5},
+                   {13, 7, 1},
+                   {15, 9, 3},
+                   {17, 11, 5},
+                   {19, 13, 7, 1}}},
+                 true},
+                {{1, 4, std::nullopt},
+                 {{{},
+                   {3},
+                   {3, 5},
+                   {3, 5, 7},
+                   {3, 5, 7},
+                   {3, 5, 7},
+                   {3, 5, 7},
+                   {3, 5, 7},
+                   {3, 5, 7},
+                   {3, 5, 7}}},
+                 false},
+                {{-4, 5, std::nullopt},
+                 {{{1},
+                   {1, 3},
+                   {1, 3, 5},
+                   {1, 3, 5, 7},
+                   {3, 5, 7, 9},
+                   {5, 7, 9},
+                   {7, 9},
+                   {9},
+                   {},
+                   {}}},
+                 true},
+                {{-4, 8, std::nullopt},
+                 {{{1},
+                   {1, 3},
+                   {1, 3, 5},
+                   {1, 3, 5, 7},
+                   {3, 5, 7, 9},
+                   {5, 7, 9, 11},
+                   {7, 9, 11, 13},
+                   {9, 11, 13, 15},
+                   {11, 13, 15},
+                   {13, 15}}},
+                 true},
+                {{3, -3, std::nullopt},
+                 {{{}, {}, {}, {}, {}, {}, {7}, {7, 9}, {7, 9, 11}, {7, 9, 11, 13}}},
+                 true},
+                {{7, -5, std::nullopt}, {{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}}}, true},
+                {{-4, -2, std::nullopt},
+                 {{{}, {}, {1}, {1, 3}, {3, 5}, {5, 7}, {7, 9}, {9, 11}, {11, 13}, {13, 15}}},
+                 true},
+                {{-4, -6, std::nullopt}, {{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}}}, true},
+                {{1, 8, 2},
+                 {{{},
+                   {3},
+                   {3},
+                   {3, 7},
+                   {3, 7},
+                   {3, 7, 11},
+                   {3, 7, 11},
+                   {3, 7, 11, 15},
+                   {3, 7, 11, 15},
+                   {3, 7, 11, 15}}},
+                 false},
+                {{1, 8, 3},
+                 {{{}, {3}, {3}, {3}, {3, 9}, {3, 9}, {3, 9}, {3, 9, 15}, {3, 9, 15}, {3, 9, 15}}},
+                 false},
+                {{1, 8, -1}, {{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}}}, true},
+                {{1, 8, -3}, {{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}}}, true},
+                {{8, 1, -2},
+                 {{{},
+                   {},
+                   {5},
+                   {7},
+                   {9, 5},
+                   {11, 7},
+                   {13, 9, 5},
+                   {15, 11, 7},
+                   {17, 13, 9, 5},
+                   {17, 13, 9, 5}}},
+                 true},
+                {{8, 1, -3},
+                 {{{}, {}, {5}, {7}, {9}, {11, 5}, {13, 7}, {15, 9}, {17, 11, 5}, {17, 11, 5}}},
+                 true},
+                {{5, 15, std::nullopt},
+                 {{{},
+                   {},
+                   {},
+                   {},
+                   {},
+                   {11},
+                   {11, 13},
+                   {11, 13, 15},
+                   {11, 13, 15, 17},
+                   {11, 13, 15, 17, 19}}},
+                 false},
+                {{5, 15, 2},
+                 {{{}, {}, {}, {}, {}, {11}, {11}, {11, 15}, {11, 15}, {11, 15, 19}}},
+                 false},
+                {{-5, 15, 3},
+                 {{{1}, {1}, {1}, {1, 7}, {1, 7}, {3, 9}, {5, 11}, {7, 13}, {9, 15}, {11, 17}}},
+                 true},
+                {{12, 15, std::nullopt}, {{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}}}, false},
+                {{-15, 5, std::nullopt},
+                 {{{1},
+                   {1, 3},
+                   {1, 3, 5},
+                   {1, 3, 5, 7},
+                   {1, 3, 5, 7, 9},
+                   {1, 3, 5, 7, 9},
+                   {1, 3, 5, 7, 9},
+                   {1, 3, 5, 7, 9},
+                   {1, 3, 5, 7, 9},
+                   {1, 3, 5, 7, 9}}},
+                 true},
+                {{-10, 5, 3},
+                 {{{1}, {1}, {1}, {1, 7}, {1, 7}, {1, 7}, {1, 7}, {1, 7}, {1, 7}, {1, 7}}},
+                 true},
+                {{-15, 5, 3},
+                 {{{1}, {1}, {1}, {1, 7}, {1, 7}, {1, 7}, {1, 7}, {1, 7}, {1, 7}, {1, 7}}},
+                 true},
+                {{-15, -5, std::nullopt},
+                 {{{}, {}, {}, {}, {}, {1}, {1, 3}, {1, 3, 5}, {1, 3, 5, 7}, {1, 3, 5, 7, 9}}},
+                 true},
+                {{-15, -12, 3}, {{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}}}, true},
+                {{-15, -20, 3}, {{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}}}, true},
+        };
+
+        for (const auto& [slice, expected_outputs, should_throw] : tests) {
+            auto graph = Graph();
+            auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+                    std::initializer_list<ssize_t>{-1, dim1});
+
+            if (should_throw) {
+                REQUIRE_THROWS_AS(
+                        graph.emplace_node<BasicIndexingNode>(x_ptr, slice, Slice(1, std::nullopt)),
+                        std::invalid_argument);
+                continue;
+            }
+
+            auto y_ptr =
+                    graph.emplace_node<BasicIndexingNode>(x_ptr, slice, Slice(1, std::nullopt));
+            graph.emplace_node<ArrayValidationNode>(y_ptr);
+
+            auto state = graph.empty_state();
+            x_ptr->initialize_state(state, {});
+            graph.initialize_state(state);
+
+            REQUIRE(x_ptr->size(state) == 0);
+            CHECK(y_ptr->size(state) == 0);
+
+            for (const std::vector<int>& expected_output : expected_outputs) {
+                std::vector<double> values;
+                for (auto v :
+                     std::ranges::iota_view(x_ptr->size(state), x_ptr->size(state) + dim1)) {
+                    values.emplace_back(v);
+                }
+                x_ptr->grow(state, values);
+                graph.propagate(state);
+                graph.commit(state);
+
+                INFO("checking equivalent to np.arange("
+                     << x_ptr->size(state) << ").reshape(-1, " << dim1 << ")[" << slice.start << ":"
+                     << slice.stop << ":" << slice.step << ", 1:] (after growing)");
+                CHECK(y_ptr->size(state) == static_cast<ssize_t>(expected_output.size()));
+                CHECK_THAT(y_ptr->view(state), RangeEquals(expected_output));
+            }
+
+            REQUIRE(x_ptr->size(state) == dim0_max * dim1);
+
+            for (const std::vector<int>& expected_output :
+                 expected_outputs | std::views::reverse | std::views::drop(1)) {
+                x_ptr->shrink(state);
+                graph.propagate(state);
+                graph.commit(state);
+
+                INFO("checking equivalent to np.arange("
+                     << x_ptr->size(state) << ").reshape(-1, " << dim1 << ")[" << slice.start << ":"
+                     << slice.stop << ":" << slice.step << ", 1:] (after shrinking)");
+                CHECK(y_ptr->size(state) == static_cast<ssize_t>(expected_output.size()));
+                CHECK_THAT(y_ptr->view(state), RangeEquals(expected_output));
+            }
+
+            x_ptr->shrink(state);
+            graph.propagate(state);
+            graph.commit(state);
+
+            REQUIRE(x_ptr->size(state) == 0);
+            CHECK(y_ptr->size(state) == 0);
+        }
+    }
+
     GIVEN("x = Binary((3, 3)); y = x[::2, 1:]") {
         auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{3, 3});
         auto y_ptr = graph.emplace_node<BasicIndexingNode>(

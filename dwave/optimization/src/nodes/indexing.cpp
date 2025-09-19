@@ -1099,10 +1099,11 @@ BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser
           axis0_slice_(parser.axis0_slice),
           contiguous_(Array::is_contiguous(ndim_, shape_.get(), strides_.get())),
           values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()) {
-    if (!contiguous_ && dynamic() && this->axis0_slice_->start < 0) {
+    if (!contiguous_ && dynamic() &&
+        (this->axis0_slice_->start < 0 || this->axis0_slice_->stop < 0)) {
         throw std::invalid_argument(
-                "non-contiguous slices with negative starts on dynamic arrays are not currently "
-                "supported");
+                "non-contiguous indexing operations on dynamic arrays, with negative starts or "
+                "stops in the first dimension, are not currently supported");
     }
     add_predecessor(array_ptr);
 }
