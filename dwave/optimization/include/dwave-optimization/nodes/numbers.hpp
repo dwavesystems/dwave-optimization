@@ -88,22 +88,25 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     // NumberNode methods *****************************************************
 
-    // Specializations for the linear case
+    // In the given state, swap the value of index i with the value of index j.
+    // Returns `true` if the values at indices i and j change and `false`
+    // otherwise.
     bool exchange(State& state, ssize_t i, ssize_t j) const;
 
-    // return the value of index i in a given state
+    // Return the value of index i in a given state.
     double get_value(State& state, ssize_t i) const;
 
+    // Specialization of the linear case
     ssize_t linear_index(ssize_t x, ssize_t y) const;
 
-    // Lower bounds of value in a given index
+    // Lower bounds of value in a given index.
     virtual double lower_bound(ssize_t index) const { return min_; }
 
-    // Upper bounds of value in a given index
+    // Upper bounds of value in a given index.
     virtual double upper_bound(ssize_t index) const { return max_; }
 
-    // clip value in a given state to fall within upper_bound and lower_bound
-    // in a given index
+    // Clip value in a given state to fall within upper_bound and lower_bound
+    // in a given index.
     bool clip_and_set_value(State& state, ssize_t index, double value) const;
 
  protected:
@@ -114,10 +117,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         }
     }
 
-    // return truth statement: 'value is allowed in a given index'
+    // Return truth statement: 'value is within the bounds of a given index'
     virtual bool is_valid(ssize_t index, double value) const = 0;
 
-    // default value in a given index
+    // Default value in a given index
     virtual double default_value(ssize_t index) const = 0;
 
     double min_;
@@ -162,19 +165,29 @@ class IntegerNode : public NumberNode {
 
     // Overloads needed by the Node ABC ***************************************
 
+    // @copydoc Node::integral()
     bool integral() const override;
 
     // Overloads needed by the NumberNode ABC *********************************
 
+    // @copydoc NumberNode::lower_bound(). Depending upon user input, may
+    // return non-integral values
     double lower_bound(ssize_t index) const override;
 
+    // @copydoc NumberNode::upper_bound(). Depending upon user input, may
+    // return non-integral values
     double upper_bound(ssize_t index) const override;
 
+    // @copydoc NumberNode::is_valid()
     bool is_valid(ssize_t index, double value) const override;
 
+    // @copydoc NumberNode::default_value()
     double default_value(ssize_t index) const override;
 
-    // Specializations for the linear case
+    // IntegerNode methods ****************************************************
+
+    // Set the value at the given index in the given state. Returns `true` if
+    // the value at the index changed and `false` otherwise.
     bool set_value(State& state, ssize_t index, double value) const;
 
  private:
@@ -211,9 +224,16 @@ class BinaryNode : public IntegerNode {
     BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound);
     BinaryNode(ssize_t size, double lower_bound, double upper_bound);
 
-    // Specializations for the linear case
-    void flip(State& state, ssize_t i) const;
+    // Flip the value (0 -> 1 or 1 -> 0) at index i in the given state. Returns
+    // `true` if the value at index i changed and `false` otherwise.
+    bool flip(State& state, ssize_t i) const;
+
+    // Set the value at index i to `true` in the given state. Returns `true` if
+    // the value at index i changed and `false` otherwise.
     bool set(State& state, ssize_t i) const;
+
+    // Set the at index i to `false` in the given state. Returns `true` if
+    // the value at index i changed and `false` otherwise.
     bool unset(State& state, ssize_t i) const;
 };
 

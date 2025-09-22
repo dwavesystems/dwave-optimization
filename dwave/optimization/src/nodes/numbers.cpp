@@ -67,8 +67,15 @@ void NumberNode::revert(State& state) const noexcept {
     data_ptr<ArrayNodeStateData>(state)->revert();
 }
 
-// Specializations for the linear case
 bool NumberNode::exchange(State& state, ssize_t i, ssize_t j) const {
+    double value = data_ptr<ArrayNodeStateData>(state)->get(j);
+    if ((lower_bound(i) > value) || (upper_bound(i) < value)) {
+        return false;
+    }
+    value = data_ptr<ArrayNodeStateData>(state)->get(i);
+    if ((lower_bound(j) > value) || (upper_bound(j) < value)) {
+        return false;
+    }
     return data_ptr<ArrayNodeStateData>(state)->exchange(i, j);
 }
 
@@ -101,11 +108,10 @@ double get_extreme_bound(const IntegerNode::bounds_t& bound, const int default_b
     } else {
         it = std::min_element(bound->begin(), bound->end());
     }
-    if (it == bound->end()) {
-        return static_cast<double>(default_bound);
+    if (it != bound->end()) {
+        return *it;
     }
-
-    return *it;
+    return static_cast<double>(default_bound);
 }
 
 void assign_bound(IntegerNode::bounds_t& bound, std::vector<double>& full_bound_,
@@ -185,7 +191,6 @@ IntegerNode::IntegerNode(ssize_t size, double lower_bound, double upper_bound)
 
 bool IntegerNode::integral() const { return true; }
 
-// Depending upon user input, lower_bound() may return non-integral values
 double IntegerNode::lower_bound(ssize_t index) const {
     if (full_lower_bound_.size() == 1) {
         return full_lower_bound_[0];
@@ -194,7 +199,6 @@ double IntegerNode::lower_bound(ssize_t index) const {
     return full_lower_bound_[index];
 }
 
-// Depending upon user input, upper_bound() may return non-integral values
 double IntegerNode::upper_bound(ssize_t index) const {
     if (full_upper_bound_.size() == 1) {
         return full_upper_bound_[0];
@@ -216,7 +220,10 @@ bool IntegerNode::set_value(State& state, ssize_t index, double value) const {
     if (!is_valid(index, value)) {
         throw std::invalid_argument("Invalid integer value provided");
     }
-    return data_ptr<ArrayNodeStateData>(state)->set(index, value);
+    if (value >= lower_bound(index) && value <= upper_bound(index)) {
+        return data_ptr<ArrayNodeStateData>(state)->set(index, value);
+    }
+    return false;
 }
 
 // Binary Node ****************************************************************
@@ -290,21 +297,38 @@ BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound,
 BinaryNode::BinaryNode(ssize_t size, double lower_bound, double upper_bound)
         : BinaryNode({size}, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
 
-void BinaryNode::flip(State& state, ssize_t i) const {
+bool BinaryNode::flip(State& state, ssize_t i) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);
     if (ptr->get(i)) {
-        ptr->set(i, 0);
+        // if 0 is within bounds of index i
+        if (lower_bound(i) <= 0) {
+            assert(upper_bound(i) >= 0);
+            return ptr->set(i, 0.0);
+        }
     } else {
-        ptr->set(i, 1);
+        // if 1 is within bounds of index i
+        if (upper_bound(i) >= 1) {
+            assert(lower_bound(i) <= 1);
+            return ptr->set(i, 1.0);
+        }
     }
+    return false;
 }
 
 bool BinaryNode::set(State& state, ssize_t i) const {
-    return data_ptr<ArrayNodeStateData>(state)->set(i, 1);
+    if (upper_bound(i) >= 1) {
+        assert(lower_bound(i) <= 1);
+        return data_ptr<ArrayNodeStateData>(state)->set(i, 1.0);
+    }
+    return false;
 }
 
 bool BinaryNode::unset(State& state, ssize_t i) const {
-    return data_ptr<ArrayNodeStateData>(state)->set(i, 0);
+    if (lower_bound(i) <= 0) {
+        assert(upper_bound(i) >= 0);
+        return data_ptr<ArrayNodeStateData>(state)->set(i, 0.0);
+    }
+    return false;
 }
 
 }  // namespace dwave::optimization

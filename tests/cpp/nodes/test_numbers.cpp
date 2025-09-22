@@ -15,6 +15,7 @@
 #include <optional>
 
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers.hpp"
 #include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
@@ -45,6 +46,13 @@ TEST_CASE("BinaryNode") {
                 CHECK(ptr->size(state) == 10);
                 CHECK_THAT(ptr->shape(state), RangeEquals({10}));
                 CHECK_THAT(ptr->view(state), RangeEquals({0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
+            }
+
+            THEN("The default bounds are set properly") {
+                for (int i = 0; i < 10; i++) {
+                    CHECK(ptr->lower_bound(i) == 0);
+                    CHECK(ptr->upper_bound(i) == 1);
+                }
             }
         }
 
@@ -280,8 +288,65 @@ TEST_CASE("BinaryNode") {
             bnode_ptr->set_value(state, 2, 1.0);
 
             THEN("The value is correct") { CHECK(bnode_ptr->get_value(state, 2) == 1.0); }
+
+            AND_WHEN("We commit the state") {
+                graph.commit(state);
+
+                THEN("Cannot flip() index outside of bounds") {
+                    CHECK(bnode_ptr->flip(state, 2) == false);
+                }
+
+                THEN("Cannot exchange() index outside of bounds") {
+                    CHECK(bnode_ptr->exchange(state, 0, 2) == false);
+                }
+
+                THEN("Cannot unset() index outside of bounds") {
+                    CHECK(bnode_ptr->unset(state, 2) == false);
+                }
+            }
         }
-        AND_WHEN("We set the state at indices using clip") {
+
+        AND_WHEN("We set the state at the indices using set()") {
+            auto state = graph.initialize_state();
+            THEN("The value is within bounds") { CHECK(bnode_ptr->is_valid(0, 0.0)); }
+            THEN("The value is within bounds") { CHECK(bnode_ptr->is_valid(1, 1.0)); }
+
+            CHECK(bnode_ptr->set(state, 1) == true);
+
+            THEN("The value at index 0 is correct") {
+                CHECK(bnode_ptr->get_value(state, 0) == 0.0);
+            }
+            THEN("The value at index 1 is correct") {
+                CHECK(bnode_ptr->get_value(state, 1) == 1.0);
+            }
+
+            AND_WHEN("We commit the state") {
+                graph.commit(state);
+
+                THEN("We can perform a flip()") {
+                    CHECK(bnode_ptr->flip(state, 1) == true);
+                    CHECK(bnode_ptr->get_value(state, 1) == 0.0);
+                }
+
+                THEN("We can perform an unset()") {
+                    CHECK(bnode_ptr->unset(state, 1) == true);
+                    CHECK(bnode_ptr->get_value(state, 1) == 0.0);
+                }
+
+                THEN("We can perform an unset()") {
+                    CHECK(bnode_ptr->set(state, 0) == true);
+                    CHECK(bnode_ptr->get_value(state, 0) == 1.0);
+                }
+
+                THEN("We can perform an exchange()") {
+                    CHECK(bnode_ptr->exchange(state, 0, 1) == true);
+                    CHECK(bnode_ptr->get_value(state, 0) == 1.0);
+                    CHECK(bnode_ptr->get_value(state, 1) == 0.0);
+                }
+            }
+        }
+
+        AND_WHEN("We set the state at indices using clip()") {
             auto state = graph.initialize_state();
 
             bnode_ptr->clip_and_set_value(state, 0, -2);
@@ -353,7 +418,8 @@ TEST_CASE("IntegerNode") {
             CHECK(inode.is_valid(0, 10.5) == false);
             CHECK(inode.is_valid(0, inode.min()) == true);
             CHECK(inode.is_valid(0, inode.max()) == true);
-            CHECK(inode.is_valid(0, 10) == true);
+            CHECK(inode.lower_bound(0) == IntegerNode::default_lower_bound);
+            CHECK(inode.upper_bound(0) == IntegerNode::default_upper_bound);
         }
     }
 
@@ -369,6 +435,8 @@ TEST_CASE("IntegerNode") {
             CHECK(inode.is_valid(0, inode.min()) == true);
             CHECK(inode.is_valid(0, inode.max()) == true);
             CHECK(inode.is_valid(0, 5) == true);
+            CHECK(inode.lower_bound(0) == -5);
+            CHECK(inode.upper_bound(0) == 10);
         }
     }
 
@@ -401,7 +469,7 @@ TEST_CASE("IntegerNode") {
 
     GIVEN("Integer node with index-wise bounds") {
         auto inode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
-                3, std::vector<double>{-1, 3, 5}, std::vector<double>{1, 6, 7});
+                3, std::vector<double>{-1, 3, 5}, std::vector<double>{1, 7, 7});
 
         THEN("The shape, max, min, and index-wise bounds are correct") {
             CHECK(inode_ptr->size() == 3);
@@ -414,7 +482,7 @@ TEST_CASE("IntegerNode") {
             CHECK(inode_ptr->lower_bound(1) == 3.0);
             CHECK(inode_ptr->lower_bound(2) == 5.0);
             CHECK(inode_ptr->upper_bound(0) == 1.0);
-            CHECK(inode_ptr->upper_bound(1) == 6.0);
+            CHECK(inode_ptr->upper_bound(1) == 7.0);
             CHECK(inode_ptr->upper_bound(2) == 7.0);
         }
 
@@ -426,21 +494,36 @@ TEST_CASE("IntegerNode") {
 
             THEN("The value is within bounds") { CHECK(inode_ptr->is_valid(2, 6.0)); }
 
-            inode_ptr->set_value(state, 2, 6.0);
+            CHECK(inode_ptr->set_value(state, 2, 6.0) == true);
 
             THEN("The value is correct") { CHECK(inode_ptr->get_value(state, 2) == 6.0); }
         }
-        AND_WHEN("We set the state at indices using clip") {
+
+        AND_WHEN("We set the state at the indices using clip") {
             auto state = graph.initialize_state();
 
             inode_ptr->clip_and_set_value(state, 0, -2);
-            inode_ptr->clip_and_set_value(state, 1, 4);
+            inode_ptr->clip_and_set_value(state, 1, 5);
             inode_ptr->clip_and_set_value(state, 2, 9);
 
             THEN("Clip set the values correctly") {
                 CHECK(inode_ptr->get_value(state, 0) == -1);
-                CHECK(inode_ptr->get_value(state, 1) == 4);
+                CHECK(inode_ptr->get_value(state, 1) == 5);
                 CHECK(inode_ptr->get_value(state, 2) == 7);
+            }
+
+            AND_THEN("We commit the state") {
+                graph.commit(state);
+
+                THEN("We cannot exchange() outside of bounds") {
+                    CHECK(inode_ptr->exchange(state, 0, 2) == false);
+                }
+
+                THEN("We can exchange() within bounds") {
+                    CHECK(inode_ptr->exchange(state, 1, 2) == true);
+                    CHECK(inode_ptr->get_value(state, 1) == 7);
+                    CHECK(inode_ptr->get_value(state, 2) == 5);
+                }
             }
         }
     }
