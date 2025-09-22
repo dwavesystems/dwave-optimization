@@ -445,7 +445,8 @@ TEST_CASE("WhereNode") {
         graph.initialize_state(state);
 
         THEN("`where` has the expected sizeinfo") {
-            CHECK(where_ptr->sizeinfo().array_ptr == condition_ptr);
+            CHECK(where_ptr->sizeinfo().array_ptr == dyn_ptr);
+            CHECK(where_ptr->sizeinfo().multiplier == fraction(1, 3));
         }
 
         THEN("`where` has the expected output") {

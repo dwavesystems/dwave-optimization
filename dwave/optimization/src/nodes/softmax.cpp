@@ -59,7 +59,7 @@ struct SoftMaxNodeStateData : public ArrayNodeStateData {
 };
 
 SoftMaxNode::SoftMaxNode(ArrayNode* arr_ptr)
-        : ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr) {
+        : ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr), sizeinfo_(arr_ptr_->sizeinfo()) {
     add_predecessor(arr_ptr);
 }
 
@@ -158,6 +158,6 @@ ssize_t SoftMaxNode::size_diff(const State& state) const {
     return data_ptr<SoftMaxNodeStateData>(state)->size_diff();
 }
 
-SizeInfo SoftMaxNode::sizeinfo() const { return arr_ptr_->sizeinfo(); }
+SizeInfo SoftMaxNode::sizeinfo() const { return this->sizeinfo_; }
 
 }  // namespace dwave::optimization

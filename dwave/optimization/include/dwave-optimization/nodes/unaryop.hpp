@@ -74,6 +74,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     Array* const array_ptr_;
 
     const std::pair<double, double> minmax_;
+    const SizeInfo sizeinfo_;
 };
 
 using AbsoluteNode = UnaryOpNode<functional::abs<double>>;

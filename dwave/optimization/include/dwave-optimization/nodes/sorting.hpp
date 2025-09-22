@@ -75,6 +75,7 @@ class ArgSortNode : public ArrayOutputMixin<ArrayNode> {
     const Array* arr_ptr_;
 
     const std::pair<double, double> minmax_;
+    const SizeInfo sizeinfo_;
 };
 
 }  // namespace dwave::optimization

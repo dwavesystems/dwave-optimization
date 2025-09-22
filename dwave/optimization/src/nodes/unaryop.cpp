@@ -99,7 +99,8 @@ template <class UnaryOp>
 UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
         : ArrayOutputMixin(node_ptr->shape()),
           array_ptr_(node_ptr),
-          minmax_(calculate_values_minmax_<UnaryOp>(array_ptr_)) {
+          minmax_(calculate_values_minmax_<UnaryOp>(array_ptr_)),
+          sizeinfo_(array_ptr_->sizeinfo()) {
     add_predecessor(node_ptr);
 }
 
@@ -228,10 +229,7 @@ ssize_t UnaryOpNode<UnaryOp>::size_diff(const State& state) const {
 }
 
 template <class UnaryOp>
-SizeInfo UnaryOpNode<UnaryOp>::sizeinfo() const {
-    if (dynamic()) return SizeInfo(array_ptr_);  // exactly the same as predecessor
-    return SizeInfo(size());
-}
+SizeInfo UnaryOpNode<UnaryOp>::sizeinfo() const { return this->sizeinfo_; }
 
 template class UnaryOpNode<functional::abs<double>>;
 template class UnaryOpNode<functional::cos<double>>;

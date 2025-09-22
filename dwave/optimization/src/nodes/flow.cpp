@@ -51,8 +51,9 @@ ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr)
         : ArrayOutputMixin({-1}),
           condition_ptr_(condition_ptr),
           arr_ptr_(arr_ptr),
-          values_info_(arr_ptr_) {
-    if (condition_ptr_->sizeinfo().substitute(100) != arr_ptr_->sizeinfo().substitute(100)) {
+          values_info_(arr_ptr_),
+          sizeinfo_(this, 0, condition_ptr_->sizeinfo().max) {
+    if (condition_ptr_->sizeinfo() != arr_ptr_->sizeinfo()) {
         throw std::invalid_argument("condition and arr must have the same size");
     }
 
@@ -150,7 +151,7 @@ ssize_t ExtractNode::size_diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->size_diff();
 }
 
-SizeInfo ExtractNode::sizeinfo() const { return SizeInfo(this, 0, condition_ptr_->sizeinfo().max); }
+SizeInfo ExtractNode::sizeinfo() const { return this->sizeinfo_; }
 
 /// WhereNode
 
@@ -216,12 +217,23 @@ struct WhereNodeData : ArrayNodeStateData {
     }
 };
 
+SizeInfo wherenode_calculate_sizeinfo(const Array* node_ptr, const Array* condition_ptr) {
+    if (!node_ptr->dynamic()) return SizeInfo(node_ptr->size());
+
+    // NOTE: could maybe do something with the min/max of x and y?
+    if (condition_ptr->size() == 1) return SizeInfo(node_ptr);
+
+    // all three predecessor arrays should be the same (dynamic) size
+    return condition_ptr->sizeinfo();
+}
+
 WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_ptr)
         : ArrayOutputMixin(same_shape(x_ptr, y_ptr)),
           condition_ptr_(condition_ptr),
           x_ptr_(x_ptr),
           y_ptr_(y_ptr),
-          values_info_({x_ptr, y_ptr}) {
+          values_info_({x_ptr, y_ptr}),
+          sizeinfo_(wherenode_calculate_sizeinfo(this, condition_ptr_)) {
     // x and y where checked for nullptr by same_shape() above
     if (!condition_ptr_) throw std::invalid_argument("node pointer cannot be nullptr");
 
@@ -369,14 +381,6 @@ ssize_t WhereNode::size_diff(const State& state) const {
     return data_ptr<WhereNodeData>(state)->size_diff();
 }
 
-SizeInfo WhereNode::sizeinfo() const {
-    if (!this->dynamic()) return SizeInfo(this->size());
-
-    // NOTE: could maybe do something with the min/max of x and y?
-    if (condition_ptr_->size() == 1) return SizeInfo(this);
-
-    // all three predecessor arrays should be the same (dynamic) size
-    return SizeInfo(condition_ptr_);
-}
+SizeInfo WhereNode::sizeinfo() const { return this->sizeinfo_; }
 
 }  // namespace dwave::optimization

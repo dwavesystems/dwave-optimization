@@ -114,6 +114,8 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
 
     std::shared_ptr<Graph> expression_ptr_;
     const std::vector<ArrayNode*> operands_;
+
+    const SizeInfo sizeinfo_;
 };
 
 }  // namespace dwave::optimization

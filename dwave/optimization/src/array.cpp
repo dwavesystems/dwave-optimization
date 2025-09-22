@@ -84,10 +84,7 @@ SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
     sizeinfo.offset += this->offset;
 
     if (sizeinfo.min) {
-        if (this->multiplier != 1) {
-            sizeinfo.min = static_cast<ssize_t>(this->multiplier * *sizeinfo.min);
-        }
-        sizeinfo.min = std::max<ssize_t>(0, (*sizeinfo.min + this->offset).ceil());
+        sizeinfo.min = std::max<ssize_t>(0, (*sizeinfo.min * this->multiplier + this->offset).ceil());
         if (this->min) {
             sizeinfo.min = std::max<ssize_t>(*sizeinfo.min, *this->min);
         }
@@ -96,10 +93,7 @@ SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
     }
 
     if (sizeinfo.max) {
-        if (this->multiplier != 1) {
-            sizeinfo.max = static_cast<ssize_t>(this->multiplier * *sizeinfo.max);
-        }
-        sizeinfo.max = std::max<ssize_t>(0, (*sizeinfo.max + this->offset).ceil());
+        sizeinfo.max = std::max<ssize_t>(0, (*sizeinfo.max * this->multiplier + this->offset).ceil());
         if (this->max) {
             sizeinfo.max = std::min<ssize_t>(*sizeinfo.max, *this->max);
         }

@@ -1015,7 +1015,7 @@ TEST_CASE("ReshapeNode") {
 
         CHECK_THAT(reshape_ptr->shape(), RangeEquals({-1, 1}));
 
-        CHECK(reshape_ptr->sizeinfo() == SizeInfo(set_ptr));
+        CHECK(reshape_ptr->sizeinfo() == SizeInfo(set_ptr, 0, 10));
 
         auto state = graph.empty_state();
         set_ptr->initialize_state(state, {0, 1, 2, 3});  // size 4
@@ -1218,9 +1218,9 @@ TEST_CASE("SizeNode") {
                 CHECK(len.min() >= 0);
                 CHECK(len.max() <= std::numeric_limits<ssize_t>::max());
 
-                // these are an implementation detail and could change in the future
-                CHECK(len.min() == 0);
-                CHECK(len.max() == std::numeric_limits<ssize_t>::max());
+                // These should be one less than the min/max of the original set node
+                CHECK(len.min() == 1.0);
+                CHECK(len.max() == 3.0);
             }
         }
     }

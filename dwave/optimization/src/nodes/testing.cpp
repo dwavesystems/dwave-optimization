@@ -54,6 +54,8 @@ ArrayValidationNode::ArrayValidationNode(ArrayNode* node_ptr) : array_ptr(node_p
     assert(node_ptr->repr().size());
     assert(node_ptr->str().size());
 
+    assert(node_ptr->sizeinfo() == node_ptr->sizeinfo().substitute(100));
+
     add_predecessor(node_ptr);
 }
 

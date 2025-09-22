@@ -366,8 +366,8 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
             CHECK_THAT(ge_ptr->shape(), RangeEquals({-1}));
 
             // derives its size from the dynamic node
-            CHECK(le_ptr->sizeinfo() == SizeInfo(y_ptr));
-            CHECK(ge_ptr->sizeinfo() == SizeInfo(y_ptr));
+            CHECK(le_ptr->sizeinfo() == SizeInfo(y_ptr, 2, 4));
+            CHECK(ge_ptr->sizeinfo() == SizeInfo(y_ptr, 2, 4));
         }
 
         // let's also toss an ArrayValidationNode on there to do most of the

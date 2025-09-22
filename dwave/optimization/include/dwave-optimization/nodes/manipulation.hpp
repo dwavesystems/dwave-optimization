@@ -301,6 +301,7 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     const Array* array_ptr_;
 
     const ValuesInfo values_info_;
+    const SizeInfo sizeinfo_;
 };
 
 /// Reshape a node to a specific non-dynamic shape. Use fill_value for any missing
