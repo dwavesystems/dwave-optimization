@@ -32,6 +32,18 @@ using Catch::Matchers::RangeEquals;
 TEST_CASE("AccumulateZipNode") {
     auto graph = Graph();
 
+    GIVEN("An zero arg expression") {
+        auto expression = Graph();
+        expression.set_objective(expression.emplace_node<ConstantNode>(std::vector{1.0}));
+        expression.topological_sort();
+
+        THEN("We get an exception trying to use it with an AccumulateZipNode") {
+            CHECK_THROWS_AS(
+                    AccumulateZipNode(std::move(expression), std::vector<ArrayNode*>{}, 0.0),
+                    std::invalid_argument);
+        }
+    }
+
     GIVEN("Two constant vector nodes and an expression") {
         std::vector<double> i = {0, 1, 2, 2};
         std::vector<double> j = {1, 2, 4, 3};
