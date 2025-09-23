@@ -27,6 +27,17 @@ namespace dwave::optimization {
 TEST_CASE("BinaryNode") {
     auto graph = Graph();
 
+    GIVEN("Default BinaryNode") {
+        auto inode_ptr = graph.emplace_node<BinaryNode>();
+
+        THEN("The function to check valid binary works") {
+            CHECK(inode_ptr->max() == 1.0);
+            CHECK(inode_ptr->min() == 0.0);
+            CHECK(inode_ptr->size() == 1);
+            CHECK(inode_ptr->ndim() == 0);
+        }
+    }
+
     GIVEN("A Binary Node representing an 1d array of 10 elements") {
         auto ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{10});
 
@@ -409,6 +420,17 @@ TEST_CASE("BinaryNode") {
 
 TEST_CASE("IntegerNode") {
     auto graph = Graph();
+
+    GIVEN("Default IntegerNode") {
+        auto inode_ptr = graph.emplace_node<IntegerNode>();
+
+        THEN("The function to check valid integers works") {
+            CHECK(inode_ptr->max() == IntegerNode::default_upper_bound);
+            CHECK(inode_ptr->min() == IntegerNode::default_lower_bound);
+            CHECK(inode_ptr->size() == 1);
+            CHECK(inode_ptr->ndim() == 0);
+        }
+    }
 
     GIVEN("Double precision numbers, which may fall outside integer range or are not integral") {
         IntegerNode inode({1});

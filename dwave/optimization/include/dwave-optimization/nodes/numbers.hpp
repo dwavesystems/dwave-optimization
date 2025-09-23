@@ -202,7 +202,7 @@ class IntegerNode : public NumberNode {
 class BinaryNode : public IntegerNode {
  public:
     /// A binary scalar variable with lower_bound = 0.0 and upper_bound = 1.0
-    BinaryNode() : BinaryNode(1) {}
+    BinaryNode() : BinaryNode({}) {}
 
     // Create a binary array with the user-defined bounds.
     // Defaulting to lower_bound = 0.0 and upper_bound = 1.0
