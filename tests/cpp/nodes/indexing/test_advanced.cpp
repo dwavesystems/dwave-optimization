@@ -97,24 +97,6 @@ TEST_CASE("AdvancedIndexingNode") {
             CHECK(sizeinfo.array_ptr == s_ptr);
             CHECK(sizeinfo.multiplier == 1);
             CHECK(sizeinfo.offset == 0);
-            CHECK(!sizeinfo.min);  // without knowing anything about s, we don't know our own min
-            CHECK(!sizeinfo.max);  // without knowing anything about s, we don't know our own max
-
-            sizeinfo = sizeinfo.substitute();
-
-            CHECK(sizeinfo.array_ptr == s_ptr);
-            CHECK(sizeinfo.multiplier == 1);
-            CHECK(sizeinfo.offset == 0);
-            CHECK(sizeinfo.min == 0);  // we've now established the min and max size
-            CHECK(sizeinfo.max == 5);  // we've now established the min and max size
-
-            // one more recurse does nothing (this is becoming a SizeInfo test but whatevs)
-
-            sizeinfo = sizeinfo.substitute();
-
-            CHECK(sizeinfo.array_ptr == s_ptr);
-            CHECK(sizeinfo.multiplier == 1);
-            CHECK(sizeinfo.offset == 0);
             CHECK(sizeinfo.min == 0);
             CHECK(sizeinfo.max == 5);
         }
@@ -273,18 +255,10 @@ TEST_CASE("AdvancedIndexingNode") {
             auto sizeinfo = B_ptr->sizeinfo();
 
             CHECK(sizeinfo.array_ptr == s_ptr);
-            CHECK(sizeinfo.multiplier == 2);  // twice as big as s
-            CHECK(sizeinfo.offset == 0);
-            CHECK(!sizeinfo.min);  // without knowing anything about s, we don't know our own min
-            CHECK(!sizeinfo.max);  // without knowing anything about s, we don't know our own max
-
-            sizeinfo = sizeinfo.substitute();
-
-            CHECK(sizeinfo.array_ptr == s_ptr);
             CHECK(sizeinfo.multiplier == 2);
             CHECK(sizeinfo.offset == 0);
-            CHECK(sizeinfo.min == 0);   // we've now established the min and max size
-            CHECK(sizeinfo.max == 10);  // we've now established the min and max size
+            CHECK(sizeinfo.min == 0);
+            CHECK(sizeinfo.max == 10);
         }
     }
 
@@ -748,7 +722,7 @@ TEST_CASE("AdvancedIndexingNode") {
                 CHECK(adv->dynamic());
                 CHECK_THAT(adv->shape(), RangeEquals({-1, 4}));
 
-                auto sizeinfo = adv->sizeinfo().substitute(3);
+                auto sizeinfo = adv->sizeinfo();
 
                 CHECK(sizeinfo.array_ptr == dyn_ptr);
                 CHECK(sizeinfo.multiplier == fraction(4, 3));
@@ -818,22 +792,6 @@ TEST_CASE("AdvancedIndexingNode") {
                 CHECK_THAT(adv->shape(), RangeEquals({-1, 3}));
 
                 auto sizeinfo = adv->sizeinfo();
-
-                CHECK(sizeinfo.array_ptr == i_ptr);
-                CHECK(sizeinfo.multiplier == 3);
-                CHECK(sizeinfo.offset == 0);
-                CHECK(!sizeinfo.min);  // doesn't know unless it asks i
-                CHECK(!sizeinfo.max);  // doesn't know unless it asks i
-
-                sizeinfo = sizeinfo.substitute();
-
-                CHECK(sizeinfo.array_ptr == dyn_ptr);
-                CHECK(sizeinfo.multiplier == 1);  // dyn is itself an Mx3 matrix!
-                CHECK(sizeinfo.offset == 0);
-                CHECK(!sizeinfo.min);  // doesn't know unless it asks dyn
-                CHECK(!sizeinfo.max);  // doesn't know unless it asks dyn
-
-                sizeinfo = sizeinfo.substitute();
 
                 CHECK(sizeinfo.array_ptr == dyn_ptr);
                 CHECK(sizeinfo.multiplier == 1);
@@ -924,27 +882,11 @@ TEST_CASE("AdvancedIndexingNode") {
 
                 auto sizeinfo = adv_ptr->sizeinfo();
 
-                CHECK(sizeinfo.array_ptr == i_ptr);
-                CHECK(sizeinfo.multiplier == 3);
-                CHECK(sizeinfo.offset == 0);
-                CHECK(!sizeinfo.min);  // doesn't know unless it asks i
-                CHECK(!sizeinfo.max);  // doesn't know unless it asks i
-
-                sizeinfo = sizeinfo.substitute();
-
                 CHECK(sizeinfo.array_ptr == dyn_ptr);
                 CHECK(sizeinfo.multiplier == 3);
                 CHECK(sizeinfo.offset == 0);
-                CHECK(!sizeinfo.min);  // doesn't know unless it asks dyn
-                CHECK(!sizeinfo.max);  // doesn't know unless it asks dyn
-
-                sizeinfo = sizeinfo.substitute();
-
-                CHECK(sizeinfo.array_ptr == dyn_ptr);
-                CHECK(sizeinfo.multiplier == 3);
-                CHECK(sizeinfo.offset == 0);
-                CHECK(*sizeinfo.min == 0);  // finally establishes the min
-                CHECK(*sizeinfo.max == 6);  // finally establishes the max
+                CHECK(*sizeinfo.min == 0);
+                CHECK(*sizeinfo.max == 6);
             }
 
             AND_WHEN("We create a state") {
@@ -1004,22 +946,6 @@ TEST_CASE("AdvancedIndexingNode") {
                 CHECK_THAT(adv_ptr->shape(), RangeEquals({-1, 3, 4}));
 
                 auto sizeinfo = adv_ptr->sizeinfo();
-
-                CHECK(sizeinfo.array_ptr == i_ptr);
-                CHECK(sizeinfo.multiplier == 12);
-                CHECK(sizeinfo.offset == 0);
-                CHECK(!sizeinfo.min);  // doesn't know unless it asks i
-                CHECK(!sizeinfo.max);  // doesn't know unless it asks i
-
-                sizeinfo = sizeinfo.substitute();
-
-                CHECK(sizeinfo.array_ptr == dyn_ptr);
-                CHECK(sizeinfo.multiplier == 12);
-                CHECK(sizeinfo.offset == 0);
-                CHECK(!sizeinfo.min);  // doesn't know unless it asks dyn
-                CHECK(!sizeinfo.max);  // doesn't know unless it asks dyn
-
-                sizeinfo = sizeinfo.substitute();
 
                 CHECK(sizeinfo.array_ptr == dyn_ptr);
                 CHECK(sizeinfo.multiplier == 12);

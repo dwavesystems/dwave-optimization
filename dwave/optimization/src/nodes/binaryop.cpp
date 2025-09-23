@@ -136,7 +136,8 @@ template <class BinaryOp>
 BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
         : ArrayOutputMixin(broadcast_shape(a_ptr->shape(), b_ptr->shape())),
           operands_({a_ptr, b_ptr}),
-          minmax_(calculate_values_minmax<BinaryOp>(operands_[0], operands_[1])) {
+          minmax_(calculate_values_minmax<BinaryOp>(operands_[0], operands_[1])),
+          sizeinfo_(binaryop_calculate_sizeinfo(this, operands_[0], operands_[1])) {
     this->add_predecessor(a_ptr);
     this->add_predecessor(b_ptr);
 }
@@ -389,28 +390,27 @@ ssize_t BinaryOpNode<BinaryOp>::size_diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->size_diff();
 }
 
-template <class BinaryOp>
-SizeInfo BinaryOpNode<BinaryOp>::sizeinfo() const {
-    if (!dynamic()) return SizeInfo(size());
-
-    const Array* lhs_ptr = operands_[0];
-    const Array* rhs_ptr = operands_[1];
+SizeInfo binaryop_calculate_sizeinfo(const Array* node_ptr, const Array* lhs_ptr, const Array* rhs_ptr) {
+    if (!node_ptr->dynamic()) return SizeInfo(node_ptr->size());
 
     if (lhs_ptr->dynamic() && rhs_ptr->dynamic()) {
-        assert(lhs_ptr->sizeinfo().substitute(100) == rhs_ptr->sizeinfo().substitute(100));
+        assert(lhs_ptr->sizeinfo() == rhs_ptr->sizeinfo());
         return lhs_ptr->sizeinfo();
     } else if (lhs_ptr->dynamic()) {
         assert(rhs_ptr->size() == 1);
-        return SizeInfo(lhs_ptr);
+        return lhs_ptr->sizeinfo();
     } else if (rhs_ptr->dynamic()) {
         assert(lhs_ptr->size() == 1);
-        return SizeInfo(rhs_ptr);
+        return rhs_ptr->sizeinfo();
     }
 
     // not possible for us to be dynamic and none of our predecessors to be
     assert(false && "not implemeted");
     unreachable();
 }
+
+template <class BinaryOp>
+SizeInfo BinaryOpNode<BinaryOp>::sizeinfo() const { return this->sizeinfo_; }
 
 // Uncommented are the tested specializations
 template class BinaryOpNode<std::plus<double>>;

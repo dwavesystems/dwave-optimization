@@ -41,7 +41,8 @@ AccumulateZipNode::AccumulateZipNode(std::shared_ptr<Graph> expression_ptr,
         : ArrayOutputMixin(operands.empty() ? std::span<ssize_t, 0>() : operands[0]->shape()),
           initial(initial),
           expression_ptr_(std::move(expression_ptr)),
-          operands_(operands) {
+          operands_(operands),
+          sizeinfo_(operands.empty()? SizeInfo(0) : operands_[0]->sizeinfo()) {
     check(*expression_ptr_, operands, initial);
 
     if (std::holds_alternative<ArrayNode*>(initial)) {
@@ -333,7 +334,7 @@ std::span<const ssize_t> AccumulateZipNode::shape(const State& state) const {
 
 ssize_t AccumulateZipNode::size(const State& state) const { return operands_[0]->size(state); }
 
-SizeInfo AccumulateZipNode::sizeinfo() const { return operands_[0]->sizeinfo(); }
+SizeInfo AccumulateZipNode::sizeinfo() const { return this->sizeinfo_; }
 
 ssize_t AccumulateZipNode::size_diff(const State& state) const {
     return data_ptr<AccumulateZipNodeData>(state)->size_diff();

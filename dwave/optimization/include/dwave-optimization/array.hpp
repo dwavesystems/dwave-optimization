@@ -43,7 +43,22 @@ namespace dwave::optimization {
 
 class Array;
 
-// Information about where a dynamic array gets its size.
+/// Information about where a dynamic array gets its size.
+///
+/// SizeInfo allows arrays to specify their own size as a (bounded) linear function of another
+/// dynamic array's size. This allows subsequent nodes in the graph to make guarantees about their
+/// predecessors' sizes, so that they can make guarantees about correctness at runtime. Since almost
+/// all array nodes have a size that is a simple linear transformation of their predecessors' size
+/// (which itself may be linear function of previous nodes' sizes), SizeInfo is able to capture most
+/// of their behavior.
+///
+/// SizeInfo has five members: a pointer to an Array, a multiplier, an offset, a minimum, and a
+/// maximum. It represents the following linear expression:
+///
+///     clamp(ceil(multiplier * array_ptr->size() + offset), min, max)
+///
+/// Note that multiplier and offset are represented as fractions (see
+/// `dwave::optimization::fraction`).
 struct SizeInfo {
     SizeInfo() : SizeInfo(0) {}
     explicit SizeInfo(const std::integral auto size)

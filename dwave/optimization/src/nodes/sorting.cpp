@@ -53,7 +53,8 @@ ArgSortNode::ArgSortNode(ArrayNode* arr_ptr)
           arr_ptr_(arr_ptr),
           minmax_(0, static_cast<double>(arr_ptr_->sizeinfo().max.value_or(
                                                  std::numeric_limits<ssize_t>::max()) -
-                                         1)) {
+                                         1)),
+          sizeinfo_(arr_ptr_->sizeinfo()) {
     add_predecessor(arr_ptr);
 }
 
@@ -136,6 +137,6 @@ ssize_t ArgSortNode::size_diff(const State& state) const {
     return data_ptr<ArgSortNodeData>(state)->size_diff();
 }
 
-SizeInfo ArgSortNode::sizeinfo() const { return arr_ptr_->sizeinfo(); }
+SizeInfo ArgSortNode::sizeinfo() const { return this->sizeinfo_; }
 
 }  // namespace dwave::optimization

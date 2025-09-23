@@ -79,6 +79,7 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
     const Array* arr_ptr_;
 
     const ValuesInfo values_info_;
+    const SizeInfo sizeinfo_;
 };
 
 /// Choose elements from x or y depending on condition.
@@ -122,6 +123,7 @@ class WhereNode : public ArrayOutputMixin<ArrayNode> {
     const Array* y_ptr_;
 
     const ValuesInfo values_info_;
+    const SizeInfo sizeinfo_;
 };
 
 }  // namespace dwave::optimization

@@ -53,14 +53,6 @@ TEST_CASE("BasicIndexingNode") {
             CHECK(sizeinfo.array_ptr == &set);
             CHECK(sizeinfo.multiplier == 1);
             CHECK(sizeinfo.offset == 0);
-            CHECK(!sizeinfo.min.has_value());
-            CHECK(!sizeinfo.max.has_value());
-
-            // now substitute so we can see what we did to the array's size
-            sizeinfo = sizeinfo.substitute();
-            CHECK(sizeinfo.array_ptr == &set);
-            CHECK(sizeinfo.multiplier == 1);
-            CHECK(sizeinfo.offset == 0);
             CHECK(sizeinfo.min == 0);
             CHECK(sizeinfo.max == 10);
         }
@@ -74,14 +66,6 @@ TEST_CASE("BasicIndexingNode") {
             CHECK(sizeinfo.array_ptr == &set);
             CHECK(sizeinfo.multiplier == fraction(1, 2));
             CHECK(sizeinfo.offset == 0);
-            CHECK(!sizeinfo.min.has_value());
-            CHECK(!sizeinfo.max.has_value());
-
-            // now substitute so we can see what we did to the array's size
-            sizeinfo = sizeinfo.substitute();
-            CHECK(sizeinfo.array_ptr == &set);
-            CHECK(sizeinfo.multiplier == fraction(1, 2));
-            CHECK(sizeinfo.offset == 0);
             CHECK(sizeinfo.min == 0);
             CHECK(sizeinfo.max == 5);
         }
@@ -92,14 +76,6 @@ TEST_CASE("BasicIndexingNode") {
             auto slice = BasicIndexingNode(&set, Slice(1, std::nullopt));
 
             auto sizeinfo = slice.sizeinfo();
-            CHECK(sizeinfo.array_ptr == &set);
-            CHECK(sizeinfo.multiplier == 1);
-            CHECK(sizeinfo.offset == -1);
-            CHECK(!sizeinfo.min.has_value());
-            CHECK(!sizeinfo.max.has_value());
-
-            // now substitute so we can see what we did to the array's size
-            sizeinfo = sizeinfo.substitute();
             CHECK(sizeinfo.array_ptr == &set);
             CHECK(sizeinfo.multiplier == 1);
             CHECK(sizeinfo.offset == -1);
@@ -117,17 +93,8 @@ TEST_CASE("BasicIndexingNode") {
 
             auto slice = BasicIndexingNode(&set, Slice(11, std::nullopt));
 
-            auto sizeinfo = slice.sizeinfo();
-            CHECK(sizeinfo.array_ptr == &set);
-            CHECK(sizeinfo.multiplier == 1);
-            CHECK(sizeinfo.offset == -11);
-            CHECK(!sizeinfo.min.has_value());
-            CHECK(!sizeinfo.max.has_value());
-
-            // now substitute so we can see what we did to the array's size
-            // in this case, it's always 0!
-            sizeinfo = sizeinfo.substitute();
-            CHECK(sizeinfo == 0);
+            // in this case, size should be always 0!
+            CHECK(slice.sizeinfo() == 0);
         }
 
         SECTION("SetNode(10)[:1]") {
@@ -136,14 +103,6 @@ TEST_CASE("BasicIndexingNode") {
             auto slice = BasicIndexingNode(&set, Slice(1));
 
             auto sizeinfo = slice.sizeinfo();
-            CHECK(sizeinfo.array_ptr == &set);
-            CHECK(sizeinfo.multiplier == 1);
-            CHECK(sizeinfo.offset == 0);
-            CHECK(!sizeinfo.min.has_value());
-            CHECK(sizeinfo.max == 1);
-
-            // now substitute so we can see what we did to the array's size
-            sizeinfo = sizeinfo.substitute();
             CHECK(sizeinfo.array_ptr == &set);
             CHECK(sizeinfo.multiplier == 1);
             CHECK(sizeinfo.offset == 0);
@@ -160,14 +119,6 @@ TEST_CASE("BasicIndexingNode") {
             CHECK(sizeinfo.array_ptr == &set);
             CHECK(sizeinfo.multiplier == 1);
             CHECK(sizeinfo.offset == -1);
-            CHECK(!sizeinfo.min.has_value());
-            CHECK(!sizeinfo.max.has_value());
-
-            // now substitute so we can see what we did to the array's size
-            sizeinfo = sizeinfo.substitute();
-            CHECK(sizeinfo.array_ptr == &set);
-            CHECK(sizeinfo.multiplier == 1);
-            CHECK(sizeinfo.offset == -1);
             CHECK(sizeinfo.min == 0);
             CHECK(sizeinfo.max == 9);
         }
@@ -178,14 +129,6 @@ TEST_CASE("BasicIndexingNode") {
             auto slice = BasicIndexingNode(&set, Slice(-2, std::nullopt));
 
             auto sizeinfo = slice.sizeinfo();
-            CHECK(sizeinfo.array_ptr == &set);
-            CHECK(sizeinfo.multiplier == 1);
-            CHECK(sizeinfo.offset == 0);
-            CHECK(!sizeinfo.min.has_value());
-            CHECK(sizeinfo.max == 2);
-
-            // now substitute so we can see what we did to the array's size
-            sizeinfo = sizeinfo.substitute();
             CHECK(sizeinfo.array_ptr == &set);
             CHECK(sizeinfo.multiplier == 1);
             CHECK(sizeinfo.offset == 0);
@@ -200,14 +143,6 @@ TEST_CASE("BasicIndexingNode") {
 
             auto sizeinfo = slice.sizeinfo();
             CHECK(sizeinfo.array_ptr == &set);
-            CHECK(sizeinfo.multiplier == 1);
-            CHECK(sizeinfo.offset == -5);
-            CHECK(!sizeinfo.min.has_value());
-            CHECK(sizeinfo.max == 0);
-
-            // now substitute so we can see what we did to the array's size
-            sizeinfo = sizeinfo.substitute();
-            CHECK(sizeinfo.array_ptr == &set);
             CHECK(sizeinfo.multiplier == 0);
             CHECK(sizeinfo.offset == 0);
             CHECK(sizeinfo.min == 0);
@@ -220,14 +155,6 @@ TEST_CASE("BasicIndexingNode") {
             auto slice = BasicIndexingNode(&set, Slice(-4, -5));
 
             auto sizeinfo = slice.sizeinfo();
-            CHECK(sizeinfo.array_ptr == &set);
-            CHECK(sizeinfo.multiplier == 1);
-            CHECK(sizeinfo.offset == -5);
-            CHECK(!sizeinfo.min.has_value());
-            CHECK(sizeinfo.max == 0);
-
-            // now substitute so we can see what we did to the array's size
-            sizeinfo = sizeinfo.substitute();
             CHECK(sizeinfo.array_ptr == &set);
             CHECK(sizeinfo.multiplier == 0);
             CHECK(sizeinfo.offset == 0);
@@ -260,13 +187,6 @@ TEST_CASE("BasicIndexingNode") {
             auto slice1 = BasicIndexingNode(&slice0, Slice(-1, std::nullopt));
 
             auto sizeinfo = slice1.sizeinfo();
-            CHECK(sizeinfo.array_ptr == &slice0);
-            CHECK(sizeinfo.multiplier == 1);
-            CHECK(sizeinfo.offset == 0);
-            CHECK(!sizeinfo.min.has_value());
-            CHECK(sizeinfo.max == 1);
-
-            sizeinfo = sizeinfo.substitute(2);
             CHECK(sizeinfo.array_ptr == &set);
             CHECK(sizeinfo.multiplier == 1);
             CHECK(sizeinfo.offset == -1);

@@ -74,7 +74,7 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::cos<d
         THEN("The shape is also dynamic") {
             CHECK(p_ptr->dynamic());
             CHECK(p_ptr->ndim() == 1);
-            CHECK(p_ptr->sizeinfo() == SizeInfo(a_ptr));
+            CHECK(p_ptr->sizeinfo() == SizeInfo(a_ptr, 0, 5));
         }
 
         WHEN("We initialize the input node to be empty") {

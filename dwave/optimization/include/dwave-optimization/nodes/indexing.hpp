@@ -265,6 +265,7 @@ class BasicIndexingNode : public ArrayNode {
     const bool contiguous_;
 
     const ValuesInfo values_info_;
+    const SizeInfo sizeinfo_;
 };
 
 class PermutationNode : public ArrayOutputMixin<ArrayNode> {

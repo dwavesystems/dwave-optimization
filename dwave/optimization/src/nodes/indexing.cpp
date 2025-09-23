@@ -695,7 +695,8 @@ SizeInfo AdvancedIndexingNode::sizeinfo() const {
         sizeinfo = SizeInfo(base_ptr);
         sizeinfo.multiplier = multiplier;
     }
-    return sizeinfo;
+
+    return sizeinfo.substitute(1);
 }
 
 std::span<const ssize_t> AdvancedIndexingNode::shape(const State& state) const {
@@ -1086,6 +1087,130 @@ struct BasicIndexingNode::IndexParser_ {
     std::optional<Slice> axis0_slice;
 };
 
+SizeInfo basicindexing_calculate_sizeinfo(const Array* this_node_ptr, const Array* array_ptr_, const std::optional<Slice>& axis0_slice_) {
+    // easy case, fixed size
+    if (!this_node_ptr->dynamic()) return SizeInfo(this_node_ptr->size());
+
+    const ssize_t array_num_per_row = array_ptr_->strides()[0] / array_ptr_->itemsize();
+    if (axis0_slice_->stop >= 0 && axis0_slice_->stop < std::numeric_limits<ssize_t>::max() &&
+        axis0_slice_->start < 0) {
+        // Stop is positive and finite and start is less than zero. In this case, the size is not a
+        // linear function of the main array's size, and thus the best we can do is compute the
+        // maximum and return a SizeInfo pointing to the BasicIndexingNode itself.
+        ssize_t max_size =
+                std::min<ssize_t>(-axis0_slice_->start, axis0_slice_->stop) * array_num_per_row;
+        return SizeInfo(this_node_ptr, 0, max_size);
+    }
+
+    if (std::abs(axis0_slice_->step) > 1 && array_num_per_row > 1) {
+        // There is currently no way to capture the resulting size of this indexing operation
+        // using SizeInfo, so the best we can do is compute the min/max and return a SizeInfo
+        // pointing to the BasicIndexingNode itself.
+        if (axis0_slice_->start < 0 && axis0_slice_->stop < 0) {
+            // Both negative, the max size is the difference
+            ssize_t max_size = std::max<ssize_t>(axis0_slice_->stop - axis0_slice_->start, 0);
+            return SizeInfo(this_node_ptr, 0, max_size);
+        } else if (axis0_slice_->start > 0 && axis0_slice_->stop < 0 &&
+                   array_ptr_->sizeinfo().max.has_value()) {
+            // Positive start and negative end with known bound on size of predecessor
+            ssize_t max_size =
+                    array_ptr_->sizeinfo().max.value() - axis0_slice_->start + axis0_slice_->stop;
+            return SizeInfo(this_node_ptr, 0, max_size);
+        } else if (axis0_slice_->start > 0 && axis0_slice_->stop < 0 &&
+                   array_ptr_->sizeinfo().max.has_value()) {
+            // Positive start and negative end with no known bound on size of predecessor.
+            // Size is unbounded
+            return SizeInfo(this_node_ptr);
+        } else {
+            // There are more cases we could handle here... but for now just giving up
+            return SizeInfo(this_node_ptr);
+        }
+    }
+
+    auto sizeinfo = SizeInfo(array_ptr_);
+
+    // Get the multiplier on the size of the array
+    {
+        // Determine how many elements are in each row of the array. Where "row" here means the
+        // first axis.
+        // We use the fact that the parent is contiguous to simplify this calculation.
+        assert(array_ptr_->contiguous());
+        assert(this_node_ptr->ndim() > 0);
+        ssize_t array_num_per_row = array_ptr_->strides()[0] / array_ptr_->itemsize();
+
+        sizeinfo.multiplier /= array_num_per_row;
+
+        // Determine how many elements are in each row of the resulting array.
+        // Here we may be strided, so we use the shape to figure it out.
+        auto shape = this_node_ptr->shape();
+        ssize_t num_per_row =
+                std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>());
+
+        sizeinfo.multiplier *= num_per_row;
+
+        // handle the step
+        assert(axis0_slice_);            // dynamic so this should be present
+        assert(axis0_slice_->step > 0);  // constructor prevents otherwise for now
+
+        sizeinfo.multiplier /= axis0_slice_->step;
+    }
+
+    // This is where having Slice's values be optional<ssize_t> would be useful.
+    // For now let's just read them off of Slice
+    // constexpr auto MIN = Slice(std::nullopt, std::nullopt, -1).stop;
+    constexpr auto MAX = Slice().stop;
+
+    // Get the offset and bounds
+    {
+        assert(axis0_slice_);            // dynamic so this should be present
+        assert(axis0_slice_->step > 0);  // currently required by constructor
+        assert(!sizeinfo.max);           // bounds have not been set yet
+        assert(!sizeinfo.min);
+
+        const auto& [start, stop, step] = *axis0_slice_;  // all for axis 0!
+
+        // get the number of elements in each "row" of the model
+        auto shape = this_node_ptr->shape();
+        ssize_t num_per_row =
+                std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>());
+
+        // having a positive start imposes a size offset
+        if (start > 0) sizeinfo.offset -= num_per_row * start;
+
+        // having a negative stop imposes a size offset
+        if (stop < 0) sizeinfo.offset += num_per_row * stop;
+
+        sizeinfo.offset /= axis0_slice_->step;
+
+        // now the bounds
+        if (start >= 0 && stop == MAX) {
+            // start::step - no information about bounds
+        } else if (start < 0 && stop == MAX) {
+            // -start::step - imposes a maximum size
+            sizeinfo.max = num_per_row * -start / step;
+            assert(-start % step == 0);
+        } else if (start >= 0 && stop >= 0) {
+            // start:stop:step - imposes a maximum size
+            assert(stop < MAX);  // previous case, already checked
+            sizeinfo.max = num_per_row * (std::max<ssize_t>(stop - start, 0) + step - 1) / step;
+        } else if (start >= 0 && stop < 0) {
+            // start:-stop:step - no information about bounds
+        } else if (start < 0 && stop >= 0) {
+            // -start:stop:step - imposes a nonlinear maximum size
+            assert(false && "not linear, handled above");
+            unreachable();
+        } else if (start < 0 && stop < 0) {
+            // -start:-stop:step - imposes a maximum size
+            sizeinfo.max = num_per_row * (std::max<ssize_t>(stop - start, 0) + step - 1) / step;
+        } else {
+            assert(false && "shouldn't be reachable");
+            unreachable();
+        }
+    }
+
+    return sizeinfo.substitute(1);
+}
+
 BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, std::vector<slice_or_int> indices)
         : BasicIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
 
@@ -1098,7 +1223,8 @@ BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser
           size_(Array::shape_to_size(ndim_, shape_.get())),
           axis0_slice_(parser.axis0_slice),
           contiguous_(Array::is_contiguous(ndim_, shape_.get(), strides_.get())),
-          values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()) {
+          values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()),
+          sizeinfo_(basicindexing_calculate_sizeinfo(this, array_ptr_, axis0_slice_)) {
     if (!contiguous_ && dynamic() &&
         (this->axis0_slice_->start < 0 || this->axis0_slice_->stop < 0)) {
         throw std::invalid_argument(
@@ -1621,129 +1747,7 @@ ssize_t BasicIndexingNode::size(const State& state) const {
     return Array::shape_to_size(ndim_, data_ptr<BasicIndexingNodeData>(state)->dynamic_shape.get());
 }
 
-SizeInfo BasicIndexingNode::sizeinfo() const {
-    // easy case, fixed size
-    if (size_ >= 0) return SizeInfo(size_);
-
-    const ssize_t array_num_per_row = array_ptr_->strides()[0] / array_ptr_->itemsize();
-    if (axis0_slice_->stop >= 0 && axis0_slice_->stop < std::numeric_limits<ssize_t>::max() &&
-        axis0_slice_->start < 0) {
-        // Stop is positive and finite and start is less than zero. In this case, the size is not a
-        // linear function of the main array's size, and thus the best we can do is compute the
-        // maximum and return a SizeInfo pointing to the BasicIndexingNode itself.
-        ssize_t max_size =
-                std::min<ssize_t>(-axis0_slice_->start, axis0_slice_->stop) * array_num_per_row;
-        return SizeInfo(this, 0, max_size);
-    }
-
-    if (std::abs(axis0_slice_->step) > 1 && array_num_per_row > 1) {
-        // There is currently no way to capture the resulting size of this indexing operation
-        // using SizeInfo, so the best we can do is compute the min/max and return a SizeInfo
-        // pointing to the BasicIndexingNode itself.
-        if (axis0_slice_->start < 0 && axis0_slice_->stop < 0) {
-            // Both negative, the max size is the difference
-            ssize_t max_size = std::max<ssize_t>(axis0_slice_->stop - axis0_slice_->start, 0);
-            return SizeInfo(this, 0, max_size);
-        } else if (axis0_slice_->start > 0 && axis0_slice_->stop < 0 &&
-                   array_ptr_->sizeinfo().max.has_value()) {
-            // Positive start and negative end with known bound on size of predecessor
-            ssize_t max_size =
-                    array_ptr_->sizeinfo().max.value() - axis0_slice_->start + axis0_slice_->stop;
-            return SizeInfo(this, 0, max_size);
-        } else if (axis0_slice_->start > 0 && axis0_slice_->stop < 0 &&
-                   array_ptr_->sizeinfo().max.has_value()) {
-            // Positive start and negative end with no known bound on size of predecessor.
-            // Size is unbounded
-            return SizeInfo(this);
-        } else {
-            // There are more cases we could handle here... but for now just giving up
-            return SizeInfo(this);
-        }
-    }
-
-    auto sizeinfo = SizeInfo(array_ptr_);
-
-    // Get the multiplier on the size of the array
-    {
-        // Determine how many elements are in each row of the array. Where "row" here means the
-        // first axis.
-        // We use the fact that the parent is contiguous to simplify this calculation.
-        assert(array_ptr_->contiguous());
-        assert(this->ndim() > 0);
-        ssize_t array_num_per_row = array_ptr_->strides()[0] / array_ptr_->itemsize();
-
-        sizeinfo.multiplier /= array_num_per_row;
-
-        // Determine how many elements are in each row of the resulting array.
-        // Here we may be strided, so we use the shape to figure it out.
-        auto shape = this->shape();
-        ssize_t num_per_row =
-                std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>());
-
-        sizeinfo.multiplier *= num_per_row;
-
-        // handle the step
-        assert(axis0_slice_);            // dynamic so this should be present
-        assert(axis0_slice_->step > 0);  // constructor prevents otherwise for now
-
-        sizeinfo.multiplier /= axis0_slice_->step;
-    }
-
-    // This is where having Slice's values be optional<ssize_t> would be useful.
-    // For now let's just read them off of Slice
-    // constexpr auto MIN = Slice(std::nullopt, std::nullopt, -1).stop;
-    constexpr auto MAX = Slice().stop;
-
-    // Get the offset and bounds
-    {
-        assert(axis0_slice_);            // dynamic so this should be present
-        assert(axis0_slice_->step > 0);  // currently required by constructor
-        assert(!sizeinfo.max);           // bounds have not been set yet
-        assert(!sizeinfo.min);
-
-        const auto& [start, stop, step] = *axis0_slice_;  // all for axis 0!
-
-        // get the number of elements in each "row" of the model
-        auto shape = this->shape();
-        ssize_t num_per_row =
-                std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>());
-
-        // having a positive start imposes a size offset
-        if (start > 0) sizeinfo.offset -= num_per_row * start;
-
-        // having a negative stop imposes a size offset
-        if (stop < 0) sizeinfo.offset += num_per_row * stop;
-
-        sizeinfo.offset /= axis0_slice_->step;
-
-        // now the bounds
-        if (start >= 0 && stop == MAX) {
-            // start::step - no information about bounds
-        } else if (start < 0 && stop == MAX) {
-            // -start::step - imposes a maximum size
-            sizeinfo.max = num_per_row * -start / step;
-            assert(-start % step == 0);
-        } else if (start >= 0 && stop >= 0) {
-            // start:stop:step - imposes a maximum size
-            assert(stop < MAX);  // previous case, already checked
-            sizeinfo.max = num_per_row * (std::max<ssize_t>(stop - start, 0) + step - 1) / step;
-        } else if (start >= 0 && stop < 0) {
-            // start:-stop:step - no information about bounds
-        } else if (start < 0 && stop >= 0) {
-            // -start:stop:step - imposes a nonlinear maximum size
-            assert(false && "not linear, handled above");
-            unreachable();
-        } else if (start < 0 && stop < 0) {
-            // -start:-stop:step - imposes a maximum size
-            sizeinfo.max = num_per_row * (std::max<ssize_t>(stop - start, 0) + step - 1) / step;
-        } else {
-            assert(false && "shouldn't be reachable");
-            unreachable();
-        }
-    }
-
-    return sizeinfo;
-}
+SizeInfo BasicIndexingNode::sizeinfo() const { return this->sizeinfo_; }
 
 ssize_t BasicIndexingNode::size_diff(const State& state) const {
     if (size_ >= 0) return 0;

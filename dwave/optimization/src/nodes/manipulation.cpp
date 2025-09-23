@@ -818,7 +818,8 @@ class DynamicReshapeNodeData : public NodeStateData {
 ReshapeNode::ReshapeNode(ArrayNode* node_ptr, std::vector<ssize_t>&& shape)
         : ArrayOutputMixin(infer_reshape(node_ptr, std::move(shape))),
           array_ptr_(node_ptr),
-          values_info_(array_ptr_) {
+          values_info_(array_ptr_),
+          sizeinfo_(array_ptr_->sizeinfo()) {
     // Don't (yet) support non-contiguous predecessors.
     // In some cases with non-contiguous predecessors we need to make a copy.
     // See https://github.com/dwavesystems/dwave-optimization/issues/16
@@ -918,10 +919,7 @@ ssize_t ReshapeNode::size(const State& state) const {
     return data_ptr<DynamicReshapeNodeData>(state)->size();
 }
 
-SizeInfo ReshapeNode::sizeinfo() const {
-    if (this->dynamic()) return SizeInfo(array_ptr_);
-    return SizeInfo(this->size());
-}
+SizeInfo ReshapeNode::sizeinfo() const { return this->sizeinfo_; }
 
 ssize_t ReshapeNode::size_diff(const State& state) const {
     if (!this->dynamic()) return 0;  // stateless

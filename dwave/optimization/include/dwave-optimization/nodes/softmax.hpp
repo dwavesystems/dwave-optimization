@@ -74,6 +74,8 @@ class SoftMaxNode : public ArrayOutputMixin<ArrayNode> {
  private:
     // these are redundant, but convenient
     const Array* arr_ptr_;
+
+    const SizeInfo sizeinfo_;
 };
 
 }  // namespace dwave::optimization
