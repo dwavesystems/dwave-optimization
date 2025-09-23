@@ -133,7 +133,7 @@ class IntegerNode : public NumberNode {
     static constexpr int default_upper_bound = maximum_upper_bound;
 
     // Default to a single scalar integer with default bounds
-    IntegerNode() : IntegerNode(1) {}
+    IntegerNode() : IntegerNode({}) {}
 
     // Create an integer array with the user-defined bounds.
     // Defaulting to the specified default bounds.
