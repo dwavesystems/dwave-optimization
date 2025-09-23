@@ -49,7 +49,7 @@ TEST_CASE("BinaryNode") {
             }
 
             THEN("The default bounds are set properly") {
-                for (int i = 0; i < 10; i++) {
+                for (int i = 0; i < 10; ++i) {
                     CHECK(ptr->lower_bound(i) == 0);
                     CHECK(ptr->upper_bound(i) == 1);
                 }
@@ -82,8 +82,8 @@ TEST_CASE("BinaryNode") {
             THEN("We can read the state") { CHECK_THAT(ptr->view(state), RangeEquals(vec_d)); }
 
             WHEN("We flip the states") {
-                for (int i = 0; i < ptr->size(); i++) {
-                    ptr->flip(state, i);
+                for (int i = 0, stop = ptr->size(); i < stop; ++i) {
+                    CHECK(ptr->flip(state, i));
                     vec_d[i] = !vec_d[i];
                 }
 
@@ -95,7 +95,7 @@ TEST_CASE("BinaryNode") {
             WHEN("We set all the elements") {
                 auto set_count = 0;
                 auto set_count_ground = 0;
-                for (int i = 0; i < ptr->size(); i++) {
+                for (int i = 0, stop = ptr->size(); i < stop; ++i) {
                     set_count += ptr->set(state, i);
                     set_count_ground += !vec_d[i];
                 }
@@ -112,7 +112,7 @@ TEST_CASE("BinaryNode") {
             WHEN("We unset all the elements") {
                 auto unset_count = 0;
                 auto unset_count_ground = 0;
-                for (int i = 0; i < ptr->size(); i++) {
+                for (int i = 0, stop = ptr->size(); i < stop; ++i) {
                     unset_count += ptr->unset(state, i);
                     unset_count_ground += vec_d[i];
                 }
@@ -129,7 +129,7 @@ TEST_CASE("BinaryNode") {
             WHEN("We exchange the elements") {
                 auto exchange_count = 0;
                 auto exchange_count_ground = 0;
-                for (int i = 0; i < ptr->size() - 1; i++) {
+                for (int i = 0, stop = ptr->size() - 1; i < stop; ++i) {
                     exchange_count += ptr->exchange(state, i, i + 1);
                     std::swap(vec_d[i], vec_d[i + 1]);
                     exchange_count_ground += (vec_d[i] != vec_d[i + 1]);
@@ -195,8 +195,8 @@ TEST_CASE("BinaryNode") {
             THEN("We can read the state") { CHECK(std::ranges::equal(ptr->view(state), vec_d)); }
 
             WHEN("We flip the states") {
-                for (int i = 0; i < ptr->size(); i++) {
-                    ptr->flip(state, i);
+                for (int i = 0, stop = ptr->size(); i < stop; ++i) {
+                    CHECK(ptr->flip(state, i));
                     vec_d[i] = !vec_d[i];
                 }
 
@@ -208,7 +208,7 @@ TEST_CASE("BinaryNode") {
             WHEN("We set all the elements") {
                 auto set_count = 0;
                 auto set_count_ground = 0;
-                for (int i = 0; i < ptr->size(); i++) {
+                for (int i = 0, stop = ptr->size(); i < stop; ++i) {
                     set_count += ptr->set(state, i);
                     set_count_ground += !vec_d[i];
                 }
@@ -225,7 +225,7 @@ TEST_CASE("BinaryNode") {
             WHEN("We unset all the elements") {
                 auto unset_count = 0;
                 auto unset_count_ground = 0;
-                for (int i = 0; i < ptr->size(); i++) {
+                for (int i = 0, stop = ptr->size(); i < stop; ++i) {
                     unset_count += ptr->unset(state, i);
                     unset_count_ground += vec_d[i];
                 }
@@ -242,7 +242,7 @@ TEST_CASE("BinaryNode") {
             WHEN("We exchange the elements") {
                 auto exchange_count = 0;
                 auto exchange_count_ground = 0;
-                for (int i = 0; i < ptr->size() - 1; i++) {
+                for (int i = 0, stop = ptr->size() - 1; i < stop; ++i) {
                     exchange_count += ptr->exchange(state, i, i + 1);
                     std::swap(vec_d[i], vec_d[i + 1]);
                     exchange_count_ground += (vec_d[i] != vec_d[i + 1]);
@@ -279,15 +279,20 @@ TEST_CASE("BinaryNode") {
 
         AND_WHEN("We set the state at one of the indices") {
             auto state = graph.initialize_state();
-            THEN("An exception is raised if it's out of bounds") {
-                REQUIRE_THROWS(bnode_ptr->set_value(state, 2, 1.9));
+
+            THEN("The initialized values are correct") {
+                CHECK_THAT(bnode_ptr->view(state), RangeEquals({0, 0, 1}));
             }
 
-            THEN("The value is within bounds") { CHECK(bnode_ptr->is_valid(2, 1.0)); }
+            THEN("An exception is raised if it's out of bounds") {
+                REQUIRE_THROWS(bnode_ptr->set_value(state, 0, 1.9));
+            }
 
-            bnode_ptr->set_value(state, 2, 1.0);
+            THEN("The value is within bounds") { CHECK(bnode_ptr->is_valid(0, 1.0)); }
 
-            THEN("The value is correct") { CHECK(bnode_ptr->get_value(state, 2) == 1.0); }
+            CHECK(bnode_ptr->set_value(state, 0, 1.0));
+
+            THEN("The value is correct") { CHECK(bnode_ptr->get_value(state, 0) == 1.0); }
 
             AND_WHEN("We commit the state") {
                 graph.commit(state);
@@ -577,7 +582,7 @@ TEST_CASE("IntegerNode") {
 
             THEN("Then all elements are integral and within range") {
                 bool found_invalid = false;
-                for (ssize_t i = 0, stop = state_view.size(); i < stop; i++) {
+                for (ssize_t i = 0, stop = state_view.size(); i < stop; ++i) {
                     if (!ptr->is_valid(i, state_view[i])) {
                         found_invalid = true;
                         break;
@@ -604,7 +609,7 @@ TEST_CASE("IntegerNode") {
                 auto set_count = 0;
                 std::vector<double> new_values;
                 auto view = ptr->view(state);
-                for (int i = 0; i < ptr->size(); i++) {
+                for (int i = 0, stop = ptr->size(); i < stop; ++i) {
                     double new_val = (i % 2) ? 9 : view[i];
                     set_count += ptr->set_value(state, i, new_val);
                     new_values.push_back(new_val);
@@ -631,7 +636,7 @@ TEST_CASE("IntegerNode") {
                 auto initial_state = vec_d;
                 auto exchange_count = 0;
                 auto exchange_count_ground = 0;
-                for (int i = 0; i < ptr->size() - 1; i++) {
+                for (int i = 0, stop = ptr->size() - 1; i < stop; ++i) {
                     exchange_count += ptr->exchange(state, i, i + 1);
                     std::swap(vec_d[i], vec_d[i + 1]);
                     exchange_count_ground += (vec_d[i] != vec_d[i + 1]);
