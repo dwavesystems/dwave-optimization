@@ -65,7 +65,7 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const noexcept override;
 
     /// @copydoc Array::integral()
-    bool integral() const override { return integral_; };
+    bool integral() const override { return values_info_.integral; };
 
     [[noreturn]] void initialize_state(State& state) const override {
         throw std::logic_error(
@@ -78,10 +78,10 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     void initialize_state(State& state, std::span<const double> data) const;
 
     /// @copydoc Array::max()
-    double max() const override { return max_; }
+    double max() const override { return values_info_.max; }
 
     /// @copydoc Array::min()
-    double min() const override { return min_; }
+    double min() const override { return values_info_.min; }
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const noexcept override{};
@@ -92,9 +92,7 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
  private:
     void check_values(std::span<const double> new_values) const;
 
-    const double min_;
-    const double max_;
-    const bool integral_;
+    const ValuesInfo values_info_;
 };
 
 }  // namespace dwave::optimization
