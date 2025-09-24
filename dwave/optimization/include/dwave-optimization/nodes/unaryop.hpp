@@ -73,7 +73,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     // predecessors(), but this is more performant
     Array* const array_ptr_;
 
-    const std::pair<double, double> minmax_;
+    const ValuesInfo values_info_;
     const SizeInfo sizeinfo_;
 };
 

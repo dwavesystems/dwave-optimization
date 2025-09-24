@@ -19,7 +19,7 @@
 namespace dwave::optimization {
 
 template <class UnaryOp>
-std::pair<double, double> calculate_values_minmax_(Array* const array_ptr) {
+std::pair<double, double> calculate_values_minmax(const Array* array_ptr) {
     // Do some checks to make sure the resulting domain/range will be valid
     if constexpr (std::is_same<UnaryOp, functional::square_root<double>>::value) {
         if (array_ptr->min() < 0) {
@@ -96,10 +96,62 @@ std::pair<double, double> calculate_values_minmax_(Array* const array_ptr) {
 }
 
 template <class UnaryOp>
+bool calculate_integral(const Array*) {
+    using result_type = typename std::invoke_result<UnaryOp, double&>::type;
+    return std::is_integral<result_type>::value;
+}
+
+template <>
+bool calculate_integral<functional::abs<double>>(const Array* array_ptr) {
+    return array_ptr->integral();
+}
+
+template <>
+bool calculate_integral<functional::cos<double>>(const Array*) {
+    return false;
+}
+
+template <>
+bool calculate_integral<functional::exp<double>>(const Array*) {
+    return false;
+}
+
+template <>
+bool calculate_integral<functional::expit<double>>(const Array*) {
+    return false;
+}
+
+template <>
+bool calculate_integral<functional::log<double>>(const Array*) {
+    return false;
+}
+
+template <>
+bool calculate_integral<std::negate<double>>(const Array* array_ptr) {
+    return array_ptr->integral();
+}
+
+template <>
+bool calculate_integral<functional::rint<double>>(const Array*) {
+    return true;
+}
+
+template <>
+bool calculate_integral<functional::sin<double>>(const Array*) {
+    return false;
+}
+
+template <>
+bool calculate_integral<functional::square<double>>(const Array* array_ptr) {
+    return array_ptr->integral();
+}
+
+template <class UnaryOp>
 UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
         : ArrayOutputMixin(node_ptr->shape()),
           array_ptr_(node_ptr),
-          minmax_(calculate_values_minmax_<UnaryOp>(array_ptr_)),
+          values_info_(calculate_values_minmax<UnaryOp>(array_ptr_),
+                       calculate_integral<UnaryOp>(array_ptr_)),
           sizeinfo_(array_ptr_->sizeinfo()) {
     add_predecessor(node_ptr);
 }
@@ -130,61 +182,19 @@ void UnaryOpNode<UnaryOp>::initialize_state(State& state) const {
     emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
 }
 
-template <>
-bool UnaryOpNode<functional::abs<double>>::integral() const {
-    return array_ptr_->integral();
-}
-template <>
-bool UnaryOpNode<functional::cos<double>>::integral() const {
-    return false;
-}
-template <>
-bool UnaryOpNode<functional::exp<double>>::integral() const {
-    return false;
-}
-template <>
-bool UnaryOpNode<functional::expit<double>>::integral() const {
-    return false;
-}
-template <>
-bool UnaryOpNode<functional::log<double>>::integral() const {
-    return false;
-}
-template <>
-bool UnaryOpNode<std::negate<double>>::integral() const {
-    return array_ptr_->integral();
-}
-template <>
-bool UnaryOpNode<functional::rint<double>>::integral() const {
-    return true;
-}
-template <>
-bool UnaryOpNode<functional::sin<double>>::integral() const {
-    return false;
-}
-template <>
-bool UnaryOpNode<functional::square<double>>::integral() const {
-    return array_ptr_->integral();
-}
 template <class UnaryOp>
 bool UnaryOpNode<UnaryOp>::integral() const {
-    using result_type = typename std::invoke_result<UnaryOp, double&>::type;
-
-    if constexpr (std::is_integral<result_type>::value) {
-        return true;
-    }
-
-    return Array::integral();
+    return values_info_.integral;
 }
 
 template <class UnaryOp>
 double UnaryOpNode<UnaryOp>::min() const {
-    return this->minmax_.first;
+    return this->values_info_.min;
 }
 
 template <class UnaryOp>
 double UnaryOpNode<UnaryOp>::max() const {
-    return this->minmax_.second;
+    return this->values_info_.max;
 }
 
 template <class UnaryOp>
@@ -229,7 +239,9 @@ ssize_t UnaryOpNode<UnaryOp>::size_diff(const State& state) const {
 }
 
 template <class UnaryOp>
-SizeInfo UnaryOpNode<UnaryOp>::sizeinfo() const { return this->sizeinfo_; }
+SizeInfo UnaryOpNode<UnaryOp>::sizeinfo() const {
+    return this->sizeinfo_;
+}
 
 template class UnaryOpNode<functional::abs<double>>;
 template class UnaryOpNode<functional::cos<double>>;
