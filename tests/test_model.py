@@ -433,19 +433,18 @@ class TestModel(unittest.TestCase):
         with self.subTest("disjoint lists"):
             model = Model()
 
-            base, lists = model.disjoint_lists(10, 4)
+            disjoint_lists = model.disjoint_lists(10, 4)
 
             # only use some of the lists
-            model.minimize(lists[0].sum())
-            model.add_constraint(lists[1].sum() <= model.constant(3))
+            model.minimize(disjoint_lists[0].sum())
+            model.add_constraint(disjoint_lists[1].sum() <= model.constant(3))
 
-            lists[2].prod()  # this one will hopefully be removed
+            disjoint_lists[2].prod()  # this one will hopefully be removed
 
             self.assertEqual(model.num_symbols(), 10)
 
             # make sure they aren't being kept alive by other objects
-            del lists
-            del base
+            del disjoint_lists
 
             num_removed = model.remove_unused_symbols()
 
