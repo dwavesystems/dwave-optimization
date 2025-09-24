@@ -133,10 +133,38 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
 }
 
 template <class BinaryOp>
+bool calculate_integral(const Array* lhs_ptr, const Array* rhs_ptr) {
+    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
+
+    if constexpr (std::is_integral<result_type>::value) {
+        return true;
+    }
+
+    // The mathematical operations require a bit more fiddling.
+
+    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value ||
+                  std::is_same<BinaryOp, functional::safe_divides<double>>::value) {
+        return false;
+    }
+    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
+                  std::is_same<BinaryOp, functional::min<double>>::value ||
+                  std::is_same<BinaryOp, std::minus<double>>::value ||
+                  std::is_same<BinaryOp, functional::modulus<double>>::value ||
+                  std::is_same<BinaryOp, std::multiplies<double>>::value ||
+                  std::is_same<BinaryOp, std::plus<double>>::value) {
+        return lhs_ptr->integral() && rhs_ptr->integral();
+    }
+
+    assert(false && "not implemeted yet");
+    unreachable();
+}
+
+template <class BinaryOp>
 BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
         : ArrayOutputMixin(broadcast_shape(a_ptr->shape(), b_ptr->shape())),
           operands_({a_ptr, b_ptr}),
-          minmax_(calculate_values_minmax<BinaryOp>(operands_[0], operands_[1])),
+          values_info_(calculate_values_minmax<BinaryOp>(operands_[0], operands_[1]),
+                       calculate_integral<BinaryOp>(operands_[0], operands_[1])),
           sizeinfo_(binaryop_calculate_sizeinfo(this, operands_[0], operands_[1])) {
     this->add_predecessor(a_ptr);
     this->add_predecessor(b_ptr);
@@ -203,42 +231,17 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
 
 template <class BinaryOp>
 bool BinaryOpNode<BinaryOp>::integral() const {
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_integral<result_type>::value) {
-        return true;
-    }
-
-    // The mathematical operations require a bit more fiddling.
-
-    auto lhs_ptr = operands_[0];
-    auto rhs_ptr = operands_[1];
-
-    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value ||
-                  std::is_same<BinaryOp, functional::safe_divides<double>>::value) {
-        return false;
-    }
-    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
-                  std::is_same<BinaryOp, functional::min<double>>::value ||
-                  std::is_same<BinaryOp, std::minus<double>>::value ||
-                  std::is_same<BinaryOp, functional::modulus<double>>::value ||
-                  std::is_same<BinaryOp, std::multiplies<double>>::value ||
-                  std::is_same<BinaryOp, std::plus<double>>::value) {
-        return lhs_ptr->integral() && rhs_ptr->integral();
-    }
-
-    assert(false && "not implemeted yet");
-    unreachable();
-}
-
-template <class BinaryOp>
-double BinaryOpNode<BinaryOp>::min() const {
-    return this->minmax_.first;
+    return values_info_.integral;
 }
 
 template <class BinaryOp>
 double BinaryOpNode<BinaryOp>::max() const {
-    return this->minmax_.second;
+    return this->values_info_.max;
+}
+
+template <class BinaryOp>
+double BinaryOpNode<BinaryOp>::min() const {
+    return this->values_info_.min;
 }
 
 template <class BinaryOp>
@@ -390,7 +393,8 @@ ssize_t BinaryOpNode<BinaryOp>::size_diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->size_diff();
 }
 
-SizeInfo binaryop_calculate_sizeinfo(const Array* node_ptr, const Array* lhs_ptr, const Array* rhs_ptr) {
+SizeInfo binaryop_calculate_sizeinfo(const Array* node_ptr, const Array* lhs_ptr,
+                                     const Array* rhs_ptr) {
     if (!node_ptr->dynamic()) return SizeInfo(node_ptr->size());
 
     if (lhs_ptr->dynamic() && rhs_ptr->dynamic()) {
@@ -410,7 +414,9 @@ SizeInfo binaryop_calculate_sizeinfo(const Array* node_ptr, const Array* lhs_ptr
 }
 
 template <class BinaryOp>
-SizeInfo BinaryOpNode<BinaryOp>::sizeinfo() const { return this->sizeinfo_; }
+SizeInfo BinaryOpNode<BinaryOp>::sizeinfo() const {
+    return this->sizeinfo_;
+}
 
 // Uncommented are the tested specializations
 template class BinaryOpNode<std::plus<double>>;

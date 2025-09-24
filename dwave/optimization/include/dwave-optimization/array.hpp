@@ -94,6 +94,8 @@ struct SizeInfo {
 struct ValuesInfo {
     ValuesInfo() = delete;
     ValuesInfo(double min, double max, bool integral) : min(min), max(max), integral(integral) {}
+    ValuesInfo(std::pair<double, double> minmax, bool integral)
+            : min(minmax.first), max(minmax.second), integral(integral) {}
     /// Copy the min/max/integral from the array
     ValuesInfo(const Array* array_ptr);
 
