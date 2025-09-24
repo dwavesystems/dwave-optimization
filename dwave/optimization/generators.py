@@ -381,7 +381,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     capacity = model.constant(vehicle_capacity)
 
     # Add the decision variable
-    routes_decision, routes = model.disjoint_lists(
+    routes = model.disjoint_lists(
         primary_set_size=num_customers,
         num_disjoint_lists=number_of_vehicles)
 
@@ -561,7 +561,7 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
     one = model.constant(1)
 
     # Add the decision variable
-    routes_decision, routes = model.disjoint_lists(
+    routes = model.disjoint_lists(
         primary_set_size=num_customers,
         num_disjoint_lists=number_of_vehicles)
 

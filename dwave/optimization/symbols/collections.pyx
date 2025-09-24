@@ -305,7 +305,7 @@ cdef class DisjointList(ArraySymbol):
     """
     def __init__(self, DisjointLists parent, Py_ssize_t list_index):
         if list_index < 0 or list_index >= parent.num_disjoint_lists():
-            raise ValueError(
+            raise IndexError(
                 "`list_index` must be less than the number of disjoint sets of the parent"
             )
 
@@ -411,6 +411,9 @@ cdef class DisjointLists(Symbol):
 
         self.initialize_node(model, self.ptr)
 
+    def __getitem__(self, index: int):
+        return DisjointList(self, index)
+
     @classmethod
     def _from_symbol(cls, Symbol symbol):
         cdef DisjointListsNode* ptr = dynamic_cast_ptr[DisjointListsNode](symbol.node_ptr)
@@ -491,21 +494,21 @@ cdef class DisjointLists(Symbol):
                 Index of the state to set
             state:
                 Assignment of values for the state.
-        
+
         Examples:
             This example sets the state of a disjoint-lists symbol. You can
             inspect the state of each list individually.
-            
+
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> lists_symbol, lists_array = model.disjoint_lists(
+            >>> lists_symbol = model.disjoint_lists(
             ...     primary_set_size=5,
             ...     num_disjoint_lists=3
             ... )
             >>> with model.lock():
             ...     model.states.resize(1)
             ...     lists_symbol.set_state(0, [[0, 1, 2, 3], [4], []])
-            ...     for index, disjoint_list in enumerate(lists_array):
+            ...     for index, disjoint_list in enumerate(lists_symbol):
             ...         print(f"DisjointList {index}:")
             ...         print(disjoint_list.state(0))
             DisjointList 0:
@@ -568,6 +571,10 @@ cdef class DisjointLists(Symbol):
     def num_disjoint_lists(self):
         """Return the number of disjoint lists in the symbol."""
         return self.ptr.num_disjoint_lists()
+
+    def primary_set_size(self):
+        """Return the size of primary set of elements that the lists contain."""
+        return self.ptr.primary_set_size()
 
     # An observing pointer to the C++ DisjointListsNode
     cdef DisjointListsNode* ptr
