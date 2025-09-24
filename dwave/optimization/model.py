@@ -306,14 +306,11 @@ class Model(_Graph):
             self,
             primary_set_size: int,
             num_disjoint_lists: int,
-            ) -> tuple[DisjointLists, tuple[DisjointList, ...]]:
+            ) -> DisjointLists:
         """Create a disjoint-lists symbol as a decision variable.
 
         Divides a set of the elements of ``range(primary_set_size)`` into
         ``num_disjoint_lists`` ordered partitions.
-
-        Also creates ``num_disjoint_lists`` extra successors from the
-        symbol that output the disjoint lists as arrays.
 
         Args:
             primary_set_size: Number of elements in the primary set to
@@ -321,8 +318,7 @@ class Model(_Graph):
             num_disjoint_lists: Number of disjoint lists.
 
         Returns:
-            A tuple where the first element is the disjoint-lists symbol
-            and the second is a list of its newly added successor nodes.
+            A disjoint-lists symbol.
 
         Examples:
             This example creates a symbol of 10 elements that is divided
@@ -330,12 +326,21 @@ class Model(_Graph):
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> destinations, routes = model.disjoint_lists(10, 4)
+            >>> disjoint_lists = model.disjoint_lists(10, 4)
+            >>> disjoint_lists.primary_set_size()
+            10
+            >>> disjoint_lists.num_disjoint_lists()
+            4
         """
         from dwave.optimization.symbols import DisjointLists, DisjointList  # avoid circular import
         main = DisjointLists(self, primary_set_size, num_disjoint_lists)
-        lists = [DisjointList(main, i) for i in range(num_disjoint_lists)]
-        return main, lists
+
+        # create the DisjointList symbols, which will create the successor nodes, even
+        # though we won't use them directly here
+        for i in range(num_disjoint_lists):
+            DisjointList(main, i)
+
+        return main
 
     def feasible(self, index: int = 0) -> bool:
         """Check the feasibility of the state at the input index.
