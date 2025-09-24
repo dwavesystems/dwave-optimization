@@ -1287,6 +1287,18 @@ class TestDisjointListsVariable(utils.SymbolTests):
         self.assertEqual(dls.primary_set_size(), 10)
         self.assertEqual(dls.num_disjoint_lists(), 4)
 
+    def test_indexing(self):
+        model = Model()
+
+        dls = model.disjoint_lists(10, 4)
+
+        self.assertEqual(len(list(dls)), 4)
+        self.assertIsInstance(dls[0], dwave.optimization.symbols.DisjointList)
+        self.assertIsInstance(dls[3], dwave.optimization.symbols.DisjointList)
+
+        with self.assertRaises(IndexError):
+            dls[4]
+
     def test_construction(self):
         model = Model()
 
