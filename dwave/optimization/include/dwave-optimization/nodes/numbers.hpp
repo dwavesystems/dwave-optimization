@@ -98,9 +98,11 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     // Lower bounds of value in a given index.
     virtual double lower_bound(ssize_t index) const { return min_; }
+    virtual double lower_bound() const { return min_; }
 
     // Upper bounds of value in a given index.
     virtual double upper_bound(ssize_t index) const { return max_; }
+    virtual double upper_bound() const { return max_; }
 
     // Clip value in a given state to fall within upper_bound and lower_bound
     // in a given index.
@@ -173,10 +175,12 @@ class IntegerNode : public NumberNode {
     // @copydoc NumberNode::lower_bound(). Depending upon user input, may
     // return non-integral values
     double lower_bound(ssize_t index) const override;
+    double lower_bound() const override;
 
     // @copydoc NumberNode::upper_bound(). Depending upon user input, may
     // return non-integral values
     double upper_bound(ssize_t index) const override;
+    double upper_bound() const override;
 
     // @copydoc NumberNode::is_valid()
     bool is_valid(ssize_t index, double value) const override;

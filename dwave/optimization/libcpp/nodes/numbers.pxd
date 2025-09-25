@@ -23,8 +23,12 @@ cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimi
         void initialize_state(State&, vector[double]) except+
         double lower_bound(Py_ssize_t index)
         double upper_bound(Py_ssize_t index)
+        double lower_bound() except+
+        double upper_bound() except+
 
     cdef cppclass BinaryNode(ArrayNode):
         void initialize_state(State&, vector[double]) except+
         double lower_bound(Py_ssize_t index)
         double upper_bound(Py_ssize_t index)
+        double lower_bound() except+
+        double upper_bound() except+

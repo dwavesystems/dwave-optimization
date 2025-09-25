@@ -199,12 +199,28 @@ double IntegerNode::lower_bound(ssize_t index) const {
     return full_lower_bound_[index];
 }
 
+double IntegerNode::lower_bound() const {
+    if (full_lower_bound_.size() > 1) {
+        throw std::out_of_range(
+                "IntegerNode has multiple lower bounds, use lower_bound(index) instead");
+    }
+    return full_lower_bound_[0];
+}
+
 double IntegerNode::upper_bound(ssize_t index) const {
     if (full_upper_bound_.size() == 1) {
         return full_upper_bound_[0];
     }
     assert(full_upper_bound_.size() > 1);
     return full_upper_bound_[index];
+}
+
+double IntegerNode::upper_bound() const {
+    if (full_upper_bound_.size() > 1) {
+        throw std::out_of_range(
+                "IntegerNode has multiple uppper bounds, use upper_bound(index) instead");
+    }
+    return full_upper_bound_[0];
 }
 
 bool IntegerNode::is_valid(ssize_t index, double value) const {

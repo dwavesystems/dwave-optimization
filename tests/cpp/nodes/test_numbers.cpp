@@ -28,13 +28,17 @@ TEST_CASE("BinaryNode") {
     auto graph = Graph();
 
     GIVEN("Default BinaryNode") {
-        auto inode_ptr = graph.emplace_node<BinaryNode>();
+        auto bnode_ptr = graph.emplace_node<BinaryNode>();
 
         THEN("The function to check valid binary works") {
-            CHECK(inode_ptr->max() == 1.0);
-            CHECK(inode_ptr->min() == 0.0);
-            CHECK(inode_ptr->size() == 1);
-            CHECK(inode_ptr->ndim() == 0);
+            CHECK(bnode_ptr->max() == 1.0);
+            CHECK(bnode_ptr->min() == 0.0);
+            CHECK(bnode_ptr->size() == 1);
+            CHECK(bnode_ptr->ndim() == 0);
+            CHECK(bnode_ptr->lower_bound() == 0.0);
+            CHECK(bnode_ptr->upper_bound() == 1.0);
+            CHECK(bnode_ptr->lower_bound(0) == 0.0);
+            CHECK(bnode_ptr->upper_bound(1) == 1.0);
         }
     }
 
@@ -50,6 +54,15 @@ TEST_CASE("BinaryNode") {
             CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
         }
 
+        THEN("The default bounds are set properly") {
+            CHECK(ptr->lower_bound() == 0.0);
+            CHECK(ptr->upper_bound() == 1.0);
+            for (int i = 0; i < 10; ++i) {
+                CHECK(ptr->lower_bound(i) == 0);
+                CHECK(ptr->upper_bound(i) == 1);
+            }
+        }
+
         WHEN("We create a state using the default value") {
             auto state = graph.initialize_state();
 
@@ -57,13 +70,6 @@ TEST_CASE("BinaryNode") {
                 CHECK(ptr->size(state) == 10);
                 CHECK_THAT(ptr->shape(state), RangeEquals({10}));
                 CHECK_THAT(ptr->view(state), RangeEquals({0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
-            }
-
-            THEN("The default bounds are set properly") {
-                for (int i = 0; i < 10; ++i) {
-                    CHECK(ptr->lower_bound(i) == 0);
-                    CHECK(ptr->upper_bound(i) == 1);
-                }
             }
         }
 
@@ -165,6 +171,15 @@ TEST_CASE("BinaryNode") {
             CHECK(ptr->size() == 25);
             CHECK_THAT(ptr->shape(), RangeEquals({5, 5}));
             CHECK_THAT(ptr->strides(), RangeEquals({5 * sizeof(double), sizeof(double)}));
+        }
+
+        THEN("The default bounds are set properly") {
+            CHECK(ptr->lower_bound() == 0.0);
+            CHECK(ptr->upper_bound() == 1.0);
+            for (int i = 0; i < 25; ++i) {
+                CHECK(ptr->lower_bound(i) == 0);
+                CHECK(ptr->upper_bound(i) == 1);
+            }
         }
 
         WHEN("We create a state using the default value") {
@@ -269,17 +284,20 @@ TEST_CASE("BinaryNode") {
             }
         }
     }
+
     GIVEN("Binary node with index-wise bounds") {
         auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
                 3, std::vector<double>{-1, 0, 1}, std::vector<double>{2, 1, 1});
 
-        THEN("The shape, max, min, and index-wise bounds are correct") {
+        THEN("The shape, max, min, and bounds are correct") {
             CHECK(bnode_ptr->size() == 3);
             CHECK(bnode_ptr->ndim() == 1);
 
             CHECK(bnode_ptr->max() == 1.0);
             CHECK(bnode_ptr->min() == 0.0);
 
+            REQUIRE_THROWS(bnode_ptr->lower_bound());
+            REQUIRE_THROWS(bnode_ptr->upper_bound());
             CHECK(bnode_ptr->lower_bound(0) == 0.0);
             CHECK(bnode_ptr->lower_bound(1) == 0.0);
             CHECK(bnode_ptr->lower_bound(2) == 1.0);
@@ -381,10 +399,12 @@ TEST_CASE("BinaryNode") {
         auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
                 2, -2.0, std::vector<double>{0.0, 1.1});
 
-        THEN("The max, min, and index-wise bounds are correct") {
+        THEN("The max, min, and bounds are correct") {
             CHECK(bnode_ptr->max() == 1.0);
             CHECK(bnode_ptr->min() == 0.0);
 
+            CHECK(bnode_ptr->lower_bound() == 0.0);
+            REQUIRE_THROWS(bnode_ptr->upper_bound());
             CHECK(bnode_ptr->lower_bound(0) == 0.0);
             CHECK(bnode_ptr->lower_bound(1) == 0.0);
             CHECK(bnode_ptr->upper_bound(0) == 0.0);
@@ -396,10 +416,12 @@ TEST_CASE("BinaryNode") {
         auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
                 2, std::vector<double>{-1.0, 1.0}, 100.0);
 
-        THEN("The max, min, and index-wise bounds are correct") {
+        THEN("The max, min, and bounds are correct") {
             CHECK(bnode_ptr->max() == 1.0);
             CHECK(bnode_ptr->min() == 0.0);
 
+            REQUIRE_THROWS(bnode_ptr->lower_bound());
+            CHECK(bnode_ptr->upper_bound() == 1.0);
             CHECK(bnode_ptr->lower_bound(0) == 0.0);
             CHECK(bnode_ptr->lower_bound(1) == 1.0);
             CHECK(bnode_ptr->upper_bound(0) == 1.0);
@@ -429,6 +451,10 @@ TEST_CASE("IntegerNode") {
             CHECK(inode_ptr->min() == IntegerNode::default_lower_bound);
             CHECK(inode_ptr->size() == 1);
             CHECK(inode_ptr->ndim() == 0);
+            CHECK(inode_ptr->lower_bound(0) == IntegerNode::default_lower_bound);
+            CHECK(inode_ptr->upper_bound(0) == IntegerNode::default_upper_bound);
+            CHECK(inode_ptr->lower_bound() == IntegerNode::default_lower_bound);
+            CHECK(inode_ptr->upper_bound() == IntegerNode::default_upper_bound);
         }
     }
 
@@ -447,6 +473,8 @@ TEST_CASE("IntegerNode") {
             CHECK(inode.is_valid(0, inode.max()) == true);
             CHECK(inode.lower_bound(0) == IntegerNode::default_lower_bound);
             CHECK(inode.upper_bound(0) == IntegerNode::default_upper_bound);
+            CHECK(inode.lower_bound() == IntegerNode::default_lower_bound);
+            CHECK(inode.upper_bound() == IntegerNode::default_upper_bound);
         }
     }
 
@@ -464,33 +492,41 @@ TEST_CASE("IntegerNode") {
             CHECK(inode.is_valid(0, 5) == true);
             CHECK(inode.lower_bound(0) == -5);
             CHECK(inode.upper_bound(0) == 10);
+            CHECK(inode.lower_bound() == -5);
+            CHECK(inode.upper_bound() == 10);
         }
     }
 
     GIVEN("Integer with an upper bound specified, but no lower bound") {
         IntegerNode inode({1}, std::nullopt, 10);
 
-        THEN("The lower bound takes the default we expect") {
+        THEN("The bounds are correct") {
             CHECK(inode.lower_bound(0) == IntegerNode::default_lower_bound);
             CHECK(inode.upper_bound(0) == 10);
+            CHECK(inode.lower_bound() == IntegerNode::default_lower_bound);
+            CHECK(inode.upper_bound() == 10);
         }
     }
 
     GIVEN("Integer with a lower bound specified, but no upper bound provided") {
         IntegerNode inode1({1}, 5);
 
-        THEN("The lower bound takes the default we expect") {
+        THEN("The bounds are correct") {
             CHECK(inode1.lower_bound(0) == 5);
             CHECK(inode1.upper_bound(0) == IntegerNode::default_upper_bound);
+            CHECK(inode1.lower_bound() == 5);
+            CHECK(inode1.upper_bound() == IntegerNode::default_upper_bound);
         }
     }
 
     GIVEN("Integer with a lower bound specified, but with unspecified upper bound provided") {
         IntegerNode inode1({1}, 5, std::nullopt);
 
-        THEN("The lower bound takes the default we expect") {
+        THEN("The bounds are correct") {
             CHECK(inode1.lower_bound(0) == 5);
             CHECK(inode1.upper_bound(0) == IntegerNode::default_upper_bound);
+            CHECK(inode1.lower_bound() == 5);
+            CHECK(inode1.upper_bound() == IntegerNode::default_upper_bound);
         }
     }
 
@@ -498,7 +534,7 @@ TEST_CASE("IntegerNode") {
         auto inode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
                 3, std::vector<double>{-1, 3, 5}, std::vector<double>{1, 7, 7});
 
-        THEN("The shape, max, min, and index-wise bounds are correct") {
+        THEN("The shape, max, min, and bounds are correct") {
             CHECK(inode_ptr->size() == 3);
             CHECK(inode_ptr->ndim() == 1);
 
@@ -511,6 +547,8 @@ TEST_CASE("IntegerNode") {
             CHECK(inode_ptr->upper_bound(0) == 1.0);
             CHECK(inode_ptr->upper_bound(1) == 7.0);
             CHECK(inode_ptr->upper_bound(2) == 7.0);
+            REQUIRE_THROWS(inode_ptr->lower_bound());
+            REQUIRE_THROWS(inode_ptr->upper_bound());
         }
 
         AND_WHEN("We set the state at one of the indices") {
@@ -559,7 +597,7 @@ TEST_CASE("IntegerNode") {
         auto inode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
                 2, 10, std::vector<double>{20, 10});
 
-        THEN("The max, min, and index-wise bounds are correct") {
+        THEN("The max, min, and bounds are correct") {
             CHECK(inode_ptr->max() == 20.0);
             CHECK(inode_ptr->min() == 10.0);
 
@@ -567,6 +605,8 @@ TEST_CASE("IntegerNode") {
             CHECK(inode_ptr->lower_bound(1) == 10.0);
             CHECK(inode_ptr->upper_bound(0) == 20.0);
             CHECK(inode_ptr->upper_bound(1) == 10.0);
+            CHECK(inode_ptr->lower_bound() == 10.0);
+            REQUIRE_THROWS(inode_ptr->upper_bound());
         }
     }
 
@@ -583,6 +623,15 @@ TEST_CASE("IntegerNode") {
             CHECK(ptr->size() == 10);
             CHECK_THAT(ptr->shape(), RangeEquals({10}));
             CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
+        }
+
+        THEN("The bounds are correct") {
+            CHECK(ptr->lower_bound() == -10.0);
+            CHECK(ptr->upper_bound() == IntegerNode::default_upper_bound);
+            for (int i = 0; i < 10; ++i) {
+                CHECK(ptr->lower_bound(i) == -10);
+                CHECK(ptr->upper_bound(i) == IntegerNode::default_upper_bound);
+            }
         }
 
         WHEN("We create a state using the default value") {

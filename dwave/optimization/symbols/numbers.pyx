@@ -106,8 +106,6 @@ cdef class BinaryVariable(ArraySymbol):
         else:
             with zf.open(info, "r") as f:
                 lower_bound = np.load(f, allow_pickle=False)
-                if (lower_bound.size == 1):
-                    lower_bound = lower_bound[0]
 
         # needs to be compatible with older versions
         try:
@@ -117,8 +115,6 @@ cdef class BinaryVariable(ArraySymbol):
         else:
             with zf.open(info, "r") as f:
                 upper_bound = np.load(f, allow_pickle=False)
-                if (upper_bound.size == 1):
-                    upper_bound = upper_bound[0]
 
         return BinaryVariable(model,
                               shape=shape_info["shape"],
@@ -131,29 +127,29 @@ cdef class BinaryVariable(ArraySymbol):
         encoder = json.JSONEncoder(separators=(',', ':'))
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
 
-        lower_bound = np.array([self.lower_bound(i) for i in range(self.size())], dtype=np.double)
+        lower_bound = self.lower_bound()
         # if all values in the array are the same, simply save a scalar
-        if lower_bound.size and (lower_bound == lower_bound[0]).all():
-            lower_bound = lower_bound[:1]
-        else:
-            lower_bound = lower_bound.reshape(self.shape())
+        if lower_bound.size and (lower_bound == lower_bound.flat[0]).all():
+            lower_bound = lower_bound.flat[0]
         # NumPy serialization is overkill but it's type-safe
         with zf.open(directory + "lower_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, lower_bound, allow_pickle=False)
 
-        upper_bound = np.array([self.upper_bound(i) for i in range(self.size())], dtype=np.double)
+        upper_bound = self.upper_bound()
         # if all values in the array are the same, simply save a scalar
-        if upper_bound.size and (upper_bound == upper_bound[0]).all():
-            upper_bound = upper_bound[:1]
-        else:
-            upper_bound = upper_bound.reshape(self.shape())
+        if upper_bound.size and (upper_bound == upper_bound.flat[0]).all():
+            upper_bound = upper_bound.flat[0]
         # NumPy serialization is overkill but it's type-safe
         with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, upper_bound, allow_pickle=False)
 
-    def lower_bound(self, Py_ssize_t index):
-        """The lowest value allowed for the binary symbol at the given index."""
-        return int(self.ptr.lower_bound(index))
+    def lower_bound(self):
+        """Lower bound(s) of Binary symbol."""
+        try:
+            return np.asarray(self.ptr.lower_bound())
+        except IndexError:
+            pass
+        return np.asarray([self.ptr.lower_bound(i) for i in range(self.size())]).reshape(self.shape())
 
     def set_state(self, Py_ssize_t index, state):
         r"""Set the state of the binary symbol.
@@ -196,9 +192,13 @@ cdef class BinaryVariable(ArraySymbol):
         # The validity of the state is checked in C++
         self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
-    def upper_bound(self, Py_ssize_t index):
-        """The highest value allowed for the binary symbol at the given index."""
-        return int(self.ptr.upper_bound(index))
+    def upper_bound(self):
+        """Upper bound(s) of Binary symbol."""
+        try:
+            return np.asarray(self.ptr.upper_bound())
+        except IndexError:
+            pass
+        return np.asarray([self.ptr.upper_bound(i) for i in range(self.size())]).reshape(self.shape())
 
     # An observing pointer to the C++ BinaryNode
     cdef BinaryNode* ptr
@@ -279,8 +279,6 @@ cdef class IntegerVariable(ArraySymbol):
         else:
             with zf.open(info, "r") as f:
                 lower_bound = np.load(f, allow_pickle=False)
-                if (lower_bound.size == 1):
-                    lower_bound = lower_bound[0]
 
         # needs to be compatible with older versions
         try:
@@ -290,8 +288,6 @@ cdef class IntegerVariable(ArraySymbol):
         else:
             with zf.open(info, "r") as f:
                 upper_bound = np.load(f, allow_pickle=False)
-                if (upper_bound.size == 1):
-                    upper_bound = upper_bound[0]
 
         return IntegerVariable(model,
                                shape=shape_info["shape"],
@@ -300,35 +296,39 @@ cdef class IntegerVariable(ArraySymbol):
                                )
 
     def _into_zipfile(self, zf, directory):
-        # `lb` and `ub` are redundant and should NOT be used but are kept for
-        # backwards compatibility testing
-        shape_info = dict(shape=self.shape(), lb=self.lower_bound(0), ub=self.upper_bound(0))
+        shape_info = dict(shape=self.shape())
+        lower_bound = self.lower_bound()
+        upper_bound = self.upper_bound()
+
+        # This is for backward compatiblity and should be ignored
+        if lower_bound.size == 1 and upper_bound.size == 1:
+            shape_info["lb"] = lower_bound.item()
+            shape_info["ub"] = upper_bound.item() 
+
         encoder = json.JSONEncoder(separators=(',', ':'))
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
 
-        lower_bound = np.array([self.lower_bound(i) for i in range(self.size())], dtype=np.double)
         # if all values in the array are the same, simply save a scalar
-        if lower_bound.size and (lower_bound == lower_bound[0]).all():
-            lower_bound = lower_bound[:1]
-        else:
-            lower_bound = lower_bound.reshape(self.shape())
+        if lower_bound.size and (lower_bound == lower_bound.flat[0]).all():
+            lower_bound = lower_bound.flat[0]
         # NumPy serialization is overkill but it's type-safe
         with zf.open(directory + "lower_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, lower_bound, allow_pickle=False)
 
-        upper_bound = np.array([self.upper_bound(i) for i in range(self.size())], dtype=np.double)
         # if all values in the array are the same, simply save a scalar
-        if upper_bound.size and (upper_bound == upper_bound[0]).all():
-            upper_bound = upper_bound[:1]
-        else:
-            upper_bound = upper_bound.reshape(self.shape())
+        if upper_bound.size and (upper_bound == upper_bound.flat[0]).all():
+            upper_bound = upper_bound.flat[0]
         # NumPy serialization is overkill but it's type-safe
         with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, upper_bound, allow_pickle=False)
 
-    def lower_bound(self, Py_ssize_t index):
-        """The lowest value allowed for the integer symbol at the given index."""
-        return int(self.ptr.lower_bound(index))
+    def lower_bound(self):
+        """Lower bound(s) of Integer symbol."""
+        try:
+            return np.asarray(self.ptr.lower_bound())
+        except IndexError:
+            pass
+        return np.asarray([self.ptr.lower_bound(i) for i in range(self.size())]).reshape(self.shape())
 
     def set_state(self, Py_ssize_t index, state):
         r"""Set the state of the integer symbol.
@@ -369,9 +369,13 @@ cdef class IntegerVariable(ArraySymbol):
         # The validity of the state is checked in C++
         self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
-    def upper_bound(self, Py_ssize_t index):
-        """The highest value allowed for the integer symbol at the given index."""
-        return int(self.ptr.upper_bound(index))
+    def upper_bound(self):
+        """Upper bound(s) of Integer symbol."""
+        try:
+            return np.asarray(self.ptr.upper_bound())
+        except IndexError:
+            pass
+        return np.asarray([self.ptr.upper_bound(i) for i in range(self.size())]).reshape(self.shape())
 
     # An observing pointer to the C++ IntegerNode
     cdef IntegerNode* ptr
