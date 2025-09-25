@@ -27,6 +27,7 @@ from dwave.optimization.libcpp.nodes.naryop cimport *
 from dwave.optimization.libcpp.nodes.numbers cimport *
 from dwave.optimization.libcpp.nodes.quadratic_model cimport *
 from dwave.optimization.libcpp.nodes.reduce cimport *
+from dwave.optimization.libcpp.nodes.set_routines cimport *
 from dwave.optimization.libcpp.nodes.softmax cimport *
 from dwave.optimization.libcpp.nodes.sorting cimport *
 from dwave.optimization.libcpp.nodes.statistics cimport *

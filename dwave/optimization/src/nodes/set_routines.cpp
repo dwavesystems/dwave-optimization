@@ -20,14 +20,14 @@
 
 namespace dwave::optimization {
 
-// IsInNode *****************************************************************
+// IsInNode *******************************************************************
 struct IsInNodeSetData {
     IsInNodeSetData() = default;
 
     // # of indices from `test_elements` with a given value
-    ssize_t test_elements_count;
+    ssize_t test_elements_count;  // default is 0
     // All indices of `element` with a given value
-    std::vector<ssize_t> element_indices;
+    std::vector<ssize_t> element_indices;  // default is empty vector
 };
 
 struct IsInNodeDataHelper_ {
@@ -37,7 +37,7 @@ struct IsInNodeDataHelper_ {
         for (const double& val : test_elements) {
             set_data[val].test_elements_count += 1;
         }
-        for (ssize_t index = 0, stop = element.size(); index < stop; index++) {
+        for (ssize_t index = 0, stop = element.size(); index < stop; ++index) {
             IsInNodeSetData& set_data_struct = set_data[element[index]];
             set_data_struct.element_indices.push_back(index);
             element_isin.emplace_back(set_data_struct.test_elements_count > 0);
@@ -95,12 +95,9 @@ void IsInNode::initialize_state(State& state) const {
 
 bool IsInNode::integral() const { return true; }  // All values are true/false
 
-std::pair<double, double> IsInNode::minmax(
-        optional_cache_type<std::pair<double, double>> cache) const {
-    return memoize(cache, [&]() {
-        return std::make_pair(0.0, 1.0);  // All values are true/false
-    });
-}
+double IsInNode::min() const { return 0.0; }  // All values are true/false
+
+double IsInNode::max() const { return 1.0; }  // All values are true/false
 
 inline void IsInNode::rm_index(IsInNodeData*& node_data, const ssize_t rm_index,
                                const double key) const {
