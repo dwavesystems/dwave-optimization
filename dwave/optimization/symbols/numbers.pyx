@@ -300,7 +300,9 @@ cdef class IntegerVariable(ArraySymbol):
                                )
 
     def _into_zipfile(self, zf, directory):
-        shape_info = dict(shape=self.shape())
+        # `lb` and `ub` are redundant and should NOT be used but are kept for
+        # backwards compatibility testing
+        shape_info = dict(shape=self.shape(), lb=self.lower_bound(0), ub=self.upper_bound(0))
         encoder = json.JSONEncoder(separators=(',', ':'))
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
 
