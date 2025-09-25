@@ -248,8 +248,7 @@ double get_bool_bound(const double bound) {
 }
 
 template <bool upper_bound>
-std::optional<std::vector<double>> limit_bound_to_bool_domain(
-        const std::optional<std::vector<double>>& bound) {
+std::vector<double> limit_bound_to_bool_domain(const std::optional<std::vector<double>>& bound) {
     if (!bound) {
         // set default boolean bounds if user does not provide bounds
         double output = (upper_bound) ? 1.0 : 0.0;
@@ -258,8 +257,8 @@ std::optional<std::vector<double>> limit_bound_to_bool_domain(
     const ssize_t vec_size = bound->size();
     std::vector<double> output_vec;
     output_vec.reserve(vec_size);
-    for (ssize_t index = 0; index < vec_size; ++index) {
-        output_vec.emplace_back(get_bool_bound<upper_bound>((*bound)[index]));
+    for (const double& value : bound.value()) {
+        output_vec.emplace_back(get_bool_bound<upper_bound>(value));
     }
     return output_vec;
 }
@@ -308,20 +307,13 @@ BinaryNode::BinaryNode(ssize_t size, double lower_bound, double upper_bound)
 
 bool BinaryNode::flip(State& state, ssize_t i) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);
-    if (ptr->get(i)) {
-        // if 0 is within bounds of index i
-        if (lower_bound(i) <= 0) {
-            assert(upper_bound(i) >= 0);
-            return ptr->set(i, 0.0);
-        }
-    } else {
-        // if 1 is within bounds of index i
-        if (upper_bound(i) >= 1) {
-            assert(lower_bound(i) <= 1);
-            return ptr->set(i, 1.0);
-        }
+    if (lower_bound(i) == upper_bound(i)) {
+        // variable is fixed
+        return false;
     }
-    return false;
+
+    ptr->set(i, !ptr->get(i));
+    return true;
 }
 
 bool BinaryNode::set(State& state, ssize_t i) const {
