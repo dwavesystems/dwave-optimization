@@ -107,6 +107,7 @@ foreach name : [
     'numbers',
     'quadratic_model',
     'reduce',
+    'set_routines',
     'softmax',
     'sorting',
     'statistics',

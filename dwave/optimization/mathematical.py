@@ -739,9 +739,9 @@ def isin(element: ArraySymbol, test_elements: ArraySymbol) -> IsIn:
         [0. 1. 1.]
 
     See Also:
-        :class:`~dwave.optimization.IsIn`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.IsIn`: equivalent symbol.
 
-    .. versionadded:: 0.6.5
+    .. versionadded:: 0.6.7
     """
     return IsIn(element, test_elements)
 
