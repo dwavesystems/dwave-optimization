@@ -14,8 +14,7 @@
 
 #pragma once
 
-#include <algorithm>
-#include <memory>
+#include <optional>
 #include <ranges>
 #include <span>
 #include <utility>
@@ -33,11 +32,11 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     // Overloads needed by the Array ABC **************************************
 
+    // @copydoc Array::buff()
     double const* buff(const State&) const noexcept override;
-    std::span<const Update> diff(const State& state) const noexcept override;
 
-    void commit(State&) const noexcept override;
-    void revert(State&) const noexcept override;
+    // @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const noexcept override;
 
     /// @copydoc Array::min()
     double min() const override;
@@ -45,10 +44,13 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     /// @copydoc Array::max()
     double max() const override;
 
-    double lower_bound() const;
-    double upper_bound() const;
-
     // Overloads required by the Node ABC *************************************
+
+    // @copydoc Node::commit()
+    void commit(State&) const noexcept override;
+
+    // @copydoc Node::revert()
+    void revert(State&) const noexcept override;
 
     // Initialize the state. Defaults to 0 if 0 is in range, otherwise defaults
     // to lower bound.
@@ -67,40 +69,61 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     template <std::uniform_random_bit_generator Generator>
     void initialize_state(State& state, Generator& rng) const {
         std::vector<double> values;
-
         const ssize_t size = this->size();
         values.reserve(size);
 
         if (integral()) {
-            std::uniform_int_distribution<ssize_t> gen(lower_bound_, upper_bound_);
-            for (ssize_t i = 0; i < size; ++i) values.emplace_back(gen(rng));
+            for (ssize_t i = 0; i < size; ++i) {
+                std::uniform_int_distribution<ssize_t> gen(lower_bound(i), upper_bound(i));
+                values.emplace_back(gen(rng));
+            }
         } else {
-            std::uniform_real_distribution<double> gen(lower_bound_, upper_bound_);
-            for (ssize_t i = 0; i < size; ++i) values.emplace_back(gen(rng));
+            for (ssize_t i = 0; i < size; ++i) {
+                std::uniform_real_distribution<double> gen(lower_bound(i), upper_bound(i));
+                values.emplace_back(gen(rng));
+            }
         }
-
         return initialize_state(state, std::move(values));
     }
 
-    // Specializations for the linear case
+    // NumberNode methods *****************************************************
+
+    // In the given state, swap the value of index i with the value of index j.
+    // Returns `true` if the values at indices i and j change and `false`
+    // otherwise.
     bool exchange(State& state, ssize_t i, ssize_t j) const;
+
+    // Return the value of index i in a given state.
     double get_value(State& state, ssize_t i) const;
 
-    ssize_t linear_index(ssize_t x, ssize_t y) const;
+    // Lower bounds of value in a given index.
+    virtual double lower_bound(ssize_t index) const { return min_; }
+    virtual double lower_bound() const { return min_; }
+
+    // Upper bounds of value in a given index.
+    virtual double upper_bound(ssize_t index) const { return max_; }
+    virtual double upper_bound() const { return max_; }
+
+    // Clip value in a given state to fall within upper_bound and lower_bound
+    // in a given index.
+    bool clip_and_set_value(State& state, ssize_t index, double value) const;
 
  protected:
-    explicit NumberNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound)
-            : ArrayOutputMixin(shape), lower_bound_(lower_bound), upper_bound_(upper_bound) {
-        if (upper_bound_ < lower_bound_) {
+    explicit NumberNode(std::span<const ssize_t> shape, double minimum, double maximum)
+            : ArrayOutputMixin(shape), min_(minimum), max_(maximum) {
+        if (max_ < min_) {
             throw std::invalid_argument("Invalid range for number array provided");
         }
     }
 
-    virtual bool is_valid(double value) const = 0;
-    virtual double default_value() const = 0;
+    // Return truth statement: 'value is within the bounds of a given index'
+    virtual bool is_valid(ssize_t index, double value) const = 0;
 
-    double lower_bound_;
-    double upper_bound_;
+    // Default value in a given index
+    virtual double default_value(ssize_t index) const = 0;
+
+    double min_;
+    double max_;
 };
 
 /// A contiguous block of integer numbers.
@@ -112,45 +135,117 @@ class IntegerNode : public NumberNode {
     static constexpr int default_upper_bound = maximum_upper_bound;
 
     // Default to a single scalar integer with default bounds
-    IntegerNode();
+    IntegerNode() : IntegerNode({}) {}
 
-    // Create an integer array with the given bounds. Defaulting to the
-    // specified default bounds.
+    // Create an integer array with the user-defined bounds.
+    // Defaulting to the specified default bounds.
     IntegerNode(std::span<const ssize_t> shape,
-                std::optional<int> lower_bound = std::nullopt,   // inclusive
-                std::optional<int> upper_bound = std::nullopt);  // inclusive
+                std::optional<std::vector<double>> lower_bound = std::nullopt,
+                std::optional<std::vector<double>> upper_bound = std::nullopt);
     IntegerNode(std::initializer_list<ssize_t> shape,
-                std::optional<int> lower_bound = std::nullopt,   // inclusive
-                std::optional<int> upper_bound = std::nullopt);  // inclusive
-    IntegerNode(ssize_t size,
-                std::optional<int> lower_bound = std::nullopt,   // inclusive
-                std::optional<int> upper_bound = std::nullopt);  // inclusive
+                std::optional<std::vector<double>> lower_bound = std::nullopt,
+                std::optional<std::vector<double>> upper_bound = std::nullopt);
+    IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound = std::nullopt,
+                std::optional<std::vector<double>> upper_bound = std::nullopt);
 
-    // Overloads needed by the Node ABC **************************************
+    IntegerNode(std::span<const ssize_t> shape, double lower_bound,
+                std::optional<std::vector<double>> upper_bound = std::nullopt);
+    IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound,
+                std::optional<std::vector<double>> upper_bound = std::nullopt);
+    IntegerNode(ssize_t size, double lower_bound,
+                std::optional<std::vector<double>> upper_bound = std::nullopt);
 
+    IntegerNode(std::span<const ssize_t> shape, std::optional<std::vector<double>> lower_bound,
+                double upper_bound);
+    IntegerNode(std::initializer_list<ssize_t> shape,
+                std::optional<std::vector<double>> lower_bound, double upper_bound);
+    IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound, double upper_bound);
+
+    IntegerNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound);
+    IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound);
+    IntegerNode(ssize_t size, double lower_bound, double upper_bound);
+
+    // Overloads needed by the Node ABC ***************************************
+
+    // @copydoc Node::integral()
     bool integral() const override;
 
-    // Overloads needed by the NumberNode ABC **************************************
+    // Overloads needed by the NumberNode ABC *********************************
 
-    bool is_valid(double value) const override;
-    double default_value() const override;
+    // @copydoc NumberNode::lower_bound(). Depending upon user input, may
+    // return non-integral values
+    double lower_bound(ssize_t index) const override;
+    double lower_bound() const override;
 
-    // Specializations for the linear case
-    bool set_value(State& state, ssize_t i, int value) const;
+    // @copydoc NumberNode::upper_bound(). Depending upon user input, may
+    // return non-integral values
+    double upper_bound(ssize_t index) const override;
+    double upper_bound() const override;
+
+    // @copydoc NumberNode::is_valid()
+    bool is_valid(ssize_t index, double value) const override;
+
+    // IntegerNode methods ****************************************************
+
+    // Set the value at the given index in the given state. Returns `true` if
+    // the value at the index changed and `false` otherwise.
+    bool set_value(State& state, ssize_t index, double value) const;
+
+ protected:
+    // Overloads needed by the Node ABC ***************************************
+
+    // @copydoc NumberNode::default_value()
+    double default_value(ssize_t index) const override;
+
+ private:
+    std::vector<double> full_lower_bound_;
+    std::vector<double> full_upper_bound_;
 };
 
 /// A contiguous block of binary numbers.
 class BinaryNode : public IntegerNode {
  public:
-    /// A single binary scalar variable
+    /// A binary scalar variable with lower_bound = 0.0 and upper_bound = 1.0
     BinaryNode() : BinaryNode({}) {}
 
-    explicit BinaryNode(std::initializer_list<ssize_t> shape) : IntegerNode(shape, 0, 1) {}
-    explicit BinaryNode(std::span<const ssize_t> shape) : IntegerNode(shape, 0, 1) {}
+    // Create a binary array with the user-defined bounds.
+    // Defaulting to lower_bound = 0.0 and upper_bound = 1.0
+    BinaryNode(std::span<const ssize_t> shape,
+               std::optional<std::vector<double>> lower_bound = std::nullopt,
+               std::optional<std::vector<double>> upper_bound = std::nullopt);
+    BinaryNode(std::initializer_list<ssize_t> shape,
+               std::optional<std::vector<double>> lower_bound = std::nullopt,
+               std::optional<std::vector<double>> upper_bound = std::nullopt);
+    BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound = std::nullopt,
+               std::optional<std::vector<double>> upper_bound = std::nullopt);
 
-    // Specializations for the linear case
-    void flip(State& state, ssize_t i) const;
+    BinaryNode(std::span<const ssize_t> shape, double lower_bound,
+               std::optional<std::vector<double>> upper_bound = std::nullopt);
+    BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound,
+               std::optional<std::vector<double>> upper_bound = std::nullopt);
+    BinaryNode(ssize_t size, double lower_bound,
+               std::optional<std::vector<double>> upper_bound = std::nullopt);
+
+    BinaryNode(std::span<const ssize_t> shape, std::optional<std::vector<double>> lower_bound,
+               double upper_bound);
+    BinaryNode(std::initializer_list<ssize_t> shape, std::optional<std::vector<double>> lower_bound,
+               double upper_bound);
+    BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound, double upper_bound);
+
+    BinaryNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound);
+    BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound);
+    BinaryNode(ssize_t size, double lower_bound, double upper_bound);
+
+    // Flip the value (0 -> 1 or 1 -> 0) at index i in the given state. Returns
+    // `true` if the value at index i changed and `false` otherwise.
+    bool flip(State& state, ssize_t i) const;
+
+    // Set the value at index i to `true` in the given state. Returns `true` if
+    // the value at index i changed and `false` otherwise.
     bool set(State& state, ssize_t i) const;
+
+    // Set the at index i to `false` in the given state. Returns `true` if
+    // the value at index i changed and `false` otherwise.
     bool unset(State& state, ssize_t i) const;
 };
 

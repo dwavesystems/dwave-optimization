@@ -121,6 +121,20 @@ class TestSerialization(unittest.TestCase):
 
                     self.assertModelEqual(base_model, test_model)
 
+    def make_binary_and_integer(self) -> Model:
+        """ A model with binary and integer variables"""
+        model = Model()
+
+        model.binary()
+        model.binary((2, 3))
+        model.binary(2)
+
+        model.integer()
+        model.integer((3,2))
+        model.integer(3, upper_bound=5)
+
+        return model
+
     def make_empty(self) -> Model:
         return Model()
 

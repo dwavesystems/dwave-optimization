@@ -615,6 +615,25 @@ class TestBinaryVariable(utils.SymbolTests):
 
         model.binary([10])
 
+    def test_bounds(self):
+        model = Model()
+        x = model.binary(lower_bound=0, upper_bound=1)
+        self.assertEqual(x.lower_bound(), 0)
+        self.assertEqual(x.upper_bound(), 1)
+
+        x = model.binary((2, 2), upper_bound=0)
+        self.assertTrue(x.upper_bound() == 0)
+
+        x = model.binary((2, 3), -3, [[1, 0, 0], [1, 0, 0]])
+        self.assertEqual(x.lower_bound(), 0.0)
+        self.assertTrue(np.all(x.upper_bound() == [[1, 0, 0], [1, 0, 0]]))
+
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), upper_bound=np.nan)
+
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), upper_bound=np.arange(6))
+
     def test_no_shape(self):
         model = Model()
         x = model.binary()
@@ -643,6 +662,25 @@ class TestBinaryVariable(utils.SymbolTests):
         with self.assertRaises(ValueError):
             model.binary([0.5])
 
+    def test_serialization(self):
+        model = Model()
+        binary_vars = [
+            model.binary((5, 2)),
+            model.binary(),
+            model.binary(3, lower_bound=1),
+            model.binary(2, upper_bound=[0,1]),
+        ]
+
+        model.lock()
+        with model.to_file() as f:
+            copy = Model.from_file(f)
+
+        for old, new in zip(binary_vars, copy.iter_decisions()):
+            self.assertEqual(old.shape(), new.shape())
+            for i in range(old.size()):
+                self.assertTrue(np.all(old.lower_bound() == new.lower_bound()))
+                self.assertTrue(np.all(old.upper_bound() == new.upper_bound()))
+
     def test_set_state(self):
         with self.subTest("array-like"):
             model = Model()
@@ -653,6 +691,26 @@ class TestBinaryVariable(utils.SymbolTests):
             np.testing.assert_array_equal(x.state(), np.arange(25).reshape((5, 5)) % 2)
             x.set_state(0, 1 - np.arange(25).reshape((5, 5)) % 2)
             np.testing.assert_array_equal(x.state(), 1 - np.arange(25).reshape((5, 5)) % 2)
+
+        with self.subTest("Default bounds test"):
+            model = Model()
+            model.states.resize(1)
+            x = model.binary(1)
+            x.set_state(0, 0)
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, -1)
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, 2)
+
+        with self.subTest("Simple bounds test"):
+            model = Model()
+            model.states.resize(1)
+            x = model.binary(2, lower_bound=[-1, 0.9], upper_bound=[1.1, 1.2])
+            x.set_state(0, [0, 1])
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, 2)
+            with np.testing.assert_raises(ValueError):
+                x.set_state(1, 0)
 
         with self.subTest("invalid state index"):
             model = Model()
@@ -1628,15 +1686,18 @@ class TestIntegerVariable(utils.SymbolTests):
         self.assertEqual(x.lower_bound(), 4)
         self.assertEqual(x.upper_bound(), 5)
 
-    def test_lower_bound(self):
-        model = Model()
-        x = model.integer(lower_bound=5)
-        self.assertEqual(x.lower_bound(), 5)
+        x = model.integer((2, 2), upper_bound=7)
+        self.assertTrue(x.upper_bound() == 7)
 
-    def test_upper_bound(self):
-        model = Model()
-        x = model.integer(upper_bound=5)
-        self.assertEqual(x.upper_bound(), 5)
+        x = model.integer((2, 3), -3, [[1, 2, 3], [4, 5, 6]])
+        self.assertTrue(np.all(x.upper_bound() == [[1, 2, 3], [4, 5, 6]]))
+        self.assertTrue(x.lower_bound() == -3)
+
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), upper_bound=np.nan)
+
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), upper_bound=np.arange(6))
 
     # Todo: we can generalize many of these tests for all decisions that can have
     # their state set
@@ -1657,6 +1718,7 @@ class TestIntegerVariable(utils.SymbolTests):
             model.integer(3, lower_bound=-1),
             model.integer(upper_bound=105),
             model.integer(15, lower_bound=4, upper_bound=6),
+            model.integer(2, lower_bound=[1, 2], upper_bound=[3, 4]),
         ]
 
         model.lock()
@@ -1665,8 +1727,9 @@ class TestIntegerVariable(utils.SymbolTests):
 
         for old, new in zip(integers, copy.iter_decisions()):
             self.assertEqual(old.shape(), new.shape())
-            self.assertEqual(old.lower_bound(), new.lower_bound())
-            self.assertEqual(old.upper_bound(), new.upper_bound())
+            for i in range(old.size()):
+                self.assertTrue(np.all(old.lower_bound() == new.lower_bound()))
+                self.assertTrue(np.all(old.upper_bound() == new.upper_bound()))
 
     def test_set_state(self):
         with self.subTest("Simple positive integer"):
