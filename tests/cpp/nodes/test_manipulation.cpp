@@ -186,6 +186,53 @@ TEST_CASE("BroadcastToNode") {
         graph.propagate(state);
         CHECK_THAT(b->view(state), RangeEquals({1, 0, 2, 3, 6, 5, 1, 0, 2, 3, 6, 5}));
     }
+
+    SECTION("broadcast (3,2) array to a (3,2,3,2) array") {
+        auto a = graph.emplace_node<InputNode>(std::vector<ssize_t>{3, 2});
+        auto b = graph.emplace_node<BroadcastToNode>(a, std::vector<ssize_t>{3, 2, 3, 2});
+        graph.emplace_node<ArrayValidationNode>(b);
+        CHECK_THAT(b->shape(), RangeEquals({3, 2, 3, 2}));
+        CHECK_THAT(b->strides(), RangeEquals({0, 0, 16, 8}));
+
+        auto state = graph.empty_state();
+        a->initialize_state(state, {0, 1, 2, 3, 4, 5});
+        graph.initialize_state(state);
+        CHECK_THAT(b->view(state),
+                   RangeEquals({0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5,
+                                0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5}));
+
+        // Do an update followed by a propagation
+        a->assign(state, {1, 0, 2, 3, 6, 5});
+        graph.propagate(state);
+        CHECK_THAT(b->view(state),
+                   RangeEquals({1, 0, 2, 3, 6, 5, 1, 0, 2, 3, 6, 5, 1, 0, 2, 3, 6, 5,
+                                1, 0, 2, 3, 6, 5, 1, 0, 2, 3, 6, 5, 1, 0, 2, 3, 6, 5}));
+    }
+
+    GIVEN("arr = broadcast_to(set(10).reshape(-1, 1, 1), (-1, 2, 3))") {
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto reshape_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::array<ssize_t, 3>{-1, 1, 1});
+        auto arr_ptr = graph.emplace_node<BroadcastToNode>(reshape_ptr, std::array<ssize_t, 3>{-1, 2, 3});
+        graph.emplace_node<ArrayValidationNode>(arr_ptr);
+
+        AND_GIVEN("set = {1, 2, 3]") {
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {1, 2, 3});
+            graph.initialize_state(state);
+
+            CHECK_THAT(arr_ptr->view(state),
+                       RangeEquals({1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3}));
+
+            WHEN("We change the set to equal {1, 2, 4, 3}") {
+                set_ptr->assign(state, {1, 2, 4, 3});
+                graph.propagate(state);
+
+                CHECK_THAT(arr_ptr->view(state), RangeEquals({1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2,
+                                                              4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3}));
+            }
+        }
+    }
 }
 
 TEST_CASE("ConcatenateNode") {
