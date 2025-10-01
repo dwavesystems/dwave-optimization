@@ -22,8 +22,6 @@
 
 namespace dwave::optimization {
 
-struct IsInNodeData;
-
 class IsInNode : public ArrayOutputMixin<ArrayNode> {
  public:
     IsInNode(ArrayNode* element_ptr, ArrayNode* test_elements_ptr);
@@ -75,8 +73,6 @@ class IsInNode : public ArrayOutputMixin<ArrayNode> {
     // these are redundant, but convenient
     const Array* element_ptr_;
     const Array* test_elements_ptr_;
-
-    inline void rm_index(IsInNodeData*& node_data, const ssize_t rm_index, const double key) const;
 };
 
 }  // namespace dwave::optimization

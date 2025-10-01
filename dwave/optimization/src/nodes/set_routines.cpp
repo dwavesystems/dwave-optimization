@@ -99,15 +99,14 @@ double IsInNode::min() const { return 0.0; }  // All values are true/false
 
 double IsInNode::max() const { return 1.0; }  // All values are true/false
 
-inline void IsInNode::rm_index(IsInNodeData*& node_data, const ssize_t rm_index,
-                               const double key) const {
+inline void rm_index(IsInNodeData*& node_data, const ssize_t index, const double key) {
     auto set_data_it = node_data->set_data.find(key);
     // find() should be successful since we need to remove the index
     assert(set_data_it != node_data->set_data.end());
     // Vector containing indices of `element` with value `key`
     std::vector<ssize_t>& indices_vec = set_data_it->second.element_indices;
     // Find index of `indices_vec` equal to `rm_index`
-    auto index_ptr = std::find(indices_vec.begin(), indices_vec.end(), rm_index);
+    auto index_ptr = std::find(indices_vec.begin(), indices_vec.end(), index);
     // find() should be successful since we need to remove the index
     assert(index_ptr != indices_vec.end());
     // swap and pop
@@ -139,8 +138,7 @@ void IsInNode::propagate(State& state) const {
         if (!update.placed()) {
             // i.e. changed or removed.
             ssize_t& count = node_data->set_data[update.old].test_elements_count;
-            // `update.old` must be in `test_elements_counter`
-            assert(count > 0);
+            assert(count > 0 && "update.old should be in test_elements_counter");
             count -= 1;
 
             if (count == 0) {

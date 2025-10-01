@@ -717,8 +717,8 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
 
 def isin(element: ArraySymbol, test_elements: ArraySymbol) -> IsIn:
     """ Determine element-wise containment between two symbols. Given two
-    symbols: element and test_elements, returns an array of the same shape
-    as element such that element[index] = True if element[index] is in
+    symbols: element and test_elements, returns an output array of the same
+    shape as element such that output[index] = True if element[index] is in
     test_elements and False otherwise.
 
     Args:
@@ -741,7 +741,7 @@ def isin(element: ArraySymbol, test_elements: ArraySymbol) -> IsIn:
     See Also:
         :class:`~dwave.optimization.symbols.IsIn`: equivalent symbol.
 
-    .. versionadded:: 0.6.7
+    .. versionadded:: 0.6.8
     """
     return IsIn(element, test_elements)
 

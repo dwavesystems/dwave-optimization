@@ -22,14 +22,14 @@ from dwave.optimization.libcpp.nodes.set_routines cimport IsInNode
 
 cdef class IsIn(ArraySymbol):
     """Determine element-wise containment between two symbols. Given two
-    symbols: element and test_elements, returns an array of the same shape
-    as element such that element[index] = True if element[index] is in
+    symbols: element and test_elements, returns an output array of the same
+    shape as element such that output[index] = True if element[index] is in
     test_elements and False otherwise.
 
     See Also:
         :meth:`~dwave.optimization.mathematical.isin`: equivalent method.
 
-    .. versionadded:: 0.6.7
+    .. versionadded:: 0.6.8
     """
     def __init__(self, ArraySymbol element, ArraySymbol test_elements):
         cdef _Graph model = element.model
