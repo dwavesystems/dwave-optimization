@@ -20,6 +20,7 @@
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
+#include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/reduce.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
@@ -27,6 +28,107 @@
 using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
+
+TEST_CASE("Reduce2") {
+    GIVEN("arr = broadcast_to(set(10).reshape(-1, 1, 1), (-1, 3, 4))") {
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto reshape_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::array<ssize_t, 3>{-1, 1, 1});
+        auto arr_ptr = graph.emplace_node<BroadcastToNode>(reshape_ptr, std::array<ssize_t, 3>{-1, 3, 4});
+
+        WHEN("We try to do a reduction with invalid axes") {
+            CHECK_THROWS(SumNode2(arr_ptr, {0, 0}));  // duplicate
+            CHECK_THROWS(SumNode2(arr_ptr, {0, -4}));  // out of bounds
+            CHECK_THROWS(SumNode2(arr_ptr, {0, 3}));  // out of bounds
+
+            // todo: test no initial (fails because set can be empty)
+
+            CHECK(arr_ptr->successors().empty());  // no side-effects
+        }
+
+        AND_GIVEN("x = sum(arr, initial=2)") {
+            auto x_ptr = graph.emplace_node<SumNode2>(arr_ptr, std::vector<ssize_t>{}, 2);
+            graph.emplace_node<ArrayValidationNode>(x_ptr);
+
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {1, 2, 3});
+            graph.initialize_state(state);
+
+            CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 3) * 3 * 4 + 2}));
+
+            WHEN("We change the state of the set") {
+                set_ptr->assign(state, {1, 2, 4, 3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 4 + 3) * 3 * 4 + 2}));
+                graph.commit(state);
+
+                set_ptr->assign(state, {3, 2});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({(3 + 2) * 3 * 4 + 2}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 4 + 3) * 3 * 4 + 2}));
+            }
+        }
+
+        AND_GIVEN("x = sum(arr, axes=(0,), initial=2)") {
+            auto x_ptr = graph.emplace_node<SumNode2>(arr_ptr, std::vector<ssize_t>{0}, 2);
+            graph.emplace_node<ArrayValidationNode>(x_ptr);
+
+            CHECK_THAT(x_ptr->shape(), RangeEquals({3, 4}));
+
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {1, 2, 3});
+            graph.initialize_state(state);
+
+            CHECK_THAT(x_ptr->view(state), RangeEquals({8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8}));
+
+            WHEN("We change the state of the set") {
+                set_ptr->assign(state, {1, 2, 4, 3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
+                graph.commit(state);
+
+                set_ptr->assign(state, {3, 2});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
+            }
+        }
+
+        AND_GIVEN("x = sum(arr, axes=(1,), initial=2)") {
+            auto x_ptr = graph.emplace_node<SumNode2>(arr_ptr, std::vector<ssize_t>{1}, 2);
+            graph.emplace_node<ArrayValidationNode>(x_ptr);
+
+            CHECK_THAT(x_ptr->shape(), RangeEquals({-1, 4}));
+
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {1, 2, 3});
+            graph.initialize_state(state);
+
+            CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 11, 11, 11, 11}));
+
+            WHEN("We change the state of the set") {
+                set_ptr->assign(state, {1, 2, 4, 3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11}));
+                graph.commit(state);
+
+                set_ptr->assign(state, {3, 2});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({11, 11, 11, 11, 8, 8, 8, 8}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11}));
+            }
+        }
+    }
+
+    // todo: check growing then shrinking as part of the same propagation
+}
+
 
 TEMPLATE_TEST_CASE("PartialReduceNode", "", std::multiplies<double>, std::plus<double>) {
     GIVEN("A 1D array of 5 integers, and a reduction over axis 0 and an explicit initial value") {

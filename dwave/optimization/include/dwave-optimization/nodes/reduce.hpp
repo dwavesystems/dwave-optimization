@@ -31,6 +31,82 @@
 
 namespace dwave::optimization {
 
+template <class BinaryOp>
+class ReduceNode2 : public ArrayOutputMixin<ArrayNode> {
+ public:
+    ReduceNode2(ArrayNode* array_ptr);
+
+    ReduceNode2(ArrayNode* array_ptr, std::initializer_list<ssize_t> axes,
+                std::optional<double> initial = std::nullopt);
+    ReduceNode2(ArrayNode* array_ptr, std::span<const ssize_t> axes,
+                std::optional<double> initial = std::nullopt);
+
+    // std::span<const ssize_t> axes() const;
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    // /// @copydoc Array::integral()
+    // bool integral() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
+
+    // // The predecessor of the reduction, as an Array*.
+    // std::span<Array* const> operands() {
+    //     assert(predecessors().size() == 1);
+    //     return std::span<Array* const, 1>(&array_ptr_, 1);
+    // }
+    // std::span<const Array* const> operands() const {
+    //     assert(predecessors().size() == 1);
+    //     return std::span<const Array* const, 1>(&array_ptr_, 1);
+    // }
+
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+    using ArrayOutputMixin::shape;
+    std::span<const ssize_t> shape(const State& state) const override;
+
+    using ArrayOutputMixin::size;
+    ssize_t size(const State& state) const override;
+
+    ssize_t size_diff(const State& state) const override;
+
+    /// The initial value if one was provided.
+    /// Otherwise uses the first element in the reduction.
+    const std::optional<double> initial;
+ private:
+    BinaryOp op;
+
+    ArrayNode* const array_ptr_;
+
+    // The axes we're reducing in a sorted, unique vector.
+    // An empty vector means we're reducing over everything
+    std::vector<ssize_t> axes_;
+
+    // The minimum and maximum (inclusive) value that might be returned
+    std::pair<double, double> minmax_;
+};
+
+
+using SumNode2 = ReduceNode2<std::plus<double>>;
+
+
 /// TODO: support multiple axes
 template <class BinaryOp>
 class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
