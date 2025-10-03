@@ -241,9 +241,14 @@ void AccumulateZipNode::initialize_state(State& state) const {
         iterators.push_back(array_ptr->begin(state));
     }
 
-    // Initialize the inputs
+    // Initialize the inputs. This ensures that we can call `assign()` on the input
+    // nodes in loop below (or in future propagations, if predecessors are dynamic
+    // and start empty).
     for (const auto inp : expression_ptr_->inputs()) {
-        double val = inp->min();
+        // This is just an initial value to set the state up, it will be immediately
+        // overwritten. Choose a value close to zero instead of using min/max directly
+        // in case they are unbounded (set to +/-inf).
+        double val = std::clamp(0.0, inp->min(), inp->max());
         inp->initialize_state(reg, std::span(&val, 1));
     }
 

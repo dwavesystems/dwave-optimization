@@ -165,6 +165,44 @@ TEST_CASE("AccumulateZipNode") {
         }
     }
 
+    GIVEN("Two integer nodes and an expression that produces nans when initialized with "
+          "infinities") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{5}, -10, 10);
+        auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{5}, -10, 10);
+
+        // (x0 - x1) * x2
+        auto expression = Graph();
+        std::vector<InputNode*> inputs = {
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar())};
+        auto output_ptr = expression.emplace_node<MultiplyNode>(
+                expression.emplace_node<SubtractNode>(inputs[0], inputs[1]), inputs[2]);
+
+        expression.set_objective(output_ptr);
+        expression.topological_sort();
+
+        THEN("We can create a lambda node and initialize a state") {
+            std::vector<ArrayNode*> args({i_ptr, j_ptr});
+
+            auto accumulate_ptr =
+                    graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0);
+
+            graph.emplace_node<ArrayValidationNode>(accumulate_ptr);
+
+            AND_WHEN("We initialize a state") {
+                auto state = graph.empty_state();
+                i_ptr->initialize_state(state, {1, 1, 1, 1, 1});
+                j_ptr->initialize_state(state, {1, 1, 1, 1, 1});
+                graph.initialize_state(state);
+
+                THEN("The output is correct") {
+                    CHECK_THAT(accumulate_ptr->view(state), RangeEquals({-1, -2, -3, -4, -5}));
+                }
+            }
+        }
+    }
+
     GIVEN("Three integer nodes and an expression") {
         auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{5}, 0, 100);
         auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{5}, 0, 100);
