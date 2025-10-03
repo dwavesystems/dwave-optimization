@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fix ``BroadcastTo`` symbol's diff creation. Previously it would sometimes
+    propagate the wrong information when broadcasting high-demensional arrays.

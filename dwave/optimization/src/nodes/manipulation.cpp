@@ -47,21 +47,18 @@ std::vector<ssize_t> diff_offsets(std::span<const ssize_t> from_shape,
     auto to_it = to_shape.rbegin();
     ssize_t multiplier = 1;
     for (const auto stop = from_shape.rend(); from_it != stop; ++from_it, ++to_it) {
-        if (*from_it == *to_it) {
-            // The shapes match, there is no broadcasting here
-
-            // In the case that we're dynamic, this will result in a negative multiplier,
-            // but that's OK because it's only the 0th dimension so we'll never use it.
-            multiplier *= *from_it;
-        } else {
+        if (*from_it != *to_it) {
             assert(*from_it == 1);  // should be checked in constructor
             offsets = expand(offsets, *to_it, multiplier);
         }
+
+        multiplier *= *to_it;
     }
 
     // all of the dimensions we're prepending need offsets
     for (auto stop = to_shape.rend(); to_it != stop; ++to_it) {
         offsets = expand(offsets, *to_it, multiplier);
+        multiplier *= *to_it;
     }
 
     // We need it to be sorted in order to potentially support dynamic nodes
