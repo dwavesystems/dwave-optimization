@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Fix an issue with ``AccumulateZip`` when given an expression that contains
+    unbounded input symbols. For some expressions, this would result in
+    malformed data being propagated through the expression on initialization,
+    which could then affect all subsequent propagations.
