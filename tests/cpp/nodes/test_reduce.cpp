@@ -127,6 +127,7 @@ TEST_CASE("Reduce2") {
     }
 
     // todo: check growing then shrinking as part of the same propagation
+    // todo: test empty set
 }
 
 
@@ -191,9 +192,9 @@ TEST_CASE("PartialReduceNode - PartialProdNode") {
     GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes") {
         std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
         auto ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
-        auto r_ptr_0 = graph.emplace_node<PartialProdNode>(ptr, 0);
-        auto r_ptr_1 = graph.emplace_node<PartialProdNode>(ptr, 1);
-        auto r_ptr_2 = graph.emplace_node<PartialProdNode>(ptr, 2);
+        auto r_ptr_0 = graph.emplace_node<ProdNode2>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<ProdNode2>(ptr, std::vector<ssize_t>{1});
+        auto r_ptr_2 = graph.emplace_node<ProdNode2>(ptr, std::vector<ssize_t>{2});
         graph.emplace_node<ArrayValidationNode>(r_ptr_0);
         graph.emplace_node<ArrayValidationNode>(r_ptr_1);
         graph.emplace_node<ArrayValidationNode>(r_ptr_2);

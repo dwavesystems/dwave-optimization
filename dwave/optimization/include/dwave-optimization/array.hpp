@@ -92,12 +92,28 @@ struct SizeInfo {
 
 /// Struct for the common use case of saving statistics about an ArrayNode's output values
 struct ValuesInfo {
-    ValuesInfo() = delete;
+    ValuesInfo() = default;
     ValuesInfo(double min, double max, bool integral) : min(min), max(max), integral(integral) {}
     ValuesInfo(std::pair<double, double> minmax, bool integral)
             : min(minmax.first), max(minmax.second), integral(integral) {}
     /// Copy the min/max/integral from the array
     ValuesInfo(const Array* array_ptr);
+
+    ValuesInfo& operator|=(const ValuesInfo& rhs) {
+        this->min = std::min<double>(this->min, rhs.min);
+        this->max = std::max<double>(this->max, rhs.max);
+
+        // the result set only contains integers if they both did
+        this->integral = this->integral && rhs.integral;
+
+        return *this;
+    }
+
+    /// The union of the domains of ValuesInfo and rhs
+    friend ValuesInfo operator|(ValuesInfo lhs, const ValuesInfo& rhs) {
+        lhs |= rhs;
+        return lhs;
+    }
 
     /// These constructors take the min of the mins, etc for all the arrays
     ValuesInfo(std::initializer_list<const Array*> array_ptrs);
@@ -111,9 +127,9 @@ struct ValuesInfo {
 
     static ValuesInfo logical_output() { return {false, true, true}; };
 
-    double min;
-    double max;
-    bool integral;
+    double min = std::numeric_limits<double>::lowest();
+    double max = std::numeric_limits<double>::max();
+    bool integral = false;
 };
 
 // A slice represents a set of indices specified by range(start, stop, step).

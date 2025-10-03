@@ -55,8 +55,8 @@ class ReduceNode2 : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
 
-    // /// @copydoc Array::integral()
-    // bool integral() const override;
+    /// @copydoc Array::integral()
+    bool integral() const override;
 
     /// @copydoc Array::max()
     double max() const override;
@@ -100,10 +100,11 @@ class ReduceNode2 : public ArrayOutputMixin<ArrayNode> {
     std::vector<ssize_t> axes_;
 
     // The minimum and maximum (inclusive) value that might be returned
-    std::pair<double, double> minmax_;
+    const ValuesInfo values_info_;
 };
 
 
+using ProdNode2 = ReduceNode2<std::multiplies<double>>;
 using SumNode2 = ReduceNode2<std::plus<double>>;
 
 

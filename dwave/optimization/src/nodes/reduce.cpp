@@ -33,17 +33,16 @@ namespace dwave::optimization {
 // - For the same reason that our BufferIterators assume that the node using them
 //   knows what type it is, we likewise assume that we know at compile-time what
 //   result type we want. For now it's always double
+
+struct limit_type {};
+
 template <DType result_type>
 struct add {
     class reduction_type {
      public:
         reduction_type() = default;
 
-
         reduction_type(result_type value) noexcept : value_(value) {}
-
-        // // dev note: maybe replace with the more explicit .value()?
-        // explicit operator result_type() noexcept { return this->value; }
 
         bool operator==(const reduction_type& rhs) const { return this->value_ == rhs.value_; }
 
@@ -93,30 +92,156 @@ struct add {
         return lhs;
     }
 
+    /// Given a lhs and rhs where we know the min/max/integrality. Return the
+    /// resulting min/max/integrality. `n` defines the number of times it is
+    /// applied (e.g., in a accumulation or reduction).
+    ValuesInfo result_bounds(ValuesInfo lhs, ValuesInfo rhs) {
+        return ValuesInfo(lhs.min + rhs.min, lhs.max + rhs.max, lhs.integral && rhs.integral);
+    }
+
+    /// Equivalent to the result of
+    ///     auto lhs = bounds;
+    ///     for (ssize_t i = 1; i < n; ++i) {
+    ///         lhs = results_bounds(std::move(lhs), bounds);
+    ///     }
+    ///     return lhs;
+    /// `n` must be positive.
+    ValuesInfo result_bounds(ValuesInfo bounds, ssize_t n) const {
+        // developer note: This might return `inf` in some cases. For now I think
+        // that's OK, because the alterative (replacing inf with numeric_limits::max())
+        // seems ad hoc and pretty ill-defined. And the node itself might return `inf`s.
+        assert(n > 0 && "n must be positive");
+        return ValuesInfo(bounds.min * n, bounds.max * n, bounds.integral);
+    }
+    ValuesInfo result_bounds(ValuesInfo bounds, limit_type) const {
+        // dev note: we currently don't want infs for the bounds
+        return ValuesInfo(std::numeric_limits<double>::lowest(),  //
+                          std::numeric_limits<double>::max(),     //
+                          bounds.integral);
+    }
+
     static constexpr bool associative = true;
     static constexpr bool commutative = true;
     static constexpr bool invertible = true;
 };
-// struct multiply {
-//     // template<class T>
-//     // struct accumulator_type {
-//     //     T nonzero;
-//     //     ssize_t num_zero;
-//     // };
+template <DType result_type>
+struct prod {
+    struct reduction_type {
+     public:
+        reduction_type() = delete;
 
-//     // constexpr decltype(auto) operator()(const DType auto& lhs, const DType auto& rhs) {
-//     //     return lhs * rhs;
-//     // }
+        reduction_type(result_type value) noexcept
+                : nonzero_(value ? value : 0), num_zero_(value == 0) {}
 
-//     // static constexpr bool associative = true;
-//     // static constexpr bool commutative = true;
-// };
+        bool operator==(const reduction_type& rhs) const {
+            return this->nonzero_ == rhs.nonzero_ && this->num_zero_ == rhs.num_zero_;
+        }
+
+        result_type value() const noexcept { return num_zero_ ? 0 : nonzero_; }
+
+     private:
+        friend prod;
+
+        result_type nonzero_;
+        ssize_t num_zero_;
+    };
+
+    constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
+        assert(false);
+    }
+    reduction_type operator()(reduction_type lhs, const DType auto& rhs) {
+        if (rhs == 0) {
+            lhs.num_zero_ += 1;
+        } else {
+            lhs.nonzero_ *= rhs;
+        }
+        return lhs;
+    }
+
+    std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
+        assert(false);
+    }
+    std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
+        assert(false);
+    }
+
+    // If `range` is empty then `initial` must be provided.
+    template <std::ranges::range Range, DType T>
+    reduction_type reduce(const Range&& range, std::optional<T> initial) {
+        if (!initial.has_value()) {
+            auto begin = std::ranges::begin(range);
+            const auto end = std::ranges::end(range);
+            assert(begin != end && "initial must be provided for an empty range");
+            std::optional<T> init = *begin;
+            return reduce(std::ranges::subrange(++begin, end), std::move(init));
+        }
+
+        // Unfortunately as of C++20 there is not a std::ranges::accumulate so in order
+        // to support sentinels etc we have to do this "by hand".
+        auto lhs = reduction_type(initial.value());
+        for (const auto& rhs : range) {
+            lhs = (*this)(std::move(lhs), rhs);
+        }
+        return lhs;
+    }
+
+    /// Given a lhs and rhs where we know the min/max/integrality. Return the
+    /// resulting min/max/integrality. `n` defines the number of times it is
+    /// applied (e.g., in a accumulation or reduction).
+    ValuesInfo result_bounds(ValuesInfo lhs, ValuesInfo rhs) {
+        assert(false);
+    }
+
+    /// Equivalent to the result of
+    ///     auto lhs = bounds;
+    ///     for (ssize_t i = 1; i < n; ++i) {
+    ///         lhs = results_bounds(std::move(lhs), bounds);
+    ///     }
+    ///     return lhs;
+    /// `n` must be positive.
+    ValuesInfo result_bounds(ValuesInfo bounds, ssize_t n) const {
+        assert(n > 0 && "n must be positive");
+
+        double low = bounds.min;
+        double high = bounds.max;
+
+        // A bunch of cases we need to handle
+        std::vector<double> candidates{
+                std::pow(low, n),
+                std::pow(high, n),
+        };
+        if (n > 1) {
+            candidates.emplace_back(low * std::pow(high, n - 1));
+            candidates.emplace_back(high * std::pow(low, n - 1));
+        }
+
+        return ValuesInfo(std::ranges::min(candidates), std::ranges::max(candidates),
+                          bounds.integral);
+    }
+    ValuesInfo result_bounds(ValuesInfo bounds, limit_type) const {
+        assert(false && "not yet implemeted");
+    }
+
+    static constexpr bool associative = true;
+    static constexpr bool commutative = true;
+    static constexpr bool invertible = true;
+};
+
+template <class BinaryOp>
+struct std_to_ufunc {};
+template <>
+struct std_to_ufunc<std::multiplies<double>> {
+    using type = prod<double>;
+};
+template <>
+struct std_to_ufunc<std::plus<double>> {
+    using type = add<double>;
+};
 
 template <class BinaryOp>
 class ReduceNode2Data : public NodeStateData {
  public:
-    // Giant ugly conditional to map std functors to our ufuncs
-    using ufunc_type = std::enable_if<std::same_as<BinaryOp, std::plus<double>>, add<double>>::type;
+    using ufunc_type = std_to_ufunc<BinaryOp>::type;
 
     // Pull this into the namespace for convenience.
     using reduction_type = ufunc_type::reduction_type;
@@ -424,6 +549,17 @@ std::vector<ssize_t> drop_axes(std::ranges::sized_range auto&& range,
     return out;
 }
 
+bool is_unique(std::ranges::range auto&& range) {
+    assert(std::ranges::is_sorted(range));
+    auto trail = std::ranges::begin(range);
+    const auto end = std::ranges::end(range);
+    if (trail == end) return true;
+    for (auto lead = std::next(trail); lead != end; ++trail, ++lead) {
+        if (*trail == *lead) return false;
+    }
+    return true;
+}
+
 std::vector<ssize_t> keep_axes(std::ranges::random_access_range auto&& range,
                              std::span<const ssize_t> axes) {
     std::vector<ssize_t> out;
@@ -466,6 +602,12 @@ std::vector<ssize_t> normalize_axes(const ArrayNode* array_ptr, std::span<const 
     return normalized;
 }
 
+// Return the product of all elements in the range
+auto product(std::ranges::range auto&& range) {
+    return std::reduce(std::ranges::begin(range), std::ranges::end(range), 1,
+                        std::multiplies<void>());
+}
+
 // The resulting shape when reducing the given array over the given axes
 std::vector<ssize_t> reduce_shape(const ArrayNode* array_ptr, std::span<const ssize_t> axes) {
     // If axes is empty then we're reducing everything and therefore our resulting
@@ -475,6 +617,80 @@ std::vector<ssize_t> reduce_shape(const ArrayNode* array_ptr, std::span<const ss
 
     std::vector<ssize_t> normalized = normalize_axes(array_ptr, axes);
     return drop_axes(array_ptr->shape(), normalized);
+}
+
+// The min/max/integrality when reducing the given array over the given `axes`.
+template <class BinaryOp>
+ValuesInfo values_info(ArrayNode* array_ptr, std::span<const ssize_t> axes,
+                       std::optional<double> initial) {
+    // This function assumes axes is sorted and unique
+    assert(std::ranges::is_sorted(axes));
+    assert(is_unique(axes));
+
+    // Our ufunc will determine our bounds
+    typename std_to_ufunc<BinaryOp>::type ufunc;
+    static_assert(decltype(ufunc)::associative);  // otherwise this doesn't make sense
+    static_assert(decltype(ufunc)::commutative);  // otherwise this doesn't make sense
+
+    // Get the bounds for our predecessor
+    const auto array_bounds = ValuesInfo(array_ptr);
+
+    // The easy case is that the size of each reduction is fixed.
+    if (not array_ptr->dynamic() or (axes.size() > 0 && axes[0] != 0)) {
+        const ssize_t reduction_size = product(keep_axes(array_ptr->shape(), axes));
+        return ufunc.result_bounds(array_bounds, reduction_size);
+    }
+
+    //
+    // Unfortunately we're in the more complex case where the reduction size varies as a function
+    // of the size of our predecessor array.
+    //
+
+    auto array_sizeinfo = array_ptr->sizeinfo();
+
+    ssize_t min_size = array_sizeinfo.min.value_or(0);     // if we don't know we have to assume 0
+    std::optional<ssize_t> max_size = array_sizeinfo.max;  // possibly unknown!
+
+    // For each axis that we're *not* reducing over, we divide the size because it's not part of
+    // the reduction space
+    if (axes.size()) {
+        for (const auto& dim_size : drop_axes(array_ptr->shape(), axes)) {
+            assert(dim_size >= 0);
+
+            min_size /= dim_size;
+            if (max_size) *max_size /= dim_size;
+        }
+    }  // else we're reducing over all axes
+
+    //
+    // Ok, now that we (maybe) know the min/max size of our reduction space. we can start fiddling
+    // with bounds.
+    //
+
+    if (max_size.has_value() && *max_size == 0) {
+        // TODO Is it even possible to get here? Needs testing
+        assert(false && "not yet implemeted");
+    }
+
+    // Get the bounds at each of the smallest and largest sizes we can be
+    ValuesInfo min_bounds = ufunc.result_bounds(array_bounds, std::max<ssize_t>(min_size, 1));
+    ValuesInfo max_bounds = max_size ? ufunc.result_bounds(array_bounds, *max_size)
+                                     : ufunc.result_bounds(array_bounds, limit_type());
+
+    // If there is not initial value, then our bounds are just the union of min_/max_bounds
+    if (!initial.has_value()) return min_bounds | max_bounds;
+
+    // Otherwise we need to account for the initial value in the bounds
+    auto initial_bounds = ValuesInfo(*initial, *initial, is_integer(*initial));
+    min_bounds = ufunc.result_bounds(std::move(min_bounds), initial_bounds);
+    max_bounds = ufunc.result_bounds(std::move(max_bounds), initial_bounds);
+
+    auto bounds = min_bounds | max_bounds;  // the union of the domains
+
+    // One more case (empty array)
+    if (min_size == 0) bounds |= initial_bounds;
+
+    return bounds;
 }
 
 template <class BinaryOp>
@@ -487,14 +703,12 @@ ReduceNode2<BinaryOp>::ReduceNode2(ArrayNode* array_ptr, std::span<const ssize_t
           initial(initial),
           array_ptr_(array_ptr),
           axes_(normalize_axes(array_ptr, axes)),
-          minmax_(std::numeric_limits<double>::signaling_NaN(),
-                  std::numeric_limits<double>::signaling_NaN()) {
+          values_info_(values_info<BinaryOp>(array_ptr_, axes_, initial)) {
     // surely there is more I need to do here
 
-    // todo: min/max/sizeinfo
+    // Handle sizeinfo?
 
-    minmax_ = {-10000, 10000};  // todo: actually calculate
-
+    // Handle values_info
 
     add_predecessor(array_ptr);
 }
@@ -576,13 +790,18 @@ void ReduceNode2<BinaryOp>::initialize_state(State& state) const {
 }
 
 template <class BinaryOp>
+bool ReduceNode2<BinaryOp>::integral() const {
+    return values_info_.integral;
+}
+
+template <class BinaryOp>
 double ReduceNode2<BinaryOp>::max() const {
-    return minmax_.second;
+    return values_info_.max;
 }
 
 template <class BinaryOp>
 double ReduceNode2<BinaryOp>::min() const {
-    return minmax_.first;
+    return values_info_.min;
 }
 
 template <class BinaryOp>
@@ -685,6 +904,7 @@ ssize_t ReduceNode2<BinaryOp>::size_diff(const State& state) const {
     return data_ptr<ReduceNode2Data<BinaryOp>>(state)->size_diff();
 }
 
+template class ReduceNode2<std::multiplies<double>>;
 template class ReduceNode2<std::plus<double>>;
 
 
