@@ -1794,6 +1794,36 @@ class TestIntegerVariable(utils.SymbolTests):
             np.testing.assert_array_equal(x.state(), [0, 0, 0, -1, 0])
 
 
+class TestIsIn(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        element = model.constant([-1.9, -2, 1.7, 1.6])
+        test_elements = model.constant([0, -2, 9.5, 3.2])
+        contains = dwave.optimization.symbols.IsIn(element, test_elements)
+
+        with model.lock():
+            yield contains
+
+    def test(self):
+        from dwave.optimization.symbols import IsIn
+        model = Model()
+        element = model.constant([-1.9, -2, 1.7, 1.6])
+        test_elements = model.constant([0, -2, 9.5, 3.2])
+        contains = dwave.optimization.isin(element, test_elements)
+
+        self.assertIsInstance(contains, IsIn)
+
+    def test_state(self):
+        model = Model()
+        element = model.constant([-1.9, -2, 1.7, 1.6])
+        test_elements = model.constant([0, -2, 9.5, -1.9])
+        contains = dwave.optimization.symbols.IsIn(element, test_elements)
+        model.states.resize(1)
+        with model.lock():
+            expected = np.array([1.0, 1.0, 0.0, 0.0])
+            np.testing.assert_array_almost_equal(contains.state(0), expected)
+
+
 class TestLessEqual(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
