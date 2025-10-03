@@ -77,7 +77,11 @@ struct add {
     template <std::ranges::range Range, DType T>
     reduction_type reduce(const Range&& range, std::optional<T> initial) {
         if (!initial.has_value()) {
-            assert(false);
+            auto begin = std::ranges::begin(range);
+            const auto end = std::ranges::end(range);
+            assert(begin != end && "initial must be provided for an empty range");
+            std::optional<T> init = *begin;
+            return reduce(std::ranges::subrange(++begin, end), std::move(init));
         }
 
         // Unfortunately as of C++20 there is not a std::ranges::accumulate so in order
@@ -247,14 +251,6 @@ class ReduceNode2Data : public NodeStateData {
     }
 
     void revert() {
-        // if (shape_info_) {
-        //     if (shape_info_->previous_size < buffer_.size()) {
-        //         assert(false);
-        //     } else if (shape_info_->previous_size > buffer_.size()) {
-        //         assert(false);
-        //     }
-        // }
-
         // flip any flags back to unchanged
         // Should we do this as part of prepare_diff?
         flags_.clear();
@@ -529,7 +525,7 @@ void ReduceNode2<BinaryOp>::initialize_state(State& state) const {
     assert(ufunc.associative && ufunc.commutative);  // we rely on this
 
     // We are reducing over all axes, so this is nice and simple
-    if (axes_.empty() || axes_.size() == static_cast<std::size_t>(this->ndim())) {
+    if (axes_.empty() || axes_.size() == static_cast<std::size_t>(array_ptr_->ndim())) {
         auto reduction = ufunc.reduce(array_ptr_->view(state), initial);
         emplace_data_ptr<ReduceNode2Data<BinaryOp>>(state, reduction);
         return;
@@ -542,7 +538,6 @@ void ReduceNode2<BinaryOp>::initialize_state(State& state) const {
                                               std::multiplies<ssize_t>());
 
     const auto array_begin = array_ptr_->begin(state);
-    assert(array_begin.shaped());  // if we're here then we must be acting on an array with ndim > 0
 
     std::vector<typename ufunc_type::reduction_type> reductions;
     for (ssize_t index = 0, size = array_ptr_->size(state) / subspace_size; index < size; ++index) {
@@ -559,7 +554,11 @@ void ReduceNode2<BinaryOp>::initialize_state(State& state) const {
 
         // We can then create an iterator that iterates of the reduction group
         auto begin = array_begin;  // make a copy that we can mutate
-        begin.advance_to(multi_index);
+        if (begin.shaped()) {
+            begin.advance_to(multi_index);
+        } else {
+            begin += ravel_multi_index(multi_index, array_ptr_->shape());
+        }
         auto it = BufferIterator<double, double, true>(&*begin, subspace_shape, subspace_strides);
 
         // Calculate the reduction over said group

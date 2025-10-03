@@ -190,12 +190,10 @@ TEST_CASE("PartialReduceNode - PartialProdNode") {
     auto graph = Graph();
     GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes") {
         std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
-        auto ptr =
-                graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 2, 2});
+        auto ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
         auto r_ptr_0 = graph.emplace_node<PartialProdNode>(ptr, 0);
         auto r_ptr_1 = graph.emplace_node<PartialProdNode>(ptr, 1);
         auto r_ptr_2 = graph.emplace_node<PartialProdNode>(ptr, 2);
-
         graph.emplace_node<ArrayValidationNode>(r_ptr_0);
         graph.emplace_node<ArrayValidationNode>(r_ptr_1);
         graph.emplace_node<ArrayValidationNode>(r_ptr_2);
@@ -237,11 +235,13 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
     auto graph = Graph();
     GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes ") {
         std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
-        auto ptr =
-                graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 2, 2});
-        auto r_ptr_0 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 0);
-        auto r_ptr_1 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 1);
-        auto r_ptr_2 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 2);
+        auto ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
+        auto r_ptr_0 = graph.emplace_node<SumNode2>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<SumNode2>(ptr, std::vector<ssize_t>{1});
+        auto r_ptr_2 = graph.emplace_node<SumNode2>(ptr, std::vector<ssize_t>{2});
+        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_2);
 
         THEN("The dimensions of the partial reductions are correct") {
             CHECK(r_ptr_0->ndim() == 2);
@@ -279,9 +279,12 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
 
     GIVEN("A 3D binary array with shape (2, 3, 2) and partially reduce over the axes") {
         auto ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3, 2});
-        auto r_ptr_0 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 0);
-        auto r_ptr_1 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 1);
-        auto r_ptr_2 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 2);
+        auto r_ptr_0 = graph.emplace_node<SumNode2>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<SumNode2>(ptr, std::vector<ssize_t>{1});
+        auto r_ptr_2 = graph.emplace_node<SumNode2>(ptr, std::vector<ssize_t>{2});
+        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_2);
 
         THEN("The dimensions of the partial reductions are correct") {
             CHECK(r_ptr_0->ndim() == 2);
@@ -359,13 +362,14 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
 
     GIVEN("A 3D array, index it by slice, int and slice and we take partial traces") {
         std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
-        auto array_ptr =
-                graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 2, 2});
+        auto array_ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
         auto ptr = graph.emplace_node<BasicIndexingNode>(array_ptr, Slice(0, 2), 1, Slice(0, 2));
 
         // then there are only 2 possible reductions
-        auto r_ptr_0 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 0);
-        auto r_ptr_1 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 1);
+        auto r_ptr_0 = graph.emplace_node<SumNode2>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<SumNode2>(ptr, std::vector<ssize_t>{1});
+        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
 
         THEN("The dimensions of the partial reductions are correct") {
             CHECK(ptr->ndim() == 2);
