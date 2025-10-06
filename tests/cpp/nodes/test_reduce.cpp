@@ -837,7 +837,7 @@ TEST_CASE("ReduceNode - ProdNode") {
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.prod()") {
         auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
-        auto y_ptr = graph.emplace_node<ProdNode>(x_ptr);
+        auto y_ptr = graph.emplace_node<ProdNode2>(x_ptr);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -5 * -5 * -5);
@@ -848,7 +848,7 @@ TEST_CASE("ReduceNode - ProdNode") {
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.prod(init=-.5)") {
         auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
-        auto y_ptr = graph.emplace_node<ProdNode>(x_ptr, -.5);
+        auto y_ptr = graph.emplace_node<ProdNode2>(x_ptr, std::vector<ssize_t>{}, -.5);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -5 * -5 * 2 * -.5);
@@ -859,7 +859,7 @@ TEST_CASE("ReduceNode - ProdNode") {
 
     GIVEN("Given a list node with a prod over it") {
         auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
-        auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr);
+        auto prod_ptr = graph.emplace_node<ProdNode2>(list_ptr, std::vector<ssize_t>{}, 1);
 
         AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
             auto state = graph.empty_state();
@@ -966,7 +966,7 @@ TEST_CASE("ReduceNode - ProdNode") {
 
     GIVEN("Given a list node with a prod over it with an initial value of 0") {
         auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
-        auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr, 0);
+        auto prod_ptr = graph.emplace_node<ProdNode2>(list_ptr, std::vector<ssize_t>{}, 0);
 
         AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
             auto state = graph.empty_state();
@@ -1005,7 +1005,7 @@ TEST_CASE("ReduceNode - SumNode") {
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.sum()") {
         auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
-        auto y_ptr = graph.emplace_node<SumNode>(x_ptr);
+        auto y_ptr = graph.emplace_node<SumNode2>(x_ptr);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -5 + -5 + -5);
@@ -1016,7 +1016,7 @@ TEST_CASE("ReduceNode - SumNode") {
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.sum(init=-.5)") {
         auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
-        auto y_ptr = graph.emplace_node<SumNode>(x_ptr, -.5);
+        auto y_ptr = graph.emplace_node<SumNode2>(x_ptr, std::vector<ssize_t>{}, -.5);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -5 + -5 + -5 + -.5);
@@ -1029,7 +1029,7 @@ TEST_CASE("ReduceNode - SumNode") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 3, 2});
         auto x_ptr = graph.emplace_node<SetNode>(3);
         auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
-        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+        auto y_ptr = graph.emplace_node<SumNode2>(ax_ptr, std::vector<ssize_t>{}, 0);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == 0);
@@ -1042,7 +1042,7 @@ TEST_CASE("ReduceNode - SumNode") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 3, 2});
         auto x_ptr = graph.emplace_node<SetNode>(3);
         auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
-        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+        auto y_ptr = graph.emplace_node<SumNode2>(ax_ptr, std::vector<ssize_t>{}, 0);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == 0);  // can be 0 because x can be empty
@@ -1055,7 +1055,7 @@ TEST_CASE("ReduceNode - SumNode") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{2, 3, 2});
         auto x_ptr = graph.emplace_node<SetNode>(3, 2, 3);
         auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
-        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+        auto y_ptr = graph.emplace_node<SumNode2>(ax_ptr);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == 4);  // Set has at least 2 elements
@@ -1068,7 +1068,7 @@ TEST_CASE("ReduceNode - SumNode") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, -3, 2});
         auto x_ptr = graph.emplace_node<SetNode>(3);
         auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
-        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+        auto y_ptr = graph.emplace_node<SumNode2>(ax_ptr, std::vector<ssize_t>{}, 0);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -9);  // set has at most 3 elements
@@ -1081,7 +1081,7 @@ TEST_CASE("ReduceNode - SumNode") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, -3, -2});
         auto x_ptr = graph.emplace_node<SetNode>(3);
         auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
-        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+        auto y_ptr = graph.emplace_node<SumNode2>(ax_ptr, std::vector<ssize_t>{}, 0);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -9);
@@ -1092,7 +1092,7 @@ TEST_CASE("ReduceNode - SumNode") {
 
     GIVEN("A set reduced") {
         auto a_ptr = graph.emplace_node<SetNode>(4);
-        auto r_ptr = graph.emplace_node<SumNode>(a_ptr);
+        auto r_ptr = graph.emplace_node<SumNode2>(a_ptr, std::vector<ssize_t>{}, 0);
 
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);

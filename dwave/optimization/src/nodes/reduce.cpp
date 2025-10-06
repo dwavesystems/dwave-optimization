@@ -646,7 +646,8 @@ ValuesInfo values_info(ArrayNode* array_ptr, std::span<const ssize_t> axes,
 
     // The easy case is that the size of each reduction is fixed.
     if (not array_ptr->dynamic() or (axes.size() > 0 && axes[0] != 0)) {
-        const ssize_t reduction_size = product(keep_axes(array_ptr->shape(), axes));
+        const ssize_t reduction_size = axes.size() ? product(keep_axes(array_ptr->shape(), axes)) : array_ptr->size();
+        assert(reduction_size >= 0);
         auto bounds = ufunc.result_bounds(array_bounds, reduction_size);
         if (not initial) return bounds;
         auto initial_bounds = ValuesInfo(*initial, *initial, is_integer(*initial));
@@ -673,6 +674,14 @@ ValuesInfo values_info(ArrayNode* array_ptr, std::span<const ssize_t> axes,
             if (max_size) *max_size /= dim_size;
         }
     }  // else we're reducing over all axes
+
+    // If we don't have an initial value and min_size == 0 then we have a problem
+    // NumPy error message: ValueError: zero-size array to reduction operation maximum which has no identity
+    if (min_size == 0 and not initial) {
+        throw std::invalid_argument(
+                "cannot perform a reduction operation with no identity on an array that might be "
+                "empty");
+    }
 
     //
     // Ok, now that we (maybe) know the min/max size of our reduction space. we can start fiddling
