@@ -104,6 +104,9 @@ TEST_CASE("Reduce2") {
 
             CHECK_THAT(x_ptr->shape(), RangeEquals({-1, 4}));
 
+            CHECK(x_ptr->min() == set_ptr->min() * 3 + 2);
+            CHECK(x_ptr->max() == set_ptr->max() * 3 + 2);
+
             auto state = graph.empty_state();
             set_ptr->initialize_state(state, {1, 2, 3});
             graph.initialize_state(state);
@@ -137,7 +140,7 @@ TEMPLATE_TEST_CASE("PartialReduceNode", "", std::multiplies<double>, std::plus<d
 
         auto graph = Graph();
         auto x_ptr = graph.emplace_node<IntegerNode>(5, 0, 10);  // 5 integers in [0, 10]
-        auto r_ptr = graph.emplace_node<PartialReduceNode<TestType>>(x_ptr, 0, init);
+        auto r_ptr = graph.emplace_node<ReduceNode2<TestType>>(x_ptr, std::vector<ssize_t>{0}, init);
         graph.emplace_node<ArrayValidationNode>(r_ptr);
 
         // this is equivalent to a reduction, so the output is a scalar

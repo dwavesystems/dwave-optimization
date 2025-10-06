@@ -162,7 +162,12 @@ struct prod {
         assert(false);
     }
     std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
-        assert(false);
+        if (rhs == 0) {
+            lhs.num_zero_ -= 1;
+        } else {
+            lhs.nonzero_ /= rhs;
+        }
+        return lhs;
     }
 
     // If `range` is empty then `initial` must be provided.
@@ -189,7 +194,14 @@ struct prod {
     /// resulting min/max/integrality. `n` defines the number of times it is
     /// applied (e.g., in a accumulation or reduction).
     ValuesInfo result_bounds(ValuesInfo lhs, ValuesInfo rhs) {
-        assert(false);
+        const auto [min, max] = std::minmax({
+                lhs.min * rhs.min,
+                lhs.min * rhs.max,
+                lhs.max * rhs.min,
+                lhs.max * rhs.max,
+        });
+
+        return ValuesInfo(min, max, lhs.integral and rhs.integral);
     }
 
     /// Equivalent to the result of
@@ -206,10 +218,7 @@ struct prod {
         double high = bounds.max;
 
         // A bunch of cases we need to handle
-        std::vector<double> candidates{
-                std::pow(low, n),
-                std::pow(high, n),
-        };
+        std::vector<double> candidates{std::pow(low, n), std::pow(high, n)};
         if (n > 1) {
             candidates.emplace_back(low * std::pow(high, n - 1));
             candidates.emplace_back(high * std::pow(low, n - 1));
@@ -638,7 +647,10 @@ ValuesInfo values_info(ArrayNode* array_ptr, std::span<const ssize_t> axes,
     // The easy case is that the size of each reduction is fixed.
     if (not array_ptr->dynamic() or (axes.size() > 0 && axes[0] != 0)) {
         const ssize_t reduction_size = product(keep_axes(array_ptr->shape(), axes));
-        return ufunc.result_bounds(array_bounds, reduction_size);
+        auto bounds = ufunc.result_bounds(array_bounds, reduction_size);
+        if (not initial) return bounds;
+        auto initial_bounds = ValuesInfo(*initial, *initial, is_integer(*initial));
+        return ufunc.result_bounds(bounds, initial_bounds);
     }
 
     //
