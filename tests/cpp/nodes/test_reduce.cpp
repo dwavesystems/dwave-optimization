@@ -405,16 +405,17 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
     }
 }
 
-TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<double>,
-                   std::logical_and<double>, std::logical_or<double>, std::multiplies<double>,
-                   std::plus<double>) {
+TEMPLATE_TEST_CASE("ReduceNode", "",
+        functional::max<double>, functional::min<double>,
+        std::logical_and<double>, std::logical_or<double>,
+        std::multiplies<double>, std::plus<double>) {
     auto graph = Graph();
 
     auto func = TestType();
 
     GIVEN("A scalar constant reduced") {
         auto a_ptr = graph.emplace_node<ConstantNode>(5);
-        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(a_ptr);
+        auto r_ptr = graph.emplace_node<ReduceNode2<TestType>>(a_ptr);
 
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
@@ -446,7 +447,7 @@ TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<do
     GIVEN("An array reduced without an explicit init") {
         std::vector<double> values_a = {1, 2, 3, 4};
         auto a_ptr = graph.emplace_node<ConstantNode>(values_a);
-        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(a_ptr);
+        auto r_ptr = graph.emplace_node<ReduceNode2<TestType>>(a_ptr);
 
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
@@ -479,7 +480,7 @@ TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<do
         double init = 17;
         std::vector<double> values = {1, 2, 3, 4};
         auto a_ptr = graph.emplace_node<ConstantNode>(values);
-        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(a_ptr, init);
+        auto r_ptr = graph.emplace_node<ReduceNode2<TestType>>(a_ptr, std::vector<ssize_t>{}, init);
 
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
@@ -506,7 +507,7 @@ TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<do
     GIVEN("A set reduced with an explicit init value") {
         double init = 17;
         auto a_ptr = graph.emplace_node<SetNode>(4);
-        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(a_ptr, init);
+        auto r_ptr = graph.emplace_node<ReduceNode2<TestType>>(a_ptr, std::vector<ssize_t>{}, init);
 
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
@@ -573,8 +574,8 @@ TEST_CASE("ReduceNode - AllNode/AnyNode") {
 
     GIVEN("x = BinaryNode({5}), y = x.any()") {
         auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{5});
-        auto y_ptr = graph.emplace_node<AllNode>(x_ptr);
-        auto z_ptr = graph.emplace_node<AnyNode>(x_ptr);
+        auto y_ptr = graph.emplace_node<AllNode2>(x_ptr);
+        auto z_ptr = graph.emplace_node<AnyNode2>(x_ptr);
 
         graph.emplace_node<ArrayValidationNode>(y_ptr);
         graph.emplace_node<ArrayValidationNode>(z_ptr);
@@ -633,8 +634,8 @@ TEST_CASE("ReduceNode - AllNode/AnyNode") {
 
     GIVEN("x = [], y = x.all(), z = x.any()") {
         auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{0});
-        auto y_ptr = graph.emplace_node<AllNode>(x_ptr);
-        auto z_ptr = graph.emplace_node<AnyNode>(x_ptr);
+        auto y_ptr = graph.emplace_node<AllNode2>(x_ptr, std::vector<ssize_t>{}, true);
+        auto z_ptr = graph.emplace_node<AnyNode2>(x_ptr, std::vector<ssize_t>{}, false);
 
         graph.emplace_node<ArrayValidationNode>(y_ptr);
         graph.emplace_node<ArrayValidationNode>(z_ptr);
@@ -663,11 +664,15 @@ TEST_CASE("ReduceNode - MaxNode/MinNode") {
 
         // chose init values out of range - we test that init works correctly
         // in the ReduceNode tests
-        auto max_ptr = graph.emplace_node<MaxNode>(list_ptr, -1);
-        auto min_ptr = graph.emplace_node<MinNode>(list_ptr, 6);
-
+        auto max_ptr = graph.emplace_node<MaxNode2>(list_ptr, std::vector<ssize_t>{}, -1);
+        auto min_ptr = graph.emplace_node<MinNode2>(list_ptr, std::vector<ssize_t>{}, 6);
         graph.emplace_node<ArrayValidationNode>(max_ptr);
         graph.emplace_node<ArrayValidationNode>(min_ptr);
+
+        CHECK(max_ptr->min() == -1);  // because the list can be empty
+        CHECK(max_ptr->max() == 4);
+        CHECK(min_ptr->min() == 0);
+        CHECK(min_ptr->max() == 6);  // beause the list can be empty
 
         AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
             auto state = graph.empty_state();

@@ -64,15 +64,15 @@ class ReduceNode2 : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::min()
     double min() const override;
 
-    // // The predecessor of the reduction, as an Array*.
-    // std::span<Array* const> operands() {
-    //     assert(predecessors().size() == 1);
-    //     return std::span<Array* const, 1>(&array_ptr_, 1);
-    // }
-    // std::span<const Array* const> operands() const {
-    //     assert(predecessors().size() == 1);
-    //     return std::span<const Array* const, 1>(&array_ptr_, 1);
-    // }
+    // The predecessor of the reduction, as an Array*.
+    std::span<Array* const> operands() {
+        assert(predecessors().size() == 1);
+        return std::span<Array* const, 1>(&array_ptr_, 1);
+    }
+    std::span<const Array* const> operands() const {
+        assert(predecessors().size() == 1);
+        return std::span<const Array* const, 1>(&array_ptr_, 1);
+    }
 
     void propagate(State& state) const override;
 
@@ -91,19 +91,27 @@ class ReduceNode2 : public ArrayOutputMixin<ArrayNode> {
     /// Otherwise uses the first element in the reduction.
     const std::optional<double> initial;
  private:
+    // std::ranges::subrange<BufferIterator<double, double, true>, std::default_sentinel_t>
+    auto reduce_(const State& state, ssize_t index) const;
+
     BinaryOp op;
 
-    ArrayNode* const array_ptr_;
+    Array* const array_ptr_;
 
     // The axes we're reducing in a sorted, unique vector.
     // An empty vector means we're reducing over everything
     std::vector<ssize_t> axes_;
 
-    // The minimum and maximum (inclusive) value that might be returned
+    // The minimum and maximum (inclusive) value that might be returned as well
+    // as whether we're integral or not.
     const ValuesInfo values_info_;
 };
 
 
+using AllNode2 = ReduceNode2<std::logical_and<double>>;
+using AnyNode2 = ReduceNode2<std::logical_or<double>>;
+using MaxNode2 = ReduceNode2<functional::max<double>>;
+using MinNode2 = ReduceNode2<functional::min<double>>;
 using ProdNode2 = ReduceNode2<std::multiplies<double>>;
 using SumNode2 = ReduceNode2<std::plus<double>>;
 

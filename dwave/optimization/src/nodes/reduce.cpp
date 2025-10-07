@@ -40,17 +40,13 @@ template <DType result_type>
 struct add {
     class reduction_type {
      public:
-        reduction_type() = default;
-
+        reduction_type() = delete;
         reduction_type(result_type value) noexcept : value_(value) {}
-
         bool operator==(const reduction_type& rhs) const { return this->value_ == rhs.value_; }
-
         result_type value() const noexcept { return value_; }
 
      private:
         friend add;
-
         result_type value_;
     };
 
@@ -123,6 +119,306 @@ struct add {
     static constexpr bool associative = true;
     static constexpr bool commutative = true;
     static constexpr bool invertible = true;
+};
+struct all {
+    using result_type = bool;
+
+    class reduction_type {
+     public:
+        reduction_type() = delete;
+        reduction_type(result_type value) noexcept : num_falsy_(value == 0) {}
+        bool operator==(const reduction_type& rhs) const { return num_falsy_ == rhs.num_falsy_; }
+        result_type value() const noexcept { return num_falsy_ == 0; }
+
+     private:
+        friend all;
+        ssize_t num_falsy_;
+    };
+
+    constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
+        assert(false);
+    }
+    reduction_type operator()(reduction_type lhs, const DType auto& rhs) {
+        if (rhs == 0) lhs.num_falsy_ += 1;
+        return lhs;
+    }
+
+
+    std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
+        assert(false);
+    }
+    static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
+        if (rhs == 0) lhs.num_falsy_ -= 1;
+        return lhs;
+    }
+
+    // If `range` is empty then `initial` must be provided.
+    template <std::ranges::range Range, DType T>
+    reduction_type reduce(const Range&& range, std::optional<T> initial) {
+        if (!initial.has_value()) {
+            auto begin = std::ranges::begin(range);
+            const auto end = std::ranges::end(range);
+            assert(begin != end && "initial must be provided for an empty range");
+            std::optional<T> init = *begin;
+            return reduce(std::ranges::subrange(++begin, end), std::move(init));
+        }
+
+        // Unfortunately as of C++20 there is not a std::ranges::accumulate so in order
+        // to support sentinels etc we have to do this "by hand".
+        auto lhs = reduction_type(initial.value());
+        for (const auto& rhs : range) {
+            lhs = (*this)(std::move(lhs), rhs);
+        }
+        return lhs;
+    }
+
+    /// Given a lhs and rhs where we know the min/max/integrality. Return the
+    /// resulting min/max/integrality. `n` defines the number of times it is
+    /// applied (e.g., in a accumulation or reduction).
+    ValuesInfo result_bounds(ValuesInfo lhs, ValuesInfo rhs) {
+        return ValuesInfo(0, 1, true);
+    }
+
+    /// Equivalent to the result of
+    ///     auto lhs = bounds;
+    ///     for (ssize_t i = 1; i < n; ++i) {
+    ///         lhs = results_bounds(std::move(lhs), bounds);
+    ///     }
+    ///     return lhs;
+    /// `n` must be positive.
+    ValuesInfo result_bounds(ValuesInfo bounds, ssize_t n) const {
+        // Dev note: do we want to consider all falsy predecessors?
+        assert(n > 0 && "n must be positive");
+        return ValuesInfo(0, 1, true);
+    }
+    ValuesInfo result_bounds(ValuesInfo bounds, limit_type) const {
+        return ValuesInfo(0, 1, true);
+    }
+
+    static constexpr bool associative = true;
+    static constexpr bool commutative = true;
+    static constexpr bool invertible = true;  // sort of anyway
+};
+struct any {
+    using result_type = bool;
+
+    class reduction_type {
+     public:
+        reduction_type() = delete;
+        reduction_type(result_type value) noexcept : num_truthy_(value != 0) {}
+        bool operator==(const reduction_type& rhs) const { return num_truthy_ == rhs.num_truthy_; }
+        result_type value() const noexcept { return num_truthy_ > 0; }
+     private:
+        friend any;
+        ssize_t num_truthy_;
+    };
+
+    constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
+        assert(false);
+    }
+    reduction_type operator()(reduction_type lhs, const DType auto& rhs) {
+        lhs.num_truthy_ += (rhs != 0);
+        return lhs;
+    }
+
+
+    std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
+        assert(false);
+    }
+    static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
+        lhs.num_truthy_ -= (rhs != 0);
+        return lhs;
+    }
+
+    // If `range` is empty then `initial` must be provided.
+    template <std::ranges::range Range, DType T>
+    reduction_type reduce(const Range&& range, std::optional<T> initial) {
+        if (!initial.has_value()) {
+            auto begin = std::ranges::begin(range);
+            const auto end = std::ranges::end(range);
+            assert(begin != end && "initial must be provided for an empty range");
+            std::optional<T> init = *begin;
+            return reduce(std::ranges::subrange(++begin, end), std::move(init));
+        }
+
+        // Unfortunately as of C++20 there is not a std::ranges::accumulate so in order
+        // to support sentinels etc we have to do this "by hand".
+        auto lhs = reduction_type(initial.value());
+        for (const auto& rhs : range) {
+            lhs = (*this)(std::move(lhs), rhs);
+        }
+        return lhs;
+    }
+
+    /// Given a lhs and rhs where we know the min/max/integrality. Return the
+    /// resulting min/max/integrality. `n` defines the number of times it is
+    /// applied (e.g., in a accumulation or reduction).
+    ValuesInfo result_bounds(ValuesInfo lhs, ValuesInfo rhs) { return ValuesInfo(0, 1, true); }
+
+    /// Equivalent to the result of
+    ///     auto lhs = bounds;
+    ///     for (ssize_t i = 1; i < n; ++i) {
+    ///         lhs = results_bounds(std::move(lhs), bounds);
+    ///     }
+    ///     return lhs;
+    /// `n` must be positive.
+    ValuesInfo result_bounds(ValuesInfo bounds, ssize_t n) const {
+        // Dev note: do we want to consider all falsy predecessors?
+        assert(n > 0 && "n must be positive");
+        return ValuesInfo(0, 1, true);
+    }
+    ValuesInfo result_bounds(ValuesInfo bounds, limit_type) const { return ValuesInfo(0, 1, true); }
+
+    static constexpr bool associative = true;
+    static constexpr bool commutative = true;
+    static constexpr bool invertible = true;  // sort of anyway
+};
+template <DType result_type>
+struct max {
+    // TODO: consider replacing with using double and the requirement becomes explicitly castable
+    class reduction_type {
+     public:
+        reduction_type() = delete;
+        reduction_type(result_type value) noexcept : value_(value) {}
+        bool operator==(const reduction_type& rhs) const { return value_ == rhs.value_; }
+        result_type value() const noexcept { return value_; }
+
+     private:
+        friend max;
+        result_type value_;
+    };
+
+    constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
+        assert(false);
+    }
+    reduction_type operator()(reduction_type lhs, const DType auto& rhs) { 
+        lhs.value_ = std::max(lhs.value_, rhs);
+        return lhs;
+    }
+
+    std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
+        assert(false);
+    }
+    static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
+        if (lhs.value_ > rhs) return lhs;  // We're removing a value smaller than our current max
+        return {};  // Otherwise we failed! We cannot invert
+    }
+
+    // If `range` is empty then `initial` must be provided.
+    template <std::ranges::range Range, DType T>
+    reduction_type reduce(const Range&& range, std::optional<T> initial) {
+        if (!initial.has_value()) {
+            auto begin = std::ranges::begin(range);
+            const auto end = std::ranges::end(range);
+            assert(begin != end && "initial must be provided for an empty range");
+            std::optional<T> init = *begin;
+            return reduce(std::ranges::subrange(++begin, end), std::move(init));
+        }
+
+        // Unfortunately as of C++20 there is not a std::ranges::accumulate so in order
+        // to support sentinels etc we have to do this "by hand".
+        auto lhs = reduction_type(initial.value());
+        for (const auto& rhs : range) {
+            lhs = (*this)(std::move(lhs), rhs);
+        }
+        return lhs;
+    }
+
+    /// Given a lhs and rhs where we know the min/max/integrality. Return the
+    /// resulting min/max/integrality. `n` defines the number of times it is
+    /// applied (e.g., in a accumulation or reduction).
+    ValuesInfo result_bounds(ValuesInfo lhs, ValuesInfo rhs) {
+        return ValuesInfo(std::max(lhs.min, rhs.min),  //
+                          std::max(lhs.max, rhs.max),  //
+                          lhs.integral and rhs.integral);
+    }
+
+    /// Equivalent to the result of
+    ///     auto lhs = bounds;
+    ///     for (ssize_t i = 1; i < n; ++i) {
+    ///         lhs = results_bounds(std::move(lhs), bounds);
+    ///     }
+    ///     return lhs;
+    /// `n` must be positive.
+    ValuesInfo result_bounds(ValuesInfo bounds, ssize_t) const { return bounds; }
+    ValuesInfo result_bounds(ValuesInfo bounds, limit_type) const { return bounds; }
+
+    static constexpr bool associative = true;
+    static constexpr bool commutative = true;
+    static constexpr bool invertible = true;  // sort of anyway
+};
+template <DType result_type>
+struct min {
+    class reduction_type {
+     public:
+        reduction_type() = delete;
+        reduction_type(result_type value) noexcept : value_(value) {}
+        bool operator==(const reduction_type& rhs) const { return value_ == rhs.value_; }
+        result_type value() const noexcept { return value_; }
+
+     private:
+        friend min;
+        result_type value_;
+    };
+
+    constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
+        assert(false);
+    }
+    reduction_type operator()(reduction_type lhs, const DType auto& rhs) { 
+        lhs.value_ = std::min(lhs.value_, rhs);
+        return lhs;
+    }
+
+    std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
+        assert(false);
+    }
+    static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
+        if (lhs.value_ < rhs) return lhs;  // We're removing a value greater than our current min
+        return {};  // Otherwise we failed! We cannot invert
+    }
+
+    // If `range` is empty then `initial` must be provided.
+    template <std::ranges::range Range, DType T>
+    reduction_type reduce(const Range&& range, std::optional<T> initial) {
+        if (!initial.has_value()) {
+            auto begin = std::ranges::begin(range);
+            const auto end = std::ranges::end(range);
+            assert(begin != end && "initial must be provided for an empty range");
+            std::optional<T> init = *begin;
+            return reduce(std::ranges::subrange(++begin, end), std::move(init));
+        }
+
+        // Unfortunately as of C++20 there is not a std::ranges::accumulate so in order
+        // to support sentinels etc we have to do this "by hand".
+        auto lhs = reduction_type(initial.value());
+        for (const auto& rhs : range) {
+            lhs = (*this)(std::move(lhs), rhs);
+        }
+        return lhs;
+    }
+
+    /// Given a lhs and rhs where we know the min/max/integrality. Return the
+    /// resulting min/max/integrality. `n` defines the number of times it is
+    /// applied (e.g., in a accumulation or reduction).
+    ValuesInfo result_bounds(ValuesInfo lhs, ValuesInfo rhs) {
+        return ValuesInfo(std::min(lhs.min, rhs.min),  //
+                          std::min(lhs.max, rhs.max),  //
+                          lhs.integral and rhs.integral);
+    }
+
+    /// Equivalent to the result of
+    ///     auto lhs = bounds;
+    ///     for (ssize_t i = 1; i < n; ++i) {
+    ///         lhs = results_bounds(std::move(lhs), bounds);
+    ///     }
+    ///     return lhs;
+    /// `n` must be positive.
+    ValuesInfo result_bounds(ValuesInfo bounds, ssize_t) const { return bounds; }
+    ValuesInfo result_bounds(ValuesInfo bounds, limit_type) const { return bounds; }
+
+    static constexpr bool associative = true;
+    static constexpr bool commutative = true;
+    static constexpr bool invertible = true;  // sort of anyway
 };
 template <DType result_type>
 struct prod {
@@ -239,6 +535,22 @@ struct prod {
 template <class BinaryOp>
 struct std_to_ufunc {};
 template <>
+struct std_to_ufunc<functional::max<double>> {
+    using type = max<double>;
+};
+template <>
+struct std_to_ufunc<functional::min<double>> {
+    using type = min<double>;
+};
+template <>
+struct std_to_ufunc<std::logical_and<double>> {
+    using type = all;
+};
+template <>
+struct std_to_ufunc<std::logical_or<double>> {
+    using type = any;
+};
+template <>
 struct std_to_ufunc<std::multiplies<double>> {
     using type = prod<double>;
 };
@@ -323,7 +635,7 @@ class ReduceNode2Data : public NodeStateData {
         flags_.pop_back();
     }
 
-    void prepare_diff() {
+    void prepare_diff(std::function<reduction_type(ssize_t)> reduce) {
         while (buffer_.size() > reductions_.size()) {
             diff_.emplace_back(Update::removal(buffer_.size() - 1, buffer_.back()));
             buffer_.pop_back();
@@ -341,7 +653,13 @@ class ReduceNode2Data : public NodeStateData {
                     }
                     break;
                 case ReductionFlag::invalid:
-                    assert(false);
+                    reductions_[index] = reduce(index);
+                    value = reductions_[index].value();
+                    if (buffer_[index] != value) {
+                        diff_.emplace_back(index, buffer_[index], value);
+                        buffer_[index] = value;
+                    }
+                    break;
                 case ReductionFlag::unchanged:
                     // Nothing to do!
                     break;
@@ -378,7 +696,9 @@ class ReduceNode2Data : public NodeStateData {
         // Then try to remove the value
         auto inverse = ufunc.inverse(reductions_[index], value);
         if (not inverse.has_value()) {
-            assert(false);  // not yet tested
+            // We broke the reduction, so mark it as invalid and return
+            flags_[index] = ReductionFlag::invalid;
+            return;
         }
 
         update_reduction_(index, std::move(inverse.value()));
@@ -466,7 +786,8 @@ class ReduceNode2Data : public NodeStateData {
         // Then try to remove the value
         auto inverse = ufunc.inverse(std::move(reduction), from);
         if (not inverse.has_value()) {
-            assert(false);  // not yet tested
+            flags_[index] = ReductionFlag::invalid;
+            return;
         }
         reduction = std::move(inverse.value());
 
@@ -630,7 +951,7 @@ std::vector<ssize_t> reduce_shape(const ArrayNode* array_ptr, std::span<const ss
 
 // The min/max/integrality when reducing the given array over the given `axes`.
 template <class BinaryOp>
-ValuesInfo values_info(ArrayNode* array_ptr, std::span<const ssize_t> axes,
+ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
                        std::optional<double> initial) {
     // This function assumes axes is sorted and unique
     assert(std::ranges::is_sorted(axes));
@@ -646,12 +967,30 @@ ValuesInfo values_info(ArrayNode* array_ptr, std::span<const ssize_t> axes,
 
     // The easy case is that the size of each reduction is fixed.
     if (not array_ptr->dynamic() or (axes.size() > 0 && axes[0] != 0)) {
-        const ssize_t reduction_size = axes.size() ? product(keep_axes(array_ptr->shape(), axes)) : array_ptr->size();
+        const ssize_t reduction_size =
+                axes.size() ? product(keep_axes(array_ptr->shape(), axes)) : array_ptr->size();
         assert(reduction_size >= 0);
-        auto bounds = ufunc.result_bounds(array_bounds, reduction_size);
-        if (not initial) return bounds;
-        auto initial_bounds = ValuesInfo(*initial, *initial, is_integer(*initial));
-        return ufunc.result_bounds(bounds, initial_bounds);
+
+        if (reduction_size and initial) {
+            // cast initial to the correct output type
+            auto init = typename decltype(ufunc)::reduction_type(*initial).value();
+
+            return ufunc.result_bounds(
+                    ufunc.result_bounds(array_bounds, reduction_size),  // from reducing the array
+                    ValuesInfo(init, init, is_integer(init))            // from initial
+            );
+        } else if (reduction_size) {
+            return ufunc.result_bounds(array_bounds, reduction_size);
+        } else if (initial) {
+            // cast initial to the correct output type
+            auto init = typename decltype(ufunc)::reduction_type(*initial).value();
+
+            return ValuesInfo(init, init, is_integer(init));
+        } else {
+            throw std::invalid_argument(
+                    "cannot perform a reduction operation with no "
+                    "identity on an array that might be empty");
+        }
     }
 
     //
@@ -676,8 +1015,8 @@ ValuesInfo values_info(ArrayNode* array_ptr, std::span<const ssize_t> axes,
     }  // else we're reducing over all axes
 
     // If we don't have an initial value and min_size == 0 then we have a problem
-    // NumPy error message: ValueError: zero-size array to reduction operation maximum which has no identity
     if (min_size == 0 and not initial) {
+        // NumPy error message: ValueError: zero-size array to reduction operation maximum which has no identity
         throw std::invalid_argument(
                 "cannot perform a reduction operation with no identity on an array that might be "
                 "empty");
@@ -702,7 +1041,8 @@ ValuesInfo values_info(ArrayNode* array_ptr, std::span<const ssize_t> axes,
     if (!initial.has_value()) return min_bounds | max_bounds;
 
     // Otherwise we need to account for the initial value in the bounds
-    auto initial_bounds = ValuesInfo(*initial, *initial, is_integer(*initial));
+    auto init = typename decltype(ufunc)::reduction_type(*initial).value();  // cast to bool etc
+    auto initial_bounds = ValuesInfo(init, init, is_integer(init));
     min_bounds = ufunc.result_bounds(std::move(min_bounds), initial_bounds);
     max_bounds = ufunc.result_bounds(std::move(max_bounds), initial_bounds);
 
@@ -759,53 +1099,20 @@ void ReduceNode2<BinaryOp>::initialize_state(State& state) const {
     ufunc_type ufunc;
     assert(ufunc.associative && ufunc.commutative);  // we rely on this
 
-    // We are reducing over all axes, so this is nice and simple
-    if (axes_.empty() || axes_.size() == static_cast<std::size_t>(array_ptr_->ndim())) {
-        auto reduction = ufunc.reduce(array_ptr_->view(state), initial);
-        emplace_data_ptr<ReduceNode2Data<BinaryOp>>(state, reduction);
-        return;
-    }
-
-    // Alas, we're in the more complex case where we have several axis to reduce over
-    const auto subspace_shape = keep_axes(array_ptr_->shape(state), axes_);  // state-dependent!
-    const auto subspace_strides = keep_axes(array_ptr_->strides(), axes_);
-    const ssize_t subspace_size = std::reduce(subspace_shape.begin(), subspace_shape.end(), 1,
-                                              std::multiplies<ssize_t>());
-
-    const auto array_begin = array_ptr_->begin(state);
-
     std::vector<typename ufunc_type::reduction_type> reductions;
-    for (ssize_t index = 0, size = array_ptr_->size(state) / subspace_size; index < size; ++index) {
-        // Get the multi-index pointing to the location that the reduction will
-        // be placed in *our* graph.
-        std::vector<ssize_t> multi_index = unravel_index(index, this->shape());
-
-        // Add back in the axes we reduced over and set them to 0 so that
-        // multi_index now points to the beginning of each reduction in the
-        // array we're reducing over
-        for (const ssize_t& dim : axes_) {
-            multi_index.insert(multi_index.begin() + dim, 0);
-        }
-
-        // We can then create an iterator that iterates of the reduction group
-        auto begin = array_begin;  // make a copy that we can mutate
-        if (begin.shaped()) {
-            begin.advance_to(multi_index);
-        } else {
-            begin += ravel_multi_index(multi_index, array_ptr_->shape());
-        }
-        auto it = BufferIterator<double, double, true>(&*begin, subspace_shape, subspace_strides);
-
-        // Calculate the reduction over said group
-        auto reduction = ufunc.reduce(std::ranges::subrange(it, std::default_sentinel), initial);
-
-        // Finally add it to our state
-        reductions.emplace_back(std::move(reduction));
-    }
 
     if (this->dynamic()) {
+        const ssize_t subspace_size = product(keep_axes(array_ptr_->shape(state), axes_));
+        const ssize_t size = array_ptr_->size(state) / subspace_size;
+
+        for (ssize_t index = 0; index < size; ++index) {
+            reductions.emplace_back(reduce_(state, index));
+        }
         emplace_data_ptr<ReduceNode2Data<BinaryOp>>(state, std::move(reductions), this->shape());
     } else {
+        for (ssize_t index = 0; index < this->size(); ++index) {
+            reductions.emplace_back(reduce_(state, index));
+        }
         emplace_data_ptr<ReduceNode2Data<BinaryOp>>(state, std::move(reductions));
     }
 }
@@ -845,7 +1152,7 @@ void ReduceNode2<BinaryOp>::propagate(State& state) const {
             }
         }
 
-        state_ptr->prepare_diff();
+        state_ptr->prepare_diff([&](const ssize_t idx) { return this->reduce_(state, idx); });
         return;
     }
 
@@ -899,7 +1206,43 @@ void ReduceNode2<BinaryOp>::propagate(State& state) const {
         }
     }
 
-    state_ptr->prepare_diff();
+    state_ptr->prepare_diff([&](ssize_t index) { return this->reduce_(state, index); });
+}
+
+template <class BinaryOp>
+auto ReduceNode2<BinaryOp>::reduce_(const State& state, const ssize_t index) const {
+    typename std_to_ufunc<BinaryOp>::type ufunc;
+
+    // Everything is being reduced
+    if (axes_.empty() || axes_.size() == static_cast<std::size_t>(array_ptr_->ndim())) {
+        assert(index == 0);
+        return ufunc.reduce(array_ptr_->view(state), initial);
+    }
+
+    const auto subspace_shape = keep_axes(array_ptr_->shape(state), axes_);  // state-dependent!
+    const auto subspace_strides = keep_axes(array_ptr_->strides(), axes_);
+
+    // Get the multi-index pointing to the location that the reduction will
+    // be placed in *our* graph.
+    std::vector<ssize_t> multi_index = unravel_index(index, this->shape());
+
+    // Add back in the axes we reduced over and set them to 0 so that
+    // multi_index now points to the beginning of each reduction in the
+    // array we're reducing over
+    for (const ssize_t& dim : axes_) {
+        multi_index.insert(multi_index.begin() + dim, 0);
+    }
+
+    // We can then create an iterator that iterates of the reduction group
+    auto begin = array_ptr_->begin(state);
+    if (begin.shaped()) {
+        begin.advance_to(multi_index);
+    } else {
+        begin += ravel_multi_index(multi_index, array_ptr_->shape());
+    }
+    auto it = BufferIterator<double, double, true>(&*begin, subspace_shape, subspace_strides);
+
+    return ufunc.reduce(std::ranges::subrange(it, std::default_sentinel), initial);
 }
 
 template <class BinaryOp>
@@ -925,6 +1268,10 @@ ssize_t ReduceNode2<BinaryOp>::size_diff(const State& state) const {
     return data_ptr<ReduceNode2Data<BinaryOp>>(state)->size_diff();
 }
 
+template class ReduceNode2<functional::max<double>>;
+template class ReduceNode2<functional::min<double>>;
+template class ReduceNode2<std::logical_and<double>>;
+template class ReduceNode2<std::logical_or<double>>;
 template class ReduceNode2<std::multiplies<double>>;
 template class ReduceNode2<std::plus<double>>;
 
