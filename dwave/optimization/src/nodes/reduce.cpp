@@ -136,7 +136,7 @@ struct all {
     };
 
     constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
-        assert(false);
+        return lhs and rhs;
     }
     reduction_type operator()(reduction_type lhs, const DType auto& rhs) {
         if (rhs == 0) lhs.num_falsy_ += 1;
@@ -145,7 +145,8 @@ struct all {
 
 
     std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
-        assert(false);
+        assert(false && "not yet implemeted");
+        return 0;
     }
     static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
         if (rhs == 0) lhs.num_falsy_ -= 1;
@@ -214,7 +215,7 @@ struct any {
     };
 
     constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
-        assert(false);
+        return lhs or rhs;
     }
     reduction_type operator()(reduction_type lhs, const DType auto& rhs) {
         lhs.num_truthy_ += (rhs != 0);
@@ -223,7 +224,8 @@ struct any {
 
 
     std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
-        assert(false);
+        assert(false && "not yet implemeted");
+        return 0;
     }
     static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
         lhs.num_truthy_ -= (rhs != 0);
@@ -525,6 +527,7 @@ struct prod {
     }
     ValuesInfo result_bounds(ValuesInfo bounds, limit_type) const {
         assert(false && "not yet implemeted");
+        return ValuesInfo(0, 0, false);
     }
 
     static constexpr bool associative = true;
@@ -1095,11 +1098,7 @@ std::span<const Update> ReduceNode2<BinaryOp>::diff(const State& state) const {
 
 template <class BinaryOp>
 void ReduceNode2<BinaryOp>::initialize_state(State& state) const {
-    using ufunc_type = typename ReduceNode2Data<BinaryOp>::ufunc_type;
-    ufunc_type ufunc;
-    assert(ufunc.associative && ufunc.commutative);  // we rely on this
-
-    std::vector<typename ufunc_type::reduction_type> reductions;
+    std::vector<typename ReduceNode2Data<BinaryOp>::reduction_type> reductions;
 
     if (this->dynamic()) {
         const ssize_t subspace_size = product(keep_axes(array_ptr_->shape(state), axes_));
@@ -1134,10 +1133,6 @@ double ReduceNode2<BinaryOp>::min() const {
 
 template <class BinaryOp>
 void ReduceNode2<BinaryOp>::propagate(State& state) const {
-    using ufunc_type = typename ReduceNode2Data<BinaryOp>::ufunc_type;
-    ufunc_type ufunc;
-    assert(ufunc.associative && ufunc.commutative);  // we rely on this
-
     auto* const state_ptr = data_ptr<ReduceNode2Data<BinaryOp>>(state);
 
     // We are reducing over all axes, so this is nice and simple
