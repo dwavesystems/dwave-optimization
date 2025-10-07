@@ -236,6 +236,13 @@ class BufferIterator {
         }
     }
 
+    friend bool operator==(const BufferIterator& lhs, std::default_sentinel_t) {
+        assert(lhs.shape_ && "only defined for shaped iterators");
+        assert(lhs.shape_->ndim > 0 && "only defined for iterators with ndim > 0");
+        assert(lhs.shape_->shape[0] >= 0 && "only defined for non-dynamic shapes");
+        return lhs.shape_->loc[0] >= lhs.shape_->shape[0];
+    }
+
     /// Three-way comparison between two iterators.
     friend std::strong_ordering operator<=>(const BufferIterator& lhs, const BufferIterator& rhs) {
         if (lhs.shape_ && rhs.shape_) {
@@ -282,6 +289,13 @@ class BufferIterator {
         }
     }
 
+    /// Advance to the specific location for a shaped buffer
+    void advance_to(std::ranges::sized_range auto&& location) {
+        assert(shape_ && "only defined for shaped iterators");
+        using ptr_type = std::conditional<IsConst, const char*, char*>::type;
+        ptr_ = static_cast<ptr_type>(ptr_) + shape_->advance_to(location);
+    }
+
     /// The number of bytes used to encode values in the buffer.
     std::ptrdiff_t itemsize() const noexcept {
         if constexpr (DType<From>) {
@@ -310,6 +324,9 @@ class BufferIterator {
         }
         unreachable();
     }
+
+    /// Return `true` if the iterator is shaped.
+    bool shaped() const noexcept { return static_cast<bool>(shape_); }
 
  private:
     struct ShapeInfo {
@@ -394,6 +411,20 @@ class BufferIterator {
             return difference;
         }
 
+        std::ptrdiff_t advance_to(std::ranges::sized_range auto&& location) {
+            assert(static_cast<ssize_t>(std::ranges::size(location)) == ndim);
+
+            std::ptrdiff_t offset = 0;  // the number of bytes we need to move
+
+            for (ssize_t axis = 0; axis < ndim; ++axis) {
+                assert(axis == 0 || (0 <= location[axis] && location[axis] < shape[axis]));
+                offset += strides[axis] * (location[axis] - loc[axis]);
+                loc[axis] = location[axis];
+            }
+
+            return offset;
+        }
+
         // Return the pointer offset (in bytes) relative to the current
         // position in order to increment the iterator n times.
         // n can be negative.
@@ -408,7 +439,7 @@ class BufferIterator {
             // working from right-to-left, figure out how many steps in each
             // axis. We handle axis 0 as a special case
 
-            ssize_t offset = 0;  // the number of bytes we need to move
+            std::ptrdiff_t offset = 0;  // the number of bytes we need to move
 
             // We'll be using std::div() over ssize_t, so we'll store our
             // current location in the struct returned by it.
