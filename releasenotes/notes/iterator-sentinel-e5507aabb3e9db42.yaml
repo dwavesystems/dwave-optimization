@@ -1,0 +1,4 @@
+---
+features:
+  - Support equality and inequality comparison to ``std::default_sentinel`` for C++ ``BufferIterator``.
+  - Add C++ ``BufferIterator::advance_to()`` method for shaped ``BufferIterator``.
