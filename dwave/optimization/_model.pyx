@@ -1232,7 +1232,7 @@ cdef class Symbol:
 
             >>> from dwave.optimization import Model
             >>> model = Model()
-            >>> lsymbol = model.disjoint_lists(primary_set_size=5, num_disjoint_lists=2)
+            >>> lsymbol = model.disjoint_lists_symbol(primary_set_size=5, num_disjoint_lists=2)
             >>> with model.lock():
             ...     model.states.resize(2)
             ...     lsymbol.set_state(0, [[0, 4], [1, 2, 3]])

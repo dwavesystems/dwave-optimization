@@ -433,7 +433,7 @@ class TestModel(unittest.TestCase):
         with self.subTest("disjoint lists"):
             model = Model()
 
-            disjoint_lists = model.disjoint_lists(10, 4)
+            disjoint_lists = model.disjoint_lists_symbol(10, 4)
 
             # only use some of the lists
             model.minimize(disjoint_lists[0].sum())

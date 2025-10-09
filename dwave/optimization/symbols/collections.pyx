@@ -501,7 +501,7 @@ cdef class DisjointLists(Symbol):
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> lists_symbol = model.disjoint_lists(
+            >>> lists_symbol = model.disjoint_lists_symbol(
             ...     primary_set_size=5,
             ...     num_disjoint_lists=3
             ... )

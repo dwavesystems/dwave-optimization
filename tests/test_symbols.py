@@ -1274,7 +1274,7 @@ class TestDisjointListsVariable(utils.SymbolTests):
 
     def generate_symbols(self):
         model = Model()
-        d = model.disjoint_lists(10, 4)
+        d = model.disjoint_lists_symbol(10, 4)
         model.lock()
         yield d
         yield from d
@@ -1282,15 +1282,27 @@ class TestDisjointListsVariable(utils.SymbolTests):
     def test(self):
         model = Model()
 
-        dls = model.disjoint_lists(10, 4)
+        dls = model.disjoint_lists_symbol(10, 4)
 
         self.assertEqual(dls.primary_set_size(), 10)
         self.assertEqual(dls.num_disjoint_lists(), 4)
 
+    def test_deprecated_creation_method(self):
+        model = Model()
+        with self.assertWarnsRegex(
+            DeprecationWarning,
+            r"The return behavior of Model.disjoint_lists\(\) is deprecated"
+        ):
+            d, dls = model.disjoint_lists(10, 4)
+
+        self.assertIsInstance(d, dwave.optimization.symbols.DisjointLists)
+        self.assertEqual(len(dls), 4)
+        self.assertIsInstance(dls[0], dwave.optimization.symbols.DisjointList)
+
     def test_indexing(self):
         model = Model()
 
-        dls = model.disjoint_lists(10, 4)
+        dls = model.disjoint_lists_symbol(10, 4)
 
         self.assertEqual(len(list(dls)), 4)
         self.assertIsInstance(dls[0], dwave.optimization.symbols.DisjointList)
@@ -1303,19 +1315,19 @@ class TestDisjointListsVariable(utils.SymbolTests):
         model = Model()
 
         with self.assertRaises(ValueError):
-            model.disjoint_lists(-5, 1)
+            model.disjoint_lists_symbol(-5, 1)
         with self.assertRaises(ValueError):
-            model.disjoint_lists(1, -5)
+            model.disjoint_lists_symbol(1, -5)
 
         model.states.resize(1)
 
-        ds = model.disjoint_lists(0, 1)
+        ds = model.disjoint_lists_symbol(0, 1)
         self.assertEqual(ds[0].shape(), (-1,))  # todo: handle this special case
 
     def test_num_returned_nodes(self):
         model = Model()
 
-        model.disjoint_lists(10, 4)
+        model.disjoint_lists_symbol(10, 4)
 
         # One DisjointListsNode, and one node for each of the 4 successor lists
         self.assertEqual(model.num_nodes(), 5)
@@ -1324,7 +1336,7 @@ class TestDisjointListsVariable(utils.SymbolTests):
         with self.subTest("array-like output lists"):
             model = Model()
             model.states.resize(1)
-            x = model.disjoint_lists(5, 3)
+            x = model.disjoint_lists_symbol(5, 3)
             model.lock()
 
             x.set_state(0, [[0, 1], [2, 3], [4]])
@@ -1335,7 +1347,7 @@ class TestDisjointListsVariable(utils.SymbolTests):
 
         with self.subTest("invalid state index"):
             model = Model()
-            x = model.disjoint_lists(5, 3)
+            x = model.disjoint_lists_symbol(5, 3)
 
             state = [[0, 1, 2, 3, 4], [], []]
 
@@ -1356,7 +1368,7 @@ class TestDisjointListsVariable(utils.SymbolTests):
             # gets translated into integer according to NumPy rules
             model = Model()
             model.states.resize(1)
-            x = model.disjoint_lists(5, 3)
+            x = model.disjoint_lists_symbol(5, 3)
             model.lock()
 
             x.set_state(0, [[4.5, 3, 2, 1, 0], [], []])
@@ -1365,7 +1377,7 @@ class TestDisjointListsVariable(utils.SymbolTests):
         with self.subTest("invalid"):
             model = Model()
             model.states.resize(1)
-            x = model.disjoint_lists(5, 3)
+            x = model.disjoint_lists_symbol(5, 3)
             model.lock()
 
             with self.assertRaisesRegex(
@@ -1394,7 +1406,7 @@ class TestDisjointListsVariable(utils.SymbolTests):
     def test_state_size(self):
         model = Model()
 
-        d = model.disjoint_lists(10, 4)
+        d = model.disjoint_lists_symbol(10, 4)
 
         self.assertEqual(d.state_size(), 0)
         for s in d:
