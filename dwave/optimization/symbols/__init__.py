@@ -66,6 +66,7 @@ from dwave.optimization.symbols.manipulation import (
     Reshape,
     Resize,
     Size,
+    Transpose,
 )
 from dwave.optimization.symbols.naryop import (
     NaryAdd,
@@ -179,6 +180,7 @@ __all__ = [
     "Square",
     "SquareRoot",
     "Sum",
+    "Transpose",
     "Where",
     "Xor",
 ]
