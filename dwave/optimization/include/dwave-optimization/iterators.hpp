@@ -24,6 +24,9 @@
 
 namespace dwave::optimization {
 
+template <class T>
+concept shape_like = std::ranges::sized_range<T> and std::integral<std::ranges::range_value_t<T>>;
+
 /// An iterator over bytes with a fixed size that can be interpreted as an
 /// array.
 ///
@@ -216,6 +219,21 @@ class BufferIterator {
         return *this;
     }
 
+    template <shape_like Shape>
+    BufferIterator& operator+=(Shape&& rhs) {
+        // We want to increment the pointer by a number of bytes, so we cast
+        // void* to char*. But we also need to respect the const-correctness.
+        using ptr_type = std::conditional<IsConst, const char*, char*>::type;
+
+        assert(shape_ && "only defined for shaped iterators");
+        ptr_ = static_cast<ptr_type>(ptr_) + shape_->advance(std::forward<Shape>(rhs));
+
+        return *this;
+    }
+    BufferIterator& operator+=(std::initializer_list<std::ptrdiff_t> rhs) {
+        return (*this) += std::vector(rhs);
+    }
+
     /// Decrement the iterator by `rhs` steps.
     BufferIterator& operator-=(difference_type rhs) { return *this += -rhs; }
 
@@ -265,6 +283,11 @@ class BufferIterator {
     /// Return an iterator pointing to the location `lhs` steps from `rhs`.
     friend BufferIterator operator+(difference_type lhs, BufferIterator rhs) { return rhs += lhs; }
 
+    friend BufferIterator operator+(BufferIterator lhs, shape_like auto&& rhs) {
+        lhs += rhs;
+        return lhs;
+    }
+
     /// Return an iterator pointing to the location `rhs` steps before `lhs`.
     friend BufferIterator operator-(BufferIterator lhs, difference_type rhs) { return lhs -= rhs; }
 
@@ -287,13 +310,6 @@ class BufferIterator {
             return (static_cast<const char*>(lhs.ptr_) - static_cast<const char*>(rhs.ptr_)) /
                    lhs.itemsize();
         }
-    }
-
-    /// Advance to the specific location for a shaped buffer
-    void advance_to(std::ranges::sized_range auto&& location) {
-        assert(shape_ && "only defined for shaped iterators");
-        using ptr_type = std::conditional<IsConst, const char*, char*>::type;
-        ptr_ = static_cast<ptr_type>(ptr_) + shape_->advance_to(location);
     }
 
     /// The number of bytes used to encode values in the buffer.
@@ -323,6 +339,14 @@ class BufferIterator {
             }
         }
         unreachable();
+    }
+
+    /// Return the location in the shaped array that the iterator currently
+    /// points to.
+    /// Only defined for shaped iterators.
+    std::span<const ssize_t> location() {
+        assert(shape_ && "only defined for shaped iterators");
+        return std::span<ssize_t>(shape_->loc.get(), shape_->ndim);
     }
 
     /// Return `true` if the iterator is shaped.
@@ -411,15 +435,21 @@ class BufferIterator {
             return difference;
         }
 
-        std::ptrdiff_t advance_to(std::ranges::sized_range auto&& location) {
-            assert(static_cast<ssize_t>(std::ranges::size(location)) == ndim);
+        std::ptrdiff_t advance(shape_like auto&& multi_increment) {
+            assert(static_cast<ssize_t>(std::ranges::size(multi_increment)) == ndim);
 
             std::ptrdiff_t offset = 0;  // the number of bytes we need to move
 
             for (ssize_t axis = 0; axis < ndim; ++axis) {
-                assert(axis == 0 || (0 <= location[axis] && location[axis] < shape[axis]));
-                offset += strides[axis] * (location[axis] - loc[axis]);
-                loc[axis] = location[axis];
+                // Make sure the new loc is in range, otherwise this function is undefined!
+                assert([&]() {
+                    if (axis == 0) return true;  // we allow out of bounds on axis 0
+                    ssize_t new_loc = loc[axis] + multi_increment[axis];
+                    return 0 <= new_loc and new_loc < shape[axis];
+                }());
+
+                offset += strides[axis] * multi_increment[axis];
+                loc[axis] += multi_increment[axis];
             }
 
             return offset;

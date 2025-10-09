@@ -213,13 +213,25 @@ TEST_CASE("BufferIterator") {
             CHECK_THAT(std::ranges::subrange(it, std::default_sentinel), RangeEquals(values));
         }
 
-        THEN("We can advance to specific locations in the array") {
-            it.advance_to(std::vector{1, 0, 2});
+        THEN("We can do inplace multi-increments with various ranges") {
+            it += {1, 0, 2};
+            CHECK_THAT(it.location(), RangeEquals({1, 0, 2}));
             CHECK(*it == 8);
-            it.advance_to(std::vector{0, 1, 1});  // ok to go backwards
+
+            it += std::array<signed char, 3>{-1, 1, -1};  // backwards is OK
+            CHECK_THAT(it.location(), RangeEquals({0, 1, 1}));
             CHECK(*it == 4);
-            it.advance_to(std::vector{2, 0, 0});  // can go to the end
+
+            it += std::vector<int>{2, -1, -1};  // end is OK
+            CHECK_THAT(it.location(), RangeEquals({2, 0, 0}));
             CHECK(it == end);
+        }
+
+        THEN("We can do multi-increments with various  ranges") {
+            // alas, cannot do initializer_list because C++ doesn't allow it
+            CHECK(*(it + std::array{1, 0, 2}) == 8);
+            CHECK(*(it + std::vector{0, 1, 1}) == 4);
+            CHECK((it + std::array{2, 0, 0}) == end);
         }
     }
 
