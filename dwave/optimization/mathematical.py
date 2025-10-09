@@ -57,6 +57,7 @@ from dwave.optimization.symbols import (
     Sin,
     SoftMax,
     SquareRoot,
+    Transpose,
     Where,
     Xor,
 )
@@ -99,6 +100,7 @@ __all__ = [
     "softmax",
     "sqrt",
     "stack",
+    "transpose",
     "vstack",
     "where",
 ]
@@ -1586,6 +1588,35 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
 
     new_shape = tuple(shape[:axis]) + (1,) + (shape[axis:])  # add the axis and then concatenate
     return concatenate([arr.reshape(new_shape) for arr in arrays], axis)
+
+
+def transpose(array: ArraySymbol) -> Transpose:
+    r"""Return transpose of the given symbol.
+
+    Args:
+        array: Input symbol. Note: If array is dynamic, it must have
+            dimension at most one.
+
+    Returns:
+        A symbol that is the transpose of the given symbol.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import transpose
+        ...
+        >>> model = Model()
+        >>> array = model.constant([[0, 1], [2, 3]])
+        >>> transpose = transpose(array)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(transpose.state())
+        [[0. 2.]
+         [1. 3.]]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Transpose`: equivalent symbol.
+    """
+    return Transpose(array)
 
 
 def vstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:

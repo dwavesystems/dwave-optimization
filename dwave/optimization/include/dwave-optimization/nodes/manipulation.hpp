@@ -390,7 +390,7 @@ class SizeNode : public ScalarOutputMixin<ArrayNode, true> {
 // Compute the transpose of predecessor
 class TransposeNode : public ArrayNode {
  public:
-    TransposeNode(ArrayNode* pred_ptr);
+    TransposeNode(ArrayNode* array_ptr);
 
     // Overloads needed by the Array ABC **************************************
 
@@ -440,7 +440,7 @@ class TransposeNode : public ArrayNode {
     void revert(State&) const override;
 
  private:
-    const Array* pred_ptr_;
+    const Array* array_ptr_;
 
     ssize_t ndim_;
     std::unique_ptr<ssize_t[]> shape_;

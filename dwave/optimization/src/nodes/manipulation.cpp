@@ -1067,37 +1067,37 @@ class TransposeNodeDiffData : public NodeStateData {
     std::vector<Update> diff;
 };
 
-TransposeNode::TransposeNode(ArrayNode* pred_ptr_)
-        : pred_ptr_(pred_ptr_),
-          ndim_(pred_ptr_->ndim()),
+TransposeNode::TransposeNode(ArrayNode* array_ptr_)
+        : array_ptr_(array_ptr_),
+          ndim_(array_ptr_->ndim()),
           shape_(std::make_unique<ssize_t[]>(ndim_)),
           strides_(std::make_unique<ssize_t[]>(ndim_)) {
     // Can take the transpose of a dynamic vector but not a dyanmic (>=2)-D array
     // since the latter would result in a dynamic array which is dynamic in an
     // axis other than the 0th axis.
-    if ((ndim_ >= 2) && (pred_ptr_->dynamic())) {
+    if ((ndim_ >= 2) && (array_ptr_->dynamic())) {
         throw std::invalid_argument("Cannot take transpose of a dynamic (>=2)-D Array");
     }
 
     // transpose has the reverse shape of its predecessor
-    const std::span<const ssize_t> array_shape = pred_ptr_->shape();
+    const std::span<const ssize_t> array_shape = array_ptr_->shape();
     std::reverse_copy(array_shape.begin(), array_shape.end(), shape_.get());
 
     // transpose has the reverse strides of its predecessor
-    const std::span<const ssize_t> array_strides = pred_ptr_->strides();
+    const std::span<const ssize_t> array_strides = array_ptr_->strides();
     std::reverse_copy(array_strides.begin(), array_strides.end(), strides_.get());
 
-    add_predecessor(pred_ptr_);
+    add_predecessor(array_ptr_);
 }
 
 // this node simply points to the predecessor buff
-double const* TransposeNode::buff(const State& state) const { return pred_ptr_->buff(state); }
+double const* TransposeNode::buff(const State& state) const { return array_ptr_->buff(state); }
 
 ssize_t TransposeNode::ndim() const { return ndim_; }
 
 std::span<const ssize_t> TransposeNode::shape(const State& state) const {
     if (ndim_ <= 1) {  // predecessor is vector and may be dynamic
-        return pred_ptr_->shape(state);
+        return array_ptr_->shape(state);
     }
     // predecessor is (>=2)-D array and shape is static
     return std::span<const ssize_t>(shape_.get(), ndim_);
@@ -1105,7 +1105,7 @@ std::span<const ssize_t> TransposeNode::shape(const State& state) const {
 
 std::span<const ssize_t> TransposeNode::shape() const {
     if (ndim_ <= 1) {  // predecessor is vector and may be dynamic
-        return pred_ptr_->shape();
+        return array_ptr_->shape();
     }
     // predecessor is (>=2)-D array and shape is fixed
     return std::span<const ssize_t>(shape_.get(), ndim_);
@@ -1115,19 +1115,19 @@ std::span<const ssize_t> TransposeNode::strides() const {
     return std::span<const ssize_t>(strides_.get(), ndim_);
 }
 
-ssize_t TransposeNode::size() const { return pred_ptr_->size(); }
+ssize_t TransposeNode::size() const { return array_ptr_->size(); }
 
-ssize_t TransposeNode::size(const State& state) const { return pred_ptr_->size(state); }
+ssize_t TransposeNode::size(const State& state) const { return array_ptr_->size(state); }
 
-double TransposeNode::min() const { return pred_ptr_->min(); }
+double TransposeNode::min() const { return array_ptr_->min(); }
 
-double TransposeNode::max() const { return pred_ptr_->max(); }
+double TransposeNode::max() const { return array_ptr_->max(); }
 
-bool TransposeNode::integral() const { return pred_ptr_->integral(); }
+bool TransposeNode::integral() const { return array_ptr_->integral(); }
 
 bool TransposeNode::contiguous() const {
     if (ndim_ <= 1) {  // predecessor is vector
-        return pred_ptr_->contiguous();
+        return array_ptr_->contiguous();
     }
     // Predecessor is (>=2)-D array, memory is not contiguous
     // There might be an edge case here I am not considering....
@@ -1138,13 +1138,13 @@ std::span<const Update> TransposeNode::diff(const State& state) const {
     // If the predecessor is a vector, the transpose does nothing and the diff
     // of this node is simply the diff of the predecessor node.
     if (ndim_ <= 1) {  // predecessor is vector
-        return pred_ptr_->diff(state);
+        return array_ptr_->diff(state);
     }
     // Otherwise, we use the stored diff data.
     return data_ptr<TransposeNodeDiffData>(state)->diff;
 }
 
-ssize_t TransposeNode::size_diff(const State& state) const { return pred_ptr_->size_diff(state); }
+ssize_t TransposeNode::size_diff(const State& state) const { return array_ptr_->size_diff(state); }
 
 void TransposeNode::initialize_state(State& state) const {
     if (ndim_ <= 1) {
@@ -1157,7 +1157,7 @@ void TransposeNode::initialize_state(State& state) const {
 }
 
 void TransposeNode::propagate(State& state) const {
-    const std::span<const Update> pred_diff = pred_ptr_->diff(state);
+    const std::span<const Update> pred_diff = array_ptr_->diff(state);
 
     if (pred_diff.empty() || ndim_ <= 1) {
         return;  // Nothing to do or predecessor is vector (transpose of vector is vector)
@@ -1165,12 +1165,12 @@ void TransposeNode::propagate(State& state) const {
 
     // Predecessor is a non-dynamic (>=2)-D array. It suffices to update the
     // indices of the updates to the transpose index and to save the diff.
-    const std::span<const ssize_t> pred_shape = pred_ptr_->shape(state);
+    const std::span<const ssize_t> pred_shape = array_ptr_->shape(state);
     const std::span<const ssize_t> node_shape = this->shape();
 
     std::vector<Update>& transpose_diff = this->data_ptr<TransposeNodeDiffData>(state)->diff;
     assert(transpose_diff.size() == 0);
-    transpose_diff.reserve(pred_ptr_->size_diff(state));
+    transpose_diff.reserve(array_ptr_->size_diff(state));
 
     for (const Update& update : pred_diff) {
         // make a copy of the update
