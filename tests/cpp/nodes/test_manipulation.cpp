@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "catch2/catch_test_macros.hpp"
-#include "catch2/matchers/catch_matchers_all.hpp"
+#include "catch2/matchers/catch_matchers_range_equals.hpp"
 #include "dwave-optimization/nodes/binaryop.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
@@ -212,8 +212,10 @@ TEST_CASE("BroadcastToNode") {
     GIVEN("arr = broadcast_to(set(10).reshape(-1, 1, 1), (-1, 2, 3))") {
         auto graph = Graph();
         auto set_ptr = graph.emplace_node<SetNode>(10);
-        auto reshape_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::array<ssize_t, 3>{-1, 1, 1});
-        auto arr_ptr = graph.emplace_node<BroadcastToNode>(reshape_ptr, std::array<ssize_t, 3>{-1, 2, 3});
+        auto reshape_ptr =
+                graph.emplace_node<ReshapeNode>(set_ptr, std::array<ssize_t, 3>{-1, 1, 1});
+        auto arr_ptr =
+                graph.emplace_node<BroadcastToNode>(reshape_ptr, std::array<ssize_t, 3>{-1, 2, 3});
         graph.emplace_node<ArrayValidationNode>(arr_ptr);
 
         AND_GIVEN("set = {1, 2, 3]") {
@@ -1310,6 +1312,207 @@ TEST_CASE("SizeNode") {
 
                 THEN("The state of the SizeNode is the same as the size of the SetNode") {
                     CHECK(*(len_ptr->buff(state)) == s_ptr->size(state));
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("TransposeNode") {
+    auto graph = Graph();
+
+    GIVEN("A dynamic vector and a transpose node") {
+        auto vec_ptr =
+                graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1});
+        auto transpose_ptr = graph.emplace_node<TransposeNode>(vec_ptr);
+
+        THEN("The basic attributes of the transpose node are correct") {
+            CHECK_THAT(transpose_ptr->strides(), RangeEquals({8}));
+            CHECK_THAT(transpose_ptr->shape(), RangeEquals({-1}));
+            CHECK(transpose_ptr->min() == vec_ptr->min());
+            CHECK(transpose_ptr->max() == vec_ptr->max());
+            CHECK(transpose_ptr->integral() == vec_ptr->integral());
+            CHECK(transpose_ptr->contiguous() == vec_ptr->contiguous());
+        }
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            vec_ptr->initialize_state(state, {0, 1});
+            graph.initialize_state(state);
+
+            THEN("The initial transpose is correct") {
+                CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 1}));
+            }
+
+            AND_WHEN("We make some changes to the integer node and propagate") {
+                vec_ptr->grow(state, std::vector<double>{3});
+                // vec_ptr should now be {0, 1, 3}
+
+                graph.propagate(state);
+
+                THEN("The transpose is correct") {
+                    CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 1, 3}));
+                    CHECK_THAT(transpose_ptr->diff(state), RangeEquals({Update(2, NAN, 3)}));
+                    CHECK(transpose_ptr->size_diff(state) == 1);
+                }
+
+                AND_WHEN("We commit, make changes to integer node, and propagate") {
+                    graph.commit(state);
+                    vec_ptr->shrink(state);
+                    vec_ptr->shrink(state);
+                    // vec_ptr should now be {0}
+
+                    graph.propagate(state);
+
+                    THEN("The transpose is correct") {
+                        CHECK_THAT(transpose_ptr->view(state), RangeEquals({0}));
+                        CHECK_THAT(transpose_ptr->diff(state),
+                                   RangeEquals({Update(2, 3, NAN), Update(1, 1, NAN)}));
+                        CHECK(transpose_ptr->size_diff(state) == -2);
+                    }
+
+                    AND_WHEN("We revert") {
+                        graph.revert(state);
+
+                        THEN("The transpose is correct") {
+                            CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 1, 3}));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("A dynamic (>=2)-D array and a transpose node") {
+        auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+                std::initializer_list<ssize_t>{-1, 3, 5, 4});
+        REQUIRE_THROWS(graph.emplace_node<TransposeNode>(arr_ptr));
+    }
+
+    GIVEN("An integer vector and a transpose node") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(5);
+        auto transpose_ptr = graph.emplace_node<TransposeNode>(i_ptr);
+
+        THEN("The basic attributes of the transpose node are correct") {
+            CHECK_THAT(transpose_ptr->strides(), RangeEquals({8}));
+            CHECK_THAT(transpose_ptr->shape(), RangeEquals({5}));
+            CHECK(transpose_ptr->min() == i_ptr->min());
+            CHECK(transpose_ptr->max() == i_ptr->max());
+            CHECK(transpose_ptr->integral() == i_ptr->integral());
+            CHECK(transpose_ptr->contiguous() == i_ptr->contiguous());
+        }
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            i_ptr->initialize_state(state, {0, 1, 2, 3, 4});
+            graph.initialize_state(state);
+
+            THEN("The initial transpose state is correct") {
+                CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
+            }
+
+            AND_WHEN("We make some changes to the integer node and propagate") {
+                i_ptr->set_value(state, 1, 6);
+                i_ptr->set_value(state, 4, 7);
+                // i_ptr should now be {0, 6, 2, 3, 7}
+
+                graph.propagate(state);
+
+                THEN("The transpose is correct") {
+                    CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 6, 2, 3, 7}));
+                    CHECK_THAT(transpose_ptr->diff(state),
+                               RangeEquals({Update(1, 1, 6), Update(4, 4, 7)}));
+                }
+
+                AND_WHEN("We commit, make changes to integer node, and propagate") {
+                    graph.commit(state);
+                    i_ptr->set_value(state, 0, 8);
+                    // i_ptr should now be {8, 6, 2, 3, 7}
+
+                    graph.propagate(state);
+
+                    THEN("The transpose is correct") {
+                        CHECK_THAT(transpose_ptr->view(state), RangeEquals({8, 6, 2, 3, 7}));
+                        CHECK_THAT(transpose_ptr->diff(state), RangeEquals({Update(0, 0, 8)}));
+                    }
+
+                    AND_WHEN("We revert") {
+                        graph.revert(state);
+
+                        THEN("The transpose is correct") {
+                            CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 6, 2, 3, 7}));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("An integer 2-D array and a transpose node") {
+        auto array_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2, 3});
+        auto transpose_ptr = graph.emplace_node<TransposeNode>(array_ptr);
+
+        THEN("The basic attributes of the transpose node are correct") {
+            CHECK_THAT(array_ptr->strides(), RangeEquals({24, 8}));
+            CHECK_THAT(transpose_ptr->strides(), RangeEquals({8, 24}));
+
+            CHECK_THAT(transpose_ptr->shape(), RangeEquals({3, 2}));
+            CHECK(transpose_ptr->min() == array_ptr->min());
+            CHECK(transpose_ptr->max() == array_ptr->max());
+            CHECK(transpose_ptr->integral() == array_ptr->integral());
+            CHECK(!transpose_ptr->contiguous());
+        }
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            array_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5});
+            // | 0 1 2 |T    | 0 3 |
+            // | 3 4 5 |  -> | 1 4 |
+            //               | 2 5 |
+            graph.initialize_state(state);
+
+            THEN("The initial transpose state is correct") {
+                CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 3, 1, 4, 2, 5}));
+            }
+
+            AND_THEN("We make some changes to the array node and propagate") {
+                array_ptr->set_value(state, 1, 6);
+                array_ptr->set_value(state, 4, 7);
+                array_ptr->set_value(state, 5, 8);
+                // | 0 6 2 |T    | 0 3 |
+                // | 3 7 8 |  -> | 6 7 |
+                //               | 2 8 |
+                graph.propagate(state);
+
+                THEN("The transpose state is correct") {
+                    CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 3, 6, 7, 2, 8}));
+                    CHECK_THAT(transpose_ptr->diff(state),
+                               RangeEquals({Update(2, 1, 6), Update(3, 4, 7), Update(5, 5, 8)}));
+                }
+
+                AND_WHEN("We commit, make changes to integer node, and propagate") {
+                    graph.commit(state);
+                    array_ptr->set_value(state, 0, 9);
+                    array_ptr->set_value(state, 2, 10);
+                    // | 9 6 2 |T    | 9 3 |
+                    // | 3 7 8 |  -> | 6 7 |
+                    //               | 10 8 |
+
+                    graph.propagate(state);
+
+                    THEN("The transpose is correct") {
+                        CHECK_THAT(transpose_ptr->view(state), RangeEquals({9, 3, 6, 7, 10, 8}));
+                        CHECK_THAT(transpose_ptr->diff(state),
+                                   RangeEquals({Update(0, 0, 9), Update(4, 2, 10)}));
+                    }
+
+                    AND_WHEN("We revert") {
+                        graph.revert(state);
+
+                        THEN("The transpose is correct") {
+                            CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 3, 6, 7, 2, 8}));
+                        }
+                    }
                 }
             }
         }
