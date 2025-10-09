@@ -24,6 +24,9 @@
 
 namespace dwave::optimization {
 
+template <class T>
+concept shape_like = std::ranges::sized_range<T> and std::integral<std::ranges::range_value_t<T>>;
+
 /// An iterator over bytes with a fixed size that can be interpreted as an
 /// array.
 ///
@@ -216,6 +219,21 @@ class BufferIterator {
         return *this;
     }
 
+    template <shape_like Shape>
+    BufferIterator& operator+=(Shape&& rhs) {
+        // We want to increment the pointer by a number of bytes, so we cast
+        // void* to char*. But we also need to respect the const-correctness.
+        using ptr_type = std::conditional<IsConst, const char*, char*>::type;
+
+        assert(shape_ && "only defined for shaped iterators");
+        ptr_ = static_cast<ptr_type>(ptr_) + shape_->advance(std::forward<Shape>(rhs));
+
+        return *this;
+    }
+    BufferIterator& operator+=(std::initializer_list<std::ptrdiff_t> rhs) {
+        return (*this) += std::vector(rhs);
+    }
+
     /// Decrement the iterator by `rhs` steps.
     BufferIterator& operator-=(difference_type rhs) { return *this += -rhs; }
 
@@ -234,6 +252,13 @@ class BufferIterator {
             // both are contiguous, so they are equal if their pointers match.
             return lhs.ptr_ == rhs.ptr_;
         }
+    }
+
+    friend bool operator==(const BufferIterator& lhs, std::default_sentinel_t) {
+        assert(lhs.shape_ && "only defined for shaped iterators");
+        assert(lhs.shape_->ndim > 0 && "only defined for iterators with ndim > 0");
+        assert(lhs.shape_->shape[0] >= 0 && "only defined for non-dynamic shapes");
+        return lhs.shape_->loc[0] >= lhs.shape_->shape[0];
     }
 
     /// Three-way comparison between two iterators.
@@ -257,6 +282,11 @@ class BufferIterator {
 
     /// Return an iterator pointing to the location `lhs` steps from `rhs`.
     friend BufferIterator operator+(difference_type lhs, BufferIterator rhs) { return rhs += lhs; }
+
+    friend BufferIterator operator+(BufferIterator lhs, shape_like auto&& rhs) {
+        lhs += rhs;
+        return lhs;
+    }
 
     /// Return an iterator pointing to the location `rhs` steps before `lhs`.
     friend BufferIterator operator-(BufferIterator lhs, difference_type rhs) { return lhs -= rhs; }
@@ -310,6 +340,17 @@ class BufferIterator {
         }
         unreachable();
     }
+
+    /// Return the location in the shaped array that the iterator currently
+    /// points to.
+    /// Only defined for shaped iterators.
+    std::span<const ssize_t> location() {
+        assert(shape_ && "only defined for shaped iterators");
+        return std::span<ssize_t>(shape_->loc.get(), shape_->ndim);
+    }
+
+    /// Return `true` if the iterator is shaped.
+    bool shaped() const noexcept { return static_cast<bool>(shape_); }
 
  private:
     struct ShapeInfo {
@@ -394,6 +435,26 @@ class BufferIterator {
             return difference;
         }
 
+        std::ptrdiff_t advance(shape_like auto&& multi_increment) {
+            assert(static_cast<ssize_t>(std::ranges::size(multi_increment)) == ndim);
+
+            std::ptrdiff_t offset = 0;  // the number of bytes we need to move
+
+            for (ssize_t axis = 0; axis < ndim; ++axis) {
+                // Make sure the new loc is in range, otherwise this function is undefined!
+                assert([&]() {
+                    if (axis == 0) return true;  // we allow out of bounds on axis 0
+                    ssize_t new_loc = loc[axis] + multi_increment[axis];
+                    return 0 <= new_loc and new_loc < shape[axis];
+                }());
+
+                offset += strides[axis] * multi_increment[axis];
+                loc[axis] += multi_increment[axis];
+            }
+
+            return offset;
+        }
+
         // Return the pointer offset (in bytes) relative to the current
         // position in order to increment the iterator n times.
         // n can be negative.
@@ -408,7 +469,7 @@ class BufferIterator {
             // working from right-to-left, figure out how many steps in each
             // axis. We handle axis 0 as a special case
 
-            ssize_t offset = 0;  // the number of bytes we need to move
+            std::ptrdiff_t offset = 0;  // the number of bytes we need to move
 
             // We'll be using std::div() over ssize_t, so we'll store our
             // current location in the struct returned by it.
