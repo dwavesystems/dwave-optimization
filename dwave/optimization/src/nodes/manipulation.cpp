@@ -23,6 +23,7 @@
 
 #include "_state.hpp"
 #include "dwave-optimization/array.hpp"
+#include "dwave-optimization/graph.hpp"
 
 namespace dwave::optimization {
 
@@ -1056,38 +1057,32 @@ void SizeNode::propagate(State& state) const { set_state(state, array_ptr_->size
 
 // TransposeNode **************************************************************
 
-// For saving the diff data on the node
-class TransposeNodeDiffData : public NodeStateData {
- public:
-    TransposeNodeDiffData() {}
-
-    void commit() { diff.clear(); }
-    void revert() { diff.clear(); }
-
-    std::vector<Update> diff;
-};
-
-TransposeNode::TransposeNode(ArrayNode* array_ptr_)
-        : array_ptr_(array_ptr_),
-          ndim_(array_ptr_->ndim()),
-          shape_(std::make_unique<ssize_t[]>(ndim_)),
-          strides_(std::make_unique<ssize_t[]>(ndim_)) {
-    // Can take the transpose of a dynamic vector but not a dyanmic (>=2)-D array
-    // since the latter would result in a dynamic array which is dynamic in an
-    // axis other than the 0th axis.
-    if ((ndim_ >= 2) && (array_ptr_->dynamic())) {
+ArrayNode* transposenode_predeccesor_check(ArrayNode* array_ptr) {
+    // Can take the transpose of a dynamic vector but not a dyanmic (>=2)-D
+    // array since the latter would result in a dynamic array which is dynamic
+    // in an axis other than the 0th axis.
+    if ((array_ptr->ndim() >= 2) && (array_ptr->dynamic())) {
         throw std::invalid_argument("Cannot take transpose of a dynamic (>=2)-D Array");
     }
+    return array_ptr;
+}
 
-    // transpose has the reverse shape of its predecessor
-    const std::span<const ssize_t> array_shape = array_ptr_->shape();
-    std::reverse_copy(array_shape.begin(), array_shape.end(), shape_.get());
+// a TransposeNodes shape and strides are the reverse of its predecessor
+std::unique_ptr<ssize_t[]> reverse_span_helper(const std::span<const ssize_t> span,
+                                               const ssize_t size) {
+    std::unique_ptr<ssize_t[]> reverse_span = std::make_unique<ssize_t[]>(size);
+    std::reverse_copy(span.begin(), span.end(), reverse_span.get());
+    return reverse_span;
+}
 
-    // transpose has the reverse strides of its predecessor
-    const std::span<const ssize_t> array_strides = array_ptr_->strides();
-    std::reverse_copy(array_strides.begin(), array_strides.end(), strides_.get());
-
-    add_predecessor(array_ptr_);
+TransposeNode::TransposeNode(ArrayNode* array_ptr)
+        : array_ptr_(transposenode_predeccesor_check(array_ptr)),
+          ndim_(array_ptr->ndim()),
+          shape_(reverse_span_helper(array_ptr->shape(), ndim_)),
+          strides_(reverse_span_helper(array_ptr->strides(), ndim_)),
+          contiguous_(Array::is_contiguous(ndim_, shape_.get(), strides_.get())),
+          values_info_(array_ptr) {
+    add_predecessor(array_ptr);
 }
 
 // this node simply points to the predecessor buff
@@ -1119,20 +1114,24 @@ ssize_t TransposeNode::size() const { return array_ptr_->size(); }
 
 ssize_t TransposeNode::size(const State& state) const { return array_ptr_->size(state); }
 
-double TransposeNode::min() const { return array_ptr_->min(); }
+double TransposeNode::min() const { return values_info_.min; }
 
-double TransposeNode::max() const { return array_ptr_->max(); }
+double TransposeNode::max() const { return values_info_.max; }
 
-bool TransposeNode::integral() const { return array_ptr_->integral(); }
+bool TransposeNode::integral() const { return values_info_.integral; }
 
-bool TransposeNode::contiguous() const {
-    if (ndim_ <= 1) {  // predecessor is vector
-        return array_ptr_->contiguous();
-    }
-    // Predecessor is (>=2)-D array, memory is not contiguous
-    // There might be an edge case here I am not considering....
-    return false;
-}
+bool TransposeNode::contiguous() const { return contiguous_; }
+
+// For saving the diff data on the node
+class TransposeNodeDiffData : public NodeStateData {
+ public:
+    TransposeNodeDiffData() {}
+
+    void commit() { diff.clear(); }
+    void revert() { diff.clear(); }
+
+    std::vector<Update> diff;
+};
 
 std::span<const Update> TransposeNode::diff(const State& state) const {
     // If the predecessor is a vector, the transpose does nothing and the diff
@@ -1166,9 +1165,9 @@ void TransposeNode::propagate(State& state) const {
     // Predecessor is a non-dynamic (>=2)-D array. It suffices to update the
     // indices of the updates to the transpose index and to save the diff.
     const std::span<const ssize_t> pred_shape = array_ptr_->shape(state);
-    const std::span<const ssize_t> node_shape = this->shape();
+    const std::span<const ssize_t> node_shape = shape();
 
-    std::vector<Update>& transpose_diff = this->data_ptr<TransposeNodeDiffData>(state)->diff;
+    std::vector<Update>& transpose_diff = data_ptr<TransposeNodeDiffData>(state)->diff;
     assert(transpose_diff.size() == 0);
     transpose_diff.reserve(array_ptr_->size_diff(state));
 
@@ -1188,17 +1187,15 @@ void TransposeNode::propagate(State& state) const {
 }
 
 void TransposeNode::commit(State& state) const {
-    if (ndim_ <= 1) {
-        return;  // stateless
-    }
-    this->data_ptr<TransposeNodeDiffData>(state)->commit();
+    if (ndim_ > 1) {
+        data_ptr<TransposeNodeDiffData>(state)->commit();
+    }  // otherwise, stateless
 };
 
 void TransposeNode::revert(State& state) const {
-    if (ndim_ <= 1) {
-        return;  // stateless
-    }
-    this->data_ptr<TransposeNodeDiffData>(state)->revert();
+    if (ndim_ > 1) {
+        data_ptr<TransposeNodeDiffData>(state)->revert();
+    }  // otherwise, stateless
 }
 
 }  // namespace dwave::optimization

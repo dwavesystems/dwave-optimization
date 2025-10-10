@@ -442,9 +442,11 @@ class TransposeNode : public ArrayNode {
  private:
     const Array* array_ptr_;
 
-    ssize_t ndim_;
+    const ssize_t ndim_;
     std::unique_ptr<ssize_t[]> shape_;
     std::unique_ptr<ssize_t[]> strides_;
+    const bool contiguous_;
+    const ValuesInfo values_info_;
 };
 
 }  // namespace dwave::optimization
