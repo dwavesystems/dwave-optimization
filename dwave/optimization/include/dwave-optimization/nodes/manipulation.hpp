@@ -431,9 +431,9 @@ class TransposeNode : public ArrayNode {
 
     // Overloads required by the Node ABC *************************************
 
-    void propagate(State& state) const override;
-
     void initialize_state(State& state) const override;
+
+    void propagate(State& state) const override;
 
     void commit(State&) const override;
 
@@ -443,8 +443,8 @@ class TransposeNode : public ArrayNode {
     const Array* array_ptr_;
 
     const ssize_t ndim_;
-    std::unique_ptr<ssize_t[]> shape_;
-    std::unique_ptr<ssize_t[]> strides_;
+    const std::unique_ptr<ssize_t[]> shape_;
+    const std::unique_ptr<ssize_t[]> strides_;
     const bool contiguous_;
     const ValuesInfo values_info_;
 };

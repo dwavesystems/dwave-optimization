@@ -1453,9 +1453,7 @@ TEST_CASE("TransposeNode") {
         auto transpose_ptr = graph.emplace_node<TransposeNode>(array_ptr);
 
         THEN("The basic attributes of the transpose node are correct") {
-            CHECK_THAT(array_ptr->strides(), RangeEquals({24, 8}));
             CHECK_THAT(transpose_ptr->strides(), RangeEquals({8, 24}));
-
             CHECK_THAT(transpose_ptr->shape(), RangeEquals({3, 2}));
             CHECK(transpose_ptr->min() == array_ptr->min());
             CHECK(transpose_ptr->max() == array_ptr->max());
@@ -1511,6 +1509,71 @@ TEST_CASE("TransposeNode") {
 
                         THEN("The transpose is correct") {
                             CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 3, 6, 7, 2, 8}));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("An integer 2-D array and TWO transpose node") {
+        auto array_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2, 3});
+        auto transpose_ptr_1 = graph.emplace_node<TransposeNode>(array_ptr);
+        auto transpose_ptr_2 = graph.emplace_node<TransposeNode>(transpose_ptr_1);
+
+        THEN("The basic attributes of the second transpose node are correct") {
+            CHECK_THAT(transpose_ptr_2->strides(), RangeEquals({24, 8}));
+            CHECK_THAT(transpose_ptr_2->shape(), RangeEquals({2, 3}));
+            CHECK(transpose_ptr_2->contiguous());
+        }
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            array_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5});
+            // | 0 1 2 |
+            // | 3 4 5 |
+            graph.initialize_state(state);
+
+            THEN("The initial second transpose state is correct") {
+                CHECK_THAT(transpose_ptr_2->view(state), RangeEquals({0, 1, 2, 3, 4, 5}));
+            }
+
+            AND_THEN("We make some changes to the array node and propagate") {
+                array_ptr->set_value(state, 1, 6);
+                array_ptr->set_value(state, 4, 7);
+                array_ptr->set_value(state, 5, 8);
+                // | 0 6 2 |
+                // | 3 7 8 |
+
+                graph.propagate(state);
+
+                THEN("The second transpose state is correct") {
+                    CHECK_THAT(transpose_ptr_2->view(state), RangeEquals({0, 6, 2, 3, 7, 8}));
+                    CHECK_THAT(transpose_ptr_2->diff(state),
+                               RangeEquals({Update(1, 1, 6), Update(4, 4, 7), Update(5, 5, 8)}));
+                }
+
+                AND_WHEN("We commit, make changes to integer node, and propagate") {
+                    graph.commit(state);
+                    array_ptr->set_value(state, 0, 9);
+                    array_ptr->set_value(state, 2, 10);
+                    // | 9 6 10 |
+                    // | 3 7 8  |
+
+                    graph.propagate(state);
+
+                    THEN("The second transpose is correct") {
+                        CHECK_THAT(transpose_ptr_2->view(state), RangeEquals({9, 6, 10, 3, 7, 8}));
+                        CHECK_THAT(transpose_ptr_2->diff(state),
+                                   RangeEquals({Update(0, 0, 9), Update(2, 2, 10)}));
+                    }
+
+                    AND_WHEN("We revert") {
+                        graph.revert(state);
+
+                        THEN("The second transpose is correct") {
+                            CHECK_THAT(transpose_ptr_2->view(state),
+                                       RangeEquals({0, 6, 2, 3, 7, 8}));
                         }
                     }
                 }

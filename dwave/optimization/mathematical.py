@@ -1605,16 +1605,19 @@ def transpose(array: ArraySymbol) -> Transpose:
         >>> from dwave.optimization.mathematical import transpose
         ...
         >>> model = Model()
-        >>> array = model.constant([[0, 1], [2, 3]])
+        >>> array = model.constant([[0, 1, 2], [3, 4, 5]])
         >>> transpose = transpose(array)
         >>> model.states.resize(1)
         >>> with model.lock():
         ...     print(transpose.state())
-        [[0. 2.]
-         [1. 3.]]
+        [[0. 3.]
+         [1. 4.]
+         [2. 5.]]
 
     See Also:
         :class:`~dwave.optimization.symbols.Transpose`: equivalent symbol.
+
+    .. versionadded:: 0.6.8
     """
     return Transpose(array)
 
