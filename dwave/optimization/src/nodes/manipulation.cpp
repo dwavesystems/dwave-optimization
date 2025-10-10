@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <numeric>
 #include <ranges>
 #include <stdexcept>
 #include <tuple>
@@ -1057,7 +1058,7 @@ void SizeNode::propagate(State& state) const { set_state(state, array_ptr_->size
 
 // TransposeNode **************************************************************
 
-ArrayNode* transposenode_predeccesor_check(ArrayNode* array_ptr) {
+ArrayNode* TransposeNode::predeccesor_check(ArrayNode* array_ptr) const {
     // Can take the transpose of a dynamic vector but not a dyanmic (>=2)-D
     // array since the latter would result in a dynamic array which is dynamic
     // in an axis other than the 0th axis.
@@ -1076,7 +1077,7 @@ std::unique_ptr<ssize_t[]> reverse_span_helper(const std::span<const ssize_t> sp
 }
 
 TransposeNode::TransposeNode(ArrayNode* array_ptr)
-        : array_ptr_(transposenode_predeccesor_check(array_ptr)),
+        : array_ptr_(predeccesor_check(array_ptr)),
           ndim_(array_ptr->ndim()),
           shape_(reverse_span_helper(array_ptr->shape(), ndim_)),
           strides_(reverse_span_helper(array_ptr->strides(), ndim_)),
@@ -1153,6 +1154,48 @@ void TransposeNode::initialize_state(State& state) const {
     emplace_data_ptr<TransposeNodeDiffData>(state);
 }
 
+ssize_t TransposeNode::convert_predecessor_index(ssize_t flat_index) const {
+    if (ndim_ <= 1) {  // predecessor is vector
+        return flat_index;
+    }
+
+    const std::span<const ssize_t> array_shape = array_ptr_->shape();
+    ssize_t transpose_flat_index = 0;
+    // when constructing a flat index of the transpose, it is helpful to know
+    // the # of indices contributed when you move along a fixed axes.
+    // `transpose_axis_strides` is initialized by the # of indices contributed
+    // when moving along the 0th axis of the transpose.
+    ssize_t transpose_axis_strides = std::accumulate(array_shape.begin(), array_shape.end() - 1, 1,
+                                                     std::multiplies<ssize_t>());
+
+    // traverse the predecessor axes in backward (reverse) order and the
+    // transpose axes in forward order
+    for (ssize_t i = ndim_ - 1; i >= 0; --i) {
+        // grab predecessor shape along the ith axis
+        const ssize_t axis_shape = array_shape[i];
+        assert(0 <= axis_shape &&
+               "all dimensions of (>=2)-D array must be non-negative for transpose operation");
+        // determine the multidimensional index of `flat_index` along the ith
+        // axis of predecessor. Note: this is the multidimensional index along
+        // the (ndim_ - 1 - i)th axis of the transpose
+        const ssize_t multidimensional_index = flat_index % axis_shape;
+        // reassign flat_index to the correct index along the (i - 1)th axes of predecessor
+        flat_index /= axis_shape;
+
+        // weight the multidimensional index along the (ndim_ - 1 - i)th axis
+        // of the transpose by # of indices contributed by moving along this
+        // axis
+        transpose_flat_index += multidimensional_index * transpose_axis_strides;
+        // recall we are traversing the tranpose axes in forward order.
+        // the # of indices contributed by moving along the (ndim - 2 - i)th
+        // axis is the same as (the # of indices contributed by moving along the
+        // (ndim_ - 1 - i)th axis) / shape(ndim_ - i - 1)
+        transpose_axis_strides /= array_shape[ndim_ - i - 1];
+    }
+
+    return transpose_flat_index;
+}
+
 void TransposeNode::propagate(State& state) const {
     const std::span<const Update> pred_diff = array_ptr_->diff(state);
 
@@ -1162,9 +1205,6 @@ void TransposeNode::propagate(State& state) const {
 
     // Predecessor is a non-dynamic (>=2)-D array. It suffices to update the
     // indices of the updates to the transpose index and to save the diff.
-    const std::span<const ssize_t> array_shape = array_ptr_->shape(state);
-    const std::span<const ssize_t> node_shape = shape();
-
     std::vector<Update>& transpose_diff = data_ptr<TransposeNodeDiffData>(state)->diff;
     assert(transpose_diff.size() == 0);
     transpose_diff.reserve(array_ptr_->size_diff(state));
@@ -1172,13 +1212,8 @@ void TransposeNode::propagate(State& state) const {
     for (const Update& update : pred_diff) {
         // make a copy of the update
         Update transpose_update = update;
-        // convert flat index of predecessor update to multidimensional indices
-        std::vector<ssize_t> multi_index = unravel_index(update.index, array_shape);
-        // reverse multidimensional indices to obtain the multidimensional
-        // transpose indices
-        std::reverse(multi_index.begin(), multi_index.end());
-        // convert multidimensional transpose indices to transpose flat index
-        transpose_update.index = ravel_multi_index(multi_index, node_shape);
+        // convert the index to the transpose index
+        transpose_update.index = convert_predecessor_index(update.index);
         // save the converted update
         transpose_diff.emplace_back(transpose_update);
     }
