@@ -1594,13 +1594,32 @@ def transpose(array: ArraySymbol) -> Transpose:
     r"""Return transpose of the given symbol.
 
     Args:
-        array: Input symbol. Note: If array is dynamic, it must have
-            dimension at most one.
+        array: Input symbol. If array is dynamic, it must have dimension at
+        most one.
 
     Returns:
-        A symbol that is the transpose of the given symbol.
+        A symbol that is the transpose of the given symbol. For a 1-D array,
+        this returns an unchanged view of the original array. For a 2-D array,
+        this is the standard matrix transpose. For an n-D array, the transpose
+        simply reverses the order of the axes.
 
     Examples:
+        This example takes the transpose of a 5 element vector.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import transpose
+        ...
+        >>> model = Model()
+        >>> array = model.constant([0, 1, 2, 3, 4])
+        >>> transpose = transpose(array)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(transpose.state())
+        [0. 1. 2. 3. 4.]
+
+
+        This example takes the transpose of a :math:`2 \times 3` matrix.
+
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import transpose
         ...
@@ -1613,6 +1632,26 @@ def transpose(array: ArraySymbol) -> Transpose:
         [[0. 3.]
          [1. 4.]
          [2. 5.]]
+
+
+        This example takes the transpose of a :math:`2 \times 3 \times 2` matrix.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import transpose
+        ...
+        >>> model = Model()
+        >>> array = model.constant([[[0, 1], [2, 3], [4, 5]], [[6, 7], [8, 9], [10, 11]]])
+        >>> transpose = transpose(array)
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(transpose.state())
+        [[[ 0.  6.]
+          [ 2.  8.]
+          [ 4. 10.]]
+        <BLANKLINE>
+         [[ 1.  7.]
+          [ 3.  9.]
+          [ 5. 11.]]]
 
     See Also:
         :class:`~dwave.optimization.symbols.Transpose`: equivalent symbol.

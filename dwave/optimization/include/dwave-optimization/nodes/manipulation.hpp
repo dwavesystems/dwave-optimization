@@ -447,6 +447,9 @@ class TransposeNode : public ArrayNode {
     const std::unique_ptr<ssize_t[]> strides_;
     const bool contiguous_;
     const ValuesInfo values_info_;
+
+    ArrayNode* predeccesor_check(ArrayNode* array_ptr) const;
+    ssize_t convert_predecessor_index(ssize_t index) const;
 };
 
 }  // namespace dwave::optimization

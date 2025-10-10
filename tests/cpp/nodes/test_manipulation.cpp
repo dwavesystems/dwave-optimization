@@ -13,6 +13,7 @@
 //    limitations under the License.
 
 #include <ranges>
+#include <stdexcept>
 #include <vector>
 
 #include "catch2/catch_test_macros.hpp"
@@ -1576,6 +1577,77 @@ TEST_CASE("TransposeNode") {
                                        RangeEquals({0, 6, 2, 3, 7, 8}));
                         }
                     }
+                }
+            }
+        }
+    }
+
+    GIVEN("An integer 4-D array and a transpose node") {
+        auto array_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2, 2, 2, 3});
+        auto transpose_ptr = graph.emplace_node<TransposeNode>(array_ptr);
+        // Python code to obtain the outputs because I was unwilling to do this by hand..
+        // >>> import numpy as np
+        // >>> a = np.arange(24).reshape(2, 2, 2, 3)
+
+        THEN("The basic attributes of the transpose node are correct") {
+            // >>> a.transpose().strides
+            // (8, 24, 48, 96)
+            CHECK_THAT(transpose_ptr->strides(), RangeEquals({8, 24, 48, 96}));
+            CHECK_THAT(transpose_ptr->shape(), RangeEquals({3, 2, 2, 2}));
+            CHECK(transpose_ptr->min() == array_ptr->min());
+            CHECK(transpose_ptr->max() == array_ptr->max());
+            CHECK(transpose_ptr->integral() == array_ptr->integral());
+            CHECK(!transpose_ptr->contiguous());
+        }
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            array_ptr->initialize_state(state, {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
+                                                12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23});
+            graph.initialize_state(state);
+
+            // >>> a.transpose().flatten()
+            // array([ 0, 12,  6, 18,  3, 15,  9, 21,  1, 13,  7, 19,  4, 16, 10, 22,  2,
+            // 14,  8, 20,  5, 17, 11, 23])
+            CHECK_THAT(transpose_ptr->view(state),
+                       RangeEquals({0, 12, 6,  18, 3, 15, 9, 21, 1, 13, 7,  19,
+                                    4, 16, 10, 22, 2, 14, 8, 20, 5, 17, 11, 23}));
+
+            AND_THEN("We make some changes to the array node and propagate") {
+                array_ptr->set_value(state, 1, 24);
+                array_ptr->set_value(state, 7, 25);
+                array_ptr->set_value(state, 10, 26);
+                array_ptr->set_value(state, 16, 27);
+                array_ptr->set_value(state, 22, 28);
+                graph.propagate(state);
+                // >>> a = a.flatten()
+                // >>> a[1] = 24
+                // >>> a[7] = 25
+                // >>> a[10] = 26
+                // >>> a[16] = 27
+                // >>> a[22] = 28
+                // >>> a = a.reshape(2,2,2,3)
+
+                THEN("The transpose state is correct") {
+                    // >>> a.transpose().flatten()
+                    // array([ 0, 12,  6, 18,  3, 15,  9, 21, 24, 13, 25, 19,  4, 27, 26, 28,  2,
+                    // 14,  8, 20,  5, 17, 11, 23])
+                    CHECK_THAT(transpose_ptr->view(state),
+                               RangeEquals({0, 12, 6,  18, 3, 15, 9, 21, 24, 13, 25, 19,
+                                            4, 27, 26, 28, 2, 14, 8, 20, 5,  17, 11, 23}));
+                    // >>> np.where(a.transpose().flatten() == 24)
+                    // (array([8]),)
+                    // >>> np.where(a.transpose().flatten() == 25)
+                    // (array([10]),)
+                    // >>> np.where(a.transpose().flatten() == 26)
+                    // (array([14]),)
+                    // >>> np.where(a.transpose().flatten() == 27)
+                    // (array([13]),)
+                    // >>> np.where(a.transpose().flatten() == 28)
+                    // (array([15]),)
+                    CHECK_THAT(transpose_ptr->diff(state),
+                               RangeEquals({Update(8, 1, 24), Update(10, 7, 25), Update(14, 10, 26),
+                                            Update(13, 16, 27), Update(15, 22, 28)}));
                 }
             }
         }
