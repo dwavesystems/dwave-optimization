@@ -32,6 +32,7 @@ import hashlib
 import numpy as np
 import tempfile
 import typing
+import warnings
 
 from dwave.optimization._model import ArraySymbol, _Graph, Symbol
 from dwave.optimization.states import States
@@ -331,11 +332,65 @@ class Model(_Graph):
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> destinations, routes = model.disjoint_lists(10, 4)
+
+        .. deprecated:: 0.6.7
+
+            The return behavior of this method will be changed in
+            dwave.optimization 0.8.0. Use :meth:`.disjoint_lists_symbol`.
+        """
+
+        warnings.warn(
+            "The return behavior of Model.disjoint_lists() is deprecated "
+            "since dwave.optimization 0.6.7 and will be changed to the "
+            "behavior of Model.disjoint_lists_symbol() in 0.8.0. Use "
+            "Model.disjoint_lists_symbol().",
+            DeprecationWarning,
+        )
+
+        disjoint_lists = self.disjoint_lists_symbol(
+            primary_set_size, num_disjoint_lists
+        )
+        return disjoint_lists, list(disjoint_lists)
+
+    def disjoint_lists_symbol(
+            self,
+            primary_set_size: int,
+            num_disjoint_lists: int,
+            ) -> DisjointLists:
+        """Create a disjoint-lists symbol as a decision variable.
+
+        Divides a set of the elements of ``range(primary_set_size)`` into
+        ``num_disjoint_lists`` ordered partitions.
+
+        Args:
+            primary_set_size: Number of elements in the primary set to
+                be partitioned into disjoint lists.
+            num_disjoint_lists: Number of disjoint lists.
+
+        Returns:
+            A disjoint-lists symbol.
+
+        Examples:
+            This example creates a symbol of 10 elements that is divided
+            into 4 lists.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> disjoint_lists = model.disjoint_lists_symbol(10, 4)
+            >>> disjoint_lists.primary_set_size()
+            10
+            >>> disjoint_lists.num_disjoint_lists()
+            4
         """
         from dwave.optimization.symbols import DisjointLists, DisjointList  # avoid circular import
-        main = DisjointLists(self, primary_set_size, num_disjoint_lists)
-        lists = [DisjointList(main, i) for i in range(num_disjoint_lists)]
-        return main, lists
+        disjoint_lists = DisjointLists(self, primary_set_size, num_disjoint_lists)
+
+        # create the DisjointList symbols, which will create the successor nodes, even
+        # though we won't use them directly here
+        for i in range(num_disjoint_lists):
+            DisjointList(disjoint_lists, i)
+
+        return disjoint_lists
 
     def feasible(self, index: int = 0) -> bool:
         """Check the feasibility of the state at the input index.

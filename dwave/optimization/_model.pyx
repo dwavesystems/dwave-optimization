@@ -1144,10 +1144,9 @@ cdef class Symbol:
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> lsymbol, lsymbol_lists = model.disjoint_lists(
-            ...     primary_set_size=5,
-            ...     num_disjoint_lists=2)
-            >>> lsymbol_lists[0].equals(next(lsymbol.iter_successors()))
+            >>> x = model.binary()
+            >>> y = x + 5
+            >>> y.equals(next(x.iter_successors()))
             True
         """
         cdef vector[cppNode.SuccessorView].const_iterator it = self.node_ptr.successors().begin()
@@ -1233,17 +1232,17 @@ cdef class Symbol:
 
             >>> from dwave.optimization import Model
             >>> model = Model()
-            >>> lsymbol, lsymbol_lists = model.disjoint_lists(primary_set_size=5, num_disjoint_lists=2)
+            >>> lsymbol = model.disjoint_lists_symbol(primary_set_size=5, num_disjoint_lists=2)
             >>> with model.lock():
             ...     model.states.resize(2)
             ...     lsymbol.set_state(0, [[0, 4], [1, 2, 3]])
             ...     lsymbol.set_state(1, [[3, 4], [0, 1, 2]])
-            ...     print(f"state 0: {lsymbol_lists[0].state(0)} and {lsymbol_lists[1].state(0)}")
-            ...     print(f"state 1: {lsymbol_lists[0].state(1)} and {lsymbol_lists[1].state(1)}")
+            ...     print(f"state 0: {lsymbol[0].state(0)} and {lsymbol[1].state(0)}")
+            ...     print(f"state 1: {lsymbol[0].state(1)} and {lsymbol[1].state(1)}")
             ...     lsymbol.reset_state(0)
             ...     print("After reset:")
-            ...     print(f"state 0: {lsymbol_lists[0].state(0)} and {lsymbol_lists[1].state(0)}")
-            ...     print(f"state 1: {lsymbol_lists[0].state(1)} and {lsymbol_lists[1].state(1)}")
+            ...     print(f"state 0: {lsymbol[0].state(0)} and {lsymbol[1].state(0)}")
+            ...     print(f"state 1: {lsymbol[0].state(1)} and {lsymbol[1].state(1)}")
             state 0: [0. 4.] and [1. 2. 3.]
             state 1: [3. 4.] and [0. 1. 2.]
             After reset:
