@@ -15,27 +15,6 @@
 from dwave.optimization.libcpp.graph cimport ArrayNode
 
 
-cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass BroadcastToNode(ArrayNode):
-        pass
-
-    cdef cppclass ConcatenateNode(ArrayNode):
-        Py_ssize_t axis()
-
-    cdef cppclass CopyNode(ArrayNode):
-        pass
-
-    cdef cppclass PutNode(ArrayNode):
-        pass
-
-    cdef cppclass ReshapeNode(ArrayNode):
-        pass
-
-    cdef cppclass ResizeNode(ArrayNode):
-        double fill_value() const
-
-    cdef cppclass SizeNode(ArrayNode):
-        pass
-
-    cdef cppclass TransposeNode(ArrayNode):
+cdef extern from "dwave-optimization/nodes/set_routines.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass IsInNode(ArrayNode):
         pass

@@ -92,13 +92,37 @@ struct SizeInfo {
 
 /// Struct for the common use case of saving statistics about an ArrayNode's output values
 struct ValuesInfo {
+    /// Factory constructor for a ValuesInfo representing a logical (boolean) output.
+    static ValuesInfo logical_output() { return {false, true, true}; };
+
+    /// Construct a maximally general `ValuesInfo`. We do not allow `inf`.
     ValuesInfo() = default;
+
+    /// Construct a ValuesInfo from a fixed `min`/`max`/`integral`.
     ValuesInfo(double min, double max, bool integral) : min(min), max(max), integral(integral) {}
     ValuesInfo(std::pair<double, double> minmax, bool integral)
-            : min(minmax.first), max(minmax.second), integral(integral) {}
+            : ValuesInfo(minmax.first, minmax.second, integral) {}
+
     /// Copy the min/max/integral from the array
     ValuesInfo(const Array* array_ptr);
 
+    /// These constructors take the min of the mins, etc for all the arrays
+    ValuesInfo(std::initializer_list<const Array*> array_ptrs);
+    // Unfortunately it seems we still need this span constructor for GCC11 which doesn't
+    // like a vector being passed to the viewable_range constructor
+    ValuesInfo(std::span<const Array* const> array_ptrs);
+    template <std::ranges::viewable_range R>
+    ValuesInfo(R&& array_ptrs);
+
+    /// Return `true` if equal to `rhs`.
+    bool operator==(const ValuesInfo& rhs) const {
+        return this->min == rhs.min && this->max == rhs.max && this->integral == rhs.integral;
+    }
+
+    // Dev note: We follow Python's set union API and overload operator|.
+    // It would be easy to add the intersection operator& as well if needed.
+
+    // Add the domain of rhs to the ValuesInfo
     ValuesInfo& operator|=(const ValuesInfo& rhs) {
         this->min = std::min<double>(this->min, rhs.min);
         this->max = std::max<double>(this->max, rhs.max);
@@ -109,26 +133,19 @@ struct ValuesInfo {
         return *this;
     }
 
-    /// The union of the domains of ValuesInfo and rhs
+    /// The union of the domains of `lhs` and `rhs`
     friend ValuesInfo operator|(ValuesInfo lhs, const ValuesInfo& rhs) {
         lhs |= rhs;
         return lhs;
     }
 
-    /// These constructors take the min of the mins, etc for all the arrays
-    ValuesInfo(std::initializer_list<const Array*> array_ptrs);
-
-    // Unfortunately it seems we still need this span constructor for GCC11 which doesn't
-    // like a vector being passed to the viewable_range constructor
-    ValuesInfo(std::span<const Array* const> array_ptrs);
-
-    template <std::ranges::viewable_range R>
-    ValuesInfo(R&& array_ptrs);
-
-    static ValuesInfo logical_output() { return {false, true, true}; };
-
+    /// The minimum value that might be outputted by any one index of an Array
     double min = std::numeric_limits<double>::lowest();
+
+    /// The maximum value that might be outputted by any one index of an Array
     double max = std::numeric_limits<double>::max();
+
+    /// Whether all values in the Array will be integral or not
     bool integral = false;
 };
 

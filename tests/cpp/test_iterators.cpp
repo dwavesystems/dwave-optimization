@@ -147,8 +147,6 @@ TEST_CASE("BufferIterator") {
     GIVEN("A buffer encoding 2d array [[0, 1, 2], [3, 4, 5]]") {
         auto values = std::array<double, 6>{0, 1, 2, 3, 4, 5};
         auto shape = std::array<ssize_t, 2>{2, 3};
-        // auto strides = std::array<ssize_t, 2>{24, 8};
-
         auto [strides, start] = GENERATE(std::pair(std::array<ssize_t, 2>{24, 8}, 0),
                                          std::pair(std::array<ssize_t, 2>{-24, 8}, 3));
 
@@ -206,6 +204,34 @@ TEST_CASE("BufferIterator") {
             CHECK(((it + 1) + 3) == it + 4);
             CHECK(((it - 1005) + 1009) == it + 4);
             CHECK(((it + 1) + 13) == it + 14);
+        }
+
+        THEN("The shaped iterator can be used with a sentinel") {
+            CHECK(it.shaped());
+            CHECK(it != std::default_sentinel);
+            CHECK(it + values.size() == std::default_sentinel);
+            CHECK_THAT(std::ranges::subrange(it, std::default_sentinel), RangeEquals(values));
+        }
+
+        THEN("We can do inplace multi-increments with various ranges") {
+            it += {1, 0, 2};
+            CHECK_THAT(it.location(), RangeEquals({1, 0, 2}));
+            CHECK(*it == 8);
+
+            it += std::array<signed char, 3>{-1, 1, -1};  // backwards is OK
+            CHECK_THAT(it.location(), RangeEquals({0, 1, 1}));
+            CHECK(*it == 4);
+
+            it += std::vector<int>{2, -1, -1};  // end is OK
+            CHECK_THAT(it.location(), RangeEquals({2, 0, 0}));
+            CHECK(it == end);
+        }
+
+        THEN("We can do multi-increments with various  ranges") {
+            // alas, cannot do initializer_list because C++ doesn't allow it
+            CHECK(*(it + std::array{1, 0, 2}) == 8);
+            CHECK(*(it + std::vector{0, 1, 1}) == 4);
+            CHECK((it + std::array{2, 0, 0}) == end);
         }
     }
 
@@ -273,6 +299,13 @@ TEST_CASE("BufferIterator") {
                 CHECK(*(it--) == 4);
                 CHECK(*(it--) == 2);
                 CHECK(*(it--) == 0);
+            }
+
+            THEN("We can construct another vector using reverse iterators") {
+                auto end = it + 5;
+                auto copy = std::vector<double>();
+                copy.insert(copy.begin(), std::reverse_iterator(end), std::reverse_iterator(it));
+                CHECK_THAT(copy, RangeEquals({8, 6, 4, 2, 0}));
             }
         }
 

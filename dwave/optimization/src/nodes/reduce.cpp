@@ -1231,7 +1231,7 @@ auto ReduceNode2<BinaryOp>::reduce_(const State& state, const ssize_t index) con
     // We can then create an iterator that iterates of the reduction group
     auto begin = array_ptr_->begin(state);
     if (begin.shaped()) {
-        begin.advance_to(multi_index);
+        begin += multi_index;
     } else {
         begin += ravel_multi_index(multi_index, array_ptr_->shape());
     }

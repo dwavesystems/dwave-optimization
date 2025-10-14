@@ -387,4 +387,69 @@ class SizeNode : public ScalarOutputMixin<ArrayNode, true> {
     const std::pair<double, double> minmax_;
 };
 
+// Compute the transpose of predecessor
+class TransposeNode : public ArrayNode {
+ public:
+    TransposeNode(ArrayNode* array_ptr);
+
+    // Overloads needed by the Array ABC **************************************
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Array::ndim()
+    ssize_t ndim() const override;
+
+    /// @copydoc Array::shape()
+    std::span<const ssize_t> shape(const State& state) const override;
+    std::span<const ssize_t> shape() const override;
+
+    /// @copydoc Array::strides()
+    std::span<const ssize_t> strides() const override;
+
+    /// @copydoc Array::size()
+    ssize_t size() const override;
+    ssize_t size(const State& state) const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::contiguous()
+    bool contiguous() const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Array::size_diff()
+    ssize_t size_diff(const State& state) const override;
+
+    // Overloads required by the Node ABC *************************************
+
+    void initialize_state(State& state) const override;
+
+    void propagate(State& state) const override;
+
+    void commit(State&) const override;
+
+    void revert(State&) const override;
+
+ private:
+    const Array* array_ptr_;
+
+    const ssize_t ndim_;
+    const std::unique_ptr<ssize_t[]> shape_;
+    const std::unique_ptr<ssize_t[]> strides_;
+    const bool contiguous_;
+    const ValuesInfo values_info_;
+
+    ArrayNode* predeccesor_check_(ArrayNode* array_ptr) const;
+    Update convert_predecessor_update_(Update update) const;
+};
+
 }  // namespace dwave::optimization

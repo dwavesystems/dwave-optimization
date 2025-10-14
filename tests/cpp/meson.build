@@ -23,6 +23,7 @@ tests_all = executable(
         'nodes/test_numbers.cpp',
         'nodes/test_quadratic_model.cpp',
         'nodes/test_reduce.cpp',
+        'nodes/test_set_routines.cpp',
         'nodes/test_softmax.cpp',
         'nodes/test_sorting.cpp',
         'nodes/test_statistics.cpp',

@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Added ``IsIn`` symbol/node which computes the element-wise 
+    containment of one symbol with another.
+

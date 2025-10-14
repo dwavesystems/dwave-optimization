@@ -66,6 +66,7 @@ from dwave.optimization.symbols.manipulation import (
     Reshape,
     Resize,
     Size,
+    Transpose,
 )
 from dwave.optimization.symbols.naryop import (
     NaryAdd,
@@ -88,6 +89,7 @@ from dwave.optimization.symbols.reduce import (
     Prod,
     Sum,
 )
+from dwave.optimization.symbols.set_routines import IsIn
 from dwave.optimization.symbols.softmax import SoftMax
 from dwave.optimization.symbols.sorting import ArgSort
 from dwave.optimization.symbols.statistics import Mean
@@ -112,10 +114,10 @@ __all__ = [
     "Absolute",
     "AccumulateZip",
     "Add",
+    "AdvancedIndexing",
     "All",
     "And",
     "Any",
-    "AdvancedIndexing",
     "ARange",
     "ArgSort",
     "BasicIndexing",
@@ -126,10 +128,10 @@ __all__ = [
     "Constant",
     "Copy",
     "Cos",
-    "DisjointBitSets",
     "DisjointBitSet",
-    "DisjointLists",
+    "DisjointBitSets",
     "DisjointList",
+    "DisjointLists",
     "Divide",
     "Equal",
     "Exp",
@@ -137,6 +139,7 @@ __all__ = [
     "Extract",
     "Input",
     "IntegerVariable",
+    "IsIn",
     "LessEqual",
     "LinearProgram",
     "LinearProgramFeasible",
@@ -167,16 +170,17 @@ __all__ = [
     "QuadraticModel",
     "Reshape",
     "Resize",
-    "Sin",
-    "Subtract",
-    "SetVariable",
-    "Size",
     "Rint",
     "SafeDivide",
+    "SetVariable",
+    "Sin",
+    "Size",
     "SoftMax",
     "Square",
     "SquareRoot",
+    "Subtract",
     "Sum",
+    "Transpose",
     "Where",
     "Xor",
 ]

@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    ``DisjointLists`` symbols are now indexable, returning the corresponding
+    ``DisjointList`` (singular) symbol for the given index. This allows the
+    method of creating disjoint lists on the model to be simplified, returning
+    only a ``DisjointLists`` symbol instead of a tuple of the symbol and a
+    list of ``DisjointList`` symbols. A new method
+    ``Model.disjoint_lists_symbol()`` has been added to the Model class which
+    implements this.
+deprecations:
+  - |
+    The ``Model.disjoint_lists()`` method has been deprecated. Use
+    ``Model.disjoint_lists_symbol()`` instead.

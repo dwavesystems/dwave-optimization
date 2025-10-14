@@ -267,7 +267,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         A model encoding the CVRP problem.
 
     Notes:
-        The model uses a :class:`~dwave.optimization.model.Model.disjoint_lists`
+        The model uses a :class:`~dwave.optimization.symbols.DisjointLists`
         class as the decision variable being optimized, with permutations of its
         sublist representing various itineraries for each vehicle.
     """
@@ -381,7 +381,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     capacity = model.constant(vehicle_capacity)
 
     # Add the decision variable
-    routes_decision, routes = model.disjoint_lists(
+    routes = model.disjoint_lists_symbol(
         primary_set_size=num_customers,
         num_disjoint_lists=number_of_vehicles)
 
@@ -455,7 +455,7 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
         A model encoding the CVRPTW problem.
 
     Notes:
-        The model uses a :class:`~dwave.optimization.model.Model.disjoint_lists`
+        The model uses a :class:`~dwave.optimization.symbols.DisjointLists`
         class as the decision variable being optimized, with permutations of its
         sublist representing various itineraries for each vehicle.
     """
@@ -561,7 +561,7 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
     one = model.constant(1)
 
     # Add the decision variable
-    routes_decision, routes = model.disjoint_lists(
+    routes = model.disjoint_lists_symbol(
         primary_set_size=num_customers,
         num_disjoint_lists=number_of_vehicles)
 
