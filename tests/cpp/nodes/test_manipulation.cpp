@@ -1336,6 +1336,14 @@ TEST_CASE("TransposeNode") {
             CHECK(transpose_ptr->contiguous() == vec_ptr->contiguous());
         }
 
+        WHEN("We initialize an empty state") {
+            auto state = graph.empty_state();
+            vec_ptr->initialize_state(state, {});
+            graph.initialize_state(state);
+
+            THEN("The initial transpose is correct") { CHECK(transpose_ptr->size(state) == 0); }
+        }
+
         WHEN("We initialize a state") {
             auto state = graph.empty_state();
             vec_ptr->initialize_state(state, {0, 1});

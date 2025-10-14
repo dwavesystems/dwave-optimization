@@ -449,7 +449,7 @@ class TransposeNode : public ArrayNode {
     const ValuesInfo values_info_;
 
     ArrayNode* predeccesor_check(ArrayNode* array_ptr) const;
-    ssize_t convert_predecessor_index(ssize_t index) const;
+    Update convert_predecessor_update(Update update) const;
 };
 
 }  // namespace dwave::optimization

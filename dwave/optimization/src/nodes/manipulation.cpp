@@ -1154,19 +1154,19 @@ void TransposeNode::initialize_state(State& state) const {
     emplace_data_ptr<TransposeNodeDiffData>(state);
 }
 
-ssize_t TransposeNode::convert_predecessor_index(ssize_t flat_index) const {
+Update TransposeNode::convert_predecessor_update(Update update) const {
     if (ndim_ <= 1) {  // predecessor is vector
-        return flat_index;
+        return update;
     }
 
     const std::span<const ssize_t> array_shape = array_ptr_->shape();
     ssize_t transpose_flat_index = 0;
     // when constructing a flat index of the transpose, it is helpful to know
     // the # of indices contributed when you move along a fixed axes.
-    // `transpose_axis_strides` is initialized by the # of indices contributed
-    // when moving along the 0th axis of the transpose.
-    ssize_t transpose_axis_strides = std::accumulate(array_shape.begin(), array_shape.end() - 1, 1,
-                                                     std::multiplies<ssize_t>());
+    // `transpose_axis_index_stride` is initialized by the # of indices
+    // contributed when moving along the 0th axis of the transpose.
+    ssize_t transpose_axis_index_stride = std::accumulate(
+            array_shape.begin(), array_shape.end() - 1, 1, std::multiplies<ssize_t>());
 
     // traverse the predecessor axes in backward (reverse) order and the
     // transpose axes in forward order
@@ -1178,44 +1178,41 @@ ssize_t TransposeNode::convert_predecessor_index(ssize_t flat_index) const {
         // determine the multidimensional index of `flat_index` along the ith
         // axis of predecessor. Note: this is the multidimensional index along
         // the (ndim_ - 1 - i)th axis of the transpose
-        const ssize_t multidimensional_index = flat_index % axis_shape;
+        const ssize_t multidimensional_index = update.index % axis_shape;
         // reassign flat_index to the correct index along the (i - 1)th axes of predecessor
-        flat_index /= axis_shape;
+        update.index /= axis_shape;
 
         // weight the multidimensional index along the (ndim_ - 1 - i)th axis
-        // of the transpose by # of indices contributed by moving along this
-        // axis
-        transpose_flat_index += multidimensional_index * transpose_axis_strides;
+        // of the transpose by # of indices contributed by moving along axis
+        transpose_flat_index += multidimensional_index * transpose_axis_index_stride;
+
         // recall we are traversing the tranpose axes in forward order.
         // the # of indices contributed by moving along the (ndim - 2 - i)th
         // axis is the same as (the # of indices contributed by moving along the
         // (ndim_ - 1 - i)th axis) / shape(ndim_ - i - 1)
-        transpose_axis_strides /= array_shape[ndim_ - i - 1];
+        transpose_axis_index_stride /= array_shape[ndim_ - i - 1];
     }
 
-    return transpose_flat_index;
+    update.index = transpose_flat_index;
+    return update;
 }
 
 void TransposeNode::propagate(State& state) const {
-    const std::span<const Update> pred_diff = array_ptr_->diff(state);
+    const std::span<const Update> array_diff = array_ptr_->diff(state);
 
-    if (pred_diff.empty() || ndim_ <= 1) {
+    if (array_diff.empty() || ndim_ <= 1) {
         return;  // Nothing to do or predecessor is vector (transpose of vector is vector)
     }
 
-    // Predecessor is a non-dynamic (>=2)-D array. It suffices to update the
-    // indices of the updates to the transpose index and to save the diff.
+    // Predecessor is a non-dynamic (>=2)-D array.
     std::vector<Update>& transpose_diff = data_ptr<TransposeNodeDiffData>(state)->diff;
     assert(transpose_diff.size() == 0);
     transpose_diff.reserve(array_ptr_->size_diff(state));
 
-    for (const Update& update : pred_diff) {
-        // make a copy of the update
-        Update transpose_update = update;
-        // convert the index to the transpose index
-        transpose_update.index = convert_predecessor_index(update.index);
-        // save the converted update
-        transpose_diff.emplace_back(transpose_update);
+    for (const Update& u : array_diff) {
+        // Make a copy of the update and convert the index to the respective
+        // transpose index
+        transpose_diff.emplace_back(convert_predecessor_update(u));
     }
 }
 
