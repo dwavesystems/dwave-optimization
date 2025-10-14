@@ -36,3 +36,6 @@ cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::o
 
     cdef cppclass SizeNode(ArrayNode):
         pass
+
+    cdef cppclass TransposeNode(ArrayNode):
+        pass

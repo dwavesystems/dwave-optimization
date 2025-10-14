@@ -34,6 +34,7 @@ from dwave.optimization.libcpp.nodes.manipulation cimport (
     ReshapeNode,
     ResizeNode,
     SizeNode,
+    TransposeNode,
 )
 
 
@@ -287,3 +288,20 @@ cdef class Size(ArraySymbol):
         self.initialize_arraynode(array.model, ptr)
 
 _register(Size, typeid(SizeNode))
+
+
+cdef class Transpose(ArraySymbol):
+    """Tranpose symbol.
+
+    See Also:
+       :meth:`~dwave.optimization.mathematical.transpose`: equivalent function.
+
+    .. versionadded:: 0.6.8
+    """
+    def __init__(self, ArraySymbol array):
+        cdef _Graph model = array.model
+
+        cdef TransposeNode* ptr = model._graph.emplace_node[TransposeNode](array.array_ptr)
+        self.initialize_arraynode(model, ptr)
+
+_register(Transpose, typeid(TransposeNode))

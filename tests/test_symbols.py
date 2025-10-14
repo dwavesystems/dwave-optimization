@@ -3486,6 +3486,33 @@ class TestSum(utils.ReduceTests):
         self.assertEqual(b.state(0), np.arange(5, 10).sum())
 
 
+class TestTranspose(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        array = model.constant([[0, 1], [2, 3]])
+        transpose = dwave.optimization.symbols.Transpose(array)
+
+        with model.lock():
+            yield transpose
+
+    def test(self):
+        from dwave.optimization.symbols import Transpose
+        model = Model()
+        array = model.constant([[0, 1], [2, 3]])
+        contains = dwave.optimization.transpose(array)
+
+        self.assertIsInstance(contains, Transpose)
+
+    def test_state(self):
+        model = Model()
+        array = model.constant([[0, 1, 2], [3, 4, 5]])
+        transpose = dwave.optimization.symbols.Transpose(array)
+        model.states.resize(1)
+        with model.lock():
+            expected = np.array([[0, 3], [1, 4], [2, 5]])
+            np.testing.assert_array_almost_equal(transpose.state(0), expected)
+
+
 class TestWhere(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

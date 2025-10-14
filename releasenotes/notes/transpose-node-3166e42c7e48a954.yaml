@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    Added ``Transpose`` symbol/node which computes the transpose of a symbol.
