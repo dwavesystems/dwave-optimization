@@ -32,16 +32,16 @@
 namespace dwave::optimization {
 
 template <class BinaryOp>
-class ReduceNode2 : public ArrayOutputMixin<ArrayNode> {
+class ReduceNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    ReduceNode2(ArrayNode* array_ptr);
+    ReduceNode(ArrayNode* array_ptr);
 
-    ReduceNode2(ArrayNode* array_ptr, std::initializer_list<ssize_t> axes,
-                std::optional<double> initial = std::nullopt);
-    ReduceNode2(ArrayNode* array_ptr, std::span<const ssize_t> axes,
-                std::optional<double> initial = std::nullopt);
+    ReduceNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> axes,
+               std::optional<double> initial = std::nullopt);
+    ReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes,
+               std::optional<double> initial = std::nullopt);
 
-    // std::span<const ssize_t> axes() const;
+    std::span<const ssize_t> axes() const { return axes_; }
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -90,6 +90,7 @@ class ReduceNode2 : public ArrayOutputMixin<ArrayNode> {
     /// The initial value if one was provided.
     /// Otherwise uses the first element in the reduction.
     const std::optional<double> initial;
+
  private:
     // std::ranges::subrange<BufferIterator<double, double, true>, std::default_sentinel_t>
     auto reduce_(const State& state, ssize_t index) const;
@@ -107,154 +108,6 @@ class ReduceNode2 : public ArrayOutputMixin<ArrayNode> {
     const ValuesInfo values_info_;
 };
 
-
-using AllNode2 = ReduceNode2<std::logical_and<double>>;
-using AnyNode2 = ReduceNode2<std::logical_or<double>>;
-using MaxNode2 = ReduceNode2<functional::max<double>>;
-using MinNode2 = ReduceNode2<functional::min<double>>;
-using ProdNode2 = ReduceNode2<std::multiplies<double>>;
-using SumNode2 = ReduceNode2<std::plus<double>>;
-
-
-/// TODO: support multiple axes
-template <class BinaryOp>
-class PartialReduceNode : public ArrayOutputMixin<ArrayNode> {
- public:
-    // Runtime constructor
-    PartialReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes, double init);
-    PartialReduceNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> axes, double init);
-    PartialReduceNode(ArrayNode* array_ptr, ssize_t axis, double init);
-
-    // Some operations have known default values so we can create them regardless of
-    // whether or not the array is dynamic.
-    // Others will raise an error for non-dynamic arrays.
-    explicit PartialReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes);
-    explicit PartialReduceNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> axes);
-    explicit PartialReduceNode(ArrayNode* array_ptr, ssize_t axis);
-
-    std::span<const ssize_t> axes() const;
-    double const* buff(const State& state) const override;
-
-    void commit(State& state) const override;
-    std::span<const Update> diff(const State& state) const override;
-    void initialize_state(State& state) const override;
-
-    /// @copydoc Array::integral()
-    bool integral() const override;
-
-    /// @copydoc Array::min()
-    double min() const override;
-
-    /// @copydoc Array::max()
-    double max() const override;
-
-    // The predecessor of the reduction, as an Array*.
-    std::span<Array* const> operands() {
-        assert(predecessors().size() == 1);
-        return std::span<Array* const, 1>(&array_ptr_, 1);
-    }
-    std::span<const Array* const> operands() const {
-        assert(predecessors().size() == 1);
-        return std::span<const Array* const, 1>(&array_ptr_, 1);
-    }
-
-    void propagate(State& state) const override;
-    void revert(State& state) const override;
-
-    using ArrayOutputMixin::shape;
-    std::span<const ssize_t> shape(const State& state) const override;
-
-    using ArrayOutputMixin::size;
-    ssize_t size(const State& state) const override;
-    ssize_t size_diff(const State& state) const override;
-
-    const std::optional<double> init;
-
- private:
-    BinaryOp op;
-
-    // There are redundant, because we could dynamic_cast each time from
-    // predecessors(), but this is more performant
-    Array* const array_ptr_;
-
-    // The axis along which to do the
-    std::unique_ptr<ssize_t[]> axes_ = nullptr;
-
-    template <class Range>
-    static std::unique_ptr<ssize_t[]> make_axes(Range&& axes) noexcept {
-        if (axes.size() == 0) return nullptr;
-        auto ptr = std::make_unique<ssize_t[]>(axes.size());
-        std::copy(axes.begin(), axes.end(), ptr.get());
-        return ptr;
-    }
-
-    /// Map the parent index to the affected array index (linear)
-    ssize_t map_parent_index(const State& state, ssize_t parent_flat_index) const;
-
-    /// Convert linear index to indices for each dimension
-    std::vector<ssize_t> parent_strides_c_;
-
-    const ValuesInfo values_info_;
-};
-
-using PartialProdNode = PartialReduceNode<std::multiplies<double>>;
-using PartialSumNode = PartialReduceNode<std::plus<double>>;
-
-template <class BinaryOp>
-class ReduceNode : public ScalarOutputMixin<ArrayNode> {
- public:
-    ReduceNode(ArrayNode* node_ptr, double init);
-
-    // Some operations have known default values so we can create them regardless of
-    // whether or not the array is dynamic.
-    // Others will raise an error for non-dynamic arrays.
-    explicit ReduceNode(ArrayNode* node_ptr);
-
-    double const* buff(const State& state) const override;
-    std::span<const Update> diff(const State& state) const override;
-
-    /// @copydoc Array::integral()
-    bool integral() const override;
-
-    /// @copydoc Array::min()
-    double min() const override;
-
-    /// @copydoc Array::max()
-    double max() const override;
-
-    void commit(State& state) const override;
-    void revert(State& state) const override;
-    void initialize_state(State& state) const override;
-    void propagate(State& state) const override;
-
-    // The predecessor of the reduction, as an Array*.
-    std::span<Array* const> operands() {
-        assert(predecessors().size() == 1);
-        return std::span<Array* const, 1>(&array_ptr_, 1);
-    }
-    std::span<const Array* const> operands() const {
-        assert(predecessors().size() == 1);
-        return std::span<const Array* const, 1>(&array_ptr_, 1);
-    }
-
-    const std::optional<double> init;
-
- private:
-    BinaryOp op;
-
-    // Calculate the output value based on the state of the predecessor
-    double reduce(const State& state) const;
-
-    // There are redundant, because we could dynamic_cast each time from
-    // predecessors(), but this is more performant
-    Array* const array_ptr_;
-
-    const ValuesInfo values_info_;
-};
-
-// We follow NumPy naming convention rather than C++ to distinguish between
-// binary operations and reduce operations.
-// https://numpy.org/doc/stable/reference/routines.math.html
 using AllNode = ReduceNode<std::logical_and<double>>;
 using AnyNode = ReduceNode<std::logical_or<double>>;
 using MaxNode = ReduceNode<functional::max<double>>;

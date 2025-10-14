@@ -1635,15 +1635,15 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Divide  # avoid circular import
         return Divide(self, rhs)
 
-    def all(self):
+    def all(self, *, axis=None, initial=True):
         """Create an :class:`~dwave.optimization.symbols.All` symbol.
 
         The new symbol returns True when all elements evaluate to True.
         """
         from dwave.optimization.symbols import All  # avoid circular import
-        return All(self)
+        return All(self, axis=axis, initial=initial)
 
-    def any(self):
+    def any(self, *, axis=None, initial=False):
         """Create an :class:`~dwave.optimization.symbols.Any` symbol.
 
         The new symbol returns True when any elements evaluate to True.
@@ -1651,7 +1651,7 @@ cdef class ArraySymbol(Symbol):
         .. versionadded:: 0.4.1
         """
         from dwave.optimization.symbols import Any  # avoid circular import
-        return Any(self)
+        return Any(self, axis=axis, initial=initial)
 
     def copy(self):
         """Return an array symbol that is a copy of the array.
@@ -1671,7 +1671,7 @@ cdef class ArraySymbol(Symbol):
         """
         return self.reshape(-1)
 
-    def max(self, *, initial=None):
+    def max(self, *, axis=None, initial=None):
         """Create a :class:`~dwave.optimization.symbols.Max` symbol.
 
         The new symbol returns the maximum value in its elements.
@@ -1697,7 +1697,7 @@ cdef class ArraySymbol(Symbol):
             :class:`~dwave.optimization.symbols.Max`
         """
         from dwave.optimization.symbols import Max  # avoid circular import
-        return Max(self, initial=initial)
+        return Max(self, axis=axis, initial=initial)
 
     def maybe_equals(self, other):
         # note: docstring inherited from Symbol.maybe_equal()
@@ -1719,7 +1719,7 @@ cdef class ArraySymbol(Symbol):
 
         return MAYBE
 
-    def min(self, *, initial=None):
+    def min(self, *, axis=None, initial=None):
         """Create a :class:`~dwave.optimization.symbols.Min` symbol.
 
         The new symbol returns the minimum value in its elements.
@@ -1745,13 +1745,13 @@ cdef class ArraySymbol(Symbol):
             :class:`~dwave.optimization.symbols.Min`
         """
         from dwave.optimization.symbols import Min  # avoid circular import
-        return Min(self, initial=initial)
+        return Min(self, axis=axis, initial=initial)
 
     def ndim(self):
         """Return the number of dimensions for a symbol."""
         return self.array_ptr.ndim()
 
-    def prod(self, *, axis=None, initial=None):
+    def prod(self, *, axis=None, initial=1):
         """Create a :class:`~dwave.optimization.symbols.Prod` symbol.
 
         The new symbol returns the product of its elements.
@@ -1781,12 +1781,8 @@ cdef class ArraySymbol(Symbol):
             :class:`~dwave.optimization.symbols.PartialProd`
             :class:`~dwave.optimization.symbols.Prod`
         """
-        import dwave.optimization.symbols
-
-        if axis is not None:
-            return dwave.optimization.symbols.PartialProd(self, axis, initial=initial)
-
-        return dwave.optimization.symbols.Prod(self, initial=initial)
+        from dwave.optimization.symbols import Prod
+        return Prod(self, axis=axis, initial=initial)
 
     def reshape(self, *shape):
         """Create a :class:`~dwave.optimization.symbols.Reshape` symbol.
@@ -2120,7 +2116,7 @@ cdef class ArraySymbol(Symbol):
         strides = self.array_ptr.strides()
         return tuple(strides[i] for i in range(strides.size()))
 
-    def sum(self, *, axis=None, initial=None):
+    def sum(self, *, axis=None, initial=0):
         """Create a :class:`~dwave.optimization.symbols.Sum` symbol.
 
         The new symbol returns the sum of its elements.
@@ -2150,9 +2146,5 @@ cdef class ArraySymbol(Symbol):
             :class:`~dwave.optimization.symbols.PartialSum`
             :class:`~dwave.optimization.symbols.Sum`
         """
-        import dwave.optimization.symbols
-
-        if axis is not None:
-            return dwave.optimization.symbols.PartialSum(self, axis, initial=initial)
-
-        return dwave.optimization.symbols.Sum(self, initial=initial)
+        from dwave.optimization.symbols import Sum
+        return Sum(self, axis=axis, initial=initial)
