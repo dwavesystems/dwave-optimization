@@ -448,8 +448,8 @@ class TransposeNode : public ArrayNode {
     const bool contiguous_;
     const ValuesInfo values_info_;
 
-    ArrayNode* predeccesor_check(ArrayNode* array_ptr) const;
-    Update convert_predecessor_update(Update update) const;
+    ArrayNode* predeccesor_check_(ArrayNode* array_ptr) const;
+    Update convert_predecessor_update_(Update update) const;
 };
 
 }  // namespace dwave::optimization

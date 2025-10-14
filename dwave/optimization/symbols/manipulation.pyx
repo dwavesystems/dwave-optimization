@@ -294,7 +294,7 @@ cdef class Transpose(ArraySymbol):
     """Tranpose symbol.
 
     See Also:
-       :meth:`~dwave.optimization.mathematical.transpose`: equivalent method.
+       :meth:`~dwave.optimization.mathematical.transpose`: equivalent function.
 
     .. versionadded:: 0.6.8
     """

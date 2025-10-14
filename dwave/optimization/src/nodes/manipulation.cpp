@@ -1058,7 +1058,7 @@ void SizeNode::propagate(State& state) const { set_state(state, array_ptr_->size
 
 // TransposeNode **************************************************************
 
-ArrayNode* TransposeNode::predeccesor_check(ArrayNode* array_ptr) const {
+ArrayNode* TransposeNode::predeccesor_check_(ArrayNode* array_ptr) const {
     // Can take the transpose of a dynamic vector but not a dyanmic (>=2)-D
     // array since the latter would result in a dynamic array which is dynamic
     // in an axis other than the 0th axis.
@@ -1077,7 +1077,7 @@ std::unique_ptr<ssize_t[]> reverse_span_helper(const std::span<const ssize_t> sp
 }
 
 TransposeNode::TransposeNode(ArrayNode* array_ptr)
-        : array_ptr_(predeccesor_check(array_ptr)),
+        : array_ptr_(predeccesor_check_(array_ptr)),
           ndim_(array_ptr->ndim()),
           shape_(reverse_span_helper(array_ptr->shape(), ndim_)),
           strides_(reverse_span_helper(array_ptr->strides(), ndim_)),
@@ -1154,7 +1154,7 @@ void TransposeNode::initialize_state(State& state) const {
     emplace_data_ptr<TransposeNodeDiffData>(state);
 }
 
-Update TransposeNode::convert_predecessor_update(Update update) const {
+Update TransposeNode::convert_predecessor_update_(Update update) const {
     if (ndim_ <= 1) {  // predecessor is vector
         return update;
     }
@@ -1212,7 +1212,7 @@ void TransposeNode::propagate(State& state) const {
     for (const Update& u : array_diff) {
         // Make a copy of the update and convert the index to the respective
         // transpose index
-        transpose_diff.emplace_back(convert_predecessor_update(u));
+        transpose_diff.emplace_back(convert_predecessor_update_(u));
     }
 }
 
