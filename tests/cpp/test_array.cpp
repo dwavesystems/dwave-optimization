@@ -60,6 +60,29 @@ TEST_CASE("Test SizeInfo") {
     CHECK(SizeInfo(5) == 5);
 }
 
+TEST_CASE("ValuesInfo") {
+    static_assert(std::regular<ValuesInfo>);
+
+    SECTION("Construction") {
+        CHECK(ValuesInfo::logical_output() == ValuesInfo(false, true, true));
+        CHECK(ValuesInfo(0, 1, false) == ValuesInfo({0, 1}, false));
+
+        CHECK(ValuesInfo().min <= std::numeric_limits<double>::lowest());
+        CHECK(ValuesInfo().max >= std::numeric_limits<double>::max());
+        CHECK(!ValuesInfo().integral);
+    }
+
+    SECTION("Union") {
+        CHECK((ValuesInfo(-1, 10, true) | ValuesInfo(0, 11, false)) == ValuesInfo(-1, 11, false));
+        CHECK((ValuesInfo(6, 10, false) | ValuesInfo(0, 2, false)) == ValuesInfo(0, 10, false));
+
+        // Inplace
+        auto vi = ValuesInfo(0, 1, true);
+        CHECK((vi |= ValuesInfo(0, 2, true)) == ValuesInfo(0, 2, true));
+        CHECK(vi == ValuesInfo(0, 2, true));
+    }
+}
+
 TEST_CASE("Slice") {
     SECTION("exceptions") {
         CHECK_THROWS_AS(Slice(0, 1, 0), std::invalid_argument);

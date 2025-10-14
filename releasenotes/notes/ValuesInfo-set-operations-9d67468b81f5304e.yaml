@@ -1,0 +1,3 @@
+---
+features:
+  - Add set union operation to C++ ``ValuesInfo`` class.
