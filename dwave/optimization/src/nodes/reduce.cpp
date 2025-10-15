@@ -36,46 +36,31 @@ namespace dwave::optimization {
 
 struct limit_type {};
 
-template <DType result_type>
+template <DType T>
 struct add {
-    class reduction_type {
-     public:
-        reduction_type() = delete;
-        reduction_type(result_type value) noexcept : value_(value) {}
-        bool operator==(const reduction_type& rhs) const { return this->value_ == rhs.value_; }
-        result_type value() const noexcept { return value_; }
+    using result_type = T;
+    using reduction_type = result_type;  // needs to be static-castable to result_type
 
-     private:
-        friend add;
-        result_type value_;
-    };
-
-    constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
+    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
         return lhs + rhs;
     }
-    reduction_type operator()(reduction_type lhs, const DType auto& rhs) {
-        lhs.value_ += rhs;
-        return lhs;
-    }
 
-    std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
+    // because result_type is the same as reduction_type, we only need one overload
+    static std::optional<result_type> inverse(const DType auto& lhs,
+                                              const DType auto& rhs) noexcept {
         // dev note: we could check whether we have any infs and return nullopt in that
         // case. Needs though/testing.
         return lhs - rhs;
     }
-    std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
-        lhs.value_ -= rhs;
-        return lhs;
-    }
 
     // If `range` is empty then `initial` must be provided.
-    template <std::ranges::range Range, DType T>
-    reduction_type reduce(const Range&& range, std::optional<T> initial) {
+    template <std::ranges::range Range, DType U>
+    reduction_type reduce(const Range&& range, std::optional<U> initial) {
         if (!initial.has_value()) {
             auto begin = std::ranges::begin(range);
             const auto end = std::ranges::end(range);
             assert(begin != end && "initial must be provided for an empty range");
-            std::optional<T> init = *begin;
+            std::optional<U> init = *begin;
             return reduce(std::ranges::subrange(++begin, end), std::move(init));
         }
 
@@ -128,39 +113,39 @@ struct all {
         reduction_type() = delete;
         reduction_type(result_type value) noexcept : num_falsy_(value == 0) {}
         bool operator==(const reduction_type& rhs) const { return num_falsy_ == rhs.num_falsy_; }
-        result_type value() const noexcept { return num_falsy_ == 0; }
+        explicit operator result_type() const noexcept { return num_falsy_ == 0; }
 
      private:
         friend all;
         ssize_t num_falsy_;
     };
 
-    constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
+    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
         return lhs and rhs;
     }
-    reduction_type operator()(reduction_type lhs, const DType auto& rhs) {
+    reduction_type operator()(reduction_type lhs, const DType auto& rhs) const noexcept {
         if (rhs == 0) lhs.num_falsy_ += 1;
         return lhs;
     }
 
 
-    std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
+    static std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) noexcept {
         assert(false && "not yet implemeted");
         return 0;
     }
-    static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
+    static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) noexcept {
         if (rhs == 0) lhs.num_falsy_ -= 1;
         return lhs;
     }
 
     // If `range` is empty then `initial` must be provided.
-    template <std::ranges::range Range, DType T>
-    reduction_type reduce(const Range&& range, std::optional<T> initial) {
+    template <std::ranges::range Range, DType U>
+    reduction_type reduce(const Range&& range, std::optional<U> initial) {
         if (!initial.has_value()) {
             auto begin = std::ranges::begin(range);
             const auto end = std::ranges::end(range);
             assert(begin != end && "initial must be provided for an empty range");
-            std::optional<T> init = *begin;
+            std::optional<U> init = *begin;
             return reduce(std::ranges::subrange(++begin, end), std::move(init));
         }
 
@@ -208,38 +193,38 @@ struct any {
         reduction_type() = delete;
         reduction_type(result_type value) noexcept : num_truthy_(value != 0) {}
         bool operator==(const reduction_type& rhs) const { return num_truthy_ == rhs.num_truthy_; }
-        result_type value() const noexcept { return num_truthy_ > 0; }
+        explicit operator result_type() const noexcept { return num_truthy_ > 0; }
      private:
         friend any;
         ssize_t num_truthy_;
     };
 
-    constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
+    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
         return lhs or rhs;
     }
-    reduction_type operator()(reduction_type lhs, const DType auto& rhs) {
+    reduction_type operator()(reduction_type lhs, const DType auto& rhs) const noexcept {
         lhs.num_truthy_ += (rhs != 0);
         return lhs;
     }
 
 
-    std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
+    static std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
         assert(false && "not yet implemeted");
         return 0;
     }
-    static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
+    static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) noexcept {
         lhs.num_truthy_ -= (rhs != 0);
         return lhs;
     }
 
     // If `range` is empty then `initial` must be provided.
-    template <std::ranges::range Range, DType T>
-    reduction_type reduce(const Range&& range, std::optional<T> initial) {
+    template <std::ranges::range Range, DType U>
+    reduction_type reduce(const Range&& range, std::optional<U> initial) {
         if (!initial.has_value()) {
             auto begin = std::ranges::begin(range);
             const auto end = std::ranges::end(range);
             assert(begin != end && "initial must be provided for an empty range");
-            std::optional<T> init = *begin;
+            std::optional<U> init = *begin;
             return reduce(std::ranges::subrange(++begin, end), std::move(init));
         }
 
@@ -275,45 +260,30 @@ struct any {
     static constexpr bool commutative = true;
     static constexpr bool invertible = true;  // sort of anyway
 };
-template <DType result_type>
+template <DType T>
 struct max {
-    // TODO: consider replacing with using double and the requirement becomes explicitly castable
-    class reduction_type {
-     public:
-        reduction_type() = delete;
-        reduction_type(result_type value) noexcept : value_(value) {}
-        bool operator==(const reduction_type& rhs) const { return value_ == rhs.value_; }
-        result_type value() const noexcept { return value_; }
+    using result_type = T;
+    using reduction_type = result_type;  // just must be explicitly castable to result_type
 
-     private:
-        friend max;
-        result_type value_;
-    };
-
-    constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
-        assert(false);
-    }
-    reduction_type operator()(reduction_type lhs, const DType auto& rhs) { 
-        lhs.value_ = std::max(lhs.value_, rhs);
-        return lhs;
+    // because result_type is the same as reduction_type, we only need one overload
+    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
+        return std::max<result_type>(lhs, rhs);
     }
 
-    std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
-        assert(false);
-    }
-    static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
-        if (lhs.value_ > rhs) return lhs;  // We're removing a value smaller than our current max
+    // because result_type is the same as reduction_type, we only need one overload
+    static std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) noexcept {
+        if (lhs > rhs) return lhs;  // We're removing a value smaller than our current max
         return {};  // Otherwise we failed! We cannot invert
     }
 
     // If `range` is empty then `initial` must be provided.
-    template <std::ranges::range Range, DType T>
-    reduction_type reduce(const Range&& range, std::optional<T> initial) {
+    template <std::ranges::range Range, DType U>
+    reduction_type reduce(const Range&& range, std::optional<U> initial) {
         if (!initial.has_value()) {
             auto begin = std::ranges::begin(range);
             const auto end = std::ranges::end(range);
             assert(begin != end && "initial must be provided for an empty range");
-            std::optional<T> init = *begin;
+            std::optional<U> init = *begin;
             return reduce(std::ranges::subrange(++begin, end), std::move(init));
         }
 
@@ -349,44 +319,28 @@ struct max {
     static constexpr bool commutative = true;
     static constexpr bool invertible = true;  // sort of anyway
 };
-template <DType result_type>
+template <DType T>
 struct min {
-    class reduction_type {
-     public:
-        reduction_type() = delete;
-        reduction_type(result_type value) noexcept : value_(value) {}
-        bool operator==(const reduction_type& rhs) const { return value_ == rhs.value_; }
-        result_type value() const noexcept { return value_; }
+    using result_type = T;
+    using reduction_type = result_type;  // just must be explicitly castable to result_type
 
-     private:
-        friend min;
-        result_type value_;
-    };
-
-    constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
-        assert(false);
-    }
-    reduction_type operator()(reduction_type lhs, const DType auto& rhs) { 
-        lhs.value_ = std::min(lhs.value_, rhs);
-        return lhs;
+    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
+        return std::min<result_type>(lhs, rhs);
     }
 
-    std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
-        assert(false);
-    }
-    static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
-        if (lhs.value_ < rhs) return lhs;  // We're removing a value greater than our current min
+    static std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) noexcept {
+        if (lhs < rhs) return lhs;  // We're removing a value greater than our current min
         return {};  // Otherwise we failed! We cannot invert
     }
 
     // If `range` is empty then `initial` must be provided.
-    template <std::ranges::range Range, DType T>
-    reduction_type reduce(const Range&& range, std::optional<T> initial) {
+    template <std::ranges::range Range, DType U>
+    reduction_type reduce(const Range&& range, std::optional<U> initial) {
         if (!initial.has_value()) {
             auto begin = std::ranges::begin(range);
             const auto end = std::ranges::end(range);
             assert(begin != end && "initial must be provided for an empty range");
-            std::optional<T> init = *begin;
+            std::optional<U> init = *begin;
             return reduce(std::ranges::subrange(++begin, end), std::move(init));
         }
 
@@ -422,8 +376,9 @@ struct min {
     static constexpr bool commutative = true;
     static constexpr bool invertible = true;  // sort of anyway
 };
-template <DType result_type>
+template <DType T>
 struct prod {
+    using result_type = T;
     struct reduction_type {
      public:
         reduction_type() = delete;
@@ -435,7 +390,7 @@ struct prod {
             return this->nonzero_ == rhs.nonzero_ && this->num_zero_ == rhs.num_zero_;
         }
 
-        result_type value() const noexcept { return num_zero_ ? 0 : nonzero_; }
+        explicit operator result_type() const noexcept { return num_zero_ ? 0 : nonzero_; }
 
      private:
         friend prod;
@@ -444,10 +399,10 @@ struct prod {
         ssize_t num_zero_;
     };
 
-    constexpr result_type operator()(const DType auto& lhs, const DType auto& rhs) {
-        assert(false);
+    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
+        return lhs * rhs;
     }
-    reduction_type operator()(reduction_type lhs, const DType auto& rhs) {
+    reduction_type operator()(reduction_type lhs, const DType auto& rhs) const noexcept {
         if (rhs == 0) {
             lhs.num_zero_ += 1;
         } else {
@@ -456,10 +411,10 @@ struct prod {
         return lhs;
     }
 
-    std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) {
+    static std::optional<result_type> inverse(const DType auto& lhs, const DType auto& rhs) noexcept {
         assert(false);
     }
-    std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) {
+    static std::optional<reduction_type> inverse(reduction_type lhs, const DType auto& rhs) noexcept {
         if (rhs == 0) {
             lhs.num_zero_ -= 1;
         } else {
@@ -469,13 +424,13 @@ struct prod {
     }
 
     // If `range` is empty then `initial` must be provided.
-    template <std::ranges::range Range, DType T>
-    reduction_type reduce(const Range&& range, std::optional<T> initial) {
+    template <std::ranges::range Range, DType U>
+    reduction_type reduce(const Range&& range, std::optional<U> initial) {
         if (!initial.has_value()) {
             auto begin = std::ranges::begin(range);
             const auto end = std::ranges::end(range);
             assert(begin != end && "initial must be provided for an empty range");
-            std::optional<T> init = *begin;
+            std::optional<U> init = *begin;
             return reduce(std::ranges::subrange(++begin, end), std::move(init));
         }
 
@@ -569,6 +524,7 @@ class ReduceNodeData : public NodeStateData {
 
     // Pull this into the namespace for convenience.
     using reduction_type = ufunc_type::reduction_type;
+    using result_type = ufunc_type::result_type;
 
     enum class ReductionFlag {
         invalid,    // no longer holds the correct value, the whole reduction must be recalculated
@@ -580,7 +536,7 @@ class ReduceNodeData : public NodeStateData {
 
     ReduceNodeData(std::vector<reduction_type>&& reductions): reductions_(std::move(reductions)), flags_(reductions_.size(), ReductionFlag::unchanged) {
         buffer_.reserve(reductions_.size());
-        for (const auto& reduction : reductions_) buffer_.emplace_back(reduction.value());
+        for (const auto& reduction : reductions_) buffer_.emplace_back(static_cast<result_type>(reduction));
     }
 
     ReduceNodeData(std::vector<reduction_type>&& reductions, std::span<const ssize_t> shape) : ReduceNodeData(std::move(reductions)) {
@@ -649,7 +605,7 @@ class ReduceNodeData : public NodeStateData {
 
             switch (flags_[index]) {
                 case ReductionFlag::updated:
-                    value = reductions_[index].value();
+                    value = static_cast<result_type>(reductions_[index]);
                     if (buffer_[index] != value) {
                         diff_.emplace_back(index, buffer_[index], value);
                         buffer_[index] = value;
@@ -657,7 +613,7 @@ class ReduceNodeData : public NodeStateData {
                     break;
                 case ReductionFlag::invalid:
                     reductions_[index] = reduce(index);
-                    value = reductions_[index].value();
+                    value = static_cast<result_type>(reductions_[index]);
                     if (buffer_[index] != value) {
                         diff_.emplace_back(index, buffer_[index], value);
                         buffer_[index] = value;
@@ -673,7 +629,7 @@ class ReduceNodeData : public NodeStateData {
             const ssize_t index = buffer_.size();
             switch (flags_[index]) {
                 case ReductionFlag::updated:
-                    buffer_.emplace_back(reductions_[index].value());
+                    buffer_.emplace_back(static_cast<result_type>(reductions_[index]));
                     diff_.emplace_back(Update::placement(index, buffer_[index]));
                     break;
                 case ReductionFlag::unchanged:
@@ -976,7 +932,7 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
 
         if (reduction_size and initial) {
             // cast initial to the correct output type
-            auto init = typename decltype(ufunc)::reduction_type(*initial).value();
+            auto init = typename decltype(ufunc)::result_type(*initial);
 
             return ufunc.result_bounds(
                     ufunc.result_bounds(array_bounds, reduction_size),  // from reducing the array
@@ -986,7 +942,7 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
             return ufunc.result_bounds(array_bounds, reduction_size);
         } else if (initial) {
             // cast initial to the correct output type
-            auto init = typename decltype(ufunc)::reduction_type(*initial).value();
+            auto init = typename decltype(ufunc)::result_type(*initial);
 
             return ValuesInfo(init, init, is_integer(init));
         } else {
@@ -1044,7 +1000,7 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
     if (!initial.has_value()) return min_bounds | max_bounds;
 
     // Otherwise we need to account for the initial value in the bounds
-    auto init = typename decltype(ufunc)::reduction_type(*initial).value();  // cast to bool etc
+    auto init = typename decltype(ufunc)::result_type(*initial);  // cast to bool etc
     auto initial_bounds = ValuesInfo(init, init, is_integer(init));
     min_bounds = ufunc.result_bounds(std::move(min_bounds), initial_bounds);
     max_bounds = ufunc.result_bounds(std::move(max_bounds), initial_bounds);
