@@ -20,6 +20,7 @@
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
+#include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/reduce.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
@@ -28,13 +29,118 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
+TEST_CASE("Reduce2") {
+    GIVEN("arr = broadcast_to(set(10).reshape(-1, 1, 1), (-1, 3, 4))") {
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto reshape_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::array<ssize_t, 3>{-1, 1, 1});
+        auto arr_ptr = graph.emplace_node<BroadcastToNode>(reshape_ptr, std::array<ssize_t, 3>{-1, 3, 4});
+
+        WHEN("We try to do a reduction with invalid axes") {
+            CHECK_THROWS(SumNode(arr_ptr, {0, 0}));  // duplicate
+            CHECK_THROWS(SumNode(arr_ptr, {0, -4}));  // out of bounds
+            CHECK_THROWS(SumNode(arr_ptr, {0, 3}));  // out of bounds
+
+            // todo: test no initial (fails because set can be empty)
+
+            CHECK(arr_ptr->successors().empty());  // no side-effects
+        }
+
+        AND_GIVEN("x = sum(arr, initial=2)") {
+            auto x_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{}, 2);
+            graph.emplace_node<ArrayValidationNode>(x_ptr);
+
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {1, 2, 3});
+            graph.initialize_state(state);
+
+            CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 3) * 3 * 4 + 2}));
+
+            WHEN("We change the state of the set") {
+                set_ptr->assign(state, {1, 2, 4, 3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 4 + 3) * 3 * 4 + 2}));
+                graph.commit(state);
+
+                set_ptr->assign(state, {3, 2});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({(3 + 2) * 3 * 4 + 2}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 4 + 3) * 3 * 4 + 2}));
+            }
+        }
+
+        AND_GIVEN("x = sum(arr, axes=(0,), initial=2)") {
+            auto x_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{0}, 2);
+            graph.emplace_node<ArrayValidationNode>(x_ptr);
+
+            CHECK_THAT(x_ptr->shape(), RangeEquals({3, 4}));
+
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {1, 2, 3});
+            graph.initialize_state(state);
+
+            CHECK_THAT(x_ptr->view(state), RangeEquals({8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8}));
+
+            WHEN("We change the state of the set") {
+                set_ptr->assign(state, {1, 2, 4, 3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
+                graph.commit(state);
+
+                set_ptr->assign(state, {3, 2});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
+            }
+        }
+
+        AND_GIVEN("x = sum(arr, axes=(1,), initial=2)") {
+            auto x_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{1}, 2);
+            graph.emplace_node<ArrayValidationNode>(x_ptr);
+
+            CHECK_THAT(x_ptr->shape(), RangeEquals({-1, 4}));
+
+            CHECK(x_ptr->min() == set_ptr->min() * 3 + 2);
+            CHECK(x_ptr->max() == set_ptr->max() * 3 + 2);
+
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {1, 2, 3});
+            graph.initialize_state(state);
+
+            CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 11, 11, 11, 11}));
+
+            WHEN("We change the state of the set") {
+                set_ptr->assign(state, {1, 2, 4, 3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11}));
+                graph.commit(state);
+
+                set_ptr->assign(state, {3, 2});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({11, 11, 11, 11, 8, 8, 8, 8}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11}));
+            }
+        }
+    }
+
+    // todo: check growing then shrinking as part of the same propagation
+    // todo: test empty set
+}
+
+
 TEMPLATE_TEST_CASE("PartialReduceNode", "", std::multiplies<double>, std::plus<double>) {
     GIVEN("A 1D array of 5 integers, and a reduction over axis 0 and an explicit initial value") {
         const double init = GENERATE(-1, 0, 1);
 
         auto graph = Graph();
         auto x_ptr = graph.emplace_node<IntegerNode>(5, 0, 10);  // 5 integers in [0, 10]
-        auto r_ptr = graph.emplace_node<PartialReduceNode<TestType>>(x_ptr, 0, init);
+        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(x_ptr, std::vector<ssize_t>{0}, init);
         graph.emplace_node<ArrayValidationNode>(r_ptr);
 
         // this is equivalent to a reduction, so the output is a scalar
@@ -88,12 +194,10 @@ TEST_CASE("PartialReduceNode - PartialProdNode") {
     auto graph = Graph();
     GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes") {
         std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
-        auto ptr =
-                graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 2, 2});
-        auto r_ptr_0 = graph.emplace_node<PartialProdNode>(ptr, 0);
-        auto r_ptr_1 = graph.emplace_node<PartialProdNode>(ptr, 1);
-        auto r_ptr_2 = graph.emplace_node<PartialProdNode>(ptr, 2);
-
+        auto ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
+        auto r_ptr_0 = graph.emplace_node<ProdNode>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<ProdNode>(ptr, std::vector<ssize_t>{1});
+        auto r_ptr_2 = graph.emplace_node<ProdNode>(ptr, std::vector<ssize_t>{2});
         graph.emplace_node<ArrayValidationNode>(r_ptr_0);
         graph.emplace_node<ArrayValidationNode>(r_ptr_1);
         graph.emplace_node<ArrayValidationNode>(r_ptr_2);
@@ -135,11 +239,13 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
     auto graph = Graph();
     GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes ") {
         std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
-        auto ptr =
-                graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 2, 2});
-        auto r_ptr_0 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 0);
-        auto r_ptr_1 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 1);
-        auto r_ptr_2 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 2);
+        auto ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
+        auto r_ptr_0 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{1});
+        auto r_ptr_2 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{2});
+        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_2);
 
         THEN("The dimensions of the partial reductions are correct") {
             CHECK(r_ptr_0->ndim() == 2);
@@ -177,9 +283,12 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
 
     GIVEN("A 3D binary array with shape (2, 3, 2) and partially reduce over the axes") {
         auto ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3, 2});
-        auto r_ptr_0 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 0);
-        auto r_ptr_1 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 1);
-        auto r_ptr_2 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 2);
+        auto r_ptr_0 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{1});
+        auto r_ptr_2 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{2});
+        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_2);
 
         THEN("The dimensions of the partial reductions are correct") {
             CHECK(r_ptr_0->ndim() == 2);
@@ -257,13 +366,14 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
 
     GIVEN("A 3D array, index it by slice, int and slice and we take partial traces") {
         std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
-        auto array_ptr =
-                graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 2, 2});
+        auto array_ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
         auto ptr = graph.emplace_node<BasicIndexingNode>(array_ptr, Slice(0, 2), 1, Slice(0, 2));
 
         // then there are only 2 possible reductions
-        auto r_ptr_0 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 0);
-        auto r_ptr_1 = graph.emplace_node<PartialReduceNode<std::plus<double>>>(ptr, 1);
+        auto r_ptr_0 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{1});
+        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
 
         THEN("The dimensions of the partial reductions are correct") {
             CHECK(ptr->ndim() == 2);
@@ -295,9 +405,10 @@ TEST_CASE("PartialReduceNode - PartialSumNode") {
     }
 }
 
-TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<double>,
-                   std::logical_and<double>, std::logical_or<double>, std::multiplies<double>,
-                   std::plus<double>) {
+TEMPLATE_TEST_CASE("ReduceNode", "",
+        functional::max<double>, functional::min<double>,
+        std::logical_and<double>, std::logical_or<double>,
+        std::multiplies<double>, std::plus<double>) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -369,7 +480,7 @@ TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<do
         double init = 17;
         std::vector<double> values = {1, 2, 3, 4};
         auto a_ptr = graph.emplace_node<ConstantNode>(values);
-        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(a_ptr, init);
+        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(a_ptr, std::vector<ssize_t>{}, init);
 
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
@@ -396,7 +507,7 @@ TEMPLATE_TEST_CASE("ReduceNode", "", functional::max<double>, functional::min<do
     GIVEN("A set reduced with an explicit init value") {
         double init = 17;
         auto a_ptr = graph.emplace_node<SetNode>(4);
-        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(a_ptr, init);
+        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(a_ptr, std::vector<ssize_t>{}, init);
 
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
@@ -523,8 +634,8 @@ TEST_CASE("ReduceNode - AllNode/AnyNode") {
 
     GIVEN("x = [], y = x.all(), z = x.any()") {
         auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{0});
-        auto y_ptr = graph.emplace_node<AllNode>(x_ptr);
-        auto z_ptr = graph.emplace_node<AnyNode>(x_ptr);
+        auto y_ptr = graph.emplace_node<AllNode>(x_ptr, std::vector<ssize_t>{}, true);
+        auto z_ptr = graph.emplace_node<AnyNode>(x_ptr, std::vector<ssize_t>{}, false);
 
         graph.emplace_node<ArrayValidationNode>(y_ptr);
         graph.emplace_node<ArrayValidationNode>(z_ptr);
@@ -553,11 +664,15 @@ TEST_CASE("ReduceNode - MaxNode/MinNode") {
 
         // chose init values out of range - we test that init works correctly
         // in the ReduceNode tests
-        auto max_ptr = graph.emplace_node<MaxNode>(list_ptr, -1);
-        auto min_ptr = graph.emplace_node<MinNode>(list_ptr, 6);
-
+        auto max_ptr = graph.emplace_node<MaxNode>(list_ptr, std::vector<ssize_t>{}, -1);
+        auto min_ptr = graph.emplace_node<MinNode>(list_ptr, std::vector<ssize_t>{}, 6);
         graph.emplace_node<ArrayValidationNode>(max_ptr);
         graph.emplace_node<ArrayValidationNode>(min_ptr);
+
+        CHECK(max_ptr->min() == -1);  // because the list can be empty
+        CHECK(max_ptr->max() == 4);
+        CHECK(min_ptr->min() == 0);
+        CHECK(min_ptr->max() == 6);  // beause the list can be empty
 
         AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
             auto state = graph.empty_state();
@@ -686,7 +801,7 @@ TEST_CASE("ReduceNode - MaxNode") {
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.max(init=-.5)") {
         auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
-        auto y_ptr = graph.emplace_node<MaxNode>(x_ptr, -.5);
+        auto y_ptr = graph.emplace_node<MaxNode>(x_ptr, std::vector<ssize_t>{}, -.5);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -.5);
@@ -712,7 +827,7 @@ TEST_CASE("ReduceNode - MinNode") {
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.min(init=-.5)") {
         auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
-        auto y_ptr = graph.emplace_node<MinNode>(x_ptr, -.5);
+        auto y_ptr = graph.emplace_node<MinNode>(x_ptr, std::vector<ssize_t>{}, -.5);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -5);
@@ -738,7 +853,7 @@ TEST_CASE("ReduceNode - ProdNode") {
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.prod(init=-.5)") {
         auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
-        auto y_ptr = graph.emplace_node<ProdNode>(x_ptr, -.5);
+        auto y_ptr = graph.emplace_node<ProdNode>(x_ptr, std::vector<ssize_t>{}, -.5);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -5 * -5 * 2 * -.5);
@@ -749,7 +864,7 @@ TEST_CASE("ReduceNode - ProdNode") {
 
     GIVEN("Given a list node with a prod over it") {
         auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
-        auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr);
+        auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr, std::vector<ssize_t>{}, 1);
 
         AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
             auto state = graph.empty_state();
@@ -856,7 +971,7 @@ TEST_CASE("ReduceNode - ProdNode") {
 
     GIVEN("Given a list node with a prod over it with an initial value of 0") {
         auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
-        auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr, 0);
+        auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr, std::vector<ssize_t>{}, 0);
 
         AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
             auto state = graph.empty_state();
@@ -906,7 +1021,7 @@ TEST_CASE("ReduceNode - SumNode") {
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.sum(init=-.5)") {
         auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 2);
-        auto y_ptr = graph.emplace_node<SumNode>(x_ptr, -.5);
+        auto y_ptr = graph.emplace_node<SumNode>(x_ptr, std::vector<ssize_t>{}, -.5);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -5 + -5 + -5 + -.5);
@@ -919,7 +1034,7 @@ TEST_CASE("ReduceNode - SumNode") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 3, 2});
         auto x_ptr = graph.emplace_node<SetNode>(3);
         auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
-        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr, std::vector<ssize_t>{}, 0);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == 0);
@@ -932,7 +1047,7 @@ TEST_CASE("ReduceNode - SumNode") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 3, 2});
         auto x_ptr = graph.emplace_node<SetNode>(3);
         auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
-        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr, std::vector<ssize_t>{}, 0);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == 0);  // can be 0 because x can be empty
@@ -958,7 +1073,7 @@ TEST_CASE("ReduceNode - SumNode") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, -3, 2});
         auto x_ptr = graph.emplace_node<SetNode>(3);
         auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
-        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr, std::vector<ssize_t>{}, 0);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -9);  // set has at most 3 elements
@@ -971,7 +1086,7 @@ TEST_CASE("ReduceNode - SumNode") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, -3, -2});
         auto x_ptr = graph.emplace_node<SetNode>(3);
         auto ax_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, x_ptr);
-        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr);
+        auto y_ptr = graph.emplace_node<SumNode>(ax_ptr, std::vector<ssize_t>{}, 0);
 
         THEN("y's min/max/integral are as expected") {
             CHECK(y_ptr->min() == -9);
@@ -982,7 +1097,7 @@ TEST_CASE("ReduceNode - SumNode") {
 
     GIVEN("A set reduced") {
         auto a_ptr = graph.emplace_node<SetNode>(4);
-        auto r_ptr = graph.emplace_node<SumNode>(a_ptr);
+        auto r_ptr = graph.emplace_node<SumNode>(a_ptr, std::vector<ssize_t>{}, 0);
 
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);

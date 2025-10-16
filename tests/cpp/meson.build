@@ -32,6 +32,7 @@ tests_all = executable(
         'test_double_kahan.cpp',
         'test_fraction.cpp',
         'test_functional.cpp',
+        'test_functional_.cpp',
         'test_graph.cpp',
         'test_iterators.cpp',
         'test_simplex.cpp',
