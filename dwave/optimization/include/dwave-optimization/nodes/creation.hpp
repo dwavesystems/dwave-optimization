@@ -132,6 +132,15 @@ class ARangeNode : public ArrayOutputMixin<ArrayNode> {
     array_or_int stop_;
     array_or_int step_;
 
+    // Truth value of the statement `node has exactly one predecessor,
+    // predecessor defines stop_, and predecessor is a SizeNode`
+    bool one_pred_is_stop_is_sizenode_ = false;
+
+    SizeInfo calculate_sizeinfo_(const ssize_t start_low, const ssize_t start_high,
+                                 const ssize_t stop_low, const ssize_t stop_high,
+                                 const ssize_t step_low, const ssize_t step_high,
+                                 const ssize_t min_, const ssize_t max_) const;
+
     const std::pair<double, double> values_minmax_;
 };
 

@@ -15,6 +15,8 @@
 #include "dwave-optimization/nodes/creation.hpp"
 
 #include "_state.hpp"
+#include "dwave-optimization/array.hpp"
+#include "dwave-optimization/nodes/manipulation.hpp"
 
 namespace dwave::optimization {
 
@@ -149,6 +151,7 @@ std::pair<double, double> calculate_values_minmax(array_or_int start_, array_or_
 
         return std::pair<double, double>{start_low, high};
     }
+
     if (step_high < 0) {
         if (start_high <= stop_low) return std::pair<double, double>(0, 0);
 
@@ -198,6 +201,11 @@ ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ssize_t step)
           step_(step),
           values_minmax_(calculate_values_minmax(start, stop, step)) {
     add_predecessor(stop);
+    // Exactly one predecessor. Predecessor defines `stop`. Predecessor is a
+    // SizeNode
+    if (dynamic_cast<const SizeNode*>(stop) != nullptr) {
+        one_pred_is_stop_is_sizenode_ = true;
+    }
 }
 ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ArrayNode* step)
         : ArrayOutputMixin(range_shape(start, stop, step)),
@@ -333,8 +341,37 @@ ssize_t ARangeNode::size(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->size();
 }
 
-// There is a special case here that we're not considering, which is where
-// there is exactly one stop predecessor, and it's a SizeNode.
+SizeInfo ARangeNode::calculate_sizeinfo_(const ssize_t start_low, const ssize_t start_high,
+                                         const ssize_t stop_low, const ssize_t stop_high,
+                                         const ssize_t step_low, const ssize_t step_high,
+                                         const ssize_t min_, const ssize_t max_) const {
+    if (!one_pred_is_stop_is_sizenode_) {
+        return SizeInfo(this, min_, max_);
+    }
+
+    // Exactly one predecessor, it defines `stop_`, and it is a SizeNode.
+    assert(std::holds_alternative<const Array*>(stop_));
+    assert(step_low == step_high);
+    assert(start_low == start_high);
+    // The size of this node is a linear function of the size of the node its
+    // predecessor (the SizeNode defining `stop_`) is listening to.
+    const ArrayNode* sizenode_pred_ptr =
+            dynamic_cast<ArrayNode*>(predecessors()[0]->predecessors()[0]);
+
+    // SizeInfo is computed as follows (see SizeInfo docs):
+    // clamp(ceil(multiplier * array_ptr->size() + offset), min, max)
+    //
+    // To simplify the algebra, let x := sizenode_pred_ptr->size(),
+    // step := step_low == step_high, and start := start_low == start_high.
+    //
+    // The size of this node is clamp[ceil( (x - start) / step), min, max]
+    SizeInfo sizeinfo(sizenode_pred_ptr, min_, max_);
+    sizeinfo.multiplier = fraction(1, step_low);
+    sizeinfo.offset = fraction(-start_low, step_low);
+
+    return sizeinfo;
+}
+
 SizeInfo ARangeNode::sizeinfo() const {
     if (!dynamic()) return SizeInfo(size());
 
@@ -364,14 +401,16 @@ SizeInfo ARangeNode::sizeinfo() const {
                 0, std::ceil(static_cast<double>(stop_low - start_high) / step_high));
         const ssize_t max_ = std::max<ssize_t>(
                 min_, std::ceil(static_cast<double>(stop_high - start_low) / step_low));
-        return SizeInfo(this, min_, max_);
+        return calculate_sizeinfo_(start_low, start_high, stop_low, stop_high, step_low, step_high,
+                                   min_, max_);
     }
     if (step_high < 0) {
         const ssize_t min_ = std::max<ssize_t>(
                 0, std::ceil(static_cast<double>(stop_high - start_low) / step_high));
         const ssize_t max_ = std::max<ssize_t>(
                 min_, std::ceil(static_cast<double>(stop_low - start_high) / step_low));
-        return SizeInfo(this, min_, max_);
+        return calculate_sizeinfo_(start_low, start_high, stop_low, stop_high, step_low, step_high,
+                                   min_, max_);
     }
 
     assert(false && "unreachable");

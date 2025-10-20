@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    Make ARange symbol aware of the Size symbol 
