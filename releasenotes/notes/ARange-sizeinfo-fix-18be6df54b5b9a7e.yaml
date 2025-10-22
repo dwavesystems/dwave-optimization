@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fixed issue (#409) in how ARangeNode calculated its sizeinfo.min
+    and sizeinfo.max.

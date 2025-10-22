@@ -348,6 +348,10 @@ TEST_CASE("ARangeNode") {
             CHECK(arange_ptr->min() == 0);
             CHECK(arange_ptr->max() == 14);
         }
+
+        THEN("arange_ptr->sizeinfo() is correct") {
+            CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 2, 3));
+        }
     }
 
     GIVEN("start in {0, 1}, arange = ARangeNode(start, 15, 10)") {
@@ -362,6 +366,10 @@ TEST_CASE("ARangeNode") {
         THEN("The min/max are correct") {
             CHECK(arange_ptr->min() == 0);
             CHECK(arange_ptr->max() == 11);
+        }
+
+        THEN("arange_ptr->sizeinfo() is correct") {
+            CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 2, 2));
         }
     }
 
@@ -378,6 +386,10 @@ TEST_CASE("ARangeNode") {
             CHECK(arange_ptr->min() == 0);
             CHECK(arange_ptr->max() == 14);
         }
+
+        THEN("arange_ptr->sizeinfo() is correct") {
+            CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 2, 5));
+        }
     }
 
     GIVEN("start in {0, -1}, arange = ARangeNode(start, -15, -7)") {
@@ -391,6 +403,29 @@ TEST_CASE("ARangeNode") {
         THEN("The min/max are correct") {
             CHECK(arange_ptr->min() == -14);
             CHECK(arange_ptr->max() == 0);
+        }
+
+        THEN("arange_ptr->sizeinfo() is correct") {
+            CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 2, 3));
+        }
+    }
+
+    GIVEN("step in {-3, -4}, arange = ARangeNode(10, 5, step)") {
+        // arange(10, 5, -3) => [10, 7]
+        // arange(10, 5, -4) => [10, 6]
+
+        auto graph = Graph();
+        auto step_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -4, -3);
+
+        auto arange_ptr = graph.emplace_node<ARangeNode>(10, 5, step_ptr);
+
+        THEN("The min/max are correct") {
+            CHECK(arange_ptr->min() == 6);
+            CHECK(arange_ptr->max() == 10);
+        }
+
+        THEN("arange_ptr->sizeinfo() is correct") {
+            CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 2, 2));
         }
     }
 }
