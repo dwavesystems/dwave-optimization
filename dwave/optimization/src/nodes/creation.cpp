@@ -201,10 +201,9 @@ ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ssize_t step)
           step_(step),
           values_minmax_(calculate_values_minmax(start, stop, step)) {
     add_predecessor(stop);
-    // Exactly one predecessor. Predecessor defines `stop`. Predecessor is a
-    // SizeNode
+    // Exactly one predecessor, it defines `stop_`, and it is a SizeNode.
     if (dynamic_cast<const SizeNode*>(stop) != nullptr) {
-        one_pred_is_stop_is_sizenode_ = true;
+        one_predecessor_defines_stop_and_is_sizenode_ = true;
     }
 }
 ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ArrayNode* step)
@@ -342,10 +341,9 @@ ssize_t ARangeNode::size(const State& state) const {
 }
 
 SizeInfo ARangeNode::calculate_sizeinfo_(const ssize_t start_low, const ssize_t start_high,
-                                         const ssize_t stop_low, const ssize_t stop_high,
                                          const ssize_t step_low, const ssize_t step_high,
                                          const ssize_t min_, const ssize_t max_) const {
-    if (!one_pred_is_stop_is_sizenode_) {
+    if (!one_predecessor_defines_stop_and_is_sizenode_) {
         return SizeInfo(this, min_, max_);
     }
 
@@ -362,9 +360,9 @@ SizeInfo ARangeNode::calculate_sizeinfo_(const ssize_t start_low, const ssize_t 
     // clamp(ceil(multiplier * array_ptr->size() + offset), min, max)
     //
     // To simplify the algebra, let x := sizenode_pred_ptr->size(),
-    // step := step_low == step_high, and start := start_low == start_high.
+    // start := start_low == start_high, and step := step_low == step_high.
     //
-    // The size of this node is clamp[ceil( (x - start) / step), min, max]
+    // The size of this node is clamp[ceil{(x - start) / step}, min, max].
     SizeInfo sizeinfo(sizenode_pred_ptr, min_, max_);
     sizeinfo.multiplier = fraction(1, step_low);
     sizeinfo.offset = fraction(-start_low, step_low);
@@ -383,34 +381,33 @@ SizeInfo ARangeNode::sizeinfo() const {
     // checked on construction.
     assert(!(step_low <= 0 && step_high >= 0));
 
-    // The direction we're stepping determines the largest/smallest we can be
+    // The direction we're stepping determines the largest/smallest we can be.
     //
     // Given an interval: [a, b) and a step size s, arange(a, b, s) yields the
     // values: a, a+s, a+2s, ..., a+ks where k is the largest integer such that
     // a+ks < b => k < (b-a)/s. There are two cases.
-    // 1) If s does NOT divide (b-a), then k = floor((b-a)/s)
+    // 1) If s does NOT divide (b-a), then k = floor((b-a)/s).
     // 2) If s divides (b-a), then k = (b-a)/s - 1.
     //
     // For such a value k, arange(a, b, s) has (k + 1) values. Therefore,
-    // 1) If s does NOT divide (b-a), then k+1 = floor((b-a)/s)+1 = ceil((b-a)/s)
-    // 2) If s divides (b-a), then k+1 = (b-a)/s-1+1 = (b-a)/s = ceil((b-a)/s)
+    // 1) If s does NOT divide (b-a), then k+1 = floor((b-a)/s)+1 = ceil((b-a)/s).
+    // 2) If s divides (b-a), then k+1 = (b-a)/s-1+1 = (b-a)/s = ceil((b-a)/s).
     //
-    // Therefore, arange(a, b, s) defines ceil((b-a)/s) many values
+    // Therefore, arange(a, b, s) defines ceil((b-a)/s) many values.
     if (step_low > 0) {
         const ssize_t min_ = std::max<ssize_t>(
                 0, std::ceil(static_cast<double>(stop_low - start_high) / step_high));
         const ssize_t max_ = std::max<ssize_t>(
                 min_, std::ceil(static_cast<double>(stop_high - start_low) / step_low));
-        return calculate_sizeinfo_(start_low, start_high, stop_low, stop_high, step_low, step_high,
-                                   min_, max_);
+        return calculate_sizeinfo_(start_low, start_high, step_low, step_high, min_, max_);
     }
+
     if (step_high < 0) {
         const ssize_t min_ = std::max<ssize_t>(
                 0, std::ceil(static_cast<double>(stop_high - start_low) / step_high));
         const ssize_t max_ = std::max<ssize_t>(
                 min_, std::ceil(static_cast<double>(stop_low - start_high) / step_low));
-        return calculate_sizeinfo_(start_low, start_high, stop_low, stop_high, step_low, step_high,
-                                   min_, max_);
+        return calculate_sizeinfo_(start_low, start_high, step_low, step_high, min_, max_);
     }
 
     assert(false && "unreachable");
