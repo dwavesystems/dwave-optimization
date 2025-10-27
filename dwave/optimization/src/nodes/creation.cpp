@@ -346,16 +346,31 @@ SizeInfo ARangeNode::sizeinfo() const {
     // checked on construction.
     assert(!(step_low <= 0 && step_high >= 0));
 
-    // The direction that we're stepping determines the largest/smallest
-    // we can be
+    // The direction we're stepping determines the largest/smallest we can be
+    //
+    // Given an interval: [a, b) and a step size s, arange(a, b, s) yields the
+    // values: a, a+s, a+2s, ..., a+ks where k is the largest integer such that
+    // a+ks < b => k < (b-a)/s. There are two cases.
+    // 1) If s does NOT divide (b-a), then k = floor((b-a)/s)
+    // 2) If s divides (b-a), then k = (b-a)/s - 1.
+    //
+    // For such a value k, arange(a, b, s) has (k + 1) values. Therefore,
+    // 1) If s does NOT divide (b-a), then k+1 = floor((b-a)/s)+1 = ceil((b-a)/s)
+    // 2) If s divides (b-a), then k+1 = (b-a)/s-1+1 = (b-a)/s = ceil((b-a)/s)
+    //
+    // Therefore, arange(a, b, s) defines ceil((b-a)/s) many values
     if (step_low > 0) {
-        const ssize_t min_ = std::max<ssize_t>((stop_low - start_high) / step_high, 0);
-        const ssize_t max_ = std::max<ssize_t>((stop_high - start_low) / step_low, min_);
+        const ssize_t min_ = std::max<ssize_t>(
+                0, std::ceil(static_cast<double>(stop_low - start_high) / step_high));
+        const ssize_t max_ = std::max<ssize_t>(
+                min_, std::ceil(static_cast<double>(stop_high - start_low) / step_low));
         return SizeInfo(this, min_, max_);
     }
     if (step_high < 0) {
-        const ssize_t min_ = std::max<ssize_t>((stop_high - start_low) / step_high, 0);
-        const ssize_t max_ = std::max<ssize_t>((stop_low - start_high) / step_low, min_);
+        const ssize_t min_ = std::max<ssize_t>(
+                0, std::ceil(static_cast<double>(stop_high - start_low) / step_high));
+        const ssize_t max_ = std::max<ssize_t>(
+                min_, std::ceil(static_cast<double>(stop_low - start_high) / step_low));
         return SizeInfo(this, min_, max_);
     }
 
