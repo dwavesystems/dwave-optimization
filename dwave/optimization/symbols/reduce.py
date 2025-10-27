@@ -16,14 +16,19 @@ from dwave.optimization.symbols._reduce import _ReduceSymbol, _ReduceNodeType
 
 
 class All(_ReduceSymbol, node_type=_ReduceNodeType.All, default_initial=True):
-    """Tests whether all elements evaluate to True."""
+    """Tests whether all elements evaluate to True.
+
+    See Also:
+        :meth:`~dwave.optimization.model.ArraySymbol.all()` equivalent method.
+    """
     pass
 
 
 class Any(_ReduceSymbol, node_type=_ReduceNodeType.Any, default_initial=False):
     """Tests whether any elements evaluate to True.
 
-    .. versionadded:: 0.4.1
+    See Also:
+        :meth:`~dwave.optimization.model.ArraySymbol.any()` equivalent method.
     """
     pass
 

@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 from dwave.optimization.model import ArraySymbol as _ArraySymbol
+from dwave.optimization.utilities import _NoValueType
 
 class _ReduceNodeType:
     All: int
@@ -23,14 +24,19 @@ class _ReduceNodeType:
     Sum: int
 
 class _ReduceSymbol(_ArraySymbol):
-    def __init_subclass__(cls, /, node_type: _ReduceNodeType): ...
+    def __init_subclass__(
+        cls,
+        /,
+        node_type: _ReduceNodeType,
+        default_initial: None | float,
+    ): ...
 
     def __init__(
         self,
         array: _ArraySymbol,
         *,
         axis: None | int | tuple[int, ...],
-        initial: None | float,
+        initial: None | _NoValueType | float,
     ): ...
 
     @property

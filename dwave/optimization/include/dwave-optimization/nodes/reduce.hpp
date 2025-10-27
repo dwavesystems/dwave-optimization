@@ -41,6 +41,7 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
     ReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes,
                std::optional<double> initial = std::nullopt);
 
+    /// The axes over which the reduction is performed.
     std::span<const ssize_t> axes() const { return axes_; }
 
     /// @copydoc Array::buff()
@@ -74,17 +75,21 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
         return std::span<const Array* const, 1>(&array_ptr_, 1);
     }
 
+    /// @copydoc Node::propagate()
     void propagate(State& state) const override;
 
     /// @copydoc Node::revert()
     void revert(State& state) const override;
 
+    /// @copydoc Array::shape()
     using ArrayOutputMixin::shape;
     std::span<const ssize_t> shape(const State& state) const override;
 
+    /// @copydoc Array::size()
     using ArrayOutputMixin::size;
     ssize_t size(const State& state) const override;
 
+    /// @copydoc Array::size_diff()
     ssize_t size_diff(const State& state) const override;
 
     /// The initial value if one was provided.

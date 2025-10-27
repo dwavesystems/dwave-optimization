@@ -3466,11 +3466,23 @@ class TestSum(utils.ReduceTests):
     def test_empty(self):
         model = Model()
         empty = model.constant([]).sum()
+
+        with self.assertRaises(ValueError):
+            model.constant([]).sum(initial=None)
+
         model.lock()
         model.states.resize(1)
 
         self.assertEqual(empty.state(), 0)
         self.assertEqual(empty.state(), np.asarray([]).sum())  # confirm consistency with NumPy
+
+    def test_exceptions(self):
+        model = Model()
+
+        with self.assertRaises(ValueError):
+            model.constant(np.ones((5, 3))).sum(axis=100)
+        with self.assertRaises(ValueError):
+            model.constant(np.ones((5, 3))).sum(axis=-100)
 
     def test_state(self):
         model = Model()
