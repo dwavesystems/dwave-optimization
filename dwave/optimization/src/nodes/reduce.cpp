@@ -30,9 +30,8 @@ namespace dwave::optimization {
 template <class BinaryOp>
 class ReduceNodeData : public NodeStateData {
  public:
+    // Some type information about our function
     using ufunc_type = functional_::std_to_ufunc<BinaryOp>::type;
-
-    // Pull this into the namespace for convenience.
     using reduction_type = ufunc_type::reduction_type;
     using result_type = ufunc_type::result_type;
 
@@ -42,8 +41,7 @@ class ReduceNodeData : public NodeStateData {
         updated,    // has been updated and holds the correct value
     };
 
-    ReduceNodeData(reduction_type reduction) : ReduceNodeData(std::vector{reduction}) {}
-
+    // Given a vector of reductions, construct the state of the array.
     ReduceNodeData(std::vector<reduction_type>&& reductions)
             : reductions_(std::move(reductions)),
               flags_(reductions_.size(), ReductionFlag::unchanged) {
@@ -54,84 +52,109 @@ class ReduceNodeData : public NodeStateData {
 
     ReduceNodeData(std::vector<reduction_type>&& reductions, std::span<const ssize_t> shape)
             : ReduceNodeData(std::move(reductions)) {
-        shape_info_ = shape_info_type(reductions_.size(), shape);
+        shape_info_.emplace(shape_info_type(reductions_.size(), shape));
     }
 
     // Add a value to the reduction at the given `index`.
     // `index` can be one-past-the-end in which case a new reduction
     // is appended.
     void add_to_reduction(ssize_t index, double value) {
-        static_assert(decltype(ufunc)::associative);  // Otherwise this function doesn't make sense
+        // Make sure this method is defined for our ufunc
+        static_assert(decltype(ufunc)::associative);
 
-        assert(not std::isnan(value));  // Not trying to add a placement
-        assert(0 <= index);             // Index must be non-negative
-        assert(static_cast<std::size_t>(index) <= reductions_.size());  // one-past-end is OK
-        assert(reductions_.size() == reductions_.size());
+        // Check that we're not trying to add a removal
+        assert(not std::isnan(value));
+
+        // And that we're within bounds. One past the end is OK
+        assert(0 <= index and static_cast<std::size_t>(index) <= reductions_.size());
 
         if (static_cast<std::size_t>(index) == reductions_.size()) {
-            return append_reduction(value);
+            // If we're one-past-end then it's an append (which even rhymes!)
+            append_reduction(value);
+        } else {
+            // Otherwise an update
+            update_reduction_(index, ufunc(reductions_[index], value));
         }
-
-        update_reduction_(index, ufunc(reductions_[index], value));
     }
 
+    // Append a new reduction value, thereby extending the length of the array
     void append_reduction(reduction_type reduction) {
         reductions_.emplace_back(reduction);
         flags_.emplace_back(ReductionFlag::updated);
+        // in this case there is no old value to save to reductions_diff_
     }
 
+    // Pointer to the beginning of the buffer. `update_reduction()` must be
+    // called to incorporate changes!
     const double* buff() const { return buffer_.data(); }
 
+    // Commit the changes to the buffer
     void commit() {
-        // flip any flags back to unchanged
-        // Should we do this as part of prepare_diff?
-        flags_.clear();
-        flags_.resize(reductions_.size(), ReductionFlag::unchanged);
+        // Confirm that all of our flags have been reset
+        assert(std::ranges::all_of(flags_, [](const ReductionFlag& flag) {
+            return flag == ReductionFlag::unchanged;
+        }));
+
+        // Confirm that our reductions and our buffer are consistent
+        assert(reductions_.size() == buffer_.size());
 
         // Clear the diffs
         diff_.clear();
         reductions_diff_.clear();
 
         // Update the shape_info to match the current state
-        if (shape_info_) shape_info_->previous_size = buffer_.size();
+        if (shape_info_) shape_info_->commit();
     }
 
+    // The current buffer diff. `update_reduction()` must be called to
+    // incorporate changes!
     std::span<const Update> diff() const { return diff_; }
 
+    // Remove a reduction
     void pop_reduction() {
         assert(reductions_.size() > 0);
+        assert(reductions_.size() == flags_.size());
 
+        // The index we're popping
         const ssize_t index = reductions_.size() - 1;
 
-        reductions_diff_.emplace_back(index, reductions_[index]);
+        // If we haven't already changed the value at this index, we go ahead
+        // and save the old value for later reverting
+        if (flags_[index] == ReductionFlag::unchanged) {
+            reductions_diff_.emplace_back(index, reductions_[index]);
+        }
+
         reductions_.pop_back();
         flags_.pop_back();
     }
 
+    // Synchronize the buffer with the reductions array in preperation for
+    // propagation
     void prepare_diff(std::function<reduction_type(ssize_t)> reduce) {
         while (buffer_.size() > reductions_.size()) {
             diff_.emplace_back(Update::removal(buffer_.size() - 1, buffer_.back()));
             buffer_.pop_back();
+        }
+        while (buffer_.size() < reductions_.size()) {
+            // we put Update::nothing here so that subequent Updates will be
+            // interpreted (correctly) as placements
+            buffer_.emplace_back(Update::nothing);
         }
 
         for (ssize_t index = 0, size = buffer_.size(); index < size; ++index) {
             double value;
 
             switch (flags_[index]) {
+                case ReductionFlag::invalid:
+                    reductions_[index] = reduce(index);
+                    [[fallthrough]];
                 case ReductionFlag::updated:
                     value = static_cast<result_type>(reductions_[index]);
                     if (buffer_[index] != value) {
                         diff_.emplace_back(index, buffer_[index], value);
                         buffer_[index] = value;
                     }
-                    break;
-                case ReductionFlag::invalid:
-                    reductions_[index] = reduce(index);
-                    value = static_cast<result_type>(reductions_[index]);
-                    if (buffer_[index] != value) {
-                        diff_.emplace_back(index, buffer_[index], value);
-                        buffer_[index] = value;
-                    }
+                    flags_[index] = ReductionFlag::unchanged;
                     break;
                 case ReductionFlag::unchanged:
                     // Nothing to do!
@@ -139,32 +162,17 @@ class ReduceNodeData : public NodeStateData {
             }
         }
 
-        while (buffer_.size() < reductions_.size()) {
-            const ssize_t index = buffer_.size();
-            switch (flags_[index]) {
-                case ReductionFlag::updated:
-                    buffer_.emplace_back(static_cast<result_type>(reductions_[index]));
-                    diff_.emplace_back(Update::placement(index, buffer_[index]));
-                    break;
-                case ReductionFlag::unchanged:
-                    assert(false);
-                case ReductionFlag::invalid:
-                    assert(false);
-            }
-        }
-
-        if (shape_info_) {
-            shape_info_->shape[0] = buffer_.size() / shape_info_->size_divisor;
-        }
+        if (shape_info_) shape_info_->update(buffer_.size());
     }
 
+    // Remove a value from a reduction
     void remove_from_reduction(ssize_t index, double value) {
         // Otherwise this function implementation doesn't make sense
         static_assert(decltype(ufunc)::associative);
         static_assert(decltype(ufunc)::invertible);
 
-        assert(not std::isnan(value));  // Not trying to remove a removal
-        assert(0 <= index && static_cast<std::size_t>(index) < buffer_.size());
+        assert(not std::isnan(value));  // Not trying to remove a placement
+        assert(0 <= index and static_cast<std::size_t>(index) < buffer_.size());
 
         // Then try to remove the value
         auto inverse = ufunc.inverse(reductions_[index], value);
@@ -177,27 +185,25 @@ class ReduceNodeData : public NodeStateData {
         update_reduction_(index, std::move(inverse.value()));
     }
 
+    // Revert any changes that have been made to the buffer
     void revert() {
-        // flip any flags back to unchanged
-        // Should we do this as part of prepare_diff?
-        flags_.clear();
-        flags_.resize(reductions_.size(), ReductionFlag::unchanged);
+        // Confirm that all of our flags have been reset
+        assert(std::ranges::all_of(flags_, [](const ReductionFlag& flag) {
+            return flag == ReductionFlag::unchanged;
+        }));
 
+        // First revert changes to the reductions_
+        if (shape_info_) reductions_.resize(shape_info_->previous_size, reduction_type(0));
         // These should be unique, but might as well do it in reverse just in case
         for (const auto& [index, old_reduction] : reductions_diff_ | std::views::reverse) {
-            assert(0 <= index && static_cast<std::size_t>(index) <= reductions_.size());
-
-            if (static_cast<std::size_t>(index) == reductions_.size()) {
-                reductions_.emplace_back(old_reduction);
-            } else {
-                reductions_[index] = old_reduction;
-            }
+            assert(0 <= index and static_cast<std::size_t>(index) < reductions_.size());
+            reductions_[index] = old_reduction;
         }
         reductions_diff_.clear();
 
         // likewise these should be unique
         for (const auto& [index, old_value, _] : diff_ | std::views::reverse) {
-            assert(0 <= index && static_cast<std::size_t>(index) <= buffer_.size());
+            assert(0 <= index and static_cast<std::size_t>(index) <= buffer_.size());
             if (static_cast<std::size_t>(index) == buffer_.size()) {
                 buffer_.emplace_back(old_value);
             } else {
@@ -206,28 +212,26 @@ class ReduceNodeData : public NodeStateData {
         }
         diff_.clear();
 
-        if (shape_info_) {
-            if (static_cast<std::size_t>(shape_info_->previous_size) < buffer_.size()) {
-                assert(false && "not yet implemeted");
-            }
-
-            shape_info_->previous_size = buffer_.size();
-            shape_info_->shape[0] = buffer_.size() / shape_info_->size_divisor;
-        }
+        // And finally update our shape
+        if (shape_info_) shape_info_->revert();
     }
 
+    // The current shape of the array.
     std::span<const ssize_t> shape() const {
         assert(shape_info_);
         return shape_info_->shape;
     }
 
+    // The current size of the array
     ssize_t size() const { return buffer_.size(); }
 
+    // The change in size of the array
     ssize_t size_diff() const {
         if (!shape_info_) return 0;
         return static_cast<ssize_t>(buffer_.size()) - shape_info_->previous_size;
     }
 
+    // Update a reduction by removing `from` and then adding `to`.
     void update_reduction(ssize_t index, double from, double to) {
         // Otherwise this function implementation doesn't make sense
         static_assert(decltype(ufunc)::associative);
@@ -239,7 +243,7 @@ class ReduceNodeData : public NodeStateData {
         // Some input checking
         assert(not std::isnan(from));  // Not trying to remove a removal
         assert(not std::isnan(to));    // Not trying to add a placement
-        assert(0 <= index && static_cast<std::size_t>(index) < reductions_.size());
+        assert(0 <= index and static_cast<std::size_t>(index) < reductions_.size());
 
         // If we've already marked this location as invalid, then nothing to do
         if (flags_[index] == ReductionFlag::invalid) return;
@@ -267,14 +271,15 @@ class ReduceNodeData : public NodeStateData {
  private:
     void update_reduction_(ssize_t index, reduction_type reduction) {
         assert(flags_.size() == reductions_.size());
-        assert(0 <= index && static_cast<std::size_t>(index) < reductions_.size());
+        assert(0 <= index and static_cast<std::size_t>(index) < reductions_.size());
 
         // No change so don't save anything
         if (reductions_[index] == reduction) return;
 
         switch (flags_[index]) {
             case ReductionFlag::invalid:
-                assert(false && "not yet implemeted");
+                // it's already invalid, so nothing to do
+                break;
             case ReductionFlag::unchanged:
                 // We haven't previously made any changes to this location, so we
                 // save the old value, mark ourselves as updated, and then
@@ -292,15 +297,25 @@ class ReduceNodeData : public NodeStateData {
 
     ufunc_type ufunc;
 
-    // A vector of reductions
+    // A vector of reductions. `reduction_type` might be a double, or some other
+    // type that tracks the information needed for us to invert reductions.
     std::vector<reduction_type> reductions_;
+
+    // For each reduction, we also track a flag indicating whether the reduction
+    // has changed and/or whether it needs to be recalculated.
     std::vector<ReductionFlag> flags_;
+
+    // The buffer we expose to the other nodes
     std::vector<double> buffer_;
 
+    // We track the original states of the reduction to support `revert()`
     std::vector<std::tuple<ssize_t, reduction_type>> reductions_diff_ = {};
+
+    // The diff we expose to the user
     std::vector<Update> diff_ = {};
 
     // Dynamic nodes need us to hold some information about their shape etc
+    // so we use this struct to (optionally) track that info.
     struct shape_info_type {
         shape_info_type() = delete;
 
@@ -312,11 +327,31 @@ class ReduceNodeData : public NodeStateData {
             this->shape[0] = size / size_divisor;
         }
 
+        void commit() {
+            assert(shape.size());
+            previous_size = shape[0] * size_divisor;
+        }
+
+        void revert() {
+            assert(shape.size());
+            assert(previous_size % size_divisor == 0);
+            shape[0] = previous_size / size_divisor;
+        }
+
+        void update(ssize_t size) {
+            assert(shape.size());
+            assert(size % size_divisor == 0);
+            shape[0] = size / size_divisor;
+        }
+
+        // The current shape of the array
         std::vector<ssize_t> shape;
 
-        // relationship between the size of the buffer and the size of the first dimension
-        ssize_t size_divisor;
+        // The relationship between the size of the buffer and the size of the
+        // first dimension.
+        const ssize_t size_divisor;
 
+        // The previous size of the array.
         ssize_t previous_size;
     };
     std::optional<shape_info_type> shape_info_;
@@ -380,7 +415,7 @@ std::vector<ssize_t> normalize_axes(const ArrayNode* array_ptr, std::span<const 
     // First, check bounds and make nonnegative
     for (ssize_t& dim : normalized) {
         // NumPy raises `AxisError: axis -5 is out of bounds for array of dimension 2`
-        if (dim < -ndim || ndim <= dim) {
+        if (dim < -ndim or ndim <= dim) {
             throw std::invalid_argument("axis " + std::to_string(dim) +
                                         " is out of bounds for array of dimension " +
                                         std::to_string(ndim));
@@ -436,7 +471,7 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
     const auto array_bounds = ValuesInfo(array_ptr);
 
     // The easy case is that the size of each reduction is fixed.
-    if (not array_ptr->dynamic() or (axes.size() > 0 && axes[0] != 0)) {
+    if (not array_ptr->dynamic() or (axes.size() > 0 and axes[0] != 0)) {
         const ssize_t reduction_size =
                 axes.size() ? product(keep_axes(array_ptr->shape(), axes)) : array_ptr->size();
         assert(reduction_size >= 0);
@@ -498,10 +533,7 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
     // with bounds.
     //
 
-    if (max_size.has_value() && *max_size == 0) {
-        // TODO Is it even possible to get here? Needs testing
-        assert(false && "not yet implemeted");
-    }
+    assert(not (max_size.has_value() and *max_size == 0));  // shouldn't be possible to get here
 
     // Get the bounds at each of the smallest and largest sizes we can be
     ValuesInfo min_bounds = ufunc.result_bounds(array_bounds, std::max<ssize_t>(min_size, 1));
@@ -536,12 +568,6 @@ ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> 
           array_ptr_(array_ptr),
           axes_(normalize_axes(array_ptr, axes)),
           values_info_(values_info<BinaryOp>(array_ptr_, axes_, initial)) {
-    // surely there is more I need to do here
-
-    // Handle sizeinfo?
-
-    // Handle values_info
-
     add_predecessor(array_ptr);
 }
 
@@ -605,7 +631,7 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
     auto* const state_ptr = data_ptr<ReduceNodeData<BinaryOp>>(state);
 
     // We are reducing over all axes, so this is nice and simple
-    if (axes_.empty() || axes_.size() == static_cast<std::size_t>(this->ndim())) {
+    if (axes_.empty() or axes_.size() == static_cast<std::size_t>(this->ndim())) {
         for (const Update& update : array_ptr_->diff(state)) {
             if (update.placed()) {
                 state_ptr->add_to_reduction(0, update.value);
@@ -626,7 +652,7 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
     auto array_shape = array_ptr_->shape();
     auto reduce_shape = this->shape();
 
-    if (this->dynamic() && array_ptr_->size_diff(state) > 0 && initial) {
+    if (this->dynamic() and array_ptr_->size_diff(state) > 0 and initial) {
         // Make sure we're including the initial values
         const ssize_t size_diff = array_ptr_->size_diff(state);
 
@@ -657,7 +683,7 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
         }
     }
 
-    if (this->dynamic() && array_ptr_->size_diff(state) < 0) {
+    if (this->dynamic() and array_ptr_->size_diff(state) < 0) {
         const ssize_t size_diff = array_ptr_->size_diff(state);
 
         const auto subspace_shape = keep_axes(array_ptr_->shape(state), axes_);
@@ -677,7 +703,7 @@ auto ReduceNode<BinaryOp>::reduce_(const State& state, const ssize_t index) cons
     typename functional_::std_to_ufunc<BinaryOp>::type ufunc;
 
     // Everything is being reduced
-    if (axes_.empty() || axes_.size() == static_cast<std::size_t>(array_ptr_->ndim())) {
+    if (axes_.empty() or axes_.size() == static_cast<std::size_t>(array_ptr_->ndim())) {
         assert(index == 0);
         return ufunc.reduce(array_ptr_->view(state), initial);
     }
