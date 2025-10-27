@@ -34,6 +34,7 @@ from dwave.optimization.libcpp.nodes.reduce cimport (
     ProdNode,
     SumNode,
 )
+from dwave.optimization.utilities import _NoValue
 
 
 # We need to be able to expose the available node types to the Python level,
@@ -48,7 +49,7 @@ cpdef enum _ReduceNodeType:
 
 
 class _ReduceSymbol(ArraySymbol):
-    def __init_subclass__(cls, /, _ReduceNodeType node_type):
+    def __init_subclass__(cls, /, _ReduceNodeType node_type, default_initial=None):
         if node_type is _ReduceNodeType.All:
             _register(cls, typeid(AllNode))
         elif node_type is _ReduceNodeType.Any:
@@ -65,8 +66,9 @@ class _ReduceSymbol(ArraySymbol):
             raise RuntimeError(f"unexpected _ReduceNodeType: {<object>node_type!r}")
 
         cls._node_type = node_type
+        cls._default_initial = default_initial
 
-    def __init__(self, ArraySymbol array, *, axis=None, initial=None):
+    def __init__(self, ArraySymbol array, *, axis=None, initial=_NoValue):
         cdef _Graph model = array.model
 
         # Convert the kwargs into something that can be understood by C++
@@ -80,7 +82,12 @@ class _ReduceSymbol(ArraySymbol):
             cppaxes = list(axis)
 
         cdef optional[double] cppinitial
-        if initial is not None:
+        if initial is None:
+            pass  # nothing to change
+        elif initial is _NoValue:
+            if self._default_initial is not None:
+                cppinitial = <double?>self._default_initial
+        else:
             cppinitial = <double?>initial
 
         cdef _ReduceNodeType node_type = self._node_type

@@ -39,7 +39,7 @@ from dwave.optimization.libcpp.array cimport Array as cppArray
 from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
-from dwave.optimization.utilities import _file_object_arg, _lock
+from dwave.optimization.utilities import _file_object_arg, _lock, _NoValue
 
 __all__ = []
 
@@ -443,6 +443,8 @@ cdef class _Graph:
 
         .. _NPY format: https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html
         """
+        from dwave.optimization.symbols.reduce import Prod, Sum  # see note below
+
         version, model_info = self._into_file_header(
             file,
             version=version,
@@ -469,6 +471,16 @@ cdef class _Graph:
             # On the first pass we made a nodetypes.txt file that has the node names
             with zf.open("nodetypes.txt", "w", force_zip64=True) as f:
                 for node in itertools.islice(self.iter_symbols(), 0, stop):
+                    # There is a backwards compatibility break here in 0.6.8 where
+                    # we unified PartialReduce and Reduce. For compatibility going
+                    # backwards though, we want to use the PartialReduce alias
+                    if isinstance(node, Prod) and node.axes():
+                        f.write(b"PartialProd\n")
+                        continue
+                    if isinstance(node, Sum) and node.axes():
+                        f.write(b"PartialSum\n")
+                        continue
+
                     f.write(type(node).__name__.encode("UTF-8"))
                     f.write(b"\n")
 
@@ -1635,13 +1647,13 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Divide  # avoid circular import
         return Divide(self, rhs)
 
-    def all(self, *, axis=None, initial=True):
+    def all(self, *, axis=None, initial=_NoValue):
         """Create an :class:`~dwave.optimization.symbols.All` symbol.
 
         The new symbol returns True when all elements evaluate to True.
         """
         from dwave.optimization.symbols import All  # avoid circular import
-        return All(self, axis=axis, initial=initial)
+        return All(self, axis=axis, initial=_NoValue)
 
     def any(self, *, axis=None, initial=False):
         """Create an :class:`~dwave.optimization.symbols.Any` symbol.
@@ -1651,7 +1663,7 @@ cdef class ArraySymbol(Symbol):
         .. versionadded:: 0.4.1
         """
         from dwave.optimization.symbols import Any  # avoid circular import
-        return Any(self, axis=axis, initial=initial)
+        return Any(self, axis=axis, initial=_NoValue)
 
     def copy(self):
         """Return an array symbol that is a copy of the array.
@@ -1671,7 +1683,7 @@ cdef class ArraySymbol(Symbol):
         """
         return self.reshape(-1)
 
-    def max(self, *, axis=None, initial=None):
+    def max(self, *, axis=None, initial=_NoValue):
         """Create a :class:`~dwave.optimization.symbols.Max` symbol.
 
         The new symbol returns the maximum value in its elements.
@@ -1719,7 +1731,7 @@ cdef class ArraySymbol(Symbol):
 
         return MAYBE
 
-    def min(self, *, axis=None, initial=None):
+    def min(self, *, axis=None, initial=_NoValue):
         """Create a :class:`~dwave.optimization.symbols.Min` symbol.
 
         The new symbol returns the minimum value in its elements.
@@ -1751,7 +1763,7 @@ cdef class ArraySymbol(Symbol):
         """Return the number of dimensions for a symbol."""
         return self.array_ptr.ndim()
 
-    def prod(self, *, axis=None, initial=1):
+    def prod(self, *, axis=None, initial=_NoValue):
         """Create a :class:`~dwave.optimization.symbols.Prod` symbol.
 
         The new symbol returns the product of its elements.
@@ -2116,7 +2128,7 @@ cdef class ArraySymbol(Symbol):
         strides = self.array_ptr.strides()
         return tuple(strides[i] for i in range(strides.size()))
 
-    def sum(self, *, axis=None, initial=0):
+    def sum(self, *, axis=None, initial=_NoValue):
         """Create a :class:`~dwave.optimization.symbols.Sum` symbol.
 
         The new symbol returns the sum of its elements.

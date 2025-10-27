@@ -15,12 +15,12 @@
 from dwave.optimization.symbols._reduce import _ReduceSymbol, _ReduceNodeType
 
 
-class All(_ReduceSymbol, node_type=_ReduceNodeType.All):
+class All(_ReduceSymbol, node_type=_ReduceNodeType.All, default_initial=True):
     """Tests whether all elements evaluate to True."""
     pass
 
 
-class Any(_ReduceSymbol, node_type=_ReduceNodeType.Any):
+class Any(_ReduceSymbol, node_type=_ReduceNodeType.Any, default_initial=False):
     """Tests whether any elements evaluate to True.
 
     .. versionadded:: 0.4.1
@@ -46,7 +46,7 @@ class Min(_ReduceSymbol, node_type=_ReduceNodeType.Min):
     pass
 
 
-class Prod(_ReduceSymbol, node_type=_ReduceNodeType.Prod):
+class Prod(_ReduceSymbol, node_type=_ReduceNodeType.Prod, default_initial=1):
     """Product of the elements of a symbol.
 
     See also:
@@ -55,7 +55,7 @@ class Prod(_ReduceSymbol, node_type=_ReduceNodeType.Prod):
     pass
 
 
-class Sum(_ReduceSymbol, node_type=_ReduceNodeType.Sum):
+class Sum(_ReduceSymbol, node_type=_ReduceNodeType.Sum, default_initial=0):
     """Sum of the elements of a symbol.
 
     See Also:
