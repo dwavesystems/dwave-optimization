@@ -112,7 +112,7 @@ class ARangeNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t size(const State& state) const override;
 
     /// @copydoc Array::sizeinfo()
-    SizeInfo sizeinfo() const override;
+    SizeInfo sizeinfo() const override { return sizeinfo_; }
 
     /// @copydoc Array::size_diff()
     ssize_t size_diff(const State& state) const override;
@@ -127,19 +127,12 @@ class ARangeNode : public ArrayOutputMixin<ArrayNode> {
     array_or_int step() const { return step_; }
 
  private:
-    array_or_int start_;
-    array_or_int stop_;
-    array_or_int step_;
-
-    // Truth value of the statement `node has exactly one predecessor,
-    // predecessor defines stop_ and is a SizeNode`
-    bool one_predecessor_defines_stop_and_is_sizenode_ = false;
-
-    SizeInfo calculate_sizeinfo_(const ssize_t start_low, const ssize_t start_high,
-                                 const ssize_t step_low, const ssize_t step_high,
-                                 const ssize_t min_, const ssize_t max_) const;
+    const array_or_int start_;
+    const array_or_int stop_;
+    const array_or_int step_;
 
     const std::pair<double, double> values_minmax_;
+    const SizeInfo sizeinfo_;
 };
 
 }  // namespace dwave::optimization
