@@ -493,6 +493,20 @@ class TestARange(utils.SymbolTests):
                 with model.lock():
                     np.testing.assert_array_equal(ar.state(), np.arange(1, 5, 1))
 
+    def test_sizenode_awareness(self):
+        model = Model()
+        set = model.set(3)
+        indices = arange(set.size())
+        array = model.constant([-1] * 3)
+        # requires that `indices` knows that it gets it's size from `set`
+        array = put(array, indices, set)
+
+        # not necessary for this test but helpful for clarity
+        with model.lock():
+            model.states.resize(1)
+            set.set_state(0, [2])
+            np.testing.assert_array_equal(array.state(0), [2, -1, -1])
+
 
 class TestArgSort(utils.SymbolTests):
     def generate_symbols(self):

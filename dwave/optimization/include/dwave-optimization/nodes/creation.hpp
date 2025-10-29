@@ -14,7 +14,6 @@
 
 #pragma once
 
-#include <optional>
 #include <utility>
 #include <variant>
 
@@ -113,7 +112,7 @@ class ARangeNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t size(const State& state) const override;
 
     /// @copydoc Array::sizeinfo()
-    SizeInfo sizeinfo() const override;
+    SizeInfo sizeinfo() const override { return sizeinfo_; }
 
     /// @copydoc Array::size_diff()
     ssize_t size_diff(const State& state) const override;
@@ -128,11 +127,12 @@ class ARangeNode : public ArrayOutputMixin<ArrayNode> {
     array_or_int step() const { return step_; }
 
  private:
-    array_or_int start_;
-    array_or_int stop_;
-    array_or_int step_;
+    const array_or_int start_;
+    const array_or_int stop_;
+    const array_or_int step_;
 
     const std::pair<double, double> values_minmax_;
+    const SizeInfo sizeinfo_;
 };
 
 }  // namespace dwave::optimization

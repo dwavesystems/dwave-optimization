@@ -15,7 +15,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
 
+#include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/creation.hpp"
+#include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
 
@@ -348,6 +350,10 @@ TEST_CASE("ARangeNode") {
             CHECK(arange_ptr->min() == 0);
             CHECK(arange_ptr->max() == 14);
         }
+
+        THEN("arange_ptr->sizeinfo() is correct") {
+            CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 2, 3));
+        }
     }
 
     GIVEN("start in {0, 1}, arange = ARangeNode(start, 15, 10)") {
@@ -362,6 +368,10 @@ TEST_CASE("ARangeNode") {
         THEN("The min/max are correct") {
             CHECK(arange_ptr->min() == 0);
             CHECK(arange_ptr->max() == 11);
+        }
+
+        THEN("arange_ptr->sizeinfo() is correct") {
+            CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 2, 2));
         }
     }
 
@@ -378,6 +388,10 @@ TEST_CASE("ARangeNode") {
             CHECK(arange_ptr->min() == 0);
             CHECK(arange_ptr->max() == 14);
         }
+
+        THEN("arange_ptr->sizeinfo() is correct") {
+            CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 2, 5));
+        }
     }
 
     GIVEN("start in {0, -1}, arange = ARangeNode(start, -15, -7)") {
@@ -391,6 +405,165 @@ TEST_CASE("ARangeNode") {
         THEN("The min/max are correct") {
             CHECK(arange_ptr->min() == -14);
             CHECK(arange_ptr->max() == 0);
+        }
+
+        THEN("arange_ptr->sizeinfo() is correct") {
+            CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 2, 3));
+        }
+    }
+
+    GIVEN("step in {-3, -4}, arange = ARangeNode(10, 5, step)") {
+        // arange(10, 5, -3) => [10, 7]
+        // arange(10, 5, -4) => [10, 6]
+
+        auto graph = Graph();
+        auto step_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -4, -3);
+
+        auto arange_ptr = graph.emplace_node<ARangeNode>(10, 5, step_ptr);
+
+        THEN("The min/max are correct") {
+            CHECK(arange_ptr->min() == 6);
+            CHECK(arange_ptr->max() == 10);
+        }
+
+        THEN("arange_ptr->sizeinfo() is correct") {
+            CHECK(arange_ptr->sizeinfo() == SizeInfo(arange_ptr, 2, 2));
+        }
+    }
+
+    GIVEN("set = SetNode(5), size = SizeNode(i), arange = ARangeNode(size)") {
+        // arange(0) => []
+        // arange(5) => [0, 1, 2, 3, 4]
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(5);
+        auto size_ptr = graph.emplace_node<SizeNode>(set_ptr);
+        auto arange_ptr = graph.emplace_node<ARangeNode>(size_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(arange_ptr);
+
+        THEN("Basic information about the ARangeNode is correct") {
+            CHECK(arange_ptr->dynamic());
+            CHECK(arange_ptr->size() == -1);
+            CHECK(arange_ptr->min() == 0);
+            CHECK(arange_ptr->max() == 4);
+            CHECK(arange_ptr->sizeinfo() == SizeInfo(set_ptr, 0, 5));
+        }
+
+        THEN("We initialize set = {0, 1, 2}") {
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {0, 1, 2});
+            graph.initialize_state(state);
+
+            CHECK(arange_ptr->size(state) == 3);
+            CHECK_THAT(arange_ptr->view(state), RangeEquals({0, 1, 2}));
+        }
+    }
+
+    GIVEN("set = SetNode(10), size = SizeNode(i), arange = ARangeNode(3, size, 2)") {
+        // arange(3, 0, 2) => []
+        // arange(3, 10, 2) => [3, 5, 7, 9]
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto size_ptr = graph.emplace_node<SizeNode>(set_ptr);
+        auto arange_ptr = graph.emplace_node<ARangeNode>(3, size_ptr, 2);
+
+        graph.emplace_node<ArrayValidationNode>(arange_ptr);
+
+        THEN("Basic information about the ARangeNode is correct") {
+            CHECK(arange_ptr->dynamic());
+            CHECK(arange_ptr->size() == -1);
+            CHECK(arange_ptr->min() == 3);
+            CHECK(arange_ptr->max() == 9);
+
+            const SizeInfo sizeinfo = arange_ptr->sizeinfo();
+            CHECK(sizeinfo.array_ptr == set_ptr);
+            CHECK(sizeinfo.max.has_value());
+            CHECK(sizeinfo.max == 4);
+            CHECK(sizeinfo.min.has_value());
+            CHECK(sizeinfo.min == 0);
+            CHECK(sizeinfo.multiplier == fraction(1, 2));
+            CHECK(sizeinfo.offset == fraction(-3, 2));
+        }
+
+        THEN("We initialize set = {0, 1, 2, 3, 4, 5, 6, 7}") {
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5, 6, 7});
+            graph.initialize_state(state);
+
+            CHECK(arange_ptr->size(state) == 3);
+            CHECK_THAT(arange_ptr->view(state), RangeEquals({3, 5, 7}));
+        }
+    }
+
+    GIVEN("set = SetNode(11), size = SizeNode(i), arange = ARangeNode(-2, size, 5)") {
+        // arange(-2, 0, 5) => [-2]
+        // arange(-2, 11, 5) => [-2, 3, 8]
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(11);
+        auto size_ptr = graph.emplace_node<SizeNode>(set_ptr);
+        auto arange_ptr = graph.emplace_node<ARangeNode>(-2, size_ptr, 5);
+
+        graph.emplace_node<ArrayValidationNode>(arange_ptr);
+
+        THEN("Basic information about the ARangeNode is correct") {
+            CHECK(arange_ptr->dynamic());
+            CHECK(arange_ptr->size() == -1);
+            CHECK(arange_ptr->min() == -2);
+            CHECK(arange_ptr->max() == 8);
+
+            const SizeInfo sizeinfo = arange_ptr->sizeinfo();
+            CHECK(sizeinfo.array_ptr == set_ptr);
+            CHECK(sizeinfo.max.has_value());
+            CHECK(sizeinfo.max == 3);
+            CHECK(sizeinfo.min.has_value());
+            CHECK(sizeinfo.min == 1);
+            CHECK(sizeinfo.multiplier == fraction(1, 5));
+            CHECK(sizeinfo.offset == fraction(2, 5));
+        }
+
+        THEN("We initialize set = {3, 6, 9, 10}") {
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {3, 6, 9, 10});
+            graph.initialize_state(state);
+
+            CHECK(arange_ptr->size(state) == 2);
+            CHECK_THAT(arange_ptr->view(state), RangeEquals({-2, 3}));
+        }
+    }
+
+    GIVEN("set = SetNode(20), size = SizeNode(i), arange = ARangeNode(17, size, -3)") {
+        // arange(17, 0, -3) => [17, 14, 11, 8, 5, 2]
+        // arange(17, 20, -3) => []
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(20);
+        auto size_ptr = graph.emplace_node<SizeNode>(set_ptr);
+        auto arange_ptr = graph.emplace_node<ARangeNode>(17, size_ptr, -3);
+
+        graph.emplace_node<ArrayValidationNode>(arange_ptr);
+
+        THEN("Basic information about the ARangeNode is correct") {
+            CHECK(arange_ptr->dynamic());
+            CHECK(arange_ptr->size() == -1);
+            CHECK(arange_ptr->min() == 2);
+            CHECK(arange_ptr->max() == 17);
+
+            const SizeInfo sizeinfo = arange_ptr->sizeinfo();
+            CHECK(sizeinfo.array_ptr == set_ptr);
+            CHECK(sizeinfo.max.has_value());
+            CHECK(sizeinfo.max == 6);
+            CHECK(sizeinfo.min.has_value());
+            CHECK(sizeinfo.min == 0);
+            CHECK(sizeinfo.multiplier == fraction(1, -3));
+            CHECK(sizeinfo.offset == fraction(17, 3));
+        }
+
+        THEN("We initialize set = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}") {
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+            graph.initialize_state(state);
+
+            CHECK(arange_ptr->size(state) == 3);
+            CHECK_THAT(arange_ptr->view(state), RangeEquals({17, 14, 11}));
         }
     }
 }

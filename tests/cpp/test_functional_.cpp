@@ -234,8 +234,13 @@ TEST_CASE("Maximum") {
         CHECK(op.result_bounds({0, 5, true}, {1, 2, true}) == ValuesInfo(1, 5, true));
         CHECK(op.result_bounds({0, 5, true}, {1, 2, false}) == ValuesInfo(1, 5, false));
 
+        CHECK(op.result_bounds({0, 5, false}, {5, 10, true}) == ValuesInfo(5, 10, true));
+        CHECK(op.result_bounds({0, 5, true}, {-10, -5, false}) == ValuesInfo(0, 5, true));
+
         CHECK(op.result_bounds({0, 5, true}, 5) == ValuesInfo(0, 5, true));
         CHECK(op.result_bounds({-1, 5, true}, 5) == ValuesInfo(-1, 5, true));
+
+        CHECK(op.result_bounds({-1, 5, true}, limit_type()) == ValuesInfo(-1, 5, true));
     }
 }
 
@@ -275,8 +280,13 @@ TEST_CASE("Minimum") {
         CHECK(op.result_bounds({0, 5, true}, {1, 2, true}) == ValuesInfo(0, 2, true));
         CHECK(op.result_bounds({0, 5, true}, {1, 2, false}) == ValuesInfo(0, 2, false));
 
+        CHECK(op.result_bounds({0, 5, true}, {5, 10, false}) == ValuesInfo(0, 5, true));
+        CHECK(op.result_bounds({0, 5, true}, {-10, -5, false}) == ValuesInfo(-10, -5, false));
+
         CHECK(op.result_bounds({0, 5, true}, 5) == ValuesInfo(0, 5, true));
         CHECK(op.result_bounds({-1, 5, true}, 5) == ValuesInfo(-1, 5, true));
+
+        CHECK(op.result_bounds({-1, 5, true}, limit_type()) == ValuesInfo(-1, 5, true));
     }
 }
 
@@ -330,6 +340,8 @@ TEST_CASE("Multiply") {
 
         CHECK(op.result_bounds({0, 5, true}, 2) == ValuesInfo(0, 25, true));
         CHECK(op.result_bounds({-1, 5, true}, 2) == ValuesInfo(-5, 25, true));
+
+        CHECK(op.result_bounds({0, 5, true}, limit_type()) == ValuesInfo(0, std::numeric_limits<double>::max(), true));
     }
 }
 
