@@ -90,20 +90,24 @@ class ReduceNodeData : public NodeStateData {
 
     // Commit the changes to the buffer
     void commit() {
-        // Confirm that all of our flags have been reset
-        assert(std::ranges::all_of(flags_, [](const ReductionFlag& flag) {
-            return flag == ReductionFlag::unchanged;
-        }));
-
-        // Confirm that our reductions and our buffer are consistent
-        assert(reductions_.size() == buffer_.size());
-
         // Clear the diffs
         diff_.clear();
         reductions_diff_.clear();
 
         // Update the shape_info to match the current state
         if (shape_info_) shape_info_->commit();
+
+        // A few final consistency checks
+        assert(flags_.size() == reductions_.size());
+        assert(buffer_.size() == reductions_.size());
+        assert(!shape_info_ or shape_info_->previous_size == static_cast<ssize_t>(flags_.size()));
+        assert(std::ranges::equal(buffer_, reductions_,
+                                  [](const double& lhs, const reduction_type& rhs) {
+                                      return lhs == static_cast<result_type>(rhs);
+                                  }));
+        assert(std::ranges::all_of(flags_, [](const ReductionFlag& flag) {
+            return flag == ReductionFlag::unchanged;
+        }));
     }
 
     // The current buffer diff. `update_reduction()` must be called to
@@ -128,7 +132,7 @@ class ReduceNodeData : public NodeStateData {
         flags_.pop_back();
     }
 
-    // Synchronize the buffer with the reductions array in preperation for
+    // Synchronize the buffer with the reductions array in preparation for
     // propagation
     void prepare_diff(std::function<reduction_type(ssize_t)> reduce) {
         while (buffer_.size() > reductions_.size()) {
@@ -187,33 +191,38 @@ class ReduceNodeData : public NodeStateData {
 
     // Revert any changes that have been made to the buffer
     void revert() {
-        // Confirm that all of our flags have been reset
-        assert(std::ranges::all_of(flags_, [](const ReductionFlag& flag) {
-            return flag == ReductionFlag::unchanged;
-        }));
+        // First update everything to the correct size
+        if (shape_info_) {
+            // Note the 0s are arbitrary, they'll be overwritten later
+            reductions_.resize(shape_info_->previous_size, reduction_type(0));
+            flags_.resize(shape_info_->previous_size, ReductionFlag::unchanged);
+            buffer_.resize(shape_info_->previous_size, 0);
 
-        // First revert changes to the reductions_
-        if (shape_info_) reductions_.resize(shape_info_->previous_size, reduction_type(0));
-        // These should be unique, but might as well do it in reverse just in case
+            shape_info_->revert();
+        }
+
+        // Next revert the values in the buffer and reductions
         for (const auto& [index, old_reduction] : reductions_diff_ | std::views::reverse) {
             assert(0 <= index and static_cast<std::size_t>(index) < reductions_.size());
             reductions_[index] = old_reduction;
+            buffer_[index] = static_cast<result_type>(reductions_[index]);
         }
-        reductions_diff_.clear();
 
-        // likewise these should be unique
-        for (const auto& [index, old_value, _] : diff_ | std::views::reverse) {
-            assert(0 <= index and static_cast<std::size_t>(index) <= buffer_.size());
-            if (static_cast<std::size_t>(index) == buffer_.size()) {
-                buffer_.emplace_back(old_value);
-            } else {
-                buffer_[index] = old_value;
-            }
-        }
+        // Clear the diff
+        reductions_diff_.clear();
         diff_.clear();
 
-        // And finally update our shape
-        if (shape_info_) shape_info_->revert();
+        // A few final consistency checks
+        assert(flags_.size() == reductions_.size());
+        assert(buffer_.size() == reductions_.size());
+        assert(!shape_info_ or shape_info_->previous_size == static_cast<ssize_t>(flags_.size()));
+        assert(std::ranges::equal(buffer_, reductions_,
+                                  [](const double& lhs, const reduction_type& rhs) {
+                                      return lhs == static_cast<result_type>(rhs);
+                                  }));
+        assert(std::ranges::all_of(flags_, [](const ReductionFlag& flag) {
+            return flag == ReductionFlag::unchanged;
+        }));
     }
 
     // The current shape of the array.
@@ -254,10 +263,10 @@ class ReduceNodeData : public NodeStateData {
         // Get the reduction we're potentially updating, as a copy
         auto reduction = reductions_[index];
 
-        // Add the value to the reduction first
+        // Add `to` to the reduction first
         reduction = ufunc(std::move(reduction), to);
 
-        // Then try to remove the value
+        // Then try to remove `from` from the value
         auto inverse = ufunc.inverse(std::move(reduction), from);
         if (not inverse.has_value()) {
             flags_[index] = ReductionFlag::invalid;
@@ -282,14 +291,14 @@ class ReduceNodeData : public NodeStateData {
                 break;
             case ReductionFlag::unchanged:
                 // We haven't previously made any changes to this location, so we
-                // save the old value, mark ourselves as updated, and then
-                //
+                // save the old value, update with the new value, and then mark 
+                // ourselves as updated
                 reductions_diff_.emplace_back(index, reductions_[index]);
                 reductions_[index] = std::move(reduction);
                 flags_[index] = ReductionFlag::updated;
                 break;
             case ReductionFlag::updated:
-                // We've already updated this index once, so need to save the old value
+                // We've already updated this index once, so no need to save the old value
                 reductions_[index] = std::move(reduction);
                 break;
         };
@@ -384,17 +393,6 @@ std::vector<ssize_t> drop_axes(std::ranges::sized_range auto&& range,
     return out;
 }
 
-bool is_unique(std::ranges::range auto&& range) {
-    assert(std::ranges::is_sorted(range));
-    auto trail = std::ranges::begin(range);
-    const auto end = std::ranges::end(range);
-    if (trail == end) return true;
-    for (auto lead = std::next(trail); lead != end; ++trail, ++lead) {
-        if (*trail == *lead) return false;
-    }
-    return true;
-}
-
 std::vector<ssize_t> keep_axes(std::ranges::random_access_range auto&& range,
                                std::span<const ssize_t> axes) {
     std::vector<ssize_t> out;
@@ -460,7 +458,7 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
                        std::optional<double> initial) {
     // This function assumes axes is sorted and unique
     assert(std::ranges::is_sorted(axes));
-    assert(is_unique(axes));
+    assert(std::ranges::adjacent_find(axes) == axes.end());  // it's unique
 
     // Our ufunc will determine our bounds
     typename functional_::std_to_ufunc<BinaryOp>::type ufunc;
@@ -533,7 +531,7 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
     // with bounds.
     //
 
-    assert(not (max_size.has_value() and *max_size == 0));  // shouldn't be possible to get here
+    assert(not(max_size.has_value() and *max_size == 0));  // shouldn't be possible to get here
 
     // Get the bounds at each of the smallest and largest sizes we can be
     ValuesInfo min_bounds = ufunc.result_bounds(array_bounds, std::max<ssize_t>(min_size, 1));

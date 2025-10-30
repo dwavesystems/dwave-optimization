@@ -97,7 +97,9 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
     const std::optional<double> initial;
 
  private:
-    // std::ranges::subrange<BufferIterator<double, double, true>, std::default_sentinel_t>
+    // Perform a reduction over the reduction space associated with the given
+    // index. The return type is determined by the reduction_type, see
+    // functional_.hpp
     auto reduce_(const State& state, ssize_t index) const;
 
     BinaryOp op;

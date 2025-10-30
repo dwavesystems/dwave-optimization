@@ -29,386 +29,11 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
-TEST_CASE("Reduce2") {
-    GIVEN("arr = broadcast_to(set(10).reshape(-1, 1, 1), (-1, 3, 4))") {
-        auto graph = Graph();
-        auto set_ptr = graph.emplace_node<SetNode>(10);
-        auto reshape_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::array<ssize_t, 3>{-1, 1, 1});
-        auto arr_ptr = graph.emplace_node<BroadcastToNode>(reshape_ptr, std::array<ssize_t, 3>{-1, 3, 4});
-
-        WHEN("We try to do a reduction with invalid axes") {
-            CHECK_THROWS(SumNode(arr_ptr, {0, 0}));  // duplicate
-            CHECK_THROWS(SumNode(arr_ptr, {0, -4}));  // out of bounds
-            CHECK_THROWS(SumNode(arr_ptr, {0, 3}));  // out of bounds
-
-            // todo: test no initial (fails because set can be empty)
-
-            CHECK(arr_ptr->successors().empty());  // no side-effects
-        }
-
-        AND_GIVEN("x = sum(arr, initial=2)") {
-            auto x_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{}, 2);
-            graph.emplace_node<ArrayValidationNode>(x_ptr);
-
-            auto state = graph.empty_state();
-            set_ptr->initialize_state(state, {1, 2, 3});
-            graph.initialize_state(state);
-
-            CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 3) * 3 * 4 + 2}));
-
-            WHEN("We change the state of the set") {
-                set_ptr->assign(state, {1, 2, 4, 3});
-                graph.propagate(state);
-                CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 4 + 3) * 3 * 4 + 2}));
-                graph.commit(state);
-
-                set_ptr->assign(state, {3, 2});
-                graph.propagate(state);
-                CHECK_THAT(x_ptr->view(state), RangeEquals({(3 + 2) * 3 * 4 + 2}));
-
-                graph.revert(state);
-                CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 4 + 3) * 3 * 4 + 2}));
-            }
-        }
-
-        AND_GIVEN("x = sum(arr, axes=(0,), initial=2)") {
-            auto x_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{0}, 2);
-            graph.emplace_node<ArrayValidationNode>(x_ptr);
-
-            CHECK_THAT(x_ptr->shape(), RangeEquals({3, 4}));
-
-            auto state = graph.empty_state();
-            set_ptr->initialize_state(state, {1, 2, 3});
-            graph.initialize_state(state);
-
-            CHECK_THAT(x_ptr->view(state), RangeEquals({8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8}));
-
-            WHEN("We change the state of the set") {
-                set_ptr->assign(state, {1, 2, 4, 3});
-                graph.propagate(state);
-                CHECK_THAT(x_ptr->view(state), RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
-                graph.commit(state);
-
-                set_ptr->assign(state, {3, 2});
-                graph.propagate(state);
-                CHECK_THAT(x_ptr->view(state), RangeEquals({7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7}));
-
-                graph.revert(state);
-                CHECK_THAT(x_ptr->view(state), RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
-            }
-        }
-
-        AND_GIVEN("x = sum(arr, axes=(1,), initial=2)") {
-            auto x_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{1}, 2);
-            graph.emplace_node<ArrayValidationNode>(x_ptr);
-
-            CHECK_THAT(x_ptr->shape(), RangeEquals({-1, 4}));
-
-            CHECK(x_ptr->min() == set_ptr->min() * 3 + 2);
-            CHECK(x_ptr->max() == set_ptr->max() * 3 + 2);
-
-            auto state = graph.empty_state();
-            set_ptr->initialize_state(state, {1, 2, 3});
-            graph.initialize_state(state);
-
-            CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 11, 11, 11, 11}));
-
-            WHEN("We change the state of the set") {
-                set_ptr->assign(state, {1, 2, 4, 3});
-                graph.propagate(state);
-                CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11}));
-                graph.commit(state);
-
-                set_ptr->assign(state, {3, 2});
-                graph.propagate(state);
-                CHECK_THAT(x_ptr->view(state), RangeEquals({11, 11, 11, 11, 8, 8, 8, 8}));
-
-                graph.revert(state);
-                CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11}));
-            }
-        }
-    }
-
-    // todo: check growing then shrinking as part of the same propagation
-    // todo: test empty set
-}
-
-
-TEMPLATE_TEST_CASE("PartialReduceNode", "", std::multiplies<double>, std::plus<double>) {
-    GIVEN("A 1D array of 5 integers, and a reduction over axis 0 and an explicit initial value") {
-        const double init = GENERATE(-1, 0, 1);
-
-        auto graph = Graph();
-        auto x_ptr = graph.emplace_node<IntegerNode>(5, 0, 10);  // 5 integers in [0, 10]
-        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(x_ptr, std::vector<ssize_t>{0}, init);
-        graph.emplace_node<ArrayValidationNode>(r_ptr);
-
-        // this is equivalent to a reduction, so the output is a scalar
-        CHECK(r_ptr->ndim() == 0);
-
-        auto values = std::vector{1, 2, 3, 4, 5};
-
-        auto state = graph.empty_state();
-        x_ptr->initialize_state(state, values);
-        graph.initialize_state(state);
-
-        // the output is consistent with a "by hand" reduction over x
-        auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
-        CHECK(r_ptr->view(state).front() == value);
-
-        WHEN("We make changes to x") {
-            // a few redundant changes
-            x_ptr->set_value(state, 0, 10);
-            x_ptr->set_value(state, 0, 5);
-            x_ptr->set_value(state, 0, 10);
-
-            // and one single
-            x_ptr->set_value(state, 4, 4);
-
-            graph.propagate(state, graph.descendants(state, {x_ptr}));
-
-            // the output is consistent with a "by hand" reduction over x
-            auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
-            CHECK(r_ptr->view(state).front() == value);
-
-            AND_WHEN("We commit") {
-                graph.commit(state, graph.descendants(state, {x_ptr}));
-
-                // the output is consistent with a "by hand" reduction over x
-                auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
-                CHECK(r_ptr->view(state).front() == value);
-            }
-
-            AND_WHEN("We revert") {
-                graph.revert(state, graph.descendants(state, {x_ptr}));
-
-                // the output is consistent with a "by hand" reduction over x
-                auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
-                CHECK(r_ptr->view(state).front() == value);
-            }
-        }
-    }
-}
-
-TEST_CASE("PartialReduceNode - PartialProdNode") {
-    auto graph = Graph();
-    GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes") {
-        std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
-        auto ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
-        auto r_ptr_0 = graph.emplace_node<ProdNode>(ptr, std::vector<ssize_t>{0});
-        auto r_ptr_1 = graph.emplace_node<ProdNode>(ptr, std::vector<ssize_t>{1});
-        auto r_ptr_2 = graph.emplace_node<ProdNode>(ptr, std::vector<ssize_t>{2});
-        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
-        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
-        graph.emplace_node<ArrayValidationNode>(r_ptr_2);
-
-        CHECK(r_ptr_0->ndim() == 2);
-        CHECK(r_ptr_1->ndim() == 2);
-        CHECK(r_ptr_2->ndim() == 2);
-
-        WHEN("We make a state") {
-            auto state = graph.initialize_state();
-
-            THEN("The partial reduction has the values and shapes we expect") {
-                CHECK(r_ptr_0->ndim() == 2);
-                CHECK(r_ptr_0->size(state) == 4);
-                CHECK(r_ptr_0->shape(state).size() == 2);
-
-                CHECK(r_ptr_1->ndim() == 2);
-                CHECK(r_ptr_1->size(state) == 4);
-                CHECK(r_ptr_1->shape(state).size() == 2);
-
-                CHECK(r_ptr_2->ndim() == 2);
-                CHECK(r_ptr_2->size(state) == 4);
-                CHECK(r_ptr_2->shape(state).size() == 2);
-
-                /// Check with
-                /// A = np.arange(8).reshape((2, 2, 2))
-                /// np.prod(A, axis=0)
-                CHECK_THAT(r_ptr_0->view(state), RangeEquals({0, 5, 12, 21}));
-                /// np.prod(A, axis=1)
-                CHECK_THAT(r_ptr_1->view(state), RangeEquals({0, 3, 24, 35}));
-                /// np.prod(A, axis=2)
-                CHECK_THAT(r_ptr_2->view(state), RangeEquals({0, 6, 20, 42}));
-            }
-        }
-    }
-}
-
-TEST_CASE("PartialReduceNode - PartialSumNode") {
-    auto graph = Graph();
-    GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes ") {
-        std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
-        auto ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
-        auto r_ptr_0 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{0});
-        auto r_ptr_1 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{1});
-        auto r_ptr_2 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{2});
-        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
-        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
-        graph.emplace_node<ArrayValidationNode>(r_ptr_2);
-
-        THEN("The dimensions of the partial reductions are correct") {
-            CHECK(r_ptr_0->ndim() == 2);
-            CHECK(r_ptr_1->ndim() == 2);
-            CHECK(r_ptr_2->ndim() == 2);
-        }
-
-        WHEN("We make a state") {
-            auto state = graph.initialize_state();
-
-            THEN("The partial reduction has the values and shapes we expect") {
-                CHECK(r_ptr_0->ndim() == 2);
-                CHECK(r_ptr_0->size(state) == 4);
-                CHECK(r_ptr_0->shape(state).size() == 2);
-
-                CHECK(r_ptr_1->ndim() == 2);
-                CHECK(r_ptr_1->size(state) == 4);
-                CHECK(r_ptr_1->shape(state).size() == 2);
-
-                CHECK(r_ptr_2->ndim() == 2);
-                CHECK(r_ptr_2->size(state) == 4);
-                CHECK(r_ptr_2->shape(state).size() == 2);
-
-                /// Check with
-                /// A = np.arange(8).reshape((2, 2, 2))
-                /// np.sum(A, axis=0)
-                CHECK_THAT(r_ptr_0->view(state), RangeEquals({4, 6, 8, 10}));
-                /// np.sum(A, axis=1)
-                CHECK_THAT(r_ptr_1->view(state), RangeEquals({2, 4, 10, 12}));
-                /// np.sum(A, axis=2)
-                CHECK_THAT(r_ptr_2->view(state), RangeEquals({1, 5, 9, 13}));
-            }
-        }
-    }
-
-    GIVEN("A 3D binary array with shape (2, 3, 2) and partially reduce over the axes") {
-        auto ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3, 2});
-        auto r_ptr_0 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{0});
-        auto r_ptr_1 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{1});
-        auto r_ptr_2 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{2});
-        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
-        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
-        graph.emplace_node<ArrayValidationNode>(r_ptr_2);
-
-        THEN("The dimensions of the partial reductions are correct") {
-            CHECK(r_ptr_0->ndim() == 2);
-            CHECK(r_ptr_1->ndim() == 2);
-            CHECK(r_ptr_2->ndim() == 2);
-        }
-
-        WHEN("We make a state") {
-            auto state = graph.initialize_state();
-
-            THEN("The partial reduction has the values and shapes we expect") {
-                CHECK(r_ptr_0->ndim() == 2);
-                CHECK(r_ptr_0->size(state) == 6);
-                CHECK(r_ptr_0->shape(state).size() == 2);
-
-                CHECK(r_ptr_1->ndim() == 2);
-                CHECK(r_ptr_1->size(state) == 4);
-                CHECK(r_ptr_1->shape(state).size() == 2);
-
-                CHECK(r_ptr_2->ndim() == 2);
-                CHECK(r_ptr_2->size(state) == 6);
-                CHECK(r_ptr_2->shape(state).size() == 2);
-
-                CHECK(std::ranges::equal(r_ptr_0->view(state), std::vector<double>(6, 0)));
-                CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector<double>(4, 0)));
-                CHECK(std::ranges::equal(r_ptr_2->view(state), std::vector<double>(6, 0)));
-
-                AND_WHEN("We update a variable") {
-                    ptr->flip(state, 4);
-
-                    // manually propagate
-                    ptr->propagate(state);
-                    r_ptr_0->propagate(state);
-                    r_ptr_1->propagate(state);
-                    r_ptr_2->propagate(state);
-
-                    THEN("The partial reductions are updated correctly") {
-                        CHECK_THAT(r_ptr_0->view(state), RangeEquals({0, 0, 0, 0, 1, 0}));
-                        CHECK_THAT(r_ptr_1->view(state), RangeEquals({1, 0, 0, 0}));
-                        CHECK_THAT(r_ptr_2->view(state), RangeEquals({0, 0, 1, 0, 0, 0}));
-                    }
-
-                    AND_WHEN("We commit") {
-                        ptr->commit(state);
-                        r_ptr_0->commit(state);
-                        r_ptr_1->commit(state);
-                        r_ptr_2->commit(state);
-
-                        THEN("The values are maintained") {
-                            CHECK_THAT(r_ptr_0->view(state), RangeEquals({0, 0, 0, 0, 1, 0}));
-                            CHECK_THAT(r_ptr_1->view(state), RangeEquals({1, 0, 0, 0}));
-                            CHECK_THAT(r_ptr_2->view(state), RangeEquals({0, 0, 1, 0, 0, 0}));
-                        }
-                    }
-
-                    AND_WHEN("We revert") {
-                        ptr->revert(state);
-                        r_ptr_0->revert(state);
-                        r_ptr_1->revert(state);
-                        r_ptr_2->revert(state);
-
-                        THEN("The values are reverted") {
-                            CHECK(std::ranges::equal(r_ptr_0->view(state),
-                                                     std::vector<double>(6, 0)));
-                            CHECK(std::ranges::equal(r_ptr_1->view(state),
-                                                     std::vector<double>(4, 0)));
-                            CHECK(std::ranges::equal(r_ptr_2->view(state),
-                                                     std::vector<double>(6, 0)));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    GIVEN("A 3D array, index it by slice, int and slice and we take partial traces") {
-        std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
-        auto array_ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
-        auto ptr = graph.emplace_node<BasicIndexingNode>(array_ptr, Slice(0, 2), 1, Slice(0, 2));
-
-        // then there are only 2 possible reductions
-        auto r_ptr_0 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{0});
-        auto r_ptr_1 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{1});
-        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
-        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
-
-        THEN("The dimensions of the partial reductions are correct") {
-            CHECK(ptr->ndim() == 2);
-            CHECK(r_ptr_0->ndim() == 1);
-            CHECK(r_ptr_1->ndim() == 1);
-        }
-
-        WHEN("We make a state") {
-            auto state = graph.initialize_state();
-
-            THEN("The partial reduction has the values and shapes we expect") {
-                CHECK(r_ptr_0->ndim() == 1);
-                CHECK(r_ptr_0->size(state) == 2);
-                CHECK(r_ptr_0->shape(state).size() == 1);
-
-                CHECK(r_ptr_1->ndim() == 1);
-                CHECK(r_ptr_1->size(state) == 2);
-                CHECK(r_ptr_1->shape(state).size() == 1);
-
-                /// Check with
-                /// A = np.arange(8).reshape((2, 2, 2))
-                /// B = A[:, 1, :]
-                /// np.sum(B, axis=0)
-                CHECK_THAT(r_ptr_0->view(state), RangeEquals({8, 10}));
-                /// np.sum(B, axis=1)
-                CHECK_THAT(r_ptr_1->view(state), RangeEquals({5, 13}));
-            }
-        }
-    }
-}
-
-TEMPLATE_TEST_CASE("ReduceNode", "",
-        functional::max<double>, functional::min<double>,
-        std::logical_and<double>, std::logical_or<double>,
-        std::multiplies<double>, std::plus<double>) {
+TEMPLATE_TEST_CASE("ReduceNode", "",                                   //
+                   functional::max<double>, functional::min<double>,   //
+                   std::logical_and<double>, std::logical_or<double>,  //
+                   std::multiplies<double>,                            //
+                   std::plus<double>) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -567,9 +192,63 @@ TEMPLATE_TEST_CASE("ReduceNode", "",
             }
         }
     }
+
+    GIVEN("A 1D array of 5 integers, and a reduction over axis 0 and an explicit initial value") {
+        const double init = GENERATE(-1, 0, 1);
+
+        auto graph = Graph();
+        auto x_ptr = graph.emplace_node<IntegerNode>(5, 0, 10);  // 5 integers in [0, 10]
+        auto r_ptr = graph.emplace_node<ReduceNode<TestType>>(x_ptr, std::vector<ssize_t>{0}, init);
+        graph.emplace_node<ArrayValidationNode>(r_ptr);
+
+        // this is equivalent to a reduction, so the output is a scalar
+        CHECK(r_ptr->ndim() == 0);
+
+        auto values = std::vector{1, 2, 3, 4, 5};
+
+        auto state = graph.empty_state();
+        x_ptr->initialize_state(state, values);
+        graph.initialize_state(state);
+
+        // the output is consistent with a "by hand" reduction over x
+        auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
+        CHECK(r_ptr->view(state).front() == value);
+
+        WHEN("We make changes to x") {
+            // a few redundant changes
+            x_ptr->set_value(state, 0, 10);
+            x_ptr->set_value(state, 0, 5);
+            x_ptr->set_value(state, 0, 10);
+
+            // and one single
+            x_ptr->set_value(state, 4, 4);
+
+            graph.propagate(state, graph.descendants(state, {x_ptr}));
+
+            // the output is consistent with a "by hand" reduction over x
+            auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
+            CHECK(r_ptr->view(state).front() == value);
+
+            AND_WHEN("We commit") {
+                graph.commit(state, graph.descendants(state, {x_ptr}));
+
+                // the output is consistent with a "by hand" reduction over x
+                auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
+                CHECK(r_ptr->view(state).front() == value);
+            }
+
+            AND_WHEN("We revert") {
+                graph.revert(state, graph.descendants(state, {x_ptr}));
+
+                // the output is consistent with a "by hand" reduction over x
+                auto value = std::reduce(x_ptr->begin(state), x_ptr->end(state), init, TestType());
+                CHECK(r_ptr->view(state).front() == value);
+            }
+        }
+    }
 }
 
-TEST_CASE("ReduceNode - AllNode/AnyNode") {
+TEST_CASE("AllNode/AnyNode") {
     auto graph = Graph();
 
     GIVEN("x = BinaryNode({5}), y = x.any()") {
@@ -656,7 +335,7 @@ TEST_CASE("ReduceNode - AllNode/AnyNode") {
     }
 }
 
-TEST_CASE("ReduceNode - MaxNode/MinNode") {
+TEST_CASE("MaxNode/MinNode") {
     auto graph = Graph();
 
     GIVEN("A list node with a min and max node over it") {
@@ -785,7 +464,7 @@ TEST_CASE("ReduceNode - MaxNode/MinNode") {
     }
 }
 
-TEST_CASE("ReduceNode - MaxNode") {
+TEST_CASE("MaxNode") {
     auto graph = Graph();
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.max()") {
@@ -811,7 +490,7 @@ TEST_CASE("ReduceNode - MaxNode") {
     }
 }
 
-TEST_CASE("ReduceNode - MinNode") {
+TEST_CASE("MinNode") {
     auto graph = Graph();
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.min()") {
@@ -837,7 +516,7 @@ TEST_CASE("ReduceNode - MinNode") {
     }
 }
 
-TEST_CASE("ReduceNode - ProdNode") {
+TEST_CASE("ProdNode") {
     auto graph = Graph();
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.prod()") {
@@ -1003,9 +682,51 @@ TEST_CASE("ReduceNode - ProdNode") {
             }
         }
     }
+
+    GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes") {
+        std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
+        auto ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
+        auto r_ptr_0 = graph.emplace_node<ProdNode>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<ProdNode>(ptr, std::vector<ssize_t>{1});
+        auto r_ptr_2 = graph.emplace_node<ProdNode>(ptr, std::vector<ssize_t>{2});
+        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_2);
+
+        CHECK(r_ptr_0->ndim() == 2);
+        CHECK(r_ptr_1->ndim() == 2);
+        CHECK(r_ptr_2->ndim() == 2);
+
+        WHEN("We make a state") {
+            auto state = graph.initialize_state();
+
+            THEN("The partial reduction has the values and shapes we expect") {
+                CHECK(r_ptr_0->ndim() == 2);
+                CHECK(r_ptr_0->size(state) == 4);
+                CHECK(r_ptr_0->shape(state).size() == 2);
+
+                CHECK(r_ptr_1->ndim() == 2);
+                CHECK(r_ptr_1->size(state) == 4);
+                CHECK(r_ptr_1->shape(state).size() == 2);
+
+                CHECK(r_ptr_2->ndim() == 2);
+                CHECK(r_ptr_2->size(state) == 4);
+                CHECK(r_ptr_2->shape(state).size() == 2);
+
+                /// Check with
+                /// A = np.arange(8).reshape((2, 2, 2))
+                /// np.prod(A, axis=0)
+                CHECK_THAT(r_ptr_0->view(state), RangeEquals({0, 5, 12, 21}));
+                /// np.prod(A, axis=1)
+                CHECK_THAT(r_ptr_1->view(state), RangeEquals({0, 3, 24, 35}));
+                /// np.prod(A, axis=2)
+                CHECK_THAT(r_ptr_2->view(state), RangeEquals({0, 6, 20, 42}));
+            }
+        }
+    }
 }
 
-TEST_CASE("ReduceNode - SumNode") {
+TEST_CASE("SumNode") {
     auto graph = Graph();
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.sum()") {
@@ -1193,6 +914,309 @@ TEST_CASE("ReduceNode - SumNode") {
                         THEN("The value is reverted") { CHECK(r_ptr->view(state)[0] == old_value); }
                     }
                 }
+            }
+        }
+    }
+
+    GIVEN("A 3D array with shape (2, 2, 2) and partially reduce over the axes ") {
+        std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
+        auto ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
+        auto r_ptr_0 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{1});
+        auto r_ptr_2 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{2});
+        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_2);
+
+        THEN("The dimensions of the partial reductions are correct") {
+            CHECK(r_ptr_0->ndim() == 2);
+            CHECK(r_ptr_1->ndim() == 2);
+            CHECK(r_ptr_2->ndim() == 2);
+        }
+
+        WHEN("We make a state") {
+            auto state = graph.initialize_state();
+
+            THEN("The partial reduction has the values and shapes we expect") {
+                CHECK(r_ptr_0->ndim() == 2);
+                CHECK(r_ptr_0->size(state) == 4);
+                CHECK(r_ptr_0->shape(state).size() == 2);
+
+                CHECK(r_ptr_1->ndim() == 2);
+                CHECK(r_ptr_1->size(state) == 4);
+                CHECK(r_ptr_1->shape(state).size() == 2);
+
+                CHECK(r_ptr_2->ndim() == 2);
+                CHECK(r_ptr_2->size(state) == 4);
+                CHECK(r_ptr_2->shape(state).size() == 2);
+
+                /// Check with
+                /// A = np.arange(8).reshape((2, 2, 2))
+                /// np.sum(A, axis=0)
+                CHECK_THAT(r_ptr_0->view(state), RangeEquals({4, 6, 8, 10}));
+                /// np.sum(A, axis=1)
+                CHECK_THAT(r_ptr_1->view(state), RangeEquals({2, 4, 10, 12}));
+                /// np.sum(A, axis=2)
+                CHECK_THAT(r_ptr_2->view(state), RangeEquals({1, 5, 9, 13}));
+            }
+        }
+    }
+
+    GIVEN("A 3D binary array with shape (2, 3, 2) and partially reduce over the axes") {
+        auto ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3, 2});
+        auto r_ptr_0 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{1});
+        auto r_ptr_2 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{2});
+        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_2);
+
+        THEN("The dimensions of the partial reductions are correct") {
+            CHECK(r_ptr_0->ndim() == 2);
+            CHECK(r_ptr_1->ndim() == 2);
+            CHECK(r_ptr_2->ndim() == 2);
+        }
+
+        WHEN("We make a state") {
+            auto state = graph.initialize_state();
+
+            THEN("The partial reduction has the values and shapes we expect") {
+                CHECK(r_ptr_0->ndim() == 2);
+                CHECK(r_ptr_0->size(state) == 6);
+                CHECK(r_ptr_0->shape(state).size() == 2);
+
+                CHECK(r_ptr_1->ndim() == 2);
+                CHECK(r_ptr_1->size(state) == 4);
+                CHECK(r_ptr_1->shape(state).size() == 2);
+
+                CHECK(r_ptr_2->ndim() == 2);
+                CHECK(r_ptr_2->size(state) == 6);
+                CHECK(r_ptr_2->shape(state).size() == 2);
+
+                CHECK(std::ranges::equal(r_ptr_0->view(state), std::vector<double>(6, 0)));
+                CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector<double>(4, 0)));
+                CHECK(std::ranges::equal(r_ptr_2->view(state), std::vector<double>(6, 0)));
+
+                AND_WHEN("We update a variable") {
+                    ptr->flip(state, 4);
+
+                    // manually propagate
+                    ptr->propagate(state);
+                    r_ptr_0->propagate(state);
+                    r_ptr_1->propagate(state);
+                    r_ptr_2->propagate(state);
+
+                    THEN("The partial reductions are updated correctly") {
+                        CHECK_THAT(r_ptr_0->view(state), RangeEquals({0, 0, 0, 0, 1, 0}));
+                        CHECK_THAT(r_ptr_1->view(state), RangeEquals({1, 0, 0, 0}));
+                        CHECK_THAT(r_ptr_2->view(state), RangeEquals({0, 0, 1, 0, 0, 0}));
+                    }
+
+                    AND_WHEN("We commit") {
+                        ptr->commit(state);
+                        r_ptr_0->commit(state);
+                        r_ptr_1->commit(state);
+                        r_ptr_2->commit(state);
+
+                        THEN("The values are maintained") {
+                            CHECK_THAT(r_ptr_0->view(state), RangeEquals({0, 0, 0, 0, 1, 0}));
+                            CHECK_THAT(r_ptr_1->view(state), RangeEquals({1, 0, 0, 0}));
+                            CHECK_THAT(r_ptr_2->view(state), RangeEquals({0, 0, 1, 0, 0, 0}));
+                        }
+                    }
+
+                    AND_WHEN("We revert") {
+                        ptr->revert(state);
+                        r_ptr_0->revert(state);
+                        r_ptr_1->revert(state);
+                        r_ptr_2->revert(state);
+
+                        THEN("The values are reverted") {
+                            CHECK(std::ranges::equal(r_ptr_0->view(state),
+                                                     std::vector<double>(6, 0)));
+                            CHECK(std::ranges::equal(r_ptr_1->view(state),
+                                                     std::vector<double>(4, 0)));
+                            CHECK(std::ranges::equal(r_ptr_2->view(state),
+                                                     std::vector<double>(6, 0)));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("A 3D array, index it by slice, int and slice and we take partial traces") {
+        std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
+        auto array_ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 2, 2});
+        auto ptr = graph.emplace_node<BasicIndexingNode>(array_ptr, Slice(0, 2), 1, Slice(0, 2));
+
+        // then there are only 2 possible reductions
+        auto r_ptr_0 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{0});
+        auto r_ptr_1 = graph.emplace_node<SumNode>(ptr, std::vector<ssize_t>{1});
+        graph.emplace_node<ArrayValidationNode>(r_ptr_0);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_1);
+
+        THEN("The dimensions of the partial reductions are correct") {
+            CHECK(ptr->ndim() == 2);
+            CHECK(r_ptr_0->ndim() == 1);
+            CHECK(r_ptr_1->ndim() == 1);
+        }
+
+        WHEN("We make a state") {
+            auto state = graph.initialize_state();
+
+            THEN("The partial reduction has the values and shapes we expect") {
+                CHECK(r_ptr_0->ndim() == 1);
+                CHECK(r_ptr_0->size(state) == 2);
+                CHECK(r_ptr_0->shape(state).size() == 1);
+
+                CHECK(r_ptr_1->ndim() == 1);
+                CHECK(r_ptr_1->size(state) == 2);
+                CHECK(r_ptr_1->shape(state).size() == 1);
+
+                /// Check with
+                /// A = np.arange(8).reshape((2, 2, 2))
+                /// B = A[:, 1, :]
+                /// np.sum(B, axis=0)
+                CHECK_THAT(r_ptr_0->view(state), RangeEquals({8, 10}));
+                /// np.sum(B, axis=1)
+                CHECK_THAT(r_ptr_1->view(state), RangeEquals({5, 13}));
+            }
+        }
+    }
+
+    GIVEN("arr = broadcast_to(set(10).reshape(-1, 1, 1), (-1, 3, 4))") {
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto reshape_ptr =
+                graph.emplace_node<ReshapeNode>(set_ptr, std::array<ssize_t, 3>{-1, 1, 1});
+        auto arr_ptr =
+                graph.emplace_node<BroadcastToNode>(reshape_ptr, std::array<ssize_t, 3>{-1, 3, 4});
+
+        WHEN("We try to do a reduction with invalid axes") {
+            CHECK_THROWS(SumNode(arr_ptr, {0, 0}));   // duplicate
+            CHECK_THROWS(SumNode(arr_ptr, {0, -4}));  // out of bounds
+            CHECK_THROWS(SumNode(arr_ptr, {0, 3}));   // out of bounds
+            CHECK_THROWS(SumNode(arr_ptr, {}));       // no initial state
+
+            CHECK(arr_ptr->successors().empty());  // no side-effects
+        }
+
+        AND_GIVEN("x = sum(arr, initial=2)") {
+            auto x_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{}, 2);
+            graph.emplace_node<ArrayValidationNode>(x_ptr);
+
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {1, 2, 3});
+            graph.initialize_state(state);
+
+            CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 3) * 3 * 4 + 2}));
+
+            WHEN("We change the state of the set") {
+                set_ptr->assign(state, {1, 2, 4, 3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 4 + 3) * 3 * 4 + 2}));
+                graph.commit(state);
+
+                set_ptr->assign(state, {3, 2});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({(3 + 2) * 3 * 4 + 2}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 4 + 3) * 3 * 4 + 2}));
+
+                set_ptr->assign(state, {1, 2, 3, 4, 5, 6});
+                set_ptr->assign(state, {3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({3 * 3 * 4 + 2}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({(1 + 2 + 4 + 3) * 3 * 4 + 2}));
+            }
+        }
+
+        AND_GIVEN("x = sum(arr, axes=(0,), initial=2)") {
+            auto x_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{0}, 2);
+            graph.emplace_node<ArrayValidationNode>(x_ptr);
+
+            CHECK_THAT(x_ptr->shape(), RangeEquals({3, 4}));
+
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {1, 2, 3});
+            graph.initialize_state(state);
+
+            CHECK_THAT(x_ptr->view(state), RangeEquals({8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8}));
+
+            WHEN("We change the state of the set") {
+                set_ptr->assign(state, {1, 2, 4, 3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state),
+                           RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
+                graph.commit(state);
+
+                set_ptr->assign(state, {3, 2});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state),
+                           RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
+
+                set_ptr->assign(state, {1, 2, 3, 4, 5, 6});
+                set_ptr->assign(state, {3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state),
+                           RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
+            }
+        }
+
+        AND_GIVEN("x = sum(arr, axes=(1,), initial=2)") {
+            auto x_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{1}, 2);
+            graph.emplace_node<ArrayValidationNode>(x_ptr);
+
+            CHECK_THAT(x_ptr->shape(), RangeEquals({-1, 4}));
+
+            CHECK(x_ptr->min() == set_ptr->min() * 3 + 2);
+            CHECK(x_ptr->max() == set_ptr->max() * 3 + 2);
+
+            auto state = graph.empty_state();
+            set_ptr->initialize_state(state, {1, 2, 3});
+            graph.initialize_state(state);
+
+            CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 11, 11, 11, 11}));
+
+            WHEN("We change the state of the set") {
+                set_ptr->assign(state, {1, 2, 4, 3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state),
+                           RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11}));
+                graph.commit(state);
+
+                set_ptr->assign(state, {3, 2});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({11, 11, 11, 11, 8, 8, 8, 8}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state),
+                           RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11}));
+
+                set_ptr->assign(state, {1, 2, 3, 4, 5, 6});
+                set_ptr->assign(state, {3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({11, 11, 11, 11}));
+
+                graph.commit(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({11, 11, 11, 11}));
+
+                set_ptr->assign(state, {2, 3});
+                graph.propagate(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({8, 8, 8, 8, 11, 11, 11, 11}));
+
+                graph.revert(state);
+                CHECK_THAT(x_ptr->view(state), RangeEquals({11, 11, 11, 11}));
             }
         }
     }
