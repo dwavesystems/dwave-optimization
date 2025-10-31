@@ -43,10 +43,35 @@ Changelog = "https://github.com/dwavesystems/dwave-optimization/releases"
 Documentation = "https://docs.dwavequantum.com"
 "Source Code" = "https://github.com/dwavesystems/dwave-optimization"
 
+[dependency-groups]
+dev = [
+    # Install requirements
+    "numpy==2.2.6; python_version < '3.11'",  # last that supports 3.10
+    "numpy==2.3.3; python_version >= '3.11'",
+
+    # Build requirements
+    "cython~=3.1.0",
+    "meson-python~=0.18.0",
+    "meson~=1.9.0",
+    "ninja~=1.13.0",
+
+    # For the changelog
+    "reno==4.1.0",
+]
+docs = [
+    "pydata-sphinx-theme==0.14.3",
+    "sphinx==7.3.7",
+    "sphinx-design==0.6.1",
+    "breathe==4.35.0",
+]
+test = [
+    "dimod==0.12.21",
+]
+
 [tool.cibuildwheel]
 build-verbosity = "1"
 skip = "pp* *musllinux*"
-before-test = "pip install -r {project}/tests/requirements.txt"
+before-test = "pip install --group test"
 test-command = "python -Werror -m unittest discover {project}/tests/"
 
 [tool.cibuildwheel.config-settings]

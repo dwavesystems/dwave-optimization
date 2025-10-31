@@ -90,8 +90,8 @@ jobs:
           name: test with installed package
           command: |
             . env/bin/activate
+            pip install --group test
             cd tests/
-            pip install -r requirements.txt
             python -Werror -m unittest
 
   python-macOS:
@@ -170,6 +170,7 @@ jobs:
           command: |
             python -m venv env
             . env/bin/activate
+            pip install pip --upgrade
             pip install << parameters.dependency-versions >> --upgrade --only-binary << parameters.only-binary >>
             pip install dwave-optimization --no-index -f dist/ --no-deps --force-reinstall
       - run: *run-tests
@@ -195,7 +196,8 @@ jobs:
           command: |
             python3 -m venv env
             . env/bin/activate
-            pip install -r requirements.txt
+            pip install pip --upgrade
+            pip install --group dev
       - run: &run-cpp-tests
           name: run c++ tests with meson
           command: |
@@ -284,7 +286,9 @@ jobs:
           command: |
             python -m venv env
             . env/bin/activate
-            pip install dist/*optimization*cp310*.whl -r docs/requirements.txt
+            pip install pip --upgrade
+            pip install dist/*optimization*cp310*.whl
+            pip install --group docs
 
       - run:
           name: build docs
