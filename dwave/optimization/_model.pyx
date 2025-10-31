@@ -39,7 +39,7 @@ from dwave.optimization.libcpp.array cimport Array as cppArray
 from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
-from dwave.optimization.utilities import _file_object_arg, _lock
+from dwave.optimization.utilities import _file_object_arg, _lock, _NoValue
 
 __all__ = []
 
@@ -443,6 +443,8 @@ cdef class _Graph:
 
         .. _NPY format: https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html
         """
+        from dwave.optimization.symbols.reduce import Prod, Sum  # see note below
+
         version, model_info = self._into_file_header(
             file,
             version=version,
@@ -469,6 +471,16 @@ cdef class _Graph:
             # On the first pass we made a nodetypes.txt file that has the node names
             with zf.open("nodetypes.txt", "w", force_zip64=True) as f:
                 for node in itertools.islice(self.iter_symbols(), 0, stop):
+                    # There is a backwards compatibility break here in 0.6.8 where
+                    # we unified PartialReduce and Reduce. For compatibility going
+                    # backwards though, we want to use the PartialReduce alias
+                    if isinstance(node, Prod) and node.axes():
+                        f.write(b"PartialProd\n")
+                        continue
+                    if isinstance(node, Sum) and node.axes():
+                        f.write(b"PartialSum\n")
+                        continue
+
                     f.write(type(node).__name__.encode("UTF-8"))
                     f.write(b"\n")
 
@@ -1635,23 +1647,59 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Divide  # avoid circular import
         return Divide(self, rhs)
 
-    def all(self):
+    def all(self, *, axis=None, initial=_NoValue):
         """Create an :class:`~dwave.optimization.symbols.All` symbol.
 
-        The new symbol returns True when all elements evaluate to True.
+        Test whether all of the elements in the array evaluate to ``True``.
+
+        Args:
+            axis (int or tuple[int, ...], optional):
+                Axis or axes along which the operation is performed.
+                If ``None``, the reduction is performed over all dimensions.
+                If ``tuple[int, ...]``, the reduction is performed along the
+                specified axes.
+
+                .. versionadded:: 0.6.8
+
+            initial (float or None, optional):
+                The starting value for the reduction.
+                If `None` is given, the first element of the reduction is used.
+
+                .. versionadded:: 0.6.8
+
+        See Also:
+            :class:`~dwave.optimization.symbols.All` equivalent class.
         """
         from dwave.optimization.symbols import All  # avoid circular import
-        return All(self)
+        return All(self, axis=axis, initial=_NoValue)
 
-    def any(self):
+    def any(self, *, axis=None, initial=False):
         """Create an :class:`~dwave.optimization.symbols.Any` symbol.
 
         The new symbol returns True when any elements evaluate to True.
 
+        Args:
+            axis (int or tuple[int, ...], optional):
+                Axis or axes along which the operation is performed.
+                If ``None``, the reduction is performed over all dimensions.
+                If ``tuple[int, ...]``, the reduction is performed along the
+                specified axes.
+
+                .. versionadded:: 0.6.8
+
+            initial (float or None, optional):
+                The starting value for the reduction.
+                If `None` is given, the first element of the reduction is used.
+
+                .. versionadded:: 0.6.8
+
+        See Also:
+            :class:`~dwave.optimization.symbols.Any` equivalent class.
+
         .. versionadded:: 0.4.1
         """
         from dwave.optimization.symbols import Any  # avoid circular import
-        return Any(self)
+        return Any(self, axis=axis, initial=_NoValue)
 
     def copy(self):
         """Return an array symbol that is a copy of the array.
@@ -1671,14 +1719,23 @@ cdef class ArraySymbol(Symbol):
         """
         return self.reshape(-1)
 
-    def max(self, *, initial=None):
+    def max(self, *, axis=None, initial=_NoValue):
         """Create a :class:`~dwave.optimization.symbols.Max` symbol.
 
         The new symbol returns the maximum value in its elements.
 
         Args:
-            initial:
-                The starting value for the product operation.
+            axis (int or tuple[int, ...], optional):
+                Axis or axes along which the operation is performed.
+                If ``None``, the reduction is performed over all dimensions.
+                If ``tuple[int, ...]``, the reduction is performed along the
+                specified axes.
+
+                .. versionadded:: 0.6.8
+
+            initial (float or None, optional):
+                The starting value for the reduction.
+                If `None` is given, the first element of the reduction is used.
 
                 .. versionadded:: 0.6.4
 
@@ -1697,7 +1754,7 @@ cdef class ArraySymbol(Symbol):
             :class:`~dwave.optimization.symbols.Max`
         """
         from dwave.optimization.symbols import Max  # avoid circular import
-        return Max(self, initial=initial)
+        return Max(self, axis=axis, initial=initial)
 
     def maybe_equals(self, other):
         # note: docstring inherited from Symbol.maybe_equal()
@@ -1719,14 +1776,23 @@ cdef class ArraySymbol(Symbol):
 
         return MAYBE
 
-    def min(self, *, initial=None):
+    def min(self, *, axis=None, initial=_NoValue):
         """Create a :class:`~dwave.optimization.symbols.Min` symbol.
 
         The new symbol returns the minimum value in its elements.
 
         Args:
-            initial:
-                The starting value for the product operation.
+            axis (int or tuple[int, ...], optional):
+                Axis or axes along which the operation is performed.
+                If ``None``, the reduction is performed over all dimensions.
+                If ``tuple[int, ...]``, the reduction is performed along the
+                specified axes.
+
+                .. versionadded:: 0.6.8
+
+            initial (float or None, optional):
+                The starting value for the reduction.
+                If `None` is given, the first element of the reduction is used.
 
                 .. versionadded:: 0.6.4
 
@@ -1745,25 +1811,29 @@ cdef class ArraySymbol(Symbol):
             :class:`~dwave.optimization.symbols.Min`
         """
         from dwave.optimization.symbols import Min  # avoid circular import
-        return Min(self, initial=initial)
+        return Min(self, axis=axis, initial=initial)
 
     def ndim(self):
         """Return the number of dimensions for a symbol."""
         return self.array_ptr.ndim()
 
-    def prod(self, *, axis=None, initial=None):
+    def prod(self, *, axis=None, initial=_NoValue):
         """Create a :class:`~dwave.optimization.symbols.Prod` symbol.
 
         The new symbol returns the product of its elements.
 
         Args:
-            axis:
-                Axis along which the a product operation is performed.
+            axis (int or tuple[int, ...], optional):
+                Axis or axes along which the operation is performed.
+                If ``None``, the reduction is performed over all dimensions.
+                If ``tuple[int, ...]``, the reduction is performed along the
+                specified axes.
 
                 .. versionadded:: 0.5.1
 
-            initial:
-                The starting value for the product operation.
+            initial (float or None, optional):
+                The starting value for the reduction.
+                If `None` is given, the first element of the reduction is used.
 
                 .. versionadded:: 0.6.4
 
@@ -1778,15 +1848,10 @@ cdef class ArraySymbol(Symbol):
             <dwave.optimization.symbols...Prod at ...>
 
         See Also:
-            :class:`~dwave.optimization.symbols.PartialProd`
-            :class:`~dwave.optimization.symbols.Prod`
+            :class:`~dwave.optimization.symbols.Prod` equivalent symbol.
         """
-        import dwave.optimization.symbols
-
-        if axis is not None:
-            return dwave.optimization.symbols.PartialProd(self, axis, initial=initial)
-
-        return dwave.optimization.symbols.Prod(self, initial=initial)
+        from dwave.optimization.symbols import Prod
+        return Prod(self, axis=axis, initial=initial)
 
     def reshape(self, *shape):
         """Create a :class:`~dwave.optimization.symbols.Reshape` symbol.
@@ -2120,19 +2185,23 @@ cdef class ArraySymbol(Symbol):
         strides = self.array_ptr.strides()
         return tuple(strides[i] for i in range(strides.size()))
 
-    def sum(self, *, axis=None, initial=None):
+    def sum(self, *, axis=None, initial=_NoValue):
         """Create a :class:`~dwave.optimization.symbols.Sum` symbol.
 
         The new symbol returns the sum of its elements.
 
         Args:
-            axis:
-                Axis along which the a plus operation is performed.
+            axis (int or tuple[int, ...], optional):
+                Axis or axes along which the operation is performed.
+                If ``None``, the reduction is performed over all dimensions.
+                If ``tuple[int, ...]``, the reduction is performed along the
+                specified axes.
 
                 .. versionadded:: 0.4.1
 
-            initial:
-                The starting value for the plus operation.
+            initial (float or None, optional):
+                The starting value for the reduction.
+                If `None` is given, the first element of the reduction is used.
 
                 .. versionadded:: 0.6.4
 
@@ -2147,12 +2216,7 @@ cdef class ArraySymbol(Symbol):
             <dwave.optimization.symbols...Sum at ...>
 
         See Also:
-            :class:`~dwave.optimization.symbols.PartialSum`
-            :class:`~dwave.optimization.symbols.Sum`
+            :class:`~dwave.optimization.symbols.Sum` equivalent symbol.
         """
-        import dwave.optimization.symbols
-
-        if axis is not None:
-            return dwave.optimization.symbols.PartialSum(self, axis, initial=initial)
-
-        return dwave.optimization.symbols.Sum(self, initial=initial)
+        from dwave.optimization.symbols import Sum
+        return Sum(self, axis=axis, initial=initial)

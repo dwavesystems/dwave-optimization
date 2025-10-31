@@ -20,28 +20,25 @@ from dwave.optimization.libcpp.graph cimport ArrayNode
 
 cdef extern from "dwave-optimization/nodes/reduce.hpp" namespace "dwave::optimization" nogil:
     cdef cppclass AllNode(ArrayNode):
-        pass
+        span[const Py_ssize_t] axes() const
+        optional[double] initial
 
     cdef cppclass AnyNode(ArrayNode):
-        pass
+        span[const Py_ssize_t] axes() const
+        optional[double] initial
 
     cdef cppclass MaxNode(ArrayNode):
-        optional[double] init
+        span[const Py_ssize_t] axes() const
+        optional[double] initial
 
     cdef cppclass MinNode(ArrayNode):
-        optional[double] init
-
-    cdef cppclass PartialProdNode(ArrayNode):
         span[const Py_ssize_t] axes() const
-        optional[double] init
-
-    cdef cppclass PartialSumNode(ArrayNode):
-        span[const Py_ssize_t] axes() const
-        optional[double] init
+        optional[double] initial
 
     cdef cppclass ProdNode(ArrayNode):
-        optional[double] init
-
+        span[const Py_ssize_t] axes() const
+        optional[double] initial
 
     cdef cppclass SumNode(ArrayNode):
-        optional[double] init
+        span[const Py_ssize_t] axes() const
+        optional[double] initial
