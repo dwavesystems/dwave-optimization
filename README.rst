@@ -72,7 +72,7 @@ for more details.
 
 .. code-block:: bash
 
-    pip install -r requirements.txt
+    pip install --group dev
     pip install --no-build-isolation --config-settings=editable-verbose=true --editable .
 
 Testing
@@ -94,7 +94,7 @@ the tests to run.
 
 .. code-block:: bash
 
-    pip install -r requirements.txt
+    pip install --group dev
     meson setup build -Dbuildtype=debug
 
 You can then run the tests using
@@ -108,7 +108,7 @@ To run the doctests, install the docs requirements:
 
 .. code-block:: bash
 
-    pip install -r docs/requirements.txt
+    pip install --group docs
 
 You can then run them using the `docs/Makefile`.
 
