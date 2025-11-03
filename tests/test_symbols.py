@@ -3477,14 +3477,62 @@ class TestSum(utils.ReduceTests):
     def op(self, x, *args, **kwargs):
         return x.sum(*args, **kwargs)
 
+    def test_axis(self):
+        model = Model()
+        model.states.resize(1)
+
+        threeD = model.constant(np.arange(2 * 3 * 4).reshape(4, 2, 3))
+        
+        x = threeD.sum(axis=(0, 1))
+        self.assertEqual(x.shape(), (3,))
+        with model.lock():
+            np.testing.assert_array_equal(x.state(), [84, 92, 100])
+
+        y = threeD.sum(axis=(1, -3))
+        self.assertEqual(x.shape(), (3,))
+        with model.lock():
+            self.assertEqual(y.shape(), (3,))
+            np.testing.assert_array_equal(y.state(), [84, 92, 100])
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "axis -4 is out of bounds for array of dimension 3",
+        ):
+            threeD.sum(axis=(2, -4))
+        with self.assertRaisesRegex(
+            ValueError,
+            "axis 3 is out of bounds for array of dimension 3",
+        ):
+            threeD.sum(axis=(-3, 3))
+
     def test_empty(self):
         model = Model()
         empty = model.constant([]).sum()
+
+        with self.assertRaises(ValueError):
+            model.constant([]).sum(initial=None)
+
         model.lock()
         model.states.resize(1)
 
         self.assertEqual(empty.state(), 0)
         self.assertEqual(empty.state(), np.asarray([]).sum())  # confirm consistency with NumPy
+
+    def test_exceptions(self):
+        model = Model()
+
+        with self.assertRaises(ValueError):
+            model.constant(np.ones((5, 3))).sum(axis=100)
+        with self.assertRaises(ValueError):
+            model.constant(np.ones((5, 3))).sum(axis=-100)
+
+    def test_initial(self):
+        model = Model()
+
+        empty = model.constant([])
+
+        with self.assertRaises(ValueError):
+            empty.sum(initial=None)
 
     def test_state(self):
         model = Model()

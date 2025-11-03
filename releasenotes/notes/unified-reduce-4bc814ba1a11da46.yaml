@@ -1,0 +1,8 @@
+---
+features:
+  - Consolidate C++ ``ReduceNode`` and ``PartialReduceNode`` into a single node type.
+  - |
+    Support reductions over multiple axes for all reduce operations.
+    See `#347 <https://github.com/dwavesystems/dwave-optimization/issues/347>`_.
+deprecations:
+  - Make ``PartialProd`` and ``PartialSum`` symbols aliases for ``Prod`` and ``Sum``.

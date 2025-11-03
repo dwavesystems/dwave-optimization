@@ -92,6 +92,7 @@ endif
 
 foreach name : [
     '_binaryop',
+    '_reduce',
     '_unaryop',
     'accumulate_zip',
     'collections',
@@ -106,7 +107,6 @@ foreach name : [
     'naryop',
     'numbers',
     'quadratic_model',
-    'reduce',
     'set_routines',
     'softmax',
     'sorting',

@@ -114,8 +114,8 @@ TEST_CASE("Topological Sort", "[topological_sort]") {
         }
 
         AND_WHEN("We add some more successors, and topologically sort the model") {
-            graph.emplace_node<SumNode>(disjoint_list1);
-            graph.emplace_node<SumNode>(disjoint_list0);
+            graph.emplace_node<SumNode>(disjoint_list1, std::vector<ssize_t>{}, 0);
+            graph.emplace_node<SumNode>(disjoint_list0, std::vector<ssize_t>{}, 0);
 
             graph.topological_sort();
 

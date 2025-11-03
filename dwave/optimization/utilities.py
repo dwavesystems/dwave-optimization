@@ -18,6 +18,32 @@ import functools
 __all__ = []
 
 
+# Adopted from NumPy under BSD license
+# https://github.com/numpy/numpy/blob/0959a54/LICENSE.txt
+# https://github.com/numpy/numpy/blob/0959a54/numpy/_globals.py#L32-L63
+#
+# We could just use numpy._globals._NoValue directly but because that's private
+# and subject to change, we choose to instead maintain our own.
+class _NoValueType:
+    """Special keyword value to use when no other default is appropriate.
+
+    Specifically useful to distinguish from ``None``.
+    """
+    __instance = None
+
+    def __new__(cls):
+        # ensure that only one instance ever exists
+        if not cls.__instance:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    def __repr__(self):
+        return "<no value>"
+
+
+_NoValue = _NoValueType()
+
+
 def _file_object_arg(mode: str):
     """In several methods we want to accept a file name or a file-like object.
 

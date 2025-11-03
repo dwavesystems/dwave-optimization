@@ -419,23 +419,12 @@ class ReduceTests(SymbolTests):
             with model.lock():
                 self.assertEqual(out.state(), self.op(np.asarray(arr)))
 
-            if self.empty_requires_initial:
-                with self.assertRaises(ValueError):
-                    self.op(empty, initial=None)
-                with self.assertRaises(ValueError):
-                    self.op(dynamic, initial=None)
+            with self.assertRaises(ValueError):
+                self.op(empty, initial=None)
+            with self.assertRaises(ValueError):
+                self.op(dynamic, initial=None)
 
-                self.assertEqual(model.num_symbols(), 4)  # no side-effects
-            else:
-                out = self.op(empty, initial=None)
-                with model.lock():
-                    self.assertEqual(out.state(), self.op(empty.state()))
-
-                out = self.op(dynamic, initial=None)
-                with model.lock():
-                    self.assertEqual(out.state(), self.op(dynamic.state()))
-
-                self.assertEqual(model.num_symbols(), 6)
+            self.assertEqual(model.num_symbols(), 4)  # no side-effects
 
     def test_numpy_equivalence(self):
         model = Model()
