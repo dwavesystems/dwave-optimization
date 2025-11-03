@@ -3484,11 +3484,14 @@ class TestSum(utils.ReduceTests):
         threeD = model.constant(np.arange(2 * 3 * 4).reshape(4, 2, 3))
         
         x = threeD.sum(axis=(0, 1))
+        self.assertEqual(x.shape(), (3,))
         with model.lock():
             np.testing.assert_array_equal(x.state(), [84, 92, 100])
 
         y = threeD.sum(axis=(1, -3))
+        self.assertEqual(x.shape(), (3,))
         with model.lock():
+            self.assertEqual(y.shape(), (3,))
             np.testing.assert_array_equal(y.state(), [84, 92, 100])
 
         with self.assertRaisesRegex(
