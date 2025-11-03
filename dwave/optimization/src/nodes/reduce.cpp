@@ -630,7 +630,7 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
     auto* const state_ptr = data_ptr<ReduceNodeData<BinaryOp>>(state);
 
     // We are reducing over all axes, so this is nice and simple
-    if (axes_.empty() or axes_.size() == static_cast<std::size_t>(this->ndim())) {
+    if (axes_.empty() or axes_.size() == static_cast<std::size_t>(array_ptr_->ndim())) {
         for (const Update& update : array_ptr_->diff(state)) {
             if (update.placed()) {
                 state_ptr->add_to_reduction(0, update.value);

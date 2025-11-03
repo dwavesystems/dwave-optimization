@@ -1279,6 +1279,40 @@ TEST_CASE("SumNode") {
             }
         }
     }
+
+    GIVEN("Dynamic array of shape (-1, 2) with min/max of 1/3 on first dim, and a sum across the second dim") {
+        auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 2}, 0.0, 10.0, true, 2, 6);
+        auto sum_ptr = graph.emplace_node<SumNode>(x_ptr, std::vector<ssize_t>{1});
+
+        THEN("The shape of the sum is correct") {
+            CHECK(sum_ptr->dynamic());
+            CHECK_THAT(sum_ptr->shape(), RangeEquals({-1}));
+        }
+
+        AND_GIVEN("An initialized state") {
+            auto state = graph.empty_state();
+            x_ptr->initialize_state(state, {1, 2});
+            graph.initialize_state(state);
+            REQUIRE_THAT(x_ptr->shape(state), RangeEquals({1, 2}));
+
+            THEN("The initial state of the sum is correct") {
+                CHECK_THAT(sum_ptr->shape(state), RangeEquals({1}));
+                CHECK_THAT(sum_ptr->view(state), RangeEquals({3}));
+            }
+
+            AND_WHEN("We grow the dynamic node") {
+
+                x_ptr->grow(state, {3, 4});
+                graph.propagate(state);
+                REQUIRE_THAT(x_ptr->shape(state), RangeEquals({2, 2}));
+
+                THEN("The state of the sum is still correct") {
+                    CHECK_THAT(sum_ptr->shape(state), RangeEquals({2}));
+                    CHECK_THAT(sum_ptr->view(state), RangeEquals({3, 7}));
+                }
+            }
+        }
+    }
 }
 
 }  // namespace dwave::optimization
