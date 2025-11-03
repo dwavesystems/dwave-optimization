@@ -264,16 +264,17 @@ class ReduceNodeData : public NodeStateData {
         // Get the reduction we're potentially updating, as a copy
         auto reduction = reductions_[index];
 
-        // Add `to` to the reduction first
-        reduction = ufunc(std::move(reduction), to);
-
-        // Then try to remove `from` from the value
+        // First try to remove the `from` value we previously included in the
+        // reduction
         auto inverse = ufunc.inverse(std::move(reduction), from);
         if (not inverse.has_value()) {
             flags_[index] = ReductionFlag::invalid;
             return;
         }
         reduction = std::move(inverse.value());
+
+        // Then add the new `to` value to the reduction
+        reduction = ufunc(std::move(reduction), to);
 
         return update_reduction_(index, std::move(reduction));
     }
