@@ -251,7 +251,7 @@ TEMPLATE_TEST_CASE("ReduceNode", "",                                   //
 TEST_CASE("AllNode/AnyNode") {
     auto graph = Graph();
 
-    GIVEN("x = BinaryNode({5}), y = x.any()") {
+    GIVEN("x = BinaryNode({5}), y = x.any(), z = x.any()") {
         auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{5});
         auto y_ptr = graph.emplace_node<AllNode>(x_ptr);
         auto z_ptr = graph.emplace_node<AnyNode>(x_ptr);
@@ -307,6 +307,18 @@ TEST_CASE("AllNode/AnyNode") {
             THEN("y is false and z is true") {
                 CHECK_THAT(y_ptr->view(state), RangeEquals({false}));
                 CHECK_THAT(z_ptr->view(state), RangeEquals({true}));
+            }
+
+            AND_WHEN("x is updated to [1, 1, 1, 1, 1]") {
+                for (ssize_t i = 0; i < 5; ++i) {
+                    x_ptr->set_value(state, i, 1);
+                }
+                graph.propagate(state, {x_ptr, y_ptr, z_ptr});
+
+                THEN("y is true and z is true") {
+                    CHECK_THAT(y_ptr->view(state), RangeEquals({true}));
+                    CHECK_THAT(z_ptr->view(state), RangeEquals({true}));
+                }
             }
         }
     }
@@ -580,7 +592,7 @@ TEST_CASE("ProdNode") {
                 list_ptr->propagate(state);
                 prod_ptr->propagate(state);
 
-                THEN("prod([ 1 2 3 0 ]) == 24") { CHECK(prod_ptr->view(state)[0] == 24); }
+                THEN("prod([ 1 2 3 4 ]) == 24") { CHECK(prod_ptr->view(state)[0] == 24); }
 
                 list_ptr->commit(state);
                 prod_ptr->commit(state);
@@ -958,6 +970,53 @@ TEST_CASE("SumNode") {
                 CHECK_THAT(r_ptr_1->view(state), RangeEquals({2, 4, 10, 12}));
                 /// np.sum(A, axis=2)
                 CHECK_THAT(r_ptr_2->view(state), RangeEquals({1, 5, 9, 13}));
+            }
+        }
+    }
+
+    GIVEN("A 3D array and a reduction along all choices of exactly two axes") {
+        std::vector<double> values = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
+                                      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23};
+        auto array_ptr = graph.emplace_node<ConstantNode>(values, std::vector<ssize_t>{2, 3, 4});
+
+        auto r_ptr_01 = graph.emplace_node<SumNode>(array_ptr, std::vector<ssize_t>{0, 1});
+        auto r_ptr_02 = graph.emplace_node<SumNode>(array_ptr, std::vector<ssize_t>{0, 2});
+        auto r_ptr_12 = graph.emplace_node<SumNode>(array_ptr, std::vector<ssize_t>{1, 2});
+        graph.emplace_node<ArrayValidationNode>(r_ptr_01);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_02);
+        graph.emplace_node<ArrayValidationNode>(r_ptr_12);
+
+        THEN("The dimensions of the partial reductions are correct") {
+            CHECK(array_ptr->ndim() == 3);
+            CHECK(r_ptr_01->ndim() == 1);
+            CHECK(r_ptr_02->ndim() == 1);
+            CHECK(r_ptr_12->ndim() == 1);
+        }
+
+        WHEN("We make a state") {
+            auto state = graph.initialize_state();
+
+            THEN("The reductions have the values and shapes we expect") {
+                CHECK(r_ptr_01->ndim() == 1);
+                CHECK(r_ptr_01->size(state) == 4);
+                CHECK(r_ptr_01->shape(state).size() == 1);
+
+                CHECK(r_ptr_02->ndim() == 1);
+                CHECK(r_ptr_02->size(state) == 3);
+                CHECK(r_ptr_02->shape(state).size() == 1);
+
+                CHECK(r_ptr_12->ndim() == 1);
+                CHECK(r_ptr_12->size(state) == 2);
+                CHECK(r_ptr_12->shape(state).size() == 1);
+
+                /// Check with
+                /// A = np.arange(24).reshape((2, 3, 4))
+                /// np.sum(A, axis=(0,1))
+                CHECK_THAT(r_ptr_01->view(state), RangeEquals({60, 66, 72, 78}));
+                /// np.sum(A, axis=(0,2))
+                CHECK_THAT(r_ptr_02->view(state), RangeEquals({60, 92, 124}));
+                /// np.sum(A, axis=(1,2))
+                CHECK_THAT(r_ptr_12->view(state), RangeEquals({66, 210}));
             }
         }
     }

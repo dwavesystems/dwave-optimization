@@ -14,19 +14,17 @@
 
 #pragma once
 
-#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <initializer_list>
-#include <memory>
 #include <optional>
 #include <span>
-#include <utility>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/functional.hpp"
 #include "dwave-optimization/graph.hpp"
+#include "dwave-optimization/iterators.hpp"
 #include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {

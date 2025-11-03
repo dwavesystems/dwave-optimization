@@ -15,15 +15,16 @@
 #include "dwave-optimization/nodes/reduce.hpp"
 
 #include <cmath>
-#include <concepts>
+#include <iterator>
+#include <memory>
 #include <numeric>
 #include <ranges>
 #include <stdexcept>
+#include <string>
 #include <tuple>
-#include <type_traits>
+#include <utility>
 
 #include "../functional_.hpp"
-#include "_state.hpp"
 
 namespace dwave::optimization {
 
