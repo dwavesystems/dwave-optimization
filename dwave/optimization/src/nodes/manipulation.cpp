@@ -1194,6 +1194,7 @@ Update TransposeNode::convert_predecessor_update_(Update update) const {
     }
 
     update.index = transpose_flat_index;
+
     return update;
 }
 
@@ -1210,6 +1211,19 @@ void TransposeNode::propagate(State& state) const {
     transpose_diff.reserve(array_ptr_->size_diff(state));
 
     for (const Update& u : array_diff) {
+        assert(([&]() {
+            // make a copy of the update
+            Update u_copy = u;
+            // convert flat index of predecessor update to multidimensional indices
+            std::vector<ssize_t> multi_index = unravel_index(u_copy.index, array_ptr_->shape());
+            // reverse multidimensional indices to obtain the multidimensional
+            // transpose indices
+            std::reverse(multi_index.begin(), multi_index.end());
+            // convert multidimensional transpose indices to transpose flat index
+            // and check conversion
+            return ravel_multi_index(multi_index, this->shape()) ==
+                   convert_predecessor_update_(u_copy).index;
+        })());
         // Make a copy of the update and convert the index to the respective
         // transpose index
         transpose_diff.emplace_back(convert_predecessor_update_(u));
