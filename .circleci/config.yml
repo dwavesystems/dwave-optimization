@@ -191,6 +191,7 @@ jobs:
           command: |
             apt update
             apt install python3-pip python3-venv -y
+            apt install valgrind -y
       - run: &install-requirements
           name: create venv and install build dependencies
           command: |
@@ -204,6 +205,11 @@ jobs:
             . env/bin/activate
             meson setup _build -Dbuildtype=debug -Dwerror=true
             meson test -C _build
+
+      - run:
+          name: run c++ tests with valgrind
+          command: |
+            valgrind --error-exitcode=1 ./_build/tests/cpp/tests-all
 
       - run: &run-cpp23-tests
           name: run c++23 tests with meson
