@@ -381,9 +381,10 @@ std::vector<ssize_t> drop_axes(std::ranges::sized_range auto&& range,
     std::vector<ssize_t> out;
 
     auto axes_it = axes.begin();
+    const auto axes_end = axes.end();
     auto range_it = std::ranges::begin(range);
     for (ssize_t dim = 0, stop = std::ranges::size(range); dim < stop; ++dim, ++range_it) {
-        if (dim == *axes_it) {
+        if (axes_it != axes_end && dim == *axes_it) {
             // skipped axis, this relies on axes being sorted and unique
             ++axes_it;
         } else {
