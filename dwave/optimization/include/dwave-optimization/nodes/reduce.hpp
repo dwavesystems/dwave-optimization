@@ -24,7 +24,6 @@
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/functional.hpp"
 #include "dwave-optimization/graph.hpp"
-#include "dwave-optimization/iterators.hpp"
 #include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {
@@ -111,6 +110,11 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
     // The minimum and maximum (inclusive) value that might be returned as well
     // as whether we're integral or not.
     const ValuesInfo values_info_;
+
+    // During propagation, we need to take a predecessor's `update` and apply
+    // it to the correct `index` in the ReduceNode buffer. This method
+    // determines the correct buffer `index` given an `update.index`.
+    ssize_t convert_predecessor_index_(ssize_t index) const;
 };
 
 using AllNode = ReduceNode<std::logical_and<double>>;
