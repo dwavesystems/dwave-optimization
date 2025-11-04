@@ -20,7 +20,7 @@
 
 namespace dwave::optimization {
 
-std::pair<double, double> calculate_values_minmax_(const Array *arr_ptr) {
+std::pair<double, double> calculate_values_minmax_(const Array* arr_ptr) {
     // Predecessor is static or dynamic but always non-empty. Therefore,
     // mean is always computed and will fall within min/max of predecessor.
     if ((arr_ptr->size() > 0) || (arr_ptr->sizeinfo().min.value_or(0) > 0)) {
@@ -37,14 +37,14 @@ std::pair<double, double> calculate_values_minmax_(const Array *arr_ptr) {
     return std::make_pair(std::min(arr_ptr->min(), 0.0), std::max(arr_ptr->max(), 0.0));
 }
 
-MeanNode::MeanNode(ArrayNode *arr_ptr)
+MeanNode::MeanNode(ArrayNode* arr_ptr)
         : ScalarOutputMixin<ArrayNode, true>(),
           arr_ptr_(arr_ptr),
           minmax_(calculate_values_minmax_(arr_ptr_)) {
     add_predecessor(arr_ptr);
 }
 
-void MeanNode::initialize_state(State &state) const {
+void MeanNode::initialize_state(State& state) const {
     if (arr_ptr_->size(state) == 0) {
         emplace_state(state, 0.0);
         return;
@@ -63,7 +63,7 @@ double MeanNode::min() const { return this->minmax_.first; }
 
 double MeanNode::max() const { return this->minmax_.second; }
 
-void MeanNode::propagate(State &state) const {
+void MeanNode::propagate(State& state) const {
     const std::span<const Update> arr_updates = arr_ptr_->diff(state);
 
     // If no update, mean is unchanged
@@ -85,13 +85,12 @@ void MeanNode::propagate(State &state) const {
     double sum = data_ptr<ScalarOutputMixinStateData>(state)->update.value *
                  static_cast<double>(state_size_prior);
 
-    for (const Update &u : arr_updates) {
-        if (u.removed()) {
+    for (const Update& u : arr_updates) {
+        if (!u.placed()) {  // i.e. removed or changed.
             sum -= u.old;
-        } else if (u.placed()) {
+        }
+        if (!u.removed()) {  // i.e. placed or changed.
             sum += u.value;
-        } else {
-            sum += u.value - u.old;
         }
     }
     set_state(state, sum / static_cast<double>(state_size));
