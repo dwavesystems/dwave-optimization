@@ -370,12 +370,8 @@ class ReduceNodeData : public NodeStateData {
 // Drop the given axes from the range. Assumes axes is sorted and unique
 std::vector<ssize_t> drop_axes(std::ranges::sized_range auto&& range,
                                std::span<const ssize_t> axes) {
-    assert(std::ranges::is_sorted(axes));
-    assert(([&]() {
-        std::vector<ssize_t> ax(axes.begin(), axes.end());
-        const auto [ret, end] = std::ranges::unique(ax);
-        return ret == end;
-    })());
+    assert(std::ranges::is_sorted(axes) && "axes must be sorted");
+    assert(std::ranges::adjacent_find(axes) == axes.end() && "axes must be unique");
 
     std::vector<ssize_t> out;
 
@@ -630,12 +626,7 @@ template <class BinaryOp>
 ssize_t ReduceNode<BinaryOp>::convert_predecessor_index_(ssize_t index) const {
     assert(index >= 0 && "index must be non-negative");  // NumPy raises here so we assert
     assert(std::ranges::is_sorted(axes_) && "axes must be sorted");
-    assert(([&]() {
-               std::vector<ssize_t> ax(axes_.begin(), axes_.end());
-               const auto [ret, end] = std::ranges::unique(ax);
-               return ret == end;
-           })() &&
-           "axes must be unique");
+    assert(std::ranges::adjacent_find(axes_) == axes_.end() && "axes must be unique");
 
     // Predecessor's shape
     const std::span<const ssize_t> array_shape = array_ptr_->shape();
