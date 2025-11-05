@@ -199,9 +199,9 @@ class Model(_Graph):
             >>> model = Model()
             >>> b = model.binary(5, lower_bound=[-1, 0, 1, 0, 1], upper_bound=[1, 0, 1, 1, 1])
             >>> np.all([0, 0, 1, 0, 1] == b.lower_bound())
-            np.True_
+            True
             >>> np.all([1, 0, 1, 1, 1] == b.upper_bound())
-            np.True_
+            True
 
             This example adds a :math:`2`-sized binary symbol with a scalar lower
             bound and index-wise upper bounds to a model.
@@ -211,9 +211,9 @@ class Model(_Graph):
             >>> model = Model()
             >>> b = model.binary(2, lower_bound=-1.1, upper_bound=[1.1, 0.9])
             >>> np.all([0, 0] == b.lower_bound())
-            np.True_
+            True
             >>> np.all([1, 0] == b.upper_bound())
-            np.True_
+            True
 
         See Also:
             :class:`~dwave.optimization.symbols.numbers.BinaryVariable`: equivalent symbol.
@@ -513,9 +513,9 @@ class Model(_Graph):
             >>> model = Model()
             >>> i = model.integer(5, lower_bound=[-1, 0, 3, 0, 2], upper_bound=[1, 2, 3, 4, 5])
             >>> np.all([-1, 0, 3, 0, 2] == i.lower_bound())
-            np.True_
+            True
             >>> np.all([1, 2, 3, 4, 5] == i.upper_bound())
-            np.True_
+            True
 
             This example adds a :math:`2`-sized integer symbol with a scalar lower
             bound and index-wise upper bounds to a model.
@@ -525,9 +525,9 @@ class Model(_Graph):
             >>> model = Model()
             >>> i = model.integer(2, lower_bound=-1.1, upper_bound=[1.1, 2.9])
             >>> np.all([-1, -1] == i.lower_bound())
-            np.True_
+            True
             >>> np.all([1, 2] == i.upper_bound())
-            np.True_
+            True
 
         See Also:
             :class:`~dwave.optimization.symbols.numbers.IntegerVariable`: equivalent symbol.
