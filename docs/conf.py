@@ -55,6 +55,10 @@ doctest_global_setup = """
 
 import dwave.optimization
 
+# print numpy numeric scalars without their type information,
+# e.g. as 3.0 rather than np.float64(3.0).
+import numpy
+numpy.set_printoptions(legacy='1.25')
 """
 
 autodoc_type_aliases = {
