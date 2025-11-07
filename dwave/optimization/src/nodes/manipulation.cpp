@@ -229,7 +229,15 @@ void BroadcastToNode::propagate(State& state) const {
     ssize_t size_diff = 0;
     for (Update update : deduplicate_diff_view(from_diff)) {
         // we need to convert from our predecessor's index to ours
-        const ssize_t index = reindex(update.index);
+        const ssize_t index = convert_predecessor_index_(update.index);
+        assert(([&]() {
+                   std::vector<ssize_t> multi_index =
+                           unravel_index(update.index, array_ptr_->shape());
+                   multi_index.insert(multi_index.begin(), this->ndim() - array_ptr_->ndim(), 0);
+                   const ssize_t assert_index = ravel_multi_index(multi_index, this->shape());
+                   return assert_index == index;
+               })() &&
+               "Bad conversion of predecessor index");
 
         if (update.placed()) {
             for (const ssize_t offset : diff_offsets) {
@@ -261,11 +269,56 @@ void BroadcastToNode::propagate(State& state) const {
     if (to_diff.size()) Node::propagate(state);
 }
 
-ssize_t BroadcastToNode::reindex(const ssize_t index) const {
-    std::vector<ssize_t> multi_index = unravel_index(index, array_ptr_->shape());
-    assert(this->ndim() >= array_ptr_->ndim());
-    multi_index.insert(multi_index.begin(), this->ndim() - array_ptr_->ndim(), 0);
-    return ravel_multi_index(multi_index, this->shape());
+ssize_t BroadcastToNode::convert_predecessor_index_(ssize_t index) const {
+    assert(this->ndim() >= array_ptr_->ndim() && "incorrect # of dimensions");
+    assert(index >= 0 && "index must be non-negative");  // NumPy raises here so we assert
+
+    std::span<const ssize_t> array_shape = array_ptr_->shape();
+    std::span<const ssize_t> node_shape = this->shape();
+
+    if (array_shape.empty()) {
+        assert(index == 0);  // otherwise it's out-of-bounds
+        return index;
+    }
+
+    // Shape iterators, initialized to the last element in their resp. ranges.
+    auto array_shape_it = std::ranges::end(array_shape) - 1;
+    auto node_shape_it = std::ranges::end(node_shape) - 1;
+
+    ssize_t flat_index = 0;
+    ssize_t multiplier = 1;
+
+    // We traverse the dimensions (and shape) of the predecessor array in
+    // reverse order up to and *not* including the 0th dimension while also
+    // traversing the BroadcastToNode shape in reverse.
+    for (ssize_t dim = std::ranges::size(array_shape) - 1; dim > 0;
+         --dim, --array_shape_it, --node_shape_it) {
+        assert(0 <= dim && "All dimensions except the first must be non-negative");
+        assert(array_shape_it != array_shape.begin() - 1 && "Bad array shape iterator");
+
+        // Contribution of `index` in the given dimension `dim`
+        const ssize_t multidimensional_index = index % *array_shape_it;
+        index /= *array_shape_it;
+
+        // NumPy supports "clip" and "wrap" which we could add support for
+        // but for now let's just assert.
+        assert(0 <= multidimensional_index && multidimensional_index < *node_shape_it &&
+               "Multidimensional_index exceeds node shape");
+        assert(node_shape_it != node_shape.begin() - 1 && "Bad node shape iterator");
+
+        // determine the contribution of `multidimensional_index` to flat index
+        flat_index += multidimensional_index * multiplier;
+        // this contribution is defined by the node shape
+        multiplier *= *node_shape_it;
+    }
+
+    // Check if the index is out of bounds for non-dynamic shapes and assert
+    assert(array_shape[0] < 0 || index < array_shape[0]);
+
+    // Handle the contribution of the 0th dimension of the predecessor.
+    flat_index += index * multiplier;
+
+    return flat_index;
 }
 
 void BroadcastToNode::revert(State& state) const { data_ptr<BroadcastToNodeData>(state)->revert(); }
