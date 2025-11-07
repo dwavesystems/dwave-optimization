@@ -500,6 +500,49 @@ TEST_CASE("MaxNode") {
             CHECK(!y_ptr->integral());
         }
     }
+
+    GIVEN("x = IntegerNode(5, 0, 10), y x.max()") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(3, 0, 20);
+        auto y_ptr = graph.emplace_node<MaxNode>(x_ptr);
+
+        auto state = graph.empty_state();
+        x_ptr->initialize_state(state, {0, 5, 10});
+        graph.initialize_state(state);
+        CHECK_THAT(y_ptr->view(state), RangeEquals({10}));
+
+        x_ptr->set_value(state, 2, 11);
+        x_ptr->set_value(state, 2, 5);
+        graph.propagate(state);
+        CHECK_THAT(y_ptr->view(state), RangeEquals({5}));
+
+        graph.revert(state);
+        CHECK_THAT(y_ptr->view(state), RangeEquals({10}));
+
+        // do the other order
+        x_ptr->set_value(state, 2, 5);
+        x_ptr->set_value(state, 2, 11);
+        graph.propagate(state);
+        CHECK_THAT(y_ptr->view(state), RangeEquals({11}));
+
+        graph.revert(state);
+        CHECK_THAT(y_ptr->view(state), RangeEquals({10}));
+
+        x_ptr->set_value(state, 2, 11);
+        x_ptr->set_value(state, 2, 5);
+        graph.propagate(state);
+        CHECK_THAT(y_ptr->view(state), RangeEquals({5}));
+
+        graph.commit(state);
+        CHECK_THAT(y_ptr->view(state), RangeEquals({5}));
+
+        x_ptr->set_value(state, 2, 5);
+        x_ptr->set_value(state, 2, 11);
+        graph.propagate(state);
+        CHECK_THAT(y_ptr->view(state), RangeEquals({11}));
+
+        graph.commit(state);
+        CHECK_THAT(y_ptr->view(state), RangeEquals({11}));
+    }
 }
 
 TEST_CASE("MinNode") {

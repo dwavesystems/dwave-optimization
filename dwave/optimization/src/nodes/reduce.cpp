@@ -263,17 +263,28 @@ class ReduceNodeData : public NodeStateData {
         // Get the reduction we're potentially updating, as a copy
         auto reduction = reductions_[index];
 
-        // First try to remove the `from` value we previously included in the
+        // Add the new `to` value to the reduction.
+        // We do this first because it results in fewer indices marked invalid
+        // in some common cases.
+        // E.g., for `MaxNode`, if `reduction == 10`, `from == 10`, and `to == 11`
+        // then if we invert first then the inversion will fail, but if we apply
+        // first it wont! This can theoretically happen in the other direction as
+        // well but we don't have any operations right now that work that way.
+        reduction = ufunc(std::move(reduction), to);
+
+        // Then try to remove the `from` value we previously included in the
         // reduction
         auto inverse = ufunc.inverse(std::move(reduction), from);
         if (not inverse.has_value()) {
-            flags_[index] = ReductionFlag::invalid;
+            // if the location has not been previously updated, then save the old
+            // value and mark it as invalid
+            if (flags_[index] == ReductionFlag::unchanged) {
+                reductions_diff_.emplace_back(index, reductions_[index]);
+            }
+            flags_[index] = ReductionFlag::invalid;            
             return;
         }
         reduction = std::move(inverse.value());
-
-        // Then add the new `to` value to the reduction
-        reduction = ufunc(std::move(reduction), to);
 
         return update_reduction_(index, std::move(reduction));
     }
