@@ -115,6 +115,10 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
     // it to the correct `index` in the ReduceNode buffer. This method
     // determines the correct buffer `index` given an `update.index`.
     ssize_t convert_predecessor_index_(ssize_t index) const;
+
+    // During `reduce_()` we need to convert from a flat index of this
+    // node to a flat index of the predecessor node.
+    ssize_t convert_to_predecessor_index_(ssize_t index) const;
 };
 
 using AllNode = ReduceNode<std::logical_and<double>>;

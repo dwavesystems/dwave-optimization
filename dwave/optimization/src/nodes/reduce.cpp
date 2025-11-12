@@ -657,7 +657,7 @@ ssize_t ReduceNode<BinaryOp>::convert_predecessor_index_(ssize_t index) const {
         const ssize_t multidimensional_index = index % *array_shape_it;
         index /= *array_shape_it;
 
-        assert(0 <= dim && "all dimensions except the first must be non-negative");
+        assert(0 <= dim && "all dimensions except the 0th must be non-negative");
         // NumPy supports "clip" and "wrap" which we could add support for
         // but for now let's just assert.
         assert(0 <= multidimensional_index && (!dim || multidimensional_index < *array_shape_it));
@@ -688,6 +688,83 @@ ssize_t ReduceNode<BinaryOp>::convert_predecessor_index_(ssize_t index) const {
     }
 
     return reduce_node_flat_index;
+}
+
+template <class BinaryOp>
+ssize_t ReduceNode<BinaryOp>::convert_to_predecessor_index_(ssize_t index) const {
+    assert(index >= 0 && "index must be non-negative");  // NumPy raises here so we assert
+    assert(std::ranges::is_sorted(axes_) && "axes must be sorted");
+    assert(std::ranges::adjacent_find(axes_) == axes_.end() && "axes must be unique");
+
+    // ReduceNode's shape
+    const std::span<const ssize_t> reduce_shape = this->shape();
+    if (reduce_shape.empty()) {
+        assert(index == 0);  // otherwise it's out-of-bounds
+        return index;
+    }
+
+    // ReduceNode and predecessors' shape iterator, initialized to the last
+    // element in their respective ranges.
+    const std::span<const ssize_t> array_shape = array_ptr_->shape();
+    auto reduce_shape_it = std::ranges::end(reduce_shape) - 1;
+    auto array_shape_it = std::ranges::end(array_shape) - 1;
+
+    // `axes_` defines the axes *excluded* from the reduction.
+    auto axes_it = axes_.end() - 1;
+    const auto axes_stop = axes_.begin() - 1;
+
+    ssize_t predecessor_flat_index = 0;
+    ssize_t multiplier = 1;
+
+    // We traverse the dimensions (and shape) of the *predecessor* in reverse
+    // order up to and *not* including the 0th dimension. We traverse the
+    // predecessor`s dimensions as opposed to the ReduceNode`s dimensions since
+    // we need to handle the deleted axes (axes_) in the reduction.
+    for (ssize_t dim = std::ranges::size(array_shape) - 1; dim > 0; --dim, --array_shape_it) {
+        assert(0 <= dim && "All dimensions except the 0th must be non-negative");
+        assert(array_shape_it != array_shape.begin() - 1 &&
+               "Bad predecessor array shape iterator in ReduceNode");
+
+        if (axes_it != axes_stop && dim == *axes_it) {
+            // This axis was *ignored* in the reduction. We add it back and set
+            // it's multidimensional index to 0. It`s contribution to the flat
+            // index is therefore also 0. Therefore, there is nothing to do.
+            assert(axes_it != axes_stop && "Bad axes_ iterator in ReduceNode");
+            --axes_it;
+        } else {
+            // This axe was reduced over. First, we calculate the contribution
+            // of `index` in the given dimension `dim`.
+            assert(reduce_shape_it != reduce_shape.begin() - 1 &&
+                   "Bad reduce node shape iterator in ReduceNode");
+            const ssize_t multidimensional_index = index % *reduce_shape_it;
+            index /= *reduce_shape_it;
+
+            // NumPy supports "clip" and "wrap" which we could add support for
+            // but for now let's just assert.
+            assert(0 <= multidimensional_index &&
+                   (!dim || multidimensional_index < *reduce_shape_it));
+
+            // Second, we determine the contribution of
+            // `multidimensional_index` to the predecessor's flat index.
+            predecessor_flat_index += multidimensional_index * multiplier;
+            --reduce_shape_it;
+        }
+
+        // The flat index axis multiplier is *always* offset by the
+        // predecessor's shape along the given dimension (dim).
+        multiplier *= *array_shape_it;
+    }
+
+    // Handle the contribution of the 0th dimension. If the axis was *ignored*
+    // in the reduction, there is nothing to do (recall rationale above).
+    if (axes_it == axes_stop) {
+        // 0th dimension was included in the reduction.
+        // Check if the index is out of bounds for non-dynamic shapes and assert.
+        assert(reduce_shape[0] < 0 || index < reduce_shape[0]);
+        predecessor_flat_index += index * multiplier;
+    }
+
+    return predecessor_flat_index;
 }
 
 template <class BinaryOp>
@@ -767,23 +844,33 @@ auto ReduceNode<BinaryOp>::reduce_(const State& state, const ssize_t index) cons
     const auto subspace_shape = keep_axes(array_ptr_->shape(state), axes_);  // state-dependent!
     const auto subspace_strides = keep_axes(array_ptr_->strides(), axes_);
 
-    // Get the multi-index pointing to the location that the reduction will
-    // be placed in *our* graph.
-    std::vector<ssize_t> multi_index = unravel_index(index, this->shape());
-
-    // Add back in the axes we reduced over and set them to 0 so that
-    // multi_index now points to the beginning of each reduction in the
-    // array we're reducing over
-    for (const ssize_t& dim : axes_) {
-        multi_index.insert(multi_index.begin() + dim, 0);
-    }
-
     // We can then create an iterator that iterates of the reduction group
     auto begin = array_ptr_->begin(state);
     if (begin.shaped()) {
+        // Get the multi-index pointing to the location that the reduction will
+        // be placed in *our* graph.
+        std::vector<ssize_t> multi_index = unravel_index(index, this->shape());
+
+        // Add back in the axes we reduced over and set them to 0 so that
+        // multi_index now points to the beginning of each reduction in the
+        // array we're reducing over
+        for (const ssize_t& dim : axes_) {
+            multi_index.insert(multi_index.begin() + dim, 0);
+        }
+
         begin += multi_index;
     } else {
-        begin += ravel_multi_index(multi_index, array_ptr_->shape());
+        assert(([&]() {
+                   std::vector<ssize_t> multi_index = unravel_index(index, this->shape());
+                   for (const ssize_t& dim : axes_) {
+                       multi_index.insert(multi_index.begin() + dim, 0);
+                   }
+                   // convert to a flat index and check conversion
+                   return (convert_to_predecessor_index_(index) ==
+                           ravel_multi_index(multi_index, array_ptr_->shape()));
+               })() &&
+               "Bad conversion to predecessor index");
+        begin += convert_to_predecessor_index_(index);
     }
     auto it = BufferIterator<double, double, true>(&*begin, subspace_shape, subspace_strides);
 
