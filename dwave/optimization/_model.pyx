@@ -13,6 +13,8 @@
 #    limitations under the License.
 
 import collections.abc
+import dataclasses
+import fractions
 import functools
 import itertools
 import json
@@ -1373,6 +1375,64 @@ def _split_indices(indices):
     return tuple(basic_indices), tuple(advanced_indices)
 
 
+# dev note: most documentation is in the `ArraySymbol.info()` method.
+@dataclasses.dataclass(frozen=True)
+class ArraySizeInfo:
+    """Information about the size of an :class:`ArraySymbol`."""
+
+    multiplier: fractions.Fraction
+    symbol: Symbol
+    offset: fractions.Fraction
+    min: None | float = None
+    max: None | float = None
+
+    @classmethod
+    def _from_array(cls, ArraySymbol symbol):
+        if not symbol.array_ptr.dynamic():
+            return symbol.array_ptr.size()
+
+        sizeinfo = symbol.array_ptr.sizeinfo()
+
+        if sizeinfo.array_ptr:
+            symbol = symbol_from_ptr(symbol.model, <cppArrayNode*>sizeinfo.array_ptr)
+        else:
+            symbol = None
+
+        return cls(
+            multiplier=fractions.Fraction(
+                sizeinfo.multiplier.numerator(),
+                sizeinfo.multiplier.denominator(),
+            ),
+            symbol=symbol,
+            offset=fractions.Fraction(
+                sizeinfo.offset.numerator(),
+                sizeinfo.offset.denominator(),
+            ),
+            min=sizeinfo.min.value() if sizeinfo.min else None,
+            max=sizeinfo.max.value() if sizeinfo.max else None,
+        )
+
+
+# dev note: most documentation is in the `ArraySymbol.info()` method.
+@dataclasses.dataclass(frozen=True)
+class ArrayInfo:
+    """Information about an :class:`ArraySymbol`."""
+
+    min: float
+    max: float
+    integral: bool
+    size: int | ArraySizeInfo
+
+    @classmethod
+    def _from_array(cls, ArraySymbol symbol):
+        return cls(
+            min=symbol.array_ptr.min(),
+            max=symbol.array_ptr.max(),
+            integral=symbol.array_ptr.integral(),
+            size=ArraySizeInfo._from_array(symbol),
+        )
+
+
 def _as_array_symbol(model, symbol):
     if isinstance(symbol, ArraySymbol):
         return symbol
@@ -1718,6 +1778,85 @@ cdef class ArraySymbol(Symbol):
         Equivalent to ``symbol.reshape(-1)``.
         """
         return self.reshape(-1)
+
+    def info(self):
+        """Information about the values and size of the array symbol.
+
+        Symbols sometimes need to know information about their predecessor(s)
+        in order to determine whether they define a valid operation. For example,
+        a :class:`~dwave.optimization.symbols.Divide` symbol does not permit its
+        denominator to be 0.
+
+        This method returns a :func:`~dataclasses.dataclass` with the following fields
+
+        * ``min``: A lower bound (inclusive) on the values of the array.
+        * ``max``: An upper bound (inclusive) on the values of the array.
+        * ``integral``: Whether or not the values in the array will always be integral.
+        * ``size``: The size of the array. If the array has a fixed size it will
+          be an ``int``. If the array has a dynamic size, this will instead
+          be another :func:`~dataclasses.dataclass` with the following fields
+
+          * ``multiplier``, ``symbol``, and ``offset``: The size of the array
+            will be `multiplier * (size of symbol) + offset`. If the size of
+            the array symbol is not a linear function of another symbol, the
+            ``symbol`` field will just the ``self``.
+          * ``min``: A lower bound (inclusive) on the size of the array. Will be
+            ``None`` is the bound is not known.
+          * ``max``: An upper bound (inclusive) on the size of the array. Will be
+            ``None`` is the bound is not known.
+
+        Examples:
+            A constant symbol will have ``min``, ``max``, ``integral``, and
+            ``size`` determined by the array.
+
+            >>> import numpy as np
+            >>> from dwave.optimization import Model
+            ...
+            >>> model = Model()
+            >>> c = model.constant(np.linspace(0, 4.5, num=10))
+            >>> c.info()
+            ArrayInfo(min=0.0, max=4.5, integral=False, size=10)
+
+            A set symbol is dynamic so its size cannot be expressed as an
+            integer. However, its size is not derived from another symbol
+            so its size is derived from itself.
+
+            >>> s = model.set(10)
+            >>> s.info()  # doctest: +ELLIPSIS
+            ArrayInfo(min=0.0, max=9.0, integral=True, size=...)
+            >>> sizeinfo = s.info().size  # doctest: +ELLIPSIS
+            >>> sizeinfo.multiplier
+            Fraction(1, 1)
+            >>> sizeinfo.symbol.id() == s.id()
+            True
+            >>> sizeinfo.offset
+            Fraction(0, 1)
+            >>> sizeinfo.min
+            0
+            >>> sizeinfo.max
+            10
+
+            When we index the constant array from the set we create another
+            dynamic array with its size derived from set
+
+            >>> b = c[s]
+            >>> b.info()  # doctest: +ELLIPSIS
+            ArrayInfo(min=0.0, max=4.5, integral=False, size=...)
+            >>> sizeinfo = b.info().size  # doctest: +ELLIPSIS
+            >>> sizeinfo.multiplier
+            Fraction(1, 1)
+            >>> sizeinfo.symbol.id() == s.id()  # size is defined by the set
+            True
+            >>> sizeinfo.offset
+            Fraction(0, 1)
+            >>> sizeinfo.min
+            0
+            >>> sizeinfo.max
+            10
+
+        .. versionadded:: 0.6.8
+        """
+        return ArrayInfo._from_array(self)
 
     def max(self, *, axis=None, initial=_NoValue):
         """Create a :class:`~dwave.optimization.symbols.Max` symbol.

@@ -1069,6 +1069,23 @@ class TestConstant(utils.SymbolTests):
         with self.assertRaises(TypeError):
             int(model.constant([0]))  # not a scalar
 
+    def test_info(self):
+        model = Model()
+
+        with self.subTest(5):
+            info = model.constant(5).info()
+            self.assertEqual(info.min, 5)
+            self.assertEqual(info.max, 5)
+            self.assertTrue(info.integral)
+            self.assertEqual(info.size, 1)
+
+        with self.subTest([0, 2.4, 4.2]):
+            info = model.constant([0, 2.4, 4.2]).info()
+            self.assertEqual(info.min, 0)
+            self.assertEqual(info.max, 4.2)
+            self.assertFalse(info.integral)
+            self.assertEqual(info.size, 3)
+
     def test_noncontiguous(self):
         model = Model()
         c = model.constant(np.arange(6)[::2])
@@ -3316,6 +3333,22 @@ class TestSetVariable(utils.SymbolTests):
         s = model.set(5, 5)
         model.lock()
         yield s
+
+    def test_info(self):
+        model = Model()
+
+        s = model.set(7)
+        info = s.info()
+        self.assertEqual(info.min, 0)
+        self.assertEqual(info.max, 6)
+        self.assertTrue(info.integral)
+
+        sizeinfo: dwave.optimization._model.ArraySizeInfo = info.size
+        self.assertEqual(sizeinfo.multiplier, 1)
+        self.assertEqual(sizeinfo.offset, 0)
+        self.assertEqual(sizeinfo.symbol.id(), s.id())
+        self.assertEqual(sizeinfo.min, 0)
+        self.assertEqual(sizeinfo.max, 7)
 
     def test_shape(self):
         model = Model()

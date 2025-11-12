@@ -261,6 +261,15 @@ class BinaryOpTests(SymbolTests):
         x = next(self.generate_symbols())
         self.assertTrue(x._deterministic_state())
 
+    def test_info(self):
+        for x in self.generate_symbols():
+            info = x.info()
+            model = x.model
+            model.states.resize(1)
+            with model.lock():
+                self.assertLessEqual(info.min, x.state(0).min())
+                self.assertGreaterEqual(info.max, x.state(0).max())
+
     def test_numpy_equivalence(self):
         lhs_array = np.arange(10)
         rhs_array = np.arange(1, 11)

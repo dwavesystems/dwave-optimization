@@ -13,6 +13,8 @@
 #    limitations under the License.
 
 import collections.abc
+import dataclasses
+import fractions
 import os
 import typing
 
@@ -85,6 +87,21 @@ class Symbol:
     def state_size(self) -> int: ...
     def topological_index(self) -> int: ...
 
+@dataclasses.dataclass(frozen=True)
+class ArraySizeInfo:
+    multiplier: fractions.Fraction
+    symbol: Symbol
+    offset: fractions.Fraction
+    min: None | float
+    max: None | float
+
+@dataclasses.dataclass(frozen=True)
+class ArrayInfo:
+    min: float
+    max: float
+    integral: bool
+    size: int | ArraySizeInfo
+
 class ArraySymbol(Symbol):
     def __init__(self, *args, **kwargs) -> typing.NoReturn: ...
     def __abs__(self) -> symbols.Absolute: ...
@@ -116,6 +133,7 @@ class ArraySymbol(Symbol):
     def all(self, *, axis: _AxisLike = None, initial: _InitialLike = _NoValue) -> symbols.All: ...
     def any(self, *, axis: _AxisLike = None, initial: _InitialLike = _NoValue) -> symbols.Any: ...
     def copy(self) -> symbols.Copy: ...
+    def info(self) -> ArrayInfo: ...
     def flatten(self) -> symbols.Reshape: ...
     def max(self, *, axis: _AxisLike = None, initial: _InitialLike = _NoValue) -> symbols.Max: ...
     def min(self, *, axis: _AxisLike = None, initial: _InitialLike = _NoValue) -> symbols.Min: ...
