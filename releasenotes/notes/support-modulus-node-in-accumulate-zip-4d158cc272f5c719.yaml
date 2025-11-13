@@ -2,4 +2,4 @@
 
 features:
   - |
-    Support ModulusNode in expressions used in AccumulateZips
+    Support ``Modulus`` symbol in expressions used in ``AccumulateZip``.
