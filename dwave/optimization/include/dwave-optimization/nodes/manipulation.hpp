@@ -16,7 +16,9 @@
 
 #pragma once
 
+#include <optional>
 #include <span>
+#include <variant>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
@@ -360,6 +362,88 @@ class ResizeNode : public ArrayOutputMixin<ArrayNode> {
     const double fill_value_;
 
     const ValuesInfo values_info_;
+};
+
+class RollNode : public ArrayOutputMixin<ArrayNode> {
+ public:
+    /// Construct a RollNode.
+    ///
+    /// `shift` is a single integer, a vector of shifts per-axis, or an array encoding
+    /// the same.
+    ///
+    /// If `axis` is empty then the array is treated as flat while rolling. Otherwise
+    /// the given axes are shifted.
+    RollNode(ArrayNode* array_ptr, ssize_t shift, std::vector<ssize_t> axis = {});
+    RollNode(ArrayNode* array_ptr, std::vector<ssize_t> shift, std::vector<ssize_t> axis = {});
+    RollNode(ArrayNode* array_ptr, ArrayNode* shift, std::vector<ssize_t> axis = {});
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Node::initialize_state()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+    using ArrayOutputMixin::shape;
+
+    /// @copydoc Array::shape()
+    std::span<const ssize_t> shape(const State& state) const override;
+
+    using ArrayOutputMixin::size;
+
+    /// @copydoc Array::size()
+    ssize_t size(const State& state) const override;
+
+    /// @copydoc Array::sizeinfo()
+    SizeInfo sizeinfo() const override;
+
+    /// @copydoc Array::size_diff()
+    ssize_t size_diff(const State& state) const override;
+
+ private:
+    // Rotate the given array by shift
+    static void rotate_(std::span<double> array, ssize_t shift);
+
+    // Rotate the given array with the given shift by the shift given for each
+    // axis.
+    static void rotate_(std::span<double> array, std::span<const ssize_t> shape,
+                        std::span<const ssize_t> shifts);
+
+    // Return the current shift, and whether is changed since the last propagation
+    std::tuple<ssize_t, bool> shift_diff_(const State& state) const;
+
+    // Return the current shifts for each axis and whether they have changed since
+    // the last propagation
+    std::tuple<std::vector<ssize_t>, bool> shifts_diff_(const State& state) const;
+
+    const Array* array_ptr_;
+
+    std::variant<const Array*, std::vector<ssize_t>> shift_;
+
+    std::vector<ssize_t> axis_;
+
+    const ValuesInfo values_info_;
+    const SizeInfo sizeinfo_;
 };
 
 class SizeNode : public ScalarOutputMixin<ArrayNode, true> {
