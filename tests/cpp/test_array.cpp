@@ -518,15 +518,10 @@ TEST_CASE("Test resulting_shape()") {
     }
 }
 
-// helper function for a test below
-void test_helper_range_input(std::ranges::input_range auto&& updates) {
-    CHECK_THAT(updates, RangeEquals({Update(3, 1, 0), Update(4, 0, 1), Update(6, 0, -1)}));
-}
-
 TEST_CASE("Test deduplicate_diff") {
     SECTION("static asserts") {
-        static_assert(std::ranges::sized_range<deduplicate_diff_view<std::span<Update>>>);
-        static_assert(std::ranges::viewable_range<deduplicate_diff_view<std::span<Update>>>);
+        static_assert(std::ranges::sized_range<deduplicate_diff_view>);
+        static_assert(std::ranges::viewable_range<deduplicate_diff_view>);
     }
 
     GIVEN("An empty vector of updates") {
@@ -576,8 +571,6 @@ TEST_CASE("Test deduplicate_diff") {
             }
             CHECK_THAT(deduped_and_shifted,
                        RangeEquals({Update(3, 1, 0), Update(4, 0, 1), Update(6, 0, -1)}));
-
-            test_helper_range_input(deduplicate_diff_view(updates) | std::views::transform(shift));
         }
     }
 

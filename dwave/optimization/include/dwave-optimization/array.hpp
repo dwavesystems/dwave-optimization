@@ -656,14 +656,10 @@ std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
 
 void deduplicate_diff(std::vector<Update>& diff);
 
-template <std::ranges::range V>
-requires(std::same_as<std::ranges::range_value_t<V>, Update>) class deduplicate_diff_view
-        : public std::ranges::view_interface<deduplicate_diff_view<V>> {
+class deduplicate_diff_view {
  public:
-    explicit deduplicate_diff_view(const V& diff) : diff_(diff.begin(), diff.end()) {
-        deduplicate_diff(diff_);
-    }
-    explicit deduplicate_diff_view(const V&& diff) : diff_(diff.begin(), diff.end()) {
+    template <std::ranges::range R>
+    deduplicate_diff_view(R&& diff) : diff_(std::ranges::begin(diff), std::ranges::end(diff)) {
         deduplicate_diff(diff_);
     }
 

@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Make the C++ ``deduplicate_diff_view`` a non-template class. Rather, make
+    the constructor templated. This avoids a potential recursion when using
+    ``deduplicate_diff_view`` in some concepts.
