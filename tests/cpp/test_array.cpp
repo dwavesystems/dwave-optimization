@@ -519,6 +519,11 @@ TEST_CASE("Test resulting_shape()") {
 }
 
 TEST_CASE("Test deduplicate_diff") {
+    SECTION("static asserts") {
+        static_assert(std::ranges::sized_range<deduplicate_diff_view>);
+        static_assert(std::ranges::viewable_range<deduplicate_diff_view>);
+    }
+
     GIVEN("An empty vector of updates") {
         std::vector<Update> updates;
 
@@ -551,6 +556,21 @@ TEST_CASE("Test deduplicate_diff") {
                 deduped.emplace_back(u);
             }
             CHECK_THAT(deduped, RangeEquals({Update(2, 1, 0), Update(3, 0, 1), Update(5, 0, -1)}));
+        }
+
+        THEN("We can use deduplicate_diff_view in a for-loop with a transform") {
+            std::vector<Update> deduped_and_shifted;
+
+            auto shift = [](Update update) -> Update {
+                update.index += 1;
+                return update;
+            };
+
+            for (const auto& u : deduplicate_diff_view(updates) | std::views::transform(shift)) {
+                deduped_and_shifted.emplace_back(u);
+            }
+            CHECK_THAT(deduped_and_shifted,
+                       RangeEquals({Update(3, 1, 0), Update(4, 0, 1), Update(6, 0, -1)}));
         }
     }
 
