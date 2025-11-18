@@ -20,6 +20,9 @@ cdef extern from "<variant>" namespace "std" nogil:
         variant(T)
         variant(U)
 
+        bint operator==(const variant[T, U]& other) const
+        bint operator!=(const variant[T, U]& other) const
+
     T get[T](...)
     bint holds_alternative[T](...)
 

@@ -1092,10 +1092,8 @@ void ResizeNode::revert(State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->revert();
 }
 
-// RollNode *******************************************************************
-
 // Return the lhs % rhs, but always as a positive number
-ssize_t positive_modulus(ssize_t lhs, ssize_t rhs) {
+ssize_t positive_modulus_(ssize_t lhs, ssize_t rhs) {
     lhs %= rhs;
     if (lhs < 0) lhs += rhs;
     return lhs;
@@ -1117,20 +1115,22 @@ RollNode::RollNode(ArrayNode* array_ptr, std::vector<ssize_t> shift, std::vector
     if (axis_.empty()) {
         // If the axis is empty then we're shifting as a flat array and therefore only
         // want a single shift value
-        if (shift_ref.size() != 1) assert(false and "not yet implemented");  // TODO: error message
+        if (shift_ref.size() != 1) {
+            throw std::invalid_argument("unexpected number of shifts (" +
+                                        std::to_string(shift_ref.size()) + "), expected 1");
+        }
     } else if (shift_ref.size() == 1) {
-        // we're broadcasting
-        // TODO: check that we're 0 or 1d
-        assert(false and "not yet tested");
+        // we're broadcasting to the axes in this case
     } else {
-        // TODO
-        // assert(false and "not yet tested");
+        // axis is not empty so it must be the same length as the shift
+        if (shift_ref.size() != axis_.size()) {
+            throw std::invalid_argument("shift and axis must have the same length");
+        }
     }
 
     // axis and shift are consistent, but is axis consistent with our array?
-    if (axis_.size()) {
-        // TODO
-        // assert(false and "not yet tested");
+    for (const ssize_t& ax : axis_) {
+        if (ax < 0 or array_ptr_->ndim() <= ax) throw std::invalid_argument("axis out of bounds");
     }
 
     add_predecessor(array_ptr);
@@ -1143,29 +1143,32 @@ RollNode::RollNode(ArrayNode* array_ptr, ArrayNode* shift_ptr, std::vector<ssize
           axis_(std::move(axis)),
           values_info_(array_ptr),
           sizeinfo_(array_ptr_->sizeinfo()) {
-    if (shift_ptr->dynamic()) assert(false and "not yet implemented");    // TODO: error message
-    if (shift_ptr->ndim() >= 2) assert(false and "not yet implemented");  // TODO: error message
+    if (shift_ptr->dynamic()) throw std::invalid_argument("shift may not be dynamic");
+    if (shift_ptr->ndim() >= 2) throw std::invalid_argument("shift must be 0 or 1 dimensional");
 
     if (axis_.empty()) {
-        if (shift_ptr->size() != 1) assert(false and "not yet implemented");  // TODO: error message
+        if (shift_ptr->size() != 1) {
+            throw std::invalid_argument("unexpected number of shifts (" +
+                                        std::to_string(shift_ptr->size()) + "), expected 1");
+        }
     } else if (shift_ptr->size() == 1) {
         // we're broadcasting to the axes in this case
-        // TODO: check that we're 0 or 1d
     } else {
-        // if (shift_ptr->size() != 1 and shift_ptr->size() != axis.size()) assert(false and "not
-        // yet implemented");  // TODO: error message
-        assert(false and "not yet implemented");
+        if (shift_ptr->size() != static_cast<ssize_t>(axis.size())) {
+            throw std::invalid_argument("shift and axis must have the same length");
+        }
     }
 
     // axis and shift are consistent, but is axis consistent with our array?
-    if (axis_.size()) {
-        // TODO
-        // assert(false and "not yet tested");
+    for (const ssize_t& ax : axis_) {
+        if (ax < 0 or array_ptr_->ndim() <= ax) throw std::invalid_argument("axis out of bounds");
     }
 
     add_predecessor(array_ptr);
     add_predecessor(shift_ptr);
 }
+
+std::span<const ssize_t> RollNode::axes() const { return axis_; }
 
 double const* RollNode::buff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->buff();
@@ -1214,19 +1217,19 @@ void RollNode::propagate(State& state) const {
             // update the individual indices and it is efficient to do so.
 
             auto transform = [&shift, &size](Update update) -> Update {
-                update.index = positive_modulus(update.index + shift, size);
+                update.index = positive_modulus_(update.index + shift, size);
                 return update;
             };
 
             if (array_ptr_->dynamic()) {
                 // One last case we need to worry about. If the array may have grown and then
                 // shrunk, we need to deduplicate the diff
-                state_ptr->update(deduplicate_diff_view(array_ptr_->diff(state)) |
-                                  std::views::transform(transform));
+                state_ptr->update(std::ranges::transform_view(
+                        deduplicate_diff_view(array_ptr_->diff(state)), transform));
             } else {
                 // Otherwise we just propagate the diff like normal under the assumption
                 // that our predecessor was efficient (not always true but nice to believe).
-                state_ptr->update(array_ptr_->diff(state) | std::views::transform(transform));
+                state_ptr->update(std::ranges::transform_view(array_ptr_->diff(state), transform));
             }
         } else {
             // Either our size or our shift has changed, so we might as well re-calculate
@@ -1261,7 +1264,7 @@ void RollNode::propagate(State& state) const {
 
                     // res.quot * size is the index at the beginning of the current axis
                     // we then shift the res.rem modulus the size of the axis
-                    update.index = res.quot * size + positive_modulus(res.rem + shift, size);
+                    update.index = res.quot * size + positive_modulus_(res.rem + shift, size);
 
                     // we can now increase the multiplier before going on
                     multiplier *= shape[axis];
@@ -1272,8 +1275,8 @@ void RollNode::propagate(State& state) const {
 
             // Unlike the flat shift case we always deduplicate because each shift
             // operation is relatively expensive.
-            state_ptr->update(deduplicate_diff_view(array_ptr_->diff(state)) |
-                              std::views::transform(transform));
+            state_ptr->update(std::ranges::transform_view(
+                    deduplicate_diff_view(array_ptr_->diff(state)), transform));
         } else {
             // Either our size or our shifts have changed, so we might as well re-calculate
             // the whole thing.
@@ -1289,7 +1292,7 @@ void RollNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)-
 // Act on the given array *in place*.
 void RollNode::rotate_(std::span<double> array, ssize_t shift) {
     // we want to turn shift into a number >=0,<array.size()
-    shift = positive_modulus(shift, array.size());
+    shift = positive_modulus_(shift, array.size());
 
     // if the net is no shift, then exit early
     if (shift == 0) return;
@@ -1328,6 +1331,8 @@ std::span<const ssize_t> RollNode::shape(const State& state) const {
     return array_ptr_->shape(state);  // same as predecessor
 }
 
+const std::variant<const Array*, std::vector<ssize_t>>& RollNode::shift() const { return shift_; }
+
 std::tuple<ssize_t, bool> RollNode::shift_diff_(const State& state) const {
     assert(axis_.empty());
 
@@ -1358,10 +1363,15 @@ std::tuple<std::vector<ssize_t>, bool> RollNode::shifts_diff_(const State& state
         const Array* const shifts_ptr = std::get<const Array*>(shift_);
         const auto view = shifts_ptr->view(state);
 
-        assert(shifts_ptr->size() == static_cast<ssize_t>(axis_.size()));
-
-        for (ssize_t i = 0, stop = axis_.size(); i < stop; ++i) {
-            shifts[axis_[i]] += view[i];
+        if (shifts_ptr->size() == 1) {
+            // broadcasting
+            for (ssize_t i = 0, stop = axis_.size(); i < stop; ++i) {
+                shifts[axis_[i]] += view[0];
+            }
+        } else {
+            for (ssize_t i = 0, stop = axis_.size(); i < stop; ++i) {
+                shifts[axis_[i]] += view[i];
+            }
         }
 
         // If there is any diff, we assume that at least one of our indices
@@ -1371,10 +1381,14 @@ std::tuple<std::vector<ssize_t>, bool> RollNode::shifts_diff_(const State& state
 
     const std::vector<ssize_t>& shifts_ref = std::get<std::vector<ssize_t>>(shift_);
 
-    assert(shifts_ref.size() == axis_.size());
-
-    for (ssize_t i = 0, stop = axis_.size(); i < stop; ++i) {
-        shifts[axis_[i]] += shifts_ref[i];
+    if (shifts_ref.size() == 1) {
+        for (ssize_t i = 0, stop = axis_.size(); i < stop; ++i) {
+            shifts[axis_[i]] += shifts_ref[0];
+        }
+    } else {
+        for (ssize_t i = 0, stop = axis_.size(); i < stop; ++i) {
+            shifts[axis_[i]] += shifts_ref[i];
+        }
     }
 
     return {shifts, false};
@@ -1390,8 +1404,6 @@ SizeInfo RollNode::sizeinfo() const { return sizeinfo_; }
 ssize_t RollNode::size_diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->size_diff();
 }
-
-// SizeNode **************************************************************
 
 SizeNode::SizeNode(ArrayNode* node_ptr)
         : array_ptr_(node_ptr),

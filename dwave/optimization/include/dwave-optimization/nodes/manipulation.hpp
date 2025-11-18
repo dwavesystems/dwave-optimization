@@ -377,6 +377,8 @@ class RollNode : public ArrayOutputMixin<ArrayNode> {
     RollNode(ArrayNode* array_ptr, std::vector<ssize_t> shift, std::vector<ssize_t> axis = {});
     RollNode(ArrayNode* array_ptr, ArrayNode* shift, std::vector<ssize_t> axis = {});
 
+    std::span<const ssize_t> axes() const;
+
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
 
@@ -408,6 +410,8 @@ class RollNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::shape()
     std::span<const ssize_t> shape(const State& state) const override;
+
+    const std::variant<const Array*, std::vector<ssize_t>>& shift() const;
 
     using ArrayOutputMixin::size;
 

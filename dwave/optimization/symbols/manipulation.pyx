@@ -15,16 +15,18 @@
 #    limitations under the License.
 
 import collections.abc
+import numbers
 import json
 
 import numpy as np
 
 from cython.operator cimport typeid
+from libcpp.algorithm cimport equal
 from libcpp.vector cimport vector
 
 from dwave.optimization._model cimport _Graph, _register, ArraySymbol, Symbol
 from dwave.optimization._utilities cimport as_cppshape
-from dwave.optimization.libcpp cimport dynamic_cast_ptr
+from dwave.optimization.libcpp cimport dynamic_cast_ptr, holds_alternative, get
 from dwave.optimization.libcpp.graph cimport ArrayNode
 from dwave.optimization.libcpp.nodes.manipulation cimport (
     BroadcastToNode,
@@ -33,6 +35,7 @@ from dwave.optimization.libcpp.nodes.manipulation cimport (
     PutNode,
     ReshapeNode,
     ResizeNode,
+    RollNode,
     SizeNode,
     TransposeNode,
 )
@@ -278,6 +281,124 @@ cdef class Resize(ArraySymbol):
     cdef ResizeNode* ptr
 
 _register(Resize, typeid(ResizeNode))
+
+
+cdef class Roll(ArraySymbol):
+    def __init__(self, ArraySymbol array, shift, axis=None):
+        cdef _Graph model = array.model
+
+        # First let's handle the axis argument. An empty axis signals that
+        # we want to roll as a flat array
+        cdef vector[Py_ssize_t] cppaxis
+        if axis is None:
+            pass  # nothing to do
+        elif isinstance(axis, numbers.Number):
+            # It's a single number so cast to an int
+            cppaxis.push_back(<Py_ssize_t?>axis)
+        else:
+            # Otherwise assume it's an iterable of numbers
+            # We do allow an empty list to be the same as None because why not
+            for ax in axis:
+                cppaxis.push_back(<Py_ssize_t?>ax)
+
+        # Ok, now we want to handle the shift
+        if isinstance(shift, numbers.Number):
+            # An integer shift is compatible with basically anything so that's
+            # nice
+            self.ptr = model._graph.emplace_node[RollNode](
+                array.array_ptr,
+                <Py_ssize_t>shift,
+                cppaxis,
+            )
+        elif isinstance(shift, ArraySymbol):
+            self.ptr = model._graph.emplace_node[RollNode](
+                array.array_ptr,
+                (<ArraySymbol>shift).array_ptr,
+                cppaxis,
+            )
+        else:
+            self.ptr = model._graph.emplace_node[RollNode](
+                array.array_ptr,
+                <vector[Py_ssize_t]?>tuple(shift),
+                cppaxis,
+            )
+
+        self.initialize_arraynode(array.model, self.ptr)
+
+    @classmethod
+    def _from_symbol(cls, Symbol symbol):
+        cdef RollNode* ptr = dynamic_cast_ptr[RollNode](symbol.node_ptr)
+        if not ptr:
+            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+
+        cdef Roll r = Roll.__new__(Roll)
+        r.ptr = ptr
+        r.initialize_arraynode(symbol.model, ptr)
+        return r
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        if len(predecessors) == 1:
+            # then shifts should be a json file
+            with zf.open(directory + "shift.json", "r") as f:
+                shift = json.load(f)
+        elif len(predecessors) == 2:
+            shift = predecessors[1]
+        else:
+            raise ValueError("Roll must have one or two predecessor(s)")
+
+        with zf.open(directory + "axis.json", "r") as f:
+            axis = json.load(f)
+
+        return Roll(predecessors[0], shift=shift, axis=axis)
+
+    def _into_zipfile(self, zf, directory):
+        encoder = json.JSONEncoder(separators=(',', ':'))
+
+        if self.node_ptr.predecessors().size() == 2:
+            # then our shift is an array so we don't save anything in the file
+            zf.writestr(directory + "shift.json", b"")
+        else:
+            shifts = []
+            for shift in get[vector[Py_ssize_t]](self.ptr.shift()):
+                shifts.append(shift)
+            zf.writestr(directory + "shift.json", encoder.encode(shifts))
+
+        cppaxes = self.ptr.axes()
+        axes = []
+        for i in range(cppaxes.size()):
+            axes.append(cppaxes[i])
+        zf.writestr(directory + "axis.json", encoder.encode(axes))
+
+    def maybe_equals(self, other):
+        # inherit docstring from ArraySymbol
+        cdef Py_ssize_t NOT = 0
+        cdef Py_ssize_t MAYBE = 1
+        cdef Py_ssize_t DEFINITELY = 2
+
+        equality = super().maybe_equals(other)
+        if (equality != MAYBE):
+            return equality
+
+        if not isinstance(other, Roll):
+            return NOT
+
+        # check the axis parameter
+        if not equal(self.ptr.axes().begin(), self.ptr.axes().end(), (<Roll>other).ptr.axes().begin()):
+            return NOT
+
+        # check the shift
+        # if we have two predecessors than so must other (based on the super() check earlier)
+        # and the predecessor equality will be checked later.
+        if self.node_ptr.predecessors().size() != 2:
+            if self.ptr.shift() != (<Roll>other).ptr.shift():
+                return NOT
+
+        return MAYBE
+
+    cdef RollNode* ptr
+
+_register(Roll, typeid(RollNode))
 
 
 cdef class Size(ArraySymbol):

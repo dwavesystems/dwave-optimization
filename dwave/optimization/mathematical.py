@@ -53,6 +53,7 @@ from dwave.optimization.symbols import (
     Put,
     Resize,
     Rint,
+    Roll,
     SafeDivide,
     Sin,
     SoftMax,
@@ -95,6 +96,7 @@ __all__ = [
     "put",
     "resize",
     "rint",
+    "roll",
     "safe_divide",
     "sin",
     "softmax",
@@ -1388,6 +1390,16 @@ def rint(x: ArraySymbol) -> Rint:
         :class:`~dwave.optimization.symbols.Rint`: equivalent symbol.
     """
     return Rint(x)
+
+
+def roll(
+    a: ArraySymbol,
+    shift: ArraySymbol | tuple[int, ...] | int,
+    axis: None | tuple[int, ...] | int = None,
+) -> Roll:
+    """
+    """
+    return Roll(a, shift=shift, axis=axis)
 
 
 def safe_divide(x1: ArraySymbol, x2: ArraySymbol) -> SafeDivide:
