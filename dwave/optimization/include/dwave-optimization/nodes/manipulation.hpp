@@ -80,7 +80,7 @@ class BroadcastToNode : public ArrayNode {
  private:
     /// Translate a linear index of the predecessor into a linear index of the
     /// BroadcastToNode.
-    ssize_t reindex(ssize_t index) const;
+    ssize_t convert_predecessor_index_(ssize_t index) const;
 
     ArrayNode* array_ptr_;
 
