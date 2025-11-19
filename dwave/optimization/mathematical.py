@@ -1393,13 +1393,49 @@ def rint(x: ArraySymbol) -> Rint:
 
 
 def roll(
-    a: ArraySymbol,
+    array: ArraySymbol,
     shift: ArraySymbol | tuple[int, ...] | int,
     axis: None | tuple[int, ...] | int = None,
 ) -> Roll:
+    """Roll array elements along the given axis.
+
+    Args:
+        array: The input array.
+        shift: The number of places to shift the elements. If ``axis`` is given
+            then ``shift`` must be a single number that applies to all axes, or
+            the same length as ``axis``.
+        axis: The axis or axes to be shifted. If not provided the array is treated
+            as flat while shifting.
+
+    Examples:
+        >>> from dwave.optimization import Model, roll
+        ...
+        >>> model = Model()
+        >>> x = model.constant(range(10))
+        >>> r0 = roll(x, 2)
+        >>> r1 = roll(x, -2)
+        >>> r2 = roll(x.reshape(2, 5), shift=1, axis=0)
+        >>> r3 = roll(x.reshape(2, 5), shift=[1, 2], axis=[1, 0])
+        ...
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(r0.state())
+        ...     print(r1.state())
+        ...     print(r2.state())
+        ...     print(r3.state())
+        [8. 9. 0. 1. 2. 3. 4. 5. 6. 7.]
+        [2. 3. 4. 5. 6. 7. 8. 9. 0. 1.]
+        [[5. 6. 7. 8. 9.]
+         [0. 1. 2. 3. 4.]]
+        [[4. 0. 1. 2. 3.]
+         [9. 5. 6. 7. 8.]]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Roll`: equivalent symbol.
+
+    .. versionadded:: 0.6.9
     """
-    """
-    return Roll(a, shift=shift, axis=axis)
+    return Roll(array, shift=shift, axis=axis)
 
 
 def safe_divide(x1: ArraySymbol, x2: ArraySymbol) -> SafeDivide:

@@ -520,7 +520,6 @@ TEST_CASE("Test resulting_shape()") {
 
 TEST_CASE("Test deduplicate_diff") {
     SECTION("static asserts") {
-        // static_assert(std::ranges::view<deduplicate_diff_view>);
         static_assert(std::ranges::sized_range<deduplicate_diff_view>);
         static_assert(std::ranges::viewable_range<deduplicate_diff_view>);
     }

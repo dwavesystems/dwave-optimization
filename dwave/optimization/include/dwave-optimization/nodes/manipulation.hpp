@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include <optional>
 #include <span>
 #include <variant>
 #include <vector>
@@ -377,6 +376,8 @@ class RollNode : public ArrayOutputMixin<ArrayNode> {
     RollNode(ArrayNode* array_ptr, std::vector<ssize_t> shift, std::vector<ssize_t> axis = {});
     RollNode(ArrayNode* array_ptr, ArrayNode* shift, std::vector<ssize_t> axis = {});
 
+    /// The axes upon which the roll is performed. If empty the array is treated as flat
+    /// when rolling.
     std::span<const ssize_t> axes() const;
 
     /// @copydoc Array::buff()
@@ -411,6 +412,7 @@ class RollNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::shape()
     std::span<const ssize_t> shape(const State& state) const override;
 
+    /// The shift value used by the node.
     const std::variant<const Array*, std::vector<ssize_t>>& shift() const;
 
     using ArrayOutputMixin::size;
@@ -425,18 +427,18 @@ class RollNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t size_diff(const State& state) const override;
 
  private:
-    // Rotate the given array by shift
+    // Rotate the given array by shift in-place.
     static void rotate_(std::span<double> array, ssize_t shift);
 
     // Rotate the given array with the given shift by the shift given for each
-    // axis.
+    // axis. Acts in-place.
     static void rotate_(std::span<double> array, std::span<const ssize_t> shape,
                         std::span<const ssize_t> shifts);
 
-    // Return the current shift, and whether is changed since the last propagation
+    // Return the current shift, and whether is changed since the last propagation.
     std::tuple<ssize_t, bool> shift_diff_(const State& state) const;
 
-    // Return the current shifts for each axis and whether they have changed since
+    // Return the current shifts for each axis and whether any have changed since
     // the last propagation
     std::tuple<std::vector<ssize_t>, bool> shifts_diff_(const State& state) const;
 

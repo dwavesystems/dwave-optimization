@@ -284,6 +284,13 @@ _register(Resize, typeid(ResizeNode))
 
 
 cdef class Roll(ArraySymbol):
+    """Roll symbol.
+
+    See also:
+        :func:`~dwave.optimization.mathematical.roll`: equivalent function.
+
+    .. versionadded:: 0.6.9
+    """
     def __init__(self, ArraySymbol array, shift, axis=None):
         cdef _Graph model = array.model
 
