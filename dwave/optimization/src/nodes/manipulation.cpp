@@ -1223,9 +1223,15 @@ void RollNode::propagate(State& state) const {
 
             if (array_ptr_->dynamic()) {
                 // One last case we need to worry about. If the array may have grown and then
-                // shrunk, we need to deduplicate the diff
-                state_ptr->update(std::ranges::transform_view(
-                        deduplicate_diff_view(array_ptr_->diff(state)), transform));
+                // shrunk, we need to deduplicate the diff.
+                // We'd really like to use some of the nice C++20 range stuff and
+                // deduplicate_diff_view(), but alas some of the old Python images
+                // don't support deduplicate_diff_view with std::ranges::transform.
+                // So we have to do it manually with a copy.
+                auto diff = array_ptr_->diff(state);
+                std::vector<Update> updates(diff.begin(), diff.end());
+                deduplicate_diff(updates);
+                state_ptr->update(updates | std::views::transform(transform));
             } else {
                 // Otherwise we just propagate the diff like normal under the assumption
                 // that our predecessor was efficient (not always true but nice to believe).
@@ -1275,8 +1281,11 @@ void RollNode::propagate(State& state) const {
 
             // Unlike the flat shift case we always deduplicate because each shift
             // operation is relatively expensive.
-            state_ptr->update(std::ranges::transform_view(
-                    deduplicate_diff_view(array_ptr_->diff(state)), transform));
+            // See note there about the use of deduplicate_diff
+            auto diff = array_ptr_->diff(state);
+            std::vector<Update> updates(diff.begin(), diff.end());
+            deduplicate_diff(updates);
+            state_ptr->update(updates | std::views::transform(transform));
         } else {
             // Either our size or our shifts have changed, so we might as well re-calculate
             // the whole thing.
