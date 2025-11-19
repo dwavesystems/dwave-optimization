@@ -540,7 +540,13 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
     // with bounds.
     //
 
-    assert(not(max_size.has_value() and *max_size == 0));  // shouldn't be possible to get here
+    if (max_size.has_value() and *max_size == 0) {
+        // If our array is always empty (can happen that arrays think they are dynamic when
+        // they are empty by construction), then our initial value is our bounds.
+        assert(initial.has_value());  // previous check should have caught this
+        auto init = typename decltype(ufunc)::result_type(*initial);
+        return ValuesInfo(init, init, is_integer(init));
+    }
 
     // Get the bounds at each of the smallest and largest sizes we can be
     ValuesInfo min_bounds = ufunc.result_bounds(array_bounds, std::max<ssize_t>(min_size, 1));
