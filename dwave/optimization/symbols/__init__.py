@@ -65,6 +65,7 @@ from dwave.optimization.symbols.manipulation import (
     Put,
     Reshape,
     Resize,
+    Roll,
     Size,
     Transpose,
 )
@@ -171,6 +172,7 @@ __all__ = [
     "Reshape",
     "Resize",
     "Rint",
+    "Roll",
     "SafeDivide",
     "SetVariable",
     "Sin",

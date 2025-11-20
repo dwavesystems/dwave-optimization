@@ -1191,6 +1191,197 @@ TEST_CASE("ResizeNode") {
     }
 }
 
+TEST_CASE("RollNode") {
+    GIVEN("x = list(10, min_size=5, max_size=10)") {
+        auto graph = Graph();
+        auto x_ptr = graph.emplace_node<ListNode>(10, 5, 10);
+
+        AND_GIVEN("r = roll(x, shift=2)") {
+            auto r_ptr = graph.emplace_node<RollNode>(x_ptr, 2);
+            graph.emplace_node<ArrayValidationNode>(r_ptr);
+
+            auto state = graph.empty_state();
+            x_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+            graph.initialize_state(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals({8, 9, 0, 1, 2, 3, 4, 5, 6, 7}));
+
+            x_ptr->assign(state, {1, 0, 2, 3, 4, 5, 6, 7, 8, 9});  // swap first two
+            graph.propagate(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals({8, 9, 1, 0, 2, 3, 4, 5, 6, 7}));
+
+            graph.revert(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals({8, 9, 0, 1, 2, 3, 4, 5, 6, 7}));
+
+            x_ptr->assign(state, {1, 0, 2, 3, 5});
+            x_ptr->assign(state, {8, 9, 0, 6, 7, 5, 1, 2, 3, 4});
+            graph.propagate(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals({3, 4, 8, 9, 0, 6, 7, 5, 1, 2}));
+        }
+
+        AND_GIVEN("r = roll(x, shift=-2)") {
+            auto r_ptr = graph.emplace_node<RollNode>(x_ptr, -2);
+            graph.emplace_node<ArrayValidationNode>(r_ptr);
+
+            auto state = graph.empty_state();
+            x_ptr->initialize_state(state, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+            graph.initialize_state(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals({2, 3, 4, 5, 6, 7, 8, 9, 0, 1}));
+
+            x_ptr->assign(state, {0, 2, 1, 3, 4, 5, 6, 7, 8, 9});  // swap index 1 and 2
+            graph.propagate(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals({1, 3, 4, 5, 6, 7, 8, 9, 0, 2}));
+
+            graph.commit(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals({1, 3, 4, 5, 6, 7, 8, 9, 0, 2}));
+
+            x_ptr->assign(state, {1, 0, 2, 3, 5});
+            x_ptr->assign(state, {8, 9, 0, 6, 7, 2});
+            graph.propagate(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals({0, 6, 7, 2, 8, 9}));
+        }
+    }
+
+    GIVEN("x = arange(10).reshape(2, 5)") {
+        auto graph = Graph();
+
+        // the test string is a simplification, but this'll give us the behavior we want
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{5, 5}, 0, 24);
+        auto s_ptr = graph.emplace_node<SetNode>(5);  // so we can make a dynamic node
+        auto x_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, s_ptr, Slice());
+
+        auto shift_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -100, 100);
+
+        AND_GIVEN("r = roll(x, shift=1)") {
+            auto r_ptr = graph.emplace_node<RollNode>(x_ptr, shift_ptr);
+            graph.emplace_node<ArrayValidationNode>(r_ptr);
+
+            auto state = graph.empty_state();
+            a_ptr->initialize_state(state, std::views::iota(0, 25));
+            s_ptr->initialize_state(state, std::vector<double>{0, 1});
+            shift_ptr->initialize_state(state, std::vector<double>{1});
+            graph.initialize_state(state);
+
+            CHECK_THAT(r_ptr->shape(state), RangeEquals({2, 5}));
+            CHECK_THAT(r_ptr->view(state), RangeEquals({9, 0, 1, 2, 3, 4, 5, 6, 7, 8}));
+
+            WHEN("We change shift so that r = roll(x, shift=-3)") {
+                shift_ptr->set_value(state, 0, -3);
+                graph.propagate(state);
+                CHECK_THAT(r_ptr->view(state), RangeEquals({3, 4, 5, 6, 7, 8, 9, 0, 1, 2}));
+            }
+
+            WHEN("We change x = arange(15).reshape(3, 5)") {
+                s_ptr->assign(state, {0, 1, 2});
+                graph.propagate(state);
+                CHECK_THAT(r_ptr->view(state),
+                           RangeEquals({14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}));
+            }
+        }
+
+        AND_GIVEN("r = roll(x, shift=1, axis=0)") {
+            auto r_ptr = graph.emplace_node<RollNode>(x_ptr, shift_ptr, std::vector<ssize_t>{0});
+            graph.emplace_node<ArrayValidationNode>(r_ptr);
+
+            auto state = graph.empty_state();
+            a_ptr->initialize_state(state, std::views::iota(0, 25));
+            s_ptr->initialize_state(state, std::vector<double>{0, 1});
+            shift_ptr->initialize_state(state, std::vector<double>{1});
+            graph.initialize_state(state);
+
+            CHECK_THAT(r_ptr->shape(state), RangeEquals({2, 5}));
+            CHECK_THAT(r_ptr->view(state), RangeEquals({5, 6, 7, 8, 9, 0, 1, 2, 3, 4}));
+
+            WHEN("We change shift so that r = roll(x, shift=-4, axis=0)") {
+                shift_ptr->set_value(state, 0, -4);
+                graph.propagate(state);
+                CHECK_THAT(r_ptr->view(state), RangeEquals({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+            }
+
+            WHEN("We change x = arange(15).reshape(3, 5)") {
+                s_ptr->assign(state, {0, 1, 2});
+                graph.propagate(state);
+                CHECK_THAT(r_ptr->view(state),
+                           RangeEquals({10, 11, 12, 13, 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+            }
+
+            WHEN("We change x = arange(5, 15).reshape(2, 5)") {
+                s_ptr->assign(state, {1, 2});
+                graph.propagate(state);
+                CHECK_THAT(r_ptr->view(state), RangeEquals({10, 11, 12, 13, 14, 5, 6, 7, 8, 9}));
+            }
+        }
+
+        AND_GIVEN("r = roll(x, shift=1, axis=1)") {
+            auto r_ptr = graph.emplace_node<RollNode>(x_ptr, shift_ptr, std::vector<ssize_t>{1});
+            graph.emplace_node<ArrayValidationNode>(r_ptr);
+
+            auto state = graph.empty_state();
+            a_ptr->initialize_state(state, std::views::iota(0, 25));
+            s_ptr->initialize_state(state, std::vector<double>{0, 1});
+            shift_ptr->initialize_state(state, std::vector<double>{1});
+            graph.initialize_state(state);
+
+            CHECK_THAT(r_ptr->shape(state), RangeEquals({2, 5}));
+            CHECK_THAT(r_ptr->view(state), RangeEquals({4, 0, 1, 2, 3, 9, 5, 6, 7, 8}));
+
+            WHEN("We change shift so that r = roll(x, shift=-3, axis=1)") {
+                shift_ptr->set_value(state, 0, -3);
+                graph.propagate(state);
+                CHECK_THAT(r_ptr->view(state), RangeEquals({3, 4, 0, 1, 2, 8, 9, 5, 6, 7}));
+            }
+
+            WHEN("We change x = arange(15).reshape(3, 5)") {
+                s_ptr->assign(state, {0, 1, 2});
+                graph.propagate(state);
+                CHECK_THAT(r_ptr->view(state),
+                           RangeEquals({4, 0, 1, 2, 3, 9, 5, 6, 7, 8, 14, 10, 11, 12, 13}));
+            }
+
+            WHEN("We change x = arange(5, 15).reshape(2, 5)") {
+                s_ptr->assign(state, {1, 2});
+                graph.propagate(state);
+                CHECK_THAT(r_ptr->view(state), RangeEquals({9, 5, 6, 7, 8, 14, 10, 11, 12, 13}));
+            }
+        }
+    }
+
+    GIVEN("x = arange(24).reshape(2, 4, 3)") {
+        auto graph = Graph();
+
+        // the test string is a simplification, but this'll give us the behavior we want
+        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{5, 4, 3}, 0, 60);
+        auto s_ptr = graph.emplace_node<SetNode>(5);  // so we can make a dynamic node
+        auto x_ptr = graph.emplace_node<AdvancedIndexingNode>(a_ptr, s_ptr, Slice(), Slice());
+
+        // auto shift_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -100, 100);
+
+        AND_GIVEN("r = roll(x, shift=(2, 1), axis=(1, 0))") {
+            auto r_ptr = graph.emplace_node<RollNode>(x_ptr, std::vector<ssize_t>{2, 1},
+                                                      std::vector<ssize_t>{1, 0});
+            graph.emplace_node<ArrayValidationNode>(r_ptr);
+
+            auto state = graph.empty_state();
+            a_ptr->initialize_state(state, std::views::iota(0, 60));
+            s_ptr->initialize_state(state, std::vector<double>{0, 1});
+            graph.initialize_state(state);
+
+            CHECK_THAT(r_ptr->view(state),
+                       RangeEquals({18, 19, 20, 21, 22, 23, 12, 13, 14, 15, 16, 17,
+                                    6,  7,  8,  9,  10, 11, 0,  1,  2,  3,  4,  5}));
+
+            WHEN("We change x = arange(12, 36).reshape(2, 5)") {
+                s_ptr->assign(state, {1, 2, 3});
+                s_ptr->assign(state, {1, 2});
+                graph.propagate(state);
+
+                CHECK_THAT(r_ptr->view(state),
+                           RangeEquals({30, 31, 32, 33, 34, 35, 24, 25, 26, 27, 28, 29,
+                                        18, 19, 20, 21, 22, 23, 12, 13, 14, 15, 16, 17}));
+            }
+        }
+    }
+}
+
 TEST_CASE("SizeNode") {
     GIVEN("A 0d node") {
         auto C = ConstantNode(5);

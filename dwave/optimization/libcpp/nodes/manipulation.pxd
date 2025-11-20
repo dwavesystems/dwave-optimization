@@ -12,7 +12,11 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.libcpp.graph cimport ArrayNode
+from libcpp.span cimport span
+from libcpp.vector cimport vector
+
+from dwave.optimization.libcpp cimport variant
+from dwave.optimization.libcpp.graph cimport Array, ArrayNode
 
 
 cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::optimization" nogil:
@@ -33,6 +37,10 @@ cdef extern from "dwave-optimization/nodes/manipulation.hpp" namespace "dwave::o
 
     cdef cppclass ResizeNode(ArrayNode):
         double fill_value() const
+
+    cdef cppclass RollNode(ArrayNode):
+        span[const Py_ssize_t] axes()
+        variant[const Array*, vector[Py_ssize_t]]& shift()
 
     cdef cppclass SizeNode(ArrayNode):
         pass

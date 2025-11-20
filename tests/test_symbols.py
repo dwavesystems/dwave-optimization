@@ -41,6 +41,7 @@ from dwave.optimization import (
     mod,
     put,
     rint,
+    roll,
     safe_divide,
     sqrt,
     stack,
@@ -3206,6 +3207,56 @@ class TestRint(utils.SymbolTests):
         self.assertEqual(six.state(0), 6)
         self.assertEqual(twelve.state(0), 12)
         self.assertEqual(sixteen.state(0), 16)
+
+
+class TestRoll(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+
+        x = model.constant(np.arange(10))
+        x2 = model.constant(np.arange(10).reshape(5, 2))
+        one = model.constant(1)
+
+        symbols = [
+            roll(x, shift=1),
+            roll(x, shift=one),
+            roll(x, shift=-1),
+            roll(x, shift=-one),
+            roll(x2, (1, 1), axis=(1, 0)),
+            roll(x2, -1, axis=1),
+            roll(x2, one, axis=(0, 1)),
+            roll(x2, 2, axis=(0, 1)),
+        ]
+
+        with model.lock():
+            yield from symbols
+
+    def test_exceptions(self):
+        model = Model()
+
+        x = model.constant(np.arange(10))
+
+        # Shift typing
+        with self.assertRaises(TypeError):
+            roll(x, shift="a")
+        with self.assertRaises(TypeError):
+            roll(x, shift=1.5)
+
+        # Invalid shifts
+        with self.assertRaises(ValueError):
+            roll(x, shift=[0, 1, 2])
+        with self.assertRaises(ValueError):
+            roll(x, shift=model.integer(3))
+        with self.assertRaises(ValueError):
+            roll(x, shift=model.integer((3, 1, 1, 1, 1)))
+        with self.assertRaises(ValueError):
+            roll(x, shift=model.set(10))
+        with self.assertRaises(ValueError):
+            roll(x, shift=(0, 1), axis=(0, 0, 0))
+
+        # Out of bound axis
+        with self.assertRaises(ValueError):
+            roll(x, shift=1, axis=[1])
 
 
 class TestSafeDivide(utils.BinaryOpTests):
