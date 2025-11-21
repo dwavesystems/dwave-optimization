@@ -264,6 +264,12 @@ std::vector<ssize_t> broadcast_shape(const std::span<const ssize_t> lhs,
     }
     assert(sit == shape.rend());
 
+    // Check that we haven't put a dynamic axis anywhere except axis 0
+    if (std::ranges::any_of(shape | std::views::drop(1), [](const auto& val) { return val < 0; })) {
+        throw std::invalid_argument("operands could not be broadcast together with shapes " +
+                                    shape_to_string(lhs) + " " + shape_to_string(rhs));
+    }
+
     return shape;
 }
 std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,

@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Change C++ function ``broadcast_shape()`` correctly throw an error when
+    an attempt to broadcast a dynamically sized shape would result in an invalid
+    result.
+    See `#429 <https://github.com/dwavesystems/dwave-optimization/issues/429>`_.
+  - |
+    Fix ``BinaryNode::shape(const State&)`` and ``BinaryNode::size(const State&)``
+    so that they do not propagate the wrong shape/size when both predecessors
+    have the same shape.

@@ -367,25 +367,40 @@ template <class BinaryOp>
 std::span<const ssize_t> BinaryOpNode<BinaryOp>::shape(const State& state) const {
     if (!this->dynamic()) return this->shape();
 
-    const ssize_t lhs_size = operands_[0]->size(state);
+    const auto [lhs, rhs] = operands_;
 
-    if (lhs_size == operands_[1]->size(state)) return operands_[0]->shape(state);
+    // If we're broadcasting we know which size we're looking at
+    if (lhs->size() == 1) return rhs->shape(state);
+    if (rhs->size() == 1) return lhs->shape(state);
 
-    return (lhs_size == 1) ? operands_[1]->shape(state) : operands_[0]->shape(state);
+    // Dev note: it's very tempting to put an assert here that checks
+    // that lhs.shape == rhs.shape, but that can make calling shape()
+    // very expensive in some cases.
+    // Having this commented out makes the second if-branch above redundant, but
+    // I am leaving this in for clarity and future debugging.
+    // assert(std::ranges::equal(lhs->shape(state), rhs->shape(state)));
+
+    return lhs->shape(state);
 }
 
 template <class BinaryOp>
 ssize_t BinaryOpNode<BinaryOp>::size(const State& state) const {
-    if (ssize_t size = this->size(); size >= 0) {
-        return size;
-    }
+    if (const ssize_t size = this->size(); size >= 0) return size;
 
-    const ssize_t lhs_size = operands_[0]->size(state);
-    const ssize_t rhs_size = operands_[1]->size(state);
+    const auto [lhs, rhs] = operands_;
 
-    if (lhs_size == rhs_size) return lhs_size;
+    // If we're broadcasting we know which size we're looking at
+    if (lhs->size() == 1) return rhs->size(state);
+    if (rhs->size() == 1) return lhs->size(state);
 
-    return (lhs_size == 1) ? rhs_size : lhs_size;
+    // Dev note: it's very tempting to put an assert here that checks
+    // that lhs.size == rhs.size, but that can make calling size()
+    // very expensive in some cases.
+    // Having this commented out makes the second if-branch above redundant, but
+    // I am leaving this in for clarity and future debugging.
+    // assert(lhs->size(state) == rhs->size(state)));
+
+    return lhs->size(state);
 }
 
 template <class BinaryOp>

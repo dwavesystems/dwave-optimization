@@ -164,6 +164,11 @@ class TestAdd(utils.BinaryOpTests):
         with self.assertRaises(ValueError):
             a + b
 
+        c = model.constant([[[1]]])
+        d = model.set(5)
+        with self.assertRaises(ValueError):
+            c + d
+
     def test_scalar_addition(self):
         model = Model()
         a = model.constant(5)
