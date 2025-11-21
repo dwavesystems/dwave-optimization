@@ -35,6 +35,7 @@ dwave_optimization_src = [
     'dwave/optimization/src/nodes/inputs.cpp',
     'dwave/optimization/src/nodes/interpolation.cpp',
     'dwave/optimization/src/nodes/lambda.cpp',
+    'dwave/optimization/src/nodes/linear_algebra.cpp',
     'dwave/optimization/src/nodes/lp.cpp',
     'dwave/optimization/src/nodes/manipulation.cpp',
     'dwave/optimization/src/nodes/naryop.cpp',

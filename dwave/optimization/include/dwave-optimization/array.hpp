@@ -76,6 +76,31 @@ struct SizeInfo {
     }
     bool operator==(const SizeInfo& other) const;
 
+    constexpr SizeInfo& operator*=(const std::integral auto n) {
+        multiplier *= n;
+        offset *= n;
+        if (min.has_value()) min.value() *= n;
+        if (max.has_value()) max.value() *= n;
+        return *this;
+    }
+    friend SizeInfo operator*(SizeInfo lhs, const std::integral auto rhs) {
+        lhs *= rhs;
+        return lhs;
+    }
+
+    constexpr SizeInfo& operator/=(const std::integral auto n) {
+        if (!n) throw std::invalid_argument("cannot divide by 0");
+        multiplier /= n;
+        offset /= n;
+        if (min.has_value()) min.value() /= n;
+        if (max.has_value()) max.value() /= n;
+        return *this;
+    }
+    friend SizeInfo operator/(SizeInfo lhs, const std::integral auto rhs) {
+        lhs /= rhs;
+        return lhs;
+    }
+
     // SizeInfos are printable
     friend std::ostream& operator<<(std::ostream& os, const SizeInfo& sizeinfo);
 
