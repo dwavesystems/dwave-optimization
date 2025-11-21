@@ -387,7 +387,7 @@ TEST_CASE("MatMulNode") {
         auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
                 std::initializer_list<ssize_t>{-1, 3, 2, 7});
         auto reshape_ptr =
-                graph.emplace_node<ReshapeNode>(arr_ptr, std::initializer_list{-1, 3, 7, 2});
+                graph.emplace_node<ReshapeNode>(arr_ptr, std::vector<ssize_t>{-1, 3, 7, 2});
 
         auto matmul_ptr = graph.emplace_node<MatMulNode>(arr_ptr, reshape_ptr);
         graph.emplace_node<ArrayValidationNode>(matmul_ptr);
