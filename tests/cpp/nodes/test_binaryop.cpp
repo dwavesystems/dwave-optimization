@@ -466,6 +466,22 @@ TEST_CASE("BinaryOpNode - MultiplyNode") {
             CHECK(y_ptr->integral());
         }
     }
+
+    GIVEN("x = SetNode(5), y = Constant(0), z = x * y") {
+        // This test is for a specific bug we had where it would accidentlly
+        // pick up the shape from the lhs if the size of the lhs and rhs were
+        // both 1.
+
+        auto x_ptr = graph.emplace_node<SetNode>(5);
+        auto y_ptr = graph.emplace_node<ConstantNode>(0);
+        auto z_ptr = graph.emplace_node<MultiplyNode>(y_ptr, x_ptr);
+
+        auto state = graph.empty_state();
+        x_ptr->initialize_state(state, {0});
+        graph.initialize_state(state);
+
+        CHECK_THAT(z_ptr->shape(state), RangeEquals({1}));
+    }
 }
 
 TEST_CASE("BinaryOpNode - DivideNode") {

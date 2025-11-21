@@ -481,32 +481,39 @@ TEST_CASE("Update") {
     }
 }
 
-TEST_CASE("Test resulting_shape()") {
+TEST_CASE("Test broadcast_shape()") {
     SECTION("(256,256,3) x (3,) -> (256,256,3)") {
-        CHECK(std::ranges::equal(broadcast_shape({256, 256, 3}, {3}), std::vector{256, 256, 3}));
+        CHECK_THAT(broadcast_shape({256, 256, 3}, {3}), RangeEquals({256, 256, 3}));
     }
     SECTION("(8,1,6,1) x (7,1,5) -> (8,7,6,5)") {
-        CHECK(std::ranges::equal(broadcast_shape({8, 1, 6, 1}, {7, 1, 5}),
-                                 std::vector{8, 7, 6, 5}));
+        CHECK_THAT(broadcast_shape({8, 1, 6, 1}, {7, 1, 5}), RangeEquals({8, 7, 6, 5}));
     }
     SECTION("(7,1,5) x (8,1,6,1) -> (8,7,6,5)") {
-        CHECK(std::ranges::equal(broadcast_shape({7, 1, 5}, {8, 1, 6, 1}),
-                                 std::vector{8, 7, 6, 5}));
+        CHECK_THAT(broadcast_shape({7, 1, 5}, {8, 1, 6, 1}), RangeEquals({8, 7, 6, 5}));
     }
     SECTION("(5,4) x (1,) -> (5, 4)") {
-        CHECK(std::ranges::equal(broadcast_shape({5, 4}, {1}), std::vector{5, 4}));
+        CHECK_THAT(broadcast_shape({5, 4}, {1}), RangeEquals({5, 4}));
     }
     SECTION("(5,4) x (4,) -> (5, 4)") {
-        CHECK(std::ranges::equal(broadcast_shape({5, 4}, {4}), std::vector{5, 4}));
+        CHECK_THAT(broadcast_shape({5, 4}, {4}), RangeEquals({5, 4}));
     }
     SECTION("(15,3,5) x (15,1,5) -> (15,3,5)") {
-        CHECK(std::ranges::equal(broadcast_shape({15, 3, 5}, {15, 1, 5}), std::vector{15, 3, 5}));
+        CHECK_THAT(broadcast_shape({15, 3, 5}, {15, 1, 5}), RangeEquals({15, 3, 5}));
     }
     SECTION("(15,3,5) x (3,5) -> (15,3,5)") {
-        CHECK(std::ranges::equal(broadcast_shape({15, 3, 5}, {3, 5}), std::vector{15, 3, 5}));
+        CHECK_THAT(broadcast_shape({15, 3, 5}, {3, 5}), RangeEquals({15, 3, 5}));
     }
     SECTION("(15,3,5) x (3,1) -> (15,3,5)") {
-        CHECK(std::ranges::equal(broadcast_shape({15, 3, 5}, {3, 1}), std::vector{15, 3, 5}));
+        CHECK_THAT(broadcast_shape({15, 3, 5}, {3, 1}), RangeEquals({15, 3, 5}));
+    }
+    SECTION("(-1,) x (1,) -> (-1,)") { CHECK_THAT(broadcast_shape({-1}, {1}), RangeEquals({-1})); }
+    SECTION("(1,) x (-1,) -> (-1,)") { CHECK_THAT(broadcast_shape({1}, {-1}), RangeEquals({-1})); }
+    SECTION("(1,2) x (-1,1) -> (-1,2)") {
+        CHECK_THAT(broadcast_shape({1, 2}, {-1, 1}), RangeEquals({-1, 2}));
+    }
+    SECTION("(1,1) x (-1,) -> invalid") {
+        CHECK_THROWS_WITH(broadcast_shape({1, 1}, {-1}),
+                          "operands could not be broadcast together with shapes (1, 1) (-1,)");
     }
     SECTION("(3,) x (4,)") {
         CHECK_THROWS_WITH(broadcast_shape({3}, {4}),
