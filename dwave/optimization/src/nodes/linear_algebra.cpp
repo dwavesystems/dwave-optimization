@@ -14,6 +14,10 @@
 
 #include "dwave-optimization/nodes/linear_algebra.hpp"
 
+#include <algorithm>
+#include <array>
+#include <ranges>
+
 #include "../functional_.hpp"
 #include "_state.hpp"
 #include "dwave-optimization/array.hpp"
