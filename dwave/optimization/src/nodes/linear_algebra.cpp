@@ -89,8 +89,8 @@ std::vector<ssize_t> output_shape(const ArrayNode* x_ptr, const ArrayNode* y_ptr
     std::vector<ssize_t> shape;
     // If x is being broadcast, we need to add the axes from the start of y
     if (y_ptr->ndim() > 2 && y_ptr->ndim() > x_ptr->ndim()) {
-        const ssize_t num_x_leading = std::max(0l, x_ptr->ndim() - 2);
-        const ssize_t num_y_leading = std::max(0l, y_ptr->ndim() - 2);
+        const ssize_t num_x_leading = std::max<ssize_t>(0, x_ptr->ndim() - 2);
+        const ssize_t num_y_leading = std::max<ssize_t>(0, y_ptr->ndim() - 2);
         for (ssize_t d : y_ptr->shape() | std::views::take(num_y_leading - num_x_leading)) {
             shape.push_back(d);
         }
