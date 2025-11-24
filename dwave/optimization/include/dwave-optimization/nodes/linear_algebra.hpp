@@ -21,9 +21,9 @@
 
 namespace dwave::optimization {
 
-class MatMulNode : public ArrayOutputMixin<ArrayNode> {
+class MatrixMultiplyNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    MatMulNode(ArrayNode* x_ptr, ArrayNode* y_ptr);
+    MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr);
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -52,14 +52,18 @@ class MatMulNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Node::revert()
     void revert(State& state) const override;
 
+    /// @copydoc Array::shape()
     using Array::shape;
-
     std::span<const ssize_t> shape(const State& state) const override;
 
+    /// @copydoc Array::size()
     using Array::size;
-
     ssize_t size(const State& state) const override;
+
+    /// @copydoc Array::size_diff()
     ssize_t size_diff(const State& state) const override;
+
+    /// @copydoc Array::size_info()
     SizeInfo sizeinfo() const override;
 
  private:

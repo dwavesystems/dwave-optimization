@@ -39,6 +39,7 @@ from dwave.optimization.symbols import (
     LinearProgramSolution,
     Log,
     Logical,
+    MatrixMultiply,
     Maximum,
     Mean,
     Minimum,
@@ -88,6 +89,7 @@ __all__ = [
     "logical_not",
     "logical_or",
     "logical_xor",
+    "matmul",
     "maximum",
     "mean",
     "minimum",
@@ -1058,6 +1060,71 @@ def logical_xor(x1: ArraySymbol, x2: ArraySymbol) -> Xor:
     .. versionadded:: 0.4.1
     """
     return Xor(x1, x2)
+
+
+def matmul(x: ArraySymbol, y: ArraySymbol) -> MatrixMultiply:
+    r"""Compute the matrix product of two array symbols.
+
+    Args:
+        x, y: Operand array symbols. The size of the last axis of `x` must be
+            equal to the size of the second to last axis of `y`. If `x` or `y`
+            are 1-d, they will treated as if they a row or column vector
+            respectively. If both are 1-d, this will produce a scalar (and the
+            operation is equivalent to the dot product of two vectors).
+
+    Returns:
+        A MatrixMultiply symbol representing the matrix product. If `x` and
+        `y` have shapes `(..., n, k)` and `(..., k, m)`, then the output will
+        have shape `(..., n, m)`.
+
+    Examples:
+        This example computes the dot product of two integer arrays.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import matmul
+        ...
+        >>> model = Model()
+        >>> i = model.integer(3)
+        >>> j = model.integer(3)
+        >>> m = matmul(i, j)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [1, 2, 3])
+        ...     j.set_state(0, [4, 5, 6])
+        ...     print(m.state(0))
+        32.0
+
+    See Also:
+        :class:`~dwave.optimization.symbols.MatrixMultiply`: equivalent symbol.
+
+    .. versionadded:: 0.6.9
+    """
+
+    def broadcast_missing_axes(a, b):
+        a_shape = [1,] * (b.ndim() - a.ndim()) + list(a.shape())
+        b_shape = [1,] * (a.ndim() - b.ndim()) + list(b.shape())
+
+        for i in range(len(a_shape) - 2):
+            if a_shape[i] == 1:
+                a_shape[i] = b_shape[i]
+            elif b_shape[i] == 1:
+                b_shape[i] = a_shape[i]
+            elif a_shape[i] != b_shape[i]:
+                raise ValueError("Could not broadcast operands")
+
+        if tuple(a_shape) != a.shape():
+            a = broadcast_to(a, a_shape)
+        if tuple(b_shape) != b.shape():
+            b = broadcast_to(b, b_shape)
+        return a, b
+
+    if x.ndim() == 0 or y.ndim() == 0:
+        raise ValueError("Operands must not be scalar")
+
+    if not (x.ndim() == 1 or y.ndim() == 1) and x.shape()[:-2] != y.shape()[:-2]:
+        return MatrixMultiply(*broadcast_missing_axes(x, y))
+
+    return MatrixMultiply(x, y)
 
 
 @_op(Maximum, NaryMaximum, "max")

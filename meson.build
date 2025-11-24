@@ -103,6 +103,7 @@ foreach name : [
     'indexing',
     'inputs',
     'interpolation',
+    'linear_algebra',
     'lp',
     'manipulation',
     'naryop',

@@ -52,6 +52,7 @@ from dwave.optimization.symbols.indexing import (
 )
 from dwave.optimization.symbols.inputs import Input
 from dwave.optimization.symbols.interpolation import BSpline
+from dwave.optimization.symbols.linear_algebra import MatrixMultiply
 from dwave.optimization.symbols.lp import (
     LinearProgram,
     LinearProgramFeasible,
@@ -149,6 +150,7 @@ __all__ = [
     "ListVariable",
     "Log",
     "Logical",
+    "MatrixMultiply",
     "Max",
     "Maximum",
     "Mean",

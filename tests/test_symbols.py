@@ -38,6 +38,7 @@ from dwave.optimization import (
     logical_or,
     logical_not,
     logical_xor,
+    matmul,
     mod,
     put,
     rint,
@@ -1155,6 +1156,7 @@ class TestConstant(utils.SymbolTests):
         self.assertEqual(model.num_symbols(), 5)
         self.assertEqual(z.shape(), (4, 2))
         self.assertNotEqual(x.id(), z.id())
+
 
 class TestCopy(utils.SymbolTests):
     def generate_symbols(self):
@@ -2277,6 +2279,110 @@ class TestLinearProgram(utils.SymbolTests):
             np.testing.assert_array_equal(lp.state(1), [1, 0])
             self.assertFalse(lp.has_state(2))
             np.testing.assert_array_equal(lp.state(3), [1, 1])
+
+
+class TestMatrixMultiply(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        c = model.constant(self._shaped_range(3, 4))
+        c_reshape = c.reshape((4, 3))
+        mm = dwave.optimization.symbols.MatrixMultiply(c, c_reshape)
+
+        with model.lock():
+            yield mm
+
+    def test_matmul(self):
+        model = Model()
+        c = model.constant(self._shaped_range(3, 4))
+        c_reshape = c.reshape((4, 3))
+        mm = matmul(c, c_reshape)
+        self.assertIsInstance(mm, dwave.optimization.symbols.MatrixMultiply)
+
+    def test_matmul_scalar(self):
+        model = Model()
+        with self.assertRaises(ValueError):
+            matmul(model.constant(np.arange(4)), model.constant(2))
+        with self.assertRaises(ValueError):
+            matmul(model.constant(2), model.constant(np.arange(4)))
+        with self.assertRaises(ValueError):
+            matmul(model.constant(self._shaped_range(2, 3)), model.constant(2))
+        with self.assertRaises(ValueError):
+            matmul(model.constant(2), model.constant(self._shaped_range(2, 3)))
+
+    def test_matmul_broadcast_x(self):
+        model = Model()
+        x_data = self._shaped_range(5, 2, 3, 4)
+        x = model.constant(x_data)
+
+        for shape in [
+            (4,),
+            (4, 6),
+            (1, 4, 3),
+            (5, 2, 4, 3),
+            (5, 1, 4, 3),
+            (2, 1, 1, 4, 3),
+        ]:
+            y_data = self._shaped_range(*shape)
+            np_res = np.matmul(x_data, y_data)
+            y = model.constant(y_data)
+            mm = matmul(x, y)
+            with model.lock():
+                model.states.resize(1)
+                self.assertTrue(np.array_equal(mm.state(0), np_res))
+
+        with self.assertRaises(ValueError):
+            matmul(x, model.constant(np.ones((5, 7, 4, 3))))
+
+    def test_matmul_broadcast_y(self):
+        model = Model()
+        y_data = self._shaped_range(5, 2, 3, 4)
+        y = model.constant(y_data)
+
+        for shape in [
+            (3,),
+            (6, 3),
+            (1, 2, 3),
+            (5, 2, 4, 3),
+            (5, 1, 4, 3),
+            (2, 1, 1, 4, 3),
+        ]:
+            x_data = self._shaped_range(*shape)
+            np_res = np.matmul(x_data, y_data)
+            x = model.constant(x_data)
+            mm = matmul(x, y)
+            with model.lock():
+                model.states.resize(1)
+                self.assertTrue(np.array_equal(mm.state(0), np_res))
+
+        with self.assertRaises(ValueError):
+            matmul(y, model.constant(np.ones((5, 7, 4, 3))))
+
+    def test_matmul_broadcast_both_operands(self):
+        model = Model()
+
+        for x_shape, y_shape in [
+            [(3,), (3,)],
+            [(7, 3, 2), (1, 2, 5)],
+            [(5, 7, 3, 2), (1, 1, 2, 5)],
+            [(1, 7, 3, 2), (5, 1, 2, 5)],
+            [(1, 7, 3, 2), (4, 5, 1, 2, 5)],
+        ]:
+            x_data = self._shaped_range(*x_shape)
+            x = model.constant(x_data)
+
+            y_data = self._shaped_range(*y_shape)
+            y = model.constant(y_data)
+
+            np_res = np.matmul(x_data, y_data)
+
+            mm = matmul(x, y)
+            with model.lock():
+                model.states.resize(1)
+                self.assertTrue(np.array_equal(mm.state(0), np_res))
+
+    @staticmethod
+    def _shaped_range(*shape):
+        return np.arange(np.prod(shape)).reshape(shape)
 
 
 class TestMax(utils.ReduceTests):

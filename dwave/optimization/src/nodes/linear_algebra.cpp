@@ -21,7 +21,7 @@
 
 namespace dwave::optimization {
 
-////////////////////// MatMulNode
+////////////////////// MatrixMultiplyNode
 
 // Valid shapes to multiply, and the resulting shape
 // (-1, 2, 5, 3) and (-1, 2, 3, 7) -> (-1, 2, 5, 7)
@@ -70,7 +70,7 @@ std::vector<ssize_t> output_shape(const ArrayNode* x_ptr, const ArrayNode* y_ptr
     }
 
     // Now check that the leading subspace shape is identical (no broadcasting for now)
-    if (x_ptr->ndim() > 2 && y_ptr->ndim() > 2) {
+    if (x_ptr->ndim() >= 2 && y_ptr->ndim() >= 2) {
         if (x_ptr->ndim() != y_ptr->ndim()) {
             throw std::invalid_argument(
                     "operands have different dimensions (use BroadcastNode if you wish to "
@@ -87,6 +87,14 @@ std::vector<ssize_t> output_shape(const ArrayNode* x_ptr, const ArrayNode* y_ptr
 
     // Now we now the leading axes match, we can construct the output shape
     std::vector<ssize_t> shape;
+    // If x is being broadcast, we need to add the axes from the start of y
+    if (y_ptr->ndim() > 2 && y_ptr->ndim() > x_ptr->ndim()) {
+        const ssize_t num_x_leading = std::max(0l, x_ptr->ndim() - 2);
+        const ssize_t num_y_leading = std::max(0l, y_ptr->ndim() - 2);
+        for (ssize_t d : y_ptr->shape() | std::views::take(num_y_leading - num_x_leading)) {
+            shape.push_back(d);
+        }
+    }
     for (ssize_t d : x_ptr->shape() | std::views::take(x_ptr->ndim() - 1)) {
         shape.push_back(d);
     }
@@ -118,7 +126,7 @@ SizeInfo get_sizeinfo(const ArrayNode* x_ptr, const ArrayNode* y_ptr) {
 }
 
 ValuesInfo get_values_info(const ArrayNode* x_ptr, const ArrayNode* y_ptr) {
-    // get all possible combinations of values
+    // Get all possible combinations of values
     std::array<double, 4> combos{x_ptr->min() * y_ptr->min(), x_ptr->min() * y_ptr->max(),
                                  x_ptr->max() * y_ptr->min(), x_ptr->max() * y_ptr->max()};
 
@@ -157,62 +165,84 @@ std::vector<ssize_t> atleast_2d_shape(std::span<const ssize_t> shape, bool as_ro
     return {shape.begin(), shape.end()};
 }
 
-MatMulNode::MatMulNode(ArrayNode* x_ptr, ArrayNode* y_ptr)
-        : ArrayOutputMixin(output_shape(x_ptr, y_ptr)),
-          x_ptr_(x_ptr),
-          y_ptr_(y_ptr),
-          sizeinfo_(get_sizeinfo(x_ptr, y_ptr)),
-          values_info_(get_values_info(x_ptr, y_ptr)) {}
-
-class MatMulNodeData : public ArrayNodeStateData {
+class MatrixMultiplyNodeData : public ArrayNodeStateData {
  public:
-    explicit MatMulNodeData(std::vector<double>&& values, std::span<const ssize_t> shape)
+    explicit MatrixMultiplyNodeData(std::vector<double>&& values, std::span<const ssize_t> shape)
             : ArrayNodeStateData(std::move(values)), shape(shape.begin(), shape.end()) {}
 
     std::vector<double> output;
     std::vector<ssize_t> shape;
 };
 
-ssize_t get_leading_stride(std::span<const ssize_t> shape) {
-    ssize_t stride = 1;
-    if (shape.size() >= 1) stride *= shape.back();
-    if (shape.size() >= 2) stride *= shape[shape.size() - 2];
-    return stride;
+MatrixMultiplyNode::MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr)
+        : ArrayOutputMixin(output_shape(x_ptr, y_ptr)),
+          x_ptr_(x_ptr),
+          y_ptr_(y_ptr),
+          sizeinfo_(get_sizeinfo(x_ptr, y_ptr)),
+          values_info_(get_values_info(x_ptr, y_ptr)) {
+    add_predecessor(x_ptr);
+    add_predecessor(y_ptr);
 }
 
-void MatMulNode::matmul(State& state, std::span<double> out,
-                        std::span<const ssize_t> out_shape) const {
+ssize_t get_leading_stride(std::span<const ssize_t> shape) {
+    if (shape.size() < 2) return 0;  // handles broadcasting for the vector case
+    return shape.back() * shape[shape.size() - 2];
+}
+
+ssize_t get_stride(std::span<const ssize_t> shape, ssize_t index, bool as_row) {
+    assert(index < 0 && index >= -2);
+    if (get_axis_size(shape, index, as_row) == 1) return 0;
+    if (index + 1 == 0) return 1;
+    return get_axis_size(shape, index + 1, as_row);
+}
+
+ssize_t get_leading_subspace_size(std::span<const ssize_t> x_shape,
+                                  std::span<const ssize_t> y_shape) {
+    auto shape = x_shape.size() > y_shape.size() ? x_shape : y_shape;
+    const ssize_t penultimate_axis = std::max<ssize_t>(0, static_cast<ssize_t>(shape.size()) - 2);
+    return std::reduce(shape.begin(), shape.begin() + penultimate_axis, 1,
+                       std::multiplies<ssize_t>());
+}
+
+void MatrixMultiplyNode::matmul(State& state, std::span<double> out,
+                                std::span<const ssize_t> out_shape) const {
     auto x_data = x_ptr_->view(state);
     auto y_data = y_ptr_->view(state);
 
-    ssize_t x_penultimate_axis_size = get_axis_size(x_ptr_->shape(state), -2, true);
-    ssize_t x_penultimate_axis = std::max<ssize_t>(x_ptr_->ndim() - 2, 0);
-    ssize_t leading_subspace_size = std::reduce(x_ptr_->shape(state).begin(),
-                                                x_ptr_->shape(state).begin() + x_penultimate_axis,
-                                                1, std::multiplies<ssize_t>());
+    const ssize_t x_penultimate_axis_size = get_axis_size(x_ptr_->shape(state), -2, true);
+    const ssize_t leading_subspace_size =
+            get_leading_subspace_size(x_ptr_->shape(state), y_ptr_->shape(state));
 
-    ssize_t x_leading_stride = get_leading_stride(x_ptr_->shape(state));
-    ssize_t y_leading_stride = get_leading_stride(y_ptr_->shape(state));
-    ssize_t out_leading_stride = get_leading_stride(out_shape);
+    const ssize_t x_leading_stride = get_leading_stride(x_ptr_->shape(state));
+    const ssize_t y_leading_stride = get_leading_stride(y_ptr_->shape(state));
+    const ssize_t out_leading_stride = [&]() -> ssize_t {
+        if (x_ptr_->ndim() >= 2 and y_ptr_->ndim() >= 2) return get_leading_stride(out_shape);
+        if (x_ptr_->ndim() == 1 and y_ptr_->ndim() == 1) return 0;
+        return out_shape.back();
+    }();
 
-    ssize_t y_last_axis_size = get_axis_size(y_ptr_->shape(state), -1, false);
-    ssize_t y_penultimate_axis_size = get_axis_size(y_ptr_->shape(state), -2, false);
+    const ssize_t y_last_axis_size = get_axis_size(y_ptr_->shape(state), -1, false);
+    const ssize_t y_penultimate_axis_size = get_axis_size(y_ptr_->shape(state), -2, false);
 
     // TODO: consider using the parent arrays' strides directly
-    ssize_t x_penultimate_stride = get_axis_size(x_ptr_->shape(state), -1, true);
-    ssize_t x_last_stride = 1;
+    // const ssize_t x_penultimate_stride = get_axis_size(x_ptr_->shape(state), -1, true);
+    const ssize_t x_penultimate_stride = get_stride(x_ptr_->shape(state), -2, true);
+    const ssize_t x_last_stride = 1;
 
-    ssize_t y_penultimate_stride = y_last_axis_size;
-    ssize_t y_last_stride = 1;
+    const ssize_t y_penultimate_stride = y_last_axis_size;
+    const ssize_t y_last_stride = y_ptr_->ndim() >= 2 ? 1 : 0;
 
-    ssize_t out_following_stride = get_axis_size(out_shape, -1, false);
+    const ssize_t out_penultimate_stride = [&]() -> ssize_t {
+        if (y_ptr_->ndim() == 1) return 1;
+        return get_axis_size(out_shape, -1, false);
+    }();
 
     for (ssize_t w = 0; w < leading_subspace_size; w++) {
         for (ssize_t i = 0; i < x_penultimate_axis_size; i++) {
             for (ssize_t j = 0; j < y_last_axis_size; j++) {
                 auto x = x_data.begin() + w * x_leading_stride + i * x_penultimate_stride;
                 auto y = y_data.begin() + w * y_leading_stride + j * y_last_stride;
-                double& out_val = out[w * out_leading_stride + i * out_following_stride + j];
+                double& out_val = out[w * out_leading_stride + i * out_penultimate_stride + j];
                 out_val = 0.0;
                 for (ssize_t k = 0; k < y_penultimate_axis_size; k++) {
                     out_val += *x * *y;
@@ -224,7 +254,7 @@ void MatMulNode::matmul(State& state, std::span<double> out,
     }
 }
 
-void MatMulNode::initialize_state(State& state) const {
+void MatrixMultiplyNode::initialize_state(State& state) const {
     ssize_t start_size = this->size();
     std::vector<ssize_t> shape(this->shape().begin(), this->shape().end());
     if (this->dynamic()) {
@@ -234,61 +264,68 @@ void MatMulNode::initialize_state(State& state) const {
 
     std::vector<double> data(start_size);
     matmul(state, data, shape);
-    emplace_data_ptr<MatMulNodeData>(state, std::move(data), shape);
+    emplace_data_ptr<MatrixMultiplyNodeData>(state, std::move(data), shape);
 }
 
-double const* MatMulNode::buff(const State& state) const {
-    return data_ptr<MatMulNodeData>(state)->buff();
+double const* MatrixMultiplyNode::buff(const State& state) const {
+    return data_ptr<MatrixMultiplyNodeData>(state)->buff();
 }
 
-void MatMulNode::commit(State& state) const { return data_ptr<MatMulNodeData>(state)->commit(); }
-
-std::span<const Update> MatMulNode::diff(const State& state) const {
-    return data_ptr<MatMulNodeData>(state)->diff();
+void MatrixMultiplyNode::commit(State& state) const {
+    return data_ptr<MatrixMultiplyNodeData>(state)->commit();
 }
 
-bool MatMulNode::integral() const { return values_info_.integral; }
+std::span<const Update> MatrixMultiplyNode::diff(const State& state) const {
+    return data_ptr<MatrixMultiplyNodeData>(state)->diff();
+}
 
-double MatMulNode::max() const { return values_info_.max; }
+bool MatrixMultiplyNode::integral() const { return values_info_.integral; }
 
-double MatMulNode::min() const { return values_info_.min; }
+double MatrixMultiplyNode::max() const { return values_info_.max; }
 
-void MatMulNode::update_shape(State& state) const {
+double MatrixMultiplyNode::min() const { return values_info_.min; }
+
+void MatrixMultiplyNode::update_shape(State& state) const {
     if (this->dynamic()) {
-        data_ptr<MatMulNodeData>(state)->shape[0] = x_ptr_->shape(state)[0];
+        data_ptr<MatrixMultiplyNodeData>(state)->shape[0] = x_ptr_->shape(state)[0];
     }
 }
 
-void MatMulNode::propagate(State& state) const {
-    auto data = data_ptr<MatMulNodeData>(state);
+void MatrixMultiplyNode::propagate(State& state) const {
+    if (x_ptr_->diff(state).size() == 0 and y_ptr_->diff(state).size() == 0) return;
+
+    auto data = data_ptr<MatrixMultiplyNodeData>(state);
+
     this->update_shape(state);
     ssize_t new_size = size_from_shape(data->shape);
+
     data->output.resize(new_size);
+
     this->matmul(state, data->output, data->shape);
     data->assign(data->output);
 }
 
-void MatMulNode::revert(State& state) const {
-    auto data = data_ptr<MatMulNodeData>(state);
+void MatrixMultiplyNode::revert(State& state) const {
+    auto data = data_ptr<MatrixMultiplyNodeData>(state);
     data->revert();
     this->update_shape(state);
 }
 
-std::span<const ssize_t> MatMulNode::shape(const State& state) const {
+std::span<const ssize_t> MatrixMultiplyNode::shape(const State& state) const {
     if (not this->dynamic()) return this->shape();
-    return data_ptr<MatMulNodeData>(state)->shape;
+    return data_ptr<MatrixMultiplyNodeData>(state)->shape;
 }
 
-ssize_t MatMulNode::size(const State& state) const {
+ssize_t MatrixMultiplyNode::size(const State& state) const {
     if (not this->dynamic()) return this->size();
-    return data_ptr<MatMulNodeData>(state)->size();
+    return data_ptr<MatrixMultiplyNodeData>(state)->size();
 }
 
-ssize_t MatMulNode::size_diff(const State& state) const {
+ssize_t MatrixMultiplyNode::size_diff(const State& state) const {
     if (not this->dynamic()) return 0;
-    return data_ptr<MatMulNodeData>(state)->size_diff();
+    return data_ptr<MatrixMultiplyNodeData>(state)->size_diff();
 }
 
-SizeInfo MatMulNode::sizeinfo() const { return sizeinfo_; }
+SizeInfo MatrixMultiplyNode::sizeinfo() const { return sizeinfo_; }
 
 }  // namespace dwave::optimization
