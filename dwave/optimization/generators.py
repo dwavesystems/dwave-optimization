@@ -22,7 +22,7 @@ import typing
 import numpy as np
 import numpy.typing
 
-from dwave.optimization.mathematical import add, logical_or, maximum, where
+from dwave.optimization.mathematical import add, logical_or, maximum, roll, where
 from dwave.optimization.model import Model
 
 __all__ = [
@@ -1079,26 +1079,14 @@ def traveling_salesperson(distance_matrix: numpy.typing.ArrayLike,
     # Add the constants
     DISTANCE_MATRIX = tsp_model.constant(distance_matrix)
 
-    # The objective is to minimize the distance traveled.
-    # The first elements of the pairs of cities traveled between are the
-    # permuted indices excluding the last and the second elements are these
-    # indices excluding the first.
-
-    # Python represents this slicing of a list with slice indices ``[:-1]`` and ``[1:]``,
-    # respectively, because Python slices are defined in the format of a
-    # mathematical interval (see https://en.wikipedia.org/wiki/Interval_(mathematics))
-    # [a, b) and list indices start at zero. For example, ``ordered_cities[:-1]``
-    # excludes the last element of the sliced list.
-
-    # Adding the return to the city of origin add the distance between the first
-    # element of the list, or slice ``[0]``, and the last city visited, or slice
-    # ``[-1]``
-
-    itinerary = DISTANCE_MATRIX[ordered_cities[:-1], ordered_cities[1:]]
-    return_to_origin = DISTANCE_MATRIX[ordered_cities[-1], ordered_cities[0]]
-
-    # Sum the distances along the full route traveled.
-    travel_distance = itinerary.sum() + return_to_origin.sum()
+    # Sum the distances along the full route traveled using
+    # :func:`dwave.optimization.mathematical.roll` function.
+    #
+    # With :math:`shift=-1`, this ensures that the distance between the
+    # :math:`i`th city and the :math:`(i+1)`th city on the route (where
+    # addition is taken modulo :math:`num_cities`) is included for
+    # :math:`i \in [0, num_cities-1]`.
+    travel_distance = DISTANCE_MATRIX[ordered_cities, roll(ordered_cities, shift=-1)].sum()
 
     # Minimize the total travel distance.
     tsp_model.minimize(travel_distance)
