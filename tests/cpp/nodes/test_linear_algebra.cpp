@@ -374,8 +374,8 @@ TEST_CASE("MatrixMultiplyNode") {
     }
 
     GIVEN("A 2d dynamic testing node and a 1d constant") {
-        auto arr_ptr =
-                graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 3});
+        auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+                std::initializer_list<ssize_t>{-1, 3}, -3.0, 10.0, false);
         auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 2, 3});
 
         CHECK_THROWS_AS(MatrixMultiplyNode(c_ptr, arr_ptr), std::invalid_argument);
@@ -385,6 +385,9 @@ TEST_CASE("MatrixMultiplyNode") {
 
         CHECK(matmul_ptr->dynamic());
         CHECK(matmul_ptr->ndim() == 1);
+
+        CHECK(matmul_ptr->min() == 3.0 * -3.0 * 3);
+        CHECK(matmul_ptr->max() == 3.0 * 10.0 * 3);
 
         WHEN("We initialize a state") {
             auto state = graph.initialize_state();
@@ -429,7 +432,7 @@ TEST_CASE("MatrixMultiplyNode") {
         }
     }
 
-    GIVEN("A 2d dynamic testing node and a 1d slice") {
+    GIVEN("A 2d dynamic testing node and a 1d column slice") {
         auto arr_ptr =
                 graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 3});
         auto vec_ptr = graph.emplace_node<BasicIndexingNode>(arr_ptr, Slice(), 0);

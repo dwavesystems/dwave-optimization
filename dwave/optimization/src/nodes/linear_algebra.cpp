@@ -34,10 +34,6 @@ namespace dwave::optimization {
 // (-1) and (-1) -> ()
 // (-1) and (-1, 5) -> (5)
 
-ssize_t size_from_shape(std::span<const ssize_t> shape) {
-    return std::reduce(shape.begin(), shape.end(), 1, std::multiplies<ssize_t>());
-}
-
 ssize_t get_axis_size(std::span<const ssize_t> shape, ssize_t index, bool vector_as_row) {
     // If vector_as_row is true, treat vector as shape (1, size), else as shape (size, 1)
     assert(index < 0);
@@ -54,8 +50,8 @@ std::vector<ssize_t> output_shape(const ArrayNode* x_ptr, const ArrayNode* y_ptr
     }
 
     // Check that last dimension of x matches the second last dimension of y
-    ssize_t x_last_axis_size = get_axis_size(x_ptr->shape(), -1, true);
-    ssize_t y_penultimate_axis_size = get_axis_size(y_ptr->shape(), -2, false);
+    const ssize_t x_last_axis_size = get_axis_size(x_ptr->shape(), -1, true);
+    const ssize_t y_penultimate_axis_size = get_axis_size(y_ptr->shape(), -2, false);
     if (x_last_axis_size != y_penultimate_axis_size) {
         throw std::invalid_argument(
                 "the last dimension of `x` is not the same size as the second to last dimension of "
@@ -64,8 +60,10 @@ std::vector<ssize_t> output_shape(const ArrayNode* x_ptr, const ArrayNode* y_ptr
         assert(x_ptr->dynamic() && y_ptr->dynamic());
         // Both are dynamic. We need to check that the dynamic dimension is
         // always the same size.
-        ssize_t x_subspace_size = -1 * size_from_shape(x_ptr->shape());
-        ssize_t y_subspace_size = -1 * size_from_shape(y_ptr->shape());
+        const ssize_t x_subspace_size = Array::shape_to_size(x_ptr->shape().subspan(1));
+        const ssize_t y_subspace_size = Array::shape_to_size(y_ptr->shape().subspan(1));
+        assert(x_subspace_size != Array::DYNAMIC_SIZE);
+        assert(y_subspace_size != Array::DYNAMIC_SIZE);
         if (x_ptr->sizeinfo() / x_subspace_size != y_ptr->sizeinfo() / y_subspace_size) {
             throw std::invalid_argument(
                     "the last dimension of `x` is not the same size as the second to last "
@@ -114,7 +112,7 @@ SizeInfo get_sizeinfo(const ArrayNode* x_ptr, const ArrayNode* y_ptr) {
         // x must also be dynamic, and we must be contracting along the dynamic
         // dimension, so the output is fixed size.
         std::vector<ssize_t> shape = output_shape(x_ptr, y_ptr);
-        ssize_t size = size_from_shape(shape);
+        ssize_t size = Array::shape_to_size(shape);
         assert(size >= 1);
         return SizeInfo(size);
     }
@@ -133,17 +131,20 @@ SizeInfo get_sizeinfo(const ArrayNode* x_ptr, const ArrayNode* y_ptr) {
 
 ValuesInfo get_values_info(const ArrayNode* x_ptr, const ArrayNode* y_ptr) {
     // Get all possible combinations of values
-    std::array<double, 4> combos{x_ptr->min() * y_ptr->min(), x_ptr->min() * y_ptr->max(),
-                                 x_ptr->max() * y_ptr->min(), x_ptr->max() * y_ptr->max()};
+    const std::array<double, 4> combos{x_ptr->min() * y_ptr->min(), x_ptr->min() * y_ptr->max(),
+                                       x_ptr->max() * y_ptr->min(), x_ptr->max() * y_ptr->max()};
 
-    double min_val = std::ranges::min(combos);
-    double max_val = std::ranges::max(combos);
+    const double min_val = std::ranges::min(combos);
+    const double max_val = std::ranges::max(combos);
 
-    ssize_t x_subspace_size = std::reduce(x_ptr->shape().begin(), x_ptr->shape().end() - 1, 1,
-                                          std::multiplies<ssize_t>());
-    SizeInfo contracted_axis_size = x_ptr->sizeinfo() / x_subspace_size;
+    const SizeInfo contracted_axis_size = [&]() {
+        // If x is 1d, then the contracted axis size is equal to x's size
+        if (x_ptr->ndim() == 1) return x_ptr->sizeinfo();
+        // Otherwise it's always the last axis of x (which definitionally is not dynamic)
+        return SizeInfo(x_ptr->shape().back());
+    }();
 
-    if (contracted_axis_size.max.has_value() and *contracted_axis_size.max == 0) {
+    if (contracted_axis_size.max.has_value() and contracted_axis_size.max.value() == 0) {
         // Output will always be empty, so we can return early
         return ValuesInfo(0.0, 0.0, true);
     }
@@ -157,7 +158,7 @@ ValuesInfo get_values_info(const ArrayNode* x_ptr, const ArrayNode* y_ptr) {
         if (min_val <= 0) values_info.min = min_val * contracted_axis_size.max.value();
     }
 
-    ssize_t min_size = contracted_axis_size.min.value_or(0);
+    const ssize_t min_size = contracted_axis_size.min.value_or(0);
     if (max_val < 0) values_info.max = max_val * min_size;
     if (min_val > 0) values_info.min = min_val * min_size;
 
@@ -206,16 +207,16 @@ ssize_t get_stride(std::span<const ssize_t> shape, ssize_t index, bool vector_as
 
 ssize_t get_leading_subspace_size(std::span<const ssize_t> x_shape,
                                   std::span<const ssize_t> y_shape) {
-    auto shape = x_shape.size() > y_shape.size() ? x_shape : y_shape;
+    const auto shape = x_shape.size() > y_shape.size() ? x_shape : y_shape;
     const ssize_t penultimate_axis = std::max<ssize_t>(0, static_cast<ssize_t>(shape.size()) - 2);
     return std::reduce(shape.begin(), shape.begin() + penultimate_axis, 1,
                        std::multiplies<ssize_t>());
 }
 
-void MatrixMultiplyNode::matmul(State& state, std::span<double> out,
-                                std::span<const ssize_t> out_shape) const {
-    auto x_data = x_ptr_->view(state);
-    auto y_data = y_ptr_->view(state);
+void MatrixMultiplyNode::matmul_(State& state, std::span<double> out,
+                                 std::span<const ssize_t> out_shape) const {
+    const auto x_data = x_ptr_->view(state);
+    const auto y_data = y_ptr_->view(state);
 
     const ssize_t x_penultimate_axis_size = get_axis_size(x_ptr_->shape(state), -2, true);
     const ssize_t leading_subspace_size =
@@ -267,11 +268,11 @@ void MatrixMultiplyNode::initialize_state(State& state) const {
     std::vector<ssize_t> shape(this->shape().begin(), this->shape().end());
     if (this->dynamic()) {
         shape[0] = x_ptr_->shape(state)[0];
-        start_size = size_from_shape(shape);
+        start_size = Array::shape_to_size(shape);
     }
 
     std::vector<double> data(start_size);
-    matmul(state, data, shape);
+    matmul_(state, data, shape);
     emplace_data_ptr<MatrixMultiplyNodeData>(state, std::move(data), shape);
 }
 
@@ -293,7 +294,7 @@ double MatrixMultiplyNode::max() const { return values_info_.max; }
 
 double MatrixMultiplyNode::min() const { return values_info_.min; }
 
-void MatrixMultiplyNode::update_shape(State& state) const {
+void MatrixMultiplyNode::update_shape_(State& state) const {
     if (this->dynamic()) {
         data_ptr<MatrixMultiplyNodeData>(state)->shape[0] = x_ptr_->shape(state)[0];
     }
@@ -304,19 +305,19 @@ void MatrixMultiplyNode::propagate(State& state) const {
 
     auto data = data_ptr<MatrixMultiplyNodeData>(state);
 
-    this->update_shape(state);
-    ssize_t new_size = size_from_shape(data->shape);
+    this->update_shape_(state);
+    const ssize_t new_size = Array::shape_to_size(data->shape);
 
     data->output.resize(new_size);
 
-    this->matmul(state, data->output, data->shape);
+    this->matmul_(state, data->output, data->shape);
     data->assign(data->output);
 }
 
 void MatrixMultiplyNode::revert(State& state) const {
     auto data = data_ptr<MatrixMultiplyNodeData>(state);
     data->revert();
-    this->update_shape(state);
+    this->update_shape_(state);
 }
 
 std::span<const ssize_t> MatrixMultiplyNode::shape(const State& state) const {

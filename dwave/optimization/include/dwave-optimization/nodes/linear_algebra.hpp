@@ -67,8 +67,8 @@ class MatrixMultiplyNode : public ArrayOutputMixin<ArrayNode> {
     SizeInfo sizeinfo() const override;
 
  private:
-    void matmul(State& state, std::span<double> out, std::span<const ssize_t> out_shape) const;
-    void update_shape(State& state) const;
+    void matmul_(State& state, std::span<double> out, std::span<const ssize_t> out_shape) const;
+    void update_shape_(State& state) const;
 
     const ArrayNode* x_ptr_;
     const ArrayNode* y_ptr_;
