@@ -118,14 +118,16 @@ SizeInfo get_sizeinfo(const ArrayNode* x_ptr, const ArrayNode* y_ptr) {
         assert(size >= 1);
         return SizeInfo(size);
     }
+
+    // The size should be x's size, divided by the size of x's last dimension,
+    // multiplied by the size of y's last dimension (if matrix or higher dim).
     assert(x_ptr->shape().back() != -1);
     SizeInfo sizeinfo = x_ptr->sizeinfo() / x_ptr->shape().back();
-    if (y_ptr->ndim() == 2 && y_ptr->dynamic()) {
-        assert(x_ptr->dynamic() && x_ptr->ndim() == 1);
-    } else if (y_ptr->ndim() >= 2) {
+    if (y_ptr->ndim() >= 2) {
         assert(y_ptr->shape().back() != -1);
         sizeinfo *= y_ptr->shape().back();
     }
+
     return sizeinfo;
 }
 
@@ -162,10 +164,11 @@ ValuesInfo get_values_info(const ArrayNode* x_ptr, const ArrayNode* y_ptr) {
     return values_info;
 }
 
-std::vector<ssize_t> atleast_2d_shape(std::span<const ssize_t> shape, bool as_row) {
+std::vector<ssize_t> atleast_2d_shape(std::span<const ssize_t> shape, bool vector_as_row) {
+    // If vector_as_row is true, treat vector as shape (1, size), else as shape (size, 1)
     if (shape.size() == 0) return {1, 1};
-    if (shape.size() == 1 and as_row) return {1, shape[0]};
-    if (shape.size() == 1 and not as_row) return {shape[0], 1};
+    if (shape.size() == 1 and vector_as_row) return {1, shape[0]};
+    if (shape.size() == 1 and not vector_as_row) return {shape[0], 1};
     return {shape.begin(), shape.end()};
 }
 
@@ -193,11 +196,12 @@ ssize_t get_leading_stride(std::span<const ssize_t> shape) {
     return shape.back() * shape[shape.size() - 2];
 }
 
-ssize_t get_stride(std::span<const ssize_t> shape, ssize_t index, bool as_row) {
+ssize_t get_stride(std::span<const ssize_t> shape, ssize_t index, bool vector_as_row) {
+    // If vector_as_row is true, treat vector as shape (1, size), else as shape (size, 1)
     assert(index < 0 && index >= -2);
-    if (get_axis_size(shape, index, as_row) == 1) return 0;
+    if (get_axis_size(shape, index, vector_as_row) == 1) return 0;
     if (index + 1 == 0) return 1;
-    return get_axis_size(shape, index + 1, as_row);
+    return get_axis_size(shape, index + 1, vector_as_row);
 }
 
 ssize_t get_leading_subspace_size(std::span<const ssize_t> x_shape,

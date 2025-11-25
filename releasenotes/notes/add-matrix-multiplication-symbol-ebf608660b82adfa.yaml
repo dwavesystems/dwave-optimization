@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Add the ``MatrixMultiplication`` symbol and corresponding method
+    ``matmul``. The ``matmul`` method follows the behavior of NumPy's
+    ``matmul``, meaning that it works with matrices, vectors, and higher order
+    arrays.
