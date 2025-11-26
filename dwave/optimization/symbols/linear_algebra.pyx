@@ -28,7 +28,7 @@ cdef class MatrixMultiply(ArraySymbol):
     See Also:
         :func:`~dwave.optimization.mathematical.matmul`: equivalent function.
 
-    .. versionadded:: 0.6.9
+    .. versionadded:: 0.6.10
     """
     def __init__(self, ArraySymbol x, ArraySymbol y):
         cdef _Graph model = x.model

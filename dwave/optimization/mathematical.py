@@ -1072,6 +1072,13 @@ def matmul(x: ArraySymbol, y: ArraySymbol) -> MatrixMultiply:
             respectively. If both are 1-d, this will produce a scalar (and the
             operation is equivalent to the dot product of two vectors).
 
+            Otherwise, if it is possible that the shapes can be broadcast
+            together, either by broadcasting missing leading axes (e.g.
+            `(2, 5, 3, 4, 2)` and `(2, 6)` -> `(2, 5, 3, 4, 6)`) or by
+            broadcasting axes for which one of the operands has size 1 (e.g.
+            `(3, 1, 4, 2)` and `(1, 7, 2, 3)` -> `(3, 7, 4, 3)`), then this
+            will return the result after broadcasting.
+
     Returns:
         A MatrixMultiply symbol representing the matrix product. If `x` and
         `y` have shapes `(..., n, k)` and `(..., k, m)`, then the output will
@@ -1097,32 +1104,30 @@ def matmul(x: ArraySymbol, y: ArraySymbol) -> MatrixMultiply:
     See Also:
         :class:`~dwave.optimization.symbols.MatrixMultiply`: equivalent symbol.
 
-    .. versionadded:: 0.6.9
+    .. versionadded:: 0.6.10
     """
 
-    def broadcast_missing_axes(a, b):
-        a_shape = [1,] * (b.ndim() - a.ndim()) + list(a.shape())
-        b_shape = [1,] * (a.ndim() - b.ndim()) + list(b.shape())
+    if not (x.ndim() == 1 or y.ndim() == 1) and x.shape()[:-2] != y.shape()[:-2]:
+        # The shapes don't match, but it may be possible to do a broadcast. The
+        # vector broadcast case is handled by MatrixMultiplyNode, so we need to
+        # handle all the other cases by adding one or two BroadcastNodes.
+        x_shape = [1,] * (y.ndim() - x.ndim()) + list(x.shape())
+        y_shape = [1,] * (x.ndim() - y.ndim()) + list(y.shape())
 
-        for i in range(len(a_shape) - 2):
-            if a_shape[i] == 1:
-                a_shape[i] = b_shape[i]
-            elif b_shape[i] == 1:
-                b_shape[i] = a_shape[i]
-            elif a_shape[i] != b_shape[i]:
+        for i in range(len(x_shape) - 2):
+            if x_shape[i] == 1:
+                x_shape[i] = y_shape[i]
+            elif y_shape[i] == 1:
+                y_shape[i] = x_shape[i]
+            elif x_shape[i] != y_shape[i]:
                 raise ValueError("Could not broadcast operands")
 
-        if tuple(a_shape) != a.shape():
-            a = broadcast_to(a, a_shape)
-        if tuple(b_shape) != b.shape():
-            b = broadcast_to(b, b_shape)
-        return a, b
+        if tuple(x_shape) != x.shape():
+            x = broadcast_to(x, tuple(x_shape))
+        if tuple(y_shape) != y.shape():
+            y = broadcast_to(y, tuple(y_shape))
 
-    if x.ndim() == 0 or y.ndim() == 0:
-        raise ValueError("Operands must not be scalar")
-
-    if not (x.ndim() == 1 or y.ndim() == 1) and x.shape()[:-2] != y.shape()[:-2]:
-        return MatrixMultiply(*broadcast_missing_axes(x, y))
+        return MatrixMultiply(x, y)
 
     return MatrixMultiply(x, y)
 
