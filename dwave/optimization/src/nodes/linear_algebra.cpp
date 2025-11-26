@@ -192,17 +192,22 @@ MatrixMultiplyNode::MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr)
     add_predecessor(y_ptr);
 }
 
-ssize_t get_leading_stride(std::span<const ssize_t> shape) {
-    if (shape.size() < 2) return 0;  // handles broadcasting for the vector case
-    return shape.back() * shape[shape.size() - 2];
+ssize_t get_leading_stride(std::span<const ssize_t> shape, std::span<const ssize_t> strides) {
+    assert(shape.size() >= 1);
+    assert(shape.size() == strides.size());
+    if (shape.size() == 1) return 0;  // handles broadcasting for the vector case
+    if (shape.size() == 2) return 1;
+    return strides[shape.size() - 3] / sizeof(double);
 }
 
-ssize_t get_stride(std::span<const ssize_t> shape, ssize_t index, bool vector_as_row) {
+ssize_t get_stride(std::span<const ssize_t> shape, std::span<const ssize_t> strides, ssize_t index,
+                   bool vector_as_row) {
     // If vector_as_row is true, treat vector as shape (1, size), else as shape (size, 1)
     assert(index < 0 && index >= -2);
     if (get_axis_size(shape, index, vector_as_row) == 1) return 0;
-    if (index + 1 == 0) return 1;
-    return get_axis_size(shape, index + 1, vector_as_row);
+    if (index + 1 == 0) return strides.back() / sizeof(double);
+    assert(shape.size() > 1);
+    return strides[static_cast<ssize_t>(strides.size()) + index] / sizeof(double);
 }
 
 ssize_t get_leading_subspace_size(std::span<const ssize_t> x_shape,
@@ -215,17 +220,20 @@ ssize_t get_leading_subspace_size(std::span<const ssize_t> x_shape,
 
 void MatrixMultiplyNode::matmul_(State& state, std::span<double> out,
                                  std::span<const ssize_t> out_shape) const {
-    const auto x_data = x_ptr_->view(state);
-    const auto y_data = y_ptr_->view(state);
+    assert(static_cast<ssize_t>(out.size()) == Array::shape_to_size(out_shape));
+
+    // If out is empty (possible when predecessors have 0 size) there is nothing to do
+    if (out.size() == 0) return;
 
     const ssize_t x_penultimate_axis_size = get_axis_size(x_ptr_->shape(state), -2, true);
     const ssize_t leading_subspace_size =
             get_leading_subspace_size(x_ptr_->shape(state), y_ptr_->shape(state));
 
-    const ssize_t x_leading_stride = get_leading_stride(x_ptr_->shape(state));
-    const ssize_t y_leading_stride = get_leading_stride(y_ptr_->shape(state));
+    const ssize_t x_leading_stride = get_leading_stride(x_ptr_->shape(state), x_ptr_->strides());
+    const ssize_t y_leading_stride = get_leading_stride(y_ptr_->shape(state), y_ptr_->strides());
     const ssize_t out_leading_stride = [&]() -> ssize_t {
-        if (x_ptr_->ndim() >= 2 and y_ptr_->ndim() >= 2) return get_leading_stride(out_shape);
+        if (x_ptr_->ndim() >= 2 and y_ptr_->ndim() >= 2)
+            return get_leading_stride(out_shape, this->strides());
         if (x_ptr_->ndim() == 1 and y_ptr_->ndim() == 1) return 0;
         return out_shape.back();
     }();
@@ -235,26 +243,33 @@ void MatrixMultiplyNode::matmul_(State& state, std::span<double> out,
 
     // TODO: consider using the parent arrays' strides directly
     // const ssize_t x_penultimate_stride = get_axis_size(x_ptr_->shape(state), -1, true);
-    const ssize_t x_penultimate_stride = get_stride(x_ptr_->shape(state), -2, true);
-    const ssize_t x_last_stride = 1;
+    const ssize_t x_penultimate_stride =
+            get_stride(x_ptr_->shape(state), x_ptr_->strides(), -2, true);
+    const ssize_t x_last_stride = x_ptr_->strides().back() / sizeof(double);
 
     const ssize_t y_penultimate_stride = y_last_axis_size;
-    const ssize_t y_last_stride = y_ptr_->ndim() >= 2 ? 1 : 0;
+    const ssize_t y_last_stride =
+            y_ptr_->ndim() >= 2 ? y_ptr_->strides().back() / sizeof(double) : 0;
 
     const ssize_t out_penultimate_stride = [&]() -> ssize_t {
         if (y_ptr_->ndim() == 1) return 1;
         return get_axis_size(out_shape, -1, false);
     }();
 
+    const double* const x_data = x_ptr_->buff(state);
+    const double* const y_data = y_ptr_->buff(state);
+    double* __restrict const out_data = out.data();
+
     for (ssize_t w = 0; w < leading_subspace_size; w++) {
         for (ssize_t i = 0; i < x_penultimate_axis_size; i++) {
             for (ssize_t j = 0; j < y_last_axis_size; j++) {
-                auto x = x_data.begin() + w * x_leading_stride + i * x_penultimate_stride;
-                auto y = y_data.begin() + w * y_leading_stride + j * y_last_stride;
-                double& out_val = out[w * out_leading_stride + i * out_penultimate_stride + j];
-                out_val = 0.0;
+                const double* x = x_data + w * x_leading_stride + i * x_penultimate_stride;
+                const double* y = y_data + w * y_leading_stride + j * y_last_stride;
+                double* out_val =
+                        out_data + w * out_leading_stride + i * out_penultimate_stride + j;
+                *out_val = 0.0;
                 for (ssize_t k = 0; k < y_penultimate_axis_size; k++) {
-                    out_val += *x * *y;
+                    *out_val += *x * *y;
                     x += x_last_stride;
                     y += y_penultimate_stride;
                 }
