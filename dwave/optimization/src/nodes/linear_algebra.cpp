@@ -192,12 +192,11 @@ MatrixMultiplyNode::MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr)
     add_predecessor(y_ptr);
 }
 
-ssize_t get_leading_stride(std::span<const ssize_t> shape, std::span<const ssize_t> strides) {
+ssize_t get_leading_stride(std::span<const ssize_t> shape) {
     assert(shape.size() >= 1);
-    assert(shape.size() == strides.size());
     if (shape.size() == 1) return 0;  // handles broadcasting for the vector case
     if (shape.size() == 2) return 1;
-    return strides[shape.size() - 3] / sizeof(double);
+    return Array::shape_to_size(shape.subspan(shape.size() - 2));
 }
 
 ssize_t get_stride(std::span<const ssize_t> shape, std::span<const ssize_t> strides, ssize_t index,
@@ -229,11 +228,10 @@ void MatrixMultiplyNode::matmul_(State& state, std::span<double> out,
     const ssize_t leading_subspace_size =
             get_leading_subspace_size(x_ptr_->shape(state), y_ptr_->shape(state));
 
-    const ssize_t x_leading_stride = get_leading_stride(x_ptr_->shape(state), x_ptr_->strides());
-    const ssize_t y_leading_stride = get_leading_stride(y_ptr_->shape(state), y_ptr_->strides());
+    const ssize_t x_leading_stride = get_leading_stride(x_ptr_->shape(state));
+    const ssize_t y_leading_stride = get_leading_stride(y_ptr_->shape(state));
     const ssize_t out_leading_stride = [&]() -> ssize_t {
-        if (x_ptr_->ndim() >= 2 and y_ptr_->ndim() >= 2)
-            return get_leading_stride(out_shape, this->strides());
+        if (x_ptr_->ndim() >= 2 and y_ptr_->ndim() >= 2) return get_leading_stride(out_shape);
         if (x_ptr_->ndim() == 1 and y_ptr_->ndim() == 1) return 0;
         return out_shape.back();
     }();
@@ -241,8 +239,6 @@ void MatrixMultiplyNode::matmul_(State& state, std::span<double> out,
     const ssize_t y_last_axis_size = get_axis_size(y_ptr_->shape(state), -1, false);
     const ssize_t y_penultimate_axis_size = get_axis_size(y_ptr_->shape(state), -2, false);
 
-    // TODO: consider using the parent arrays' strides directly
-    // const ssize_t x_penultimate_stride = get_axis_size(x_ptr_->shape(state), -1, true);
     const ssize_t x_penultimate_stride =
             get_stride(x_ptr_->shape(state), x_ptr_->strides(), -2, true);
     const ssize_t x_last_stride = x_ptr_->strides().back() / sizeof(double);
@@ -256,15 +252,20 @@ void MatrixMultiplyNode::matmul_(State& state, std::span<double> out,
         return get_axis_size(out_shape, -1, false);
     }();
 
-    const double* const x_data = x_ptr_->buff(state);
-    const double* const y_data = y_ptr_->buff(state);
     double* __restrict const out_data = out.data();
 
     for (ssize_t w = 0; w < leading_subspace_size; w++) {
+        // In order to avoid having to iterate over all leading dimensions
+        // and checking the strides of both x/y, we use ArrayIterators to
+        // get us to the correct subspace, and then use the strides of the
+        // predecessors to iterate through the last one or two dimensions.
+        const double* const x_data = &x_ptr_->view(state).begin()[w * x_leading_stride];
+        const double* const y_data = &y_ptr_->view(state).begin()[w * y_leading_stride];
+        // Now we do standard 2D matrix multiply
         for (ssize_t i = 0; i < x_penultimate_axis_size; i++) {
             for (ssize_t j = 0; j < y_last_axis_size; j++) {
-                const double* x = x_data + w * x_leading_stride + i * x_penultimate_stride;
-                const double* y = y_data + w * y_leading_stride + j * y_last_stride;
+                const double* x = x_data + i * x_penultimate_stride;
+                const double* y = y_data + j * y_last_stride;
                 double* out_val =
                         out_data + w * out_leading_stride + i * out_penultimate_stride + j;
                 *out_val = 0.0;
