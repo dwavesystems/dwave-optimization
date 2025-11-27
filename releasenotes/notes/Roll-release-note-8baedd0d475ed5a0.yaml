@@ -1,0 +1,3 @@
+---
+features:
+  - Add ``Roll`` symbol and corresponding ``roll()`` function. See `#423 <https://github.com/dwavesystems/dwave-optimization/issues/423>`_.
