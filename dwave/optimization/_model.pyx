@@ -1618,6 +1618,15 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import LessEqual # avoid circular import
         return LessEqual(self, rhs)
 
+    def __matmul__(self, rhs):
+        try:
+            rhs = _as_array_symbol(self.model, rhs)
+        except TypeError:
+            return NotImplemented
+
+        from dwave.optimization.mathematical import matmul
+        return matmul(self, rhs)
+
     def __mod__(self, rhs):
         try:
             rhs = _as_array_symbol(self.model, rhs)
@@ -1667,6 +1676,15 @@ cdef class ArraySymbol(Symbol):
             return NotImplemented
 
         return lhs + self
+
+    def __rmatmul__(self, lhs):
+        try:
+            lhs = _as_array_symbol(self.model, lhs)
+        except TypeError:
+            return NotImplemented
+
+        from dwave.optimization.mathematical import matmul
+        return matmul(lhs, self)
 
     def __rmod__(self, lhs):
         try:

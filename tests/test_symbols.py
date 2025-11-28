@@ -2358,6 +2358,42 @@ class TestMatrixMultiply(utils.SymbolTests):
         mm = matmul(c, c_reshape)
         self.assertIsInstance(mm, dwave.optimization.symbols.MatrixMultiply)
 
+    def test_matmul_overload(self):
+        model = Model()
+
+        x = model.integer(10)
+        y = model.integer((10, 5))
+        mm = x @ y
+        self.assertIsInstance(mm, dwave.optimization.symbols.MatrixMultiply)
+        self.assertEqual(mm.shape(), (5,))
+        with self.assertRaises(ValueError):
+            y @ x
+
+        # We can also use with numpy arrays
+        y_with_np = y @ np.ones((5, 7))
+        self.assertIsInstance(y_with_np, dwave.optimization.symbols.MatrixMultiply)
+        self.assertEqual(y_with_np.shape(), (10, 7))
+
+        with self.assertRaises(ValueError):
+            y @ np.ones((3, 5))
+
+        np_with_y = np.ones((3, 10)) @ y
+        self.assertIsInstance(np_with_y, dwave.optimization.symbols.MatrixMultiply)
+        self.assertEqual(np_with_y.shape(), (3, 5))
+
+        with self.assertRaises(ValueError):
+            np.ones((4, 4)) @ y
+
+        # Check that broadcast works
+        self.assertIsInstance(
+            model.integer((1, 7, 4, 2)) @ np.ones((5, 1, 2, 3)),
+            dwave.optimization.symbols.MatrixMultiply
+        )
+        self.assertIsInstance(
+            np.ones((5, 1, 3, 2)) @ model.integer((1, 7, 2, 4)),
+            dwave.optimization.symbols.MatrixMultiply
+        )
+
     def test_matmul_scalar(self):
         model = Model()
         with self.assertRaises(ValueError):
