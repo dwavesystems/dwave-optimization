@@ -1476,6 +1476,17 @@ cdef class ArraySymbol(Symbol):
         obj.initialize_arraynode(symbol.model, ptr)
         return obj
 
+    # Opt ArraySymbol out of default interoperability with NumPy ufuncs. We then
+    # add explicit support with our various __<op>__() and __r<op>__ methods.
+    # This prevents NumPy from interpreting our ArraySymbols as object arrays.
+    __array_ufunc__ = None
+
+    # Likewise, we want to opt out of default interoperability with NumPy
+    # functions.
+    # See https://numpy.org/neps/nep-0018-array-function-protocol.html#nep18
+    def __array_function__(self, func, types, args, kwargs):
+        return NotImplemented
+
     def __abs__(self):
         from dwave.optimization.symbols import Absolute  # avoid circular import
         return Absolute(self)
