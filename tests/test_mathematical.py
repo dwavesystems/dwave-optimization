@@ -202,9 +202,9 @@ class TestStack(unittest.TestCase):
         with model.lock():
             model.states.resize(1)
             np.testing.assert_array_equal(
-                s0.state(0), np.stack((A, B), axis=0))
+                s0.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=0))
             np.testing.assert_array_equal(
-                s1.state(0), np.stack((A, B), axis=1))
+                s1.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=1))
 
     def test_2d_arrays(self):
         model = Model()
@@ -216,11 +216,11 @@ class TestStack(unittest.TestCase):
         with model.lock():
             model.states.resize(1)
             np.testing.assert_array_equal(
-                s0.state(0), np.stack((A, B), axis=0))
+                s0.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=0))
             np.testing.assert_array_equal(
-                s1.state(0), np.stack((A, B), axis=1))
+                s1.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=1))
             np.testing.assert_array_equal(
-                s2.state(0), np.stack((A, B), axis=2))
+                s2.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=2))
 
     def test_nd_arrays(self):
         rng = np.random.default_rng(1)
@@ -237,7 +237,7 @@ class TestStack(unittest.TestCase):
                 model.states.resize(1)
                 np.testing.assert_array_equal(
                     s.state(0),
-                    np.stack((A, B, C), axis))
+                    np.stack((np.asarray(A), np.asarray(B), np.asarray(C)), axis))
 
     def test_errors(self):
         with self.subTest("axis out of bounds"):
@@ -295,7 +295,7 @@ class TestStack(unittest.TestCase):
             model.states.resize(1)
             self.assertEqual(s.shape(), (1, 2, 2))
             self.assertEqual(s.ndim(), 3)
-            np.testing.assert_array_equal(s.state(0), np.stack((A,)))
+            np.testing.assert_array_equal(s.state(0), np.stack((np.asarray(A),)))
 
 
 class TestVStack(unittest.TestCase):

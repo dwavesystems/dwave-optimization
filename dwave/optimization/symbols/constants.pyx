@@ -224,7 +224,7 @@ cdef class Constant(ArraySymbol):
             # dev note: I benchmarked using some lower-level functions
             # like np.lib.format.write_array() etc and it didn't have
             # any noticeable impact on performance (numpy==1.26.3).
-            np.save(f, self, allow_pickle=False)
+            np.save(f, np.asarray(self), allow_pickle=False)
 
     def maybe_equals(self, other):
         cdef Py_ssize_t maybe = super().maybe_equals(other)

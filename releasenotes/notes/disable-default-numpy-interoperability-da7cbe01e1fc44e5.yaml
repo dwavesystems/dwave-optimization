@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    Opt ``ArraySymbol`` out of NumPy interoperability. This means that trying
+    to use an ``ArraySymbol`` with most NumPy functions/operators will fail.
+    Prefer to use the functions in ``dwave.optimization.mathematical``.
+fixes:
+  - |
+    Fix type promotion when using NumPy arrays as the left-hand-side of
+    operations with ``ArraySymbol``.
