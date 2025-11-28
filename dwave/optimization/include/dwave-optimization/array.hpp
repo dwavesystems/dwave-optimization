@@ -76,6 +76,39 @@ struct SizeInfo {
     }
     bool operator==(const SizeInfo& other) const;
 
+    constexpr SizeInfo& operator*=(const std::integral auto n) {
+        multiplier *= n;
+        offset *= n;
+        if (min.has_value()) min.value() *= n;
+        if (max.has_value()) max.value() *= n;
+        return *this;
+    }
+    friend SizeInfo operator*(SizeInfo lhs, const std::integral auto rhs) {
+        lhs *= rhs;
+        return lhs;
+    }
+
+    constexpr SizeInfo& operator/=(const std::integral auto n) {
+        if (!n) throw std::invalid_argument("cannot divide by 0");
+        multiplier /= n;
+        offset /= n;
+        if (min.has_value()) {
+            assert(min.value() % n == 0 and
+                   "dividing SizeInfo with a divisor that does not evenly divide the minimum");
+            min.value() /= n;
+        }
+        if (max.has_value()) {
+            assert(max.value() % n == 0 and
+                   "dividing SizeInfo with a divisor that does not evenly divide the maximum");
+            max.value() /= n;
+        }
+        return *this;
+    }
+    friend SizeInfo operator/(SizeInfo lhs, const std::integral auto rhs) {
+        lhs /= rhs;
+        return lhs;
+    }
+
     // SizeInfos are printable
     friend std::ostream& operator<<(std::ostream& os, const SizeInfo& sizeinfo);
 
@@ -450,6 +483,19 @@ class Array {
         return 0;
     }
 
+    // Determine the size by the shape. For a node with a fixed size, it is simply
+    // the product of the shape.
+    // Expects the shape to be stored in a C-style array of length ndim.
+    static ssize_t shape_to_size(const ssize_t ndim, const ssize_t* const shape) noexcept {
+        if (ndim <= 0) return 1;
+        if (shape[0] < 0) return DYNAMIC_SIZE;
+        return std::reduce(shape, shape + ndim, 1, std::multiplies<ssize_t>());
+    }
+
+    static ssize_t shape_to_size(const std::span<const ssize_t> shape) noexcept {
+        return shape_to_size(shape.size(), shape.data());
+    }
+
  protected:
     // Some utility methods that might be useful to subclasses
 
@@ -474,19 +520,6 @@ class Array {
         }
 
         return true;
-    }
-
-    // Determine the size by the shape. For a node with a fixed size, it is simply
-    // the product of the shape.
-    // Expects the shape to be stored in a C-style array of length ndim.
-    static ssize_t shape_to_size(const ssize_t ndim, const ssize_t* shape) noexcept {
-        if (ndim <= 0) return 1;
-        if (shape[0] < 0) return DYNAMIC_SIZE;
-        return std::reduce(shape, shape + ndim, 1, std::multiplies<ssize_t>());
-    }
-
-    static ssize_t shape_to_size(const std::span<const ssize_t> shape) noexcept {
-        return shape_to_size(shape.size(), shape.data());
     }
 
     // Determine the strides from the shape.

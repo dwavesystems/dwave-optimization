@@ -39,6 +39,7 @@ from dwave.optimization.symbols import (
     LinearProgramSolution,
     Log,
     Logical,
+    MatrixMultiply,
     Maximum,
     Mean,
     Minimum,
@@ -88,6 +89,7 @@ __all__ = [
     "logical_not",
     "logical_or",
     "logical_xor",
+    "matmul",
     "maximum",
     "mean",
     "minimum",
@@ -1058,6 +1060,76 @@ def logical_xor(x1: ArraySymbol, x2: ArraySymbol) -> Xor:
     .. versionadded:: 0.4.1
     """
     return Xor(x1, x2)
+
+
+def matmul(x: ArraySymbol, y: ArraySymbol) -> MatrixMultiply:
+    r"""Compute the matrix product of two array symbols.
+
+    Args:
+        x, y: Operand array symbols. The size of the last axis of `x` must be
+            equal to the size of the second to last axis of `y`. If `x` or `y`
+            are 1-d, they will treated as if they a row or column vector
+            respectively. If both are 1-d, this will produce a scalar (and the
+            operation is equivalent to the dot product of two vectors).
+
+            Otherwise, if it is possible that the shapes can be broadcast
+            together, either by broadcasting missing leading axes (e.g.
+            `(2, 5, 3, 4, 2)` and `(2, 6)` -> `(2, 5, 3, 4, 6)`) or by
+            broadcasting axes for which one of the operands has size 1 (e.g.
+            `(3, 1, 4, 2)` and `(1, 7, 2, 3)` -> `(3, 7, 4, 3)`), then this
+            will return the result after broadcasting.
+
+    Returns:
+        A MatrixMultiply symbol representing the matrix product. If `x` and
+        `y` have shapes `(..., n, k)` and `(..., k, m)`, then the output will
+        have shape `(..., n, m)`.
+
+    Examples:
+        This example computes the dot product of two integer arrays.
+
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import matmul
+        ...
+        >>> model = Model()
+        >>> i = model.integer(3)
+        >>> j = model.integer(3)
+        >>> m = matmul(i, j)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [1, 2, 3])
+        ...     j.set_state(0, [4, 5, 6])
+        ...     print(m.state(0))
+        32.0
+
+    See Also:
+        :class:`~dwave.optimization.symbols.MatrixMultiply`: equivalent symbol.
+
+    .. versionadded:: 0.6.10
+    """
+
+    if not (x.ndim() == 1 or y.ndim() == 1) and x.shape()[:-2] != y.shape()[:-2]:
+        # The shapes don't match, but it may be possible to do a broadcast. The
+        # vector broadcast case is handled by MatrixMultiplyNode, so we need to
+        # handle all the other cases by adding one or two BroadcastNodes.
+        x_shape = [1,] * (y.ndim() - x.ndim()) + list(x.shape())
+        y_shape = [1,] * (x.ndim() - y.ndim()) + list(y.shape())
+
+        for i in range(len(x_shape) - 2):
+            if x_shape[i] == 1:
+                x_shape[i] = y_shape[i]
+            elif y_shape[i] == 1:
+                y_shape[i] = x_shape[i]
+            elif x_shape[i] != y_shape[i]:
+                raise ValueError("Could not broadcast operands")
+
+        if tuple(x_shape) != x.shape():
+            x = broadcast_to(x, tuple(x_shape))
+        if tuple(y_shape) != y.shape():
+            y = broadcast_to(y, tuple(y_shape))
+
+        return MatrixMultiply(x, y)
+
+    return MatrixMultiply(x, y)
 
 
 @_op(Maximum, NaryMaximum, "max")
