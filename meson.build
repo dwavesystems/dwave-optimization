@@ -54,6 +54,18 @@ dwave_optimization_src = [
     'dwave/optimization/src/simplex.cpp',
 ]
 
+dwave_optimization_dependencies = []
+
+blas = dependency(
+    'scipy-openblas',
+    allow_fallback: false,
+    method: 'pkg-config',
+    required: false,
+)
+if blas.found()
+    dwave_optimization_dependencies += [blas]
+endif
+
 if host_machine.system() == 'windows'
     # Shared libraries don't work so well on windows, so we build from a static
     # library instead
@@ -62,6 +74,7 @@ if host_machine.system() == 'windows'
             'dwave-optimization',
             sources: dwave_optimization_src,
             include_directories: dwave_optimization_include,
+            dependencies: dwave_optimization_dependencies,
         ),
         include_directories: dwave_optimization_include
     )
@@ -74,6 +87,7 @@ else
             include_directories: dwave_optimization_include,
             install: true,
             install_dir: py.get_install_dir(pure: false) / 'dwave/optimization/',
+            dependencies: dwave_optimization_dependencies,
         ),
         include_directories: dwave_optimization_include
     )
