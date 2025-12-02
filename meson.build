@@ -22,6 +22,7 @@ project(
 # We want some debugging symbols
 add_project_arguments(['-g1'], language: ['cpp'])
 
+cpp = meson.get_compiler('cpp')
 py = import('python').find_installation(pure: false)
 
 dwave_optimization_include = include_directories('dwave/optimization/include/')
@@ -56,14 +57,33 @@ dwave_optimization_src = [
 
 dwave_optimization_dependencies = []
 
-blas = dependency(
-    'scipy-openblas',
-    allow_fallback: false,
-    method: 'pkg-config',
-    required: false,
-)
-if blas.found()
-    dwave_optimization_dependencies += [blas]
+# Set up BLAS. _find_openblas.py will return the include directory, the library
+# directory and the library name.
+if not get_option('blas').disabled()
+    blasinfo = run_command(
+        ['dwave/optimization/_build/_find_openblas.py'],
+        capture: true,
+        check: true
+    ).stdout().splitlines()
+    if blasinfo.length() != 0
+        assert(blasinfo.length() == 3, '_find_openblas.py returned an unexpected value')
+
+        dwave_optimization_dependencies += [
+            declare_dependency(
+                dependencies: cpp.find_library(
+                    blasinfo[2],
+                    dirs: blasinfo[1],
+                    required: true,
+                ),
+                include_directories: blasinfo[0],
+            )
+        ]
+    elif get_option('blas').enabled()
+        error(
+            'No BLAS available.' +
+            'Install scipy_openblas64 into the build environment or disable the blas user option'
+        )
+    endif
 endif
 
 if host_machine.system() == 'windows'

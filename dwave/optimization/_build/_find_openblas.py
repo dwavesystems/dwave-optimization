@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2025 D-Wave
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +14,20 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import typing
+import os
+import pathlib
+import sys
 
-from dwave.optimization.model import ArraySymbol as _ArraySymbol
+try:
+    import scipy_openblas64
+except ImportError:
+    sys.exit()
 
-class MatrixMultiply(_ArraySymbol):
-    @staticmethod
-    def implementation() -> typing.Literal["blas", "fallback"]: ...
+# meson needs the include_dir to be relative
+print(pathlib.Path(scipy_openblas64.get_include_dir()).relative_to(os.getcwd(), walk_up=True))
+
+# But the actual library path needs to be absolute
+print(scipy_openblas64.get_lib_dir())
+
+# This one isn't a path at all
+print(scipy_openblas64.get_library())

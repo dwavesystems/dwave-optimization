@@ -44,6 +44,10 @@ Documentation = "https://docs.dwavequantum.com"
 "Source Code" = "https://github.com/dwavesystems/dwave-optimization"
 
 [dependency-groups]
+blas = [
+    # Optional build requirement
+    "scipy_openblas64==0.3.30.0.8",
+]
 dev = [
     # Install requirements
     "numpy==2.2.6; python_version < '3.11'",  # last that supports 3.10
@@ -71,11 +75,13 @@ test = [
 [tool.cibuildwheel]
 build-verbosity = "1"
 skip = "pp* *musllinux*"
+before-build = "pip install --group blas"
 before-test = "pip install --group test"
 test-command = "python -Werror -m unittest discover {project}/tests/"
 
 [tool.cibuildwheel.config-settings]
 compile-args = ["-v"]
+setup-args = ["-Dblas=enabled"]  # require BLAS
 
 [tool.cibuildwheel.linux]
 archs = "x86_64 aarch64"

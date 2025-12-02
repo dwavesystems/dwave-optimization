@@ -476,4 +476,10 @@ ssize_t MatrixMultiplyNode::size_diff(const State& state) const {
 
 SizeInfo MatrixMultiplyNode::sizeinfo() const { return sizeinfo_; }
 
+#ifdef HAS_BLAS_
+std::string MatrixMultiplyNode::implementation = "blas";
+#else
+std::string MatrixMultiplyNode::implementation = "fallback";
+#endif
+
 }  // namespace dwave::optimization
