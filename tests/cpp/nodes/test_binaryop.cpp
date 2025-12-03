@@ -20,6 +20,7 @@
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
+#include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
 
@@ -765,6 +766,35 @@ TEST_CASE("BinaryOpNode - SubtractNode") {
                 Slice(-1, std::nullopt));
 
         THEN("We can create y - z") { graph.emplace_node<SubtractNode>(y_ptr, z_ptr); }
+    }
+
+    // testing static arrays with the same size but different, broadcastable shape
+    GIVEN("x = Integer(shape = {1, 2, 3, 4}), y = Integer(shape = {3, 2, 1, 4}), z = x - y") {
+        auto x_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{1, 2, 3, 4});
+        graph.emplace_node<ArrayValidationNode>(x_ptr);
+        auto y_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3, 2, 1, 4});
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<SubtractNode>(x_ptr, y_ptr),
+                            "arrays must have the same shape or one must be a scalar");
+        REQUIRE_THROWS_WITH(graph.emplace_node<SubtractNode>(y_ptr, x_ptr),
+                            "arrays must have the same shape or one must be a scalar");
+    }
+
+    // testing dynamic arrays with the same size but different, broadcastable shape
+    GIVEN("x = DynamicArrayTestingNode(shape = {-1, 1, 3}), y = reshape(x, {-1, 3, 1}), z = x - y, "
+          "y - x") {
+        auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+                std::initializer_list<ssize_t>{-1, 1, 3});
+        graph.emplace_node<ArrayValidationNode>(x_ptr);
+        auto y_ptr =
+                graph.emplace_node<ReshapeNode>(x_ptr, std::initializer_list<ssize_t>{-1, 3, 1});
+        graph.emplace_node<ArrayValidationNode>(y_ptr);
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<SubtractNode>(x_ptr, y_ptr),
+                            "arrays must have the same shape or one must be a scalar");
+        REQUIRE_THROWS_WITH(graph.emplace_node<SubtractNode>(y_ptr, x_ptr),
+                            "arrays must have the same shape or one must be a scalar");
     }
 }
 

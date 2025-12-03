@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Fix `BinaryOpNode` at C++ level so that it does not accept predecessors
+    that have different, broadcastable shape if they have the same size.
+
