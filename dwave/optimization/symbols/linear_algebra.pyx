@@ -15,11 +15,22 @@
 #    limitations under the License.
 
 from cython.operator cimport typeid
+from libcpp.string cimport string
 
 from dwave.optimization._model cimport _Graph, _register, ArraySymbol
 from dwave.optimization.libcpp.nodes.linear_algebra cimport (
     MatrixMultiplyNode,
 )
+
+# Can't access static attributes from Cython without a workaround. So here it
+# is.
+cdef extern from * nogil:
+    """
+    std::string matmul_implementation() {
+        return dwave::optimization::MatrixMultiplyNode::implementation;
+    }
+    """
+    string matmul_implementation()
 
 
 cdef class MatrixMultiply(ArraySymbol):
@@ -39,5 +50,13 @@ cdef class MatrixMultiply(ArraySymbol):
             x.array_ptr, y.array_ptr,
         )
         self.initialize_arraynode(model, ptr)
+
+    @staticmethod
+    def implementation():
+        """Return the matrix multiplication implementation.
+
+        Either `"blas"` or `"fallback"`.
+        """
+        return bytes(matmul_implementation()).decode()
 
 _register(MatrixMultiply, typeid(MatrixMultiplyNode))

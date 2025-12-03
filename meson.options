@@ -8,3 +8,13 @@ option(
         'When set to disabled, the tests are never built.' +
         'When set to auto (default), the tests are built when buildtype != release.',
 )
+option(
+    'blas',
+    type: 'feature',
+    value: 'auto',
+    description:
+        'Whether to use BLAS when building.' +
+        'When set to enabled, the build will fail if BLAS is not available.' +
+        'When set to disabled, the build will never use BLAS.' +
+        'When set to auto (default), the build will use BLAS if it is available.'
+)

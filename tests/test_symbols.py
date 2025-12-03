@@ -2296,6 +2296,12 @@ class TestMatrixMultiply(utils.SymbolTests):
         with model.lock():
             yield mm
 
+    def test_blas(self):
+        self.assertIn(
+            dwave.optimization.symbols.MatrixMultiply.implementation(),
+            ("blas", "fallback"),
+        )
+
     def test_matmul(self):
         model = Model()
         c = model.constant(self._shaped_range(3, 4))
