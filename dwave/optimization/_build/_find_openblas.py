@@ -15,7 +15,7 @@
 #    limitations under the License.
 
 import os
-import pathlib
+import os.path
 import sys
 
 try:
@@ -24,7 +24,7 @@ except ImportError:
     sys.exit()
 
 # meson needs the include_dir to be relative
-print(pathlib.Path(scipy_openblas64.get_include_dir()).relative_to(os.getcwd(), walk_up=True))
+print(os.path.relpath(scipy_openblas64.get_include_dir(), os.getcwd()))
 
 # But the actual library path needs to be absolute
 print(scipy_openblas64.get_lib_dir())

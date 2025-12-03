@@ -1,7 +1,10 @@
 [build-system]
 requires = [
+    # Same as dependency-groups.build
     "cython~=3.2.0",
+    "meson~=1.9.0",
     "meson-python~=0.18.0",
+    "ninja~=1.13.0",
 ]
 build-backend = 'mesonpy'
 
@@ -48,16 +51,20 @@ blas = [
     # Optional build requirement
     "scipy_openblas64==0.3.30.0.8",
 ]
+build = [
+    # Same as build-system.requires
+    "cython~=3.2.0",
+    "meson~=1.9.0",
+    "meson-python~=0.18.0",
+    "ninja~=1.13.0",
+]
 dev = [
     # Install requirements
     "numpy==2.2.6; python_version < '3.11'",  # last that supports 3.10
     "numpy==2.3.3; python_version >= '3.11'",
 
     # Build requirements
-    "cython~=3.2.0",
-    "meson-python~=0.18.0",
-    "meson~=1.9.0",
-    "ninja~=1.13.0",
+    {include-group = "build"},
 
     # For the changelog
     "reno==4.1.0",
@@ -75,7 +82,13 @@ test = [
 [tool.cibuildwheel]
 build-verbosity = "1"
 skip = "pp* *musllinux*"
-before-build = "pip install --group blas"
+
+# When building with cibuildwheel, we want scipy_openblas64 available to the
+# build step. There isn't (as of Dec 2025) a way to override the
+# build-system.requires so we need to build without isolation
+before-build = "pip install --group blas --group build"
+build-frontend = { name = "build", args = ["--no-isolation"] }
+
 before-test = "pip install --group test"
 test-command = "python -Werror -m unittest discover {project}/tests/"
 
@@ -104,7 +117,7 @@ repair-wheel-command = [
 # For Python3.12+, rather than building individual wheels we build an abi3
 # wheel. 313t and 314t do not support abi wheels yet.
 select = "cp31[!01]-*"  # uses fnmatch, will fail for 3.20+ but good enough for now
-build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=true"] }
+build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=true", "--no-isolation"] }
 inherit.repair-wheel-command = "append"
 repair-wheel-command = [
     "pip install abi3audit",
