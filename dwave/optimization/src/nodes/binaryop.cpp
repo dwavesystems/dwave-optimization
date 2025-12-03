@@ -32,8 +32,16 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
     // If one size is a scalar, we also support dynamic arrays.
     // Otherwise both arrays must be the same shape and not be dynamic
     if (lhs_ptr->size() == 1 || rhs_ptr->size() == 1) {
-        // this is allowed
+        // This is allowed. Note that in this case, since `broadcast_shape()`
+        // was called prior to `calculate_values_minmax()` in the constructor
+        // of this node, we do not need to check `lhs_ptr->shape()` against
+        // `rhs_ptr->shape()` since `broadcast_shape()` has certified that we
+        // can broadcast safely.
     } else if (lhs_ptr->sizeinfo().substitute(100) != rhs_ptr->sizeinfo().substitute(100)) {
+        throw std::invalid_argument("arrays must have the same size or one must be a scalar");
+    } else if (lhs_ptr->shape().size() != rhs_ptr->shape().size() ||
+               !std::equal(lhs_ptr->shape().begin(), lhs_ptr->shape().end(),
+                           rhs_ptr->shape().begin())) {
         throw std::invalid_argument("arrays must have the same shape or one must be a scalar");
     }
 

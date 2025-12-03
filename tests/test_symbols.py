@@ -3665,6 +3665,12 @@ class TestSubtract(utils.BinaryOpTests):
         with self.assertRaises(ValueError):
             a - b
 
+        a = model.constant(np.zeros((4, 5)))
+        b = model.constant(np.zeros((5, 4)))
+
+        with self.assertRaises(ValueError):
+            a - b
+
 
 class TestSum(utils.ReduceTests):
     empty_requires_initial = False
