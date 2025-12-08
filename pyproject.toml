@@ -134,6 +134,18 @@ select = "*-macosx_*"
 inherit.repair-wheel-command = "prepend"
 repair-wheel-command = "python ./dwave/optimization/_build/_fix_rpath.py {wheel}"
 
+[[tool.cibuildwheel.overrides]]
+# We need a universal build of scipy_openblas so we need to make one on the fly
+select = "*-macosx_*"
+before-build = [
+    "pip download --group blas -d .openblas_arm64 --platform macosx_11_0_arm64 --no-deps",
+    "pip download --group blas -d .openblas_x86_64 --platform macosx_11_0_x86_64 --no-deps",
+    "pip install delocate",
+    "delocate-merge .openblas_x86_64/scipy_openblas*.whl .openblas_arm64/scipy_openblas*.whl -w .openblas",
+    "pip install .openblas/scipy_openblas*.whl",
+    "pip install --group build",
+]
+
 [tool.coverage.run]
 source = ["dwave/optimization"]
 
