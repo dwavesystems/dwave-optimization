@@ -72,8 +72,11 @@ for more details.
 
 .. code-block:: bash
 
-    pip install --group dev
-    pip install --no-build-isolation --config-settings=editable-verbose=true --editable .
+    pip install --group dev --group blas
+    pip install --editable . \
+        --no-build-isolation \
+        --config-settings=editable-verbose=true \
+        --config-settings=setup-args="-Dblas=enabled"
 
 Testing
 =======
@@ -94,8 +97,8 @@ the tests to run.
 
 .. code-block:: bash
 
-    pip install --group dev
-    meson setup build -Dbuildtype=debug
+    pip install --group dev --group blas
+    meson setup build -Dbuildtype=debug -Dblas=enabled
 
 You can then run the tests using
 `meson's test framework <https://mesonbuild.com/Unit-tests.html>`_.
