@@ -110,7 +110,8 @@ environment = "MACOSX_DEPLOYMENT_TARGET=10.13"
 archs = "AMD64"
 repair-wheel-command = [
     "pip install delvewheel",
-    "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg dwave",
+    # We put the commands in an .sh so we can use bash
+    "bash ./dwave/optimization/_build/_windows_repair_wheel.sh {wheel} {dest_dir}",
 ]
 
 [[tool.cibuildwheel.overrides]]
