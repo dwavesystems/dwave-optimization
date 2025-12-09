@@ -170,6 +170,61 @@ class TestAdd(utils.BinaryOpTests):
         with self.assertRaises(ValueError):
             c + d
 
+    def test_promotion(self):
+        model = Model()
+        model.states.resize(1)
+
+        a = model.integer(3)  # fixed shape
+        a.set_state(0, [0, 2, 1])
+
+        with self.subTest("model.integer(3) + 5"):
+            x = a + 5
+            self.assertIsInstance(x, dwave.optimization.symbols.Add)
+            with model.lock():
+                np.testing.assert_array_equal(x.state(), a.state() + 5)
+
+        with self.subTest("5 + model.integer(3)"):
+            x = 5 + a
+            self.assertIsInstance(x, dwave.optimization.symbols.Add)
+            with model.lock():
+                np.testing.assert_array_equal(x.state(), a.state() + 5)
+
+        with self.subTest("model.integer(3) + np.float64(3.2)"):
+            x = a + np.float64(3.2)
+            self.assertIsInstance(x, dwave.optimization.symbols.Add)
+            with model.lock():
+                np.testing.assert_array_equal(x.state(), a.state() + 3.2)
+
+        with self.subTest("model.integer(3) + np.float64(3.2)"):
+            x = np.float64(3.2) + a
+            self.assertIsInstance(x, dwave.optimization.symbols.Add)
+            with model.lock():
+                np.testing.assert_array_equal(x.state(), a.state() + 3.2)
+
+        with self.subTest("model.integer(3) + [5, 1.2, -1]"):
+            x = a + [5, 1.2, -1]
+            self.assertIsInstance(x, dwave.optimization.symbols.Add)
+            with model.lock():
+                np.testing.assert_array_equal(x.state(), a.state() + [5, 1.2, -1])
+
+        with self.subTest("[5, 1.2, -1] + model.integer(3)"):
+            x = [5, 1.2, -1] + a
+            self.assertIsInstance(x, dwave.optimization.symbols.Add)
+            with model.lock():
+                np.testing.assert_array_equal(x.state(), a.state() + [5, 1.2, -1])
+
+        with self.subTest("model.integer(3) + np.asarray([5, 1.2, -1])"):
+            x = a + np.asarray([5, 1.2, -1])
+            self.assertIsInstance(x, dwave.optimization.symbols.Add)
+            with model.lock():
+                np.testing.assert_array_equal(x.state(), a.state() + [5, 1.2, -1])
+
+        with self.subTest("np.asarray([5, 1.2, -1]) + model.integer(3)"):
+            x = np.asarray([5, 1.2, -1]) + a
+            self.assertIsInstance(x, dwave.optimization.symbols.Add)
+            with model.lock():
+                np.testing.assert_array_equal(x.state(), a.state() + [5, 1.2, -1])
+
     def test_scalar_addition(self):
         model = Model()
         a = model.constant(5)
@@ -1059,7 +1114,7 @@ class TestConstant(utils.SymbolTests):
         A = model.constant(arr)
 
         np.testing.assert_array_equal(A, arr)
-        self.assertTrue(np.shares_memory(A, arr))
+        self.assertTrue(np.shares_memory(np.asarray(A), arr))
 
     def test_index(self):
         model = Model()
@@ -2302,6 +2357,42 @@ class TestMatrixMultiply(utils.SymbolTests):
         c_reshape = c.reshape((4, 3))
         mm = matmul(c, c_reshape)
         self.assertIsInstance(mm, dwave.optimization.symbols.MatrixMultiply)
+
+    def test_matmul_overload(self):
+        model = Model()
+
+        x = model.integer(10)
+        y = model.integer((10, 5))
+        mm = x @ y
+        self.assertIsInstance(mm, dwave.optimization.symbols.MatrixMultiply)
+        self.assertEqual(mm.shape(), (5,))
+        with self.assertRaises(ValueError):
+            y @ x
+
+        # We can also use with numpy arrays
+        y_with_np = y @ np.ones((5, 7))
+        self.assertIsInstance(y_with_np, dwave.optimization.symbols.MatrixMultiply)
+        self.assertEqual(y_with_np.shape(), (10, 7))
+
+        with self.assertRaises(ValueError):
+            y @ np.ones((3, 5))
+
+        np_with_y = np.ones((3, 10)) @ y
+        self.assertIsInstance(np_with_y, dwave.optimization.symbols.MatrixMultiply)
+        self.assertEqual(np_with_y.shape(), (3, 5))
+
+        with self.assertRaises(ValueError):
+            np.ones((4, 4)) @ y
+
+        # Check that broadcast works
+        self.assertIsInstance(
+            model.integer((1, 7, 4, 2)) @ np.ones((5, 1, 2, 3)),
+            dwave.optimization.symbols.MatrixMultiply
+        )
+        self.assertIsInstance(
+            np.ones((5, 1, 3, 2)) @ model.integer((1, 7, 2, 4)),
+            dwave.optimization.symbols.MatrixMultiply
+        )
 
     def test_matmul_scalar(self):
         model = Model()

@@ -1476,6 +1476,17 @@ cdef class ArraySymbol(Symbol):
         obj.initialize_arraynode(symbol.model, ptr)
         return obj
 
+    # Opt ArraySymbol out of default interoperability with NumPy ufuncs. We then
+    # add explicit support with our various __<op>__() and __r<op>__ methods.
+    # This prevents NumPy from interpreting our ArraySymbols as object arrays.
+    __array_ufunc__ = None
+
+    # Likewise, we want to opt out of default interoperability with NumPy
+    # functions.
+    # See https://numpy.org/neps/nep-0018-array-function-protocol.html#nep18
+    def __array_function__(self, func, types, args, kwargs):
+        return NotImplemented
+
     def __abs__(self):
         from dwave.optimization.symbols import Absolute  # avoid circular import
         return Absolute(self)
@@ -1607,6 +1618,15 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import LessEqual # avoid circular import
         return LessEqual(self, rhs)
 
+    def __matmul__(self, rhs):
+        try:
+            rhs = _as_array_symbol(self.model, rhs)
+        except TypeError:
+            return NotImplemented
+
+        from dwave.optimization.mathematical import matmul
+        return matmul(self, rhs)
+
     def __mod__(self, rhs):
         try:
             rhs = _as_array_symbol(self.model, rhs)
@@ -1656,6 +1676,15 @@ cdef class ArraySymbol(Symbol):
             return NotImplemented
 
         return lhs + self
+
+    def __rmatmul__(self, lhs):
+        try:
+            lhs = _as_array_symbol(self.model, lhs)
+        except TypeError:
+            return NotImplemented
+
+        from dwave.optimization.mathematical import matmul
+        return matmul(lhs, self)
 
     def __rmod__(self, lhs):
         try:
