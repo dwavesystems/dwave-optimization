@@ -1,7 +1,10 @@
 [build-system]
 requires = [
+    # Same as dependency-groups.build
     "cython~=3.2.0",
+    "meson~=1.9.0",
     "meson-python~=0.18.0",
+    "ninja~=1.13.0",
 ]
 build-backend = 'mesonpy'
 
@@ -44,16 +47,28 @@ Documentation = "https://docs.dwavequantum.com"
 "Source Code" = "https://github.com/dwavesystems/dwave-optimization"
 
 [dependency-groups]
+blas = [
+    # Optional build requirement
+    "scipy_openblas64==0.3.30.0.8",
+]
+build = [
+    # Same as build-system.requires
+    "cython~=3.2.0",
+    "meson~=1.9.0",
+    "meson-python~=0.18.0",
+    "ninja~=1.13.0",
+]
+blas-build = [
+    {include-group = "build"},
+    {include-group = "blas"},
+]
 dev = [
     # Install requirements
     "numpy==2.2.6; python_version < '3.11'",  # last that supports 3.10
     "numpy==2.3.3; python_version >= '3.11'",
 
     # Build requirements
-    "cython~=3.2.0",
-    "meson-python~=0.18.0",
-    "meson~=1.9.0",
-    "ninja~=1.13.0",
+    {include-group = "build"},
 
     # For the changelog
     "reno==4.1.0",
@@ -71,11 +86,19 @@ test = [
 [tool.cibuildwheel]
 build-verbosity = "1"
 skip = "pp* *musllinux*"
+
+# When building with cibuildwheel, we want scipy_openblas64 available to the
+# build step. There isn't (as of Dec 2025) a way to override the
+# build-system.requires so we need to build without isolation
+before-build = "pip install --group blas-build"
+build-frontend = { name = "build", args = ["--no-isolation"] }
+
 before-test = "pip install --group test"
 test-command = "python -Werror -m unittest discover {project}/tests/"
 
 [tool.cibuildwheel.config-settings]
 compile-args = ["-v"]
+setup-args = ["-Dblas=enabled"]  # require BLAS
 
 [tool.cibuildwheel.linux]
 archs = "x86_64 aarch64"
@@ -91,14 +114,15 @@ environment = "MACOSX_DEPLOYMENT_TARGET=10.13"
 archs = "AMD64"
 repair-wheel-command = [
     "pip install delvewheel",
-    "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg dwave",
+    # We put the commands in an .sh so we can use bash
+    "bash ./dwave/optimization/_build/_windows_repair_wheel.sh {wheel} {dest_dir}",
 ]
 
 [[tool.cibuildwheel.overrides]]
 # For Python3.12+, rather than building individual wheels we build an abi3
 # wheel. 313t and 314t do not support abi wheels yet.
 select = "cp31[!01]-*"  # uses fnmatch, will fail for 3.20+ but good enough for now
-build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=true"] }
+build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=true", "--no-isolation"] }
 inherit.repair-wheel-command = "append"
 repair-wheel-command = [
     "pip install abi3audit",
@@ -114,6 +138,18 @@ repair-wheel-command = "python /project/dwave/optimization/_build/_fix_rpath.py 
 select = "*-macosx_*"
 inherit.repair-wheel-command = "prepend"
 repair-wheel-command = "python ./dwave/optimization/_build/_fix_rpath.py {wheel}"
+
+[[tool.cibuildwheel.overrides]]
+# We need a universal build of scipy_openblas so we need to make one on the fly
+select = "*-macosx_*"
+before-build = [
+    "pip download --group blas -d .openblas_arm64 --platform macosx_11_0_arm64 --no-deps",
+    "pip download --group blas -d .openblas_x86_64 --platform macosx_11_0_x86_64 --no-deps",
+    "pip install delocate",
+    "delocate-merge .openblas_x86_64/scipy_openblas*.whl .openblas_arm64/scipy_openblas*.whl -w .openblas",
+    "pip install .openblas/scipy_openblas*.whl",
+    "pip install --group build",
+]
 
 [tool.coverage.run]
 source = ["dwave/optimization"]

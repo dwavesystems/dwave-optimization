@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
@@ -65,6 +66,10 @@ class MatrixMultiplyNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::size_info()
     SizeInfo sizeinfo() const override;
+
+    /// The method used to calculate the matrix multiplication.
+    /// Either `"blas"` or `"fallback"`.
+    static std::string implementation;
 
  private:
     void matmul_(State& state, std::span<double> out, std::span<const ssize_t> out_shape) const;
