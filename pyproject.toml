@@ -58,6 +58,10 @@ build = [
     "meson-python~=0.18.0",
     "ninja~=1.13.0",
 ]
+blas-build = [
+    {include-group = "build"},
+    {include-group = "blas"},
+]
 dev = [
     # Install requirements
     "numpy==2.2.6; python_version < '3.11'",  # last that supports 3.10
@@ -86,7 +90,7 @@ skip = "pp* *musllinux*"
 # When building with cibuildwheel, we want scipy_openblas64 available to the
 # build step. There isn't (as of Dec 2025) a way to override the
 # build-system.requires so we need to build without isolation
-before-build = "pip install --group blas --group build"
+before-build = "pip install --group blas-build"
 build-frontend = { name = "build", args = ["--no-isolation"] }
 
 before-test = "pip install --group test"
