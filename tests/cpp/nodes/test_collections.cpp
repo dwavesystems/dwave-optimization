@@ -435,6 +435,32 @@ TEST_CASE("SetNode") {
         CHECK_THAT(set_ptr->view(state), RangeEquals({0, 5}));
     }
 
+    GIVEN("A set(5, min_size=0, max_size=2)") {
+        auto set_ptr = graph.emplace_node<SetNode>(5, 0, 2);
+
+        // the min/max are derived from the set, not the size
+        CHECK(set_ptr->max() == 4);
+        CHECK(set_ptr->min() == 0);
+
+        auto sizeinfo = set_ptr->sizeinfo();
+        CHECK(sizeinfo.min == 0);
+        CHECK(sizeinfo.max == 2);
+    }
+
+    GIVEN("A set(0)") {
+        auto set_ptr = graph.emplace_node<SetNode>(0);
+
+        CHECK(set_ptr->size() == 0);
+
+        // the min/max are derived from the set, not the size
+        CHECK(set_ptr->max() == 0);
+        CHECK(set_ptr->min() == 0);
+
+        auto sizeinfo = set_ptr->sizeinfo();
+        CHECK(sizeinfo.min == 0);
+        CHECK(sizeinfo.max == 0);
+    }
+
     GIVEN("A SetNode representing subsets of 10 elements") {
         const int num_elements = 10;
 
