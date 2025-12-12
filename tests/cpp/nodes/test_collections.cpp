@@ -414,6 +414,32 @@ TEST_CASE("ListNode") {
             }
         }
     }
+
+    GIVEN("A list(5, min_size=0, max_size=2)") {
+        auto list_ptr = graph.emplace_node<ListNode>(5, 0, 2);
+
+        // the min/max are derived from the set, not the size
+        CHECK(list_ptr->max() == 4);
+        CHECK(list_ptr->min() == 0);
+
+        auto sizeinfo = list_ptr->sizeinfo();
+        CHECK(sizeinfo.min == 0);
+        CHECK(sizeinfo.max == 2);
+    }
+
+    GIVEN("A list(0)") {
+        auto list_ptr = graph.emplace_node<ListNode>(0);
+
+        CHECK(list_ptr->size() == 0);
+
+        // the min/max are derived from the set, not the size
+        CHECK(list_ptr->max() == 0);
+        CHECK(list_ptr->min() == 0);
+
+        auto sizeinfo = list_ptr->sizeinfo();
+        CHECK(sizeinfo.min == 0);
+        CHECK(sizeinfo.max == 0);
+    }
 }
 
 TEST_CASE("SetNode") {
