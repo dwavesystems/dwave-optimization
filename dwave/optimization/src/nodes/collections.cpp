@@ -258,7 +258,10 @@ bool CollectionNode::integral() const { return true; }
 
 double CollectionNode::min() const { return 0; }
 
-double CollectionNode::max() const { return max_size_ - 1; }
+double CollectionNode::max() const {
+    if (max_value_ == 0) return 0;
+    return max_value_ - 1;
+}
 
 void CollectionNode::revert(State& state) const { data_ptr<CollectionStateData>(state)->revert(); }
 

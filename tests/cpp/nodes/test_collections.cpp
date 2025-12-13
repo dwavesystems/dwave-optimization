@@ -414,6 +414,32 @@ TEST_CASE("ListNode") {
             }
         }
     }
+
+    GIVEN("A list(5, min_size=0, max_size=2)") {
+        auto list_ptr = graph.emplace_node<ListNode>(5, 0, 2);
+
+        // the min/max are derived from the set, not the size
+        CHECK(list_ptr->max() == 4);
+        CHECK(list_ptr->min() == 0);
+
+        auto sizeinfo = list_ptr->sizeinfo();
+        CHECK(sizeinfo.min == 0);
+        CHECK(sizeinfo.max == 2);
+    }
+
+    GIVEN("A list(0)") {
+        auto list_ptr = graph.emplace_node<ListNode>(0);
+
+        CHECK(list_ptr->size() == 0);
+
+        // the min/max are derived from the set, not the size
+        CHECK(list_ptr->max() == 0);
+        CHECK(list_ptr->min() == 0);
+
+        auto sizeinfo = list_ptr->sizeinfo();
+        CHECK(sizeinfo.min == 0);
+        CHECK(sizeinfo.max == 0);
+    }
 }
 
 TEST_CASE("SetNode") {
@@ -433,6 +459,32 @@ TEST_CASE("SetNode") {
         graph.propagate(state);
 
         CHECK_THAT(set_ptr->view(state), RangeEquals({0, 5}));
+    }
+
+    GIVEN("A set(5, min_size=0, max_size=2)") {
+        auto set_ptr = graph.emplace_node<SetNode>(5, 0, 2);
+
+        // the min/max are derived from the set, not the size
+        CHECK(set_ptr->max() == 4);
+        CHECK(set_ptr->min() == 0);
+
+        auto sizeinfo = set_ptr->sizeinfo();
+        CHECK(sizeinfo.min == 0);
+        CHECK(sizeinfo.max == 2);
+    }
+
+    GIVEN("A set(0)") {
+        auto set_ptr = graph.emplace_node<SetNode>(0);
+
+        CHECK(set_ptr->size() == 0);
+
+        // the min/max are derived from the set, not the size
+        CHECK(set_ptr->max() == 0);
+        CHECK(set_ptr->min() == 0);
+
+        auto sizeinfo = set_ptr->sizeinfo();
+        CHECK(sizeinfo.min == 0);
+        CHECK(sizeinfo.max == 0);
     }
 
     GIVEN("A SetNode representing subsets of 10 elements") {

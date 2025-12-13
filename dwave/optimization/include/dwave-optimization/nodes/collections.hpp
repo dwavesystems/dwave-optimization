@@ -302,6 +302,8 @@ class SetNode : public CollectionNode {
     /// Create a set node with elements drawn from range(n)
     explicit SetNode(ssize_t n) : CollectionNode(n, 0, n) {}
 
+    /// Create a set node encoding subsets of range(n) such that the size of
+    /// the subset is between `min_size` and `max_size` (inclusive).
     explicit SetNode(ssize_t n, ssize_t min_size, ssize_t max_size)
             : CollectionNode(n, min_size, max_size) {}
 

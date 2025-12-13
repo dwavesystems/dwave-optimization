@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fix the maximum possible value reported by ``SetNode::max()``.
+    Previously it would erroneously return a value derived from the maximum subset size.
