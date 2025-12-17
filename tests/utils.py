@@ -500,7 +500,10 @@ class UnaryOpTests(SymbolTests):
 
                 model.lock()
                 model.states.resize(1)
-                self.assertEqual(op_a.state(0), self.op(scalar))
+                if type(op_a) == dwave.optimization.symbols.unaryop.Tanh:
+                    self.assertAlmostEqual(op_a.state(0), self.op(scalar))
+                else:
+                    self.assertEqual(op_a.state(0), self.op(scalar))
 
     def test_1d_input(self):
         model = Model()

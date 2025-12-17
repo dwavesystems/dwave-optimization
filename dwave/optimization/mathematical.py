@@ -59,6 +59,7 @@ from dwave.optimization.symbols import (
     Sin,
     SoftMax,
     SquareRoot,
+    Tanh,
     Transpose,
     Where,
     Xor,
@@ -104,6 +105,7 @@ __all__ = [
     "softmax",
     "sqrt",
     "stack",
+    "tanh",
     "transpose",
     "vstack",
     "where",
@@ -1708,6 +1710,36 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
 
     new_shape = tuple(shape[:axis]) + (1,) + (shape[axis:])  # add the axis and then concatenate
     return concatenate([arr.reshape(new_shape) for arr in arrays], axis)
+
+
+def tanh(x) -> Tanh:
+    """Return an element-wise trigonometric hyperbolic tangent on the given symbol.
+
+    Args:
+        x: Array giving the angles, in radians.
+
+    Returns:
+        A symbol that propagates the trigonometric hyperbolic tangent of the values in ``x``.
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Tanh`: equivalent symbol.
+
+    Examples:
+        >>> import numpy as np
+        >>> from dwave.optimization import Model, tanh
+        ...
+        >>> model = Model()
+        >>> x = model.constant([0, np.pi / 2])
+        >>> y = tanh(x)
+        ...
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     print(y.state())
+        [0.         0.91715234]
+
+    .. versionadded:: 0.6.11
+    """
+    return Tanh(x)
 
 
 def transpose(array: ArraySymbol) -> Transpose:

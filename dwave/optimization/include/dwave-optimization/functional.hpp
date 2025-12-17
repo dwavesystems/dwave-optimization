@@ -116,4 +116,9 @@ struct square_root {
     constexpr auto operator()(const T& x) const { return std::sqrt(x); }
 };
 
+template <class T>
+struct tanh {
+    auto operator()(const T& num) const { return std::tanh(num); }
+};
+
 }  // namespace dwave::optimization::functional

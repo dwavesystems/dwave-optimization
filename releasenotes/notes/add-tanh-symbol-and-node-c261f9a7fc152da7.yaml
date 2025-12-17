@@ -1,0 +1,5 @@
+---
+features:
+  - |
+  - Add ``Tanh`` symbol to support trigonometric hyperbolic tangent.
+  - Add C++ ``TanhNode`` to support trigonometric hyperbolic tangent.

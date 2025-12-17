@@ -89,5 +89,6 @@ using RintNode = UnaryOpNode<functional::rint<double>>;
 using SinNode = UnaryOpNode<functional::sin<double>>;
 using SquareNode = UnaryOpNode<functional::square<double>>;
 using SquareRootNode = UnaryOpNode<functional::square_root<double>>;
+using TanhNode = UnaryOpNode<functional::tanh<double>>;
 
 }  // namespace dwave::optimization

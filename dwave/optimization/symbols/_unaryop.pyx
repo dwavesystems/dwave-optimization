@@ -31,6 +31,7 @@ from dwave.optimization.libcpp.nodes.unaryop cimport (
     SinNode,
     SquareNode,
     SquareRootNode,
+    TanhNode,
 )
 
 # We need to be able to expose the available node types to the Python level,
@@ -48,6 +49,7 @@ cpdef enum _UnaryOpNodeType:
     Sin
     Square
     SquareRoot
+    Tanh
 
 
 class _UnaryOpSymbol(ArraySymbol):
@@ -76,6 +78,8 @@ class _UnaryOpSymbol(ArraySymbol):
             _register(cls, typeid(SquareNode))
         elif node_type is _UnaryOpNodeType.SquareRoot:
             _register(cls, typeid(SquareRootNode))
+        elif node_type is _UnaryOpNodeType.Tanh:
+            _register(cls, typeid(TanhNode))
         else:
             raise RuntimeError(f"unexpected _UnaryOpNodeType: {<object>node_type!r}")
 
@@ -111,6 +115,8 @@ class _UnaryOpSymbol(ArraySymbol):
             ptr = model._graph.emplace_node[SquareNode](x.array_ptr)
         elif node_type is _UnaryOpNodeType.SquareRoot:
             ptr = model._graph.emplace_node[SquareRootNode](x.array_ptr)
+        elif node_type is _UnaryOpNodeType.Tanh:
+            ptr = model._graph.emplace_node[TanhNode](x.array_ptr)
         else:
             raise RuntimeError(f"unexpected _UnaryOpNodeType: {<object>node_type!r}")
 
