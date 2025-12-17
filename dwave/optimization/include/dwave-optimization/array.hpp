@@ -682,10 +682,10 @@ bool array_shape_equal(const std::span<const Array* const> array_ptrs);
 /// Get the shape induced by broadcasting two arrays together.
 /// See https://numpy.org/doc/stable/user/basics.broadcasting.html.
 /// Raises an exception if the two arrays cannot be broadcast together
-std::vector<ssize_t> broadcast_shape(const std::span<const ssize_t> lhs,
-                                     const std::span<const ssize_t> rhs);
-std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
-                                     std::initializer_list<ssize_t> rhs);
+std::vector<ssize_t> broadcast_shapes(const std::span<const ssize_t> lhs,
+                                      const std::span<const ssize_t> rhs);
+std::vector<ssize_t> broadcast_shapes(std::initializer_list<ssize_t> lhs,
+                                      std::initializer_list<ssize_t> rhs);
 
 void deduplicate_diff(std::vector<Update>& diff);
 

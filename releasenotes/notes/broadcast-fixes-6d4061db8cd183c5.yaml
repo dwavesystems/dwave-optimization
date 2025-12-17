@@ -1,0 +1,3 @@
+---
+upgrade:
+  - Rename C++ ``broadcast_shape()`` to ``broadcast_shapes()`` for consistency with NumPy.

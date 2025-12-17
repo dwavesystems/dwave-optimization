@@ -223,8 +223,8 @@ bool array_shape_equal(const Array& lhs, const Array& rhs) { return array_shape_
 
 // We follow NumPy's broadcasting rules
 // See https://numpy.org/doc/stable/user/basics.broadcasting.html
-std::vector<ssize_t> broadcast_shape(const std::span<const ssize_t> lhs,
-                                     const std::span<const ssize_t> rhs) {
+std::vector<ssize_t> broadcast_shapes(const std::span<const ssize_t> lhs,
+                                      const std::span<const ssize_t> rhs) {
     // The resulting number of dimensions is the larger of the two broadcast arrays.
     std::vector<ssize_t> shape(std::max(lhs.size(), rhs.size()));
 
@@ -265,16 +265,16 @@ std::vector<ssize_t> broadcast_shape(const std::span<const ssize_t> lhs,
     assert(sit == shape.rend());
 
     // Check that we haven't put a dynamic axis anywhere except axis 0
-    if (std::ranges::any_of(shape | std::views::drop(1), [](const auto& val) { return val < 0; })) {
+    if (std::ranges::any_of(shape | std::views::drop(1), std::signbit<ssize_t>)) {
         throw std::invalid_argument("operands could not be broadcast together with shapes " +
                                     shape_to_string(lhs) + " " + shape_to_string(rhs));
     }
 
     return shape;
 }
-std::vector<ssize_t> broadcast_shape(std::initializer_list<ssize_t> lhs,
-                                     std::initializer_list<ssize_t> rhs) {
-    return broadcast_shape(std::span(lhs), std::span(rhs));
+std::vector<ssize_t> broadcast_shapes(std::initializer_list<ssize_t> lhs,
+                                      std::initializer_list<ssize_t> rhs) {
+    return broadcast_shapes(std::span(lhs), std::span(rhs));
 }
 
 void deduplicate_diff(std::vector<Update>& diff) {

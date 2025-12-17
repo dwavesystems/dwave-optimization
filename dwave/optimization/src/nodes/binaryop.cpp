@@ -32,10 +32,10 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
     // If one size is a scalar, we also support dynamic arrays.
     // Otherwise both arrays must be the same shape and not be dynamic
     if (lhs_ptr->size() == 1 || rhs_ptr->size() == 1) {
-        // This is allowed. Note that in this case, since `broadcast_shape()`
+        // This is allowed. Note that in this case, since `broadcast_shapes()`
         // was called prior to `calculate_values_minmax()` in the constructor
         // of this node, we do not need to check `lhs_ptr->shape()` against
-        // `rhs_ptr->shape()` since `broadcast_shape()` has certified that we
+        // `rhs_ptr->shape()` since `broadcast_shapes()` has certified that we
         // can broadcast safely.
     } else if (lhs_ptr->sizeinfo().substitute(100) != rhs_ptr->sizeinfo().substitute(100)) {
         throw std::invalid_argument("arrays must have the same size or one must be a scalar");
@@ -169,7 +169,7 @@ bool calculate_integral(const Array* lhs_ptr, const Array* rhs_ptr) {
 
 template <class BinaryOp>
 BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
-        : ArrayOutputMixin(broadcast_shape(a_ptr->shape(), b_ptr->shape())),
+        : ArrayOutputMixin(broadcast_shapes(a_ptr->shape(), b_ptr->shape())),
           operands_({a_ptr, b_ptr}),
           values_info_(calculate_values_minmax<BinaryOp>(operands_[0], operands_[1]),
                        calculate_integral<BinaryOp>(operands_[0], operands_[1])),
