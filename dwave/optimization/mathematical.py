@@ -160,7 +160,7 @@ def _binaryop(
             # reshapes in that case
             if len(args) == 2:
                 reshaped = tuple(
-                    broadcast_to(sym, shape) if sym.size() != 1 else sym
+                    broadcast_to(sym, shape) if np.prod(sym.shape()) != 1 else sym
                     for sym in array_symbols
                 )
                 return binaryop(*reshaped, **kwargs)

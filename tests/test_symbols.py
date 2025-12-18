@@ -227,6 +227,15 @@ class TestAdd(utils.BinaryOpTests):
             with model.lock():
                 np.testing.assert_array_equal(x.state(), a.state() + [5, 1.2, -1])
 
+        s = model.set(3)
+        s.set_state(0, [0, 2, 1])
+
+        with self.subTest("model.set(3) + 5"):
+            x = s + 5
+            self.assertIsInstance(x, dwave.optimization.symbols.Add)
+            with model.lock():
+                np.testing.assert_array_equal(x.state(), s.state() + 5)
+
     def test_scalar_addition(self):
         model = Model()
         a = model.constant(5)
