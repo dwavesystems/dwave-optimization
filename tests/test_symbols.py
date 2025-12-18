@@ -853,6 +853,12 @@ class TestBroadcastTo(utils.SymbolTests):
         ):
             broadcast_to(x, (5, 1))
 
+        with self.assertRaisesRegex(
+            ValueError,
+            r"cannot broadcast an array with a fixed shape \(5,\) to a dynamic shape \(-1, 5\)"
+        ):
+            broadcast_to(x, (-1, 5))
+
         with self.assertRaises(ValueError):
             broadcast_to(x, "hello")
 

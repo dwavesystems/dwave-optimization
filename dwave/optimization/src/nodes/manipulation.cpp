@@ -146,6 +146,12 @@ BroadcastToNode::BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> 
                 "number of dimensions");
     }
 
+    if (target_shape.size() and target_shape[0] < 0 and not array_ptr_->dynamic()) {
+        throw std::invalid_argument("cannot broadcast an array with a fixed shape " +
+                                    shape_to_string(array_ptr_->shape()) + " to a dynamic shape " +
+                                    shape_to_string(target_shape));
+    }
+
     // Walk backwards through all four arrays. Zip would be nice here...
     auto rit_sshape = source_shape.rbegin();
     auto rit_sstrides = source_strides.rbegin();
