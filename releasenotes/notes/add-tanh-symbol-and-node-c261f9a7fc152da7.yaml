@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add ``Tanh`` symbol to support hyperbolic tangent.
+    See `#445 <https://github.com/dwavesystems/dwave-optimization/issues/445>`_.
+  - Add C++ ``TanhNode`` to support hyperbolic tangent.

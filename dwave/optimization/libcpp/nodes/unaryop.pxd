@@ -51,3 +51,6 @@ cdef extern from "dwave-optimization/nodes/unaryop.hpp" namespace "dwave::optimi
         
     cdef cppclass SquareRootNode(ArrayNode):
         pass
+
+    cdef cppclass TanhNode(ArrayNode):
+        pass

@@ -37,10 +37,11 @@ std::pair<double, double> calculate_values_minmax(const Array* array_ptr) {
         return {false, true};
     }
 
-    // Likewise for sin/cos the minmax is -1/+1. We could tighten it if the domain
+    // Likewise for sin/cos/tanh the minmax is -1/+1. We could tighten it if the domain
     // of our predecessor is smaller than 2pi, but let's keep it simple for now
     if constexpr (std::same_as<UnaryOp, functional::cos<double>> ||
-                  std::same_as<UnaryOp, functional::sin<double>>) {
+                  std::same_as<UnaryOp, functional::sin<double>> ||
+                  std::same_as<UnaryOp, functional::tanh<double>>) {
         return {-1, +1};
     }
 
@@ -144,6 +145,11 @@ bool calculate_integral<functional::sin<double>>(const Array*) {
 template <>
 bool calculate_integral<functional::square<double>>(const Array* array_ptr) {
     return array_ptr->integral();
+}
+
+template <>
+bool calculate_integral<functional::tanh<double>>(const Array*) {
+    return false;
 }
 
 template <class UnaryOp>
@@ -253,6 +259,7 @@ template class UnaryOpNode<functional::rint<double>>;
 template class UnaryOpNode<functional::sin<double>>;
 template class UnaryOpNode<functional::square<double>>;
 template class UnaryOpNode<functional::square_root<double>>;
+template class UnaryOpNode<functional::tanh<double>>;
 template class UnaryOpNode<std::negate<double>>;
 template class UnaryOpNode<std::logical_not<double>>;
 

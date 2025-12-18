@@ -109,6 +109,7 @@ from dwave.optimization.symbols.unaryop import (
     Sin,
     Square,
     SquareRoot,
+    Tanh,
 )
 
 
@@ -184,6 +185,7 @@ __all__ = [
     "SquareRoot",
     "Subtract",
     "Sum",
+    "Tanh",
     "Transpose",
     "Where",
     "Xor",

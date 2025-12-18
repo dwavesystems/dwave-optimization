@@ -115,3 +115,14 @@ class Square(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Square):
 class SquareRoot(_UnaryOpSymbol, node_type=_UnaryOpNodeType.SquareRoot):
     """Square root of a symbol."""
     pass
+
+
+class Tanh(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Tanh):
+    """Tanh element-wise on a symbol.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.tanh`: equivalent function.
+
+    .. versionadded:: 0.6.11
+    """
+    pass

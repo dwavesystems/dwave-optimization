@@ -32,7 +32,7 @@ namespace dwave::optimization {
 TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::cos<double>,
                    functional::exp<double>, functional::expit<double>, functional::logical<double>,
                    functional::rint<double>, functional::sin<double>, functional::square<double>,
-                   std::negate<double>, std::logical_not<double>) {
+                   functional::tanh<double>, std::negate<double>, std::logical_not<double>) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -255,20 +255,24 @@ TEST_CASE("UnaryOpNode - AbsoluteNode") {
     }
 }
 
-TEST_CASE("UnaryOpNode - CosNode and SinNode") {
+TEST_CASE("UnaryOpNode - CosNode, SinNode, and TanhNode") {
     auto graph = Graph();
 
-    GIVEN("x with min/max of -100/+100, y = cos(x), z = sin(x)") {
+    GIVEN("x with min/max of -100/+100, y = cos(x), z = sin(x), a = tanh(x)") {
         auto x = graph.emplace_node<ConstantNode>(std::vector<double>{-100, 1.5, +100});
         auto y = graph.emplace_node<CosNode>(x);
         auto z = graph.emplace_node<SinNode>(x);
+        auto a = graph.emplace_node<TanhNode>(x);
 
         CHECK(!y->integral());
         CHECK(!z->integral());
+        CHECK(!a->integral());
         CHECK(y->min() == -1);
         CHECK(y->max() == +1);
         CHECK(z->min() == -1);
         CHECK(z->max() == +1);
+        CHECK(a->min() == -1);
+        CHECK(a->max() == +1);
     }
 }
 

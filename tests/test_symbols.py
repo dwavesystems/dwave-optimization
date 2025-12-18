@@ -3846,6 +3846,14 @@ class TestSum(utils.ReduceTests):
         self.assertEqual(b.state(0), np.arange(5, 10).sum())
 
 
+class TestTanh(utils.UnaryOpTests):
+    def op(self, x):
+        return np.tanh(x)
+
+    def symbol_op(self, x):
+        return dwave.optimization.tanh(x)
+
+
 class TestTranspose(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

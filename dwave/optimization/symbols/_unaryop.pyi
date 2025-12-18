@@ -27,6 +27,7 @@ class _UnaryOpNodeType:
     Sin: int
     Square: int
     SquareRoot: int
+    Tanh: int
 
 class _UnaryOpSymbol(_ArraySymbol):
 	def __init_subclass__(cls, /, node_type: _UnaryOpNodeType): ...
