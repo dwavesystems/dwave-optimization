@@ -62,16 +62,15 @@ blas-build = [
     {include-group = "build"},
     {include-group = "blas"},
 ]
+changelog = [
+    "reno==4.1.0",
+]
 dev = [
     # Install requirements
     "numpy==2.2.6; python_version < '3.11'",  # last that supports 3.10
     "numpy==2.3.3; python_version >= '3.11'",
-
-    # Build requirements
     {include-group = "build"},
-
-    # For the changelog
-    "reno==4.1.0",
+    {include-group = "changelog"},
 ]
 docs = [
     "pydata-sphinx-theme==0.14.3",

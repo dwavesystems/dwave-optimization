@@ -313,6 +313,16 @@ jobs:
             . env/bin/activate
             make -C docs doctest
 
+      - run:
+          name: build changelog
+          command: |
+            . env/bin/activate
+            pip install --group changelog
+            reno report -o changelog.rst
+
+      - store_artifacts:
+          path: changelog.rst
+
   deploy:
     docker:
       - image: cimg/python:3.10
