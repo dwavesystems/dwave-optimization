@@ -90,7 +90,8 @@ bool NumberNode::clip_and_set_value(State& state, ssize_t index, double value) c
 
 // Integer Node ***************************************************************
 template <bool maximum>
-double get_extreme_bound(const std::optional<std::vector<double>>& bound, const int default_bound) {
+double get_extreme_index_wise_bound(const std::optional<std::vector<double>>& bound,
+                                    const int default_bound) {
     if (!bound) {
         return static_cast<double>(default_bound);
     }
@@ -106,8 +107,8 @@ double get_extreme_bound(const std::optional<std::vector<double>>& bound, const 
     return static_cast<double>(default_bound);
 }
 
-void assign_bound(const std::optional<std::vector<double>>& bound, std::vector<double>& full_bound_,
-                  double default_bound) {
+void assign_index_wise_bounds(const std::optional<std::vector<double>>& bound,
+                              std::vector<double>& full_bound_, double default_bound) {
     if (!bound) {
         full_bound_ = std::vector<double>{default_bound};
         return;
@@ -116,39 +117,45 @@ void assign_bound(const std::optional<std::vector<double>>& bound, std::vector<d
     full_bound_ = std::move(*bound);
 }
 
-IntegerNode::IntegerNode(std::span<const ssize_t> shape,
-                         std::optional<std::vector<double>> lower_bound,
-                         std::optional<std::vector<double>> upper_bound)
-        : NumberNode(shape, get_extreme_bound<false>(lower_bound, default_lower_bound),
-                     get_extreme_bound<true>(upper_bound, default_upper_bound)) {
-    assign_bound(lower_bound, full_lower_bound_, default_lower_bound);
-    assign_bound(upper_bound, full_upper_bound_, default_upper_bound);
+void check_index_wise_bounds(const IntegerNode& node, const std::vector<double>& full_lower_bound_,
+                             const std::vector<double>& full_upper_bound_) {
     bool index_wise_bound = false;
     // If lower bound is index-wise, it must be correct size
     if (full_lower_bound_.size() > 1) {
         index_wise_bound = true;
-        if (static_cast<ssize_t>(full_lower_bound_.size()) != this->size()) {
+        if (static_cast<ssize_t>(full_lower_bound_.size()) != node.size()) {
             throw std::invalid_argument("lower_bound must match size of node");
         }
     }
     // If upper bound is index-wise, it must be correct size
     if (full_upper_bound_.size() > 1) {
         index_wise_bound = true;
-        if (static_cast<ssize_t>(full_upper_bound_.size()) != this->size()) {
+        if (static_cast<ssize_t>(full_upper_bound_.size()) != node.size()) {
             throw std::invalid_argument("upper_bound must match size of node");
         }
-    }
-    if (min_ < minimum_lower_bound || max_ > maximum_upper_bound) {
-        throw std::invalid_argument("range provided for integers exceeds supported range");
     }
     // if at least one of the bounds is index-wise, check that there are no
     // violations at any of the indices
     if (index_wise_bound) {
-        for (ssize_t i = 0, stop = this->size(); i < stop; ++i) {
-            if (this->lower_bound(i) > this->upper_bound(i)) {
+        for (ssize_t i = 0, stop = node.size(); i < stop; ++i) {
+            if (node.lower_bound(i) > node.upper_bound(i)) {
                 throw std::invalid_argument("Bounds of index " + std::to_string(i) + " clash");
             }
         }
+    }
+}
+
+IntegerNode::IntegerNode(std::span<const ssize_t> shape,
+                         std::optional<std::vector<double>> lower_bound,
+                         std::optional<std::vector<double>> upper_bound)
+        : NumberNode(shape, get_extreme_index_wise_bound<false>(lower_bound, default_lower_bound),
+                     get_extreme_index_wise_bound<true>(upper_bound, default_upper_bound)) {
+    assign_index_wise_bounds(lower_bound, full_lower_bound_, default_lower_bound);
+    assign_index_wise_bounds(upper_bound, full_upper_bound_, default_upper_bound);
+    check_index_wise_bounds(*this, full_lower_bound_, full_upper_bound_);
+
+    if (min_ < minimum_lower_bound || max_ > maximum_upper_bound) {
+        throw std::invalid_argument("range provided for integers exceeds supported range");
     }
 }
 
