@@ -283,6 +283,12 @@ class BinaryOpTests(SymbolTests):
                 self.assertLessEqual(info.min, x.state(0).min())
                 self.assertGreaterEqual(info.max, x.state(0).max())
 
+    def test_invalid_broadcasting(self):
+        model = Model()
+        lhs = model.constant(0)
+        with self.assertRaises(TypeError):
+            self.symbol_op(lhs, object())
+
     def test_numpy_equivalence(self):
         lhs_array = np.arange(10)
         rhs_array = np.arange(1, 11)

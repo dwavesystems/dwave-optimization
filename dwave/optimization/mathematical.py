@@ -140,6 +140,8 @@ def _binaryop(
             # For simplicity, let's convert all of the array-likes into np.ndarray.
             # We don't yet go all of the way to ArraySymbol because we'd like to avoid
             # this function having side effects (i.e., adding a new symbol to the model)
+            # We also force float64 because that's the underlying type we use, but if we
+            # eventually support multiple dtypes we'll want to be more general.
             arrays: tuple[np.typing.NDArray | ArraySymbol] = tuple(
                 arg if isinstance(arg, ArraySymbol) else np.asarray(arg, dtype=np.float64) for arg in args
             )

@@ -164,10 +164,13 @@ class TestAdd(utils.BinaryOpTests):
         self.assertEqual(c.shape(), (4, 5))
 
         # We don't yet support broadcasting with dynamic arrays
-        c = model.constant([[[1]]])
-        d = model.set(5)
+        d = model.constant([[[1]]])
+        e = model.set(5)
         with self.assertRaises(ValueError):
-            c + d
+            d + e
+
+        f = a + d
+        self.assertEqual(f.shape(), (1, 1, 5))
 
     def test_promotion(self):
         model = Model()
@@ -241,8 +244,6 @@ class TestAdd(utils.BinaryOpTests):
         self.assertEqual(x.state(0), 12)
 
     def test_scalar_broadcasting(self):
-        # todo: allow array broadcasting, for now just test that it raises
-        # an error
         model = Model()
         a = model.integer(1)
         b = model.integer(5)
