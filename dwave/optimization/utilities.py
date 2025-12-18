@@ -74,3 +74,14 @@ def _lock(method):
         else:
             return method(obj, *args, **kwargs)
     return _method
+
+
+def _TypeError_to_NotImplemented(f):
+    """Convert any TypeErrors raised by the given function into NotImplemented"""
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except TypeError:
+            return NotImplemented
+    return wrapper

@@ -1,6 +1,10 @@
 ---
 features:
   - Add Python ``broadcast_shapes()`` function.
+  - Add `subtract()` function.
+  - Add `equal()` function.
+  - Add `less_equal()` function.
+  - Automatically broadcast when using binary operators with array symbols.
 fixes:
   - Disallow broadcasting a fixed size array to a dynamic shape with ``BroadcastTo`` symbol.
 upgrade:

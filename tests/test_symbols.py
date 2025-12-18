@@ -157,14 +157,13 @@ class TestAdd(utils.BinaryOpTests):
         return lhs + rhs
 
     def test_broadcasting(self):
-        # todo: allow array broadcasting, for now just test that it raises
-        # an error
         model = Model()
         a = model.integer(5)
-        b = model.integer((5, 5))
-        with self.assertRaises(ValueError):
-            a + b
+        b = model.integer((4, 5))
+        c = a + b
+        self.assertEqual(c.shape(), (4, 5))
 
+        # We don't yet support broadcasting with dynamic arrays
         c = model.constant([[[1]]])
         d = model.set(5)
         with self.assertRaises(ValueError):

@@ -37,12 +37,14 @@ from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
+import dwave.optimization.mathematical
+
 from dwave.optimization.libcpp cimport dynamic_cast_ptr
 from dwave.optimization.libcpp.array cimport Array as cppArray, broadcast_shapes as cppbroadcast_shapes
 from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
-from dwave.optimization.utilities import _file_object_arg, _lock, _NoValue
+from dwave.optimization.utilities import _file_object_arg, _lock, _NoValue, _TypeError_to_NotImplemented
 
 __all__ = []
 
@@ -1492,38 +1494,22 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Absolute  # avoid circular import
         return Absolute(self)
 
+    @_TypeError_to_NotImplemented
     def __add__(self, rhs):
-        try:
-            rhs = _as_array_symbol(self.model, rhs)
-        except TypeError:
-            return NotImplemented
-
-        from dwave.optimization.symbols import Add  # avoid circular import
-        return Add(self, rhs)
+        return dwave.optimization.mathematical.add(self, rhs)
 
     def __bool__(self):
         # In the future we might want to return a Bool symbol, but __bool__ is so
         # fundamental that I am hesitant to do even that.
         raise ValueError("the truth value of an array symbol is ambiguous")
 
+    @_TypeError_to_NotImplemented
     def __eq__(self, rhs):
-        try:
-            rhs = _as_array_symbol(self.model, rhs)
-        except TypeError:
-            return NotImplemented
+        return dwave.optimization.mathematical.equal(self, rhs)
 
-        # We could consider returning a Constant(True) is the case that self is rhs
-
-        from dwave.optimization.symbols import Equal # avoid circular import
-        return Equal(self, rhs)
-
+    @_TypeError_to_NotImplemented
     def __ge__(self, rhs):
-        try:
-            rhs = _as_array_symbol(self.model, rhs)
-        except TypeError:
-            return NotImplemented
-
-        return rhs <= self
+        return dwave.optimization.mathematical.less_equal(rhs, self)
 
     def __getitem__(self, index):
         import dwave.optimization.symbols  # avoid circular import
@@ -1575,26 +1561,30 @@ cdef class ArraySymbol(Symbol):
         else:
             return self[(index,)]
 
+    @_TypeError_to_NotImplemented
     def __iadd__(self, rhs):
-        try:
-            rhs = _as_array_symbol(self.model, rhs)
-        except TypeError:
-            return NotImplemented
-
         # If the user is doing +=, we make the assumption that they will want to
-        # do it again, so we jump to NaryAdd
-        from dwave.optimization.symbols import NaryAdd # avoid circular import
+        # do it again, so we use NaryAdd
+        # Like NumPy, we only support this if the rhs can be broadcast to our
+        # shape.
+        from dwave.optimization.symbols import NaryAdd  # avoid circular import
+        rhs = dwave.optimization.mathematical.broadcast_to(
+            *dwave.optimization.mathematical.as_array_symbols(rhs, model=self.model),
+            self.shape(),
+        )
         return NaryAdd(self, rhs)
 
+    @_TypeError_to_NotImplemented
     def __imul__(self, rhs):
-        try:
-            rhs = _as_array_symbol(self.model, rhs)
-        except TypeError:
-            return NotImplemented
-
         # If the user is doing *=, we make the assumption that they will want to
-        # do it again, so we jump to NaryMultiply
-        from dwave.optimization.symbols import NaryMultiply # avoid circular import
+        # do it again, so we use NaryMultiply
+        # Like NumPy, we only support this if the rhs can be broadcast to our
+        # shape.
+        from dwave.optimization.symbols import NaryMultiply  # avoid circular import
+        rhs = dwave.optimization.mathematical.broadcast_to(
+            *dwave.optimization.mathematical.as_array_symbols(rhs, model=self.model),
+            self.shape(),
+        )
         return NaryMultiply(self, rhs)
 
     def __iter__(self):
@@ -1610,41 +1600,21 @@ cdef class ArraySymbol(Symbol):
 
         yield from (self[i] for i in range(self.shape()[0]))
 
+    @_TypeError_to_NotImplemented
     def __le__(self, rhs):
-        try:
-            rhs = _as_array_symbol(self.model, rhs)
-        except TypeError:
-            return NotImplemented
+        return dwave.optimization.mathematical.less_equal(self, rhs)
 
-        from dwave.optimization.symbols import LessEqual # avoid circular import
-        return LessEqual(self, rhs)
-
+    @_TypeError_to_NotImplemented
     def __matmul__(self, rhs):
-        try:
-            rhs = _as_array_symbol(self.model, rhs)
-        except TypeError:
-            return NotImplemented
+        return dwave.optimization.mathematical.matmul(self, rhs)
 
-        from dwave.optimization.mathematical import matmul
-        return matmul(self, rhs)
-
+    @_TypeError_to_NotImplemented
     def __mod__(self, rhs):
-        try:
-            rhs = _as_array_symbol(self.model, rhs)
-        except TypeError:
-            return NotImplemented
+        return dwave.optimization.mathematical.mod(self, rhs)
 
-        from dwave.optimization.symbols import Modulus # avoid circular import
-        return Modulus(self, rhs)
-
+    @_TypeError_to_NotImplemented
     def __mul__(self, rhs):
-        try:
-            rhs = _as_array_symbol(self.model, rhs)
-        except TypeError:
-            return NotImplemented
-
-        from dwave.optimization.symbols import Multiply  # avoid circular import
-        return Multiply(self, rhs)
+        return dwave.optimization.multiply(self, rhs)
 
     def __neg__(self):
         from dwave.optimization.symbols import Negative  # avoid circular import
@@ -1670,72 +1640,37 @@ cdef class ArraySymbol(Symbol):
             return out
         raise ValueError("only integer exponents of 1 or greater are supported")
 
+    @_TypeError_to_NotImplemented
     def __radd__(self, lhs):
-        try:
-            lhs = _as_array_symbol(self.model, lhs)
-        except TypeError:
-            return NotImplemented
+        return dwave.optimization.mathematical.add(lhs, self)
 
-        return lhs + self
-
+    @_TypeError_to_NotImplemented
     def __rmatmul__(self, lhs):
-        try:
-            lhs = _as_array_symbol(self.model, lhs)
-        except TypeError:
-            return NotImplemented
+        return dwave.optimization.mathematical.matmul(lhs, self)
 
-        from dwave.optimization.mathematical import matmul
-        return matmul(lhs, self)
-
+    @_TypeError_to_NotImplemented
     def __rmod__(self, lhs):
-        try:
-            lhs = _as_array_symbol(self.model, lhs)
-        except TypeError:
-            return NotImplemented
+        return dwave.optimization.mathematical.mod(lhs, self)
 
-        return lhs % self
-
+    @_TypeError_to_NotImplemented
     def __rmul__(self, lhs):
-        try:
-            lhs = _as_array_symbol(self.model, lhs)
-        except TypeError:
-            return NotImplemented
+        return dwave.optimization.mathematical.multiply(lhs, self)
 
-        return lhs * self
-
+    @_TypeError_to_NotImplemented
     def __rsub__(self, lhs):
-        try:
-            lhs = _as_array_symbol(self.model, lhs)
-        except TypeError:
-            return NotImplemented
+        return dwave.optimization.mathematical.subtract(lhs, self)
 
-        return lhs - self
-
+    @_TypeError_to_NotImplemented
     def __rtruediv__(self, lhs):
-        try:
-            lhs = _as_array_symbol(self.model, lhs)
-        except TypeError:
-            return NotImplemented
+        return dwave.optimization.mathematical.divide(lhs, self)
 
-        return lhs / self
-
+    @_TypeError_to_NotImplemented
     def __sub__(self, rhs):
-        try:
-            rhs = _as_array_symbol(self.model, rhs)
-        except TypeError:
-            return NotImplemented
+        return dwave.optimization.mathematical.subtract(self, rhs)
 
-        from dwave.optimization.symbols import Subtract  # avoid circular import
-        return Subtract(self, rhs)
-
+    @_TypeError_to_NotImplemented
     def __truediv__(self, rhs):
-        try:
-            rhs = _as_array_symbol(self.model, rhs)
-        except TypeError:
-            return NotImplemented
-
-        from dwave.optimization.symbols import Divide  # avoid circular import
-        return Divide(self, rhs)
+        return dwave.optimization.mathematical.divide(self, rhs)
 
     def all(self, *, axis=None, initial=_NoValue):
         """Create an :class:`~dwave.optimization.symbols.All` symbol.

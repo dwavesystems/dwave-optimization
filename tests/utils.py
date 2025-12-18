@@ -257,6 +257,19 @@ class BinaryOpTests(SymbolTests):
         # if the op is different for symbols, allow the override
         return self.op(lhs, rhs)
 
+    def test_broadcasting(self):
+        lhs = np.arange(1, 5).reshape(4, 1)
+        rhs = np.arange(1, 4)
+
+        model = Model()
+
+        out_arr = self.op(lhs, rhs)
+        out_sym = self.symbol_op(lhs, model.constant(rhs))
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_equal(out_arr, out_sym.state())
+
     def test_deterministic(self):
         x = next(self.generate_symbols())
         self.assertTrue(x._deterministic_state())
@@ -300,6 +313,10 @@ class BinaryOpTests(SymbolTests):
         with model.lock():
             np.testing.assert_array_equal(op_array, op_symbol.state())
 
+        # Make sure we let the binaryop symbol handle the scalar broadcasting
+        # I.e., we didn't add a new broadcast symbol
+        self.assertEqual(model.num_symbols(), 3)
+
     def test_size1_broadcasting(self):
         lhs_array = np.asarray([5])
         rhs_array = np.asarray([-10, 100, 16])
@@ -314,6 +331,10 @@ class BinaryOpTests(SymbolTests):
         model.states.resize(1)
         with model.lock():
             np.testing.assert_array_equal(op_array, op_symbol.state())
+
+        # Make sure we let the binaryop symbol handle the scalar broadcasting
+        # I.e., we didn't add a new broadcast symbol
+        self.assertEqual(model.num_symbols(), 3)
 
 
 class NaryOpTests(SymbolTests):

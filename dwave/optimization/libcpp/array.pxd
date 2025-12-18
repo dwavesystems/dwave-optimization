@@ -64,4 +64,4 @@ cdef extern from "dwave-optimization/array.hpp" namespace "dwave::optimization" 
         Py_ssize_t stop
         Py_ssize_t step
 
-    vector[Py_ssize_t] broadcast_shapes(span[Py_ssize_t], span[Py_ssize_t])
+    vector[Py_ssize_t] broadcast_shapes(span[Py_ssize_t], span[Py_ssize_t]) except+
