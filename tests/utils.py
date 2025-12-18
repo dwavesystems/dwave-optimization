@@ -488,6 +488,7 @@ class UnaryOpTests(SymbolTests):
 
     def test_scalar_input(self):
         for scalar in [-5, -.5, 0, 1, 1.5]:
+
             with self.subTest(f"a = {scalar}"):
                 model = Model()
                 a = model.constant(scalar)
@@ -500,10 +501,13 @@ class UnaryOpTests(SymbolTests):
 
                 model.lock()
                 model.states.resize(1)
-                if type(op_a) == dwave.optimization.symbols.unaryop.Tanh:
-                    self.assertAlmostEqual(op_a.state(0), self.op(scalar))
-                else:
-                    self.assertEqual(op_a.state(0), self.op(scalar))
+
+                # Using `assertAlmostEqual()` instead of `assertEqual()` b.c.
+                # `std::tanh()` and `numpy.tanh()` have implementation specific
+                # discrepencies that occasionally result in rounding
+                # differences
+                self.assertAlmostEqual(op_a.state(0), self.op(scalar), 12)
+
 
     def test_1d_input(self):
         model = Model()
