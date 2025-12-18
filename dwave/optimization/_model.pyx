@@ -31,13 +31,14 @@ from cython.operator cimport dereference as deref, preincrement as inc
 from cython.operator cimport typeid
 from libcpp cimport bool
 from libcpp.memory cimport make_shared
+from libcpp.span cimport span
 from libcpp.typeindex cimport type_index
 from libcpp.unordered_map cimport unordered_map
 from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp cimport dynamic_cast_ptr
-from dwave.optimization.libcpp.array cimport Array as cppArray
+from dwave.optimization.libcpp.array cimport Array as cppArray, broadcast_shapes as cppbroadcast_shapes
 from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
@@ -2388,3 +2389,8 @@ cdef class ArraySymbol(Symbol):
         """
         from dwave.optimization.symbols import Sum
         return Sum(self, axis=axis, initial=initial)
+
+
+def _broadcast_shapes(vector[Py_ssize_t] lhs, vector[Py_ssize_t] rhs):
+    """Broadcast the input shapes into a single shape or throw an error if they are incompatible."""
+    return tuple(cppbroadcast_shapes(span[Py_ssize_t](lhs), span[Py_ssize_t](rhs)))

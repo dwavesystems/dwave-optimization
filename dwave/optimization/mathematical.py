@@ -14,11 +14,12 @@
 
 import collections
 import functools
+import numbers
 import typing
 
 import numpy as np
 
-from dwave.optimization._model import ArraySymbol
+from dwave.optimization._model import ArraySymbol, _broadcast_shapes
 from dwave.optimization.symbols import (
     Add,
     And,
@@ -72,6 +73,7 @@ __all__ = [
     "arange",
     "atleast_1d",
     "atleast_2d",
+    "broadcast_shapes",
     "broadcast_symbols",
     "broadcast_to",
     "bspline",
@@ -373,6 +375,44 @@ def atleast_2d(*arrays):
     return tuple(result)
 
 
+def broadcast_shapes(*shapes: int | tuple[int, ...]) -> tuple[int, ...]:
+    """Broadcast the input shapes into a single shape.
+
+    See NumPy's `broadcasting <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_
+    documentation for more information about broadcasting.
+
+    ``broadcast_shapes()`` differs from :func:`numpy.broadcast_shapes()` by
+    handling dynamically shaped arrays.
+
+    Args:
+        *shapes: The shapes to be broadcast.
+
+    Returns:
+        The broadcasted shape.
+
+    Examples:
+        >>> from dwave.optimization import broadcast_shapes
+        >>> broadcast_shapes((1, 3), (2, 1))
+        (2, 3)
+        >>> broadcast_shapes((-1, 5), (1,))
+        (-1, 5)
+
+    See Also:
+        :func:`numpy.broadcast_shapes`
+
+        :func:`~dwave.optimization.mathematical.broadcast_symbols`
+
+    .. versionadded:: 0.6.11
+    """
+    shape: tuple[int, ...] = tuple()
+    for s in shapes:
+        if isinstance(s, numbers.Integral):
+            shape = _broadcast_shapes(shape, (int(s),))
+        else:
+            shape = _broadcast_shapes(shape, s)
+    return shape
+
+
 def broadcast_symbols(*args: ArraySymbol) -> tuple[ArraySymbol, ...]:
     """Broadcast array symbols to the same shape.
 
@@ -401,13 +441,13 @@ def broadcast_symbols(*args: ArraySymbol) -> tuple[ArraySymbol, ...]:
         (2, 3)
 
     See Also:
-        :func:`numpy.broadcast_shapes`
+        :func:`~dwave.optimization.mathematical.broadcast_shapes`
 
         :func:`~dwave.optimization.mathematical.broadcast_to`
 
     .. versionadded:: 0.6.5
     """
-    shape = np.broadcast_shapes(*(x.shape() for x in args))
+    shape = broadcast_shapes(*(x.shape() for x in args))
     return tuple(broadcast_to(x, shape) for x in args)
 
 
@@ -445,7 +485,7 @@ def broadcast_to(x: ArraySymbol, shape: typing.Union[int, tuple[int, ...]]) -> A
     See Also:
         :class:`~dwave.optimization.symbols.BroadcastTo`: equivalent symbol.
 
-        :func:`numpy.broadcast_shapes`
+        :func:`~dwave.optimization.mathematical.broadcast_shapes`
 
         :func:`~dwave.optimization.mathematical.broadcast_symbols`
 

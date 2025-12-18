@@ -1,3 +1,5 @@
 ---
+features:
+  - Add Python ``broadcast_shapes()`` function.
 upgrade:
   - Rename C++ ``broadcast_shape()`` to ``broadcast_shapes()`` for consistency with NumPy.
