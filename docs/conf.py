@@ -62,7 +62,12 @@ numpy.set_printoptions(legacy='1.25')
 """
 
 autodoc_type_aliases = {
+    'ArrayLike': 'numpy.typing.ArrayLike',
+    'np.typing.ArrayLike': 'numpy.typing.ArrayLike',
     'numpy.typing.ArrayLike': 'numpy.typing.ArrayLike',
+
+    'ArraySymbolLike': 'ArraySymbol | numpy.typing.ArrayLike',
+    'dwave.optimization.typing.ArraySymbolLike': 'ArraySymbol | numpy.typing.ArrayLike',
 }
 
 # -- Breathe --------------------------------------------------------------

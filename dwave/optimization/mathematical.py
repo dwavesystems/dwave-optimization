@@ -12,12 +12,15 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from __future__ import annotations
+
 import collections
 import functools
 import numbers
 import typing
 
 import numpy as np
+import numpy.typing
 
 from dwave.optimization._model import _broadcast_shapes, ArraySymbol, Symbol
 from dwave.optimization.model import Model
@@ -69,12 +72,14 @@ from dwave.optimization.symbols import (
     Where,
     Xor,
 )
+from dwave.optimization.typing import ArraySymbolLike
 
 
 __all__ = [
     "absolute",
     "add",
     "arange",
+    "as_array_symbols",
     "atleast_1d",
     "atleast_2d",
     "broadcast_shapes",
@@ -116,9 +121,6 @@ __all__ = [
     "vstack",
     "where",
 ]
-
-
-ArraySymbolLike: typing.TypeAlias = ArraySymbol | np.typing.ArrayLike
 
 
 def _binaryop(
@@ -316,13 +318,13 @@ def argsort(array: ArraySymbol) -> ArgSort:
 
 
 def as_array_symbols(
-    *arrays: ArraySymbol | np.typing.ArrayLike,
+    *arrays: ArraySymbolLike,
     model: Model | None = None,
 ) -> tuple[ArraySymbol, ...]:
     """Convert the given inputs into ``ArraySymbol``.
 
     Args:
-        arrays*:
+        *arrays:
             Either :class:`dwave.optimization.model.ArraySymbol` or array-like objects.
         model:
             If provided, defines the model that holds the returned ArraySymbols.
@@ -330,6 +332,8 @@ def as_array_symbols(
 
     Returns:
         A tuple of :class:`dwave.optimization.model.ArraySymbol`.
+
+    .. versionadded:: 0.6.11
     """
     # Find the model, if one wasn't provided
     if model is None:
@@ -340,7 +344,7 @@ def as_array_symbols(
         else:
             raise TypeError("given arrays must contain at least one ArraySymbol")
 
-    # Try to convert anythin that isn't already an array symbol into a constant
+    # Try to convert anything that isn't already an array symbol into a constant
     out: list[ArraySymbol] = []
     for array in arrays:
         if isinstance(array, ArraySymbol):
@@ -719,7 +723,7 @@ def equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Equal:
         x1, x2: Input array symbol.
 
     Returns:
-        A symbol the is the element-wise equality.
+        A symbol that is the element-wise equality.
 
     See Also:
         :class:`~dwave.optimization.Equal`
@@ -933,7 +937,7 @@ def less_equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> LessEqual:
         x1, x2: Input array symbol.
 
     Returns:
-        A symbol the is the element-wise less than or equal.
+        A symbol that is the element-wise less than or equal.
 
     See Also:
         :class:`~dwave.optimization.LessEqual`
@@ -1229,7 +1233,7 @@ def logical_xor(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Xor:
     raise RuntimeError("implemented by the _binaryop() decorator")
 
 
-def matmul(x: ArraySymbol, y: ArraySymbol) -> MatrixMultiply:
+def matmul(x: ArraySymbolLike, y: ArraySymbolLike) -> MatrixMultiply:
     r"""Compute the matrix product of two array symbols.
 
     Args:
@@ -1915,7 +1919,7 @@ def subtract(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Subtract:
         x1, x2: Input array symbol.
 
     Returns:
-        A symbol the is the element-wise subtraction.
+        A symbol that is the element-wise subtraction.
 
     See Also:
         :class:`~dwave.optimization.Subtract`
