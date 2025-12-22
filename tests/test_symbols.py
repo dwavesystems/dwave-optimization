@@ -3498,7 +3498,7 @@ class TestSafeDivide(utils.BinaryOpTests):
             yield from (w, x, y, z)
 
     def op(self, lhs, rhs):
-        return np.divide(lhs, rhs, where=(rhs != 0))
+        return np.divide(lhs, rhs, out=None, where=(rhs != 0))
 
     def symbol_op(self, lhs, rhs):
         return safe_divide(lhs, rhs)
