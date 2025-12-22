@@ -276,7 +276,7 @@ jobs:
 
   docs:
     docker:
-      - image: cimg/python:3.10  # As of July 2024, RTD uses 3.10
+      - image: cimg/python:3.13  # As of Dec 2025, the dwave-ocean-sdk uses 3.13
 
     steps:
       - checkout
@@ -295,7 +295,8 @@ jobs:
             python -m venv env
             . env/bin/activate
             pip install pip --upgrade
-            pip install dist/*optimization*cp310*.whl
+            pip install --group dev
+            pip install dwave-optimization --no-deps --find-links=dist
             pip install --group docs
 
       - run:

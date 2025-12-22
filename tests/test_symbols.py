@@ -157,18 +157,20 @@ class TestAdd(utils.BinaryOpTests):
         return lhs + rhs
 
     def test_broadcasting(self):
-        # todo: allow array broadcasting, for now just test that it raises
-        # an error
         model = Model()
         a = model.integer(5)
-        b = model.integer((5, 5))
-        with self.assertRaises(ValueError):
-            a + b
+        b = model.integer((4, 5))
+        c = a + b
+        self.assertEqual(c.shape(), (4, 5))
 
-        c = model.constant([[[1]]])
-        d = model.set(5)
+        # We don't yet support broadcasting with dynamic arrays
+        d = model.constant([[[1]]])
+        e = model.set(5)
         with self.assertRaises(ValueError):
-            c + d
+            d + e
+
+        f = a + d
+        self.assertEqual(f.shape(), (1, 1, 5))
 
     def test_promotion(self):
         model = Model()
@@ -225,6 +227,15 @@ class TestAdd(utils.BinaryOpTests):
             with model.lock():
                 np.testing.assert_array_equal(x.state(), a.state() + [5, 1.2, -1])
 
+        s = model.set(3)
+        s.set_state(0, [0, 2, 1])
+
+        with self.subTest("model.set(3) + 5"):
+            x = s + 5
+            self.assertIsInstance(x, dwave.optimization.symbols.Add)
+            with model.lock():
+                np.testing.assert_array_equal(x.state(), s.state() + 5)
+
     def test_scalar_addition(self):
         model = Model()
         a = model.constant(5)
@@ -242,8 +253,6 @@ class TestAdd(utils.BinaryOpTests):
         self.assertEqual(x.state(0), 12)
 
     def test_scalar_broadcasting(self):
-        # todo: allow array broadcasting, for now just test that it raises
-        # an error
         model = Model()
         a = model.integer(1)
         b = model.integer(5)
@@ -852,6 +861,12 @@ class TestBroadcastTo(utils.SymbolTests):
             r"array of shape \(5,\) could not be broadcast to \(5, 1\)",
         ):
             broadcast_to(x, (5, 1))
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"cannot broadcast an array with a fixed shape \(5,\) to a dynamic shape \(-1, 5\)"
+        ):
+            broadcast_to(x, (-1, 5))
 
         with self.assertRaises(ValueError):
             broadcast_to(x, "hello")
@@ -3483,7 +3498,7 @@ class TestSafeDivide(utils.BinaryOpTests):
             yield from (w, x, y, z)
 
     def op(self, lhs, rhs):
-        return np.divide(lhs, rhs, where=(rhs != 0))
+        return np.divide(lhs, rhs, out=None, where=(rhs != 0))
 
     def symbol_op(self, lhs, rhs):
         return safe_divide(lhs, rhs)

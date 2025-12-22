@@ -16,7 +16,11 @@ from dwave.optimization.symbols._binaryop import _BinaryOpSymbol, _BinaryOpNodeT
 
 
 class Add(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Add):
-    """Addition element-wise of two symbols."""
+    """Addition element-wise of two symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.add`: equivalent function.
+    """
     pass
 
 
@@ -30,37 +34,65 @@ class And(_BinaryOpSymbol, node_type=_BinaryOpNodeType.And):
 
 
 class Divide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Divide):
-    """Division element-wise between two symbols."""
+    """Division element-wise between two symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.divide`: equivalent function.
+    """
     pass
 
 
 class Equal(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Equal):
-    """Equality comparison element-wise between two symbols."""
+    """Equality comparison element-wise between two symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.equal`: equivalent function.
+    """
     pass
 
 
 class LessEqual(_BinaryOpSymbol, node_type=_BinaryOpNodeType.LessEqual):
-    """Smaller-or-equal comparison element-wise between two symbols."""
+    """Smaller-or-equal comparison element-wise between two symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.less_equal`: equivalent function.
+    """
     pass
 
 
 class Maximum(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Maximum):
-    """Maximum values in an element-wise comparison of two symbols."""
+    """Maximum values in an element-wise comparison of two symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.maximum`: equivalent function.
+    """
     pass
 
 
 class Minimum(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Minimum):
-    """Minimum values in an element-wise comparison of two symbols."""
+    """Minimum values in an element-wise comparison of two symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.minimum`: equivalent function.
+    """
     pass
 
 
 class Modulus(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Modulus):
-    """Modulus element-wise between two symbols."""
+    """Modulus element-wise between two symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.mod`: equivalent function.
+    """
     pass
 
 
 class Multiply(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Multiply):
-    """Multiplication element-wise between two symbols."""
+    """Multiplication element-wise between two symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.multiply`: equivalent function.
+    """
     pass
 
 
@@ -85,7 +117,11 @@ class SafeDivide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.SafeDivide):
 
 
 class Subtract(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Subtract):
-    """Subtraction element-wise of two symbols."""
+    """Subtraction element-wise of two symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.subtract`: equivalent function.
+    """
     pass
 
 

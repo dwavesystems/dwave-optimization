@@ -1,0 +1,12 @@
+---
+features:
+  - Add Python ``broadcast_shapes()`` function.
+  - Add ``subtract()`` function.
+  - Add ``equal()`` function.
+  - Add ``less_equal()`` function.
+  - Automatically broadcast when using binary operators with array symbols.
+  - Add ``dwave.optimization.typing`` module.
+fixes:
+  - Disallow broadcasting a fixed size array to a dynamic shape with ``BroadcastTo`` symbol.
+upgrade:
+  - Rename C++ ``broadcast_shape()`` to ``broadcast_shapes()`` for consistency with NumPy.

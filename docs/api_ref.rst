@@ -11,3 +11,4 @@ API Reference
     generators
     math
     symbols
+    typing

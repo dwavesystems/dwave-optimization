@@ -108,6 +108,19 @@ class Test_broadcast_symbols(unittest.TestCase):
             np.testing.assert_array_equal(xb.state(), [[0, 1, 2], [0, 1, 2]])
             np.testing.assert_array_equal(yb.state(), [[0, 0, 0], [1, 1, 1]])
 
+    def test_dynamic(self):
+        model = Model()
+        s = model.set(5)
+        sb0, sb1 = dwave.optimization.broadcast_symbols(s, s)
+        self.assertEqual(sb0.id(), s.id())
+        self.assertEqual(sb1.id(), s.id())
+
+        # In the future we could support this, see
+        # https://github.com/dwavesystems/dwave-optimization/issues/442
+        x = model.constant(0)
+        with self.assertRaises(ValueError):
+            dwave.optimization.broadcast_symbols(s, x)
+
     def test_identity(self):
         model = Model()
         x = model.integer()

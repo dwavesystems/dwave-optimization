@@ -12,13 +12,18 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from __future__ import annotations
+
 import collections
 import functools
+import numbers
 import typing
 
 import numpy as np
+import numpy.typing
 
-from dwave.optimization._model import ArraySymbol
+from dwave.optimization._model import _broadcast_shapes, ArraySymbol, Symbol
+from dwave.optimization.model import Model
 from dwave.optimization.symbols import (
     Add,
     And,
@@ -29,10 +34,12 @@ from dwave.optimization.symbols import (
     Concatenate,
     Cos,
     Divide,
+    Equal,
     Exp,
     Expit,
     Extract,
     IsIn,
+    LessEqual,
     LinearProgram,
     LinearProgramFeasible,
     LinearProgramObjectiveValue,
@@ -59,19 +66,23 @@ from dwave.optimization.symbols import (
     Sin,
     SoftMax,
     SquareRoot,
+    Subtract,
     Tanh,
     Transpose,
     Where,
     Xor,
 )
+from dwave.optimization.typing import ArraySymbolLike
 
 
 __all__ = [
     "absolute",
     "add",
     "arange",
+    "as_array_symbols",
     "atleast_1d",
     "atleast_2d",
+    "broadcast_shapes",
     "broadcast_symbols",
     "broadcast_to",
     "bspline",
@@ -112,19 +123,54 @@ __all__ = [
 ]
 
 
-def _op(BinaryOp: type, NaryOp: type, reduce_method: str):
+def _binaryop(
+    binaryop: type,
+    naryop: type | None = None,
+):
     def decorator(f):
         @functools.wraps(f)
-        def wrapper(x1, *xi, **kwargs):
-            if not xi:
+        def wrapper(*args, **kwargs):
+            # First let's make sure we have the correct number of arguments for our function
+            if len(args) < 2:
+                raise TypeError(f"{f.__name__}() missing 2 required positional arguments")
+            if len(args) > 2 and naryop is None:
+                # If we don't have a nary variation then we don't support more than two arguments
                 raise TypeError(
-                        f"Cannot call {f.__name__} on a single node; did you mean to "
-                        f"call `x.{reduce_method}()` ?"
-                    )
-            elif len(xi) == 1:
-                return BinaryOp(x1, xi[0], **kwargs)
-            else:
-                return NaryOp(x1, *xi, **kwargs)
+                    f"{f.__name__}() takes 2 positional arguments but {len(args)} were given"
+                )
+
+            # For simplicity, let's convert all of the array-likes into np.ndarray.
+            # We don't yet go all of the way to ArraySymbol because we'd like to avoid
+            # this function having side effects (i.e., adding a new symbol to the model)
+            # We also force float64 because that's the underlying type we use, but if we
+            # eventually support multiple dtypes we'll want to be more general.
+            arrays: tuple[np.typing.NDArray | ArraySymbol] = tuple(
+                arg if isinstance(arg, ArraySymbol) else np.asarray(arg, dtype=np.float64) for arg in args
+            )
+
+            # Now get the shape we'd be broadcasting to
+            shape = broadcast_shapes(
+                *(arr.shape() if isinstance(arr, ArraySymbol) else arr.shape for arr in arrays),
+            )
+
+            # Ok, no errors so far so our shapes are compatible. Now we need to
+            # actually convert them into array symbols
+            array_symbols = as_array_symbols(*arrays)
+
+            # And finally reshape them for broadcasting. BinaryOp specifically
+            # supports broadcasting length 1 arrays, so we can avoid some
+            # reshapes in that case
+            if len(args) == 2:
+                reshaped = tuple(
+                    broadcast_to(sym, shape) if np.prod(sym.shape()) != 1 else sym
+                    for sym in array_symbols
+                )
+                return binaryop(*reshaped, **kwargs)
+
+            # For NaryOp though we need to do full broadcasting.
+            # If naryop is None we shouldn't have been able to get here.
+            return naryop(*broadcast_symbols(*array_symbols), **kwargs)
+
         return wrapper
     return decorator
 
@@ -153,8 +199,8 @@ See Also:
 """
 
 
-@_op(Add, NaryAdd, "sum")
-def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add, NaryAdd]:
+@_binaryop(binaryop=Add, naryop=NaryAdd)
+def add(x1: ArraySymbolLike, x2: ArraySymbolLike, *xi: ArraySymbolLike) -> Add | NaryAdd:
     r"""Return an element-wise addition on the given symbols.
 
     In the underlying directed acyclic expression graph, produces an ``Add``
@@ -187,8 +233,13 @@ def add(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol) -> typing.Union[Add,
         ...     j.set_state(0, [7, 5])
         ...     print(i_plus_j.state(0))
         [10. 10.]
+
+    See Also:
+        :class:`~dwave.optimization.Add`
+
+        :class:`~dwave.optimization.NaryAdd`
     """
-    raise RuntimeError("implemented by the op() decorator")
+    raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 def arange(start: typing.Union[int, ArraySymbol, None] = None,
@@ -264,6 +315,49 @@ def argsort(array: ArraySymbol) -> ArgSort:
     .. versionadded:: 0.6.4
     """
     return ArgSort(array)
+
+
+def as_array_symbols(
+    *arrays: ArraySymbolLike,
+    model: Model | None = None,
+) -> tuple[ArraySymbol, ...]:
+    """Convert the given inputs into ``ArraySymbol``.
+
+    Args:
+        *arrays:
+            Either :class:`dwave.optimization.model.ArraySymbol` or array-like objects.
+        model:
+            If provided, defines the model that holds the returned ArraySymbols.
+            If not provided, the model is inferred from the given inputs.
+
+    Returns:
+        A tuple of :class:`dwave.optimization.model.ArraySymbol`.
+
+    .. versionadded:: 0.6.11
+    """
+    # Find the model, if one wasn't provided
+    if model is None:
+        for array in arrays:
+            if isinstance(array, Symbol):
+                model = array.model
+                break
+        else:
+            raise TypeError("given arrays must contain at least one ArraySymbol")
+
+    # Try to convert anything that isn't already an array symbol into a constant
+    out: list[ArraySymbol] = []
+    for array in arrays:
+        if isinstance(array, ArraySymbol):
+            if array.model is not model:
+                raise ValueError("given array symbols do not all share the same underlying model")
+            out.append(array)
+        else:
+            try:
+                out.append(model.constant(array))
+            except TypeError as err:
+                raise TypeError(f"{array!r} cannot be interpreted as an array symbol") from err
+
+    return tuple(out)
 
 
 @typing.overload
@@ -373,6 +467,44 @@ def atleast_2d(*arrays):
     return tuple(result)
 
 
+def broadcast_shapes(*shapes: int | tuple[int, ...]) -> tuple[int, ...]:
+    """Broadcast the input shapes into a single shape.
+
+    See NumPy's `broadcasting <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_
+    documentation for more information about broadcasting.
+
+    ``broadcast_shapes()`` differs from :func:`numpy.broadcast_shapes()` by
+    handling dynamically shaped arrays.
+
+    Args:
+        *shapes: The shapes to be broadcast.
+
+    Returns:
+        The broadcasted shape.
+
+    Examples:
+        >>> from dwave.optimization import broadcast_shapes
+        >>> broadcast_shapes((1, 3), (2, 1))
+        (2, 3)
+        >>> broadcast_shapes((-1, 5), (1,))
+        (-1, 5)
+
+    See Also:
+        :func:`numpy.broadcast_shapes`
+
+        :func:`~dwave.optimization.mathematical.broadcast_symbols`
+
+    .. versionadded:: 0.6.11
+    """
+    shape: tuple[int, ...] = tuple()
+    for s in shapes:
+        if isinstance(s, numbers.Integral):
+            shape = _broadcast_shapes(shape, (int(s),))
+        else:
+            shape = _broadcast_shapes(shape, s)
+    return shape
+
+
 def broadcast_symbols(*args: ArraySymbol) -> tuple[ArraySymbol, ...]:
     """Broadcast array symbols to the same shape.
 
@@ -401,17 +533,17 @@ def broadcast_symbols(*args: ArraySymbol) -> tuple[ArraySymbol, ...]:
         (2, 3)
 
     See Also:
-        :func:`numpy.broadcast_shapes`
+        :func:`~dwave.optimization.mathematical.broadcast_shapes`
 
         :func:`~dwave.optimization.mathematical.broadcast_to`
 
     .. versionadded:: 0.6.5
     """
-    shape = np.broadcast_shapes(*(x.shape() for x in args))
+    shape = broadcast_shapes(*(x.shape() for x in args))
     return tuple(broadcast_to(x, shape) for x in args)
 
 
-def broadcast_to(x: ArraySymbol, shape: typing.Union[int, tuple[int, ...]]) -> ArraySymbol:
+def broadcast_to(x: ArraySymbol, shape: tuple[int, ...] | int) -> ArraySymbol:
     """Broadcast an array symbol to a new shape.
 
     See NumPy's `broadcasting <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_
@@ -445,7 +577,7 @@ def broadcast_to(x: ArraySymbol, shape: typing.Union[int, tuple[int, ...]]) -> A
     See Also:
         :class:`~dwave.optimization.symbols.BroadcastTo`: equivalent symbol.
 
-        :func:`numpy.broadcast_shapes`
+        :func:`~dwave.optimization.mathematical.broadcast_shapes`
 
         :func:`~dwave.optimization.mathematical.broadcast_symbols`
 
@@ -547,7 +679,8 @@ def cos(x) -> Cos:
     return Cos(x)
 
 
-def divide(x1: ArraySymbol, x2: ArraySymbol) -> Divide:
+@_binaryop(Divide)
+def divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Divide:
     r"""Return an element-wise division on the given symbols.
 
     In the underlying directed acyclic expression graph, produces a
@@ -579,7 +712,24 @@ def divide(x1: ArraySymbol, x2: ArraySymbol) -> Divide:
         ...     print(k.state(0))
         [3. 5.]
     """
-    return Divide(x1, x2)
+    raise RuntimeError("implemented by the _binaryop() decorator")
+
+
+@_binaryop(Equal)
+def equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Equal:
+    """Return element-wise equality between two symbols.
+
+    Args:
+        x1, x2: Input array symbol.
+
+    Returns:
+        A symbol that is the element-wise equality.
+
+    See Also:
+        :class:`~dwave.optimization.Equal`
+    """
+    raise RuntimeError("implemented by the _binaryop() decorator")
+
 
 def exp(x: ArraySymbol) -> Exp:
     """Return the element-wise base-e exponential of the given symbol.
@@ -779,6 +929,22 @@ class LPResult:
         return LinearProgramSolution(self.lp)
 
 
+@_binaryop(LessEqual)
+def less_equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> LessEqual:
+    """Return element-wise less than or equal between two symbols.
+
+    Args:
+        x1, x2: Input array symbol.
+
+    Returns:
+        A symbol that is the element-wise less than or equal.
+
+    See Also:
+        :class:`~dwave.optimization.LessEqual`
+    """
+    raise RuntimeError("implemented by the _binaryop() decorator")
+
+
 def linprog(
         c: ArraySymbol,
         A_ub: typing.Optional[ArraySymbol] = None,  # alias for A
@@ -937,7 +1103,8 @@ def logical(x: ArraySymbol) -> Logical:
     return Logical(x)
 
 
-def logical_and(x1: ArraySymbol, x2: ArraySymbol) -> And:
+@_binaryop(And)
+def logical_and(x1: ArraySymbolLike, x2: ArraySymbolLike) -> And:
     r"""Return an element-wise logical AND on the given symbols.
 
     Args:
@@ -966,7 +1133,7 @@ def logical_and(x1: ArraySymbol, x2: ArraySymbol) -> And:
     See Also:
         :class:`~dwave.optimization.symbols.And`: equivalent symbol.
     """
-    return And(x1, x2)
+    raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 def logical_not(x: ArraySymbol) -> Not:
@@ -998,7 +1165,8 @@ def logical_not(x: ArraySymbol) -> Not:
     return Not(x)
 
 
-def logical_or(x1: ArraySymbol, x2: ArraySymbol) -> Or:
+@_binaryop(Or)
+def logical_or(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Or:
     r"""Return an element-wise logical OR on the given symbols.
 
     Args:
@@ -1027,10 +1195,11 @@ def logical_or(x1: ArraySymbol, x2: ArraySymbol) -> Or:
     See Also:
         :class:`~dwave.optimization.symbols.Or`: equivalent symbol.
     """
-    return Or(x1, x2)
+    raise RuntimeError("implemented by the _binaryop() decorator")
 
 
-def logical_xor(x1: ArraySymbol, x2: ArraySymbol) -> Xor:
+@_binaryop(Xor)
+def logical_xor(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Xor:
     r"""Return an element-wise logical XOR on the given symbols.
 
     Args:
@@ -1061,10 +1230,10 @@ def logical_xor(x1: ArraySymbol, x2: ArraySymbol) -> Xor:
 
     .. versionadded:: 0.4.1
     """
-    return Xor(x1, x2)
+    raise RuntimeError("implemented by the _binaryop() decorator")
 
 
-def matmul(x: ArraySymbol, y: ArraySymbol) -> MatrixMultiply:
+def matmul(x: ArraySymbolLike, y: ArraySymbolLike) -> MatrixMultiply:
     r"""Compute the matrix product of two array symbols.
 
     Args:
@@ -1108,6 +1277,7 @@ def matmul(x: ArraySymbol, y: ArraySymbol) -> MatrixMultiply:
 
     .. versionadded:: 0.6.10
     """
+    x, y = as_array_symbols(x, y)
 
     if not (x.ndim() == 1 or y.ndim() == 1) and x.shape()[:-2] != y.shape()[:-2]:
         # The shapes don't match, but it may be possible to do a broadcast. The
@@ -1134,10 +1304,13 @@ def matmul(x: ArraySymbol, y: ArraySymbol) -> MatrixMultiply:
     return MatrixMultiply(x, y)
 
 
-@_op(Maximum, NaryMaximum, "max")
-def maximum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
-            ) -> typing.Union[Maximum, NaryMaximum]:
-    r"""Return an element-wise maximum of the given symbols.
+@_binaryop(Maximum, NaryMaximum)
+def maximum(
+    x1: ArraySymbolLike,
+    x2: ArraySymbolLike,
+    *xi: ArraySymbolLike,
+) -> Maximum | NaryMaximum:
+    """Return an element-wise maximum of the given symbols.
 
     In the underlying directed acyclic expression graph, produces a
     ``Maximum`` node if two array nodes are provided and a
@@ -1170,8 +1343,13 @@ def maximum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         ...     j.set_state(0, [7, 2])
         ...     print(m.state(0))
         [7. 5.]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Maximum`
+
+        :class:`~dwave.optimization.symbols.NaryMaximum`
     """
-    raise RuntimeError("implemented by the op() decorator")
+    raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 def mean(array: ArraySymbol) -> Mean:
@@ -1207,9 +1385,12 @@ def mean(array: ArraySymbol) -> Mean:
     return Mean(array)
 
 
-@_op(Minimum, NaryMinimum, "min")
-def minimum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
-            ) -> typing.Union[Minimum, NaryMinimum]:
+@_binaryop(Minimum, NaryMinimum)
+def minimum(
+    x1: ArraySymbolLike,
+    x2: ArraySymbolLike,
+    *xi: ArraySymbolLike,
+) -> Minimum | NaryMinimum:
     r"""Return an element-wise minimum of the given symbols.
 
     In the underlying directed acyclic expression graph, produces a
@@ -1243,11 +1424,17 @@ def minimum(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         ...     j.set_state(0, [7, 2])
         ...     print(m.state(0))
         [3. 2.]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Minimum`
+
+        :class:`~dwave.optimization.symbols.NaryMinimum`
     """
-    raise RuntimeError("implemented by the op() decorator")
+    raise RuntimeError("implemented by the _binaryop() decorator")
 
 
-def mod(x1: ArraySymbol, x2: ArraySymbol) -> Modulus:
+@_binaryop(Modulus)
+def mod(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Modulus:
     r"""Return an element-wise modulus of the given symbols.
 
     Args:
@@ -1291,13 +1478,19 @@ def mod(x1: ArraySymbol, x2: ArraySymbol) -> Modulus:
         ...     j.set_state(0, [0, 1])
         ...     print(k.state(0))
         [0.   0.33]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Modulus`
     """
-    return Modulus(x1, x2)
+    raise RuntimeError("implemented by the _binaryop() decorator")
 
 
-@_op(Multiply, NaryMultiply, "multiply")
-def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
-             ) -> typing.Union[Multiply, NaryMultiply]:
+@_binaryop(Multiply, NaryMultiply)
+def multiply(
+    x1: ArraySymbolLike,
+    x2: ArraySymbolLike,
+    *xi: ArraySymbolLike,
+) -> Multiply | NaryMultiply:
     r"""Return an element-wise multiplication on the given symbols.
 
     In the underlying directed acyclic expression graph, produces a
@@ -1311,9 +1504,9 @@ def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
     Returns:
         A symbol that multiplies the given symbols element-wise.
         Multipying two symbols returns a
-        :class:`~dwave.optimization.symbols.Minimum`.
+        :class:`~dwave.optimization.symbols.Multiply`.
         Multiplying three or more symbols returns a
-        :class:`~dwave.optimization.symbols.NaryMinimum`.
+        :class:`~dwave.optimization.symbols.NaryMultiply`.
 
     Examples:
         This example multiplies two integer symbols of size :math:`1 \times 2`.
@@ -1332,8 +1525,13 @@ def multiply(x1: ArraySymbol, x2: ArraySymbol, *xi: ArraySymbol,
         ...     j.set_state(0, [7, 2])
         ...     print(k.state(0))
         [21. 10.]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.Multiply`
+
+        :class:`~dwave.optimization.symbols.NaryMultiply`
     """
-    raise RuntimeError("implemented by the op() decorator")
+    raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
@@ -1512,7 +1710,8 @@ def roll(
     return Roll(array, shift=shift, axis=axis)
 
 
-def safe_divide(x1: ArraySymbol, x2: ArraySymbol) -> SafeDivide:
+@_binaryop(SafeDivide)
+def safe_divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> SafeDivide:
     r"""Divide the symbols element-wise, substituting ``0`` where ``x2 == 0``.
 
     This function is not strictly mathematical division. Rather it encodes
@@ -1550,7 +1749,7 @@ def safe_divide(x1: ArraySymbol, x2: ArraySymbol) -> SafeDivide:
 
     .. versionadded:: 0.6.2
     """
-    return SafeDivide(x1, x2)
+    raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 def sin(x) -> Sin:
@@ -1710,6 +1909,22 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
 
     new_shape = tuple(shape[:axis]) + (1,) + (shape[axis:])  # add the axis and then concatenate
     return concatenate([arr.reshape(new_shape) for arr in arrays], axis)
+
+
+@_binaryop(Subtract)
+def subtract(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Subtract:
+    """Return the element-wise subtraction of two symbols.
+
+    Args:
+        x1, x2: Input array symbol.
+
+    Returns:
+        A symbol that is the element-wise subtraction.
+
+    See Also:
+        :class:`~dwave.optimization.Subtract`
+    """
+    raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 def tanh(x) -> Tanh:
