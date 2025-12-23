@@ -392,7 +392,9 @@ class Array {
     /// For contiguous arrays, this is the length of the underlying memory block.
     /// For non-contiguous arrays, it is the length that the logical structure
     /// would have if it were copied to a contiguous representation.
-    /// If the array is dynamic, returns Array::DYNAMIC_SIZE.
+    /// If the size of the array is state-dependent, returns Array::DYNAMIC_SIZE.
+    /// Note that it's possible for the array to have a state-dependent shape
+    /// but a fixed size e.g., ``(-1, 0, 2)``.
     ssize_t len() const { return (size() >= 0) ? size() * itemsize() : DYNAMIC_SIZE; }
 
     /// For contiguous arrays, this is the length of the underlying memory block.
@@ -423,6 +425,8 @@ class Array {
     /// number of bytes.
     /// If the shape is state-dependent, the first value in shape is
     /// Array::DYNAMIC_SIZE.
+    /// Note that it's possible for the array to have a state-dependent shape
+    /// but a fixed size e.g., ``(-1, 0, 2)``.
     virtual std::span<const ssize_t> shape() const = 0;
 
     /// A span of length Array::ndim() giving the number of bytes to step to get to a
@@ -444,10 +448,12 @@ class Array {
     const View view(const State& state) const { return View(begin(state), end(state)); }
 
     /// The number of doubles in the flattened array.
+    /// If the size is dependent on the state, returns Array::DYNAMIC_SIZE.
+    /// Note that it's possible for the array to have a state-dependent shape
+    /// but a fixed size e.g., ``(-1, 0, 2)``.
     virtual ssize_t size() const = 0;
 
     /// The number of doubles in the flattened array.
-    /// If the size is dependent on the state, returns Array::DYNAMIC_SIZE.
     virtual ssize_t size(const State& state) const = 0;
 
     /// Information about how the size of a node is calculated. See SizeInfo.
@@ -468,8 +474,13 @@ class Array {
     /// Whether the data is stored contiguously.
     virtual bool contiguous() const = 0;
 
-    /// Whether the size of the array is state-dependent or not.
-    bool dynamic() const { return size() < 0; }
+    /// Whether the shape of the array is state-dependent or not.
+    /// Note that it's possible for the array to have a state-dependent shape
+    /// but a fixed size e.g., ``(-1, 0, 2)``.
+    bool dynamic() const { 
+        const auto shape = this->shape();
+        return shape.size() && shape[0] < 0;
+    }
 
     // Update signaling *******************************************************
 
@@ -487,40 +498,16 @@ class Array {
     // the product of the shape.
     // Expects the shape to be stored in a C-style array of length ndim.
     static ssize_t shape_to_size(const ssize_t ndim, const ssize_t* const shape) noexcept {
-        if (ndim <= 0) return 1;
-        if (shape[0] < 0) return DYNAMIC_SIZE;
-        return std::reduce(shape, shape + ndim, 1, std::multiplies<ssize_t>());
+        const ssize_t size = std::reduce(shape, shape + ndim, 1, std::multiplies<ssize_t>());
+        if (size < 0) return Array::DYNAMIC_SIZE;
+        return size;
     }
 
     static ssize_t shape_to_size(const std::span<const ssize_t> shape) noexcept {
         return shape_to_size(shape.size(), shape.data());
     }
-
  protected:
     // Some utility methods that might be useful to subclasses
-
-    // Determine whether a given shape/strides define a contiguous array or not.
-    static bool is_contiguous(const ssize_t ndim, const ssize_t* shape, const ssize_t* strides) {
-        assert(ndim >= 0);
-        if (!ndim) return true;  // scalars are contiguous
-
-        ssize_t sd = sizeof(double);
-        for (ssize_t i = ndim - 1; i >= 0; --i) {
-            const ssize_t dim = shape[i];
-
-            // This method is fine with state-dependent shape/size under the
-            // assumption that we only ever allow it on the 0-axis.
-            assert(dim >= 0 || i == 0);
-
-            // If dim == 0 then we're contiguous because we're empty
-            if (!dim) return true;
-
-            if (dim != 1 && strides[i] != sd) return false;
-            sd *= dim;
-        }
-
-        return true;
-    }
 
     // Determine the strides from the shape.
     // Assumes itemsize = sizeof(double).
@@ -704,6 +691,10 @@ class deduplicate_diff_view {
 };
 // todo: In C++23 once we have std::ranges::range_adaptor_closure, we should
 // make this work with a range adaptor.
+
+// Determine whether a given shape/strides define a contiguous array or not.
+bool is_contiguous(const ssize_t ndim, const ssize_t* shape, const ssize_t* strides);
+bool is_contiguous(std::span<const ssize_t> shape, std::span<const ssize_t> strides);
 
 // Return whether the given double encodes an integer.
 bool is_integer(const double& value);

@@ -1222,7 +1222,7 @@ BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser
           start_(parser.start),
           size_(Array::shape_to_size(ndim_, shape_.get())),
           axis0_slice_(parser.axis0_slice),
-          contiguous_(Array::is_contiguous(ndim_, shape_.get(), strides_.get())),
+          contiguous_(is_contiguous(ndim_, shape_.get(), strides_.get())),
           values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()),
           sizeinfo_(basicindexing_calculate_sizeinfo(this, array_ptr_, axis0_slice_)) {
     if (!contiguous_ && dynamic() &&

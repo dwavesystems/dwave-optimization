@@ -277,8 +277,8 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
             rhs_diff_copy.assign(rhs_ptr->diff(state).begin(), rhs_ptr->diff(state).end());
             deduplicate_diff(lhs_diff_copy);
             deduplicate_diff(rhs_diff_copy);
-            lhs_diff = std::span<const Update>(lhs_diff.begin(), lhs_diff.end());
-            rhs_diff = std::span<const Update>(rhs_diff.begin(), rhs_diff.end());
+            lhs_diff = std::span<const Update>(lhs_diff_copy.begin(), lhs_diff_copy.end());
+            rhs_diff = std::span<const Update>(rhs_diff_copy.begin(), rhs_diff_copy.end());
         }
 
         if (lhs_diff.size() && rhs_diff.size()) {

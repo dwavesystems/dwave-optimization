@@ -75,6 +75,36 @@ TEST_CASE("BroadcastToNode") {
         }
     }
 
+    SECTION("broadcast (3,) array to a (0,3) array") {
+        auto i = graph.emplace_node<InputNode>(std::vector<ssize_t>{3});
+        auto b = graph.emplace_node<BroadcastToNode>(i, std::vector<ssize_t>{0, 3});
+        graph.emplace_node<ArrayValidationNode>(b);
+
+        CHECK_THAT(b->shape(), RangeEquals({0, 3}));
+        CHECK_THAT(b->strides(), RangeEquals({0, 8}));
+
+        auto state = graph.empty_state();
+        i->initialize_state(state, {0, 1, 2});
+        graph.initialize_state(state);
+        CHECK_THAT(b->view(state), RangeEquals(std::vector<double>{}));
+
+        // Do an update followed by a propagation
+        i->assign(state, {1, 0, 2});
+        graph.propagate(state);
+
+        CHECK(b->diff(state).size() == 0);
+        CHECK_THAT(b->view(state), RangeEquals(std::vector<double>{}));
+
+        AND_WHEN("We commit") {
+            graph.commit(state);
+            CHECK_THAT(b->view(state), RangeEquals(std::vector<double>{}));
+        }
+        AND_WHEN("We revert") {
+            graph.revert(state);
+            CHECK_THAT(b->view(state), RangeEquals(std::vector<double>{}));
+        }
+    }
+
     SECTION("broadcast (-1,1) array to a (-1,2) array") {
         auto s = graph.emplace_node<SetNode>(100);
         auto rs = graph.emplace_node<ReshapeNode>(s, std::vector<ssize_t>{-1, 1});
@@ -83,6 +113,7 @@ TEST_CASE("BroadcastToNode") {
         graph.emplace_node<ArrayValidationNode>(b);
 
         CHECK_THAT(b->shape(), RangeEquals({-1, 2}));
+        CHECK_THAT(b->strides(), RangeEquals({8, 0}));
 
         auto state = graph.empty_state();
         s->initialize_state(state, {0, 1, 2});
@@ -132,6 +163,71 @@ TEST_CASE("BroadcastToNode") {
 
                 CHECK_THAT(b->shape(state), RangeEquals({3, 2}));
                 CHECK_THAT(b->view(state), RangeEquals({0, 0, 1, 1, 2, 2}));
+            }
+        }
+    }
+
+    SECTION("broadcast (-1,1) array to a (-1,0) array") {
+        auto s = graph.emplace_node<SetNode>(100);
+        auto rs = graph.emplace_node<ReshapeNode>(s, std::vector<ssize_t>{-1, 1});
+        CHECK(rs->ndim() == 2);
+        auto b = graph.emplace_node<BroadcastToNode>(rs, std::vector<ssize_t>{-1, 0});
+        graph.emplace_node<ArrayValidationNode>(b);
+
+        CHECK(b->size() == 0);
+        CHECK_THAT(b->shape(), RangeEquals({-1, 0}));
+        CHECK_THAT(b->strides(), RangeEquals({8, 0}));
+
+        auto state = graph.empty_state();
+        s->initialize_state(state, {0, 1, 2});
+        graph.initialize_state(state);
+
+        CHECK_THAT(b->shape(state), RangeEquals({3, 0}));
+        CHECK_THAT(b->view(state), RangeEquals(std::vector<double>{}));
+
+        WHEN("We grow the set") {
+            s->assign(state, {0, 2, 1, 3, 5});
+            graph.propagate(state);
+
+            CHECK_THAT(b->shape(state), RangeEquals({5, 0}));
+            CHECK_THAT(b->view(state), RangeEquals(std::vector<double>{}));
+            CHECK(b->diff(state).size() == 0);
+
+            AND_WHEN("We commit") {
+                graph.commit(state);
+
+                CHECK_THAT(b->shape(state), RangeEquals({5, 0}));
+                CHECK_THAT(b->view(state), RangeEquals(std::vector<double>{}));
+            }
+
+            AND_WHEN("We revert") {
+                graph.revert(state);
+
+                CHECK_THAT(b->shape(state), RangeEquals({3, 0}));
+                CHECK_THAT(b->view(state), RangeEquals(std::vector<double>{}));
+            }
+        }
+
+        WHEN("We shrink the set") {
+            s->assign(state, {0, 5});
+            graph.propagate(state);
+
+            CHECK_THAT(b->shape(state), RangeEquals({2, 0}));
+            CHECK_THAT(b->view(state), RangeEquals(std::vector<double>{}));
+            CHECK(b->diff(state).size() == 0);
+
+            AND_WHEN("We commit") {
+                graph.commit(state);
+
+                CHECK_THAT(b->shape(state), RangeEquals({2, 0}));
+                CHECK_THAT(b->view(state), RangeEquals(std::vector<double>{}));
+            }
+
+            AND_WHEN("We revert") {
+                graph.revert(state);
+
+                CHECK_THAT(b->shape(state), RangeEquals({3, 0}));
+                CHECK_THAT(b->view(state), RangeEquals(std::vector<double>{}));
             }
         }
     }
