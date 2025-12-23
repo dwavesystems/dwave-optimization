@@ -498,9 +498,9 @@ class Array {
     // the product of the shape.
     // Expects the shape to be stored in a C-style array of length ndim.
     static ssize_t shape_to_size(const ssize_t ndim, const ssize_t* const shape) noexcept {
-        if (ndim <= 0) return 1;
-        if (shape[0] < 0) return DYNAMIC_SIZE;
-        return std::reduce(shape, shape + ndim, 1, std::multiplies<ssize_t>());
+        const ssize_t size = std::reduce(shape, shape + ndim, 1, std::multiplies<ssize_t>());
+        if (size < 0) return Array::DYNAMIC_SIZE;
+        return size;
     }
 
     static ssize_t shape_to_size(const std::span<const ssize_t> shape) noexcept {
