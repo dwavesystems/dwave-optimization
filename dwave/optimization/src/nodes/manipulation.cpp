@@ -118,6 +118,7 @@ BroadcastToNode::BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> 
           ndim_(shape.size()),
           shape_(std::make_unique<ssize_t[]>(ndim_)),
           strides_(std::make_unique<ssize_t[]>(ndim_)),
+          contiguous_(false),
           values_info_(array_ptr) {
     // Fill in our shape_ and then make it accessible locally as a span
     std::copy(shape.begin(), shape.end(), shape_.get());
@@ -179,12 +180,17 @@ BroadcastToNode::BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> 
         *rit_tstrides = 0;
     }
 
+    // Track whether we're contiguous
+    contiguous_ = is_contiguous(ndim_, shape_.get(), strides_.get());
+
     add_predecessor(array_ptr);
 }
 
 double const* BroadcastToNode::buff(const State& state) const { return array_ptr_->buff(state); }
 
 void BroadcastToNode::commit(State& state) const { data_ptr<BroadcastToNodeData>(state)->commit(); }
+
+bool BroadcastToNode::contiguous() const { return contiguous_; }
 
 std::span<const Update> BroadcastToNode::diff(const State& state) const {
     return data_ptr<BroadcastToNodeData>(state)->diff;
@@ -1471,7 +1477,7 @@ TransposeNode::TransposeNode(ArrayNode* array_ptr)
           ndim_(array_ptr->ndim()),
           shape_(reverse_span_helper(array_ptr->shape(), ndim_)),
           strides_(reverse_span_helper(array_ptr->strides(), ndim_)),
-          contiguous_(Array::is_contiguous(ndim_, shape_.get(), strides_.get())),
+          contiguous_(is_contiguous(ndim_, shape_.get(), strides_.get())),
           values_info_(array_ptr) {
     add_predecessor(array_ptr);
 }

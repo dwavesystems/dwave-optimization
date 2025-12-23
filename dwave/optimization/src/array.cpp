@@ -334,6 +334,32 @@ void deduplicate_diff(std::vector<Update>& diff) {
     diff.resize(new_index + 1, Update::placement(-666, 666));
 }
 
+bool is_contiguous(const ssize_t ndim, const ssize_t* shape, const ssize_t* strides) {
+    assert(ndim >= 0);
+    if (!ndim) return true;  // scalars are contiguous
+
+    ssize_t sd = sizeof(double);
+    for (ssize_t i = ndim - 1; i >= 0; --i) {
+        const ssize_t dim = shape[i];
+
+        // This method is fine with state-dependent shape/size under the
+        // assumption that we only ever allow it on the 0-axis.
+        assert(dim >= 0 || i == 0);
+
+        // If dim == 0 then we're contiguous because we're empty
+        if (!dim) return true;
+
+        if (dim != 1 && strides[i] != sd) return false;
+        sd *= dim;
+    }
+
+    return true;
+}
+bool is_contiguous(std::span<const ssize_t> shape, std::span<const ssize_t> strides) {
+    assert(shape.size() == strides.size());
+    return is_contiguous(shape.size(), shape.data(), strides.data());
+}
+
 bool is_integer(const double& value) {
     static double dummy = 0;
     return std::modf(value, &dummy) == 0.0;

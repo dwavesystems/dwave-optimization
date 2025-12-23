@@ -38,7 +38,7 @@ class BroadcastToNode : public ArrayNode {
     void commit(State& state) const override;
 
     /// Broadcast nodes are always treated as non-contiguous.
-    bool contiguous() const override { return false; }
+    bool contiguous() const override;
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
@@ -88,6 +88,8 @@ class BroadcastToNode : public ArrayNode {
     ssize_t ndim_;
     std::unique_ptr<ssize_t[]> shape_;
     std::unique_ptr<ssize_t[]> strides_;
+
+    bool contiguous_;
 
     const ValuesInfo values_info_;
 };

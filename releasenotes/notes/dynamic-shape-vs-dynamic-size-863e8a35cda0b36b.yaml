@@ -6,13 +6,18 @@ features:
     always have a size of ``0``, but the shape is state-dependent.
 
     Arrays with a state-dependent size always have a state-depenent shape.
+  - Add C++ ``is_contiguous()`` function.
 upgrade:
   - |
     Change the definition of ``ArrayNode::dynamic()`` to return ``true`` if
     ``ArrayNode::shape()[0] < 0``. That is, if the shape is state-dependent.
     Previously ``ArrayNode::dynamic()`` returned true if the size was
     state-dependent.
+  - Remove C++ ``Array::is_contiguous()`` protected method.
 fixes:
   - |
     Support broadcasting arrays to a shape with a ``0`` in one or more dimensions
     with the ``BroadcastTo`` symbol.
+  - |
+    Fix ``BroadcastToNode::contiguous()`` method, previously it would always report
+    that the node was not contiguous.

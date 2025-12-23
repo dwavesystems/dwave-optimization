@@ -506,32 +506,8 @@ class Array {
     static ssize_t shape_to_size(const std::span<const ssize_t> shape) noexcept {
         return shape_to_size(shape.size(), shape.data());
     }
-
  protected:
     // Some utility methods that might be useful to subclasses
-
-    // Determine whether a given shape/strides define a contiguous array or not.
-    static bool is_contiguous(const ssize_t ndim, const ssize_t* shape, const ssize_t* strides) {
-        assert(ndim >= 0);
-        if (!ndim) return true;  // scalars are contiguous
-
-        ssize_t sd = sizeof(double);
-        for (ssize_t i = ndim - 1; i >= 0; --i) {
-            const ssize_t dim = shape[i];
-
-            // This method is fine with state-dependent shape/size under the
-            // assumption that we only ever allow it on the 0-axis.
-            assert(dim >= 0 || i == 0);
-
-            // If dim == 0 then we're contiguous because we're empty
-            if (!dim) return true;
-
-            if (dim != 1 && strides[i] != sd) return false;
-            sd *= dim;
-        }
-
-        return true;
-    }
 
     // Determine the strides from the shape.
     // Assumes itemsize = sizeof(double).
@@ -715,6 +691,10 @@ class deduplicate_diff_view {
 };
 // todo: In C++23 once we have std::ranges::range_adaptor_closure, we should
 // make this work with a range adaptor.
+
+// Determine whether a given shape/strides define a contiguous array or not.
+bool is_contiguous(const ssize_t ndim, const ssize_t* shape, const ssize_t* strides);
+bool is_contiguous(std::span<const ssize_t> shape, std::span<const ssize_t> strides);
 
 // Return whether the given double encodes an integer.
 bool is_integer(const double& value);
