@@ -35,7 +35,7 @@ std::vector<ssize_t> diff_offsets(std::span<const ssize_t> from_shape,
     std::vector<ssize_t> offsets{0};  // for an identity broadcast there is only one offset
 
     auto expand = [](const std::vector<ssize_t>& offsets, ssize_t size, ssize_t multiplier) {
-        assert(size > 0);
+        assert(size >= 0);
         assert(multiplier > 0);
         std::vector<ssize_t> new_offsets;
         for (const ssize_t& offset : offsets) {
@@ -193,8 +193,12 @@ std::span<const Update> BroadcastToNode::diff(const State& state) const {
 void BroadcastToNode::initialize_state(State& state) const {
     std::vector<ssize_t> offsets = diff_offsets(array_ptr_->shape(), this->shape());
 
+    // If and only if we're broadcasting to an array with size 0, then our offset
+    // should likewise be an empty list.
+    assert((this->size() == 0) == offsets.empty());
+
     if (ndim_ && shape_[0] < 0) {
-        // dynamic
+        // `this` has a state-dependent shape.
         // In addition to storing the offsets, when we're dynamic we need to store our current
         // shape/size as well. Luckily, they are easy to calculate because we cannot broadcast
         // along shape[0].
@@ -208,7 +212,7 @@ void BroadcastToNode::initialize_state(State& state) const {
 
         emplace_data_ptr<DynamicBroadcastToNodeData>(state, std::move(offsets), std::move(shape));
     } else {
-        // not dynamic
+        // `this` has a fixed shape
         emplace_data_ptr<BroadcastToNodeData>(state, std::move(offsets));
     }
 }
@@ -233,34 +237,36 @@ void BroadcastToNode::propagate(State& state) const {
     const auto& diff_offsets = data_ptr->diff_offsets;
 
     ssize_t size_diff = 0;
-    for (Update update : deduplicate_diff_view(from_diff)) {
-        // we need to convert from our predecessor's index to ours
-        const ssize_t index = convert_predecessor_index_(update.index);
-        assert(([&]() {
-                   std::vector<ssize_t> multi_index =
-                           unravel_index(update.index, array_ptr_->shape());
-                   multi_index.insert(multi_index.begin(), this->ndim() - array_ptr_->ndim(), 0);
-                   const ssize_t assert_index = ravel_multi_index(multi_index, this->shape());
-                   return assert_index == index;
-               })() &&
-               "Bad conversion of predecessor index");
+    if (this->size() != 0) {
+        for (Update update : deduplicate_diff_view(from_diff)) {
+            // we need to convert from our predecessor's index to ours
+            const ssize_t index = convert_predecessor_index_(update.index);
+            assert(([&]() {
+                       std::vector<ssize_t> multi_index =
+                               unravel_index(update.index, array_ptr_->shape());
+                       multi_index.insert(multi_index.begin(), this->ndim() - array_ptr_->ndim(), 0);
+                       const ssize_t assert_index = ravel_multi_index(multi_index, this->shape());
+                       return assert_index == index;
+                   })() &&
+                   "Bad conversion of predecessor index");
 
-        if (update.placed()) {
-            for (const ssize_t offset : diff_offsets) {
-                update.index = index + offset;
-                to_diff.emplace_back(update);
-                size_diff += 1;
-            }
-        } else if (update.removed()) {
-            for (const ssize_t offset : diff_offsets | std::views::reverse) {
-                update.index = index + offset;
-                to_diff.emplace_back(update);
-                size_diff -= 1;
-            }
-        } else {
-            for (const ssize_t offset : diff_offsets) {
-                update.index = index + offset;
-                to_diff.emplace_back(update);
+            if (update.placed()) {
+                for (const ssize_t offset : diff_offsets) {
+                    update.index = index + offset;
+                    to_diff.emplace_back(update);
+                    size_diff += 1;
+                }
+            } else if (update.removed()) {
+                for (const ssize_t offset : diff_offsets | std::views::reverse) {
+                    update.index = index + offset;
+                    to_diff.emplace_back(update);
+                    size_diff -= 1;
+                }
+            } else {
+                for (const ssize_t offset : diff_offsets) {
+                    update.index = index + offset;
+                    to_diff.emplace_back(update);
+                }
             }
         }
     }
@@ -339,19 +345,22 @@ std::span<const ssize_t> BroadcastToNode::shape(const State& state) const {
 }
 
 ssize_t BroadcastToNode::size() const {
-    if (ndim_ && shape_[0] < 0) return -1;  // dynamic
-    return std::accumulate(shape_.get(), shape_.get() + ndim_, 1, std::multiplies<ssize_t>());
+    // Need this to account for the case of a state-dependent shape but a size of zero.
+    const auto shape = this->shape();
+    const ssize_t size = std::reduce(shape.begin(), shape.end(), 1, std::multiplies<ssize_t>());
+    if (size < 0) return Array::DYNAMIC_SIZE;
+    return size;
 }
 
 ssize_t BroadcastToNode::size(const State& state) const {
-    if (!ndim_ || shape_[0] >= 0) return size();  // not dynamic
+    if (const ssize_t size = this->size(); size >= 0) return size;  // size is not state-dependent
     const auto& shape = data_ptr<DynamicBroadcastToNodeData>(state)->shape;
     assert(shape.size() > 0 && shape[0] >= 0);
-    return std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<ssize_t>());
+    return std::reduce(shape.begin(), shape.end(), 1, std::multiplies<ssize_t>());
 }
 
 ssize_t BroadcastToNode::size_diff(const State& state) const {
-    if (!ndim_ || shape_[0] >= 0) return 0;  // not dynamic
+    if (this->size() >= 0) return 0;  // size is not state-dependent
     return data_ptr<DynamicBroadcastToNodeData>(state)->size_diff;
 }
 

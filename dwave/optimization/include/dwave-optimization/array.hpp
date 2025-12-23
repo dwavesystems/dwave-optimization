@@ -392,7 +392,9 @@ class Array {
     /// For contiguous arrays, this is the length of the underlying memory block.
     /// For non-contiguous arrays, it is the length that the logical structure
     /// would have if it were copied to a contiguous representation.
-    /// If the array is dynamic, returns Array::DYNAMIC_SIZE.
+    /// If the size of the array is state-dependent, returns Array::DYNAMIC_SIZE.
+    /// Note that it's possible for the array to have a state-dependent shape
+    /// but a fixed size e.g., ``(-1, 0, 2)``.
     ssize_t len() const { return (size() >= 0) ? size() * itemsize() : DYNAMIC_SIZE; }
 
     /// For contiguous arrays, this is the length of the underlying memory block.
@@ -423,6 +425,8 @@ class Array {
     /// number of bytes.
     /// If the shape is state-dependent, the first value in shape is
     /// Array::DYNAMIC_SIZE.
+    /// Note that it's possible for the array to have a state-dependent shape
+    /// but a fixed size e.g., ``(-1, 0, 2)``.
     virtual std::span<const ssize_t> shape() const = 0;
 
     /// A span of length Array::ndim() giving the number of bytes to step to get to a
@@ -444,10 +448,12 @@ class Array {
     const View view(const State& state) const { return View(begin(state), end(state)); }
 
     /// The number of doubles in the flattened array.
+    /// If the size is dependent on the state, returns Array::DYNAMIC_SIZE.
+    /// Note that it's possible for the array to have a state-dependent shape
+    /// but a fixed size e.g., ``(-1, 0, 2)``.
     virtual ssize_t size() const = 0;
 
     /// The number of doubles in the flattened array.
-    /// If the size is dependent on the state, returns Array::DYNAMIC_SIZE.
     virtual ssize_t size(const State& state) const = 0;
 
     /// Information about how the size of a node is calculated. See SizeInfo.
@@ -468,8 +474,13 @@ class Array {
     /// Whether the data is stored contiguously.
     virtual bool contiguous() const = 0;
 
-    /// Whether the size of the array is state-dependent or not.
-    bool dynamic() const { return size() < 0; }
+    /// Whether the shape of the array is state-dependent or not.
+    /// Note that it's possible for the array to have a state-dependent shape
+    /// but a fixed size e.g., ``(-1, 0, 2)``.
+    bool dynamic() const { 
+        const auto shape = this->shape();
+        return shape.size() && shape[0] < 0;
+    }
 
     // Update signaling *******************************************************
 
