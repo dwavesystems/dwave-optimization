@@ -12,6 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <initializer_list>
 #include <optional>
 
 #include "catch2/catch_test_macros.hpp"
@@ -438,6 +439,11 @@ TEST_CASE("BinaryNode") {
         REQUIRE_THROWS(graph.emplace_node<dwave::optimization::BinaryNode>(
                 2, std::vector<double>{0, 0}, std::vector<double>{1, -1}));
     }
+
+    GIVEN("Invalid dynamically sized BinaryNode") {
+        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{-1, 2}),
+                            "NumberNode cannot have dynamic size.");
+    }
 }
 
 TEST_CASE("IntegerNode") {
@@ -730,6 +736,11 @@ TEST_CASE("IntegerNode") {
                 }
             }
         }
+    }
+
+    GIVEN("Invalid dynamically sized IntegerNode") {
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{-1, 3}),
+                            "NumberNode cannot have dynamic size.");
     }
 }
 
