@@ -2,7 +2,7 @@ version: 2.1
 
 orbs:
   win: circleci/windows@5.0.0
-  macos: circleci/macos@2.4.1
+  macos: circleci/macos@2.5
 
 commands:
   run-cibuildwheel:
@@ -98,8 +98,7 @@ jobs:
 
   python-macOS:
     macos:
-      xcode: 16.4.0  # latest as of August 2025
-    resource_class: macos.m1.medium.gen1
+      xcode: 26.2.0  # latest as of Jan 2026
 
     parameters:
       cibw-arch:
@@ -222,8 +221,7 @@ jobs:
 
   cpp-macOS:
     macos:
-      xcode: 15.3.0
-    resource_class: macos.m1.medium.gen1
+      xcode: 26.2.0  # latest as of Jan 2026
 
     steps:
       - checkout
