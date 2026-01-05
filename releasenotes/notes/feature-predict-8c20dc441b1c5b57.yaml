@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Add ``predict()`` function to ``dwave.optimization.generators``.
+    The ``predict()`` function accepts a fitted
+    ``sklearn.neural_network.MLPCLassifier`` or
+    ``sklearn.neural_network.MLPRegressor`` and a symbol representing ``X``,
+    and returns a symbol encoding the prediction of the estimator.

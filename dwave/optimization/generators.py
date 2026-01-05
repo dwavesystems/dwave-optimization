@@ -17,13 +17,23 @@
 from __future__ import annotations
 
 import itertools
+import functools
 import typing
 
 import numpy as np
 import numpy.typing
 
-from dwave.optimization.mathematical import add, logical_or, maximum, where
-from dwave.optimization.model import Model
+from dwave.optimization.mathematical import (
+    add,
+    exp,
+    expit,
+    logical_or,
+    maximum,
+    softmax,
+    tanh,
+    where
+)
+from dwave.optimization.model import ArraySymbol, Model
 
 __all__ = [
     "bin_packing",
@@ -32,6 +42,7 @@ __all__ = [
     "flow_shop_scheduling",
     "job_shop_scheduling",
     "knapsack",
+    "predict",
     "quadratic_assignment",
     "traveling_salesperson",
 ]
@@ -952,6 +963,177 @@ def knapsack(values: numpy.typing.ArrayLike,
 
     model.lock()
     return model
+
+
+# dev note: we aren't guaranteed to have sklearn installed where we do doctests
+# in the SDK docs, so we use code-block to avoid the doctest. We then test
+# the example in the unittests line-for-line
+@functools.singledispatch
+def predict(estimator, X: ArraySymbol) -> ArraySymbol:
+    """Predict ``y`` from ``X`` using the given ``estimator``.
+
+    Args:
+        estimator:
+            A fitted estimator, either a
+            :class:`~sklearn.neural_network.MLPClassifier` or a
+            :class:`~sklearn.neural_network.MLPRegressor`.
+
+            Note that only binary
+            :class:`~sklearn.neural_network.MLPClassifier` is supported.
+
+        X:
+            An array symbol representing the input data.
+
+    Returns:
+        The predicted values, ``y``.
+
+    Raises:
+        NotImplementedError: There are many ways to train estimators, some cases
+            may not be supported. Feel free to open a feature request at
+            https://github.com/dwavesystems/dwave-optimization for any missing
+            cases.
+
+    Examples:
+        .. code-block:: python
+
+            import itertools
+
+            import numpy as np
+
+            from dwave.optimization import Model
+            from dwave.optimization.generators import predict
+            from sklearn.neural_network import MLPRegressor
+
+            # The values are know exactly
+            weights = np.asarray([12, 1, 1, 2, 4])
+
+            # But rather than the values being known directly, we only have observations
+            # with noise
+            def observations():
+                secret_values = np.asarray([4, 2, 1, 2, 10])
+
+                rng = np.random.default_rng(42)
+                X = rng.integers(low=0, high=2, size=(20, 5))
+
+                y = X @ secret_values + rng.normal(scale=.5, size=20)
+
+                return X, y
+
+            X, y = observations()
+
+            # We can now fit a multi-layer perceptron estimator to our observations. The
+            # estimator, given a collection of purchases, estimates the value
+            regr = MLPRegressor(max_iter=2000).fit(X, y)
+
+            # Now we can use that estimator to construct our knapsack problem
+            model = Model()
+
+            items = model.binary(shape=(1, 5))
+
+            model.minimize(-predict(regr, items))
+            model.add_constraint(items @ weights <= 15)
+
+            # Finally, we can solve it exactly by trying all possible solutions, and check
+            # that our solution is the correct one
+            model.lock()
+            model.states.resize(1)
+
+            best_value = float("inf")
+            best_state = None
+            for state in itertools.product((0, 1), repeat=5):
+                items.set_state(0, state)
+
+                if model.feasible() and model.objective.state() < best_value:
+                    best_value = model.objective.state()
+                    best_state = items.state()
+
+            assert np.array_equal(best_state, [[0, 1, 1, 1, 1]])
+
+    See Also:
+        :class:`sklearn.neural_network.MLPClassifier`
+        :class:`sklearn.neural_network.MLPRegressor`
+
+    .. versionadded:: 0.6.11
+    """
+    raise NotImplementedError(
+        "predict() is not defined for the given estimator type."
+        " If you are trying to use an MLPClassifier or MLPRegressor,"
+        "you must have sckit-learn installed."
+    )
+
+
+try:
+    import sklearn
+    from sklearn.neural_network import MLPClassifier, MLPRegressor
+except ImportError:
+    pass
+else:
+    @predict.register
+    def _mlp_classifier_predict(clf: MLPClassifier, X: ArraySymbol) -> ArraySymbol:
+        # MLPClassifier and MLPRegressor share a base type, and the predict
+        # implementation is the same except for the binarization step at the end
+        activation = _mlp_regressor_predict(clf, X)
+
+        # "multiclass" is the other option that we might want to support, for
+        # non-binary classification. However, we need SoftMax symbol for that
+        # which we don't (as of Jan 2026) have.
+        # See https://github.com/dwavesystems/dwave-optimization/issues/452
+        if clf._label_binarizer.y_type_ == "binary":
+            activation = activation >= 0.5
+        else:
+            raise NotImplementedError(
+                f"unsupported binarizer: {clf._label_binarizer.y_type_}"
+            )
+
+        return activation
+
+    @predict.register
+    def _mlp_regressor_predict(regr: MLPRegressor, X: ArraySymbol) -> ArraySymbol:
+        # Check that regr is a (fitted) estimator
+        sklearn.utils.validation.check_is_fitted(regr)
+
+        # We need an ArraySymbol as the second argument
+        if not isinstance(X, ArraySymbol):
+            raise TypeError("X must be an ArraySymbol")
+
+        # Check that X matches the shape of regr. In order to use sklearn's type
+        # checking we just generate a dense array that matches our X.
+        # We use np.zeros() rather than `np.empty()` because sklearn will complain
+        # about NaNs
+        sklearn.utils.validation.validate_data(regr, X=np.zeros(X.shape()), reset=False)
+
+        ACTIVATIONS: dict[str, typing.Callable] = dict(
+            exp=exp,
+            identity=lambda s: s,
+            logistic=expit,
+            relu=functools.partial(maximum, 0),
+            softmax=softmax,
+            tanh=tanh,
+        )
+
+        activation = X
+
+        try:
+            hidden_activation = ACTIVATIONS[regr.activation]
+        except KeyError:
+            raise NotImplementedError("unsupported activation type")
+
+        try:
+            output_activation = ACTIVATIONS[regr.out_activation_]
+        except KeyError:
+            raise NotImplementedError(
+                f"unsupported output activation : {regr.out_activation_}"
+            )
+
+        for i in range(regr.n_layers_ - 1):
+            activation = activation @ regr.coefs_[i] + regr.intercepts_[i]
+
+            if i != regr.n_layers_ - 2:
+                activation = hidden_activation(activation)
+
+        activation = output_activation(activation)
+
+        return activation.reshape(-1)
 
 
 def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,

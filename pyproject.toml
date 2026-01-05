@@ -81,6 +81,8 @@ docs = [
 ]
 test = [
     "dimod==0.12.21",
+    "scikit-learn==1.7.2; python_version<'3.11'",   # last that supports 3.10
+    "scikit-learn==1.8.0; python_version>='3.11'",  # first that supports 3.14t
 ]
 
 [tool.cibuildwheel]

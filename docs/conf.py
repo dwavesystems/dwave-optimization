@@ -90,11 +90,13 @@ html_theme_options = {
 }
 html_sidebars = {"**": ["search-field", "sidebar-nav-bs"]}  # remove ads
 
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
-                       'numpy': ('https://numpy.org/doc/stable/', None),
-                       'networkx': ('https://networkx.org/documentation/stable/', None),
-                       'dwave': ('https://docs.dwavequantum.com/en/latest/', None),
-                       }
+intersphinx_mapping = {
+    'dwave': ('https://docs.dwavequantum.com/en/latest/', None),
+    'networkx': ('https://networkx.org/documentation/stable/', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'python': ('https://docs.python.org/3', None),
+    'sklearn': ('https://scikit-learn.org/stable/', None),
+}
 
 rst_epilog = """
 .. |array-like| replace:: array-like
