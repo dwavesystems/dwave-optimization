@@ -47,7 +47,6 @@ class BoundAxisInfo {
     /// (length of vector is equal to the number of slices).
     const std::vector<double> bounds;
 
- private:
     /// Obtain the bound associated with a given slice along bound axis.
     double get_bound(const ssize_t slice) const;
 
@@ -140,7 +139,16 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     ssize_t num_bound_axes() const;
 
     /// Return the bound information for the ith bound axis
-    const BoundAxisInfo* get_ith_bound_axis_info(const ssize_t i) const;
+    const BoundAxisInfo* bound_axis_info(const ssize_t axis) const;
+
+    /// The number of hyperslice along the ith bound axis
+    ssize_t num_hyperslice_along_bound_axis(State& state, const ssize_t axis) const;
+
+    /// Get the sum of the values in the given slice along the ith bound axis
+    double bound_axis_hyperslice_sum(State& state, const ssize_t axis, const ssize_t slice) const;
+
+    /// Check whether the axis-wise bounds are satisfied
+    bool satisfies_axis_wise_bounds(State& state) const;
 
  protected:
     explicit NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,
