@@ -565,22 +565,55 @@ TEST_CASE("BinaryNode") {
     }
 
     GIVEN("(2x3x4)-Binary node with an axis-wise bound on axis: 1") {
+        auto graph = Graph();
+
         BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual},
-                                 std::vector<double>{1.0, 1.0, 0.0}};
+                                 std::vector<double>{4.0, 4.0, 6.0}};
 
         auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
                 std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
                 std::vector<BoundAxisInfo>{bound_axis});
+
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->num_bound_axes() == 1.0);
-            const BoundAxisInfo* bnode_bound_axis_ptr = bnode_ptr->get_ith_bound_axis_info(0);
+            const BoundAxisInfo* bnode_bound_axis_ptr = bnode_ptr->bound_axis_info(0);
             CHECK(bound_axis.axis == bnode_bound_axis_ptr->axis);
             CHECK_THAT(bound_axis.operators, RangeEquals(bnode_bound_axis_ptr->operators));
             CHECK_THAT(bound_axis.bounds, RangeEquals(bnode_bound_axis_ptr->bounds));
-            CHECK_THROWS_WITH(bnode_ptr->get_ith_bound_axis_info(1),
-                              "Invalid ith bound axis requested: 1");
-            CHECK_THROWS_WITH(bnode_ptr->get_ith_bound_axis_info(-1),
-                              "Invalid ith bound axis requested: -1");
+        }
+
+        WHEN("We initialize an invalid state") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values(2 * 3 * 4, 1);
+            // import numpy as np
+            // a = np.ones((2,3,4))
+            // a.sum(axis=(0, 2))
+            // array([8, 8, 8])
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy axis-wise bounds.");
+        }
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{
+                    1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0,
+            };
+            std::cout << "here" << std::endl;
+            bnode_ptr->initialize_state(state, init_values);
+            graph.initialize_state(state);
+
+            // import numpy as np
+            // a = np.array([1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0,
+            // ... 1, 0, 1, 1, 1, 1, 0])
+            // a = a.reshape(2,3,4)
+            // a.sum(axis=(0, 2))
+            // array([3, 4, 5])
+            THEN("The sums of each hyperslice along axis 1 are correct") {
+                CHECK(bnode_ptr->num_hyperslice_along_bound_axis(state, 0) == 3);
+                CHECK(bnode_ptr->bound_axis_hyperslice_sum(state, 0, 0) == 3);
+                CHECK(bnode_ptr->bound_axis_hyperslice_sum(state, 0, 1) == 4);
+                CHECK(bnode_ptr->bound_axis_hyperslice_sum(state, 0, 2) == 5);
+            }
         }
     }
 }
