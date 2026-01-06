@@ -23,7 +23,168 @@
 
 namespace dwave::optimization {
 
+BoundAxisInfo::BoundAxisInfo(ssize_t bound_axis, std::vector<BoundAxisOperator> axis_operators,
+                             std::vector<double> axis_bounds)
+        : axis(bound_axis), operators(std::move(axis_operators)), bounds(std::move(axis_bounds)) {
+    const ssize_t num_operators = operators.size();
+    const ssize_t num_bounds = bounds.size();
+
+    // Null `operators` and `bounds` are not accepted.
+    if ((num_operators == 0) || (num_bounds == 0)) {
+        throw std::invalid_argument("Bad axis-wise bounds for axis: " + std::to_string(axis) +
+                                    ", `operators` and `bounds` must each have non-zero size.");
+    }
+
+    // If `operators` and `bounds` are defined PER hyperslice along `axis`,
+    // they must have the same size.
+    if ((num_operators > 1) && (num_bounds > 1) && (num_bounds != num_operators)) {
+        throw std::invalid_argument(
+                "Bad axis-wise bounds for axis: " + std::to_string(axis) +
+                ", `operators` and `bounds` should have same size if neither has size 1.");
+    }
+}
+
+double BoundAxisInfo::get_bound(const ssize_t slice) const {
+    const ssize_t max_slice = bounds.size();
+    // Negative indexing is not supported.
+    if ((slice < 0) || (slice >= max_slice)) {
+        throw std::invalid_argument("Out of range slice: " + std::to_string(slice) +
+                                    " along axis: " + std::to_string(axis));
+    }
+
+    if (max_slice == 1) {
+        return bounds[0];
+    }
+    return bounds[slice];
+}
+
+BoundAxisOperator BoundAxisInfo::get_operator(const ssize_t slice) const {
+    const ssize_t max_slice = operators.size();
+    // Negative indexing is not supported.
+    if ((slice < 0) || (slice >= max_slice)) {
+        throw std::invalid_argument("Out of range slice: " + std::to_string(slice) +
+                                    " along axis: " + std::to_string(axis));
+    }
+
+    if (max_slice == 1) {
+        return operators[0];
+    }
+    return operators[slice];
+}
+
+template <bool maximum>
+double get_extreme_index_wise_bound(const std::vector<double>& bound) {
+    assert(bound.size() > 0);
+    std::vector<double>::const_iterator it;
+    if (maximum) {
+        it = std::max_element(bound.begin(), bound.end());
+    } else {
+        it = std::min_element(bound.begin(), bound.end());
+    }
+    return *it;
+}
+
+void check_index_wise_bounds(const NumberNode& node, const std::vector<double>& lower_bounds_,
+                             const std::vector<double>& upper_bounds_) {
+    bool index_wise_bound = false;
+    // If lower bound is index-wise, it must be correct size.
+    if (lower_bounds_.size() > 1) {
+        index_wise_bound = true;
+        if (static_cast<ssize_t>(lower_bounds_.size()) != node.size()) {
+            throw std::invalid_argument("lower_bound must match size of node");
+        }
+    }
+    // If upper bound is index-wise, it must be correct size.
+    if (upper_bounds_.size() > 1) {
+        index_wise_bound = true;
+        if (static_cast<ssize_t>(upper_bounds_.size()) != node.size()) {
+            throw std::invalid_argument("upper_bound must match size of node");
+        }
+    }
+    // If at least one of the bounds is index-wise, check that there are no
+    // violations at any of the indices.
+    if (index_wise_bound) {
+        for (ssize_t i = 0, stop = node.size(); i < stop; ++i) {
+            if (node.lower_bound(i) > node.upper_bound(i)) {
+                throw std::invalid_argument("Bounds of index " + std::to_string(i) + " clash");
+            }
+        }
+    }
+}
+
+/// Check the user defined axis-wise bounds for NumberNode
+void check_axis_wise_bounds(const std::vector<BoundAxisInfo>& bound_axes_info,
+                            const std::span<const ssize_t> shape) {
+    if (bound_axes_info.size() == 0) {  // No bound axes to check.
+        return;
+    }
+
+    // Used to asses if an axis have been bound multiple times.
+    std::vector<bool> axis_bound(shape.size(), false);
+
+    // For each set of bound axis data
+    for (const BoundAxisInfo& bound_axis_info : bound_axes_info) {
+        const ssize_t axis = bound_axis_info.axis;
+
+        if (axis < 0 || axis >= shape.size()) {
+            throw std::invalid_argument(
+                    "Invalid bound axis: " + std::to_string(axis) +
+                    ". Note, negative indexing is not supported for axis-wise bounds.");
+        }
+
+        // The number of operators defined for the given bound axis
+        const ssize_t num_operators = bound_axis_info.operators.size();
+        if ((num_operators > 1) && (num_operators != shape[axis])) {
+            throw std::invalid_argument(
+                    "Invalid number of axis-wise operators along axis: " + std::to_string(axis) +
+                    " given axis shape: " + std::to_string(shape[axis]));
+        }
+
+        // The number of operators defined for the given bound axis
+        const ssize_t num_bounds = bound_axis_info.bounds.size();
+        if ((num_bounds > 1) && (num_bounds != shape[axis])) {
+            throw std::invalid_argument(
+                    "Invalid number of axis-wise bounds along axis: " + std::to_string(axis) +
+                    " given axis shape: " + std::to_string(shape[axis]));
+        }
+
+        // Checked in BoundAxisInfo constructor
+        assert(num_operators == num_bounds || num_operators == 1 || num_bounds == 1);
+
+        if (axis_bound[axis]) {
+            throw std::invalid_argument(
+                    "Cannot define multiple axis-wise bounds for a single axis.");
+        }
+        axis_bound[axis] = true;
+    }
+
+    // *Currently*, we only support axis-wise bounds for up to one axis.
+    if (bound_axes_info.size() > 1) {
+        throw std::invalid_argument("Axis-wise bounds are supported for at most one axis.");
+    }
+}
+
 // Base class to be used as interfaces.
+NumberNode::NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,
+                       std::vector<double> upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : ArrayOutputMixin(shape),
+          min_(get_extreme_index_wise_bound<false>(lower_bound)),
+          max_(get_extreme_index_wise_bound<true>(upper_bound)),
+          lower_bounds_(std::move(lower_bound)),
+          upper_bounds_(std::move(upper_bound)),
+          bound_axes_info_(bound_axes ? std::move(*bound_axes) : std::vector<BoundAxisInfo>{}) {
+    if ((shape.size() > 0) && (shape[0] < 0)) {
+        throw std::invalid_argument("Number array cannot have dynamic size.");
+    }
+
+    if (max_ < min_) {
+        throw std::invalid_argument("Invalid range for number array provided.");
+    }
+
+    check_index_wise_bounds(*this, lower_bounds_, upper_bounds_);
+    check_axis_wise_bounds(bound_axes_info_, this->shape());
+}
 
 double const* NumberNode::buff(const State& state) const noexcept {
     return data_ptr<ArrayNodeStateData>(state)->buff();
@@ -124,74 +285,29 @@ void NumberNode::clip_and_set_value(State& state, ssize_t index, double value) c
     data_ptr<ArrayNodeStateData>(state)->set(index, value);
 }
 
-template <bool maximum>
-double get_extreme_index_wise_bound(const std::vector<double>& bound) {
-    assert(bound.size() > 0);
-    std::vector<double>::const_iterator it;
-    if (maximum) {
-        it = std::max_element(bound.begin(), bound.end());
-    } else {
-        it = std::min_element(bound.begin(), bound.end());
-    }
-    return *it;
-}
+ssize_t NumberNode::num_bound_axes() const {
+    return static_cast<ssize_t>(bound_axes_info_.size());
+};
 
-void check_index_wise_bounds(const NumberNode& node, const std::vector<double>& lower_bounds_,
-                             const std::vector<double>& upper_bounds_) {
-    bool index_wise_bound = false;
-    // If lower bound is index-wise, it must be correct size.
-    if (lower_bounds_.size() > 1) {
-        index_wise_bound = true;
-        if (static_cast<ssize_t>(lower_bounds_.size()) != node.size()) {
-            throw std::invalid_argument("lower_bound must match size of node");
-        }
+const BoundAxisInfo* NumberNode::get_ith_bound_axis_info(const ssize_t i) const {
+    if (i < 0 || i >= bound_axes_info_.size()) {
+        throw std::invalid_argument("Invalid ith bound axis requested: " + std::to_string(i));
     }
-    // If upper bound is index-wise, it must be correct size.
-    if (upper_bounds_.size() > 1) {
-        index_wise_bound = true;
-        if (static_cast<ssize_t>(upper_bounds_.size()) != node.size()) {
-            throw std::invalid_argument("upper_bound must match size of node");
-        }
-    }
-    // If at least one of the bounds is index-wise, check that there are no
-    // violations at any of the indices.
-    if (index_wise_bound) {
-        for (ssize_t i = 0, stop = node.size(); i < stop; ++i) {
-            if (node.lower_bound(i) > node.upper_bound(i)) {
-                throw std::invalid_argument("Bounds of index " + std::to_string(i) + " clash");
-            }
-        }
-    }
-}
-
-NumberNode::NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,
-                       std::vector<double> upper_bound)
-        : ArrayOutputMixin(shape),
-          min_(get_extreme_index_wise_bound<false>(lower_bound)),
-          max_(get_extreme_index_wise_bound<true>(upper_bound)),
-          lower_bounds_(std::move(lower_bound)),
-          upper_bounds_(std::move(upper_bound)) {
-    if ((shape.size() > 0) && (shape[0] < 0)) {
-        throw std::invalid_argument("Number array cannot have dynamic size.");
-    }
-
-    if (max_ < min_) {
-        throw std::invalid_argument("Invalid range for number array provided.");
-    }
-
-    check_index_wise_bounds(*this, lower_bounds_, upper_bounds_);
-}
+    return &bound_axes_info_[i];
+};
 
 // Integer Node ***************************************************************
 
 IntegerNode::IntegerNode(std::span<const ssize_t> shape,
                          std::optional<std::vector<double>> lower_bound,
-                         std::optional<std::vector<double>> upper_bound)
+                         std::optional<std::vector<double>> upper_bound,
+                         std::optional<std::vector<BoundAxisInfo>> bound_axes)
         : NumberNode(shape,
                      lower_bound.has_value() ? std::move(*lower_bound)
                                              : std::vector<double>{default_lower_bound},
                      upper_bound.has_value() ? std::move(*upper_bound)
-                                             : std::vector<double>{default_upper_bound}) {
+                                             : std::vector<double>{default_upper_bound},
+                     std::move(bound_axes)) {
     if (min_ < minimum_lower_bound || max_ > maximum_upper_bound) {
         throw std::invalid_argument("range provided for integers exceeds supported range");
     }
@@ -199,40 +315,59 @@ IntegerNode::IntegerNode(std::span<const ssize_t> shape,
 
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape,
                          std::optional<std::vector<double>> lower_bound,
-                         std::optional<std::vector<double>> upper_bound)
-        : IntegerNode(std::span(shape), std::move(lower_bound), std::move(upper_bound)) {}
+                         std::optional<std::vector<double>> upper_bound,
+                         std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : IntegerNode(std::span(shape), std::move(lower_bound), std::move(upper_bound),
+                      std::move(bound_axes)) {}
 IntegerNode::IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
-                         std::optional<std::vector<double>> upper_bound)
-        : IntegerNode({size}, std::move(lower_bound), std::move(upper_bound)) {}
+                         std::optional<std::vector<double>> upper_bound,
+                         std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : IntegerNode({size}, std::move(lower_bound), std::move(upper_bound),
+                      std::move(bound_axes)) {}
 
 IntegerNode::IntegerNode(std::span<const ssize_t> shape, double lower_bound,
-                         std::optional<std::vector<double>> upper_bound)
-        : IntegerNode(shape, std::vector<double>{lower_bound}, std::move(upper_bound)) {}
+                         std::optional<std::vector<double>> upper_bound,
+                         std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : IntegerNode(shape, std::vector<double>{lower_bound}, std::move(upper_bound),
+                      std::move(bound_axes)) {}
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound,
-                         std::optional<std::vector<double>> upper_bound)
-        : IntegerNode(std::span(shape), std::vector<double>{lower_bound}, std::move(upper_bound)) {}
+                         std::optional<std::vector<double>> upper_bound,
+                         std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : IntegerNode(std::span(shape), std::vector<double>{lower_bound}, std::move(upper_bound),
+                      std::move(bound_axes)) {}
 IntegerNode::IntegerNode(ssize_t size, double lower_bound,
-                         std::optional<std::vector<double>> upper_bound)
-        : IntegerNode({size}, std::vector<double>{lower_bound}, std::move(upper_bound)) {}
+                         std::optional<std::vector<double>> upper_bound,
+                         std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : IntegerNode({size}, std::vector<double>{lower_bound}, std::move(upper_bound),
+                      std::move(bound_axes)) {}
 
 IntegerNode::IntegerNode(std::span<const ssize_t> shape,
-                         std::optional<std::vector<double>> lower_bound, double upper_bound)
-        : IntegerNode(shape, std::move(lower_bound), std::vector<double>{upper_bound}) {}
+                         std::optional<std::vector<double>> lower_bound, double upper_bound,
+                         std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : IntegerNode(shape, std::move(lower_bound), std::vector<double>{upper_bound},
+                      std::move(bound_axes)) {}
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape,
-                         std::optional<std::vector<double>> lower_bound, double upper_bound)
-        : IntegerNode(std::span(shape), std::move(lower_bound), std::vector<double>{upper_bound}) {}
+                         std::optional<std::vector<double>> lower_bound, double upper_bound,
+                         std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : IntegerNode(std::span(shape), std::move(lower_bound), std::vector<double>{upper_bound},
+                      std::move(bound_axes)) {}
 IntegerNode::IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
-                         double upper_bound)
-        : IntegerNode({size}, std::move(lower_bound), std::vector<double>{upper_bound}) {}
+                         double upper_bound, std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : IntegerNode({size}, std::move(lower_bound), std::vector<double>{upper_bound},
+                      std::move(bound_axes)) {}
 
-IntegerNode::IntegerNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound)
-        : IntegerNode(shape, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
+IntegerNode::IntegerNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound,
+                         std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : IntegerNode(shape, std::vector<double>{lower_bound}, std::vector<double>{upper_bound},
+                      std::move(bound_axes)) {}
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound,
-                         double upper_bound)
+                         double upper_bound, std::optional<std::vector<BoundAxisInfo>> bound_axes)
         : IntegerNode(std::span(shape), std::vector<double>{lower_bound},
-                      std::vector<double>{upper_bound}) {}
-IntegerNode::IntegerNode(ssize_t size, double lower_bound, double upper_bound)
-        : IntegerNode({size}, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
+                      std::vector<double>{upper_bound}, std::move(bound_axes)) {}
+IntegerNode::IntegerNode(ssize_t size, double lower_bound, double upper_bound,
+                         std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : IntegerNode({size}, std::vector<double>{lower_bound}, std::vector<double>{upper_bound},
+                      std::move(bound_axes)) {}
 
 bool IntegerNode::integral() const { return true; }
 
@@ -287,45 +422,66 @@ std::vector<double> limit_bound_to_bool_domain(std::optional<std::vector<double>
 
 BinaryNode::BinaryNode(std::span<const ssize_t> shape,
                        std::optional<std::vector<double>> lower_bound,
-                       std::optional<std::vector<double>> upper_bound)
+                       std::optional<std::vector<double>> upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
         : IntegerNode(shape, limit_bound_to_bool_domain<false>(lower_bound),
-                      limit_bound_to_bool_domain<true>(upper_bound)) {}
+                      limit_bound_to_bool_domain<true>(upper_bound), bound_axes) {}
 
 BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape,
                        std::optional<std::vector<double>> lower_bound,
-                       std::optional<std::vector<double>> upper_bound)
-        : BinaryNode(std::span(shape), std::move(lower_bound), std::move(upper_bound)) {}
+                       std::optional<std::vector<double>> upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : BinaryNode(std::span(shape), std::move(lower_bound), std::move(upper_bound),
+                     std::move(bound_axes)) {}
 BinaryNode::BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
-                       std::optional<std::vector<double>> upper_bound)
-        : BinaryNode({size}, std::move(lower_bound), std::move(upper_bound)) {}
+                       std::optional<std::vector<double>> upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : BinaryNode({size}, std::move(lower_bound), std::move(upper_bound),
+                     std::move(bound_axes)) {}
 
 BinaryNode::BinaryNode(std::span<const ssize_t> shape, double lower_bound,
-                       std::optional<std::vector<double>> upper_bound)
-        : BinaryNode(shape, std::vector<double>{lower_bound}, std::move(upper_bound)) {}
+                       std::optional<std::vector<double>> upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : BinaryNode(shape, std::vector<double>{lower_bound}, std::move(upper_bound),
+                     std::move(bound_axes)) {}
 BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound,
-                       std::optional<std::vector<double>> upper_bound)
-        : BinaryNode(std::span(shape), std::vector<double>{lower_bound}, std::move(upper_bound)) {}
+                       std::optional<std::vector<double>> upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : BinaryNode(std::span(shape), std::vector<double>{lower_bound}, std::move(upper_bound),
+                     std::move(bound_axes)) {}
 BinaryNode::BinaryNode(ssize_t size, double lower_bound,
-                       std::optional<std::vector<double>> upper_bound)
-        : BinaryNode({size}, std::vector<double>{lower_bound}, std::move(upper_bound)) {}
+                       std::optional<std::vector<double>> upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : BinaryNode({size}, std::vector<double>{lower_bound}, std::move(upper_bound),
+                     std::move(bound_axes)) {}
 
 BinaryNode::BinaryNode(std::span<const ssize_t> shape,
-                       std::optional<std::vector<double>> lower_bound, double upper_bound)
-        : BinaryNode(shape, std::move(lower_bound), std::vector<double>{upper_bound}) {}
+                       std::optional<std::vector<double>> lower_bound, double upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : BinaryNode(shape, std::move(lower_bound), std::vector<double>{upper_bound},
+                     std::move(bound_axes)) {}
 BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape,
-                       std::optional<std::vector<double>> lower_bound, double upper_bound)
-        : BinaryNode(std::span(shape), std::move(lower_bound), std::vector<double>{upper_bound}) {}
+                       std::optional<std::vector<double>> lower_bound, double upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : BinaryNode(std::span(shape), std::move(lower_bound), std::vector<double>{upper_bound},
+                     std::move(bound_axes)) {}
 BinaryNode::BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
-                       double upper_bound)
-        : BinaryNode({size}, std::move(lower_bound), std::vector<double>{upper_bound}) {}
+                       double upper_bound, std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : BinaryNode({size}, std::move(lower_bound), std::vector<double>{upper_bound},
+                     std::move(bound_axes)) {}
 
-BinaryNode::BinaryNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound)
-        : BinaryNode(shape, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
-BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound)
+BinaryNode::BinaryNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : BinaryNode(shape, std::vector<double>{lower_bound}, std::vector<double>{upper_bound},
+                     std::move(bound_axes)) {}
+BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
         : BinaryNode(std::span(shape), std::vector<double>{lower_bound},
-                     std::vector<double>{upper_bound}) {}
-BinaryNode::BinaryNode(ssize_t size, double lower_bound, double upper_bound)
-        : BinaryNode({size}, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
+                     std::vector<double>{upper_bound}, std::move(bound_axes)) {}
+BinaryNode::BinaryNode(ssize_t size, double lower_bound, double upper_bound,
+                       std::optional<std::vector<BoundAxisInfo>> bound_axes)
+        : BinaryNode({size}, std::vector<double>{lower_bound}, std::vector<double>{upper_bound},
+                     std::move(bound_axes)) {}
 
 void BinaryNode::flip(State& state, ssize_t i) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);

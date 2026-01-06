@@ -25,6 +25,50 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
+TEST_CASE("BoundAxisInfo") {
+    GIVEN("BoundAxisInfo(axis = 0, operators = {}, bounds = {1.0})") {
+        REQUIRE_THROWS_WITH(
+                BoundAxisInfo(0, std::vector<BoundAxisOperator>{}, std::vector<double>{1.0}),
+                "Bad axis-wise bounds for axis: 0, `operators` and `bounds` must each have "
+                "non-zero size.");
+    }
+
+    GIVEN("BoundAxisInfo(axis = 0, operators = {<=}, bounds = {})") {
+        REQUIRE_THROWS_WITH(
+                BoundAxisInfo(0, std::vector<BoundAxisOperator>{LessEqual}, std::vector<double>{}),
+                "Bad axis-wise bounds for axis: 0, `operators` and `bounds` must each have "
+                "non-zero size.");
+    }
+
+    GIVEN("BoundAxisInfo(axis = 1, operators = {<=, ==, ==}, bounds = {2.0, 1.0})") {
+        REQUIRE_THROWS_WITH(
+                BoundAxisInfo(1, std::vector<BoundAxisOperator>{LessEqual, Equal, Equal},
+                              std::vector<double>{2.0, 1.0}),
+                "Bad axis-wise bounds for axis: 1, `operators` and `bounds` should have same size "
+                "if neither has size 1.");
+    }
+
+    GIVEN("BoundAxisInfo(axis = 2, operators = {==}, bounds = {1.0})") {
+        BoundAxisInfo bound_axis(2, std::vector<BoundAxisOperator>{Equal},
+                                 std::vector<double>{1.0});
+        THEN("The bound axis info is correct") {
+            CHECK(bound_axis.axis == 2);
+            CHECK_THAT(bound_axis.operators, RangeEquals({Equal}));
+            CHECK_THAT(bound_axis.bounds, RangeEquals({1.0}));
+        }
+    }
+
+    GIVEN("BoundAxisInfo(axis = 2, operators = {==, <=, >=}, bounds = {1.0, 2.0, 3.0})") {
+        BoundAxisInfo bound_axis(2, std::vector<BoundAxisOperator>{Equal, LessEqual, GreaterEqual},
+                                 std::vector<double>{1.0, 2.0, 3.0});
+        THEN("The bound axis info is correct") {
+            CHECK(bound_axis.axis == 2);
+            CHECK_THAT(bound_axis.operators, RangeEquals({Equal, LessEqual, GreaterEqual}));
+            CHECK_THAT(bound_axis.bounds, RangeEquals({1.0, 2.0, 3.0}));
+        }
+    }
+}
+
 TEST_CASE("BinaryNode") {
     auto graph = Graph();
 
@@ -438,6 +482,106 @@ TEST_CASE("BinaryNode") {
     GIVEN("Invalid dynamically sized BinaryNode") {
         REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{-1, 2}),
                             "Number array cannot have dynamic size.");
+    }
+
+    GIVEN("(2x3)-Binary node with axis-wise bounds on the invalid axis -1") {
+        BoundAxisInfo bound_axis{-1, std::vector<BoundAxisOperator>{Equal},
+                                 std::vector<double>{1.0}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::BinaryNode>(
+                                    std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                    std::nullopt, std::vector<BoundAxisInfo>{bound_axis}),
+                            "Invalid bound axis: -1. Note, negative indexing is not supported for "
+                            "axis-wise bounds.");
+    }
+
+    GIVEN("(2x3)-Binary node with axis-wise bounds on the invalid axis 2") {
+        BoundAxisInfo bound_axis{2, std::vector<BoundAxisOperator>{Equal},
+                                 std::vector<double>{1.0}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::BinaryNode>(
+                                    std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                    std::nullopt, std::vector<BoundAxisInfo>{bound_axis}),
+                            "Invalid bound axis: 2. Note, negative indexing is not supported for "
+                            "axis-wise bounds.");
+    }
+
+    GIVEN("(2x3)-Binary node with axis-wise bounds on axis: 1 with too many operators.") {
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual, Equal, Equal, Equal},
+                                 std::vector<double>{1.0}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<dwave::optimization::BinaryNode>(
+                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
+                        std::vector<BoundAxisInfo>{bound_axis}),
+                "Invalid number of axis-wise operators along axis: 1 given axis shape: 3");
+    }
+
+    GIVEN("(2x3)-Binary node with axis-wise bounds on axis: 1 with too few operators.") {
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual, Equal},
+                                 std::vector<double>{1.0}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<dwave::optimization::BinaryNode>(
+                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
+                        std::vector<BoundAxisInfo>{bound_axis}),
+                "Invalid number of axis-wise operators along axis: 1 given axis shape: 3");
+    }
+
+    GIVEN("(2x3)-Binary node with axis-wise bounds on axis: 1 with too many bounds.") {
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual},
+                                 std::vector<double>{1.0, 2.0, 3.0, 4.0}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::BinaryNode>(
+                                    std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                    std::nullopt, std::vector<BoundAxisInfo>{bound_axis}),
+                            "Invalid number of axis-wise bounds along axis: 1 given axis shape: 3");
+    }
+
+    GIVEN("(2x3)-Binary node with axis-wise bounds on axis: 1 with too few bounds.") {
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual},
+                                 std::vector<double>{1.0, 2.0}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::BinaryNode>(
+                                    std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                    std::nullopt, std::vector<BoundAxisInfo>{bound_axis}),
+                            "Invalid number of axis-wise bounds along axis: 1 given axis shape: 3");
+    }
+
+    GIVEN("(2x3)-Binary node with duplicate axis-wise bounds on axis: 1") {
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{Equal},
+                                 std::vector<double>{1.0}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<dwave::optimization::BinaryNode>(
+                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
+                        std::vector<BoundAxisInfo>{bound_axis, bound_axis}),
+                "Cannot define multiple axis-wise bounds for a single axis.");
+    }
+
+    GIVEN("(2x3)-Binary node with axis-wise bounds on axes: 0 and 1") {
+        BoundAxisInfo bound_axis_0{0, std::vector<BoundAxisOperator>{LessEqual},
+                                   std::vector<double>{1.0}};
+        BoundAxisInfo bound_axis_1{1, std::vector<BoundAxisOperator>{LessEqual},
+                                   std::vector<double>{1.0}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<dwave::optimization::BinaryNode>(
+                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
+                        std::vector<BoundAxisInfo>{bound_axis_0, bound_axis_1}),
+                "Axis-wise bounds are supported for at most one axis.");
+    }
+
+    GIVEN("(2x3x4)-Binary node with an axis-wise bound on axis: 1") {
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual},
+                                 std::vector<double>{1.0, 1.0, 0.0}};
+
+        auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
+                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
+                std::vector<BoundAxisInfo>{bound_axis});
+        THEN("Axis wise bound is correct") {
+            CHECK(bnode_ptr->num_bound_axes() == 1.0);
+            const BoundAxisInfo* bnode_bound_axis_ptr = bnode_ptr->get_ith_bound_axis_info(0);
+            CHECK(bound_axis.axis == bnode_bound_axis_ptr->axis);
+            CHECK_THAT(bound_axis.operators, RangeEquals(bnode_bound_axis_ptr->operators));
+            CHECK_THAT(bound_axis.bounds, RangeEquals(bnode_bound_axis_ptr->bounds));
+            CHECK_THROWS_WITH(bnode_ptr->get_ith_bound_axis_info(1),
+                              "Invalid ith bound axis requested: 1");
+            CHECK_THROWS_WITH(bnode_ptr->get_ith_bound_axis_info(-1),
+                              "Invalid ith bound axis requested: -1");
+        }
     }
 }
 
