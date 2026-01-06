@@ -21,3 +21,6 @@ fixes:
   - |
     Fix ``BroadcastToNode::contiguous()`` method, previously it would always report
     that the node was not contiguous.
+  - |
+    Provide a meaningful error message when attempting to make a dynamic
+    ``ConstantNode`` at the C++ level.
