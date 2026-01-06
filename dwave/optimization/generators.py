@@ -16,8 +16,8 @@
 
 from __future__ import annotations
 
-import itertools
 import functools
+import itertools
 import typing
 
 import numpy as np
@@ -1057,7 +1057,7 @@ def predict(estimator, X: ArraySymbol) -> ArraySymbol:
     """
     raise NotImplementedError(
         "predict() is not defined for the given estimator type."
-        " If you are trying to use an MLPClassifier or MLPRegressor,"
+        " If you are trying to use a MLPClassifier or MLPRegressor,"
         "you must have sckit-learn installed."
     )
 
@@ -1075,7 +1075,7 @@ else:
         activation = _mlp_regressor_predict(clf, X)
 
         # "multiclass" is the other option that we might want to support, for
-        # non-binary classification. However, we need SoftMax symbol for that
+        # non-binary classification. However, we need ArgMax symbol for that
         # which we don't (as of Jan 2026) have.
         # See https://github.com/dwavesystems/dwave-optimization/issues/452
         if clf._label_binarizer.y_type_ == "binary":
@@ -1116,13 +1116,15 @@ else:
         try:
             hidden_activation = ACTIVATIONS[regr.activation]
         except KeyError:
-            raise NotImplementedError("unsupported activation type")
+            raise NotImplementedError(
+                f"unsupported activation: {regr.activation}"
+            )
 
         try:
             output_activation = ACTIVATIONS[regr.out_activation_]
         except KeyError:
             raise NotImplementedError(
-                f"unsupported output activation : {regr.out_activation_}"
+                f"unsupported output activation: {regr.out_activation_}"
             )
 
         for i in range(regr.n_layers_ - 1):
