@@ -47,7 +47,6 @@ class BoundAxisInfo {
     /// (length of vector is equal to the number of slices).
     const std::vector<double> bounds;
 
- private:
     /// Obtain the bound associated with a given slice along bound axis.
     double get_bound(const ssize_t slice) const;
 
@@ -136,27 +135,33 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // in a given index.
     void clip_and_set_value(State& state, ssize_t index, double value) const;
 
-    /// The number of axes with axis-wise bounds.
-    ssize_t num_bound_axes() const;
+    /// Return pointer to the vector of axis-wise bounds
+    const std::vector<BoundAxisInfo>& axis_wise_bounds() const;
 
-    /// Return the bound information for the ith bound axis
-    const BoundAxisInfo* get_ith_bound_axis_info(const ssize_t i) const;
+    // Return a pointer to the vector containing the bound axis sums
+    const std::vector<std::vector<double>>& bound_axis_sums(State& state) const;
 
  protected:
     explicit NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,
                         std::vector<double> upper_bound,
                         std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
 
-    // Return truth statement: 'value is valid in a given index'.
+    /// Return truth statement: 'value is valid in a given index'.
     virtual bool is_valid(ssize_t index, double value) const = 0;
 
-    // Default value in a given index.
+    /// Default value in a given index.
     virtual double default_value(ssize_t index) const = 0;
 
+    /// Update the running bound axis sums where `index` is changed by
+    /// `value_change` in a given state.
+    void update_bound_axis_slice_sums(State& state, const ssize_t index,
+                                      const double value_change) const;
+
+    /// Statelss global minimum and maximum of the values stored in NumberNode.
     double min_;
     double max_;
 
-    // Stateless index-wise upper and lower bounds
+    /// Stateless index-wise upper and lower bounds.
     std::vector<double> lower_bounds_;
     std::vector<double> upper_bounds_;
 
