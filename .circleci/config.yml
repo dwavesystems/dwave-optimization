@@ -15,7 +15,7 @@ commands:
           name: run cibuildwheel
           shell: bash -eo pipefail
           command: |
-            python -m pip install --user cibuildwheel==<< parameters.cibw-version >>
+            python -m pip install --user cibuildwheel[uv]==<< parameters.cibw-version >>
             python -m cibuildwheel --output-dir dist
 
       - store_artifacts: &store-artifacts
