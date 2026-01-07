@@ -31,7 +31,7 @@ struct IsInNodeSetData {
 };
 
 struct IsInNodeDataHelper_ {
-    IsInNodeDataHelper_(std::vector<double> element, std::vector<double> test_elements) {
+    IsInNodeDataHelper_(std::vector<double>&& element, std::vector<double>&& test_elements) {
         element_isin.reserve(element.size());
 
         for (const double& val : test_elements) {
@@ -50,7 +50,7 @@ struct IsInNodeDataHelper_ {
 };
 
 struct IsInNodeData : public ArrayNodeStateData {
-    IsInNodeData(std::vector<double> element, std::vector<double> test_elements)
+    IsInNodeData(std::vector<double>&& element, std::vector<double>&& test_elements)
             : IsInNodeData(IsInNodeDataHelper_(std::move(element), std::move(test_elements))) {}
     IsInNodeData(IsInNodeDataHelper_&& helper)
             : ArrayNodeStateData(std::move(helper.element_isin)),

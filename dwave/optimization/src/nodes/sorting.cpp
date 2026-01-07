@@ -23,7 +23,7 @@ namespace dwave::optimization {
 /// ArgSortNode
 
 struct ArgSortNodeDataHelper_ {
-    ArgSortNodeDataHelper_(std::vector<double> values) {
+    ArgSortNodeDataHelper_(std::vector<double>&& values) {
         for (ssize_t index = 0, stop = values.size(); index < stop; index++) {
             order.emplace(values[index], index);
         }
@@ -38,7 +38,7 @@ struct ArgSortNodeDataHelper_ {
 };
 
 struct ArgSortNodeData : public ArrayNodeStateData {
-    ArgSortNodeData(std::vector<double> values)
+    ArgSortNodeData(std::vector<double>&& values)
             : ArgSortNodeData(ArgSortNodeDataHelper_(std::move(values))) {}
     ArgSortNodeData(ArgSortNodeDataHelper_&& helper)
             : ArrayNodeStateData(std::move(helper.indices)), order(std::move(helper.order)) {}
