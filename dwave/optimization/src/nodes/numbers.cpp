@@ -56,7 +56,7 @@ void NumberNode::initialize_state(State& state) const {
     for (ssize_t i = 0, stop = this->size(); i < stop; ++i) {
         values.push_back(default_value(i));
     }
-    initialize_state(state, values);
+    initialize_state(state, std::move(values));
 }
 
 void NumberNode::commit(State& state) const noexcept {
@@ -86,6 +86,17 @@ double NumberNode::get_value(State& state, ssize_t i) const {
 bool NumberNode::clip_and_set_value(State& state, ssize_t index, double value) const {
     value = std::clamp(value, lower_bound(index), upper_bound(index));
     return data_ptr<ArrayNodeStateData>(state)->set(index, value);
+}
+
+NumberNode::NumberNode(std::span<const ssize_t> shape, double minimum, double maximum)
+        : ArrayOutputMixin(shape), min_(minimum), max_(maximum) {
+    if (max_ < min_) {
+        throw std::invalid_argument("Invalid range for number array provided");
+    }
+
+    if ((shape.size() > 0) && (shape[0] < 0)) {
+        throw std::invalid_argument("NumberNode cannot have dynamic size.");
+    }
 }
 
 // Integer Node ***************************************************************
