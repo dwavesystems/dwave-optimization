@@ -114,6 +114,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         if (max_ < min_) {
             throw std::invalid_argument("Invalid range for number array provided");
         }
+
+        if ((shape.size() > 0) && (shape[0] < 0)) {
+            throw std::invalid_argument("NumberNode cannot have dynamic size.");
+        }
     }
 
     // Return truth statement: 'value is within the bounds of a given index'
