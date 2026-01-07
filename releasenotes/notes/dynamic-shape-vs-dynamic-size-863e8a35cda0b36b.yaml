@@ -21,6 +21,8 @@ fixes:
   - |
     Fix reductions over empty dynamic arrays.
   - |
+    Fix basic indexing that results in empty dynamic arrays.
+  - |
     Fix ``BroadcastToNode::contiguous()`` method, previously it would always report
     that the node was not contiguous.
   - |

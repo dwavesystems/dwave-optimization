@@ -1742,7 +1742,7 @@ void BasicIndexingNode::revert(State& state) const {
 }
 
 ssize_t BasicIndexingNode::size(const State& state) const {
-    if (size_ >= 0) return size_;
+    if (not dynamic()) return size_;
 
     return Array::shape_to_size(ndim_, data_ptr<BasicIndexingNodeData>(state)->dynamic_shape.get());
 }
@@ -1757,7 +1757,7 @@ ssize_t BasicIndexingNode::size_diff(const State& state) const {
 }
 
 std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
-    if (size_ >= 0) return BasicIndexingNode::shape();
+    if (not dynamic()) return BasicIndexingNode::shape();
 
     return std::span<const ssize_t>(data_ptr<BasicIndexingNodeData>(state)->dynamic_shape.get(),
                                     ndim_);

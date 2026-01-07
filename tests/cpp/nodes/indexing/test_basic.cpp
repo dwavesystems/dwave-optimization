@@ -19,6 +19,7 @@
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
+#include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
 
@@ -703,6 +704,28 @@ TEST_CASE("BasicIndexingNode") {
                 }
             }
         }
+    }
+
+    GIVEN("x = set(10).reshape(-1, 1); y = x[:, :0]") {
+        auto s_ptr = graph.emplace_node<SetNode>(10);
+        auto x_ptr = graph.emplace_node<ReshapeNode>(s_ptr, std::vector{-1, 1});
+        auto y_ptr = graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(), Slice(0, 0));
+
+        CHECK(y_ptr->size() == 0);
+        CHECK_THAT(y_ptr->shape(), RangeEquals({-1, 0}));
+
+        auto state = graph.empty_state();
+        s_ptr->initialize_state(state, {0, 1, 2});
+        graph.initialize_state(state);
+
+        CHECK(y_ptr->size(state) == 0);
+        CHECK_THAT(y_ptr->shape(state), RangeEquals({3, 0}));
+
+        s_ptr->assign(state, {2, 1, 0, 3, 7});
+        graph.propagate(state);
+
+        CHECK(y_ptr->size(state) == 0);
+        CHECK_THAT(y_ptr->shape(state), RangeEquals({5, 0}));
     }
 
     GIVEN("x = Set(10) and several slices and expected outputs") {
