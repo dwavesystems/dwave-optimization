@@ -109,16 +109,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     bool clip_and_set_value(State& state, ssize_t index, double value) const;
 
  protected:
-    explicit NumberNode(std::span<const ssize_t> shape, double minimum, double maximum)
-            : ArrayOutputMixin(shape), min_(minimum), max_(maximum) {
-        if (max_ < min_) {
-            throw std::invalid_argument("Invalid range for number array provided");
-        }
-
-        if ((shape.size() > 0) && (shape[0] < 0)) {
-            throw std::invalid_argument("NumberNode cannot have dynamic size.");
-        }
-    }
+    explicit NumberNode(std::span<const ssize_t> shape, double minimum, double maximum);
 
     // Return truth statement: 'value is within the bounds of a given index'
     virtual bool is_valid(ssize_t index, double value) const = 0;
