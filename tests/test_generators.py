@@ -39,6 +39,11 @@ except ImportError:
 import dwave.optimization
 from dwave.optimization.generators import _require
 
+if np.version.release:
+    numpy_version = tuple(map(int, np.version.short_version.split(".")))
+else:
+    numpy_version = (0, 0, 0)  # for simplicity
+
 
 class Test_require(unittest.TestCase):
     # tests for the private _require function
@@ -936,6 +941,7 @@ class TestKnapsack(unittest.TestCase):
 
 
 @unittest.skipUnless(sklearn, "no scikit-learn installed")
+@unittest.skipUnless(numpy_version >= (2, 3, 0), "https://github.com/numpy/numpy/issues/28687")
 class TestPredict(unittest.TestCase):
     def check_predict(self, estimator, X_test):
         model = dwave.optimization.Model()
