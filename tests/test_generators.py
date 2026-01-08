@@ -12,6 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from __future__ import annotations
+
+import functools
 import unittest
 import warnings
 
@@ -27,6 +30,11 @@ except ImportError:
     dimod_found = False
 else:
     dimod_found = True
+
+try:
+    import sklearn
+except ImportError:
+    sklearn = None
 
 import dwave.optimization
 from dwave.optimization.generators import _require
@@ -925,6 +933,183 @@ class TestKnapsack(unittest.TestCase):
         # a few smoke test checks
         self.assertEqual(model.num_symbols(), copy.num_symbols())
         self.assertEqual(model.state_size(), copy.state_size())
+
+
+@unittest.skipUnless(sklearn, "no scikit-learn installed")
+class TestPredict(unittest.TestCase):
+    def check_predict(self, estimator, X_test):
+        model = dwave.optimization.Model()
+        X_symbol = model.input(X_test.shape, lower_bound=X_test.min(), upper_bound=X_test.max())
+        y_symbol = dwave.optimization.generators.predict(estimator, X_symbol)
+
+        model.states.resize(1)
+        with model.lock():
+            X_symbol.set_state(0, X_test)
+            np.testing.assert_array_almost_equal(y_symbol.state(), estimator.predict(X_test))
+
+    def classifier(
+        self,
+        X_shape: tuple[int, int],
+        *,
+        activation: str = "relu",  # match MLPClassifier default
+        n_classes: int = 2,  # match make_classification default
+        seed: int = 42,
+    ) -> tuple[sklearn.neural_network.MLPClassifier, np.ndarray]:
+        """Create a classifier object we can use in testing."""
+
+        if n_classes == 2:
+            n_informative = 2
+        else:
+            n_informative = int(np.ceil(np.log2(2 * n_classes)))
+
+        X_train, X_test, y_train, _ = sklearn.model_selection.train_test_split(
+            *sklearn.datasets.make_classification(
+                n_informative=n_informative,
+                n_classes=n_classes,
+                n_samples=X_shape[0] * 4,
+                n_features=X_shape[1],
+                random_state=seed,
+            ),
+            test_size=.25,
+            random_state=seed,
+        )
+
+        clf = sklearn.neural_network.MLPClassifier(
+            activation=activation,
+            max_iter=25,  # to keep the test time low
+            random_state=seed,
+        )
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", sklearn.exceptions.ConvergenceWarning)
+            clf.fit(X_train, y_train)
+
+        return clf, X_test
+
+    def regressor(
+        self,
+        X_shape: tuple[int, int],
+        *,
+        activation: str = "relu",  # match MLPRegressor default
+        seed: int = 42,
+    ) -> tuple[sklearn.neural_network.MLPRegressor, np.ndarray]:
+        """Create a regressor object we can use for testing"""
+        X_train, X_test, y_train, _ = sklearn.model_selection.train_test_split(
+            *sklearn.datasets.make_regression(
+                n_samples=X_shape[0] * 4,
+                n_features=X_shape[1],
+                random_state=seed,
+            ),
+            test_size=.25,
+            random_state=seed,
+        )
+
+        clf = sklearn.neural_network.MLPRegressor(
+            activation=activation,
+            max_iter=25,  # to keep the test time low
+            random_state=seed,
+        )
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", sklearn.exceptions.ConvergenceWarning)
+            clf.fit(X_train, y_train)
+
+        return clf, X_test
+
+    def test_activations(self):
+        # The full list as of Jan 2026, unfortunately it's not algorithmically
+        # exposed with a public method
+        for activation in ("identity", "logistic", "tanh", "relu"):
+            with self.subTest(estimator="classifier", activation=activation):
+                clf, X_test = self.classifier((50, 4), activation=activation, seed=hash(activation) % 1000)
+                self.check_predict(clf, X_test)
+
+        for activation in ("identity", "logistic", "tanh", "relu"):
+            with self.subTest(estimator="regressor", activation=activation):
+                regr, X_test = self.regressor((50, 4), activation=activation, seed=hash(activation) % 1000)
+                self.check_predict(regr, X_test)
+
+    def test_doctest(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", sklearn.exceptions.ConvergenceWarning)
+
+            # The example from the predict() docstring because we don't cover it
+            # in our usual doctests. Please keep them in sync!
+
+            import itertools
+
+            import numpy as np
+
+            from dwave.optimization import Model
+            from dwave.optimization.generators import predict
+            from sklearn.neural_network import MLPRegressor
+
+            # The values are know exactly
+            weights = np.asarray([12, 1, 1, 2, 4])
+
+            # But rather than the values being known directly, we only have observations
+            # with noise
+            def observations():
+                secret_values = np.asarray([4, 2, 1, 2, 10])
+
+                rng = np.random.default_rng(42)
+                X = rng.integers(low=0, high=2, size=(20, 5))
+
+                y = X @ secret_values + rng.normal(scale=.5, size=20)
+
+                return X, y
+
+            X, y = observations()
+
+            # We can now fit a multi-layer perceptron estimator to our observations. The
+            # estimator, given a collection of purchases, estimates the value
+            regr = MLPRegressor(max_iter=2000).fit(X, y)
+
+            # Now we can use that estimator to construct our knapsack problem
+            model = Model()
+
+            items = model.binary(shape=(1, 5))
+
+            model.minimize(-predict(regr, items))
+            model.add_constraint(items @ weights <= 15)
+
+            # Finally, we can solve it exactly by trying all possible solutions, and check
+            # that our solution is the correct one
+            model.lock()
+            model.states.resize(1)
+
+            best_value = float("inf")
+            best_state = None
+            for state in itertools.product((0, 1), repeat=5):
+                items.set_state(0, state)
+
+                if model.feasible() and model.objective.state() < best_value:
+                    best_value = model.objective.state()
+                    best_state = items.state()
+
+            assert np.array_equal(best_state, [[0, 1, 1, 1, 1]])
+
+    def test_exceptions(self):
+        with self.subTest("wrong number of features"):
+            clf, X_test = self.classifier((10, 5))
+            model = dwave.optimization.Model()
+            X_symbol = model.input((3, 6))  # wrong number of features
+            with self.assertRaises(ValueError):
+                dwave.optimization.generators.predict(clf, X_symbol)
+
+        with self.subTest("not fitted"):
+            model = dwave.optimization.Model()
+            X_symbol = model.input((3, 6))
+            with self.assertRaises(sklearn.exceptions.NotFittedError):
+                dwave.optimization.generators.predict(sklearn.neural_network.MLPClassifier(), X_symbol)
+
+    def test_multiclassifier(self):
+        # Multi-classifiers are not (yet) supported
+        clf, X_test = self.classifier((50, 5), n_classes=3)
+        model = dwave.optimization.Model()
+        X_symbol = model.input(X_test.shape, lower_bound=X_test.min(), upper_bound=X_test.max())
+        with self.assertRaises(NotImplementedError):
+            dwave.optimization.generators.predict(clf, X_symbol)
 
 
 class TestQuadraticAssignment(unittest.TestCase):

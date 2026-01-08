@@ -156,7 +156,7 @@ jobs:
         type: string
       dependency-versions:
         type: string
-      only-binary:
+      optional-dependency-versions:
         type: string
 
     docker:
@@ -167,15 +167,23 @@ jobs:
       - attach_workspace:
           at: dist
       - run:
-          name: install
+          name: install package with dependencies
           command: |
             python -m venv env
             . env/bin/activate
             pip install pip --upgrade
-            pip install << parameters.dependency-versions >> --upgrade --only-binary << parameters.only-binary >>
+            pip install --upgrade --only-binary=:all: \
+              << parameters.dependency-versions >>
             pip install dwave-optimization --no-index -f dist/ --no-deps --force-reinstall
       - run: *run-tests
-
+      - run:
+          name: install optional dependencies
+          command: |
+            . env/bin/activate
+            pip install --upgrade --only-binary=:all: \
+              << parameters.dependency-versions >> \
+              << parameters.optional-dependency-versions >> \
+      - run: *run-tests
 
   cpp-gcc:
     parameters:
@@ -365,14 +373,14 @@ workflows:
           name: python-dependencies-oldest
           python-version: "3.10"
           dependency-versions: numpy==1.21.3
-          only-binary: numpy
+          optional-dependency-versions: dimod==0.12.0 scikit-learn==1.6.0
           requires:
             - python-linux
       - python-dependencies:
           name: python-dependencies-latest
           python-version: "3.14"
           dependency-versions: numpy
-          only-binary: numpy
+          optional-dependency-versions: dimod scikit-learn
           requires:
             - python-linux
       - cpp-gcc:

@@ -37,6 +37,12 @@ dependencies = [
     "numpy>=1.21.3",  # oldest that supports Python 3.10
 ]
 
+[project.optional-dependencies]
+all = [
+    "dimod>=0.12.0",  # oldest minor that passes tests
+    "scikit-learn>=1.6.0",  # oldest minor that passes tests
+]
+
 [project.readme]
 file = "README.rst"
 content-type = "text/x-rst"
@@ -81,6 +87,8 @@ docs = [
 ]
 test = [
     "dimod==0.12.21",
+    "scikit-learn==1.7.2; python_version<'3.11'",   # last that supports 3.10
+    "scikit-learn==1.8.0; python_version>='3.11'",  # first that supports 3.14t
 ]
 
 [tool.cibuildwheel]
