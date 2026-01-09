@@ -1222,7 +1222,7 @@ BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser
           start_(parser.start),
           size_(Array::shape_to_size(ndim_, shape_.get())),
           axis0_slice_(parser.axis0_slice),
-          contiguous_(Array::is_contiguous(ndim_, shape_.get(), strides_.get())),
+          contiguous_(is_contiguous(ndim_, shape_.get(), strides_.get())),
           values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()),
           sizeinfo_(basicindexing_calculate_sizeinfo(this, array_ptr_, axis0_slice_)) {
     if (!contiguous_ && dynamic() &&
@@ -1742,7 +1742,7 @@ void BasicIndexingNode::revert(State& state) const {
 }
 
 ssize_t BasicIndexingNode::size(const State& state) const {
-    if (size_ >= 0) return size_;
+    if (not dynamic()) return size_;
 
     return Array::shape_to_size(ndim_, data_ptr<BasicIndexingNodeData>(state)->dynamic_shape.get());
 }
@@ -1757,7 +1757,7 @@ ssize_t BasicIndexingNode::size_diff(const State& state) const {
 }
 
 std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
-    if (size_ >= 0) return BasicIndexingNode::shape();
+    if (not dynamic()) return BasicIndexingNode::shape();
 
     return std::span<const ssize_t>(data_ptr<BasicIndexingNodeData>(state)->dynamic_shape.get(),
                                     ndim_);

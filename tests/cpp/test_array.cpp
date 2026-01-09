@@ -511,6 +511,16 @@ TEST_CASE("Test broadcast_shapes()") {
     SECTION("(1,2) x (-1,1) -> (-1,2)") {
         CHECK_THAT(broadcast_shapes({1, 2}, {-1, 1}), RangeEquals({-1, 2}));
     }
+    SECTION("() x (0,) -> (0,)") { CHECK_THAT(broadcast_shapes({}, {0}), RangeEquals({0})); }
+    SECTION("(-1,1) x (1,0) -> (3,0)") {
+        CHECK_THAT(broadcast_shapes({-1, 1}, {1, 0}), RangeEquals({-1, 0}));
+    }
+    SECTION("(3,1) x (1,0) -> (3,0)") {
+        CHECK_THAT(broadcast_shapes({3, 1}, {1, 0}), RangeEquals({3, 0}));
+    }
+    SECTION("(3,1) x (0,1,0) -> (0,3,0)") {
+        CHECK_THAT(broadcast_shapes({3, 1}, {0, 1, 0}), RangeEquals({0, 3, 0}));
+    }
     SECTION("(-1,2) x (-1,1) -> (-1,2)") {
         CHECK_THAT(broadcast_shapes({-1, 2}, {-1, 1}), RangeEquals({-1, 2}));
     }

@@ -129,6 +129,20 @@ TEST_CASE("ConstantNode") {
             }
         }
     }
+
+    SECTION("exception - dynamic shape") {
+        std::vector<double> values = {30, 10};
+        REQUIRE_THROWS_AS(graph.emplace_node<ConstantNode>(values.data(),
+                                                           std::initializer_list<ssize_t>{-1, 2}),
+                          std::invalid_argument);
+    }
+
+    SECTION("exception - dynamic, size 0 shape") {
+        std::vector<double> values{};
+        REQUIRE_THROWS_AS(graph.emplace_node<ConstantNode>(values.data(),
+                                                           std::initializer_list<ssize_t>{-1, 0}),
+                          std::invalid_argument);
+    }
 }
 
 }  // namespace dwave::optimization

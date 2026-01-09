@@ -1323,6 +1323,115 @@ TEST_CASE("SumNode") {
         }
     }
 
+    GIVEN("x = sum(broadcast_to(set(10).reshape(-1, 1), (-1, 0)))") {
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto res_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::vector<ssize_t>{-1, 1});
+        auto arr_ptr = graph.emplace_node<BroadcastToNode>(res_ptr, std::vector<ssize_t>{-1, 0});
+        CHECK_THROWS(graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{}));  // no init
+    }
+
+    GIVEN("x = sum(broadcast_to(set(10).reshape(-1, 1), (-1, 0)), initial=1.5)") {
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto res_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::vector<ssize_t>{-1, 1});
+        auto arr_ptr = graph.emplace_node<BroadcastToNode>(res_ptr, std::vector<ssize_t>{-1, 0});
+        auto sum_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{}, 1.5);
+        graph.emplace_node<ArrayValidationNode>(sum_ptr);
+
+        // shape is as expected
+
+        CHECK(sum_ptr->size() == 1);
+        CHECK_THAT(sum_ptr->shape(), RangeEquals(std::vector<ssize_t>{}));
+
+        // as are the array values
+
+        auto state = graph.initialize_state();
+
+        CHECK(sum_ptr->size(state) == 1);
+        CHECK_THAT(sum_ptr->shape(state), RangeEquals(std::vector<ssize_t>{}));
+        CHECK_THAT(sum_ptr->view(state), RangeEquals({1.5}));
+
+        // value never changes, no matter what we do to the set
+
+        set_ptr->assign(state, {0, 1, 4, 5});
+        graph.propagate(state);
+
+        CHECK(sum_ptr->size(state) == 1);
+        CHECK_THAT(sum_ptr->shape(state), RangeEquals(std::vector<ssize_t>{}));
+        CHECK_THAT(sum_ptr->view(state), RangeEquals({1.5}));
+    }
+
+    GIVEN("x = sum(broadcast_to(set(10).reshape(-1, 1), (-1, 0)), axis=0)") {
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto res_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::vector<ssize_t>{-1, 1});
+        auto arr_ptr = graph.emplace_node<BroadcastToNode>(res_ptr, std::vector<ssize_t>{-1, 0});
+        CHECK_THROWS(graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{}));  // no init
+    }
+
+    GIVEN("x = sum(broadcast_to(set(10).reshape(-1, 1), (-1, 0)), axis=0, initial=3)") {
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto res_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::vector<ssize_t>{-1, 1});
+        auto arr_ptr = graph.emplace_node<BroadcastToNode>(res_ptr, std::vector<ssize_t>{-1, 0});
+        auto sum_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{0}, 3);
+        graph.emplace_node<ArrayValidationNode>(sum_ptr);
+
+        // shape is as expected
+
+        CHECK(sum_ptr->size() == 0);
+        CHECK_THAT(sum_ptr->shape(), RangeEquals({0}));
+
+        // as are the array values
+
+        auto state = graph.initialize_state();
+
+        CHECK(sum_ptr->size(state) == 0);
+        CHECK_THAT(sum_ptr->shape(state), RangeEquals({0}));
+
+        // value never changes, no matter what we do to the set
+
+        set_ptr->assign(state, {0, 1, 4, 5});
+        graph.propagate(state);
+
+        CHECK(sum_ptr->size(state) == 0);
+        CHECK_THAT(sum_ptr->shape(state), RangeEquals({0}));
+    }
+
+    GIVEN("x = sum(broadcast_to(set(10).reshape(-1, 1), (-1, 0)), axis=1, initial=3)") {
+        auto graph = Graph();
+        auto set_ptr = graph.emplace_node<SetNode>(10);
+        auto res_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::vector<ssize_t>{-1, 1});
+        auto arr_ptr = graph.emplace_node<BroadcastToNode>(res_ptr, std::vector<ssize_t>{-1, 0});
+        auto sum_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{1}, 3);
+        graph.emplace_node<ArrayValidationNode>(sum_ptr);
+
+        // shape is as expected
+
+        CHECK(sum_ptr->size() == -1);
+        CHECK_THAT(sum_ptr->shape(), RangeEquals({-1}));
+
+        // as are the array values
+
+        auto state = graph.empty_state();
+        set_ptr->initialize_state(state, {0, 2});
+        graph.initialize_state(state);
+
+        CHECK(sum_ptr->size(state) == 2);
+        CHECK_THAT(sum_ptr->shape(state), RangeEquals({2}));
+        CHECK_THAT(sum_ptr->view(state), RangeEquals({3, 3}));
+
+        // changing the size of the set changes the number of values
+
+        set_ptr->assign(state, {0, 1, 4, 5});
+        graph.propagate(state);
+
+        CHECK(sum_ptr->size(state) == 4);
+        CHECK_THAT(sum_ptr->shape(state), RangeEquals({4}));
+        CHECK_THAT(sum_ptr->view(state), RangeEquals({3, 3, 3, 3}));
+    }
+
     GIVEN("Dynamic array of shape (-1, 2) with min/max of 1/3 on first dim, and a sum across the second dim") {
         auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 2}, 0.0, 10.0, true, 2, 6);
         auto sum_ptr = graph.emplace_node<SumNode>(x_ptr, std::vector<ssize_t>{1});

@@ -1,0 +1,30 @@
+---
+features:
+  - |
+    Allow array symbols to have a state-dependent shape while not having a
+    state-dependent size. For example, an array with shape ``(n, 0)`` will
+    always have a size of ``0``, but the shape is state-dependent.
+
+    Arrays with a state-dependent size always have a state-depenent shape.
+  - Add C++ ``is_contiguous()`` function.
+upgrade:
+  - |
+    Change the definition of ``ArrayNode::dynamic()`` to return ``true`` if
+    ``ArrayNode::shape()[0] < 0``. That is, if the shape is state-dependent.
+    Previously ``ArrayNode::dynamic()`` returned true if the size was
+    state-dependent.
+  - Remove C++ ``Array::is_contiguous()`` protected method.
+fixes:
+  - |
+    Support broadcasting arrays to a shape with a ``0`` in one or more dimensions
+    with the ``BroadcastTo`` symbol.
+  - |
+    Fix reductions over empty dynamic arrays.
+  - |
+    Fix basic indexing that results in empty dynamic arrays.
+  - |
+    Fix ``BroadcastToNode::contiguous()`` method, previously it would always report
+    that the node was not contiguous.
+  - |
+    Provide a meaningful error message when attempting to make a dynamic
+    ``ConstantNode`` at the C++ level.

@@ -41,8 +41,20 @@ void check_shape(const std::span<const ssize_t>& dynamic_shape,
 }
 
 ArrayValidationNode::ArrayValidationNode(ArrayNode* node_ptr) : array_ptr(node_ptr) {
+    // shape and strides match the ndim
     assert(array_ptr->ndim() == static_cast<ssize_t>(array_ptr->shape().size()));
-    assert(array_ptr->dynamic() == (array_ptr->size() == -1));
+    assert(array_ptr->ndim() == static_cast<ssize_t>(array_ptr->strides().size()));
+
+    // dynamic() <=> shape[0] < 0
+    assert(array_ptr->dynamic() == (array_ptr->shape().size() && array_ptr->shape()[0] == -1));
+    // size() < 0 => shape[0] < 0 (if the size is dynamic, then the shape must be)
+    assert(array_ptr->size() >= 0 || array_ptr->dynamic());
+    // shape[0] < 0 => size() <= 0  (if the shape is dynamic, then the size is 0 or -1)
+    assert(!array_ptr->dynamic() || array_ptr->size() <= 0);
+
+    // Check that the node reports contiguity correctly
+    assert(array_ptr->contiguous() == is_contiguous(array_ptr->ndim(), array_ptr->shape().data(), array_ptr->strides().data()));
+
     assert([&]() {
         node_ptr->sizeinfo().substitute(5);
         return true;

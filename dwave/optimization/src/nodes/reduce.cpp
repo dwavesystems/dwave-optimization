@@ -474,6 +474,17 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
     static_assert(decltype(ufunc)::associative);  // otherwise this doesn't make sense
     static_assert(decltype(ufunc)::commutative);  // otherwise this doesn't make sense
 
+    // Handle the case where we're reducing over something that's always empty
+    if (array_ptr->size() == 0) {
+        if (initial) {
+            auto init = typename decltype(ufunc)::result_type(*initial);
+            return ValuesInfo(init, init, is_integer(init));
+        }
+        throw std::invalid_argument(
+                "cannot perform a reduction operation with no "
+                "identity on an array that is always empty");
+    }
+
     // Get the bounds for our predecessor
     const auto array_bounds = ValuesInfo(array_ptr);
 
@@ -519,7 +530,7 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
     // the reduction space
     if (axes.size()) {
         for (const auto& dim_size : drop_axes(array_ptr->shape(), axes)) {
-            assert(dim_size >= 0);
+            assert(dim_size > 0);
 
             min_size /= dim_size;
             if (max_size) *max_size /= dim_size;
@@ -609,12 +620,14 @@ void ReduceNode<BinaryOp>::initialize_state(State& state) const {
     std::vector<typename ReduceNodeData<BinaryOp>::reduction_type> reductions;
 
     if (this->dynamic()) {
-        const ssize_t subspace_size = product(keep_axes(array_ptr_->shape(state), axes_));
-        const ssize_t size = array_ptr_->size(state) / subspace_size;
+        assert(axes_.size());  // can't be empty if we're dynamic
+
+        const ssize_t size = product(drop_axes(array_ptr_->shape(state), axes_));
 
         for (ssize_t index = 0; index < size; ++index) {
             reductions.emplace_back(reduce_(state, index));
         }
+
         emplace_data_ptr<ReduceNodeData<BinaryOp>>(state, std::move(reductions), this->shape());
     } else {
         for (ssize_t index = 0; index < this->size(); ++index) {
@@ -727,6 +740,23 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
         return;
     }
 
+    // Another edge case is when our predecessor is a dynamic array with size 0
+    // and we're also dynamic
+    if (this->dynamic() and array_ptr_->size() == 0) {
+        const ssize_t size = this->size(state);
+        const ssize_t new_size = product(drop_axes(array_ptr_->shape(state), axes_));
+
+        // add/remove the relevant reductions
+        for (ssize_t i = size; i < new_size; ++i) state_ptr->append_reduction(*initial);
+        for (ssize_t i = size; i > new_size; --i) state_ptr->pop_reduction();
+
+        state_ptr->prepare_diff([&](ssize_t index) {
+            assert(false);  // should never be called because our reduction space is empty
+            return this->reduce_(state, index);
+        });
+        return;
+    }
+
     // Alas, we're in the more complex case where we have several axis to reduce over
 
     if (this->dynamic() and array_ptr_->size_diff(state) > 0 and initial) {
@@ -737,7 +767,7 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
         const ssize_t subspace_size = std::reduce(subspace_shape.begin(), subspace_shape.end(), 1,
                                                   std::multiplies<ssize_t>());
         for (ssize_t i = 0, stop = size_diff / subspace_size; i < stop; ++i) {
-            state_ptr->append_reduction(initial.value());
+            state_ptr->append_reduction(*initial);
         }
     }
 
@@ -782,6 +812,12 @@ auto ReduceNode<BinaryOp>::reduce_(const State& state, const ssize_t index) cons
     }
 
     const auto subspace_shape = keep_axes(array_ptr_->shape(state), axes_);  // state-dependent!
+
+    // if the subspace has size 0, we just return the initial value (which must be present)
+    if (std::ranges::any_of(subspace_shape, [](const ssize_t& dim) { return dim == 0; })) {
+        return typename decltype(ufunc)::reduction_type(*initial);
+    }
+
     const auto subspace_strides = keep_axes(array_ptr_->strides(), axes_);
 
     // Get the multi-index pointing to the location that the reduction will
