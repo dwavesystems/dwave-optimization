@@ -80,6 +80,7 @@ TEST_CASE("BroadcastToNode") {
         auto b = graph.emplace_node<BroadcastToNode>(i, std::vector<ssize_t>{0, 3});
         graph.emplace_node<ArrayValidationNode>(b);
 
+        CHECK(b->size() == 0);
         CHECK_THAT(b->shape(), RangeEquals({0, 3}));
         CHECK_THAT(b->strides(), RangeEquals({0, 8}));
 
