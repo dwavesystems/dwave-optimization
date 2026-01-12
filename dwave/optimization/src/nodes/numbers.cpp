@@ -247,13 +247,8 @@ bool IntegerNode::is_valid(ssize_t index, double value) const {
 }
 
 bool IntegerNode::set_value(State& state, ssize_t index, double value) const {
-    if (!is_valid(index, value)) {
-        throw std::invalid_argument("Invalid integer value provided");
-    }
-    if (value >= lower_bound(index) && value <= upper_bound(index)) {
-        return data_ptr<ArrayNodeStateData>(state)->set(index, value);
-    }
-    return false;
+    assert(is_valid(index, value));
+    return data_ptr<ArrayNodeStateData>(state)->set(index, value);
 }
 
 double IntegerNode::default_value(ssize_t index) const {
