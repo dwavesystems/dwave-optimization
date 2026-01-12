@@ -18,6 +18,7 @@
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/matchers/catch_matchers.hpp"
 #include "catch2/matchers/catch_matchers_all.hpp"
+#include "catch2/matchers/catch_matchers_range_equals.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 
@@ -484,7 +485,7 @@ TEST_CASE("BinaryNode") {
                             "Number array cannot have dynamic size.");
     }
 
-    GIVEN("(2x3)-Binary node with axis-wise bounds on the invalid axis -1") {
+    GIVEN("(2x3)-BinaryNode with axis-wise bounds on the invalid axis -1") {
         BoundAxisInfo bound_axis{-1, std::vector<BoundAxisOperator>{Equal},
                                  std::vector<double>{1.0}};
         REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::BinaryNode>(
@@ -494,7 +495,7 @@ TEST_CASE("BinaryNode") {
                             "axis-wise bounds.");
     }
 
-    GIVEN("(2x3)-Binary node with axis-wise bounds on the invalid axis 2") {
+    GIVEN("(2x3)-BinaryNode with axis-wise bounds on the invalid axis 2") {
         BoundAxisInfo bound_axis{2, std::vector<BoundAxisOperator>{Equal},
                                  std::vector<double>{1.0}};
         REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::BinaryNode>(
@@ -504,45 +505,45 @@ TEST_CASE("BinaryNode") {
                             "axis-wise bounds.");
     }
 
-    GIVEN("(2x3)-Binary node with axis-wise bounds on axis: 1 with too many operators.") {
+    GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too many operators.") {
         BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual, Equal, Equal, Equal},
                                  std::vector<double>{1.0}};
         REQUIRE_THROWS_WITH(
                 graph.emplace_node<dwave::optimization::BinaryNode>(
                         std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
                         std::vector<BoundAxisInfo>{bound_axis}),
-                "Invalid number of axis-wise operators along axis: 1 given axis shape: 3");
+                "Invalid number of axis-wise operators along axis: 1 given axis size: 3");
     }
 
-    GIVEN("(2x3)-Binary node with axis-wise bounds on axis: 1 with too few operators.") {
+    GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too few operators.") {
         BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual, Equal},
                                  std::vector<double>{1.0}};
         REQUIRE_THROWS_WITH(
                 graph.emplace_node<dwave::optimization::BinaryNode>(
                         std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
                         std::vector<BoundAxisInfo>{bound_axis}),
-                "Invalid number of axis-wise operators along axis: 1 given axis shape: 3");
+                "Invalid number of axis-wise operators along axis: 1 given axis size: 3");
     }
 
-    GIVEN("(2x3)-Binary node with axis-wise bounds on axis: 1 with too many bounds.") {
+    GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too many bounds.") {
         BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual},
                                  std::vector<double>{1.0, 2.0, 3.0, 4.0}};
         REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::BinaryNode>(
                                     std::initializer_list<ssize_t>{2, 3}, std::nullopt,
                                     std::nullopt, std::vector<BoundAxisInfo>{bound_axis}),
-                            "Invalid number of axis-wise bounds along axis: 1 given axis shape: 3");
+                            "Invalid number of axis-wise bounds along axis: 1 given axis size: 3");
     }
 
-    GIVEN("(2x3)-Binary node with axis-wise bounds on axis: 1 with too few bounds.") {
+    GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too few bounds.") {
         BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual},
                                  std::vector<double>{1.0, 2.0}};
         REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::BinaryNode>(
                                     std::initializer_list<ssize_t>{2, 3}, std::nullopt,
                                     std::nullopt, std::vector<BoundAxisInfo>{bound_axis}),
-                            "Invalid number of axis-wise bounds along axis: 1 given axis shape: 3");
+                            "Invalid number of axis-wise bounds along axis: 1 given axis size: 3");
     }
 
-    GIVEN("(2x3)-Binary node with duplicate axis-wise bounds on axis: 1") {
+    GIVEN("(2x3)-BinaryNode with duplicate axis-wise bounds on axis: 1") {
         BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{Equal},
                                  std::vector<double>{1.0}};
         REQUIRE_THROWS_WITH(
@@ -552,7 +553,7 @@ TEST_CASE("BinaryNode") {
                 "Cannot define multiple axis-wise bounds for a single axis.");
     }
 
-    GIVEN("(2x3)-Binary node with axis-wise bounds on axes: 0 and 1") {
+    GIVEN("(2x3)-BinaryNode with axis-wise bounds on axes: 0 and 1") {
         BoundAxisInfo bound_axis_0{0, std::vector<BoundAxisOperator>{LessEqual},
                                    std::vector<double>{1.0}};
         BoundAxisInfo bound_axis_1{1, std::vector<BoundAxisOperator>{LessEqual},
@@ -564,55 +565,259 @@ TEST_CASE("BinaryNode") {
                 "Axis-wise bounds are supported for at most one axis.");
     }
 
-    GIVEN("(2x3x4)-Binary node with an axis-wise bound on axis: 1") {
+    GIVEN("(2x3x4)-BinaryNode with an axis-wise bound on axis: 0") {
         auto graph = Graph();
 
-        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual},
-                                 std::vector<double>{4.0, 4.0, 6.0}};
+        BoundAxisInfo bound_axis{0, std::vector<BoundAxisOperator>{Equal, LessEqual, GreaterEqual},
+                                 std::vector<double>{1.0, 2.0, 3.0}};
 
         auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
-                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
+                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt,
                 std::vector<BoundAxisInfo>{bound_axis});
 
         THEN("Axis wise bound is correct") {
-            CHECK(bnode_ptr->num_bound_axes() == 1.0);
-            const BoundAxisInfo* bnode_bound_axis_ptr = bnode_ptr->bound_axis_info(0);
-            CHECK(bound_axis.axis == bnode_bound_axis_ptr->axis);
-            CHECK_THAT(bound_axis.operators, RangeEquals(bnode_bound_axis_ptr->operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(bnode_bound_axis_ptr->bounds));
+            CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
+            BoundAxisInfo bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
+            CHECK(bound_axis.axis == bnode_bound_axis.axis);
+            CHECK_THAT(bound_axis.operators, RangeEquals(bnode_bound_axis.operators));
+            CHECK_THAT(bound_axis.bounds, RangeEquals(bnode_bound_axis.bounds));
         }
 
-        WHEN("We initialize an invalid state") {
+        WHEN("We initialize three invalid states") {
             auto state = graph.empty_state();
-            std::vector<double> init_values(2 * 3 * 4, 1);
+            // This state violates the 0th hyperslice along axis 0
+            std::vector<double> init_values{1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1};
             // import numpy as np
-            // a = np.ones((2,3,4))
-            // a.sum(axis=(0, 2))
-            // array([8, 8, 8])
+            // a = np.asarray([1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+            // a = a.reshape(3, 2, 2)
+            // a.sum(axis=(1, 2))
+            // >>> array([2, 2, 4])
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy axis-wise bounds.");
+
+            state = graph.empty_state();
+            // This state violates the 1st hyperslice along axis 0
+            init_values = {0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1};
+            // import numpy as np
+            // a = np.asarray([0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1])
+            // a = a.reshape(3, 2, 2)
+            // a.sum(axis=(1, 2))
+            // >>> array([1, 3, 4])
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy axis-wise bounds.");
+
+            state = graph.empty_state();
+            // This state violates the 2nd hyperslice along axis 0
+            init_values = {0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0};
+            // import numpy as np
+            // a = np.asarray([0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0])
+            // a = a.reshape(3, 2, 2)
+            // a.sum(axis=(1, 2))
+            // >>> array([1, 2, 2])
             CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
                               "Initialized values do not satisfy axis-wise bounds.");
         }
 
-        WHEN("We initialize a state") {
+        WHEN("We initialize a valid state") {
             auto state = graph.empty_state();
-            std::vector<double> init_values{
-                    1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0,
-            };
-            std::cout << "here" << std::endl;
+            std::vector<double> init_values{0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1};
             bnode_ptr->initialize_state(state, init_values);
             graph.initialize_state(state);
 
-            // import numpy as np
-            // a = np.array([1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0,
-            // ... 1, 0, 1, 1, 1, 1, 0])
-            // a = a.reshape(2,3,4)
-            // a.sum(axis=(0, 2))
-            // array([3, 4, 5])
-            THEN("The sums of each hyperslice along axis 1 are correct") {
-                CHECK(bnode_ptr->num_hyperslice_along_bound_axis(state, 0) == 3);
-                CHECK(bnode_ptr->bound_axis_hyperslice_sum(state, 0, 0) == 3);
-                CHECK(bnode_ptr->bound_axis_hyperslice_sum(state, 0, 1) == 4);
-                CHECK(bnode_ptr->bound_axis_hyperslice_sum(state, 0, 2) == 5);
+            auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
+
+            THEN("The bound axis sums and state are correct") {
+                // **Python Code 1**
+                // import numpy as np
+                // a = np.asarray([0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+                // a = a.reshape(3, 2, 2)
+                // a.sum(axis=(1, 2))
+                CHECK(bnode_ptr->bound_axis_sums(state).size() == 1);
+                CHECK(bnode_ptr->bound_axis_sums(state).data()[0].size() == 3);
+                CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+            }
+
+            THEN("We exchange() some values") {
+                bnode_ptr->exchange(state, 0, 3);  // Does nothing.
+                bnode_ptr->exchange(state, 1, 6);  // Does nothing.
+                bnode_ptr->exchange(state, 1, 3);
+                std::swap(init_values[0], init_values[3]);
+                std::swap(init_values[1], init_values[6]);
+                std::swap(init_values[1], init_values[3]);
+                // state is now: [0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1]
+
+                THEN("The bound axis sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(1, a.shape)] = 0
+                    // a[np.unravel_index(3, a.shape)] = 1
+                    // a.sum(axis=(1, 2))
+                    CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                    CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("The bound axis sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We clip_and_set_value() some values") {
+                bnode_ptr->clip_and_set_value(state, 5, -1);  // Does nothing.
+                bnode_ptr->clip_and_set_value(state, 7, -1);
+                bnode_ptr->clip_and_set_value(state, 9, 1);  // Does nothing.
+                bnode_ptr->clip_and_set_value(state, 11, 0);
+                bnode_ptr->clip_and_set_value(state, 11, 1);
+                bnode_ptr->clip_and_set_value(state, 10, 0);
+                init_values[5] = 0;
+                init_values[7] = 0;
+                init_values[9] = 1;
+                init_values[11] = 1;
+                init_values[10] = 0;
+                // state is now: [0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1]
+
+                THEN("The bound axis sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(5, a.shape)] = 0
+                    // a[np.unravel_index(7, a.shape)] = 0
+                    // a[np.unravel_index(9, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 1, 3}));
+                    CHECK(bnode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("The bound axis sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We set_value() some values") {
+                bnode_ptr->set_value(state, 0, 0);  // Does nothing.
+                bnode_ptr->set_value(state, 6, 0);
+                bnode_ptr->set_value(state, 7, 0);
+                bnode_ptr->set_value(state, 4, 1);
+                bnode_ptr->set_value(state, 10, 1);  // Does nothing.
+                bnode_ptr->set_value(state, 11, 0);
+                init_values[0] = 0;
+                init_values[6] = 0;
+                init_values[7] = 0;
+                init_values[4] = 1;
+                init_values[10] = 1;
+                init_values[11] = 0;
+                // state is now: [0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0]
+
+                THEN("The bound axis sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(0, a.shape)] = 0
+                    // a[np.unravel_index(6, a.shape)] = 0
+                    // a[np.unravel_index(7, a.shape)] = 0
+                    // a[np.unravel_index(4, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 1, 3}));
+                    CHECK(bnode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("The bound axis sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We flip() some values") {
+                bnode_ptr->flip(state, 6);   // 1 -> 0
+                bnode_ptr->flip(state, 4);   // 0 -> 1
+                bnode_ptr->flip(state, 11);  // 1 -> 0
+                init_values[6] = !init_values[6];
+                init_values[4] = !init_values[4];
+                init_values[11] = !init_values[11];
+                // state is now: [0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0]
+
+                THEN("The bound axis sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(6, a.shape)] = 0
+                    // a[np.unravel_index(4, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 3}));
+                    CHECK(bnode_ptr->diff(state).size() == 3);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("The bound axis sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We unset() some values") {
+                bnode_ptr->unset(state, 0);  // Does nothing.
+                bnode_ptr->unset(state, 6);
+                bnode_ptr->unset(state, 11);
+                init_values[0] = 0;
+                init_values[6] = 0;
+                init_values[11] = 0;
+                // state is now: [0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0]
+
+                THEN("The bound axis sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(0, a.shape)] = 0
+                    // a[np.unravel_index(6, a.shape)] = 0
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 1, 3}));
+                    CHECK(bnode_ptr->diff(state).size() == 2);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We commit and set() some values") {
+                    graph.commit(state);
+
+                    bnode_ptr->set(state, 10);  // Does nothing.
+                    bnode_ptr->set(state, 11);
+                    init_values[10] = 1;
+                    init_values[11] = 1;
+                    // state is now: [0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+
+                    THEN("The bound axis sums updated correctly") {
+                        CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 1, 4}));
+                        CHECK(bnode_ptr->diff(state).size() == 1);
+                        CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                    }
+
+                    AND_WHEN("We revert") {
+                        graph.revert(state);
+
+                        THEN("The bound axis sums reverted correctly") {
+                            CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0],
+                                       RangeEquals({1, 1, 3}));
+                            CHECK(bnode_ptr->diff(state).size() == 0);
+                        }
+                    }
+                }
             }
         }
     }
@@ -912,6 +1117,268 @@ TEST_CASE("IntegerNode") {
     GIVEN("Invalid dynamically sized IntegerNode") {
         REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{-1, 3}),
                             "Number array cannot have dynamic size.");
+    }
+
+    GIVEN("(2x3)-IntegerNode with axis-wise bounds on the invalid axis -2") {
+        BoundAxisInfo bound_axis{-2, std::vector<BoundAxisOperator>{Equal},
+                                 std::vector<double>{20.0}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::IntegerNode>(
+                                    std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                    std::nullopt, std::vector<BoundAxisInfo>{bound_axis}),
+                            "Invalid bound axis: -2. Note, negative indexing is not supported for "
+                            "axis-wise bounds.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on the invalid axis 3") {
+        BoundAxisInfo bound_axis{3, std::vector<BoundAxisOperator>{Equal},
+                                 std::vector<double>{10.0}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::IntegerNode>(
+                                    std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt,
+                                    std::nullopt, std::vector<BoundAxisInfo>{bound_axis}),
+                            "Invalid bound axis: 3. Note, negative indexing is not supported for "
+                            "axis-wise bounds.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too many operators.") {
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual, Equal, Equal, Equal},
+                                 std::vector<double>{-10.0}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<dwave::optimization::IntegerNode>(
+                        std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
+                        std::vector<BoundAxisInfo>{bound_axis}),
+                "Invalid number of axis-wise operators along axis: 1 given axis size: 3");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too few operators.") {
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual, Equal},
+                                 std::vector<double>{-11.0}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<dwave::optimization::IntegerNode>(
+                        std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
+                        std::vector<BoundAxisInfo>{bound_axis}),
+                "Invalid number of axis-wise operators along axis: 1 given axis size: 3");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too many bounds.") {
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual},
+                                 std::vector<double>{-10.0, 20.0, 30.0, 40.0}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::IntegerNode>(
+                                    std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt,
+                                    std::nullopt, std::vector<BoundAxisInfo>{bound_axis}),
+                            "Invalid number of axis-wise bounds along axis: 1 given axis size: 3");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too few bounds.") {
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{LessEqual},
+                                 std::vector<double>{111.0, -223.0}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::IntegerNode>(
+                                    std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt,
+                                    std::nullopt, std::vector<BoundAxisInfo>{bound_axis}),
+                            "Invalid number of axis-wise bounds along axis: 1 given axis size: 3");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with duplicate axis-wise bounds on axis: 1") {
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{Equal},
+                                 std::vector<double>{100.0}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<dwave::optimization::IntegerNode>(
+                        std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
+                        std::vector<BoundAxisInfo>{bound_axis, bound_axis}),
+                "Cannot define multiple axis-wise bounds for a single axis.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axes: 0 and 1") {
+        BoundAxisInfo bound_axis_0{0, std::vector<BoundAxisOperator>{LessEqual},
+                                   std::vector<double>{11.0}};
+        BoundAxisInfo bound_axis_1{1, std::vector<BoundAxisOperator>{LessEqual},
+                                   std::vector<double>{12.0}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<dwave::optimization::IntegerNode>(
+                        std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
+                        std::vector<BoundAxisInfo>{bound_axis_0, bound_axis_1}),
+                "Axis-wise bounds are supported for at most one axis.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with non-integral axis-wise bounds") {
+        BoundAxisInfo bound_axis{2, std::vector<BoundAxisOperator>{LessEqual},
+                                 std::vector<double>{11.0, 12.0001, 0.0, 0.0}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<dwave::optimization::IntegerNode>(
+                                    std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt,
+                                    std::nullopt, std::vector<BoundAxisInfo>{bound_axis}),
+                            "Axis wise bounds for integral number arrays must be intregral.");
+    }
+
+    GIVEN("(2x3x2)-IntegerNode with index-wise bounds and an axis-wise bound on axis: 1") {
+        auto graph = Graph();
+
+        BoundAxisInfo bound_axis{1, std::vector<BoundAxisOperator>{Equal, LessEqual, GreaterEqual},
+                                 std::vector<double>{11.0, 2.0, 5.0}};
+
+        auto inode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8,
+                std::vector<BoundAxisInfo>{bound_axis});
+
+        THEN("Axis wise bound is correct") {
+            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
+            const BoundAxisInfo inode_bound_axis_ptr = inode_ptr->axis_wise_bounds().data()[0];
+            CHECK(bound_axis.axis == inode_bound_axis_ptr.axis);
+            CHECK_THAT(bound_axis.operators, RangeEquals(inode_bound_axis_ptr.operators));
+            CHECK_THAT(bound_axis.bounds, RangeEquals(inode_bound_axis_ptr.bounds));
+        }
+
+        WHEN("We initialize three invalid states") {
+            auto state = graph.empty_state();
+            // This state violates the 0th hyperslice along axis 1
+            std::vector<double> init_values{5, 6, 0, 0, 3, 1, 4, 0, 2, 0, 0, 3};
+            // import numpy as np
+            // a = np.asarray([5, 6, 0, 0, 3, 1, 4, 0, 2, 0, 0, 3])
+            // a = a.reshape(2, 3, 2)
+            // a.sum(axis=(0, 2))
+            // >>> array([15, 2, 7])
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy axis-wise bounds.");
+
+            state = graph.empty_state();
+            // This state violates the 1st hyperslice along axis 1
+            init_values = {5, 2, 0, 0, 3, 1, 4, 0, 2, 1, 0, 3};
+            // import numpy as np
+            // a = np.asarray([5, 2, 0, 0, 3, 1, 4, 0, 2, 1, 0, 3])
+            // a = a.reshape(2, 3, 2)
+            // a.sum(axis=(0, 2))
+            // >>> array([11, 3, 7])
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy axis-wise bounds.");
+
+            state = graph.empty_state();
+            // This state violates the 2nd hyperslice along axis 1
+            init_values = {5, 2, 0, 0, 3, 1, 4, 0, 1, 0, 0, 0};
+            // import numpy as np
+            // a = np.asarray([5, 2, 0, 0, 3, 1, 4, 0, 1, 0, 0, 0])
+            // a = a.reshape(2, 3, 2)
+            // a.sum(axis=(0, 2))
+            // >>> array([11, 1, 4])
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy axis-wise bounds.");
+        }
+
+        WHEN("We initialize a valid state") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{5, 2, 0, 0, 3, 1, 4, 0, 2, 0, 0, 3};
+            inode_ptr->initialize_state(state, init_values);
+            graph.initialize_state(state);
+
+            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
+
+            THEN("The bound axis sums and state are correct") {
+                // **Python Code 2**
+                // import numpy as np
+                // a = np.asarray([5, 2, 0, 0, 3, 1, 4, 0, 2, 0, 0, 3])
+                // a = a.reshape(2, 3, 2)
+                // a.sum(axis=(0, 2))
+                // >>> array([11, 2, 7])
+                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
+                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 3);
+                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, 2, 7}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+            }
+
+            THEN("We exchange() some values") {
+                inode_ptr->exchange(state, 2, 3);  // Does nothing.
+                inode_ptr->exchange(state, 1, 8);  // Does nothing.
+                inode_ptr->exchange(state, 8, 10);
+                inode_ptr->exchange(state, 0, 1);
+                std::swap(init_values[2], init_values[3]);
+                std::swap(init_values[1], init_values[8]);
+                std::swap(init_values[8], init_values[10]);
+                std::swap(init_values[0], init_values[1]);
+                // state is now: [2, 5, 0, 0, 3, 1, 4, 0, 0, 0, 2, 3]
+
+                THEN("The bound axis sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(8, a.shape)] = 0
+                    // a[np.unravel_index(10, a.shape)] = 2
+                    // a[np.unravel_index(0, a.shape)] = 2
+                    // a[np.unravel_index(1, a.shape)] = 5
+                    // a.sum(axis=(0, 2))
+                    CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, 0, 9}));
+                    CHECK(inode_ptr->diff(state).size() == 4);  // 2 updates per exchange
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("The bound axis sums reverted correctly") {
+                        CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We clip_and_set_value() some values") {
+                inode_ptr->clip_and_set_value(state, 0, 5);  // Does nothing.
+                inode_ptr->clip_and_set_value(state, 8, -300);
+                inode_ptr->clip_and_set_value(state, 10, 100);
+                init_values[8] = -5;
+                init_values[10] = 8;
+                // state is now: [5,  2,  0,  0,  3,  1,  4,  0, -5,  0,  8,  3]
+
+                THEN("The bound axis sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(8, a.shape)] = -5
+                    // a[np.unravel_index(10, a.shape)] = 8
+                    // a.sum(axis=(0, 2))
+                    CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, -5, 15}));
+                    CHECK(inode_ptr->diff(state).size() == 2);
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("The bound axis sums reverted correctly") {
+                        CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We set_value() some values") {
+                inode_ptr->set_value(state, 0, 5);  // Does nothing.
+                inode_ptr->set_value(state, 8, 0);
+                inode_ptr->set_value(state, 9, 1);
+                inode_ptr->set_value(state, 10, 5);
+                inode_ptr->set_value(state, 11, 0);
+                init_values[0] = 5;
+                init_values[8] = 0;
+                init_values[9] = 1;
+                init_values[10] = 5;
+                init_values[11] = 0;
+                // state is now: [5, 2, 0, 0, 3, 1, 4, 0, 0, 1, 5, 0]
+
+                THEN("The bound axis sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(0, a.shape)] = 5
+                    // a[np.unravel_index(8, a.shape)] = 0
+                    // a[np.unravel_index(9, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 5
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(0, 2))
+                    CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, 1, 9}));
+                    CHECK(inode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("The bound axis sums reverted correctly") {
+                        CHECK_THAT(bound_axis_sums[0], RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+        }
     }
 }
 
