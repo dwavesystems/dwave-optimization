@@ -36,7 +36,7 @@ cdef extern from "dwave-optimization/nodes/collections.hpp" namespace "dwave::op
         Py_ssize_t list_index()
 
     cdef cppclass ListNode(ArrayNode):
-        ListNode(Py_ssize_t) except+
+        ListNode(Py_ssize_t, Py_ssize_t, Py_ssize_t) except+
         void initialize_state(State&, vector[double]) except+
 
     cdef cppclass SetNode(ArrayNode):

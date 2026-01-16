@@ -2016,7 +2016,7 @@ class TestLessEqual(utils.SymbolTests):
 
 
 class TestListVariable(utils.SymbolTests):
-    def generate_symbols(self):
+    def generate_symbols(self) -> collections.abc.Iterator[dwave.optimization.symbols.ListVariable]:
         model = Model()
         x = model.list(10)
         y = model.list(0)
@@ -2028,6 +2028,24 @@ class TestListVariable(utils.SymbolTests):
         z = model.list(5)
         model.lock()
         yield z
+
+        # Fixed-size
+        model = Model()
+        x = model.list(5, min_size=2, max_size=2)
+        model.lock()
+        yield x
+
+        # Variable-size
+        model = Model()
+        x = model.list(5, min_size=1, max_size=2)
+        model.lock()
+        yield x
+
+        # Variable-size with non-default max size
+        model = Model()
+        x = model.list(5, max_size=1)
+        model.lock()
+        yield x
 
     def test_construction(self):
         model = Model()
@@ -2058,6 +2076,45 @@ class TestListVariable(utils.SymbolTests):
             np.testing.assert_array_equal(x.state(), [4, 3, 2, 1, 0])
             x.set_state(0, (2, 1, 0, 3, 4))
             np.testing.assert_array_equal(x.state(), (2, 1, 0, 3, 4))
+
+        with self.subTest("array-like non-default min size"):
+            model = Model()
+            model.states.resize(1)
+            x = model.list(5, min_size=2)
+
+            x.set_state(0, [1, 0])
+            np.testing.assert_array_equal(x.state(), [1, 0])
+            with self.assertRaisesRegex(ValueError, r"values does not contain enough values"):
+                x.set_state(0, [0])
+
+        with self.subTest("array-like non-default max size"):
+            model = Model()
+            model.states.resize(1)
+            x = model.list(5, max_size=2)
+
+            x.set_state(0, [3, 2])
+            np.testing.assert_array_equal(x.state(), [3, 2])
+            with self.assertRaisesRegex(ValueError, r"values contains too many values"):
+                x.set_state(0, [0, 1, 2])
+
+        with self.subTest("array-like non-default min / max size"):
+            model = Model()
+            model.states.resize(1)
+            x = model.list(5, min_size=2, max_size=3)
+
+            x.set_state(0, [3, 2])
+            np.testing.assert_array_equal(x.state(), [3, 2])
+            x.set_state(0, [3, 2, 0])
+            np.testing.assert_array_equal(x.state(), [3, 2, 0])
+            with self.assertRaisesRegex(ValueError, r"values contains too many values"):
+                x.set_state(0, [0, 1, 2, 3])
+
+        with self.subTest("array-like invalid min / max size"):
+            model = Model()
+            with self.assertRaisesRegex(ValueError, r"min_size cannot be greater than max_size"):
+                x = model.list(5, min_size=5, max_size=3)
+            with self.assertRaisesRegex(ValueError, r"min_size cannot be greater than max_size"):
+                x = model.list(5, min_size=6)
 
         with self.subTest("invalid state index"):
             model = Model()
