@@ -136,7 +136,7 @@ class Model(_Graph):
         self.states = States(self)
 
     @property
-    def objective(self) -> typing.Optional[ArraySymbol]:
+    def objective(self) -> None | ArraySymbol:
         """Objective to be minimized.
 
         Examples:
@@ -163,9 +163,9 @@ class Model(_Graph):
     def objective(self, value: ArraySymbol):
         self.minimize(value)
 
-    def binary(self, shape: typing.Optional[_ShapeLike] = None,
-               lower_bound: typing.Optional[np.typing.ArrayLike] = None,
-               upper_bound: typing.Optional[np.typing.ArrayLike] = None) -> BinaryVariable:
+    def binary(self, shape: None | _ShapeLike = None,
+               lower_bound: None | np.typing.ArrayLike = None,
+               upper_bound: None | np.typing.ArrayLike = None) -> BinaryVariable:
         r"""Create a binary symbol as a decision variable.
 
         Args:
@@ -424,9 +424,9 @@ class Model(_Graph):
     def input(
         self,
         shape: tuple[int, ...] = (),
-        lower_bound: typing.Optional[float] = -float("inf"),
-        upper_bound: typing.Optional[float] = float("inf"),
-        integral: typing.Optional[bool] = None,
+        lower_bound: None | float = -float("inf"),
+        upper_bound: None | float = float("inf"),
+        integral: None | bool = None,
     ) -> Input:
         """Create an "input" symbol.
 
@@ -475,9 +475,9 @@ class Model(_Graph):
 
     def integer(
             self,
-            shape: typing.Optional[_ShapeLike] = None,
-            lower_bound: typing.Optional[numpy.typing.ArrayLike] = None,
-            upper_bound: typing.Optional[numpy.typing.ArrayLike] = None,
+            shape: None | _ShapeLike = None,
+            lower_bound: None | numpy.typing.ArrayLike = None,
+            upper_bound: None | numpy.typing.ArrayLike = None,
             ) -> IntegerVariable:
         r"""Create an integer symbol as a decision variable.
 
@@ -633,7 +633,7 @@ class Model(_Graph):
     def set(self,
             n: int,
             min_size: int = 0,
-            max_size: typing.Optional[int] = None,
+            max_size: None | int = None,
             ) -> SetVariable:
         """Create a set symbol as a decision variable.
 

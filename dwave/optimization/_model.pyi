@@ -45,7 +45,7 @@ class _Graph:
         cls: typing.Type[_GraphSubclass],
         file: typing.Union[bytes, os.PathLike, str, typing.BinaryIO],
         *,
-        substitute: typing.Optional[collections.abc.Mapping[str, collections.abc.Callable]] = None,
+        substitute: None | collections.abc.Mapping[str, collections.abc.Callable] = None,
         ) -> _GraphSubclass: ...
 
     def into_file(
@@ -54,7 +54,7 @@ class _Graph:
         *,
         max_num_states: int = 0,
         only_decision: bool = False,
-        version: typing.Optional[tuple[int, int]] = None
+        version: None | tuple[int, int] = None
         ): ...
 
     def is_locked(self) -> bool: ...
@@ -145,7 +145,7 @@ class ArraySymbol(Symbol):
     def resize(
         self,
         shape: _ShapeLike,
-        fill_value: typing.Optional[float] = None,
+        fill_value: None | float = None,
     ) -> symbols.Resize: ...
     def shape(self) -> tuple[int, ...]: ...
     def size(self) -> typing.Union[int, symbols.Size]: ...
