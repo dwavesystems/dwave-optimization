@@ -539,11 +539,17 @@ class Model(_Graph):
         from dwave.optimization.symbols import IntegerVariable  # avoid circular import
         return IntegerVariable(self, shape, lower_bound, upper_bound)
 
-    def list(self, n: int) -> ListVariable:
+    def list(self,
+            n: int,
+            min_size: None | int = None,
+            max_size: None | int = None,
+            ) -> ListVariable:
         """Create a list symbol as a decision variable.
 
         Args:
             n: Values in the list are permutations of ``range(n)``.
+            min_size: Minimum list size. Defaults to ``max_size``.
+            max_size: Maximum list size. Defaults to ``n``.
 
         Returns:
             A list symbol.
@@ -554,9 +560,26 @@ class Model(_Graph):
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> routes = model.list(200)
+
+            This example creates a list symbol with at least 2 elements and at
+            most 4 elements with values between 0 to 99.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> routes = model.list(99, min_size=2, max_size=4)
+
+        .. versionchanged:: 0.6.12
+            Beginning in version 0.6.12, sub-lists are supported.
         """
         from dwave.optimization.symbols import ListVariable  # avoid circular import
-        return ListVariable(self, n)
+
+        if max_size is None:
+            max_size = n
+
+        if min_size is None:
+            min_size = max_size
+
+        return ListVariable(self, n, min_size, max_size)
 
     def lock(self) -> contextlib.AbstractContextManager:
         """Lock the model.

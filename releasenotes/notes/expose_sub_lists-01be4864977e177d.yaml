@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Sub-lists are now supported.
+    See #71` <https://github.com/dwavesystems/dwave-optimization/issues/71>`_.

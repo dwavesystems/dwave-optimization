@@ -585,12 +585,13 @@ _register(DisjointLists, typeid(DisjointListsNode))
 cdef class ListVariable(ArraySymbol):
     """List decision-variable symbol.
 
+    A list variable's possible states are the ordered subsets of ``range(n)``.
+
     See Also:
         :meth:`~dwave.optimization.model.Model.list`: equivalent method.
     """
-    def __init__(self, _Graph model, Py_ssize_t n):
-        # Get an observing pointer to the node
-        self.ptr = model._graph.emplace_node[ListNode](n)
+    def __init__(self, _Graph model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
+        self.ptr = model._graph.emplace_node[ListNode](n, min_size, max_size)
 
         self.initialize_arraynode(model, self.ptr)
 
@@ -613,7 +614,11 @@ cdef class ListVariable(ArraySymbol):
         with zf.open(directory + "shape.json", "r") as f:
             shape_info = json.load(f)
 
-        return ListVariable(model, n=shape_info["max_value"])
+        return ListVariable(model, 
+                            n=shape_info.get("max_value"),
+                            min_size=shape_info.get("min_size"),
+                            max_size=shape_info.get("max_size")
+                            )
 
     def _into_zipfile(self, zf, directory):
         # the additional data we want to encode
