@@ -52,7 +52,7 @@ def _require(argname: str,
              array_like: numpy.typing.ArrayLike,
              *,
              dtype: numpy.typing.DTypeLike = None,
-             ndim: typing.Optional[int] = None,
+             ndim: None | int = None,
              nonnegative: bool = False,
              positive: bool = False,
              square: bool = False
@@ -226,10 +226,10 @@ def bin_packing(weights: numpy.typing.ArrayLike,
 def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
                                 number_of_vehicles: int,
                                 vehicle_capacity: float,
-                                distances: typing.Optional[numpy.typing.ArrayLike] = None,
-                                locations_x: typing.Optional[numpy.typing.ArrayLike] = None,
-                                locations_y: typing.Optional[numpy.typing.ArrayLike] = None,
-                                depot_x_y: typing.Optional[numpy.typing.ArrayLike] = None
+                                distances: None | numpy.typing.ArrayLike = None,
+                                locations_x: None | numpy.typing.ArrayLike = None,
+                                locations_y: None | numpy.typing.ArrayLike = None,
+                                depot_x_y: None | numpy.typing.ArrayLike = None
                                 ) -> Model:
     r"""Generate a model encoding a capacitated vehicle routing problem.
 
@@ -766,7 +766,7 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
 
 def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.ArrayLike,
                         *,
-                        upper_bound: typing.Optional[int] = None,
+                        upper_bound: None | int = None,
                         ) -> Model:
     """Generate a model encoding a job-shop scheduling problem.
 

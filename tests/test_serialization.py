@@ -82,7 +82,7 @@ class TestSerialization(unittest.TestCase):
             test_model.states.from_file(os.path.join(directory, "states", name + ".nl"))
             self.assertModelEqual(base_model, test_model)
 
-    def save(self, directory: str, version: typing.Optional[tuple[int, int]]):
+    def save(self, directory: str, version: None | tuple[int, int]):
         """Save all models to the given directory with the given serialization version."""
         os.makedirs(os.path.join(directory, "model"), exist_ok=True)
         os.makedirs(os.path.join(directory, "states"), exist_ok=True)

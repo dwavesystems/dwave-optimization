@@ -39,7 +39,7 @@ class States:
         self,
         file: typing.Union[bytes, os.PathLike, str, typing.BinaryIO],
         *,
-        version: typing.Optional[tuple[int, int]] = None,
+        version: None | tuple[int, int] = None,
         ): ...
 
     def _reset_intermediate_states(self): ...

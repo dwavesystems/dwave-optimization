@@ -947,15 +947,15 @@ def less_equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> LessEqual:
 
 def linprog(
         c: ArraySymbol,
-        A_ub: typing.Optional[ArraySymbol] = None,  # alias for A
-        b_ub: typing.Optional[ArraySymbol] = None,
-        A_eq: typing.Optional[ArraySymbol] = None,
-        b_eq: typing.Optional[ArraySymbol] = None,
+        A_ub: None | ArraySymbol = None,  # alias for A
+        b_ub: None | ArraySymbol = None,
+        A_eq: None | ArraySymbol = None,
+        b_eq: None | ArraySymbol = None,
         *,  # the args up until here match SciPy's linprog() which accepts them positionally
-        b_lb: typing.Optional[ArraySymbol] = None,
-        A: typing.Optional[ArraySymbol] = None,
-        lb: typing.Optional[ArraySymbol] = None,
-        ub: typing.Optional[ArraySymbol] = None,
+        b_lb: None | ArraySymbol = None,
+        A: None | ArraySymbol = None,
+        lb: None | ArraySymbol = None,
+        ub: None | ArraySymbol = None,
         ) -> LPResult:
     r"""Solve a :term:`linear program` defined by the input array symbol(s).
 
@@ -1598,7 +1598,7 @@ def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
 def resize(
         array: ArraySymbol,
         shape: typing.Union[int, collections.abc.Sequence[int]],
-        fill_value: typing.Optional[float] = None,
+        fill_value: None | float = None,
 ) -> Resize:
     """Return a new :class:`~dwave.optimization.symbols.Resize` symbol with the given shape.
 
