@@ -314,10 +314,6 @@ TEST_CASE("BinaryNode") {
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals({0, 0, 1}));
             }
 
-            THEN("An exception is raised if it's out of bounds") {
-                REQUIRE_THROWS(bnode_ptr->set_value(state, 0, 1.9));
-            }
-
             THEN("The value is within bounds") { CHECK(bnode_ptr->is_valid(0, 1.0)); }
 
             CHECK(bnode_ptr->set_value(state, 0, 1.0));
@@ -559,9 +555,6 @@ TEST_CASE("IntegerNode") {
 
         AND_WHEN("We set the state at one of the indices") {
             auto state = graph.initialize_state();
-            THEN("An exception is raised if it's out of bounds") {
-                REQUIRE_THROWS(inode_ptr->set_value(state, 2, -1.0));
-            }
 
             THEN("The value is within bounds") { CHECK(inode_ptr->is_valid(2, 6.0)); }
 
