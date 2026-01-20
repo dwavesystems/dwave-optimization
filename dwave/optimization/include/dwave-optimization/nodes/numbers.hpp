@@ -96,29 +96,33 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // Return the value of index i in a given state.
     double get_value(State& state, ssize_t i) const;
 
-    // Lower bounds of value in a given index.
-    virtual double lower_bound(ssize_t index) const { return min_; }
-    virtual double lower_bound() const { return min_; }
+    // Lower bound of value in a given index.
+    double lower_bound(ssize_t index) const;
+    double lower_bound() const;
 
-    // Upper bounds of value in a given index.
-    virtual double upper_bound(ssize_t index) const { return max_; }
-    virtual double upper_bound() const { return max_; }
+    // Upper bound of value in a given index.
+    double upper_bound(ssize_t index) const;
+    double upper_bound() const;
 
     // Clip value in a given state to fall within upper_bound and lower_bound
     // in a given index.
     bool clip_and_set_value(State& state, ssize_t index, double value) const;
 
  protected:
-    explicit NumberNode(std::span<const ssize_t> shape, double minimum, double maximum);
+    explicit NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,
+                        std::vector<double> upper_bound);
 
-    // Return truth statement: 'value is within the bounds of a given index'
+    // Return truth statement: 'value is valid in a given index'.
     virtual bool is_valid(ssize_t index, double value) const = 0;
 
-    // Default value in a given index
+    // Default value in a given index.
     virtual double default_value(ssize_t index) const = 0;
 
     double min_;
     double max_;
+
+    std::vector<double> lower_bounds_;
+    std::vector<double> upper_bounds_;
 };
 
 /// A contiguous block of integer numbers.
@@ -167,16 +171,6 @@ class IntegerNode : public NumberNode {
 
     // Overloads needed by the NumberNode ABC *********************************
 
-    // @copydoc NumberNode::lower_bound(). Depending upon user input, may
-    // return non-integral values
-    double lower_bound(ssize_t index) const override;
-    double lower_bound() const override;
-
-    // @copydoc NumberNode::upper_bound(). Depending upon user input, may
-    // return non-integral values
-    double upper_bound(ssize_t index) const override;
-    double upper_bound() const override;
-
     // @copydoc NumberNode::is_valid()
     bool is_valid(ssize_t index, double value) const override;
 
@@ -191,10 +185,6 @@ class IntegerNode : public NumberNode {
 
     // @copydoc NumberNode::default_value()
     double default_value(ssize_t index) const override;
-
- private:
-    std::vector<double> full_lower_bound_;
-    std::vector<double> full_upper_bound_;
 };
 
 /// A contiguous block of binary numbers.

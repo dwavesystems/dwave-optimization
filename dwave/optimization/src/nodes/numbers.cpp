@@ -83,70 +83,76 @@ double NumberNode::get_value(State& state, ssize_t i) const {
     return data_ptr<ArrayNodeStateData>(state)->get(i);
 }
 
+double NumberNode::lower_bound(ssize_t index) const {
+    if (lower_bounds_.size() == 1) {
+        return lower_bounds_[0];
+    }
+    assert(lower_bounds_.size() > 1);
+    assert(0 <= index && index < static_cast<ssize_t>(lower_bounds_.size()));
+    return lower_bounds_[index];
+}
+
+double NumberNode::lower_bound() const {
+    if (lower_bounds_.size() > 1) {
+        throw std::out_of_range(
+                "Number array has multiple lower bounds, use lower_bound(index) instead");
+    }
+    return lower_bounds_[0];
+}
+
+double NumberNode::upper_bound(ssize_t index) const {
+    if (upper_bounds_.size() == 1) {
+        return upper_bounds_[0];
+    }
+    assert(upper_bounds_.size() > 1);
+    assert(0 <= index && index < static_cast<ssize_t>(upper_bounds_.size()));
+    return upper_bounds_[index];
+}
+
+double NumberNode::upper_bound() const {
+    if (upper_bounds_.size() > 1) {
+        throw std::out_of_range(
+                "Number array has multiple upper bounds, use upper_bound(index) instead");
+    }
+    return upper_bounds_[0];
+}
+
 bool NumberNode::clip_and_set_value(State& state, ssize_t index, double value) const {
     value = std::clamp(value, lower_bound(index), upper_bound(index));
     return data_ptr<ArrayNodeStateData>(state)->set(index, value);
 }
 
-NumberNode::NumberNode(std::span<const ssize_t> shape, double minimum, double maximum)
-        : ArrayOutputMixin(shape), min_(minimum), max_(maximum) {
-    if (max_ < min_) {
-        throw std::invalid_argument("Invalid range for number array provided");
-    }
-
-    if ((shape.size() > 0) && (shape[0] < 0)) {
-        throw std::invalid_argument("NumberNode cannot have dynamic size.");
-    }
-}
-
-// Integer Node ***************************************************************
 template <bool maximum>
-double get_extreme_index_wise_bound(const std::optional<std::vector<double>>& bound,
-                                    const int default_bound) {
-    if (!bound) {
-        return static_cast<double>(default_bound);
-    }
+double get_extreme_index_wise_bound(const std::vector<double>& bound) {
+    assert(bound.size() > 0);
     std::vector<double>::const_iterator it;
     if (maximum) {
-        it = std::max_element(bound->begin(), bound->end());
+        it = std::max_element(bound.begin(), bound.end());
     } else {
-        it = std::min_element(bound->begin(), bound->end());
+        it = std::min_element(bound.begin(), bound.end());
     }
-    if (it != bound->end()) {
-        return *it;
-    }
-    return static_cast<double>(default_bound);
+    return *it;
 }
 
-void assign_index_wise_bounds(const std::optional<std::vector<double>>& bound,
-                              std::vector<double>& full_bound_, double default_bound) {
-    if (!bound) {
-        full_bound_ = std::vector<double>{default_bound};
-        return;
-    }
-    assert(!(bound->empty()));
-    full_bound_ = std::move(*bound);
-}
-
-void check_index_wise_bounds(const IntegerNode& node, const std::vector<double>& full_lower_bound_,
-                             const std::vector<double>& full_upper_bound_) {
+void check_index_wise_bounds(const NumberNode& node, const std::vector<double>& lower_bounds_,
+                             const std::vector<double>& upper_bounds_) {
     bool index_wise_bound = false;
-    // If lower bound is index-wise, it must be correct size
-    if (full_lower_bound_.size() > 1) {
+    // If lower bound is index-wise, it must be correct size.
+    if (lower_bounds_.size() > 1) {
         index_wise_bound = true;
-        if (static_cast<ssize_t>(full_lower_bound_.size()) != node.size()) {
+        if (static_cast<ssize_t>(lower_bounds_.size()) != node.size()) {
             throw std::invalid_argument("lower_bound must match size of node");
         }
     }
-    // If upper bound is index-wise, it must be correct size
-    if (full_upper_bound_.size() > 1) {
+    // If upper bound is index-wise, it must be correct size.
+    if (upper_bounds_.size() > 1) {
         index_wise_bound = true;
-        if (static_cast<ssize_t>(full_upper_bound_.size()) != node.size()) {
+        if (static_cast<ssize_t>(upper_bounds_.size()) != node.size()) {
             throw std::invalid_argument("upper_bound must match size of node");
         }
     }
-    // if at least one of the bounds is index-wise, check that there are no
-    // violations at any of the indices
+    // If at least one of the bounds is index-wise, check that there are no
+    // violations at any of the indices.
     if (index_wise_bound) {
         for (ssize_t i = 0, stop = node.size(); i < stop; ++i) {
             if (node.lower_bound(i) > node.upper_bound(i)) {
@@ -156,15 +162,34 @@ void check_index_wise_bounds(const IntegerNode& node, const std::vector<double>&
     }
 }
 
+NumberNode::NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,
+                       std::vector<double> upper_bound)
+        : ArrayOutputMixin(shape),
+          min_(get_extreme_index_wise_bound<false>(lower_bound)),
+          max_(get_extreme_index_wise_bound<true>(upper_bound)),
+          lower_bounds_(std::move(lower_bound)),
+          upper_bounds_(std::move(upper_bound)) {
+    if ((shape.size() > 0) && (shape[0] < 0)) {
+        throw std::invalid_argument("Number array cannot have dynamic size.");
+    }
+
+    if (max_ < min_) {
+        throw std::invalid_argument("Invalid range for number array provided.");
+    }
+
+    check_index_wise_bounds(*this, lower_bounds_, upper_bounds_);
+}
+
+// Integer Node ***************************************************************
+
 IntegerNode::IntegerNode(std::span<const ssize_t> shape,
                          std::optional<std::vector<double>> lower_bound,
                          std::optional<std::vector<double>> upper_bound)
-        : NumberNode(shape, get_extreme_index_wise_bound<false>(lower_bound, default_lower_bound),
-                     get_extreme_index_wise_bound<true>(upper_bound, default_upper_bound)) {
-    assign_index_wise_bounds(lower_bound, full_lower_bound_, default_lower_bound);
-    assign_index_wise_bounds(upper_bound, full_upper_bound_, default_upper_bound);
-    check_index_wise_bounds(*this, full_lower_bound_, full_upper_bound_);
-
+        : NumberNode(shape,
+                     lower_bound.has_value() ? std::move(*lower_bound)
+                                             : std::vector<double>{default_lower_bound},
+                     upper_bound.has_value() ? std::move(*upper_bound)
+                                             : std::vector<double>{default_upper_bound}) {
     if (min_ < minimum_lower_bound || max_ > maximum_upper_bound) {
         throw std::invalid_argument("range provided for integers exceeds supported range");
     }
@@ -208,38 +233,6 @@ IntegerNode::IntegerNode(ssize_t size, double lower_bound, double upper_bound)
         : IntegerNode({size}, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
 
 bool IntegerNode::integral() const { return true; }
-
-double IntegerNode::lower_bound(ssize_t index) const {
-    if (full_lower_bound_.size() == 1) {
-        return full_lower_bound_[0];
-    }
-    assert(full_lower_bound_.size() > 1);
-    return full_lower_bound_[index];
-}
-
-double IntegerNode::lower_bound() const {
-    if (full_lower_bound_.size() > 1) {
-        throw std::out_of_range(
-                "IntegerNode has multiple lower bounds, use lower_bound(index) instead");
-    }
-    return full_lower_bound_[0];
-}
-
-double IntegerNode::upper_bound(ssize_t index) const {
-    if (full_upper_bound_.size() == 1) {
-        return full_upper_bound_[0];
-    }
-    assert(full_upper_bound_.size() > 1);
-    return full_upper_bound_[index];
-}
-
-double IntegerNode::upper_bound() const {
-    if (full_upper_bound_.size() > 1) {
-        throw std::out_of_range(
-                "IntegerNode has multiple uppper bounds, use upper_bound(index) instead");
-    }
-    return full_upper_bound_[0];
-}
 
 bool IntegerNode::is_valid(ssize_t index, double value) const {
     return (value >= lower_bound(index)) && (value <= upper_bound(index)) &&
