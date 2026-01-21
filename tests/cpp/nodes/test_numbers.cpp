@@ -101,20 +101,22 @@ TEST_CASE("BinaryNode") {
 
             WHEN("We flip the states") {
                 for (int i = 0, stop = ptr->size(); i < stop; ++i) {
-                    CHECK(ptr->flip(state, i));
+                    // Note, index-wise bounds are all [0,1]
+                    ptr->flip(state, i);
                     vec_d[i] = !vec_d[i];
                 }
 
                 THEN("Elments are flipped properly") {
                     CHECK_THAT(ptr->view(state), RangeEquals(vec_d));
+                    CHECK(static_cast<ssize_t>(ptr->diff(state).size()) == ptr->size());
                 }
             }
 
             WHEN("We set all the elements") {
-                auto set_count = 0;
-                auto set_count_ground = 0;
+                int set_count_ground = 0;
                 for (int i = 0, stop = ptr->size(); i < stop; ++i) {
-                    set_count += ptr->set(state, i);
+                    // Note, index-wise bounds are all [0,1]
+                    ptr->set(state, i);
                     set_count_ground += !vec_d[i];
                 }
 
@@ -123,15 +125,15 @@ TEST_CASE("BinaryNode") {
                 }
 
                 THEN("The number of elements set equals the number of initially unset elements") {
-                    CHECK(set_count == set_count_ground);
+                    CHECK(static_cast<int>(ptr->diff(state).size()) == set_count_ground);
                 }
             }
 
             WHEN("We unset all the elements") {
-                auto unset_count = 0;
-                auto unset_count_ground = 0;
+                int unset_count_ground = 0;
                 for (int i = 0, stop = ptr->size(); i < stop; ++i) {
-                    unset_count += ptr->unset(state, i);
+                    // Note, index-wise bounds are all [0,1]
+                    ptr->unset(state, i);
                     unset_count_ground += vec_d[i];
                 }
 
@@ -140,15 +142,15 @@ TEST_CASE("BinaryNode") {
                 }
 
                 THEN("The number of elements unset equals the number of initially set elements") {
-                    CHECK(unset_count == unset_count_ground);
+                    CHECK(static_cast<int>(ptr->diff(state).size()) == unset_count_ground);
                 }
             }
 
             WHEN("We exchange the elements") {
-                auto exchange_count = 0;
-                auto exchange_count_ground = 0;
+                int exchange_count_ground = 0;
                 for (int i = 0, stop = ptr->size() - 1; i < stop; ++i) {
-                    exchange_count += ptr->exchange(state, i, i + 1);
+                    // Note, index-wise bounds are all [0,1]
+                    ptr->exchange(state, i, i + 1);
                     std::swap(vec_d[i], vec_d[i + 1]);
                     exchange_count_ground += (vec_d[i] != vec_d[i + 1]);
                 }
@@ -158,7 +160,8 @@ TEST_CASE("BinaryNode") {
                 }
 
                 THEN("The number of effective exchanges are correct") {
-                    CHECK(exchange_count == exchange_count_ground);
+                    // Two updates per exchange
+                    CHECK(static_cast<int>(ptr->diff(state).size()) == 2 * exchange_count_ground);
                 }
             }
         }
@@ -223,20 +226,25 @@ TEST_CASE("BinaryNode") {
 
             WHEN("We flip the states") {
                 for (int i = 0, stop = ptr->size(); i < stop; ++i) {
-                    CHECK(ptr->flip(state, i));
+                    // Note, index-wise bounds are all [0,1]
+                    ptr->flip(state, i);
                     vec_d[i] = !vec_d[i];
                 }
 
                 THEN("Elments are flipped properly") {
                     CHECK(std::ranges::equal(ptr->view(state), vec_d));
                 }
+
+                THEN("The number of elements set equals the number of initially unset elements") {
+                    CHECK(static_cast<ssize_t>(ptr->diff(state).size()) == ptr->size());
+                }
             }
 
             WHEN("We set all the elements") {
-                auto set_count = 0;
-                auto set_count_ground = 0;
+                int set_count_ground = 0;
                 for (int i = 0, stop = ptr->size(); i < stop; ++i) {
-                    set_count += ptr->set(state, i);
+                    // Note, index-wise bounds are all [0,1]
+                    ptr->set(state, i);
                     set_count_ground += !vec_d[i];
                 }
 
@@ -245,15 +253,15 @@ TEST_CASE("BinaryNode") {
                 }
 
                 THEN("The number of elements set equals the number of initially unset elements") {
-                    CHECK(set_count == set_count_ground);
+                    CHECK(static_cast<int>(ptr->diff(state).size()) == set_count_ground);
                 }
             }
 
             WHEN("We unset all the elements") {
-                auto unset_count = 0;
-                auto unset_count_ground = 0;
+                int unset_count_ground = 0;
                 for (int i = 0, stop = ptr->size(); i < stop; ++i) {
-                    unset_count += ptr->unset(state, i);
+                    // Note, index-wise bounds are all [0,1]
+                    ptr->unset(state, i);
                     unset_count_ground += vec_d[i];
                 }
 
@@ -262,15 +270,15 @@ TEST_CASE("BinaryNode") {
                 }
 
                 THEN("The number of elements unset equals the number of initially set elements") {
-                    CHECK(unset_count == unset_count_ground);
+                    CHECK(static_cast<int>(ptr->diff(state).size()) == unset_count_ground);
                 }
             }
 
             WHEN("We exchange the elements") {
-                auto exchange_count = 0;
-                auto exchange_count_ground = 0;
+                int exchange_count_ground = 0;
                 for (int i = 0, stop = ptr->size() - 1; i < stop; ++i) {
-                    exchange_count += ptr->exchange(state, i, i + 1);
+                    // Note, index-wise bounds are all [0,1]
+                    ptr->exchange(state, i, i + 1);
                     std::swap(vec_d[i], vec_d[i + 1]);
                     exchange_count_ground += (vec_d[i] != vec_d[i + 1]);
                 }
@@ -280,7 +288,8 @@ TEST_CASE("BinaryNode") {
                 }
 
                 THEN("The number of effective exchanges are correct") {
-                    CHECK(exchange_count == exchange_count_ground);
+                    // Two updates per exchange
+                    CHECK(static_cast<int>(ptr->diff(state).size()) == 2 * exchange_count_ground);
                 }
             }
         }
@@ -314,63 +323,54 @@ TEST_CASE("BinaryNode") {
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals({0, 0, 1}));
             }
 
-            THEN("The value is within bounds") { CHECK(bnode_ptr->is_valid(0, 1.0)); }
+            // Note, index-wise bounds are [[0,1], [0,1], [1,1]]
+            bnode_ptr->set_value(state, 0, 1.0);
 
-            CHECK(bnode_ptr->set_value(state, 0, 1.0));
-
-            THEN("The value is correct") { CHECK(bnode_ptr->get_value(state, 0) == 1.0); }
-
-            AND_WHEN("We commit the state") {
-                graph.commit(state);
-
-                THEN("Cannot flip() index outside of bounds") {
-                    CHECK(bnode_ptr->flip(state, 2) == false);
-                }
-
-                THEN("Cannot exchange() index outside of bounds") {
-                    CHECK(bnode_ptr->exchange(state, 0, 2) == false);
-                }
-
-                THEN("Cannot unset() index outside of bounds") {
-                    CHECK(bnode_ptr->unset(state, 2) == false);
-                }
+            THEN("The value is correct") {
+                CHECK(bnode_ptr->diff(state).size() == 1);
+                CHECK(bnode_ptr->get_value(state, 0) == 1.0);
             }
         }
 
         AND_WHEN("We set the state at the indices using set()") {
             auto state = graph.initialize_state();
-            THEN("The value is within bounds") { CHECK(bnode_ptr->is_valid(0, 0.0)); }
-            THEN("The value is within bounds") { CHECK(bnode_ptr->is_valid(1, 1.0)); }
+            // Note, index-wise bounds are [[0,1], [0,1], [1,1]]
+            bnode_ptr->set(state, 1);
 
-            CHECK(bnode_ptr->set(state, 1) == true);
-
-            THEN("The value at index 0 is correct") {
-                CHECK(bnode_ptr->get_value(state, 0) == 0.0);
-            }
-            THEN("The value at index 1 is correct") {
-                CHECK(bnode_ptr->get_value(state, 1) == 1.0);
+            THEN("The values at index 0 and 1 are correct") {
+                CHECK(bnode_ptr->get_value(state, 0) == 0.0);  // Default value
+                CHECK(bnode_ptr->get_value(state, 1) == 1.0);  // Set value
             }
 
             AND_WHEN("We commit the state") {
                 graph.commit(state);
 
                 THEN("We can perform a flip()") {
-                    CHECK(bnode_ptr->flip(state, 1) == true);
+                    // Note, index-wise bounds are [[0,1], [0,1], [1,1]]
+                    CHECK(bnode_ptr->get_value(state, 1) == 1.0);
+                    bnode_ptr->flip(state, 1);
                     CHECK(bnode_ptr->get_value(state, 1) == 0.0);
                 }
 
                 THEN("We can perform an unset()") {
-                    CHECK(bnode_ptr->unset(state, 1) == true);
+                    // Note, index-wise bounds are [[0,1], [0,1], [1,1]]
+                    CHECK(bnode_ptr->get_value(state, 1) == 1.0);
+                    bnode_ptr->unset(state, 1);
                     CHECK(bnode_ptr->get_value(state, 1) == 0.0);
                 }
 
-                THEN("We can perform an unset()") {
-                    CHECK(bnode_ptr->set(state, 0) == true);
+                THEN("We can perform a set()") {
+                    // Note, index-wise bounds are [[0,1], [0,1], [1,1]]
+                    CHECK(bnode_ptr->get_value(state, 0) == 0.0);
+                    bnode_ptr->set(state, 0);
                     CHECK(bnode_ptr->get_value(state, 0) == 1.0);
                 }
 
                 THEN("We can perform an exchange()") {
-                    CHECK(bnode_ptr->exchange(state, 0, 1) == true);
+                    // Note, index-wise bounds are [[0,1], [0,1], [1,1]]
+                    CHECK(bnode_ptr->get_value(state, 0) == 0.0);
+                    CHECK(bnode_ptr->get_value(state, 1) == 1.0);
+                    bnode_ptr->exchange(state, 0, 1);
                     CHECK(bnode_ptr->get_value(state, 0) == 1.0);
                     CHECK(bnode_ptr->get_value(state, 1) == 0.0);
                 }
@@ -385,6 +385,7 @@ TEST_CASE("BinaryNode") {
             bnode_ptr->clip_and_set_value(state, 2, 2);
 
             THEN("Clip set the values correctly") {
+                // Note, index-wise bounds are [[0,1], [0,1], [1,1]]
                 CHECK(bnode_ptr->get_value(state, 0) == 0);
                 CHECK(bnode_ptr->get_value(state, 1) == 0);
                 CHECK(bnode_ptr->get_value(state, 2) == 1);
@@ -556,11 +557,13 @@ TEST_CASE("IntegerNode") {
         AND_WHEN("We set the state at one of the indices") {
             auto state = graph.initialize_state();
 
-            THEN("The value is within bounds") { CHECK(inode_ptr->is_valid(2, 6.0)); }
+            // Note, index-wise bounds are [[-1,1], [3,7], [5,7]]
+            inode_ptr->set_value(state, 2, 6.0);
 
-            CHECK(inode_ptr->set_value(state, 2, 6.0) == true);
-
-            THEN("The value is correct") { CHECK(inode_ptr->get_value(state, 2) == 6.0); }
+            THEN("The value is correct") {
+                CHECK(inode_ptr->diff(state).size() == 1);
+                CHECK(inode_ptr->get_value(state, 2) == 6.0);
+            }
         }
 
         AND_WHEN("We set the state at the indices using clip") {
@@ -571,6 +574,7 @@ TEST_CASE("IntegerNode") {
             inode_ptr->clip_and_set_value(state, 2, 9);
 
             THEN("Clip set the values correctly") {
+                // Note, index-wise bounds are [[-1,1], [3,7], [5,7]]
                 CHECK(inode_ptr->get_value(state, 0) == -1);
                 CHECK(inode_ptr->get_value(state, 1) == 5);
                 CHECK(inode_ptr->get_value(state, 2) == 7);
@@ -579,12 +583,11 @@ TEST_CASE("IntegerNode") {
             AND_THEN("We commit the state") {
                 graph.commit(state);
 
-                THEN("We cannot exchange() outside of bounds") {
-                    CHECK(inode_ptr->exchange(state, 0, 2) == false);
-                }
-
                 THEN("We can exchange() within bounds") {
-                    CHECK(inode_ptr->exchange(state, 1, 2) == true);
+                    // Note, index-wise bounds are [[-1,1], [3,7], [5,7]]
+                    CHECK(inode_ptr->get_value(state, 1) == 5);
+                    CHECK(inode_ptr->get_value(state, 2) == 7);
+                    inode_ptr->exchange(state, 1, 2);
                     CHECK(inode_ptr->get_value(state, 1) == 7);
                     CHECK(inode_ptr->get_value(state, 2) == 5);
                 }
@@ -674,14 +677,14 @@ TEST_CASE("IntegerNode") {
 
             THEN("We can read the state") { CHECK(std::ranges::equal(ptr->view(state), vec_d)); }
 
-            WHEN("We set all the elements to different values") {
+            WHEN("We set half the elements to 9 and leave the other half unchange") {
                 auto initial_state = vec_d;
-                auto set_count = 0;
                 std::vector<double> new_values;
                 auto view = ptr->view(state);
                 for (int i = 0, stop = ptr->size(); i < stop; ++i) {
                     double new_val = (i % 2) ? 9 : view[i];
-                    set_count += ptr->set_value(state, i, new_val);
+                    // Note, index-wise bounds are all [-10, 2000000000]
+                    ptr->set_value(state, i, new_val);
                     new_values.push_back(new_val);
                 }
 
@@ -690,7 +693,7 @@ TEST_CASE("IntegerNode") {
                 }
 
                 THEN("The number of elements set is correct") {
-                    CHECK(set_count == ptr->size() / 2);
+                    CHECK(static_cast<ssize_t>(ptr->diff(state).size()) == ptr->size() / 2);
                 }
 
                 WHEN("We revert") {
@@ -704,10 +707,10 @@ TEST_CASE("IntegerNode") {
 
             WHEN("We exchange the elements") {
                 auto initial_state = vec_d;
-                auto exchange_count = 0;
-                auto exchange_count_ground = 0;
+                int exchange_count_ground = 0;
                 for (int i = 0, stop = ptr->size() - 1; i < stop; ++i) {
-                    exchange_count += ptr->exchange(state, i, i + 1);
+                    // Note, index-wise bounds are all [-10, 2000000000]
+                    ptr->exchange(state, i, i + 1);
                     std::swap(vec_d[i], vec_d[i + 1]);
                     exchange_count_ground += (vec_d[i] != vec_d[i + 1]);
                 }
@@ -717,7 +720,8 @@ TEST_CASE("IntegerNode") {
                 }
 
                 THEN("The number of effective exchanges are correct") {
-                    CHECK(exchange_count == exchange_count_ground);
+                    // Two updates per exchange
+                    CHECK(static_cast<int>(ptr->diff(state).size()) == 2 * exchange_count_ground);
                 }
 
                 WHEN("We revert") {
