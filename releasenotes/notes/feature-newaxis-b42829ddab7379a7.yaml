@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Support ``numpy.newaxis`` and ``...`` while indexing array symbols.
+issues:
+  - |
+    In some cases, combined indexing operations on high dimensional arrays will
+    not match the behavior of NumPy.
+    See `#465 <https://github.com/dwavesystems/dwave-optimization/issues/465>`_.

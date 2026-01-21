@@ -16,6 +16,7 @@ import collections.abc
 import dataclasses
 import fractions
 import os
+import types
 import typing
 
 import numpy
@@ -26,6 +27,7 @@ import dwave.optimization.typing
 from dwave.optimization.utilities import _NoValue, _NoValueType
 
 _AxisLike: typing.TypeAlias = None | int | tuple[int, ...]
+_IndexLike: typing.TypeAlias = int | slice | None | types.EllipsisType | ArraySymbol
 _InitialLike: typing.TypeAlias = None | _NoValueType | float
 _ShapeLike: typing.TypeAlias = typing.Union[int, collections.abc.Sequence[int]]
 
@@ -109,12 +111,7 @@ class ArraySymbol(Symbol):
     def __bool__(self) -> typing.NoReturn: ...
     def __eq__(self, rhs: dwave.optimization.typing.ArraySymbolLike) -> symbols.Equal: ...
     def __ge__(self, rhs: dwave.optimization.typing.ArraySymbolLike) -> symbols.LessEqual: ...
-
-    def __getitem__(
-        self,
-        index: typing.Union[Symbol, int, slice, tuple],
-    ) -> typing.Union[symbols.AdvancedIndexing, symbols.BasicIndexing, symbols.Permutation]: ...
-
+    def __getitem__(self, index: _IndexLike | tuple[_IndexLike, ...]) -> ArraySymbol: ...
     def __iadd__(self, rhs: dwave.optimization.typing.ArraySymbolLike) -> symbols.NaryAdd: ...
     def __imul__(self, rhs: dwave.optimization.typing.ArraySymbolLike) -> symbols.NaryMultiply: ...
     def __iter__(self) -> typing.Iterator[ArraySymbol]: ...
