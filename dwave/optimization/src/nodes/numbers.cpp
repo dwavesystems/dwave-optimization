@@ -198,30 +198,30 @@ IntegerNode::IntegerNode(std::span<const ssize_t> shape,
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape,
                          std::optional<std::vector<double>> lower_bound,
                          std::optional<std::vector<double>> upper_bound)
-        : IntegerNode(std::span(shape), lower_bound, upper_bound) {}
+        : IntegerNode(std::span(shape), std::move(lower_bound), std::move(upper_bound)) {}
 IntegerNode::IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
                          std::optional<std::vector<double>> upper_bound)
-        : IntegerNode({size}, lower_bound, upper_bound) {}
+        : IntegerNode({size}, std::move(lower_bound), std::move(upper_bound)) {}
 
 IntegerNode::IntegerNode(std::span<const ssize_t> shape, double lower_bound,
                          std::optional<std::vector<double>> upper_bound)
-        : IntegerNode(shape, std::vector<double>{lower_bound}, upper_bound) {}
+        : IntegerNode(shape, std::vector<double>{lower_bound}, std::move(upper_bound)) {}
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound,
                          std::optional<std::vector<double>> upper_bound)
-        : IntegerNode(std::span(shape), std::vector<double>{lower_bound}, upper_bound) {}
+        : IntegerNode(std::span(shape), std::vector<double>{lower_bound}, std::move(upper_bound)) {}
 IntegerNode::IntegerNode(ssize_t size, double lower_bound,
                          std::optional<std::vector<double>> upper_bound)
-        : IntegerNode({size}, std::vector<double>{lower_bound}, upper_bound) {}
+        : IntegerNode({size}, std::vector<double>{lower_bound}, std::move(upper_bound)) {}
 
 IntegerNode::IntegerNode(std::span<const ssize_t> shape,
                          std::optional<std::vector<double>> lower_bound, double upper_bound)
-        : IntegerNode(shape, lower_bound, std::vector<double>{upper_bound}) {}
+        : IntegerNode(shape, std::move(lower_bound), std::vector<double>{upper_bound}) {}
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape,
                          std::optional<std::vector<double>> lower_bound, double upper_bound)
-        : IntegerNode(std::span(shape), lower_bound, std::vector<double>{upper_bound}) {}
+        : IntegerNode(std::span(shape), std::move(lower_bound), std::vector<double>{upper_bound}) {}
 IntegerNode::IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
                          double upper_bound)
-        : IntegerNode({size}, lower_bound, std::vector<double>{upper_bound}) {}
+        : IntegerNode({size}, std::move(lower_bound), std::vector<double>{upper_bound}) {}
 
 IntegerNode::IntegerNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound)
         : IntegerNode(shape, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
@@ -270,19 +270,12 @@ double get_bool_bound(const double bound) {
 }
 
 template <bool upper_bound>
-std::vector<double> limit_bound_to_bool_domain(const std::optional<std::vector<double>>& bound) {
-    if (!bound) {
-        // set default boolean bounds if user does not provide bounds
-        double output = (upper_bound) ? 1.0 : 0.0;
-        return std::vector<double>{output};
-    }
-    const ssize_t vec_size = bound->size();
-    std::vector<double> output_vec;
-    output_vec.reserve(vec_size);
-    for (const double& value : bound.value()) {
-        output_vec.emplace_back(get_bool_bound<upper_bound>(value));
-    }
-    return output_vec;
+std::vector<double> limit_bound_to_bool_domain(std::optional<std::vector<double>>& bound) {
+    // set default boolean bounds if user does not provide bounds
+    if (!bound) return std::vector<double>{upper_bound ? 1.0 : 0.0};
+
+    for (double& value : *bound) value = get_bool_bound<upper_bound>(value);
+    return *bound;
 }
 
 BinaryNode::BinaryNode(std::span<const ssize_t> shape,
@@ -294,30 +287,30 @@ BinaryNode::BinaryNode(std::span<const ssize_t> shape,
 BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape,
                        std::optional<std::vector<double>> lower_bound,
                        std::optional<std::vector<double>> upper_bound)
-        : BinaryNode(std::span(shape), lower_bound, upper_bound) {}
+        : BinaryNode(std::span(shape), std::move(lower_bound), std::move(upper_bound)) {}
 BinaryNode::BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
                        std::optional<std::vector<double>> upper_bound)
-        : BinaryNode({size}, lower_bound, upper_bound) {}
+        : BinaryNode({size}, std::move(lower_bound), std::move(upper_bound)) {}
 
 BinaryNode::BinaryNode(std::span<const ssize_t> shape, double lower_bound,
                        std::optional<std::vector<double>> upper_bound)
-        : BinaryNode(shape, std::vector<double>{lower_bound}, upper_bound) {}
+        : BinaryNode(shape, std::vector<double>{lower_bound}, std::move(upper_bound)) {}
 BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound,
                        std::optional<std::vector<double>> upper_bound)
-        : BinaryNode(std::span(shape), std::vector<double>{lower_bound}, upper_bound) {}
+        : BinaryNode(std::span(shape), std::vector<double>{lower_bound}, std::move(upper_bound)) {}
 BinaryNode::BinaryNode(ssize_t size, double lower_bound,
                        std::optional<std::vector<double>> upper_bound)
-        : BinaryNode({size}, std::vector<double>{lower_bound}, upper_bound) {}
+        : BinaryNode({size}, std::vector<double>{lower_bound}, std::move(upper_bound)) {}
 
 BinaryNode::BinaryNode(std::span<const ssize_t> shape,
                        std::optional<std::vector<double>> lower_bound, double upper_bound)
-        : BinaryNode(shape, lower_bound, std::vector<double>{upper_bound}) {}
+        : BinaryNode(shape, std::move(lower_bound), std::vector<double>{upper_bound}) {}
 BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape,
                        std::optional<std::vector<double>> lower_bound, double upper_bound)
-        : BinaryNode(std::span(shape), lower_bound, std::vector<double>{upper_bound}) {}
+        : BinaryNode(std::span(shape), std::move(lower_bound), std::vector<double>{upper_bound}) {}
 BinaryNode::BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
                        double upper_bound)
-        : BinaryNode({size}, lower_bound, std::vector<double>{upper_bound}) {}
+        : BinaryNode({size}, std::move(lower_bound), std::vector<double>{upper_bound}) {}
 
 BinaryNode::BinaryNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound)
         : BinaryNode(shape, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
