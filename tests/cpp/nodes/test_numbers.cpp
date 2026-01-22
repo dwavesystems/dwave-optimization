@@ -438,7 +438,7 @@ TEST_CASE("BinaryNode") {
 
     GIVEN("Invalid dynamically sized BinaryNode") {
         REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{-1, 2}),
-                            "NumberNode cannot have dynamic size.");
+                            "Number array cannot have dynamic size.");
     }
 }
 
@@ -733,7 +733,7 @@ TEST_CASE("IntegerNode") {
 
     GIVEN("Invalid dynamically sized IntegerNode") {
         REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{-1, 3}),
-                            "NumberNode cannot have dynamic size.");
+                            "Number array cannot have dynamic size.");
     }
 }
 
