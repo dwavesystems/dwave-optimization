@@ -67,16 +67,16 @@ void NumberNode::revert(State& state) const noexcept {
     data_ptr<ArrayNodeStateData>(state)->revert();
 }
 
-bool NumberNode::exchange(State& state, ssize_t i, ssize_t j) const {
-    double value = data_ptr<ArrayNodeStateData>(state)->get(j);
-    if ((lower_bound(i) > value) || (upper_bound(i) < value)) {
-        return false;
-    }
-    value = data_ptr<ArrayNodeStateData>(state)->get(i);
-    if ((lower_bound(j) > value) || (upper_bound(j) < value)) {
-        return false;
-    }
-    return data_ptr<ArrayNodeStateData>(state)->exchange(i, j);
+void NumberNode::exchange(State& state, ssize_t i, ssize_t j) const {
+    auto ptr = data_ptr<ArrayNodeStateData>(state);
+    // We expect the exchange to obey the index-wise bounds.
+    assert(lower_bound(i) <= ptr->get(j));
+    assert(upper_bound(i) >= ptr->get(j));
+    assert(lower_bound(j) <= ptr->get(i));
+    assert(upper_bound(j) >= ptr->get(i));
+    // Assert that i and j are valid indices occurs in ptr->exchange().
+    // Exchange occurs IFF (i != j) and (buffer[i] != buffer[j]).
+    ptr->exchange(i, j);
 }
 
 double NumberNode::get_value(State& state, ssize_t i) const {
@@ -117,9 +117,11 @@ double NumberNode::upper_bound() const {
     return upper_bounds_[0];
 }
 
-bool NumberNode::clip_and_set_value(State& state, ssize_t index, double value) const {
+void NumberNode::clip_and_set_value(State& state, ssize_t index, double value) const {
     value = std::clamp(value, lower_bound(index), upper_bound(index));
-    return data_ptr<ArrayNodeStateData>(state)->set(index, value);
+    // Assert that i is a valid index occurs in data_ptr->set().
+    // Set occurs IFF `value` != buffer[i] .
+    data_ptr<ArrayNodeStateData>(state)->set(index, value);
 }
 
 template <bool maximum>
@@ -239,9 +241,14 @@ bool IntegerNode::is_valid(ssize_t index, double value) const {
            (std::round(value) == value);
 }
 
-bool IntegerNode::set_value(State& state, ssize_t index, double value) const {
-    assert(is_valid(index, value));
-    return data_ptr<ArrayNodeStateData>(state)->set(index, value);
+void IntegerNode::set_value(State& state, ssize_t index, double value) const {
+    // We expect `value` to obey the index-wise bounds and to be an integer.
+    assert(lower_bound(index) <= value);
+    assert(upper_bound(index) >= value);
+    assert(value == std::round(value));
+    // Assert that i is a valid index occurs in data_ptr->set().
+    // Set occurs IFF `value` != buffer[i] .
+    data_ptr<ArrayNodeStateData>(state)->set(index, value);
 }
 
 double IntegerNode::default_value(ssize_t index) const {
@@ -320,31 +327,29 @@ BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound,
 BinaryNode::BinaryNode(ssize_t size, double lower_bound, double upper_bound)
         : BinaryNode({size}, std::vector<double>{lower_bound}, std::vector<double>{upper_bound}) {}
 
-bool BinaryNode::flip(State& state, ssize_t i) const {
+void BinaryNode::flip(State& state, ssize_t i) const {
     auto ptr = data_ptr<ArrayNodeStateData>(state);
-    if (lower_bound(i) == upper_bound(i)) {
-        // variable is fixed
-        return false;
-    }
-
+    // Variable should not be fixed.
+    assert(lower_bound(i) != upper_bound(i));
+    // Assert that i is a valid index occurs in ptr->set().
+    // Set occurs IFF `value` != buffer[i] .
     ptr->set(i, !ptr->get(i));
-    return true;
 }
 
-bool BinaryNode::set(State& state, ssize_t i) const {
-    if (upper_bound(i) >= 1) {
-        assert(lower_bound(i) <= 1);
-        return data_ptr<ArrayNodeStateData>(state)->set(i, 1.0);
-    }
-    return false;
+void BinaryNode::set(State& state, ssize_t i) const {
+    // We expect the set to obey the index-wise bounds.
+    assert(upper_bound(i) == 1.0);
+    // Assert that i is a valid index occurs in data_ptr->set().
+    // Set occurs IFF `value` != buffer[i] .
+    data_ptr<ArrayNodeStateData>(state)->set(i, 1.0);
 }
 
-bool BinaryNode::unset(State& state, ssize_t i) const {
-    if (lower_bound(i) <= 0) {
-        assert(upper_bound(i) >= 0);
-        return data_ptr<ArrayNodeStateData>(state)->set(i, 0.0);
-    }
-    return false;
+void BinaryNode::unset(State& state, ssize_t i) const {
+    // We expect the set to obey the index-wise bounds.
+    assert(lower_bound(i) == 0.0);
+    // Assert that i is a valid index occurs in data_ptr->set().
+    // Set occurs IFF `value` != buffer[i] .
+    data_ptr<ArrayNodeStateData>(state)->set(i, 0.0);
 }
 
 }  // namespace dwave::optimization
