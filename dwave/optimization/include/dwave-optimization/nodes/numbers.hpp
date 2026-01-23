@@ -104,6 +104,9 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     double upper_bound(ssize_t index) const;
     double upper_bound() const;
 
+    /// Returns true IFF the index-wise bounds are uniform.
+    bool uniform_index_wise_bounds() const { return uniform_index_wise_bounds_; };
+
     // Clip value in a given state to fall within upper_bound and lower_bound
     // in a given index.
     bool clip_and_set_value(State& state, ssize_t index, double value) const;
@@ -123,6 +126,9 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     std::vector<double> lower_bounds_;
     std::vector<double> upper_bounds_;
+
+    // Indicator variable that the index-wise bounds are uniform.
+    const bool uniform_index_wise_bounds_;
 };
 
 /// A contiguous block of integer numbers.

@@ -168,7 +168,8 @@ NumberNode::NumberNode(std::span<const ssize_t> shape, std::vector<double> lower
           min_(get_extreme_index_wise_bound<false>(lower_bound)),
           max_(get_extreme_index_wise_bound<true>(upper_bound)),
           lower_bounds_(std::move(lower_bound)),
-          upper_bounds_(std::move(upper_bound)) {
+          upper_bounds_(std::move(upper_bound)),
+          uniform_index_wise_bounds_(lower_bounds_.size() == 1 && upper_bounds_.size() == 1) {
     if ((shape.size() > 0) && (shape[0] < 0)) {
         throw std::invalid_argument("Number array cannot have dynamic size.");
     }

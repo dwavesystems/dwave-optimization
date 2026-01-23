@@ -40,6 +40,7 @@ TEST_CASE("BinaryNode") {
             CHECK(bnode_ptr->upper_bound() == 1.0);
             CHECK(bnode_ptr->lower_bound(0) == 0.0);
             CHECK(bnode_ptr->upper_bound(1) == 1.0);
+            CHECK(bnode_ptr->uniform_index_wise_bounds());
         }
     }
 
@@ -62,6 +63,7 @@ TEST_CASE("BinaryNode") {
                 CHECK(ptr->lower_bound(i) == 0);
                 CHECK(ptr->upper_bound(i) == 1);
             }
+            CHECK(ptr->uniform_index_wise_bounds());
         }
 
         WHEN("We create a state using the default value") {
@@ -181,6 +183,7 @@ TEST_CASE("BinaryNode") {
                 CHECK(ptr->lower_bound(i) == 0);
                 CHECK(ptr->upper_bound(i) == 1);
             }
+            CHECK(ptr->uniform_index_wise_bounds());
         }
 
         WHEN("We create a state using the default value") {
@@ -305,6 +308,7 @@ TEST_CASE("BinaryNode") {
             CHECK(bnode_ptr->upper_bound(0) == 1.0);
             CHECK(bnode_ptr->upper_bound(1) == 1.0);
             CHECK(bnode_ptr->upper_bound(2) == 1.0);
+            CHECK(!bnode_ptr->uniform_index_wise_bounds());
         }
 
         AND_WHEN("We set the state at one of the indices") {
@@ -406,6 +410,7 @@ TEST_CASE("BinaryNode") {
             CHECK(bnode_ptr->lower_bound(1) == 0.0);
             CHECK(bnode_ptr->upper_bound(0) == 0.0);
             CHECK(bnode_ptr->upper_bound(1) == 1.0);
+            CHECK(!bnode_ptr->uniform_index_wise_bounds());
         }
     }
 
@@ -423,6 +428,7 @@ TEST_CASE("BinaryNode") {
             CHECK(bnode_ptr->lower_bound(1) == 1.0);
             CHECK(bnode_ptr->upper_bound(0) == 1.0);
             CHECK(bnode_ptr->upper_bound(1) == 1.0);
+            CHECK(!bnode_ptr->uniform_index_wise_bounds());
         }
     }
 
@@ -457,6 +463,7 @@ TEST_CASE("IntegerNode") {
             CHECK(inode_ptr->upper_bound(0) == IntegerNode::default_upper_bound);
             CHECK(inode_ptr->lower_bound() == IntegerNode::default_lower_bound);
             CHECK(inode_ptr->upper_bound() == IntegerNode::default_upper_bound);
+            CHECK(inode_ptr->uniform_index_wise_bounds());
         }
     }
 
@@ -477,6 +484,7 @@ TEST_CASE("IntegerNode") {
             CHECK(inode.upper_bound(0) == IntegerNode::default_upper_bound);
             CHECK(inode.lower_bound() == IntegerNode::default_lower_bound);
             CHECK(inode.upper_bound() == IntegerNode::default_upper_bound);
+            CHECK(inode.uniform_index_wise_bounds());
         }
     }
 
@@ -496,6 +504,7 @@ TEST_CASE("IntegerNode") {
             CHECK(inode.upper_bound(0) == 10);
             CHECK(inode.lower_bound() == -5);
             CHECK(inode.upper_bound() == 10);
+            CHECK(inode.uniform_index_wise_bounds());
         }
     }
 
@@ -507,6 +516,7 @@ TEST_CASE("IntegerNode") {
             CHECK(inode.upper_bound(0) == 10);
             CHECK(inode.lower_bound() == IntegerNode::default_lower_bound);
             CHECK(inode.upper_bound() == 10);
+            CHECK(inode.uniform_index_wise_bounds());
         }
     }
 
@@ -518,6 +528,7 @@ TEST_CASE("IntegerNode") {
             CHECK(inode1.upper_bound(0) == IntegerNode::default_upper_bound);
             CHECK(inode1.lower_bound() == 5);
             CHECK(inode1.upper_bound() == IntegerNode::default_upper_bound);
+            CHECK(inode1.uniform_index_wise_bounds());
         }
     }
 
@@ -529,6 +540,7 @@ TEST_CASE("IntegerNode") {
             CHECK(inode1.upper_bound(0) == IntegerNode::default_upper_bound);
             CHECK(inode1.lower_bound() == 5);
             CHECK(inode1.upper_bound() == IntegerNode::default_upper_bound);
+            CHECK(inode1.uniform_index_wise_bounds());
         }
     }
 
@@ -551,6 +563,7 @@ TEST_CASE("IntegerNode") {
             CHECK(inode_ptr->upper_bound(2) == 7.0);
             REQUIRE_THROWS(inode_ptr->lower_bound());
             REQUIRE_THROWS(inode_ptr->upper_bound());
+            CHECK(!inode_ptr->uniform_index_wise_bounds());
         }
 
         AND_WHEN("We set the state at one of the indices") {
@@ -606,6 +619,7 @@ TEST_CASE("IntegerNode") {
             CHECK(inode_ptr->upper_bound(1) == 10.0);
             CHECK(inode_ptr->lower_bound() == 10.0);
             REQUIRE_THROWS(inode_ptr->upper_bound());
+            CHECK(!inode_ptr->uniform_index_wise_bounds());
         }
     }
 
@@ -631,6 +645,7 @@ TEST_CASE("IntegerNode") {
                 CHECK(ptr->lower_bound(i) == -10);
                 CHECK(ptr->upper_bound(i) == IntegerNode::default_upper_bound);
             }
+            CHECK(ptr->uniform_index_wise_bounds());
         }
 
         WHEN("We create a state using the default value") {
