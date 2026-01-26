@@ -44,7 +44,13 @@ from dwave.optimization.libcpp.array cimport Array as cppArray, broadcast_shapes
 from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.states cimport States
 from dwave.optimization.states import StateView
-from dwave.optimization.utilities import _file_object_arg, _lock, _NoValue, _TypeError_to_NotImplemented
+from dwave.optimization.utilities import (
+    _file_object_arg,
+    _lock,
+    _NoValue,
+    _split_indices,
+    _TypeError_to_NotImplemented,
+)
 
 __all__ = []
 
@@ -1339,44 +1345,6 @@ cdef class Symbol:
         index = self.node_ptr.topological_index()
         return index if index >= 0 else None
 
-def _split_indices(indices):
-    """Given a set of indices, made up of slices, integers, and array symbols,
-    create two consecutive indexing operations that can be passed to
-    BasicIndexing and AdvancedIndexing respectively.
-    """
-    # this is pure-Python and could be moved out of this .pyx file at some point
-
-    basic_indices = []
-    advanced_indices = []
-
-    for index in indices:
-        if isinstance(index, numbers.Integral):
-            # Only basic handles numeric indices and it removes the axis so
-            # only one gets the index.
-            basic_indices.append(index)
-        elif isinstance(index, slice):
-            if index.start is None and index.stop is None and index.step is None:
-                # empty slice, both handle it
-                basic_indices.append(index)
-                advanced_indices.append(index)
-            else:
-                # Advanced can only handle empty slices, so we do basic first
-                basic_indices.append(index)
-                advanced_indices.append(slice(None))
-        elif isinstance(index, (ArraySymbol, np.ndarray)):
-            # Only advanced handles arrays, it preserves the axis so basic gets
-            # an empty slice.
-            # We allow np.ndarray here for testing purposes. They are not (yet)
-            # natively handled by AdvancedIndexingNode.
-            basic_indices.append(slice(None))
-            advanced_indices.append(index)
-
-        else:
-            # this should be checked by the calling function, but just in case
-            raise RuntimeError("unexpected index type")
-
-    return tuple(basic_indices), tuple(advanced_indices)
-
 
 # dev note: most documentation is in the `ArraySymbol.info()` method.
 @dataclasses.dataclass(frozen=True)
@@ -1512,54 +1480,31 @@ cdef class ArraySymbol(Symbol):
         return dwave.optimization.mathematical.less_equal(rhs, self)
 
     def __getitem__(self, index):
-        import dwave.optimization.symbols  # avoid circular import
-        if isinstance(index, tuple):
-            index = list(index)
-
-            # for all indexing styles, empty slices are padded to fill out the
-            # number of dimension
-            while len(index) < self.ndim():
-                index.append(slice(None))
-
-            # replace any array-like indices with constants
-            for i in range(len(index)):
-                if isinstance(index[i], numbers.Integral):
-                    continue
-                try:
-                    index[i] = _as_array_symbol(self.model, index[i])
-                except (TypeError, ValueError):
-                    pass
-
-            if all(isinstance(idx, (slice, numbers.Integral)) for idx in index):
-                # Basic indexing
-                # https://numpy.org/doc/stable/user/basics.indexing.html#basic-indexing
-                return dwave.optimization.symbols.BasicIndexing(self, *index)
-
-            elif all(isinstance(idx, ArraySymbol) or
-                     (isinstance(idx, slice) and idx.start is None and idx.stop is None and idx.step is None)
-                     for idx in index):
-                # Advanced indexing
-                # https://numpy.org/doc/stable/user/basics.indexing.html#advanced-indexing
-
-                return dwave.optimization.symbols.AdvancedIndexing(self, *index)
-
-            elif all(isinstance(idx, (ArraySymbol, slice, numbers.Integral)) for idx in index):
-                # Combined indexing
-                # https://numpy.org/doc/stable/user/basics.indexing.html#combining-advanced-and-basic-indexing
-
-                # We handle this by doing basic and then advanced indexing. In principle the other
-                # order may be more efficient in some cases, but for now let's do the simple thing
-
-                basic_indices, advanced_indices = _split_indices(index)
-                basic = dwave.optimization.symbols.BasicIndexing(self, *basic_indices)
-                return dwave.optimization.symbols.AdvancedIndexing(basic, *advanced_indices)
-
-            else:
-                # this error message is chosen to be similar to NumPy's
-                raise IndexError("only integers, slices (`:`), arrays, and array symbols are valid indices")
-
-        else:
+        if not isinstance(index, tuple):
             return self[(index,)]
+
+        import dwave.optimization.symbols  # avoid circular import
+
+        newaxes, basic, advanced = _split_indices(self.shape(), index)
+
+        out = self
+
+        if newaxes:
+            raise NotImplementedError
+
+        if not all(isinstance(index, slice) and index == slice(None) for index in basic):
+            out = dwave.optimization.symbols.BasicIndexing(out, *basic)
+
+        if not all(isinstance(index, slice) and index == slice(None) for index in advanced):
+            # Do the type promotion to ArraySymbol
+            try:
+                adv = [index if isinstance(index, slice) else _as_array_symbol(self.model, index) for index in advanced]
+            except ValueError as err:
+                raise IndexError(err)
+
+            out = dwave.optimization.symbols.AdvancedIndexing(out, *adv)
+
+        return out
 
     @_TypeError_to_NotImplemented
     def __iadd__(self, rhs):

@@ -342,7 +342,7 @@ class TestAdvancedIndexing(unittest.TestCase):
                 "index may not contain non-integer values for axis 0"):
             x[1, [0, 1.1], model.constant([0, 3])]
 
-        with self.assertRaisesRegex(IndexError, "only integers, slices"):
+        with self.assertRaisesRegex(IndexError, "array must not contain infs or NaNs"):
             x[1, [0, float("inf")], model.constant([0, 3])]
 
 
@@ -624,7 +624,10 @@ class TestBasicIndexing(utils.SymbolTests):
         model = Model()
         x = model.binary(10)
 
-        self.assertEqual(x[:]._infer_indices(), (slice(0, 10, 1),))
+        self.assertEqual(
+            dwave.optimization.symbols.BasicIndexing(x)._infer_indices(),
+            (slice(0, 10, 1),),
+        )
         self.assertEqual(x[1::]._infer_indices(), (slice(1, 10, 1),))
         self.assertEqual(x[:3:]._infer_indices(), (slice(0, 3, 1),))
         self.assertEqual(x[::2]._infer_indices(), (slice(0, 10, 2),))
@@ -648,7 +651,9 @@ class TestBasicIndexing(utils.SymbolTests):
         self.assertEqual(x[3, 4::2]._infer_indices(), (3, slice(4, 6, 2)))
         self.assertEqual(x[3, 4:4:2]._infer_indices(), (3, slice(4, 4, 2)))
 
-        self.assertEqual(x[:, :]._infer_indices(), (slice(0, 5, 1), slice(0, 6, 1)))
+        self.assertEqual(dwave.optimization.symbols.BasicIndexing(x)._infer_indices(),
+            (slice(0, 5, 1), slice(0, 6, 1)),
+        )
         self.assertEqual(x[::2, :]._infer_indices(), (slice(0, 5, 2), slice(0, 6, 1)))
         self.assertEqual(x[:, ::2]._infer_indices(), (slice(0, 5, 1), slice(0, 6, 2)))
         self.assertEqual(x[2:, ::2]._infer_indices(), (slice(2, 5, 1), slice(0, 6, 2)))
@@ -661,7 +666,10 @@ class TestBasicIndexing(utils.SymbolTests):
         self.assertEqual(x[0, 4, 0]._infer_indices(), (0, 4, 0))
         self.assertEqual(x[0, 0, 0]._infer_indices(), (0, 0, 0))
 
-        self.assertEqual(x[:]._infer_indices(), (slice(0, 5, 1), slice(0, 6, 1), slice(0, 7, 1)))
+        self.assertEqual(
+            dwave.optimization.symbols.BasicIndexing(x)._infer_indices(),
+            (slice(0, 5, 1), slice(0, 6, 1), slice(0, 7, 1)),
+        )
         self.assertEqual(x[:, 3, :]._infer_indices(), (slice(0, 5, 1), 3, slice(0, 7, 1)))
         self.assertEqual(x[:, :, 3]._infer_indices(), (slice(0, 5, 1), slice(0, 6, 1), 3))
 
@@ -671,7 +679,10 @@ class TestBasicIndexing(utils.SymbolTests):
         model = Model()
         x = model.set(10)
 
-        self.assertEqual(x[:]._infer_indices(), (slice(0, MAX, 1),))
+        self.assertEqual(
+            dwave.optimization.symbols.BasicIndexing(x)._infer_indices(),
+            (slice(0, MAX, 1),),
+        )
         self.assertEqual(x[::2]._infer_indices(), (slice(0, MAX, 2),))
         self.assertEqual(x[5:2:2]._infer_indices(), (slice(5, 2, 2),))
         self.assertEqual(x[:2:]._infer_indices(), (slice(0, 2, 1),))

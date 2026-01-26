@@ -234,12 +234,12 @@ struct AdvancedIndexingNode::IndexParser_ {
         assert(array_ptr->ndim() >= 0);  // Should always be true
         if (static_cast<std::size_t>(array_ptr->ndim()) < indices_.size()) {
             // NumPy handles this case, we could as well
-            throw std::invalid_argument(std::string("too few indices for array: array is ") +
+            throw std::invalid_argument(std::string("too many indices for array: array is ") +
                                         std::to_string(array_ptr->ndim()) + "-dimensional, but " +
                                         std::to_string(indices_.size()) + " were indexed");
         }
         if (static_cast<std::size_t>(array_ptr->ndim()) > indices_.size()) {
-            throw std::invalid_argument(std::string("too many indices for array: array is ") +
+            throw std::invalid_argument(std::string("too few indices for array: array is ") +
                                         std::to_string(array_ptr->ndim()) + "-dimensional, but " +
                                         std::to_string(indices_.size()) + " were indexed");
         }

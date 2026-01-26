@@ -12,8 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import os
 import functools
+import numbers
+import os
+import types
 
 __all__ = []
 
@@ -74,6 +76,82 @@ def _lock(method):
         else:
             return method(obj, *args, **kwargs)
     return _method
+
+
+def _split_indices(
+    shape: tuple[int, ...],
+    index: tuple[int | slice | None | types.EllipsisType | object, ...],
+):
+    """Given a combined indexing operation, split into several steps.
+
+    Args:
+        shape: The shape of the indexed array.
+        index: A tuple of indexers.
+
+    Returns:
+        In order that they should be applied:
+            * A list of new axes that should be added, as with ``np.expand_dims()``.
+            * Indexers that can be given to ``BasicIndexing``
+            * Indexers that can be given to ``AdvancedIndexing``.
+
+    """
+    # developer note: there is a known issue where splitting the indexers in this
+    # way cannot account for all cases.
+    # See https://github.com/dwavesystems/dwave-optimization/issues/465 for more
+    # information.
+
+    indices: list = list(index)
+
+    # Handle the ellipses if it's present
+    if (count := sum(idx is ... for idx in indices)) > 1:
+        raise IndexError("an index can only have a single ellipsis ('...')")
+    elif count == 1:
+        # We have an ellipses, so we need to replace it with empty slice(s) until
+        # we hit the correct length
+
+        # First, find where the ellipses is
+        for loc, index in enumerate(indices):
+            if index is ...:
+                break
+        else:
+            raise RuntimeError  # shouldn't be able to get here
+
+        # Now that we know where the ellipses is, we remove it and then replace
+        # it with empty slices until we hit our desired ndim. Though we need
+        # to make sure not to count the newaxes towards that count
+        indices.pop(loc)
+        for _ in range(sum(idx is not None for idx in indices), len(shape)):
+            indices.insert(loc, slice(None))
+
+    # Now divide everything that's remaining between basic and advanced indexing
+    newaxes: list[int] = []
+    basic: list[slice | int] = []
+    advanced: list[slice | object] = []
+    for i, index in enumerate(indices):
+        if index is None:
+            # We'll insert the new axis before calling basid/advanced indexing
+            newaxes.append(i)
+            basic.append(slice(None))
+            advanced.append(slice(None))
+        elif isinstance(index, numbers.Integral):
+            # Only basic handles numeric indices and it removes the axis so
+            # only basic gets the index
+            basic.append(index)
+        elif isinstance(index, slice) and index == slice(None):
+            # Empty slices are handled by both basic and advanced indexing
+            basic.append(slice(None))
+            advanced.append(slice(None))
+        elif isinstance(index, slice):
+            # Non-empty slice are only handled by basic indexing
+            basic.append(index)
+            advanced.append(slice(None))
+        else:
+            # For anything else, we defer to advanced indexing for the type
+            # checking
+            basic.append(slice(None))
+            advanced.append(index)
+
+    return tuple(newaxes), tuple(basic), tuple(advanced)
 
 
 def _TypeError_to_NotImplemented(f):
