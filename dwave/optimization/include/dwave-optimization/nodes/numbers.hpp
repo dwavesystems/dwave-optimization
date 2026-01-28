@@ -152,18 +152,16 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     /// Default value in a given index.
     virtual double default_value(ssize_t index) const = 0;
 
-    /// Check whether all axis-wise bounds are satisfied
-    bool satisfies_axis_wise_bounds(State& state) const;
-
     /// Update the running bound axis sums where `index` is changed by
     /// `value_change` in a given state.
     void update_bound_axis_slice_sums(State& state, const ssize_t index,
                                       const double value_change) const;
 
+    /// Statelss global minimum and maximum of the values stored in NumberNode.
     double min_;
     double max_;
 
-    /// Stateless index-wise upper and lower bounds
+    /// Stateless index-wise upper and lower bounds.
     std::vector<double> lower_bounds_;
     std::vector<double> upper_bounds_;
 
