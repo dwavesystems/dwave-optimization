@@ -25,38 +25,37 @@
 
 namespace dwave::optimization {
 
-/// Allowable axis-wise bound operators.
-enum BoundAxisOperator { Equal, LessEqual, GreaterEqual };
-
-/// Class for stateless axis-wise bound information. Given an `axis`, define
-/// constraints on the sum of the values in each slice along `axis`.
-/// Constraints can be defined for ALL slices along `axis` or PER slice along
-/// `axis`. Allowable operators are defined by `BoundAxisOperator`.
-class BoundAxisInfo {
- public:
-    /// To reduce the # of `IntegerNode` and `BinaryNode` constructors, we
-    /// allow only one constructor.
-    BoundAxisInfo(ssize_t axis, std::vector<BoundAxisOperator> axis_operators,
-                  std::vector<double> axis_bounds);
-    /// The bound axis
-    const ssize_t axis;
-    /// Operator for ALL axis slices (vector has length one) or operator*s* PER
-    /// slice (length of vector is equal to the number of slices).
-    const std::vector<BoundAxisOperator> operators;
-    /// Bound for ALL axis slices (vector has length one) or bound*s* PER slice
-    /// (length of vector is equal to the number of slices).
-    const std::vector<double> bounds;
-
-    /// Obtain the bound associated with a given slice along bound axis.
-    double get_bound(const ssize_t slice) const;
-
-    /// Obtain the operator associated with a given slice along bound axis.
-    BoundAxisOperator get_operator(const ssize_t slice) const;
-};
-
 /// A contiguous block of numbers.
 class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
+    /// Allowable axis-wise bound operators.
+    enum BoundAxisOperator { Equal, LessEqual, GreaterEqual };
+
+    /// Struct for stateless axis-wise bound information. Given an `axis`, define
+    /// constraints on the sum of the values in each slice along `axis`.
+    /// Constraints can be defined for ALL slices along `axis` or PER slice along
+    /// `axis`. Allowable operators are defined by `BoundAxisOperator`.
+    struct BoundAxisInfo {
+        /// To reduce the # of `IntegerNode` and `BinaryNode` constructors, we
+        /// allow only one constructor.
+        BoundAxisInfo(ssize_t axis, std::vector<BoundAxisOperator> axis_operators,
+                      std::vector<double> axis_bounds);
+        /// The bound axis
+        const ssize_t axis;
+        /// Operator for ALL axis slices (vector has length one) or operator*s* PER
+        /// slice (length of vector is equal to the number of slices).
+        const std::vector<BoundAxisOperator> operators;
+        /// Bound for ALL axis slices (vector has length one) or bound*s* PER slice
+        /// (length of vector is equal to the number of slices).
+        const std::vector<double> bounds;
+
+        /// Obtain the bound associated with a given slice along `axis`.
+        double get_bound(const ssize_t slice) const;
+
+        /// Obtain the operator associated with a given slice along `axis`.
+        BoundAxisOperator get_operator(const ssize_t slice) const;
+    };
+
     NumberNode() = delete;
 
     // Overloads needed by the Array ABC **************************************
@@ -97,6 +96,8 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // Initialize the state of the node randomly
     template <std::uniform_random_bit_generator Generator>
     void initialize_state(State& state, Generator& rng) const {
+        // Currently, we do not support random node Initialization with
+        // axis wise bounds.
         if (bound_axes_info_.size() > 0) {
             throw std::invalid_argument("Cannot randomly initialize_state with bound axes");
         }
@@ -139,10 +140,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // in a given index.
     void clip_and_set_value(State& state, ssize_t index, double value) const;
 
-    /// Return pointer to the vector of axis-wise bounds
+    /// Return vector of axis-wise bounds.
     const std::vector<BoundAxisInfo>& axis_wise_bounds() const;
 
-    // Return a pointer to the vector containing the bound axis sums
+    /// Return vector containing the bound axis sums in a given state.
     const std::vector<std::vector<double>>& bound_axis_sums(State& state) const;
 
  protected:
@@ -156,8 +157,8 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     /// Default value in a given index.
     virtual double default_value(ssize_t index) const = 0;
 
-    /// Update the running bound axis sums where `index` is changed by
-    /// `value_change` in a given state.
+    /// Update the running bound axis sums where the value stored at `index` is
+    /// changed by `value_change` in a given state.
     void update_bound_axis_slice_sums(State& state, const ssize_t index,
                                       const double value_change) const;
 
