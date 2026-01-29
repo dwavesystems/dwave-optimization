@@ -25,38 +25,37 @@
 
 namespace dwave::optimization {
 
-/// Allowable axis-wise bound operators.
-enum BoundAxisOperator { Equal, LessEqual, GreaterEqual };
-
-/// Class for stateless axis-wise bound information. Given an `axis`, define
-/// constraints on the sum of the values in each slice along `axis`.
-/// Constraints can be defined for ALL slices along `axis` or PER slice along
-/// `axis`. Allowable operators are defined by `BoundAxisOperator`.
-class BoundAxisInfo {
- public:
-    /// To reduce the # of `IntegerNode` and `BinaryNode` constructors, we
-    /// allow only one constructor.
-    BoundAxisInfo(ssize_t axis, std::vector<BoundAxisOperator> axis_operators,
-                  std::vector<double> axis_bounds);
-    /// The bound axis
-    const ssize_t axis;
-    /// Operator for ALL axis slices (vector has length one) or operator*s* PER
-    /// slice (length of vector is equal to the number of slices).
-    const std::vector<BoundAxisOperator> operators;
-    /// Bound for ALL axis slices (vector has length one) or bound*s* PER slice
-    /// (length of vector is equal to the number of slices).
-    const std::vector<double> bounds;
-
-    /// Obtain the bound associated with a given slice along bound axis.
-    double get_bound(const ssize_t slice) const;
-
-    /// Obtain the operator associated with a given slice along bound axis.
-    BoundAxisOperator get_operator(const ssize_t slice) const;
-};
-
 /// A contiguous block of numbers.
 class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
+    /// Allowable axis-wise bound operators.
+    enum BoundAxisOperator { Equal, LessEqual, GreaterEqual };
+
+    /// Struct for stateless axis-wise bound information. Given an `axis`, define
+    /// constraints on the sum of the values in each slice along `axis`.
+    /// Constraints can be defined for ALL slices along `axis` or PER slice along
+    /// `axis`. Allowable operators are defined by `BoundAxisOperator`.
+    struct BoundAxisInfo {
+        /// To reduce the # of `IntegerNode` and `BinaryNode` constructors, we
+        /// allow only one constructor.
+        BoundAxisInfo(ssize_t axis, std::vector<BoundAxisOperator> axis_operators,
+                      std::vector<double> axis_bounds);
+        /// The bound axis
+        const ssize_t axis;
+        /// Operator for ALL axis slices (vector has length one) or operator*s* PER
+        /// slice (length of vector is equal to the number of slices).
+        const std::vector<BoundAxisOperator> operators;
+        /// Bound for ALL axis slices (vector has length one) or bound*s* PER slice
+        /// (length of vector is equal to the number of slices).
+        const std::vector<double> bounds;
+
+        /// Obtain the bound associated with a given slice along bound axis.
+        double get_bound(const ssize_t slice) const;
+
+        /// Obtain the operator associated with a given slice along bound axis.
+        BoundAxisOperator get_operator(const ssize_t slice) const;
+    };
+
     NumberNode() = delete;
 
     // Overloads needed by the Array ABC **************************************
