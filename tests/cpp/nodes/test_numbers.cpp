@@ -296,8 +296,8 @@ TEST_CASE("BinaryNode") {
     }
 
     GIVEN("Binary node with index-wise bounds") {
-        auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
-                3, std::vector<double>{-1, 0, 1}, std::vector<double>{2, 1, 1});
+        auto bnode_ptr = graph.emplace_node<BinaryNode>(3, std::vector<double>{-1, 0, 1},
+                                                        std::vector<double>{2, 1, 1});
 
         THEN("The shape, max, min, and bounds are correct") {
             CHECK(bnode_ptr->size() == 3);
@@ -394,8 +394,7 @@ TEST_CASE("BinaryNode") {
     }
 
     GIVEN("Binary node with index-wise upper bound and general lower bound") {
-        auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
-                2, -2.0, std::vector<double>{0.0, 1.1});
+        auto bnode_ptr = graph.emplace_node<BinaryNode>(2, -2.0, std::vector<double>{0.0, 1.1});
 
         THEN("The max, min, and bounds are correct") {
             CHECK(bnode_ptr->max() == 1.0);
@@ -411,8 +410,7 @@ TEST_CASE("BinaryNode") {
     }
 
     GIVEN("Binary node with index-wise lower bound and general upper bound") {
-        auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
-                2, std::vector<double>{-1.0, 1.0}, 100.0);
+        auto bnode_ptr = graph.emplace_node<BinaryNode>(2, std::vector<double>{-1.0, 1.0}, 100.0);
 
         THEN("The max, min, and bounds are correct") {
             CHECK(bnode_ptr->max() == 1.0);
@@ -428,13 +426,13 @@ TEST_CASE("BinaryNode") {
     }
 
     GIVEN("Binary node with invalid index-wise lower bounds at index 0") {
-        REQUIRE_THROWS(graph.emplace_node<dwave::optimization::BinaryNode>(
-                2, std::vector<double>{2, 0}, std::vector<double>{1, 1}));
+        REQUIRE_THROWS(graph.emplace_node<BinaryNode>(2, std::vector<double>{2, 0},
+                                                      std::vector<double>{1, 1}));
     }
 
     GIVEN("Binary node with invalid index-wise upper bounds at index 1") {
-        REQUIRE_THROWS(graph.emplace_node<dwave::optimization::BinaryNode>(
-                2, std::vector<double>{0, 0}, std::vector<double>{1, -1}));
+        REQUIRE_THROWS(graph.emplace_node<BinaryNode>(2, std::vector<double>{0, 0},
+                                                      std::vector<double>{1, -1}));
     }
 
     GIVEN("Invalid dynamically sized BinaryNode") {
@@ -534,8 +532,8 @@ TEST_CASE("IntegerNode") {
     }
 
     GIVEN("Integer node with index-wise bounds") {
-        auto inode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
-                3, std::vector<double>{-1, 3, 5}, std::vector<double>{1, 7, 7});
+        auto inode_ptr = graph.emplace_node<IntegerNode>(3, std::vector<double>{-1, 3, 5},
+                                                         std::vector<double>{1, 7, 7});
 
         THEN("The shape, max, min, and bounds are correct") {
             CHECK(inode_ptr->size() == 3);
@@ -596,8 +594,7 @@ TEST_CASE("IntegerNode") {
     }
 
     GIVEN("Integer node with index-wise upper bound and general integer lower bound") {
-        auto inode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
-                2, 10, std::vector<double>{20, 10});
+        auto inode_ptr = graph.emplace_node<IntegerNode>(2, 10, std::vector<double>{20, 10});
 
         THEN("The max, min, and bounds are correct") {
             CHECK(inode_ptr->max() == 20.0);
@@ -613,8 +610,8 @@ TEST_CASE("IntegerNode") {
     }
 
     GIVEN("Integer node with invalid index-wise bounds at index 0") {
-        REQUIRE_THROWS(graph.emplace_node<dwave::optimization::IntegerNode>(
-                2, std::vector<double>{19, 12}, std::vector<double>{20, 11}));
+        REQUIRE_THROWS(graph.emplace_node<IntegerNode>(2, std::vector<double>{19, 12},
+                                                       std::vector<double>{20, 11}));
     }
 
     GIVEN("An Integer Node representing an 1d array of 10 elements with lower bound -10") {
