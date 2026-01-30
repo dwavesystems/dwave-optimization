@@ -28,56 +28,50 @@ namespace dwave::optimization {
 
 TEST_CASE("BoundAxisInfo") {
     GIVEN("BoundAxisInfo(axis = 0, operators = {}, bounds = {1.0})") {
-        REQUIRE_THROWS_WITH(
-                NumberNode::BoundAxisInfo(0, std::vector<NumberNode::BoundAxisOperator>{},
-                                          std::vector<double>{1.0}),
-                "Bad axis-wise bounds for axis: 0, `operators` and `bounds` must each have "
-                "non-zero size.");
+        std::vector<NumberNode::BoundAxisOperator> operators;
+        std::vector<double> bounds{1.0};
+        REQUIRE_THROWS_WITH(NumberNode::BoundAxisInfo(0, operators, bounds),
+                            "Axis-wise `operators` and `bounds` must have non-zero size.");
     }
 
     GIVEN("BoundAxisInfo(axis = 0, operators = {<=}, bounds = {})") {
-        REQUIRE_THROWS_WITH(
-                NumberNode::BoundAxisInfo(0,
-                                          std::vector<NumberNode::BoundAxisOperator>{
-                                                  NumberNode::NumberNode::LessEqual},
-                                          std::vector<double>{}),
-                "Bad axis-wise bounds for axis: 0, `operators` and `bounds` must each have "
-                "non-zero size.");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::LessEqual};
+        std::vector<double> bounds;
+        REQUIRE_THROWS_WITH(NumberNode::BoundAxisInfo(0, operators, bounds),
+                            "Axis-wise `operators` and `bounds` must have non-zero size.");
     }
 
     GIVEN("BoundAxisInfo(axis = 1, operators = {<=, ==, ==}, bounds = {2.0, 1.0})") {
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::LessEqual,
+                                                             NumberNode::Equal, NumberNode::Equal};
+        std::vector<double> bounds{2.0, 1.0};
         REQUIRE_THROWS_WITH(
-                NumberNode::BoundAxisInfo(
-                        1,
-                        std::vector<NumberNode::BoundAxisOperator>{
-                                NumberNode::LessEqual, NumberNode::Equal, NumberNode::Equal},
-                        std::vector<double>{2.0, 1.0}),
-                "Bad axis-wise bounds for axis: 1, `operators` and `bounds` should have same size "
-                "if neither has size 1.");
+                NumberNode::BoundAxisInfo(1, operators, bounds),
+                "Axis-wise `operators` and `bounds` should have same size if neither has size 1.");
     }
 
     GIVEN("BoundAxisInfo(axis = 2, operators = {==}, bounds = {1.0})") {
-        NumberNode::BoundAxisInfo bound_axis(
-                2, std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal},
-                std::vector<double>{1.0});
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal};
+        std::vector<double> bounds{1.0};
+        NumberNode::BoundAxisInfo bound_axis(2, operators, bounds);
+
         THEN("The bound axis info is correct") {
             CHECK(bound_axis.axis == 2);
-            CHECK_THAT(bound_axis.operators, RangeEquals({NumberNode::Equal}));
-            CHECK_THAT(bound_axis.bounds, RangeEquals({1.0}));
+            CHECK_THAT(bound_axis.operators, RangeEquals(operators));
+            CHECK_THAT(bound_axis.bounds, RangeEquals(bounds));
         }
     }
 
     GIVEN("BoundAxisInfo(axis = 2, operators = {==, <=, >=}, bounds = {1.0, 2.0, 3.0})") {
-        NumberNode::BoundAxisInfo bound_axis(
-                2,
-                std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal, NumberNode::LessEqual,
-                                                           NumberNode::GreaterEqual},
-                std::vector<double>{1.0, 2.0, 3.0});
+        std::vector<NumberNode::BoundAxisOperator> operators{
+                NumberNode::Equal, NumberNode::LessEqual, NumberNode::GreaterEqual};
+        std::vector<double> bounds{1.0, 2.0, 3.0};
+        NumberNode::BoundAxisInfo bound_axis(2, operators, bounds);
+
         THEN("The bound axis info is correct") {
             CHECK(bound_axis.axis == 2);
-            CHECK_THAT(bound_axis.operators, RangeEquals({NumberNode::Equal, NumberNode::LessEqual,
-                                                          NumberNode::GreaterEqual}));
-            CHECK_THAT(bound_axis.bounds, RangeEquals({1.0, 2.0, 3.0}));
+            CHECK_THAT(bound_axis.operators, RangeEquals(operators));
+            CHECK_THAT(bound_axis.bounds, RangeEquals(bounds));
         }
     }
 }
@@ -498,127 +492,113 @@ TEST_CASE("BinaryNode") {
     }
 
     GIVEN("(2x3)-BinaryNode with axis-wise bounds on the invalid axis -1") {
-        NumberNode::BoundAxisInfo bound_axis{
-                -1, std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal},
-                std::vector<double>{1.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid bound axis: -1. Note, negative indexing is not supported for "
-                "axis-wise bounds.");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal};
+        std::vector<double> bounds{1.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{-1, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
+                                                           std::nullopt, std::nullopt, bound_axes),
+                            "Invalid bound axis given number array shape.");
     }
 
     GIVEN("(2x3)-BinaryNode with axis-wise bounds on the invalid axis 2") {
-        NumberNode::BoundAxisInfo bound_axis{
-                2, std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal},
-                std::vector<double>{1.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid bound axis: 2. Note, negative indexing is not supported for "
-                "axis-wise bounds.");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal};
+        std::vector<double> bounds{1.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{2, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
+                                                           std::nullopt, std::nullopt, bound_axes),
+                            "Invalid bound axis given number array shape.");
     }
 
     GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too many operators.") {
-        NumberNode::BoundAxisInfo bound_axis{
-                1,
-                std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual, NumberNode::Equal,
-                                                           NumberNode::Equal, NumberNode::Equal},
-                std::vector<double>{1.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid number of axis-wise operators along axis: 1 given axis size: 3");
+        std::vector<NumberNode::BoundAxisOperator> operators{
+                NumberNode::LessEqual, NumberNode::Equal, NumberNode::Equal, NumberNode::Equal};
+        std::vector<double> bounds{1.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
+                                                           std::nullopt, std::nullopt, bound_axes),
+                            "Invalid number of axis-wise operators given number array shape.");
     }
 
     GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too few operators.") {
-        NumberNode::BoundAxisInfo bound_axis{1,
-                                             std::vector<NumberNode::BoundAxisOperator>{
-                                                     NumberNode::LessEqual, NumberNode::Equal},
-                                             std::vector<double>{1.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid number of axis-wise operators along axis: 1 given axis size: 3");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::LessEqual,
+                                                             NumberNode::Equal};
+        std::vector<double> bounds{1.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
+                                                           std::nullopt, std::nullopt, bound_axes),
+                            "Invalid number of axis-wise operators given number array shape.");
     }
 
     GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too many bounds.") {
-        NumberNode::BoundAxisInfo bound_axis{
-                1, std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual},
-                std::vector<double>{1.0, 2.0, 3.0, 4.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid number of axis-wise bounds along axis: 1 given axis size: 3");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal};
+        std::vector<double> bounds{1.0, 2.0, 3.0, 4.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
+                                                           std::nullopt, std::nullopt, bound_axes),
+                            "Invalid number of axis-wise bounds given number array shape.");
     }
 
     GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too few bounds.") {
-        NumberNode::BoundAxisInfo bound_axis{
-                1, std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual},
-                std::vector<double>{1.0, 2.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid number of axis-wise bounds along axis: 1 given axis size: 3");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::LessEqual};
+        std::vector<double> bounds{1.0, 2.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
+                                                           std::nullopt, std::nullopt, bound_axes),
+                            "Invalid number of axis-wise bounds given number array shape.");
     }
 
     GIVEN("(2x3)-BinaryNode with duplicate axis-wise bounds on axis: 1") {
-        NumberNode::BoundAxisInfo bound_axis{
-                1, std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal},
-                std::vector<double>{1.0}};
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal};
+        std::vector<double> bounds{1.0};
+        NumberNode::BoundAxisInfo bound_axis{1, operators, bounds};
+
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::BinaryNode>(
+                graph.emplace_node<BinaryNode>(
                         std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
                         std::vector<NumberNode::BoundAxisInfo>{bound_axis, bound_axis}),
                 "Cannot define multiple axis-wise bounds for a single axis.");
     }
 
     GIVEN("(2x3)-BinaryNode with axis-wise bounds on axes: 0 and 1") {
-        NumberNode::BoundAxisInfo bound_axis_0{
-                0, std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual},
-                std::vector<double>{1.0}};
-        NumberNode::BoundAxisInfo bound_axis_1{
-                1, std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual},
-                std::vector<double>{1.0}};
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::LessEqual};
+        std::vector<double> bounds{1.0};
+        NumberNode::BoundAxisInfo bound_axis_0{0, operators, bounds};
+        NumberNode::BoundAxisInfo bound_axis_1{1, operators, bounds};
+
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::BinaryNode>(
+                graph.emplace_node<BinaryNode>(
                         std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
                         std::vector<NumberNode::BoundAxisInfo>{bound_axis_0, bound_axis_1}),
                 "Axis-wise bounds are supported for at most one axis.");
     }
 
-    GIVEN("(2x3x4)-IntegerNode with non-integral axis-wise bounds") {
-        NumberNode::BoundAxisInfo bound_axis{
-                1, std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal},
-                std::vector<double>{0.1}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Axis wise bounds for integral number arrays must be intregral.");
+    GIVEN("(2x3x4)-BinaryNode with non-integral axis-wise bounds") {
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal};
+        std::vector<double> bounds{0.1};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                           std::nullopt, std::nullopt, bound_axes),
+                            "Axis wise bounds for integral number arrays must be intregral.");
     }
 
     GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 0") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{
-                0,
-                std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal, NumberNode::LessEqual,
-                                                           NumberNode::GreaterEqual},
-                std::vector<double>{5.0, 2.0, 3.0}};
-
+        std::vector<NumberNode::BoundAxisOperator> operators{
+                NumberNode::Equal, NumberNode::LessEqual, NumberNode::GreaterEqual};
+        std::vector<double> bounds{5.0, 2.0, 3.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{0, operators, bounds}};
         // Each hyperslice along axis 0 has size 4. There is no feasible
         // assignment to the values in slice 0 (along axis 0) that results in a
         // sum equal to 5.
-        graph.emplace_node<dwave::optimization::BinaryNode>(
-                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt,
+                                       std::nullopt, bound_axes);
 
         WHEN("We create a state by initialize_state()") {
             REQUIRE_THROWS_WITH(graph.initialize_state(), "Infeasible axis-wise bounds.");
@@ -627,15 +607,12 @@ TEST_CASE("BinaryNode") {
 
     GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 1") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{1,
-                                             std::vector<NumberNode::BoundAxisOperator>{
-                                                     NumberNode::Equal, NumberNode::GreaterEqual},
-                                             std::vector<double>{5.0, 7.0}};
-
-        graph.emplace_node<dwave::optimization::BinaryNode>(
-                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal,
+                                                             NumberNode::GreaterEqual};
+        std::vector<double> bounds{5.0, 7.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+        graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt,
+                                       std::nullopt, bound_axes);
 
         WHEN("We create a state by initialize_state()") {
             // Each hyperslice along axis 1 has size 6. There is no feasible
@@ -647,15 +624,12 @@ TEST_CASE("BinaryNode") {
 
     GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 2") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{2,
-                                             std::vector<NumberNode::BoundAxisOperator>{
-                                                     NumberNode::Equal, NumberNode::LessEqual},
-                                             std::vector<double>{5.0, -1.0}};
-
-        graph.emplace_node<dwave::optimization::BinaryNode>(
-                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal,
+                                                             NumberNode::LessEqual};
+        std::vector<double> bounds{5.0, -1.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{2, operators, bounds}};
+        graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt,
+                                       std::nullopt, bound_axes);
 
         WHEN("We create a state by initialize_state()") {
             // Each hyperslice along axis 2 has size 6. There is no feasible
@@ -667,23 +641,19 @@ TEST_CASE("BinaryNode") {
 
     GIVEN("(3x2x2)-BinaryNode with feasible axis-wise bound on axis: 0") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{
-                0,
-                std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal, NumberNode::LessEqual,
-                                                           NumberNode::GreaterEqual},
-                std::vector<double>{1.0, 2.0, 3.0}};
-
-        auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
-                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{
+                NumberNode::Equal, NumberNode::LessEqual, NumberNode::GreaterEqual};
+        std::vector<double> bounds{1.0, 2.0, 3.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{0, operators, bounds}};
+        auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                                        std::nullopt, std::nullopt, bound_axes);
 
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
             NumberNode::BoundAxisInfo bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axis.axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axis.operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
+            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
+            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -716,23 +686,19 @@ TEST_CASE("BinaryNode") {
 
     GIVEN("(3x2x2)-BinaryNode with feasible axis-wise bound on axis: 1") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{
-                1,
-                std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual,
-                                                           NumberNode::GreaterEqual},
-                std::vector<double>{1.0, 5.0}};
-
-        auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
-                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::LessEqual,
+                                                             NumberNode::GreaterEqual};
+        std::vector<double> bounds{1.0, 5.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+        auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                                        std::nullopt, std::nullopt, bound_axes);
 
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
             NumberNode::BoundAxisInfo bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axis.axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axis.operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
+            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
+            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -764,22 +730,19 @@ TEST_CASE("BinaryNode") {
 
     GIVEN("(3x2x2)-BinaryNode with feasible axis-wise bound on axis: 2") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{2,
-                                             std::vector<NumberNode::BoundAxisOperator>{
-                                                     NumberNode::Equal, NumberNode::GreaterEqual},
-                                             std::vector<double>{3.0, 6.0}};
-
-        auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
-                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal,
+                                                             NumberNode::GreaterEqual};
+        std::vector<double> bounds{3.0, 6.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{2, operators, bounds}};
+        auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                                        std::nullopt, std::nullopt, bound_axes);
 
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
             NumberNode::BoundAxisInfo bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axis.axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axis.operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
+            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
+            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -811,23 +774,19 @@ TEST_CASE("BinaryNode") {
 
     GIVEN("(3x2x2)-BinaryNode with an axis-wise bound on axis: 0") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{
-                0,
-                std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal, NumberNode::LessEqual,
-                                                           NumberNode::GreaterEqual},
-                std::vector<double>{1.0, 2.0, 3.0}};
-
-        auto bnode_ptr = graph.emplace_node<dwave::optimization::BinaryNode>(
-                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{
+                NumberNode::Equal, NumberNode::LessEqual, NumberNode::GreaterEqual};
+        std::vector<double> bounds{1.0, 2.0, 3.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{0, operators, bounds}};
+        auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                                        std::nullopt, std::nullopt, bound_axes);
 
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
             NumberNode::BoundAxisInfo bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axis.axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axis.operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
+            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
+            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
         }
 
         WHEN("We initialize three invalid states") {
@@ -1088,7 +1047,8 @@ TEST_CASE("IntegerNode") {
         }
     }
 
-    GIVEN("Double precision numbers, which may fall outside integer range or are not integral") {
+    GIVEN("Double precision numbers, which may fall outside integer range or are not "
+          "integral") {
         IntegerNode inode({1});
 
         THEN("The state is not deterministic") { CHECK(!inode.deterministic_state()); }
@@ -1367,123 +1327,109 @@ TEST_CASE("IntegerNode") {
     }
 
     GIVEN("(2x3)-IntegerNode with axis-wise bounds on the invalid axis -2") {
-        NumberNode::BoundAxisInfo bound_axis{
-                -2, std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal},
-                std::vector<double>{20.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid bound axis: -2. Note, negative indexing is not supported for "
-                "axis-wise bounds.");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal};
+        std::vector<double> bounds{20.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{-2, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3},
+                                                            std::nullopt, std::nullopt, bound_axes),
+                            "Invalid bound axis given number array shape.");
     }
 
     GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on the invalid axis 3") {
-        NumberNode::BoundAxisInfo bound_axis{
-                3, std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal},
-                std::vector<double>{10.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid bound axis: 3. Note, negative indexing is not supported for "
-                "axis-wise bounds.");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal};
+        std::vector<double> bounds{10.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{3, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                            std::nullopt, std::nullopt, bound_axes),
+                            "Invalid bound axis given number array shape.");
     }
 
     GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too many operators.") {
-        NumberNode::BoundAxisInfo bound_axis{
-                1,
-                std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual, NumberNode::Equal,
-                                                           NumberNode::Equal, NumberNode::Equal},
-                std::vector<double>{-10.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid number of axis-wise operators along axis: 1 given axis size: 3");
+        std::vector<NumberNode::BoundAxisOperator> operators{
+                NumberNode::LessEqual, NumberNode::Equal, NumberNode::Equal, NumberNode::Equal};
+        std::vector<double> bounds{-10.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                            std::nullopt, std::nullopt, bound_axes),
+                            "Invalid number of axis-wise operators given number array shape.");
     }
 
     GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too few operators.") {
-        NumberNode::BoundAxisInfo bound_axis{1,
-                                             std::vector<NumberNode::BoundAxisOperator>{
-                                                     NumberNode::LessEqual, NumberNode::Equal},
-                                             std::vector<double>{-11.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid number of axis-wise operators along axis: 1 given axis size: 3");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::LessEqual,
+                                                             NumberNode::Equal};
+        std::vector<double> bounds{-11.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                            std::nullopt, std::nullopt, bound_axes),
+                            "Invalid number of axis-wise operators given number array shape.");
     }
 
     GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too many bounds.") {
-        NumberNode::BoundAxisInfo bound_axis{
-                1, std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual},
-                std::vector<double>{-10.0, 20.0, 30.0, 40.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid number of axis-wise bounds along axis: 1 given axis size: 3");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::LessEqual};
+        std::vector<double> bounds{-10.0, 20.0, 30.0, 40.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                            std::nullopt, std::nullopt, bound_axes),
+                            "Invalid number of axis-wise bounds given number array shape.");
     }
 
     GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too few bounds.") {
-        NumberNode::BoundAxisInfo bound_axis{
-                1, std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual},
-                std::vector<double>{111.0, -223.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Invalid number of axis-wise bounds along axis: 1 given axis size: 3");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::LessEqual};
+        std::vector<double> bounds{111.0, -223.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                            std::nullopt, std::nullopt, bound_axes),
+                            "Invalid number of axis-wise bounds given number array shape.");
     }
 
     GIVEN("(2x3x4)-IntegerNode with duplicate axis-wise bounds on axis: 1") {
-        NumberNode::BoundAxisInfo bound_axis{
-                1, std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal},
-                std::vector<double>{100.0}};
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal};
+        std::vector<double> bounds{100.0};
+        NumberNode::BoundAxisInfo bound_axis{1, operators, bounds};
+
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::IntegerNode>(
+                graph.emplace_node<IntegerNode>(
                         std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
                         std::vector<NumberNode::BoundAxisInfo>{bound_axis, bound_axis}),
                 "Cannot define multiple axis-wise bounds for a single axis.");
     }
 
     GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axes: 0 and 1") {
-        NumberNode::BoundAxisInfo bound_axis_0{
-                0, std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual},
-                std::vector<double>{11.0}};
-        NumberNode::BoundAxisInfo bound_axis_1{
-                1, std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual},
-                std::vector<double>{12.0}};
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal};
+        std::vector<double> bounds{100.0};
+        NumberNode::BoundAxisInfo bound_axis_0{0, operators, bounds};
+        NumberNode::BoundAxisInfo bound_axis_1{1, operators, bounds};
+
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::IntegerNode>(
+                graph.emplace_node<IntegerNode>(
                         std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
                         std::vector<NumberNode::BoundAxisInfo>{bound_axis_0, bound_axis_1}),
                 "Axis-wise bounds are supported for at most one axis.");
     }
 
     GIVEN("(2x3x4)-IntegerNode with non-integral axis-wise bounds") {
-        NumberNode::BoundAxisInfo bound_axis{
-                2, std::vector<NumberNode::BoundAxisOperator>{NumberNode::LessEqual},
-                std::vector<double>{11.0, 12.0001, 0.0, 0.0}};
-        REQUIRE_THROWS_WITH(
-                graph.emplace_node<dwave::optimization::IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt,
-                        std::vector<NumberNode::BoundAxisInfo>{bound_axis}),
-                "Axis wise bounds for integral number arrays must be intregral.");
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::LessEqual};
+        std::vector<double> bounds{11.0, 12.0001, 0.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                            std::nullopt, std::nullopt, bound_axes),
+                            "Axis wise bounds for integral number arrays must be intregral.");
     }
 
     GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 0") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{0,
-                                             std::vector<NumberNode::BoundAxisOperator>{
-                                                     NumberNode::Equal, NumberNode::LessEqual},
-                                             std::vector<double>{5.0, -31.0}};
-
-        graph.emplace_node<dwave::optimization::IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal,
+                                                             NumberNode::LessEqual};
+        std::vector<double> bounds{5.0, -31.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{0, operators, bounds}};
+        graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, bound_axes);
 
         WHEN("We create a state by initialize_state()") {
             // Each hyperslice along axis 0 has size 6. There is no feasible
@@ -1495,16 +1441,11 @@ TEST_CASE("IntegerNode") {
 
     GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 1") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{
-                1,
-                std::vector<NumberNode::BoundAxisOperator>{NumberNode::GreaterEqual,
-                                                           NumberNode::Equal, NumberNode::Equal},
-                std::vector<double>{33.0, 0.0, 0.0}};
-
-        graph.emplace_node<dwave::optimization::IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::GreaterEqual,
+                                                             NumberNode::Equal, NumberNode::Equal};
+        std::vector<double> bounds{33.0, 0.0, 0.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+        graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, bound_axes);
 
         WHEN("We create a state by initialize_state()") {
             // Each hyperslice along axis 1 has size 4. There is no feasible
@@ -1516,15 +1457,11 @@ TEST_CASE("IntegerNode") {
 
     GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 2") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{2,
-                                             std::vector<NumberNode::BoundAxisOperator>{
-                                                     NumberNode::GreaterEqual, NumberNode::Equal},
-                                             std::vector<double>{-1.0, 49.0}};
-
-        graph.emplace_node<dwave::optimization::IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::GreaterEqual,
+                                                             NumberNode::Equal};
+        std::vector<double> bounds{-1.0, 49.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{2, operators, bounds}};
+        graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, bound_axes);
 
         WHEN("We create a state by initialize_state()") {
             // Each hyperslice along axis 2 has size 6. There is no feasible
@@ -1536,22 +1473,19 @@ TEST_CASE("IntegerNode") {
 
     GIVEN("(2x3x2)-IntegerNode with feasible axis-wise bound on axis: 0") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{0,
-                                             std::vector<NumberNode::BoundAxisOperator>{
-                                                     NumberNode::Equal, NumberNode::GreaterEqual},
-                                             std::vector<double>{-21.0, 9.0}};
-
-        auto bnode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal,
+                                                             NumberNode::GreaterEqual};
+        std::vector<double> bounds{-21.0, 9.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{0, operators, bounds}};
+        auto bnode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                         -5, 8, bound_axes);
 
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
             NumberNode::BoundAxisInfo bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axis.axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axis.operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
+            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
+            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -1584,23 +1518,19 @@ TEST_CASE("IntegerNode") {
 
     GIVEN("(2x3x2)-IntegerNode with feasible axis-wise bound on axis: 1") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{
-                1,
-                std::vector<NumberNode::BoundAxisOperator>{
-                        NumberNode::Equal, NumberNode::GreaterEqual, NumberNode::LessEqual},
-                std::vector<double>{0.0, -2.0, 0.0}};
-
-        auto bnode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{
+                NumberNode::Equal, NumberNode::GreaterEqual, NumberNode::LessEqual};
+        std::vector<double> bounds{0.0, -2.0, 0.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+        auto bnode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                         -5, 8, bound_axes);
 
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
             NumberNode::BoundAxisInfo bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axis.axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axis.operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
+            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
+            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -1636,22 +1566,19 @@ TEST_CASE("IntegerNode") {
 
     GIVEN("(2x3x2)-IntegerNode with feasible axis-wise bound on axis: 2") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{2,
-                                             std::vector<NumberNode::BoundAxisOperator>{
-                                                     NumberNode::Equal, NumberNode::GreaterEqual},
-                                             std::vector<double>{23.0, 14.0}};
-
-        auto bnode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal,
+                                                             NumberNode::GreaterEqual};
+        std::vector<double> bounds{23.0, 14.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{2, operators, bounds}};
+        auto bnode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                         -5, 8, bound_axes);
 
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
             NumberNode::BoundAxisInfo bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axis.axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axis.operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
+            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
+            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -1684,24 +1611,20 @@ TEST_CASE("IntegerNode") {
 
     GIVEN("(2x3x2)-IntegerNode with index-wise bounds and an axis-wise bound on axis: 1") {
         auto graph = Graph();
-
-        NumberNode::BoundAxisInfo bound_axis{
-                1,
-                std::vector<NumberNode::BoundAxisOperator>{NumberNode::Equal, NumberNode::LessEqual,
-                                                           NumberNode::GreaterEqual},
-                std::vector<double>{11.0, 2.0, 5.0}};
-
-        auto inode_ptr = graph.emplace_node<dwave::optimization::IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8,
-                std::vector<NumberNode::BoundAxisInfo>{bound_axis});
+        std::vector<NumberNode::BoundAxisOperator> operators{
+                NumberNode::Equal, NumberNode::LessEqual, NumberNode::GreaterEqual};
+        std::vector<double> bounds{11.0, 2.0, 5.0};
+        std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                         -5, 8, bound_axes);
 
         THEN("Axis wise bound is correct") {
             CHECK(inode_ptr->axis_wise_bounds().size() == 1);
             const NumberNode::BoundAxisInfo inode_bound_axis_ptr =
                     inode_ptr->axis_wise_bounds().data()[0];
-            CHECK(bound_axis.axis == inode_bound_axis_ptr.axis);
-            CHECK_THAT(bound_axis.operators, RangeEquals(inode_bound_axis_ptr.operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(inode_bound_axis_ptr.bounds));
+            CHECK(bound_axes[0].axis == inode_bound_axis_ptr.axis);
+            CHECK_THAT(bound_axes[0].operators, RangeEquals(inode_bound_axis_ptr.operators));
+            CHECK_THAT(bound_axes[0].bounds, RangeEquals(inode_bound_axis_ptr.bounds));
         }
 
         WHEN("We initialize three invalid states") {
