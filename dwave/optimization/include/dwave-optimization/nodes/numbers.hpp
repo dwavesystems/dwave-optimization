@@ -49,10 +49,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         /// (length of vector is equal to the number of slices).
         const std::vector<double> bounds;
 
-        /// Obtain the bound associated with a given slice along bound axis.
+        /// Obtain the bound associated with a given slice along `axis`.
         double get_bound(const ssize_t slice) const;
 
-        /// Obtain the operator associated with a given slice along bound axis.
+        /// Obtain the operator associated with a given slice along `axis`.
         BoundAxisOperator get_operator(const ssize_t slice) const;
     };
 
@@ -96,6 +96,8 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // Initialize the state of the node randomly
     template <std::uniform_random_bit_generator Generator>
     void initialize_state(State& state, Generator& rng) const {
+        // Currently, we do not support random node Initialization with
+        // axis wise bounds.
         if (bound_axes_info_.size() > 0) {
             throw std::invalid_argument("Cannot randomly initialize_state with bound axes");
         }
@@ -138,10 +140,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // in a given index.
     void clip_and_set_value(State& state, ssize_t index, double value) const;
 
-    /// Return pointer to the vector of axis-wise bounds
+    /// Return vector of axis-wise bounds.
     const std::vector<BoundAxisInfo>& axis_wise_bounds() const;
 
-    // Return a pointer to the vector containing the bound axis sums
+    /// Return vector containing the bound axis sums in a given state.
     const std::vector<std::vector<double>>& bound_axis_sums(State& state) const;
 
  protected:
@@ -155,8 +157,8 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     /// Default value in a given index.
     virtual double default_value(ssize_t index) const = 0;
 
-    /// Update the running bound axis sums where `index` is changed by
-    /// `value_change` in a given state.
+    /// Update the running bound axis sums where the value stored at `index` is
+    /// changed by `value_change` in a given state.
     void update_bound_axis_slice_sums(State& state, const ssize_t index,
                                       const double value_change) const;
 
