@@ -60,6 +60,10 @@ cdef class AdvancedIndexing(ArraySymbol):
 
                 cppindices.emplace_back(array_index.array_ptr)
 
+        # If we had too few indexers, pad the remaining with empty slices
+        while cppindices.size() < array.ndim():
+            cppindices.emplace_back(Slice())
+
         self.ptr = model._graph.emplace_node[AdvancedIndexingNode](array.array_ptr, cppindices)
 
         self.initialize_arraynode(model, self.ptr)
@@ -168,6 +172,10 @@ cdef class BasicIndexing(ArraySymbol):
                 cppindices.emplace_back(BasicIndexing.cppslice(index))
             else:
                 cppindices.emplace_back(<Py_ssize_t>(index))
+
+        # If we had too few indexers, pad the remaining with empty slices
+        while cppindices.size() < array.ndim():
+            cppindices.emplace_back(Slice())
 
         self.ptr = model._graph.emplace_node[BasicIndexingNode](array.array_ptr, cppindices)
 
