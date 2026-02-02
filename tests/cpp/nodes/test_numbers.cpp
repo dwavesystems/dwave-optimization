@@ -28,9 +28,9 @@ namespace dwave::optimization {
 
 using BoundAxisInfo = NumberNode::BoundAxisInfo;
 using BoundAxisOperator = NumberNode::BoundAxisOperator;
-using NumberNode::BoundAxisOperator::Equal;
-using NumberNode::BoundAxisOperator::GreaterEqual;
-using NumberNode::BoundAxisOperator::LessEqual;
+using NumberNode::Equal;
+using NumberNode::GreaterEqual;
+using NumberNode::LessEqual;
 
 TEST_CASE("BoundAxisInfo") {
     GIVEN("BoundAxisInfo(axis = 0, operators = {}, bounds = {1.0})") {
