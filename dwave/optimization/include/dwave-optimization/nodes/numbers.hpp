@@ -29,7 +29,7 @@ namespace dwave::optimization {
 class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
     /// Allowable axis-wise bound operators.
-    enum class BoundAxisOperator { Equal, LessEqual, GreaterEqual };
+    enum BoundAxisOperator { Equal, LessEqual, GreaterEqual };
 
     /// Struct for stateless axis-wise bound information. Given an `axis`, define
     /// constraints on the sum of the values in each slice along `axis`.
@@ -149,7 +149,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  protected:
     explicit NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,
                         std::vector<double> upper_bound,
-                        std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                        std::vector<BoundAxisInfo> bound_axes = {});
 
     /// Return truth statement: 'value is valid in a given index'.
     virtual bool is_valid(ssize_t index, double value) const = 0;
@@ -190,40 +190,39 @@ class IntegerNode : public NumberNode {
     IntegerNode(std::span<const ssize_t> shape,
                 std::optional<std::vector<double>> lower_bound = std::nullopt,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                std::vector<BoundAxisInfo> bound_axes = {});
     IntegerNode(std::initializer_list<ssize_t> shape,
                 std::optional<std::vector<double>> lower_bound = std::nullopt,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                std::vector<BoundAxisInfo> bound_axes = {});
     IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound = std::nullopt,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                std::vector<BoundAxisInfo> bound_axes = {});
 
     IntegerNode(std::span<const ssize_t> shape, double lower_bound,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                std::vector<BoundAxisInfo> bound_axes = {});
     IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                std::vector<BoundAxisInfo> bound_axes = {});
     IntegerNode(ssize_t size, double lower_bound,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                std::vector<BoundAxisInfo> bound_axes = {});
 
     IntegerNode(std::span<const ssize_t> shape, std::optional<std::vector<double>> lower_bound,
-                double upper_bound,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                double upper_bound, std::vector<BoundAxisInfo> bound_axes = {});
     IntegerNode(std::initializer_list<ssize_t> shape,
                 std::optional<std::vector<double>> lower_bound, double upper_bound,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                std::vector<BoundAxisInfo> bound_axes = {});
     IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound, double upper_bound,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                std::vector<BoundAxisInfo> bound_axes = {});
 
     IntegerNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                std::vector<BoundAxisInfo> bound_axes = {});
     IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                std::vector<BoundAxisInfo> bound_axes = {});
     IntegerNode(ssize_t size, double lower_bound, double upper_bound,
-                std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+                std::vector<BoundAxisInfo> bound_axes = {});
 
     // Overloads needed by the Node ABC ***************************************
 
@@ -258,40 +257,38 @@ class BinaryNode : public IntegerNode {
     BinaryNode(std::span<const ssize_t> shape,
                std::optional<std::vector<double>> lower_bound = std::nullopt,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               std::vector<BoundAxisInfo> bound_axes = {});
     BinaryNode(std::initializer_list<ssize_t> shape,
                std::optional<std::vector<double>> lower_bound = std::nullopt,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               std::vector<BoundAxisInfo> bound_axes = {});
     BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound = std::nullopt,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               std::vector<BoundAxisInfo> bound_axes = {});
 
     BinaryNode(std::span<const ssize_t> shape, double lower_bound,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               std::vector<BoundAxisInfo> bound_axes = {});
     BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               std::vector<BoundAxisInfo> bound_axes = {});
     BinaryNode(ssize_t size, double lower_bound,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               std::vector<BoundAxisInfo> bound_axes = {});
 
     BinaryNode(std::span<const ssize_t> shape, std::optional<std::vector<double>> lower_bound,
-               double upper_bound,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               double upper_bound, std::vector<BoundAxisInfo> bound_axes = {});
     BinaryNode(std::initializer_list<ssize_t> shape, std::optional<std::vector<double>> lower_bound,
-               double upper_bound,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               double upper_bound, std::vector<BoundAxisInfo> bound_axes = {});
     BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound, double upper_bound,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               std::vector<BoundAxisInfo> bound_axes = {});
 
     BinaryNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               std::vector<BoundAxisInfo> bound_axes = {});
     BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               std::vector<BoundAxisInfo> bound_axes = {});
     BinaryNode(ssize_t size, double lower_bound, double upper_bound,
-               std::optional<std::vector<BoundAxisInfo>> bound_axes = std::nullopt);
+               std::vector<BoundAxisInfo> bound_axes = {});
 
     // Flip the value (0 -> 1 or 1 -> 0) at index i in the given state.
     void flip(State& state, ssize_t i) const;
