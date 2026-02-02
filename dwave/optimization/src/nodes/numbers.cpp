@@ -142,13 +142,13 @@ bool satisfies_axis_wise_bounds(const std::vector<NumberNode::BoundAxisInfo>& bo
         for (ssize_t slice = 0, stop_slice = static_cast<ssize_t>(bound_axis_sums.size());
              slice < stop_slice; ++slice) {
             switch (bound_axis_info.get_operator(slice)) {
-                case NumberNode::Equal:
+                case NumberNode::BoundAxisOperator::Equal:
                     if (bound_axis_sums[slice] != bound_axis_info.get_bound(slice)) return false;
                     break;
-                case NumberNode::LessEqual:
+                case NumberNode::BoundAxisOperator::LessEqual:
                     if (bound_axis_sums[slice] > bound_axis_info.get_bound(slice)) return false;
                     break;
-                case NumberNode::GreaterEqual:
+                case NumberNode::BoundAxisOperator::GreaterEqual:
                     if (bound_axis_sums[slice] < bound_axis_info.get_bound(slice)) return false;
                     break;
                 default:
@@ -227,15 +227,15 @@ std::vector<ssize_t> undo_shift_axis_data(const std::span<const ssize_t> span, c
 double compute_bound_axis_slice_delta(const ssize_t slice, const double sum,
                                       const NumberNode::BoundAxisOperator op, const double bound) {
     switch (op) {
-        case NumberNode::Equal:
+        case NumberNode::BoundAxisOperator::Equal:
             if (sum > bound) throw std::invalid_argument("Infeasible axis-wise bounds.");
             // If error was not thrown, return amount needed to satisfy bound.
             return bound - sum;
-        case NumberNode::LessEqual:
+        case NumberNode::BoundAxisOperator::LessEqual:
             if (sum > bound) throw std::invalid_argument("Infeasible axis-wise bounds.");
             // If error was not thrown, sum satisfies bound.
             return 0.0;
-        case NumberNode::GreaterEqual:
+        case NumberNode::BoundAxisOperator::GreaterEqual:
             // If sum is less than bound, return the amount needed to equal it.
             // Otherwise, sum satisfies bound.
             return (sum < bound) ? (bound - sum) : 0.0;
