@@ -29,7 +29,7 @@ namespace dwave::optimization {
 class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
     /// Allowable axis-wise bound operators.
-    enum BoundAxisOperator { Equal, LessEqual, GreaterEqual };
+    enum class BoundAxisOperator { Equal, LessEqual, GreaterEqual };
 
     /// Struct for stateless axis-wise bound information. Given an `axis`, define
     /// constraints on the sum of the values in each slice along `axis`.
@@ -41,13 +41,13 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         BoundAxisInfo(ssize_t axis, std::vector<BoundAxisOperator> axis_operators,
                       std::vector<double> axis_bounds);
         /// The bound axis
-        const ssize_t axis;
+        ssize_t axis;
         /// Operator for ALL axis slices (vector has length one) or operator*s* PER
         /// slice (length of vector is equal to the number of slices).
-        const std::vector<BoundAxisOperator> operators;
+        std::vector<BoundAxisOperator> operators;
         /// Bound for ALL axis slices (vector has length one) or bound*s* PER slice
         /// (length of vector is equal to the number of slices).
-        const std::vector<double> bounds;
+        std::vector<double> bounds;
 
         /// Obtain the bound associated with a given slice along `axis`.
         double get_bound(const ssize_t slice) const;
@@ -171,7 +171,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     std::vector<double> upper_bounds_;
 
     /// Stateless information on each bound axis.
-    const std::vector<BoundAxisInfo> bound_axes_info_;
+    std::vector<BoundAxisInfo> bound_axes_info_;
 };
 
 /// A contiguous block of integer numbers.
