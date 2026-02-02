@@ -641,12 +641,14 @@ TEST_CASE("BinaryNode") {
 
     GIVEN("(3x2x2)-BinaryNode with feasible axis-wise bound on axis: 0") {
         auto graph = Graph();
+        std::vector<double> lower_bounds{0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0};
+        std::vector<double> upper_bounds{0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1};
         std::vector<NumberNode::BoundAxisOperator> operators{
                 NumberNode::Equal, NumberNode::LessEqual, NumberNode::GreaterEqual};
         std::vector<double> bounds{1.0, 2.0, 3.0};
         std::vector<NumberNode::BoundAxisInfo> bound_axes{{0, operators, bounds}};
         auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
-                                                        std::nullopt, std::nullopt, bound_axes);
+                                                        lower_bounds, upper_bounds, bound_axes);
 
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
@@ -667,11 +669,12 @@ TEST_CASE("BinaryNode") {
             // ... [4 5 6 7]
             // print(a[2, :, :].flatten())
             // ... [ 8  9 10 11]
-            std::vector<double> expected_init{1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0};
-            // Cannonically least state that satisfies bounds
+            std::vector<double> expected_init{0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1};
+            // Cannonically least state that satisfies the index- and axis-wise
+            // bounds
             // slice 0  slice 1 slice 2
-            //  1, 0     0, 0    1, 1
-            //  0, 0     0, 0    1, 0
+            //  0, 0     0, 0    1, 1
+            //  1, 0     0, 0    0, 1
 
             auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
 
@@ -686,12 +689,14 @@ TEST_CASE("BinaryNode") {
 
     GIVEN("(3x2x2)-BinaryNode with feasible axis-wise bound on axis: 1") {
         auto graph = Graph();
+        std::vector<double> lower_bounds{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+        std::vector<double> upper_bounds{0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1};
         std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::LessEqual,
                                                              NumberNode::GreaterEqual};
         std::vector<double> bounds{1.0, 5.0};
         std::vector<NumberNode::BoundAxisInfo> bound_axes{{1, operators, bounds}};
         auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
-                                                        std::nullopt, std::nullopt, bound_axes);
+                                                        lower_bounds, upper_bounds, bound_axes);
 
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
@@ -710,13 +715,12 @@ TEST_CASE("BinaryNode") {
             // ... [0 1 4 5 8 9]
             // print(a[:, 1, :].flatten())
             // ... [ 2  3  6  7 10 11]
-            std::vector<double> expected_init{0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0};
+            std::vector<double> expected_init{0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1};
             // Cannonically least state that satisfies bounds
             // slice 0  slice 1
             //  0, 0     1, 1
             //  0, 0     1, 1
-            //  0, 0     1, 0
-
+            //  0, 0     0, 1
             auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
 
             THEN("The bound axis sums and state are correct") {
@@ -730,12 +734,14 @@ TEST_CASE("BinaryNode") {
 
     GIVEN("(3x2x2)-BinaryNode with feasible axis-wise bound on axis: 2") {
         auto graph = Graph();
+        std::vector<double> lower_bounds{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0};
+        std::vector<double> upper_bounds{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
         std::vector<NumberNode::BoundAxisOperator> operators{NumberNode::Equal,
                                                              NumberNode::GreaterEqual};
         std::vector<double> bounds{3.0, 6.0};
         std::vector<NumberNode::BoundAxisInfo> bound_axes{{2, operators, bounds}};
         auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
-                                                        std::nullopt, std::nullopt, bound_axes);
+                                                        lower_bounds, upper_bounds, bound_axes);
 
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
@@ -754,12 +760,13 @@ TEST_CASE("BinaryNode") {
             // ... [ 0  2  4  6  8 10]
             // print(a[:, :, 1].flatten())
             // ... [ 1  3  5  7  9 11]
-            std::vector<double> expected_init{1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1};
-            // Cannonically least state that satisfies bounds
+            std::vector<double> expected_init{0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1};
+            // Cannonically least state that satisfies the index- and axis-wise
+            // bounds
             // slice 0  slice 1
-            //  1, 1     1, 1
+            //  0, 1     1, 1
             //  1, 0     1, 1
-            //  0, 0     1, 1
+            //  0, 1     1, 1
 
             auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
 

@@ -187,10 +187,9 @@ void NumberNode::initialize_state(State& state, std::vector<double>&& number_dat
                                           std::move(bound_axes_sums));
 }
 
-/// Given a `span` (typically containing strides or shape), we reorder the
-/// values of the span such that the given `axis` is moved to the 0th index.
-std::vector<ssize_t> reorder_to_move_along_axis(const std::span<const ssize_t> span,
-                                                const ssize_t axis) {
+/// Given a `span` (typically containing strides or shape), reorder the values
+/// of the span such that the given `axis` is moved to the 0th index.
+std::vector<ssize_t> shift_axis_data(const std::span<const ssize_t> span, const ssize_t axis) {
     const ssize_t ndim = span.size();
     std::vector<ssize_t> output;
     output.reserve(ndim);
@@ -198,6 +197,22 @@ std::vector<ssize_t> reorder_to_move_along_axis(const std::span<const ssize_t> s
 
     for (ssize_t i = 0; i < ndim; ++i) {
         if (i != axis) output.emplace_back(span[i]);
+    }
+    return output;
+}
+
+/// Undo the operation defined by `shift_axis_data()`.
+std::vector<ssize_t> undo_shift_axis_data(const std::span<const ssize_t> span, const ssize_t axis) {
+    const ssize_t ndim = span.size();
+    std::vector<ssize_t> output;
+    output.reserve(ndim);
+
+    ssize_t i_span = 1;
+    for (ssize_t i = 0; i < ndim; ++i) {
+        if (i == axis)
+            output.emplace_back(span[0]);
+        else
+            output.emplace_back(span[i_span++]);
     }
     return output;
 }
@@ -222,9 +237,8 @@ double compute_bound_axis_slice_delta(const ssize_t slice, const double sum,
             return 0.0;
         case NumberNode::GreaterEqual:
             // If sum is less than bound, return the amount needed to equal it.
-            if (sum < bound) return bound - sum;
             // Otherwise, sum satisfies bound.
-            return 0.0;
+            return (sum < bound) ? (bound - sum) : 0.0;
         default:
             unreachable();
     }
@@ -232,8 +246,8 @@ double compute_bound_axis_slice_delta(const ssize_t slice, const double sum,
 
 /// Given a NumberNod and exactly one axis-wise bound defined for NumberNode,
 /// assign values to `values` (in-place) to satisfy the axis-wise bound. This method
-/// 1) Initially sets `values[i] = lower_bound(i)` for all i.
-/// 2) Incremements the values within each hyperslice until they satisfy
+/// A) Initially sets `values[i] = lower_bound(i)` for all i.
+/// B) Incremements the values within each hyperslice until they satisfy
 /// the axis-wise bound (should this be possible).
 void construct_state_given_exactly_one_bound_axis(const NumberNode* node,
                                                   std::vector<double>& values) {
@@ -247,28 +261,24 @@ void construct_state_given_exactly_one_bound_axis(const NumberNode* node,
     // 2) Determine the hyperslice sums for the bound axis. This could be
     // done during the previous loop if we want to improve performance.
     assert(node->axis_wise_bounds().size() == 1);
-    const std::vector<double> bound_axis_sums = get_bound_axes_sums(node, values)[0];
-    // Obtain the axis-wise bound
-    const NumberNode::BoundAxisInfo& bound_axis_info = node->axis_wise_bounds()[0];
+    const std::vector<double> bound_axis_sums = get_bound_axes_sums(node, values).front();
+    const NumberNode::BoundAxisInfo& bound_axis_info = node->axis_wise_bounds().front();
     const ssize_t bound_axis = bound_axis_info.axis;
     assert(0 <= bound_axis && bound_axis < ndim);
 
     // We need a way to iterate over each hyperslice along the bound axis and
     // adjust it`s values until they satisfy the axis-wise bounds. We do this
-    // by defining an iterator of `values` that can be used to iterate over the
-    // values within each hyperslice along the bound axis one after another. We
-    // can do this by modifying the NumberNode shape and strides such that the
-    // data for the bound_axis is moved to position 0 (remaining indices are
-    // shifted back).
-    std::vector<ssize_t> new_shape = reorder_to_move_along_axis(node_shape, bound_axis);
-    std::vector<ssize_t> new_strides = reorder_to_move_along_axis(node->strides(), bound_axis);
-    // Define an iterator for `values` corresponding to the beginning of slice
-    // 0 along the bound axis. This iterater will be used to define the start
-    // of a slice iterater.
-    BufferIterator<double, double, false> slice_0_it(values.data(), ndim, new_shape.data(),
-                                                     new_strides.data());
-    // Determine the size of each slice along the bound axis.
-    const ssize_t slice_size = std::accumulate(new_shape.begin() + 1, new_shape.end(), 1.0,
+    // by defining an iterator of `values` that traverses each hyperslice one
+    // after another. This is equivalent to adjusting NumberNode shape and
+    // strides such that the data for the bound_axis is moved to position 0.
+    const std::vector<ssize_t> buff_shape = shift_axis_data(node_shape, bound_axis);
+    const std::vector<ssize_t> buff_strides = shift_axis_data(node->strides(), bound_axis);
+    // Define an iterator for `values` corresponding with the beginning of
+    // slice 0 along the bound axis.
+    BufferIterator<double, double, false> slice_0_it(values.data(), ndim, buff_shape.data(),
+                                                     buff_strides.data());
+    // Determine the size of each hyperslice along the bound axis.
+    const ssize_t slice_size = std::accumulate(buff_shape.begin() + 1, buff_shape.end(), 1.0,
                                                std::multiplies<ssize_t>());
 
     // 3) Iterate over each hyperslice and adjust it's values until they
@@ -283,21 +293,24 @@ void construct_state_given_exactly_one_bound_axis(const NumberNode* node,
         assert(delta >= 0);        // Should only increment.
 
         // Determine how much we need to offset slice_0_it to get to the first
-        // value in the given `slice`
+        // index in the given `slice`
         const ssize_t offset = slice * slice_size;
-
-        for (auto slice_it = slice_0_it + offset, slice_end_it = slice_it + slice_size;
-             slice_it != slice_end_it; ++slice_it) {
-            assert(slice_it.location()[0] == slice);  // We should be in the right slice.
-
-            // Determine the index of `it` from `slice_0_it`
-            const ssize_t index = static_cast<ssize_t>(slice_it - slice_0_it);
+        // Iterate over all indices in the given slice.
+        for (auto slice_begin_it = slice_0_it + offset, slice_end_it = slice_begin_it + slice_size;
+             slice_begin_it != slice_end_it; ++slice_begin_it) {
+            assert(slice_begin_it.location()[0] == slice);  // We should be in the right slice.
+            // Determine the "true" index of `slice_it` given the node shape
+            ssize_t index = ravel_multi_index(
+                    undo_shift_axis_data(slice_begin_it.location(), bound_axis), node_shape);
             assert(0 <= index && index < static_cast<ssize_t>(values.size()));
+            // Sanity check that we can correctly reverse the conversion.
+            assert(std::ranges::equal(shift_axis_data(unravel_index(index, node_shape), bound_axis),
+                                      slice_begin_it.location()));
             // Determine the amount we can increment the value in the given index.
-            ssize_t inc = std::min(delta, node->upper_bound(index) - *slice_it);
+            const double inc = std::min(delta, node->upper_bound(index) - *slice_begin_it);
 
             if (inc > 0) {  // Apply the increment to both `it` and `delta`.
-                *slice_it += inc;
+                *slice_begin_it += inc;
                 delta -= inc;
                 if (delta == 0) break;  // Axis-wise bounds are now satisfied for slice.
             }
