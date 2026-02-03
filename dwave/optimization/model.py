@@ -165,7 +165,8 @@ class Model(_Graph):
 
     def binary(self, shape: None | _ShapeLike = None,
                lower_bound: None | np.typing.ArrayLike = None,
-               upper_bound: None | np.typing.ArrayLike = None) -> BinaryVariable:
+               upper_bound: None | np.typing.ArrayLike = None,
+               subject_to: None | np.typing.ArrayLike = None) -> BinaryVariable:
         r"""Create a binary symbol as a decision variable.
 
         Args:
@@ -178,6 +179,19 @@ class Model(_Graph):
                 scalar (one bound for all variables) or an array (one bound for
                 each variable). Non-boolean values are rounded down to the domain
                 [0,1]. If None, the default value of 1 is used.
+            subject_to (optional): Axis-wise bounds for the symbol. Must be an
+                array of tuples (at most one per axis). Each tuple is of the 
+                form: (axis, operator(s), bound(s)) where
+                    axis (int): Axis in which to apply the bound.
+                    operator(s) (str | array[str]): Operator ("<=", "==", or
+                        ">=") for all hyperslice along axis (str) or per 
+                        hyperslice along axis (array[str]).
+                    bound(s) (float | array[float]): Bounds for all
+                        hyperslice along axis (float) or per hyperslice along 
+                        axis (array[float]).
+                If provided, the sum of the values within each hyperslice along
+                each bound axis will satisfy the axis-wise bounds.
+                Note: At most one axis-wise bound may be provided.
 
         Returns:
             A binary symbol.
@@ -215,15 +229,36 @@ class Model(_Graph):
             >>> np.all([1, 0] == b.upper_bound())
             True
 
+            This example adds a :math:`2`-sized binary symbol with a scalar lower
+            bound and index-wise upper bounds to a model.
+
+            >>> from dwave.optimization.model import Model
+            >>> import numpy as np
+            >>> model = Model()
+            >>> b = model.binary(2, lower_bound=-1.1, upper_bound=[1.1, 0.9])
+            >>> np.all([0, 0] == b.lower_bound())
+            True
+            >>> np.all([1, 0] == b.upper_bound())
+            True
+
+            This example adds a :math:`(2x3)`-sized binary symbol with index-wise
+            lower bounds and an axis-wise bound along axis 1.
+
+            >>> from dwave.optimization.model import Model
+            >>> import numpy as np
+            >>> model = Model()
+            >>> i = model.binary([2,3], lower_bound=[[0, 1, 1], [0, 1, 0]],
+            ... subject_to=[(1, ["<=", "==", ">="], [0, 2, 1])])
+
         See Also:
             :class:`~dwave.optimization.symbols.numbers.BinaryVariable`: equivalent symbol.
 
-        .. versionchanged:: 0.6.7
-            Beginning in version 0.6.7, user-defined bounds and index-wise
-            bounds are supported.
+        .. versionchanged:: 0.6.12
+            Beginning in version 0.6.12, user-defined axis-wise bounds are
+            supported.
         """
         from dwave.optimization.symbols import BinaryVariable  # avoid circular import
-        return BinaryVariable(self, shape, lower_bound, upper_bound)
+        return BinaryVariable(self, shape, lower_bound, upper_bound, subject_to)
 
     def constant(self, array_like: numpy.typing.ArrayLike) -> Constant:
         r"""Create a constant symbol.
@@ -478,6 +513,7 @@ class Model(_Graph):
             shape: None | _ShapeLike = None,
             lower_bound: None | numpy.typing.ArrayLike = None,
             upper_bound: None | numpy.typing.ArrayLike = None,
+            subject_to: None | np.typing.ArrayLike = None
             ) -> IntegerVariable:
         r"""Create an integer symbol as a decision variable.
 
@@ -491,6 +527,19 @@ class Model(_Graph):
                 scalar (one bound for all variables) or an array (one bound for
                 each variable). Non-integer values are down up. If None, the
                 default value is used.
+            subject_to (optional): Axis-wise bounds for the symbol. Must be an
+                array of tuples (at most one per axis). Each tuple is of the 
+                form: (axis, operator(s), bound(s)) where
+                    axis (int): Axis in which to apply the bound.
+                    operator(s) (str | array[str]): Operator ("<=", "==", or
+                        ">=") for all hyperslice along axis (str) or per 
+                        hyperslice along axis (array[str]).
+                    bound(s) (float | array[float]): Bounds for all
+                        hyperslice along axis (float) or per hyperslice along 
+                        axis (array[float]).
+                If provided, the sum of the values within each hyperslice along
+                each bound axis will satisfy the axis-wise bounds.
+                Note: At most one axis-wise bound may be provided.
 
         Returns:
             An integer symbol.
@@ -529,15 +578,29 @@ class Model(_Graph):
             >>> np.all([1, 2] == i.upper_bound())
             True
 
+            This example adds a :math:`(2x3)`-sized integer symbol with 
+            general lower and upper bounds and an axis-wise bound along
+            axis 1.
+
+            >>> from dwave.optimization.model import Model
+            >>> import numpy as np
+            >>> model = Model()
+            >>> i = model.integer([2,3], lower_bound=1, upper_bound=3,
+            ... subject_to=[(1, "<=", [2, 4, 5])])
+
         See Also:
             :class:`~dwave.optimization.symbols.numbers.IntegerVariable`: equivalent symbol.
 
         .. versionchanged:: 0.6.7
             Beginning in version 0.6.7, user-defined index-wise bounds are
             supported.
+
+        .. versionchanged:: 0.6.12
+            Beginning in version 0.6.12, user-defined axis-wise bounds are
+            supported.
         """
         from dwave.optimization.symbols import IntegerVariable  # avoid circular import
-        return IntegerVariable(self, shape, lower_bound, upper_bound)
+        return IntegerVariable(self, shape, lower_bound, upper_bound, subject_to)
 
     def list(self,
             n: int,

@@ -711,7 +711,7 @@ class TestBinaryVariable(utils.SymbolTests):
 
         model.binary([10])
 
-    def test_bounds(self):
+    def test_index_wise_bounds(self):
         model = Model()
         x = model.binary(lower_bound=0, upper_bound=1)
         self.assertEqual(x.lower_bound(), 0)
@@ -729,6 +729,47 @@ class TestBinaryVariable(utils.SymbolTests):
 
         with self.assertRaises(ValueError):
             model.binary((2, 3), upper_bound=np.arange(6))
+
+    def test_axis_wise_bounds(self):
+        model = Model()
+
+        # stores correct axis-wise bounds
+        x = model.binary((2, 3), subject_to=[(0, ["<=", "=="], [1, 2])])
+        self.assertEqual(x.axis_wise_bounds(), [(0, ["<=", "=="], [1, 2])])
+        x = model.binary((2, 3), subject_to=[(1, "<=", [1, 2, 1])])
+        self.assertEqual(x.axis_wise_bounds(), [(1, ["<="], [1, 2, 1])])
+        x = model.binary((2, 3), subject_to=[(0, ["<=", "=="], 1)])
+        self.assertEqual(x.axis_wise_bounds(), [(0, ["<=", "=="], [1])])
+        x = model.binary((2, 3), subject_to=[(0, "<=", 1)])
+        self.assertEqual(x.axis_wise_bounds(), [(0, ["<="], [1])])
+        x = model.binary((2, 3), subject_to=[(0, np.asarray(["<=", "=="]), np.asarray([1, 2]))])
+        self.assertEqual(x.axis_wise_bounds(), [(0, ["<=", "=="], [1, 2])])
+
+        # infeasible axis-wise bounds
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), lower_bound=[0, 1, 0, 0, 1, 0], subject_to=[(0, "==", 0)])
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), lower_bound=[0, 1, 0, 0, 1, 0], subject_to=[(0, "<=", 0)])
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), upper_bound=[0, 1, 0, 0, 1, 0], subject_to=[(0, ">=", 2)])
+
+        # incorrect number of axis-wise operators and or bounds
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), subject_to=[(0, "==", [0, 0, 0])])
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), subject_to=[(0, ["==", "<=", "=="], [0, 0])])
+
+        # check bad argument format
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), subject_to=[(1.1, "<=", [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), subject_to=[(1, 4, [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), subject_to=[(1, ["!="], [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), subject_to=[(1, ["=="], [[0, 0, 0]])])
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), subject_to=[(1, [["<="]], [0, 0, 0])])
 
     def test_no_shape(self):
         model = Model()
@@ -798,7 +839,7 @@ class TestBinaryVariable(utils.SymbolTests):
             with np.testing.assert_raises(ValueError):
                 x.set_state(0, 2)
 
-        with self.subTest("Simple bounds test"):
+        with self.subTest("Simple index-wise bounds test"):
             model = Model()
             model.states.resize(1)
             x = model.binary(2, lower_bound=[-1, 0.9], upper_bound=[1.1, 1.2])
@@ -807,6 +848,25 @@ class TestBinaryVariable(utils.SymbolTests):
                 x.set_state(0, 2)
             with np.testing.assert_raises(ValueError):
                 x.set_state(1, 0)
+
+        with self.subTest("Simple axis-wise bounds test"):
+            model = Model()
+            model.states.resize(1)
+            x = model.binary((2, 3), subject_to=[(0, "==", 1)])
+            x.set_state(0, [0, 1, 0, 1, 0, 0])
+            # Do not satisfy axis-wise bounds
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [1, 1, 0, 1, 0, 0])
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [0, 1, 0, 0, 0, 0])
+
+            x = model.binary((2, 2), subject_to=[(1, ["<=", ">="], [0, 2])])
+            x.set_state(0, [0, 1, 0, 1])
+            # Do not satisfy axis-wise bounds
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [1, 1, 0, 1])
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [0, 0, 0, 1])
 
         with self.subTest("invalid state index"):
             model = Model()
@@ -1830,7 +1890,7 @@ class TestIntegerVariable(utils.SymbolTests):
         model.states.resize(1)
         self.assertEqual(x.state(0).shape, tuple())
 
-    def test_bounds(self):
+    def test_index_wise_bounds(self):
         model = Model()
         x = model.integer(lower_bound=4, upper_bound=5)
         self.assertEqual(x.lower_bound(), 4)
@@ -1848,6 +1908,47 @@ class TestIntegerVariable(utils.SymbolTests):
 
         with self.assertRaises(ValueError):
             model.integer((2, 3), upper_bound=np.arange(6))
+
+    def test_axis_wise_bounds(self):
+        model = Model()
+
+        # stores correct axis-wise bounds
+        x = model.integer((2, 3), subject_to=[(0, ["<=", "=="], [1, 2])])
+        self.assertEqual(x.axis_wise_bounds(), [(0, ["<=", "=="], [1, 2])])
+        x = model.integer((2, 3), subject_to=[(1, "<=", [1, 2, 1])])
+        self.assertEqual(x.axis_wise_bounds(), [(1, ["<="], [1, 2, 1])])
+        x = model.integer((2, 3), subject_to=[(0, ["<=", "=="], 1)])
+        self.assertEqual(x.axis_wise_bounds(), [(0, ["<=", "=="], [1])])
+        x = model.integer((2, 3), subject_to=[(0, "<=", 1)])
+        self.assertEqual(x.axis_wise_bounds(), [(0, ["<="], [1])])
+        x = model.integer((2, 3), subject_to=[(0, np.asarray(["<=", "=="]), np.asarray([1, 2]))])
+        self.assertEqual(x.axis_wise_bounds(), [(0, ["<=", "=="], [1, 2])])
+
+        # infeasible axis-wise bounds
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), subject_to=[(0, "==", -1)])
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), lower_bound=0, subject_to=[(0, "<=", -1)])
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), upper_bound=2, subject_to=[(0, ">=", 7)])
+
+        # incorrect number of axis-wise operators and or bounds
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), subject_to=[(0, "==", [10, 20, 30])])
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), subject_to=[(0, ["==", "<=", "=="], [10, 20])])
+
+        # bad argument format
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), subject_to=[(1.1, "<=", [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), subject_to=[(1, 4, [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), subject_to=[(1, ["!="], [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), subject_to=[(1, ["=="], [[0, 0, 0]])])
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), subject_to=[(1, [["=="]], [0, 0, 0])])
 
     # Todo: we can generalize many of these tests for all decisions that can have
     # their state set
@@ -1904,7 +2005,7 @@ class TestIntegerVariable(utils.SymbolTests):
             with np.testing.assert_raises(ValueError):
                 x.set_state(0, -1234)
 
-        with self.subTest("Simple bounds test"):
+        with self.subTest("Simple index-wise bounds test"):
             model = Model()
             model.states.resize(1)
             x = model.integer(1, lower_bound=-1, upper_bound=1)
@@ -1914,6 +2015,25 @@ class TestIntegerVariable(utils.SymbolTests):
                 x.set_state(0, 2)
             with np.testing.assert_raises(ValueError):
                 x.set_state(0, -2)
+
+        with self.subTest("Simple axis-wise bounds test"):
+            model = Model()
+            model.states.resize(1)
+            x = model.integer((2, 3), subject_to=[(0, "==", 3)])
+            x.set_state(0, [0, 3, 0, 1, 1, 1])
+            # Do not satisfy axis-wise bounds
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [0, 3, 1, 1, 1, 1])
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [0, 3, 0, 1, 1, 0])
+
+            x = model.integer((2, 2), subject_to=[(1, ["<=", ">="], [2, 6])])
+            x.set_state(0, [1, 6, 1, 10])
+            # Do not satisfy axis-wise bounds
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [1, 2, 1, 1])
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [1, 6, 2, 10])
 
         with self.subTest("array-like"):
             model = Model()
@@ -1942,6 +2062,17 @@ class TestIntegerVariable(utils.SymbolTests):
 
             x.set_state(0, [-0.5, -0.75, -0.5, -1.0, -0.1])
             np.testing.assert_array_equal(x.state(), [0, 0, 0, -1, 0])
+
+        # with self.subTest("Axis-wise bounds"):
+        #     model = Model()
+        #     model.states.resize(1)
+        #     x = model.integer([2, 3], lower_bound=0, upper_bound=2,
+        #                       subject_to=[(0, "==", 0)])
+        #     x.set_state(0, [0, 0, 1, 0, 1, 0])
+        #     # with np.testing.assert_raises(ValueError):
+        #     #     x.set_state(0, 2)
+        #     # with np.testing.assert_raises(ValueError):
+        #     #     x.set_state(0, -2)
 
 
 class TestIsIn(utils.SymbolTests):

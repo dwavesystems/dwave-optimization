@@ -19,16 +19,31 @@ from dwave.optimization.libcpp.state cimport State
 
 
 cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass IntegerNode(ArrayNode):
-        void initialize_state(State&, vector[double]) except+
-        double lower_bound(Py_ssize_t index)
-        double upper_bound(Py_ssize_t index)
-        double lower_bound() except+
-        double upper_bound() except+
 
-    cdef cppclass BinaryNode(ArrayNode):
+    cdef cppclass NumberNode(ArrayNode):
+        enum BoundAxisOperator :
+            # It appears Cython automatically assumes all (standard) enums are "public"
+            # hence we override here.
+            Equal "dwave::optimization::NumberNode::BoundAxisOperator::Equal"
+            LessEqual "dwave::optimization::NumberNode::BoundAxisOperator::LessEqual"
+            GreaterEqual "dwave::optimization::NumberNode::BoundAxisOperator::GreaterEqual"
+
+        struct BoundAxisInfo:
+            BoundAxisInfo(Py_ssize_t axis, vector[BoundAxisOperator] axis_opertors, 
+                          vector[double] axis_bounds)
+            Py_ssize_t axis
+            vector[BoundAxisOperator] operators;
+            vector[double] bounds;
+
         void initialize_state(State&, vector[double]) except+
         double lower_bound(Py_ssize_t index)
         double upper_bound(Py_ssize_t index)
         double lower_bound() except+
         double upper_bound() except+
+        const vector[BoundAxisInfo] axis_wise_bounds()
+
+    cdef cppclass IntegerNode(NumberNode):
+        pass
+
+    cdef cppclass BinaryNode(IntegerNode):
+        pass
