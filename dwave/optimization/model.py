@@ -180,18 +180,16 @@ class Model(_Graph):
                 each variable). Non-boolean values are rounded down to the domain
                 [0,1]. If None, the default value of 1 is used.
             subject_to (optional): Axis-wise bounds for the symbol. Must be an
-                array of tuples or lists (at most one per axis). Each
-                tuple/list is of the form: (axis, operator(s), bound(s)) where
-                    axis (int): Axis in which to apply the bound.
-                    operator(s) (str | array[str]): Operator ("<=", "==", or
-                        ">=") for all hyperslice along axis (str) or per 
-                        hyperslice along axis (array[str]).
-                    bound(s) (float | array[float]): Bounds for all
-                        hyperslice along axis (float) or per hyperslice along 
-                        axis (array[float]).
-                If provided, the sum of the values within each hyperslice along
-                each bound axis will satisfy the axis-wise bounds.
-                Note: At most one axis-wise bound may be provided.
+                array of tuples or lists. Each tuple/list is of the form:
+                (axis, operator(s), bound(s)) where `axis` (int) is the axis in
+                which to apply the bound, `operator(s)` (str | array[str]) is
+                the operator(s) ("<=", "==", or ">=") defined per hyperslice or
+                for all hyperslice along the bound axis, and `bound(s)` (float
+                | array[float]) is the bound(s) defined per hyperslice or for
+                all hyperslice along the bound axis. If provided, the sum of
+                the values within each hyperslice along each bound axis will
+                satisfy the axis-wise bounds. Note: At most one axis-wise bound
+                may be provided.
 
         Returns:
             A binary symbol.
@@ -528,18 +526,16 @@ class Model(_Graph):
                 each variable). Non-integer values are down up. If None, the
                 default value is used.
             subject_to (optional): Axis-wise bounds for the symbol. Must be an
-                array of tuples or lists (at most one per axis). Each
-                tuple/list is of the form: (axis, operator(s), bound(s)) where
-                    axis (int): Axis in which to apply the bound.
-                    operator(s) (str | array[str]): Operator ("<=", "==", or
-                        ">=") for all hyperslice along axis (str) or per 
-                        hyperslice along axis (array[str]).
-                    bound(s) (float | array[float]): Bounds for all
-                        hyperslice along axis (float) or per hyperslice along 
-                        axis (array[float]).
-                If provided, the sum of the values within each hyperslice along
-                each bound axis will satisfy the axis-wise bounds.
-                Note: At most one axis-wise bound may be provided.
+                array of tuples or lists. Each tuple/list is of the form:
+                (axis, operator(s), bound(s)) where `axis` (int) is the axis in
+                which to apply the bound, `operator(s)` (str | array[str]) is
+                the operator(s) ("<=", "==", or ">=") defined per hyperslice or
+                for all hyperslice along the bound axis, and `bound(s)` (float
+                | array[float]) is the bound(s) defined per hyperslice or for
+                all hyperslice along the bound axis. If provided, the sum of
+                the values within each hyperslice along each bound axis will
+                satisfy the axis-wise bounds. Note: At most one axis-wise bound
+                may be provided.
 
         Returns:
             An integer symbol.
