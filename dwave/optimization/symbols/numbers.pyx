@@ -59,13 +59,14 @@ cdef vector[NumberNode.BoundAxisInfo] _convert_python_bound_axes(
     cdef double[:] mem
 
     for bound_axis_data in bound_axes_data:
-        if not isinstance(bound_axis_data, tuple) or len(bound_axis_data) != 3:
-            raise TypeError("Each bound axis entry must be a tuple: (axis, operator(s), bound(s))")
-
-        if not isinstance(bound_axis_data[0], int):
-            raise TypeError("Bound axis must be an int.")
+        if not isinstance(bound_axis_data, (tuple, list)) or len(bound_axis_data) != 3:
+            raise TypeError("Each bound axis entry must be a tuple or list with"
+                            " three elements: axis, operator(s), bound(s)")
 
         axis, py_ops, py_bounds = bound_axis_data
+
+        if not isinstance(axis, int):
+            raise TypeError("Bound axis must be an int.")
 
         cpp_ops.clear()
         if isinstance(py_ops, str):
@@ -77,7 +78,8 @@ cdef vector[NumberNode.BoundAxisInfo] _convert_python_bound_axes(
                 for op in ops_array:
                     cpp_ops.push_back(_parse_python_operator(str(op)))
             else:
-                raise TypeError("Bound axis operator(s) should be str or 1D-array of str.")
+                raise TypeError("Bound axis operator(s) should be str or"
+                                " 1D-array of str.")
 
         cpp_bounds.clear()
         bound_array = np.asarray_chkfinite(py_bounds, dtype=np.double, order='C')
@@ -190,10 +192,20 @@ cdef class BinaryVariable(ArraySymbol):
             with zf.open(info, "r") as f:
                 upper_bound = np.load(f, allow_pickle=False)
 
+        # needs to be compatible with older versions
+        try:
+            info = zf.getinfo(directory + "subject_to.json")
+        except KeyError:
+            subject_to = None
+        else:
+            with zf.open(info, "r") as f:
+                subject_to = json.load(f)
+
         return BinaryVariable(model,
                               shape=shape_info["shape"],
                               lower_bound=lower_bound,
                               upper_bound=upper_bound,
+                              subject_to=subject_to
                               )
 
     def _into_zipfile(self, zf, directory):
@@ -216,6 +228,10 @@ cdef class BinaryVariable(ArraySymbol):
         # NumPy serialization is overkill but it's type-safe
         with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, upper_bound, allow_pickle=False)
+
+        subject_to = self.axis_wise_bounds()
+        if len(subject_to) > 0:
+            zf.writestr(directory + "subject_to.json", encoder.encode(subject_to))
 
     def axis_wise_bounds(self):
         """Axis wise bound(s) of Binary symbol as a list of tuples where
@@ -381,10 +397,20 @@ cdef class IntegerVariable(ArraySymbol):
             with zf.open(info, "r") as f:
                 upper_bound = np.load(f, allow_pickle=False)
 
+        # needs to be compatible with older versions
+        try:
+            info = zf.getinfo(directory + "subject_to.json")
+        except KeyError:
+            subject_to = None
+        else:
+            with zf.open(info, "r") as f:
+                subject_to = json.load(f)
+
         return IntegerVariable(model,
                                shape=shape_info["shape"],
                                lower_bound=lower_bound,
                                upper_bound=upper_bound,
+                               subject_to=subject_to
                                )
 
     def _into_zipfile(self, zf, directory):
@@ -413,6 +439,10 @@ cdef class IntegerVariable(ArraySymbol):
         # NumPy serialization is overkill but it's type-safe
         with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, upper_bound, allow_pickle=False)
+
+        subject_to = self.axis_wise_bounds()
+        if len(subject_to) > 0:
+            zf.writestr(directory + "subject_to.json", encoder.encode(subject_to))
 
     def axis_wise_bounds(self):
         """Axis wise bound(s) of Integer symbol as a list of tuples where
