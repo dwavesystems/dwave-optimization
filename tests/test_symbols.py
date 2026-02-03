@@ -806,6 +806,8 @@ class TestBinaryVariable(utils.SymbolTests):
             model.binary(),
             model.binary(3, lower_bound=1),
             model.binary(2, upper_bound=[0,1]),
+            model.binary((2, 3), subject_to=[(1, "<=", [0, 1, 2])]),
+            model.binary((2, 3), subject_to=[(0, ["<=", "=="], 1)]),
         ]
 
         model.lock()
@@ -817,6 +819,7 @@ class TestBinaryVariable(utils.SymbolTests):
             for i in range(old.size()):
                 self.assertTrue(np.all(old.lower_bound() == new.lower_bound()))
                 self.assertTrue(np.all(old.upper_bound() == new.upper_bound()))
+                self.assertEqual(old.axis_wise_bounds(), new.axis_wise_bounds())
 
     def test_set_state(self):
         with self.subTest("array-like"):
@@ -1970,6 +1973,8 @@ class TestIntegerVariable(utils.SymbolTests):
             model.integer(upper_bound=105),
             model.integer(15, lower_bound=4, upper_bound=6),
             model.integer(2, lower_bound=[1, 2], upper_bound=[3, 4]),
+            model.integer((2, 3), subject_to=[(1, "<=", [0, 1, 2])]),
+            model.integer((2, 3), subject_to=[(0, ["<=", ">="], 2)]),
         ]
 
         model.lock()
@@ -1981,6 +1986,7 @@ class TestIntegerVariable(utils.SymbolTests):
             for i in range(old.size()):
                 self.assertTrue(np.all(old.lower_bound() == new.lower_bound()))
                 self.assertTrue(np.all(old.upper_bound() == new.upper_bound()))
+                self.assertEqual(old.axis_wise_bounds(), new.axis_wise_bounds())
 
     def test_set_state(self):
         with self.subTest("Simple positive integer"):

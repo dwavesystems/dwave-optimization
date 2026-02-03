@@ -180,8 +180,8 @@ class Model(_Graph):
                 each variable). Non-boolean values are rounded down to the domain
                 [0,1]. If None, the default value of 1 is used.
             subject_to (optional): Axis-wise bounds for the symbol. Must be an
-                array of tuples (at most one per axis). Each tuple is of the 
-                form: (axis, operator(s), bound(s)) where
+                array of tuples or lists (at most one per axis). Each
+                tuple/list is of the form: (axis, operator(s), bound(s)) where
                     axis (int): Axis in which to apply the bound.
                     operator(s) (str | array[str]): Operator ("<=", "==", or
                         ">=") for all hyperslice along axis (str) or per 
@@ -528,8 +528,8 @@ class Model(_Graph):
                 each variable). Non-integer values are down up. If None, the
                 default value is used.
             subject_to (optional): Axis-wise bounds for the symbol. Must be an
-                array of tuples (at most one per axis). Each tuple is of the 
-                form: (axis, operator(s), bound(s)) where
+                array of tuples or lists (at most one per axis). Each
+                tuple/list is of the form: (axis, operator(s), bound(s)) where
                     axis (int): Axis in which to apply the bound.
                     operator(s) (str | array[str]): Operator ("<=", "==", or
                         ">=") for all hyperslice along axis (str) or per 
