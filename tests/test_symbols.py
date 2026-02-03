@@ -2069,17 +2069,6 @@ class TestIntegerVariable(utils.SymbolTests):
             x.set_state(0, [-0.5, -0.75, -0.5, -1.0, -0.1])
             np.testing.assert_array_equal(x.state(), [0, 0, 0, -1, 0])
 
-        # with self.subTest("Axis-wise bounds"):
-        #     model = Model()
-        #     model.states.resize(1)
-        #     x = model.integer([2, 3], lower_bound=0, upper_bound=2,
-        #                       subject_to=[(0, "==", 0)])
-        #     x.set_state(0, [0, 0, 1, 0, 1, 0])
-        #     # with np.testing.assert_raises(ValueError):
-        #     #     x.set_state(0, 2)
-        #     # with np.testing.assert_raises(ValueError):
-        #     #     x.set_state(0, -2)
-
 
 class TestIsIn(utils.SymbolTests):
     def generate_symbols(self):
