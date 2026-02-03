@@ -598,12 +598,9 @@ TEST_CASE("BinaryNode") {
         // Each hyperslice along axis 0 has size 4. There is no feasible
         // assignment to the values in slice 0 (along axis 0) that results in a
         // sum equal to 5.
-        graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt,
-                                       std::nullopt, bound_axes);
-
-        WHEN("We create a state by initialize_state()") {
-            REQUIRE_THROWS_WITH(graph.initialize_state(), "Infeasible axis-wise bounds.");
-        }
+        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                                           std::nullopt, std::nullopt, bound_axes),
+                            "Infeasible axis-wise bounds.");
     }
 
     GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 1") {
@@ -611,15 +608,12 @@ TEST_CASE("BinaryNode") {
         std::vector<BoundAxisOperator> operators{Equal, GreaterEqual};
         std::vector<double> bounds{5.0, 7.0};
         std::vector<BoundAxisInfo> bound_axes{{1, operators, bounds}};
-        graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt,
-                                       std::nullopt, bound_axes);
-
-        WHEN("We create a state by initialize_state()") {
-            // Each hyperslice along axis 1 has size 6. There is no feasible
-            // assignment to the values in slice 1 (along axis 1) that results in a
-            // sum greater than or equal to 7.
-            REQUIRE_THROWS_WITH(graph.initialize_state(), "Infeasible axis-wise bounds.");
-        }
+        // Each hyperslice along axis 1 has size 6. There is no feasible
+        // assignment to the values in slice 1 (along axis 1) that results in a
+        // sum greater than or equal to 7.
+        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                                           std::nullopt, std::nullopt, bound_axes),
+                            "Infeasible axis-wise bounds.");
     }
 
     GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 2") {
@@ -627,15 +621,12 @@ TEST_CASE("BinaryNode") {
         std::vector<BoundAxisOperator> operators{Equal, LessEqual};
         std::vector<double> bounds{5.0, -1.0};
         std::vector<BoundAxisInfo> bound_axes{{2, operators, bounds}};
-        graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt,
-                                       std::nullopt, bound_axes);
-
-        WHEN("We create a state by initialize_state()") {
-            // Each hyperslice along axis 2 has size 6. There is no feasible
-            // assignment to the values in slice 1 (along axis 2) that results in a
-            // sum less than or equal to -1.
-            REQUIRE_THROWS_WITH(graph.initialize_state(), "Infeasible axis-wise bounds.");
-        }
+        // Each hyperslice along axis 2 has size 6. There is no feasible
+        // assignment to the values in slice 1 (along axis 2) that results in a
+        // sum less than or equal to -1.
+        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                                           std::nullopt, std::nullopt, bound_axes),
+                            "Infeasible axis-wise bounds.");
     }
 
     GIVEN("(3x2x2)-BinaryNode with feasible axis-wise bound on axis: 0") {
@@ -1428,14 +1419,12 @@ TEST_CASE("IntegerNode") {
         std::vector<BoundAxisOperator> operators{Equal, LessEqual};
         std::vector<double> bounds{5.0, -31.0};
         std::vector<BoundAxisInfo> bound_axes{{0, operators, bounds}};
-        graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, bound_axes);
-
-        WHEN("We create a state by initialize_state()") {
-            // Each hyperslice along axis 0 has size 6. There is no feasible
-            // assignment to the values in slice 1 (along axis 0) that results in a
-            // sum less than or equal to -5*6-1 = -31.
-            REQUIRE_THROWS_WITH(graph.initialize_state(), "Infeasible axis-wise bounds.");
-        }
+        // Each hyperslice along axis 0 has size 6. There is no feasible
+        // assignment to the values in slice 1 (along axis 0) that results in a
+        // sum less than or equal to -5*6-1 = -31.
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                            -5, 8, bound_axes),
+                            "Infeasible axis-wise bounds.");
     }
 
     GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 1") {
@@ -1443,14 +1432,12 @@ TEST_CASE("IntegerNode") {
         std::vector<BoundAxisOperator> operators{GreaterEqual, Equal, Equal};
         std::vector<double> bounds{33.0, 0.0, 0.0};
         std::vector<BoundAxisInfo> bound_axes{{1, operators, bounds}};
-        graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, bound_axes);
-
-        WHEN("We create a state by initialize_state()") {
-            // Each hyperslice along axis 1 has size 4. There is no feasible
-            // assignment to the values in slice 0 (along axis 1) that results in a
-            // sum greater than or equal to 4*8+1 = 33.
-            REQUIRE_THROWS_WITH(graph.initialize_state(), "Infeasible axis-wise bounds.");
-        }
+        // Each hyperslice along axis 1 has size 4. There is no feasible
+        // assignment to the values in slice 0 (along axis 1) that results in a
+        // sum greater than or equal to 4*8+1 = 33.
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                            -5, 8, bound_axes),
+                            "Infeasible axis-wise bounds.");
     }
 
     GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 2") {
@@ -1458,14 +1445,12 @@ TEST_CASE("IntegerNode") {
         std::vector<BoundAxisOperator> operators{GreaterEqual, Equal};
         std::vector<double> bounds{-1.0, 49.0};
         std::vector<BoundAxisInfo> bound_axes{{2, operators, bounds}};
-        graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, bound_axes);
-
-        WHEN("We create a state by initialize_state()") {
-            // Each hyperslice along axis 2 has size 6. There is no feasible
-            // assignment to the values in slice 1 (along axis 2) that results in a
-            // sum or equal to 6*8+1 = 49
-            REQUIRE_THROWS_WITH(graph.initialize_state(), "Infeasible axis-wise bounds.");
-        }
+        // Each hyperslice along axis 2 has size 6. There is no feasible
+        // assignment to the values in slice 1 (along axis 2) that results in a
+        // sum or equal to 6*8+1 = 49
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                            -5, 8, bound_axes),
+                            "Infeasible axis-wise bounds.");
     }
 
     GIVEN("(2x3x2)-IntegerNode with feasible axis-wise bound on axis: 0") {
