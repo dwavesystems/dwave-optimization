@@ -470,9 +470,11 @@ void check_index_wise_bounds(const NumberNode& node, const std::vector<double>& 
 }
 
 /// Check the user defined axis-wise bounds for NumberNode
-void check_axis_wise_bounds(const std::vector<NumberNode::BoundAxisInfo>& bound_axes_info,
-                            const std::span<const ssize_t> shape) {
+void check_axis_wise_bounds(const NumberNode* node) {
+    const std::vector<NumberNode::BoundAxisInfo>& bound_axes_info = node->axis_wise_bounds();
     if (bound_axes_info.size() == 0) return;  // No bound axes to check.
+
+    const std::span<const ssize_t> shape = node->shape();
 
     // Used to asses if an axis have been bound multiple times.
     std::vector<bool> axis_bound(shape.size(), false);
@@ -513,6 +515,12 @@ void check_axis_wise_bounds(const std::vector<NumberNode::BoundAxisInfo>& bound_
     if (bound_axes_info.size() > 1) {
         throw std::invalid_argument("Axis-wise bounds are supported for at most one axis.");
     }
+
+    // There are quicker ways to check whether the axis-wise bounds are feasible.
+    // For now, we simply check whether we can construct a valid state.
+    std::vector<double> values;
+    values.reserve(node->size());
+    construct_state_given_exactly_one_bound_axis(node, values);
 }
 
 // Base class to be used as interfaces.
@@ -534,7 +542,7 @@ NumberNode::NumberNode(std::span<const ssize_t> shape, std::vector<double> lower
     }
 
     check_index_wise_bounds(*this, lower_bounds_, upper_bounds_);
-    check_axis_wise_bounds(bound_axes_info_, this->shape());
+    check_axis_wise_bounds(this);
 }
 
 void NumberNode::update_bound_axis_slice_sums(State& state, const ssize_t index,
@@ -565,13 +573,12 @@ void NumberNode::update_bound_axis_slice_sums(State& state, const ssize_t index,
 // Integer Node ***************************************************************
 
 /// Check the user defined axis-wise bounds for IntegerNode
-void check_integrality_of_axis_wise_bounds(
-        const std::vector<NumberNode::BoundAxisInfo>& bound_axes_info) {
+void check_bound_axes_integrality(const std::vector<NumberNode::BoundAxisInfo>& bound_axes_info) {
     if (bound_axes_info.size() == 0) return;  // No bound axes to check.
 
     for (const NumberNode::BoundAxisInfo& bound_axis_info : bound_axes_info) {
         for (const double& bound : bound_axis_info.bounds) {
-            if (bound != std::round(bound)) {
+            if (bound != std::floor(bound)) {
                 throw std::invalid_argument(
                         "Axis wise bounds for integral number arrays must be intregral.");
             }
@@ -588,12 +595,12 @@ IntegerNode::IntegerNode(std::span<const ssize_t> shape,
                                              : std::vector<double>{default_lower_bound},
                      upper_bound.has_value() ? std::move(*upper_bound)
                                              : std::vector<double>{default_upper_bound},
-                     std::move(bound_axes)) {
+                     (check_bound_axes_integrality(bound_axes), std::move(bound_axes))) {
     if (min_ < minimum_lower_bound || max_ > maximum_upper_bound) {
         throw std::invalid_argument("range provided for integers exceeds supported range");
     }
 
-    check_integrality_of_axis_wise_bounds(bound_axes_info_);
+    check_bound_axes_integrality(bound_axes_info_);
 }
 
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape,
