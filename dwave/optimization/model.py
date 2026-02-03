@@ -252,6 +252,10 @@ class Model(_Graph):
             :class:`~dwave.optimization.symbols.numbers.BinaryVariable`: The
                 created symbol and its methods.
 
+        .. versionchanged:: 0.6.7
+            Beginning in version 0.6.7, user-defined index-wise bounds are
+            supported.
+
         .. versionchanged:: 0.6.12
             Beginning in version 0.6.12, user-defined axis-wise bounds are
             supported.
