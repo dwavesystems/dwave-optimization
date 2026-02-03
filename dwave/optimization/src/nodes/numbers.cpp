@@ -50,14 +50,14 @@ NumberNode::BoundAxisInfo::BoundAxisInfo(ssize_t bound_axis,
 
 double NumberNode::BoundAxisInfo::get_bound(const ssize_t slice) const {
     assert(0 <= slice);
-    if (bounds.size() == 0) return bounds[0];
+    if (bounds.size() == 1) return bounds[0];
     assert(slice < static_cast<ssize_t>(bounds.size()));
     return bounds[slice];
 }
 
 NumberNode::BoundAxisOperator NumberNode::BoundAxisInfo::get_operator(const ssize_t slice) const {
     assert(0 <= slice);
-    if (operators.size() == 0) return operators[0];
+    if (operators.size() == 1) return operators[0];
     assert(slice < static_cast<ssize_t>(operators.size()));
     return operators[slice];
 }
