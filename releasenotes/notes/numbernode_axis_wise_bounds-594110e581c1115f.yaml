@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Axis-wise bounds added to NumberNode. Available to both IntegerNode and
+    BinaryNode.
