@@ -96,7 +96,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // Initialize the state of the node randomly
     template <std::uniform_random_bit_generator Generator>
     void initialize_state(State& state, Generator& rng) const {
-        // Currently, we do not support random node Initialization with
+        // Currently, we do not support random node initialization with
         // axis wise bounds.
         if (bound_axes_info_.size() > 0) {
             throw std::invalid_argument("Cannot randomly initialize_state with bound axes");

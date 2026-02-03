@@ -16,7 +16,6 @@
 
 import json
 
-import collections.abc
 import numpy as np
 
 from cython.operator cimport typeid
@@ -59,6 +58,8 @@ cdef vector[NumberNode.BoundAxisInfo] _convert_python_bound_axes(
     cdef double[:] mem
 
     for bound_axis_data in bound_axes_data:
+        # We allow lists and tuples because the _from_zipfile method yields
+        # a list of lists not a list of tuples.
         if not isinstance(bound_axis_data, (tuple, list)) or len(bound_axis_data) != 3:
             raise TypeError("Each bound axis entry must be a tuple or list with"
                             " three elements: axis, operator(s), bound(s)")
@@ -199,6 +200,7 @@ cdef class BinaryVariable(ArraySymbol):
             subject_to = None
         else:
             with zf.open(info, "r") as f:
+                # Note that import is a list of lists, not a list of tuples
                 subject_to = json.load(f)
 
         return BinaryVariable(model,
@@ -231,6 +233,7 @@ cdef class BinaryVariable(ArraySymbol):
 
         subject_to = self.axis_wise_bounds()
         if len(subject_to) > 0:
+            # Using json here converts the tuples to lists
             zf.writestr(directory + "subject_to.json", encoder.encode(subject_to))
 
     def axis_wise_bounds(self):
@@ -404,6 +407,7 @@ cdef class IntegerVariable(ArraySymbol):
             subject_to = None
         else:
             with zf.open(info, "r") as f:
+                # Note that import is a list of lists, not a list of tuples
                 subject_to = json.load(f)
 
         return IntegerVariable(model,
@@ -442,6 +446,7 @@ cdef class IntegerVariable(ArraySymbol):
 
         subject_to = self.axis_wise_bounds()
         if len(subject_to) > 0:
+            # Using json here converts the tuples to lists
             zf.writestr(directory + "subject_to.json", encoder.encode(subject_to))
 
     def axis_wise_bounds(self):
