@@ -64,7 +64,9 @@ NumberNode::BoundAxisOperator NumberNode::BoundAxisInfo::get_operator(const ssiz
 
 /// State dependant data attached to NumberNode
 struct NumberNodeStateData : public ArrayNodeStateData {
+    // User does not provide axis-wise bounds.
     NumberNodeStateData(std::vector<double> input) : ArrayNodeStateData(std::move(input)) {}
+    // User provides axis-wise bounds.
     NumberNodeStateData(std::vector<double> input, std::vector<std::vector<double>> bound_axes_sums)
             : ArrayNodeStateData(std::move(input)),
               bound_axes_sums(std::move(bound_axes_sums)),
@@ -73,6 +75,7 @@ struct NumberNodeStateData : public ArrayNodeStateData {
     /// track the sum of the values within the hyperslice.
     /// bound_axes_sums[i][j] = "sum of the values within the jth
     ///                          hyperslice along the ith bound axis"
+    /// Note that "ith bound axis" does not necessarily mean the ith axis.
     std::vector<std::vector<double>> bound_axes_sums;
     // Store a copy for NumberNode::revert() and commit()
     std::vector<std::vector<double>> prior_bound_axes_sums;
@@ -104,11 +107,13 @@ std::vector<std::vector<double>> get_bound_axes_sums(const NumberNode* node,
 
     // For each bound axis, initialize the sum of the values contained in each
     // of it's hyperslice to 0. Define bound_axes_sums[i][j] = "sum of the
-    // values within the jth hyperslice along the ith bound axis"
+    // values within the jth hyperslice along the ith bound axis".
     std::vector<std::vector<double>> bound_axes_sums;
     bound_axes_sums.reserve(num_bound_axes);
     for (const NumberNode::BoundAxisInfo& axis_info : bound_axes_info) {
         assert(0 <= axis_info.axis && axis_info.axis < static_cast<ssize_t>(node_shape.size()));
+        // Emplace an all zeros vector of size equal to the number of hyperslice
+        // along the given bound axis (axis_info.axis).
         bound_axes_sums.emplace_back(node_shape[axis_info.axis], 0.0);
     }
 
@@ -116,7 +121,7 @@ std::vector<std::vector<double>> get_bound_axes_sums(const NumberNode* node,
     // NumberNode and iterate over it.
     for (BufferIterator<double, double, true> it(number_data.data(), node_shape, node->strides());
          it != std::default_sentinel; ++it) {
-        // Increment the appropriate hyperslice along each bound axis.
+        // Increment the sum of the appropriate hyperslice along each bound axis.
         for (ssize_t bound_axis = 0; bound_axis < num_bound_axes; ++bound_axis) {
             const ssize_t axis = bound_axes_info[bound_axis].axis;
             assert(0 <= axis && axis < static_cast<ssize_t>(it.location().size()));
@@ -134,11 +139,12 @@ std::vector<std::vector<double>> get_bound_axes_sums(const NumberNode* node,
 bool satisfies_axis_wise_bounds(const std::vector<NumberNode::BoundAxisInfo>& bound_axes_info,
                                 const std::vector<std::vector<double>>& bound_axes_sums) {
     assert(bound_axes_info.size() == bound_axes_sums.size());
-    // Check that each hyperslice satisfies the axis-wise bounds.
+    // Iterate over each bound axis
     for (ssize_t i = 0, stop_i = static_cast<ssize_t>(bound_axes_info.size()); i < stop_i; ++i) {
         const auto& bound_axis_info = bound_axes_info[i];
         const auto& bound_axis_sums = bound_axes_sums[i];
 
+        // Return `false` if any slice does not satisfy the axis-wise bounds.
         for (ssize_t slice = 0, stop_slice = static_cast<ssize_t>(bound_axis_sums.size());
              slice < stop_slice; ++slice) {
             switch (bound_axis_info.get_operator(slice)) {
@@ -175,7 +181,7 @@ void NumberNode::initialize_state(State& state, std::vector<double>&& number_dat
         return;
     }
 
-    // Given the assingnment to NumberNode, `number_data`, get the sum of the
+    // Given the assingnment to NumberNode `number_data`, compute the sum of the
     // values within each hyperslice along each bound axis.
     std::vector<std::vector<double>> bound_axes_sums = get_bound_axes_sums(this, number_data);
 
@@ -187,7 +193,7 @@ void NumberNode::initialize_state(State& state, std::vector<double>&& number_dat
                                           std::move(bound_axes_sums));
 }
 
-/// Given a `span` (typically containing strides or shape), reorder the values
+/// Given a `span` (used for strides or shape data), reorder the values
 /// of the span such that the given `axis` is moved to the 0th index.
 std::vector<ssize_t> shift_axis_data(const std::span<const ssize_t> span, const ssize_t axis) {
     const ssize_t ndim = span.size();
@@ -201,7 +207,7 @@ std::vector<ssize_t> shift_axis_data(const std::span<const ssize_t> span, const 
     return output;
 }
 
-/// Undo the operation defined by `shift_axis_data()`.
+/// Reverse the operation defined by `shift_axis_data()`.
 std::vector<ssize_t> undo_shift_axis_data(const std::span<const ssize_t> span, const ssize_t axis) {
     const ssize_t ndim = span.size();
     std::vector<ssize_t> output;
@@ -219,7 +225,7 @@ std::vector<ssize_t> undo_shift_axis_data(const std::span<const ssize_t> span, c
 
 /// Given a `slice` along a bound axis in a NumberNode where the sum of it's
 /// values are given by `sum`, determine the non-negative amount `delta`
-/// needed to be added to `sum` to satisfy the expression: (sum+delta) op bound
+/// needed to be added to `sum` to satisfy the expression: `(sum+delta) op bound`
 /// e.g. Given (sum, op, bound) := (10, ==, 12), delta = 2
 /// e.g. Given (sum, op, bound) := (10, <=, 12), delta = 0
 /// e.g. Given (sum, op, bound) := (10, >=, 12), delta = 2
@@ -244,8 +250,8 @@ double compute_bound_axis_slice_delta(const ssize_t slice, const double sum,
     }
 }
 
-/// Given a NumberNod and exactly one axis-wise bound defined for NumberNode,
-/// assign values to `values` (in-place) to satisfy the axis-wise bound. This method
+/// Given a NumberNode and exactly one axis-wise bound, assign values to
+/// `values` (in-place) to satisfy the axis-wise bound. This method
 /// A) Initially sets `values[i] = lower_bound(i)` for all i.
 /// B) Incremements the values within each hyperslice until they satisfy
 /// the axis-wise bound (should this be possible).
@@ -258,10 +264,11 @@ void construct_state_given_exactly_one_bound_axis(const NumberNode* node,
     for (ssize_t i = 0, stop = node->size(); i < stop; ++i) {
         values.push_back(node->lower_bound(i));
     }
-    // 2) Determine the hyperslice sums for the bound axis. This could be
-    // done during the previous loop if we want to improve performance.
+    // 2) Determine the hyperslice sums for the bound axis. To improve
+    // performance, compute sum during previous loop.
     assert(node->axis_wise_bounds().size() == 1);
     const std::vector<double> bound_axis_sums = get_bound_axes_sums(node, values).front();
+    // Obtain the stateless bound axis data for node.
     const NumberNode::BoundAxisInfo& bound_axis_info = node->axis_wise_bounds().front();
     const ssize_t bound_axis = bound_axis_info.axis;
     assert(0 <= bound_axis && bound_axis < ndim);
@@ -269,7 +276,7 @@ void construct_state_given_exactly_one_bound_axis(const NumberNode* node,
     // We need a way to iterate over each hyperslice along the bound axis and
     // adjust it`s values until they satisfy the axis-wise bounds. We do this
     // by defining an iterator of `values` that traverses each hyperslice one
-    // after another. This is equivalent to adjusting NumberNode shape and
+    // after another. This is equivalent to adjusting the node's shape and
     // strides such that the data for the bound_axis is moved to position 0.
     const std::vector<ssize_t> buff_shape = shift_axis_data(node_shape, bound_axis);
     const std::vector<ssize_t> buff_strides = shift_axis_data(node->strides(), bound_axis);
@@ -284,33 +291,32 @@ void construct_state_given_exactly_one_bound_axis(const NumberNode* node,
     // 3) Iterate over each hyperslice and adjust it's values until they
     // satisfy the axis-wise bounds.
     for (ssize_t slice = 0, stop = node_shape[bound_axis]; slice < stop; ++slice) {
-        // Determine the amount we need to adjust the initialized values within
-        // the slice.
+        // Determine the amount needed to adjust the values within the slice.
         double delta = compute_bound_axis_slice_delta(slice, bound_axis_sums[slice],
                                                       bound_axis_info.get_operator(slice),
                                                       bound_axis_info.get_bound(slice));
         if (delta == 0) continue;  // Axis-wise bounds are satisfied for slice.
         assert(delta >= 0);        // Should only increment.
 
-        // Determine how much we need to offset slice_0_it to get to the first
-        // index in the given `slice`
+        // Determine how much we need to offset `slice_0_it` to get to the first
+        // index in the given `slice`.
         const ssize_t offset = slice * slice_size;
         // Iterate over all indices in the given slice.
-        for (auto slice_begin_it = slice_0_it + offset, slice_end_it = slice_begin_it + slice_size;
-             slice_begin_it != slice_end_it; ++slice_begin_it) {
-            assert(slice_begin_it.location()[0] == slice);  // We should be in the right slice.
-            // Determine the "true" index of `slice_it` given the node shape
-            ssize_t index = ravel_multi_index(
-                    undo_shift_axis_data(slice_begin_it.location(), bound_axis), node_shape);
-            assert(0 <= index && index < static_cast<ssize_t>(values.size()));
+        for (auto slice_it = slice_0_it + offset, slice_end_it = slice_it + slice_size;
+             slice_it != slice_end_it; ++slice_it) {
+            assert(slice_it.location()[0] == slice);  // We should be in the right slice.
+            // Determine the "true" index of `slice_it` given the node shape.
+            ssize_t index = ravel_multi_index(undo_shift_axis_data(slice_it.location(), bound_axis),
+                                              node_shape);
             // Sanity check that we can correctly reverse the conversion.
             assert(std::ranges::equal(shift_axis_data(unravel_index(index, node_shape), bound_axis),
-                                      slice_begin_it.location()));
-            // Determine the amount we can increment the value in the given index.
-            const double inc = std::min(delta, node->upper_bound(index) - *slice_begin_it);
+                                      slice_it.location()));
+            assert(0 <= index && index < static_cast<ssize_t>(values.size()));
+            // Determine allowable amount we can increment the value in at `index`.
+            const double inc = std::min(delta, node->upper_bound(index) - *slice_it);
 
             if (inc > 0) {  // Apply the increment to both `it` and `delta`.
-                *slice_begin_it += inc;
+                *slice_it += inc;
                 delta -= inc;
                 if (delta == 0) break;  // Axis-wise bounds are now satisfied for slice.
             }
@@ -324,7 +330,8 @@ void NumberNode::initialize_state(State& state) const {
     std::vector<double> values;
     values.reserve(this->size());
 
-    if (bound_axes_info_.size() == 0) {  // No bound axes to consider
+    if (bound_axes_info_.size() == 0) {
+        // No bound axes to consider, initialize by default.
         for (ssize_t i = 0, stop = this->size(); i < stop; ++i) {
             values.push_back(default_value(i));
         }
@@ -363,8 +370,7 @@ void NumberNode::exchange(State& state, ssize_t i, ssize_t j) const {
     // assert() that i and j are valid indices occurs in ptr->exchange().
     // State change occurs IFF (i != j) and (buffer[i] != buffer[j]).
     if (ptr->exchange(i, j)) {
-        // If the values at indices i and j were exchanged, update the bound
-        // axis sums.
+        // If exchange occured, update the bound axis sums.
         const double difference = ptr->get(i) - ptr->get(j);
         // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
         update_bound_axis_slice_sums(state, i, difference);
@@ -382,6 +388,7 @@ double NumberNode::lower_bound(ssize_t index) const {
     if (lower_bounds_.size() == 1) {
         return lower_bounds_[0];
     }
+    assert(lower_bounds_.size() > 1);
     assert(0 <= index && index < static_cast<ssize_t>(lower_bounds_.size()));
     return lower_bounds_[index];
 }
@@ -398,6 +405,7 @@ double NumberNode::upper_bound(ssize_t index) const {
     if (upper_bounds_.size() == 1) {
         return upper_bounds_[0];
     }
+    assert(upper_bounds_.size() > 1);
     assert(0 <= index && index < static_cast<ssize_t>(upper_bounds_.size()));
     return upper_bounds_[index];
 }
@@ -416,6 +424,7 @@ void NumberNode::clip_and_set_value(State& state, ssize_t index, double value) c
     // assert() that i is a valid index occurs in ptr->set().
     // State change occurs IFF `value` != buffer[index] .
     if (ptr->set(index, value)) {
+        // If change occured, update bound axis sums by differnce.
         update_bound_axis_slice_sums(state, index, value - diff(state).back().old);
         assert(satisfies_axis_wise_bounds(bound_axes_info_, ptr->bound_axes_sums));
     }
@@ -469,13 +478,12 @@ void check_index_wise_bounds(const NumberNode& node, const std::vector<double>& 
     }
 }
 
-/// Check the user defined axis-wise bounds for NumberNode
+/// Check the user defined axis-wise bounds for NumberNode.
 void check_axis_wise_bounds(const NumberNode* node) {
     const std::vector<NumberNode::BoundAxisInfo>& bound_axes_info = node->axis_wise_bounds();
     if (bound_axes_info.size() == 0) return;  // No bound axes to check.
 
     const std::span<const ssize_t> shape = node->shape();
-
     // Used to asses if an axis have been bound multiple times.
     std::vector<bool> axis_bound(shape.size(), false);
 
@@ -487,14 +495,12 @@ void check_axis_wise_bounds(const NumberNode* node) {
             throw std::invalid_argument("Invalid bound axis given number array shape.");
         }
 
-        // The number of operators defined for the given bound axis
         const ssize_t num_operators = static_cast<ssize_t>(bound_axis_info.operators.size());
         if ((num_operators > 1) && (num_operators != shape[axis])) {
             throw std::invalid_argument(
                     "Invalid number of axis-wise operators given number array shape.");
         }
 
-        // The number of operators defined for the given bound axis
         const ssize_t num_bounds = static_cast<ssize_t>(bound_axis_info.bounds.size());
         if ((num_bounds > 1) && (num_bounds != shape[axis])) {
             throw std::invalid_argument(
@@ -516,8 +522,8 @@ void check_axis_wise_bounds(const NumberNode* node) {
         throw std::invalid_argument("Axis-wise bounds are supported for at most one axis.");
     }
 
-    // There are quicker ways to check whether the axis-wise bounds are feasible.
-    // For now, we simply check whether we can construct a valid state.
+    // There are fasters ways to check whether the axis-wise bounds are feasible.
+    // For now, fully attempt to construct a state and throw if impossible.
     std::vector<double> values;
     values.reserve(node->size());
     construct_state_given_exactly_one_bound_axis(node, values);
@@ -531,8 +537,7 @@ NumberNode::NumberNode(std::span<const ssize_t> shape, std::vector<double> lower
           max_(get_extreme_index_wise_bound<true>(upper_bound)),
           lower_bounds_(std::move(lower_bound)),
           upper_bounds_(std::move(upper_bound)),
-          bound_axes_info_(bound_axes.size() > 0 ? std::move(bound_axes)
-                                                 : std::vector<BoundAxisInfo>{}) {
+          bound_axes_info_(std::move(bound_axes)) {
     if ((shape.size() > 0) && (shape[0] < 0)) {
         throw std::invalid_argument("Number array cannot have dynamic size.");
     }
@@ -558,14 +563,15 @@ void NumberNode::update_bound_axis_slice_sums(State& state, const ssize_t index,
     auto& bound_axes_sums = data_ptr<NumberNodeStateData>(state)->bound_axes_sums;
     assert(bound_axes_info.size() == bound_axes_sums.size());
 
+    // For each bound axis
     for (ssize_t bound_axis = 0, stop = static_cast<ssize_t>(bound_axes_info.size());
          bound_axis < stop; ++bound_axis) {
         assert(0 <= bound_axes_info[bound_axis].axis);
         assert(bound_axes_info[bound_axis].axis < static_cast<ssize_t>(multi_index.size()));
-        // Get the slice along the bound axis the `value_change` occurs in
+        // Get the slice along the bound axis the `value_change` occurs in.
         const ssize_t slice = multi_index[bound_axes_info[bound_axis].axis];
         assert(0 <= slice && slice < static_cast<ssize_t>(bound_axes_sums[bound_axis].size()));
-        // Offset running sum in slice
+        // Offset sum in slice.
         bound_axes_sums[bound_axis][slice] += value_change;
     }
 }
@@ -599,8 +605,6 @@ IntegerNode::IntegerNode(std::span<const ssize_t> shape,
     if (min_ < minimum_lower_bound || max_ > maximum_upper_bound) {
         throw std::invalid_argument("range provided for integers exceeds supported range");
     }
-
-    check_bound_axes_integrality(bound_axes_info_);
 }
 
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape,
@@ -675,6 +679,7 @@ void IntegerNode::set_value(State& state, ssize_t index, double value) const {
     // assert() that i is a valid index occurs in ptr->set().
     // State change occurs IFF `value` != buffer[index].
     if (ptr->set(index, value)) {
+        // If change occured, update bound axis sums by differnce.
         update_bound_axis_slice_sums(state, index, value - diff(state).back().old);
         assert(satisfies_axis_wise_bounds(bound_axes_info_, ptr->bound_axes_sums));
     }
@@ -719,7 +724,7 @@ BinaryNode::BinaryNode(std::span<const ssize_t> shape,
                        std::optional<std::vector<double>> upper_bound,
                        std::vector<BoundAxisInfo> bound_axes)
         : IntegerNode(shape, limit_bound_to_bool_domain<false>(lower_bound),
-                      limit_bound_to_bool_domain<true>(upper_bound), bound_axes) {}
+                      limit_bound_to_bool_domain<true>(upper_bound), std::move(bound_axes)) {}
 
 BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape,
                        std::optional<std::vector<double>> lower_bound,
