@@ -58,10 +58,9 @@ cdef vector[NumberNode.BoundAxisInfo] _convert_python_bound_axes(
     cdef double[:] mem
 
     for bound_axis_data in bound_axes_data:
-        # We allow lists and tuples because the _from_zipfile method yields
-        # a list of lists not a list of tuples.
-        if not isinstance(bound_axis_data, (tuple, list)) or len(bound_axis_data) != 3:
-            raise TypeError("Each bound axis entry must be a tuple or list with"
+        if not isinstance(bound_axis_data, tuple) or len(bound_axis_data) != 3:
+            print(bound_axis_data)
+            raise TypeError("Each bound axis entry must be a tuple with"
                             " three elements: axis, operator(s), bound(s)")
 
         axis, py_ops, py_bounds = bound_axis_data
@@ -200,8 +199,10 @@ cdef class BinaryVariable(ArraySymbol):
             subject_to = None
         else:
             with zf.open(info, "r") as f:
-                # Note that import is a list of lists, not a list of tuples
                 subject_to = json.load(f)
+                # Note that import is a list of lists, not a list of tuples,
+                # hence we convert to tuple. We could also support lists.
+                subject_to = [(axis, ops, bounds) for axis, ops, bounds in subject_to]
 
         return BinaryVariable(model,
                               shape=shape_info["shape"],
@@ -409,6 +410,9 @@ cdef class IntegerVariable(ArraySymbol):
             with zf.open(info, "r") as f:
                 # Note that import is a list of lists, not a list of tuples
                 subject_to = json.load(f)
+                # Note that import is a list of lists, not a list of tuples,
+                # hence we convert to tuple. We could also support lists.
+                subject_to = [(axis, ops, bounds) for axis, ops, bounds in subject_to]
 
         return IntegerVariable(model,
                                shape=shape_info["shape"],
