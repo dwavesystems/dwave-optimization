@@ -34,6 +34,8 @@ from dwave.optimization.libcpp.nodes.numbers cimport (
 from dwave.optimization.states cimport States
 
 
+# Convert the str operators "==", "<=", ">=" into their corresponding
+# C++ objects.
 cdef NumberNode.BoundAxisOperator _parse_python_operator(str op) except *:
     if op == "==":
         return NumberNode.BoundAxisOperator.Equal
@@ -45,6 +47,8 @@ cdef NumberNode.BoundAxisOperator _parse_python_operator(str op) except *:
         raise TypeError(f"Invalid bound axis operator: {op!r}")
 
 
+# Convert the user-defined axis-wise bounds for NumberNode into the 
+# corresponding C++ objects passed to NumberNode.
 cdef vector[NumberNode.BoundAxisInfo] _convert_python_bound_axes(
         bound_axes_data : None | list[tuple(int, str | list[str], float | list[float])]) except *:
     cdef vector[NumberNode.BoundAxisInfo] output
@@ -59,7 +63,6 @@ cdef vector[NumberNode.BoundAxisInfo] _convert_python_bound_axes(
 
     for bound_axis_data in bound_axes_data:
         if not isinstance(bound_axis_data, tuple) or len(bound_axis_data) != 3:
-            print(bound_axis_data)
             raise TypeError("Each bound axis entry must be a tuple with"
                             " three elements: axis, operator(s), bound(s)")
 
@@ -70,16 +73,20 @@ cdef vector[NumberNode.BoundAxisInfo] _convert_python_bound_axes(
 
         cpp_ops.clear()
         if isinstance(py_ops, str):
+            # One operator defined for all slices.
             cpp_ops.push_back(_parse_python_operator(py_ops))
         else:
+            # Operator defined per slice.
             ops_array = np.asarray(py_ops, order='C')
             if (ops_array.ndim <= 1):
                 cpp_ops.reserve(ops_array.size)
                 for op in ops_array:
+                    # Convert op to `str` because _parse_python_operator()
+                    # does not expect a `numpy.str_`.
                     cpp_ops.push_back(_parse_python_operator(str(op)))
             else:
                 raise TypeError("Bound axis operator(s) should be str or"
-                                " 1D-array of str.")
+                                " a 1D-array of str(s).")
 
         cpp_bounds.clear()
         bound_array = np.asarray_chkfinite(py_bounds, dtype=np.double, order='C')
@@ -95,7 +102,7 @@ cdef vector[NumberNode.BoundAxisInfo] _convert_python_bound_axes(
 
     return output
 
-
+# Convert the C++ operators into their corresponding str
 cdef str _parse_cpp_operators(NumberNode.BoundAxisOperator op):
     if op == NumberNode.BoundAxisOperator.Equal:
         return "=="
@@ -200,8 +207,8 @@ cdef class BinaryVariable(ArraySymbol):
         else:
             with zf.open(info, "r") as f:
                 subject_to = json.load(f)
-                # Note that import is a list of lists, not a list of tuples,
-                # hence we convert to tuple. We could also support lists.
+                # Note that import is a list of lists, not a list of tuples.
+                # Hence we convert to tuple. We could also support lists.
                 subject_to = [(axis, ops, bounds) for axis, ops, bounds in subject_to]
 
         return BinaryVariable(model,
@@ -410,8 +417,8 @@ cdef class IntegerVariable(ArraySymbol):
             with zf.open(info, "r") as f:
                 # Note that import is a list of lists, not a list of tuples
                 subject_to = json.load(f)
-                # Note that import is a list of lists, not a list of tuples,
-                # hence we convert to tuple. We could also support lists.
+                # Note that import is a list of lists, not a list of tuples.
+                # Hence we convert to tuple. We could also support lists.
                 subject_to = [(axis, ops, bounds) for axis, ops, bounds in subject_to]
 
         return IntegerVariable(model,
