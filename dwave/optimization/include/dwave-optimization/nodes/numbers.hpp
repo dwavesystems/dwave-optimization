@@ -42,10 +42,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
                       std::vector<double> axis_bounds);
         /// The bound axis
         ssize_t axis;
-        /// Operator for ALL axis slices (vector has length one) or operator*s* PER
+        /// Operator for ALL axis slices (vector has length one) or operators PER
         /// slice (length of vector is equal to the number of slices).
         std::vector<BoundAxisOperator> operators;
-        /// Bound for ALL axis slices (vector has length one) or bound*s* PER slice
+        /// Bound for ALL axis slices (vector has length one) or bounds PER slice
         /// (length of vector is equal to the number of slices).
         std::vector<double> bounds;
 
@@ -96,10 +96,9 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // Initialize the state of the node randomly
     template <std::uniform_random_bit_generator Generator>
     void initialize_state(State& state, Generator& rng) const {
-        // Currently, we do not support random node initialization with
-        // axis wise bounds.
+        // Currently do not support random node initialization with bound axes.
         if (bound_axes_info_.size() > 0) {
-            throw std::invalid_argument("Cannot randomly initialize_state with bound axes");
+            throw std::invalid_argument("Cannot randomly initialize_state with bound axes.");
         }
 
         std::vector<double> values;
@@ -140,10 +139,11 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // in a given index.
     void clip_and_set_value(State& state, ssize_t index, double value) const;
 
-    /// Return vector of axis-wise bounds.
+    /// Return the stateless axis-wise bound information i.e. bound_axes_info_.
     const std::vector<BoundAxisInfo>& axis_wise_bounds() const;
 
-    /// Return vector containing the bound axis sums in a given state.
+    /// Return the state-dependent sum of the values within each hyperslice
+    /// along each bound axis.
     const std::vector<std::vector<double>>& bound_axis_sums(State& state) const;
 
  protected:
@@ -151,10 +151,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
                         std::vector<double> upper_bound,
                         std::vector<BoundAxisInfo> bound_axes = {});
 
-    /// Return truth statement: 'value is valid in a given index'.
+    // Return truth statement: 'value is valid in a given index'.
     virtual bool is_valid(ssize_t index, double value) const = 0;
 
-    /// Default value in a given index.
+    // Default value in a given index.
     virtual double default_value(ssize_t index) const = 0;
 
     /// Update the running bound axis sums where the value stored at `index` is
@@ -186,7 +186,8 @@ class IntegerNode : public NumberNode {
     IntegerNode() : IntegerNode({}) {}
 
     // Create an integer array with the user-defined index- and axis-wise bounds.
-    // Index-wise bounds default to the specified default bounds.
+    // Index-wise bounds default to the specified default bounds. By default,
+    // there are no axis-wise bounds.
     IntegerNode(std::span<const ssize_t> shape,
                 std::optional<std::vector<double>> lower_bound = std::nullopt,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
@@ -253,7 +254,8 @@ class BinaryNode : public IntegerNode {
     BinaryNode() : BinaryNode({}) {}
 
     // Create a binary array with the user-defined index- and axis-wise bounds.
-    // Index-wise bounds default to lower_bound = 0.0 and upper_bound = 1.0.
+    // Index-wise bounds default to lower_bound = 0.0 and upper_bound = 1.0. By
+    // default, there are no axis-wise bounds.
     BinaryNode(std::span<const ssize_t> shape,
                std::optional<std::vector<double>> lower_bound = std::nullopt,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
