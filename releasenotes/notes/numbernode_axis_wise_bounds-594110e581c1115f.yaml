@@ -2,4 +2,4 @@
 features:
   - |
     Axis-wise bounds added to NumberNode. Available to both IntegerNode and
-    BinaryNode.
+    BinaryNode. See #216` <https://github.com/dwavesystems/dwave-optimization/issues/216>`_.

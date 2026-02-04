@@ -22,8 +22,8 @@ cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimi
 
     cdef cppclass NumberNode(ArrayNode):
         enum BoundAxisOperator :
-            # It appears Cython automatically assumes all (standard) enums are "public"
-            # hence we override here.
+            # It appears Cython automatically assumes all (standard) enums are "public".
+            # Because of this, these very explict overrides are needed per enum item.
             Equal "dwave::optimization::NumberNode::BoundAxisOperator::Equal"
             LessEqual "dwave::optimization::NumberNode::BoundAxisOperator::LessEqual"
             GreaterEqual "dwave::optimization::NumberNode::BoundAxisOperator::GreaterEqual"

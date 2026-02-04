@@ -179,17 +179,17 @@ class Model(_Graph):
                 scalar (one bound for all variables) or an array (one bound for
                 each variable). Non-boolean values are rounded down to the domain
                 [0,1]. If None, the default value of 1 is used.
-            subject_to (optional): Axis-wise bounds for the symbol. Must be an
-                array of tuples. Each tuple is of the form: (axis, operator(s),
-                bound(s)) where `axis` (int) is the axis to apply the bound(s),
-                `operator(s)` (str | array[str]) is the operator(s) ("<=",
-                "==", or ">=") defined for all hyperslice or per hyperslice
-                along the bound axis, and `bound(s)` (float | array[float]) is
-                the bound(s) defined for all hyperslice or per hyperslice
-                hyperslice along the bound axis. If provided, the sum of the
-                values within each hyperslice along each bound axis will
-                satisfy the axis-wise bounds. Note: At most one axis-wise bound
-                may be provided.
+            subject_to (optional): Axis-wise bounds applied to the symbol. Must be an
+                array of tuples where each tuple has the form: (axis, operators, bounds)
+                - axis (int): The axis along which the bounds are applied.
+                - operators (str | array[str]): The operator(s) ("<=", "==", or ">="). 
+                A single operator applies to all hyperslices along the axis; an
+                array specifies one operator per hyperslice.
+                - bounds (float | array[float]): The bound value(s). A single value
+                applies to all hyperslices; an array specifies one bound per hyperslice.
+                If provided, the sum of values within each hyperslice along the specified
+                axis must satisfy the corresponding operator–bound pair.
+                Note: At most one axis-wise bound may be provided.
 
         Returns:
             A binary symbol.
@@ -227,26 +227,19 @@ class Model(_Graph):
             >>> np.all([1, 0] == b.upper_bound())
             True
 
-            This example adds a :math:`2`-sized binary symbol with a scalar lower
-            bound and index-wise upper bounds to a model.
+            This example adds a :math:`(2x3)`-sized binary symbol with
+            index-wise lower bounds and an axis-wise bound along axis 1. Let
+            x_i (int i : 0 <= i <= 2) denote the sum of the values within
+            hyperslice i along axis 1. For each state defined for this symbol:
+            (x_0 <= 0), (x_1 == 2), and (x_2 >= 1).
 
             >>> from dwave.optimization.model import Model
             >>> import numpy as np
             >>> model = Model()
-            >>> b = model.binary(2, lower_bound=-1.1, upper_bound=[1.1, 0.9])
-            >>> np.all([0, 0] == b.lower_bound())
-            True
-            >>> np.all([1, 0] == b.upper_bound())
-            True
-
-            This example adds a :math:`(2x3)`-sized binary symbol with index-wise
-            lower bounds and an axis-wise bound along axis 1.
-
-            >>> from dwave.optimization.model import Model
-            >>> import numpy as np
-            >>> model = Model()
-            >>> i = model.binary([2,3], lower_bound=[[0, 1, 1], [0, 1, 0]],
+            >>> n = model.binary([2, 3], lower_bound=[[0, 1, 1], [0, 1, 0]],
             ... subject_to=[(1, ["<=", "==", ">="], [0, 2, 1])])
+            >>> np.all(n.axis_wise_bounds() == [(1, ["<=", "==", ">="], [0, 2, 1])])
+            True
 
         See Also:
             :class:`~dwave.optimization.symbols.numbers.BinaryVariable`: equivalent symbol.
@@ -529,17 +522,17 @@ class Model(_Graph):
                 scalar (one bound for all variables) or an array (one bound for
                 each variable). Non-integer values are down up. If None, the
                 default value is used.
-            subject_to (optional): Axis-wise bounds for the symbol. Must be an
-                array of tuples. Each tuple is of the form: (axis, operator(s),
-                bound(s)) where `axis` (int) is the axis to apply the bound(s),
-                `operator(s)` (str | array[str]) is the operator(s) ("<=",
-                "==", or ">=") defined for all hyperslice or per hyperslice
-                along the bound axis, and `bound(s)` (float | array[float]) is
-                the bound(s) defined for all hyperslice or per hyperslice
-                hyperslice along the bound axis. If provided, the sum of the
-                values within each hyperslice along each bound axis will
-                satisfy the axis-wise bounds. Note: At most one axis-wise bound
-                may be provided.
+            subject_to (optional): Axis-wise bounds applied to the symbol. Must be an
+                array of tuples where each tuple has the form: (axis, operators, bounds)
+                - axis (int): The axis along which the bounds are applied.
+                - operators (str | array[str]): The operator(s) ("<=", "==", or ">="). 
+                A single operator applies to all hyperslices along the axis; an
+                array specifies one operator per hyperslice.
+                - bounds (float | array[float]): The bound value(s). A single value
+                applies to all hyperslices; an array specifies one bound per hyperslice.
+                If provided, the sum of values within each hyperslice along the specified
+                axis must satisfy the corresponding operator–bound pair.
+                Note: At most one axis-wise bound may be provided.
 
         Returns:
             An integer symbol.
@@ -578,15 +571,19 @@ class Model(_Graph):
             >>> np.all([1, 2] == i.upper_bound())
             True
 
-            This example adds a :math:`(2x3)`-sized integer symbol with 
-            general lower and upper bounds and an axis-wise bound along
-            axis 1.
+            This example adds a :math:`(2x3)`-sized integer symbol with general
+            lower and upper bounds and an axis-wise bound along axis 1. Let x_i
+            (int i : 0 <= i <= 2) denote the sum of the values within
+            hyperslice i along axis 1. For each state defined for this symbol:
+            (x_0 <= 2), (x_1 <= 4), and (x_2 <= 5).
 
             >>> from dwave.optimization.model import Model
             >>> import numpy as np
             >>> model = Model()
-            >>> i = model.integer([2,3], lower_bound=1, upper_bound=3,
+            >>> i = model.integer([2, 3], lower_bound=1, upper_bound=3,
             ... subject_to=[(1, "<=", [2, 4, 5])])
+            >>> np.all(i.axis_wise_bounds() == [(1, ["<="], [2, 4, 5])])
+            True
 
         See Also:
             :class:`~dwave.optimization.symbols.numbers.IntegerVariable`: equivalent symbol.
