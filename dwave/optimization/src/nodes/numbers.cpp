@@ -177,19 +177,18 @@ void NumberNode::initialize_state(State& state, std::vector<double>&& number_dat
 
     if (bound_axes_info_.size() == 0) {  // No bound axes to consider.
         emplace_data_ptr<NumberNodeStateData>(state, std::move(number_data));
-        return;
+    } else {
+        // Given the assingnment to NumberNode `number_data`, compute the sum of the
+        // values within each hyperslice along each bound axis.
+        std::vector<std::vector<double>> bound_axes_sums = get_bound_axes_sums(this, number_data);
+
+        if (!satisfies_axis_wise_bounds(bound_axes_info_, bound_axes_sums)) {
+            throw std::invalid_argument("Initialized values do not satisfy axis-wise bounds.");
+        }
+
+        emplace_data_ptr<NumberNodeStateData>(state, std::move(number_data),
+                                              std::move(bound_axes_sums));
     }
-
-    // Given the assingnment to NumberNode `number_data`, compute the sum of the
-    // values within each hyperslice along each bound axis.
-    std::vector<std::vector<double>> bound_axes_sums = get_bound_axes_sums(this, number_data);
-
-    if (!satisfies_axis_wise_bounds(bound_axes_info_, bound_axes_sums)) {
-        throw std::invalid_argument("Initialized values do not satisfy axis-wise bounds.");
-    }
-
-    emplace_data_ptr<NumberNodeStateData>(state, std::move(number_data),
-                                          std::move(bound_axes_sums));
 }
 
 /// Given a `span` (used for strides or shape data), reorder the values
@@ -282,8 +281,8 @@ void construct_state_given_exactly_one_bound_axis(const NumberNode* node,
     const std::vector<ssize_t> buff_strides = shift_axis_data(node->strides(), bound_axis);
     // Define an iterator for `values` corresponding with the beginning of
     // slice 0 along the bound axis.
-    BufferIterator<double, double, false> slice_0_it(values.data(), ndim, buff_shape.data(),
-                                                     buff_strides.data());
+    const BufferIterator<double, double, false> slice_0_it(values.data(), ndim, buff_shape.data(),
+                                                           buff_strides.data());
     // Determine the size of each hyperslice along the bound axis.
     const ssize_t slice_size = std::accumulate(buff_shape.begin() + 1, buff_shape.end(), 1.0,
                                                std::multiplies<ssize_t>());
@@ -336,14 +335,12 @@ void NumberNode::initialize_state(State& state) const {
             values.push_back(default_value(i));
         }
         initialize_state(state, std::move(values));
-        return;
     } else if (bound_axes_info_.size() == 1) {
         construct_state_given_exactly_one_bound_axis(this, values);
         initialize_state(state, std::move(values));
-        return;
+    } else {
+        unreachable();
     }
-
-    throw std::invalid_argument("Cannot initialize state with multiple bound axes.");
 }
 
 void NumberNode::commit(State& state) const noexcept {

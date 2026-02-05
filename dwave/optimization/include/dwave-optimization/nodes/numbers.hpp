@@ -144,7 +144,8 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     const std::vector<AxisBound>& axis_wise_bounds() const;
 
     /// Return the state-dependent sum of the values within each hyperslice
-    /// along each bound axis.
+    /// along each bound axis. The returned vector is indexed by the
+    /// bound axes in the same ordering that `axis_wise_bounds()` returns.
     const std::vector<std::vector<double>>& bound_axis_sums(State& state) const;
 
  protected:
