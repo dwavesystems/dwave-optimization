@@ -36,28 +36,28 @@ from dwave.optimization.states cimport States
 
 # Convert the str operators "==", "<=", ">=" into their corresponding
 # C++ objects.
-cdef NumberNode.BoundAxisOperator _parse_python_operator(str op) except *:
+cdef NumberNode.AxisBound.Operator _parse_python_operator(str op) except *:
     if op == "==":
-        return NumberNode.BoundAxisOperator.Equal
+        return NumberNode.AxisBound.Operator.Equal
     elif op == "<=":
-        return NumberNode.BoundAxisOperator.LessEqual
+        return NumberNode.AxisBound.Operator.LessEqual
     elif op == ">=":
-        return NumberNode.BoundAxisOperator.GreaterEqual
+        return NumberNode.AxisBound.Operator.GreaterEqual
     else:
         raise TypeError(f"Invalid bound axis operator: {op!r}")
 
 
 # Convert the user-defined axis-wise bounds for NumberNode into the 
 # corresponding C++ objects passed to NumberNode.
-cdef vector[NumberNode.BoundAxisInfo] _convert_python_bound_axes(
+cdef vector[NumberNode.AxisBound] _convert_python_bound_axes(
         bound_axes_data : None | list[tuple(int, str | list[str], float | list[float])]) except *:
-    cdef vector[NumberNode.BoundAxisInfo] output
+    cdef vector[NumberNode.AxisBound] output
 
     if bound_axes_data is None:
         return output
 
     output.reserve(len(bound_axes_data))
-    cdef vector[NumberNode.BoundAxisOperator] cpp_ops
+    cdef vector[NumberNode.AxisBound.Operator] cpp_ops
     cdef vector[double] cpp_bounds
     cdef double[:] mem
 
@@ -98,17 +98,17 @@ cdef vector[NumberNode.BoundAxisInfo] _convert_python_bound_axes(
         else:
             raise TypeError("Bound axis bound(s) should be scalar or 1D-array.")
 
-        output.push_back(NumberNode.BoundAxisInfo(axis, cpp_ops, cpp_bounds))
+        output.push_back(NumberNode.AxisBound(axis, cpp_ops, cpp_bounds))
 
     return output
 
 # Convert the C++ operators into their corresponding str
-cdef str _parse_cpp_operators(NumberNode.BoundAxisOperator op):
-    if op == NumberNode.BoundAxisOperator.Equal:
+cdef str _parse_cpp_operators(NumberNode.AxisBound.Operator op):
+    if op == NumberNode.AxisBound.Operator.Equal:
         return "=="
-    elif op == NumberNode.BoundAxisOperator.LessEqual:
+    elif op == NumberNode.AxisBound.Operator.LessEqual:
         return "<="
-    elif op == NumberNode.BoundAxisOperator.GreaterEqual:
+    elif op == NumberNode.AxisBound.Operator.GreaterEqual:
         return ">="
     else:
         raise ValueError(f"Invalid bound axis operator: {op!r}")
@@ -128,7 +128,7 @@ cdef class BinaryVariable(ArraySymbol):
 
         cdef optional[vector[double]] cpplower_bound = nullopt
         cdef optional[vector[double]] cppupper_bound = nullopt
-        cdef vector[BinaryNode.BoundAxisInfo] cppbound_axes = _convert_python_bound_axes(subject_to)
+        cdef vector[BinaryNode.AxisBound] cppbound_axes = _convert_python_bound_axes(subject_to)
         cdef const double[:] mem
 
         if lower_bound is not None:
@@ -247,7 +247,7 @@ cdef class BinaryVariable(ArraySymbol):
     def axis_wise_bounds(self):
         """Axis wise bound(s) of Binary symbol as a list of tuples where
         each tuple is of the form: (axis, [operator(s)], [bound(s)])."""
-        cdef vector[NumberNode.BoundAxisInfo] bound_axes = self.ptr.axis_wise_bounds()
+        cdef vector[NumberNode.AxisBound] bound_axes = self.ptr.axis_wise_bounds()
 
         output = []
         for i in range(bound_axes.size()):
@@ -337,7 +337,7 @@ cdef class IntegerVariable(ArraySymbol):
 
         cdef optional[vector[double]] cpplower_bound = nullopt
         cdef optional[vector[double]] cppupper_bound = nullopt
-        cdef vector[BinaryNode.BoundAxisInfo] cppbound_axes = _convert_python_bound_axes(subject_to)
+        cdef vector[BinaryNode.AxisBound] cppbound_axes = _convert_python_bound_axes(subject_to)
         cdef const double[:] mem
 
         if lower_bound is not None:
@@ -463,7 +463,7 @@ cdef class IntegerVariable(ArraySymbol):
     def axis_wise_bounds(self):
         """Axis wise bound(s) of Integer symbol as a list of tuples where
         each tuple is of the form: (axis, [operator(s)], [bound(s)])."""
-        cdef vector[NumberNode.BoundAxisInfo] bound_axes = self.ptr.axis_wise_bounds()
+        cdef vector[NumberNode.AxisBound] bound_axes = self.ptr.axis_wise_bounds()
 
         output = []
         for i in range(bound_axes.size()):
