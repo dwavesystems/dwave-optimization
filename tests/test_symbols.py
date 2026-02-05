@@ -742,7 +742,7 @@ class TestBinaryVariable(utils.SymbolTests):
         self.assertEqual(x.axis_wise_bounds(), [(0, ["<=", "=="], [1])])
         x = model.binary((2, 3), subject_to=[(0, "<=", 1)])
         self.assertEqual(x.axis_wise_bounds(), [(0, ["<="], [1])])
-        x = model.binary((2, 3), subject_to=[(0, np.asarray(["<=", "=="]), np.asarray([1, 2]))])
+        x = model.binary((2, 3), subject_to=[(0, ["<=", "=="], np.asarray([1, 2]))])
         self.assertEqual(x.axis_wise_bounds(), [(0, ["<=", "=="], [1, 2])])
 
         # infeasible axis-wise bounds
@@ -1924,7 +1924,7 @@ class TestIntegerVariable(utils.SymbolTests):
         self.assertEqual(x.axis_wise_bounds(), [(0, ["<=", "=="], [1])])
         x = model.integer((2, 3), subject_to=[(0, "<=", 1)])
         self.assertEqual(x.axis_wise_bounds(), [(0, ["<="], [1])])
-        x = model.integer((2, 3), subject_to=[(0, np.asarray(["<=", "=="]), np.asarray([1, 2]))])
+        x = model.integer((2, 3), subject_to=[(0, ["<=", "=="], np.asarray([1, 2]))])
         self.assertEqual(x.axis_wise_bounds(), [(0, ["<=", "=="], [1, 2])])
 
         # infeasible axis-wise bounds
@@ -1952,6 +1952,10 @@ class TestIntegerVariable(utils.SymbolTests):
             model.integer((2, 3), subject_to=[(1, ["=="], [[0, 0, 0]])])
         with self.assertRaises(TypeError):
             model.integer((2, 3), subject_to=[(1, [["=="]], [0, 0, 0])])
+
+        # invalid number of bound axes
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), subject_to=[(0, "==", 1), (1, "<=", [1, 1, 1])])
 
     # Todo: we can generalize many of these tests for all decisions that can have
     # their state set

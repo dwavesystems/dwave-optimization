@@ -16,6 +16,7 @@
 
 import json
 
+import collections.abc
 import numpy as np
 
 from cython.operator cimport typeid
@@ -71,25 +72,20 @@ cdef vector[NumberNode.AxisBound] _convert_python_bound_axes(
         if not isinstance(axis, int):
             raise TypeError("Bound axis must be an int.")
 
-        cpp_ops.clear()
         if isinstance(py_ops, str):
+            cpp_ops.resize(1)
             # One operator defined for all slices.
-            cpp_ops.push_back(_parse_python_operator(py_ops))
-        else:
+            cpp_ops[0] = _parse_python_operator(py_ops)
+        elif isinstance(py_ops, collections.abc.Iterable):
             # Operator defined per slice.
-            ops_array = np.asarray(py_ops, order='C')
-            if (ops_array.ndim <= 1):
-                cpp_ops.reserve(ops_array.size)
-                for op in ops_array:
-                    # Convert op to `str` because _parse_python_operator()
-                    # does not expect a `numpy.str_`.
-                    cpp_ops.push_back(_parse_python_operator(str(op)))
-            else:
-                raise TypeError("Bound axis operator(s) should be str or"
-                                " a 1D-array of str(s).")
+            cpp_ops.reserve(len(py_ops))
+            for op in py_ops:
+                cpp_ops.push_back(_parse_python_operator(op))
+        else:
+            raise TypeError("Bound axis operator(s) should be str or a 1D-array"
+                            " of str(s).")
 
-        cpp_bounds.clear()
-        bound_array = np.asarray_chkfinite(py_bounds, dtype=np.double, order='C')
+        bound_array = np.asarray_chkfinite(py_bounds, dtype=np.double)
         if (bound_array.ndim <= 1):
             mem = bound_array.ravel()
             cpp_bounds.reserve(mem.shape[0])
@@ -98,7 +94,7 @@ cdef vector[NumberNode.AxisBound] _convert_python_bound_axes(
         else:
             raise TypeError("Bound axis bound(s) should be scalar or 1D-array.")
 
-        output.push_back(NumberNode.AxisBound(axis, cpp_ops, cpp_bounds))
+        output.push_back(NumberNode.AxisBound(axis, move(cpp_ops), move(cpp_bounds)))
 
     return output
 
@@ -206,10 +202,9 @@ cdef class BinaryVariable(ArraySymbol):
             subject_to = None
         else:
             with zf.open(info, "r") as f:
-                subject_to = json.load(f)
                 # Note that import is a list of lists, not a list of tuples.
                 # Hence we convert to tuple. We could also support lists.
-                subject_to = [(axis, ops, bounds) for axis, ops, bounds in subject_to]
+                subject_to = [(axis, ops, bounds) for axis, ops, bounds in json.load(f)]
 
         return BinaryVariable(model,
                               shape=shape_info["shape"],
@@ -415,11 +410,9 @@ cdef class IntegerVariable(ArraySymbol):
             subject_to = None
         else:
             with zf.open(info, "r") as f:
-                # Note that import is a list of lists, not a list of tuples
-                subject_to = json.load(f)
                 # Note that import is a list of lists, not a list of tuples.
                 # Hence we convert to tuple. We could also support lists.
-                subject_to = [(axis, ops, bounds) for axis, ops, bounds in subject_to]
+                subject_to = [(axis, ops, bounds) for axis, ops, bounds in json.load(f)]
 
         return IntegerVariable(model,
                                shape=shape_info["shape"],

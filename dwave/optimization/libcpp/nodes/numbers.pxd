@@ -30,10 +30,10 @@ cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimi
                 GreaterEqual
 
             AxisBound(Py_ssize_t axis, vector[Operator] axis_opertors, 
-                          vector[double] axis_bounds)
+                      vector[double] axis_bounds)
             Py_ssize_t axis
-            vector[Operator] operators;
-            vector[double] bounds;
+            vector[Operator] operators
+            vector[double] bounds
 
         void initialize_state(State&, vector[double]) except+
         double lower_bound(Py_ssize_t index)
