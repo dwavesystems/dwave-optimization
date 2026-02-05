@@ -28,23 +28,24 @@ namespace dwave::optimization {
 /// A contiguous block of numbers.
 class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
-    /// Allowable axis-wise bound operators.
-    enum BoundAxisOperator { Equal, LessEqual, GreaterEqual };
-
     /// Struct for stateless axis-wise bound information. Given an `axis`, define
     /// constraints on the sum of the values in each slice along `axis`.
     /// Constraints can be defined for ALL slices along `axis` or PER slice along
-    /// `axis`. Allowable operators are defined by `BoundAxisOperator`.
-    struct BoundAxisInfo {
+    /// `axis`. Allowable operators are defined by `Operator`.
+    struct AxisBound {
+        /// Allowable axis-wise bound operators.
+        enum class Operator { Equal, LessEqual, GreaterEqual };
+
         /// To reduce the # of `IntegerNode` and `BinaryNode` constructors, we
         /// allow only one constructor.
-        BoundAxisInfo(ssize_t axis, std::vector<BoundAxisOperator> axis_operators,
-                      std::vector<double> axis_bounds);
+        AxisBound(ssize_t axis, std::vector<Operator> axis_operators,
+                  std::vector<double> axis_bounds);
+
         /// The bound axis
         ssize_t axis;
         /// Operator for ALL axis slices (vector has length one) or operators PER
         /// slice (length of vector is equal to the number of slices).
-        std::vector<BoundAxisOperator> operators;
+        std::vector<Operator> operators;
         /// Bound for ALL axis slices (vector has length one) or bounds PER slice
         /// (length of vector is equal to the number of slices).
         std::vector<double> bounds;
@@ -53,7 +54,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         double get_bound(const ssize_t slice) const;
 
         /// Obtain the operator associated with a given slice along `axis`.
-        BoundAxisOperator get_operator(const ssize_t slice) const;
+        Operator get_operator(const ssize_t slice) const;
     };
 
     NumberNode() = delete;
@@ -140,7 +141,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     void clip_and_set_value(State& state, ssize_t index, double value) const;
 
     /// Return the stateless axis-wise bound information i.e. bound_axes_info_.
-    const std::vector<BoundAxisInfo>& axis_wise_bounds() const;
+    const std::vector<AxisBound>& axis_wise_bounds() const;
 
     /// Return the state-dependent sum of the values within each hyperslice
     /// along each bound axis.
@@ -148,8 +149,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
  protected:
     explicit NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,
-                        std::vector<double> upper_bound,
-                        std::vector<BoundAxisInfo> bound_axes = {});
+                        std::vector<double> upper_bound, std::vector<AxisBound> bound_axes = {});
 
     // Return truth statement: 'value is valid in a given index'.
     virtual bool is_valid(ssize_t index, double value) const = 0;
@@ -171,7 +171,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     std::vector<double> upper_bounds_;
 
     /// Stateless information on each bound axis.
-    std::vector<BoundAxisInfo> bound_axes_info_;
+    std::vector<AxisBound> bound_axes_info_;
 };
 
 /// A contiguous block of integer numbers.
@@ -191,39 +191,39 @@ class IntegerNode : public NumberNode {
     IntegerNode(std::span<const ssize_t> shape,
                 std::optional<std::vector<double>> lower_bound = std::nullopt,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::vector<BoundAxisInfo> bound_axes = {});
+                std::vector<AxisBound> bound_axes = {});
     IntegerNode(std::initializer_list<ssize_t> shape,
                 std::optional<std::vector<double>> lower_bound = std::nullopt,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::vector<BoundAxisInfo> bound_axes = {});
+                std::vector<AxisBound> bound_axes = {});
     IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound = std::nullopt,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::vector<BoundAxisInfo> bound_axes = {});
+                std::vector<AxisBound> bound_axes = {});
 
     IntegerNode(std::span<const ssize_t> shape, double lower_bound,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::vector<BoundAxisInfo> bound_axes = {});
+                std::vector<AxisBound> bound_axes = {});
     IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::vector<BoundAxisInfo> bound_axes = {});
+                std::vector<AxisBound> bound_axes = {});
     IntegerNode(ssize_t size, double lower_bound,
                 std::optional<std::vector<double>> upper_bound = std::nullopt,
-                std::vector<BoundAxisInfo> bound_axes = {});
+                std::vector<AxisBound> bound_axes = {});
 
     IntegerNode(std::span<const ssize_t> shape, std::optional<std::vector<double>> lower_bound,
-                double upper_bound, std::vector<BoundAxisInfo> bound_axes = {});
+                double upper_bound, std::vector<AxisBound> bound_axes = {});
     IntegerNode(std::initializer_list<ssize_t> shape,
                 std::optional<std::vector<double>> lower_bound, double upper_bound,
-                std::vector<BoundAxisInfo> bound_axes = {});
+                std::vector<AxisBound> bound_axes = {});
     IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound, double upper_bound,
-                std::vector<BoundAxisInfo> bound_axes = {});
+                std::vector<AxisBound> bound_axes = {});
 
     IntegerNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound,
-                std::vector<BoundAxisInfo> bound_axes = {});
+                std::vector<AxisBound> bound_axes = {});
     IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound,
-                std::vector<BoundAxisInfo> bound_axes = {});
+                std::vector<AxisBound> bound_axes = {});
     IntegerNode(ssize_t size, double lower_bound, double upper_bound,
-                std::vector<BoundAxisInfo> bound_axes = {});
+                std::vector<AxisBound> bound_axes = {});
 
     // Overloads needed by the Node ABC ***************************************
 
@@ -259,38 +259,38 @@ class BinaryNode : public IntegerNode {
     BinaryNode(std::span<const ssize_t> shape,
                std::optional<std::vector<double>> lower_bound = std::nullopt,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::vector<BoundAxisInfo> bound_axes = {});
+               std::vector<AxisBound> bound_axes = {});
     BinaryNode(std::initializer_list<ssize_t> shape,
                std::optional<std::vector<double>> lower_bound = std::nullopt,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::vector<BoundAxisInfo> bound_axes = {});
+               std::vector<AxisBound> bound_axes = {});
     BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound = std::nullopt,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::vector<BoundAxisInfo> bound_axes = {});
+               std::vector<AxisBound> bound_axes = {});
 
     BinaryNode(std::span<const ssize_t> shape, double lower_bound,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::vector<BoundAxisInfo> bound_axes = {});
+               std::vector<AxisBound> bound_axes = {});
     BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::vector<BoundAxisInfo> bound_axes = {});
+               std::vector<AxisBound> bound_axes = {});
     BinaryNode(ssize_t size, double lower_bound,
                std::optional<std::vector<double>> upper_bound = std::nullopt,
-               std::vector<BoundAxisInfo> bound_axes = {});
+               std::vector<AxisBound> bound_axes = {});
 
     BinaryNode(std::span<const ssize_t> shape, std::optional<std::vector<double>> lower_bound,
-               double upper_bound, std::vector<BoundAxisInfo> bound_axes = {});
+               double upper_bound, std::vector<AxisBound> bound_axes = {});
     BinaryNode(std::initializer_list<ssize_t> shape, std::optional<std::vector<double>> lower_bound,
-               double upper_bound, std::vector<BoundAxisInfo> bound_axes = {});
+               double upper_bound, std::vector<AxisBound> bound_axes = {});
     BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound, double upper_bound,
-               std::vector<BoundAxisInfo> bound_axes = {});
+               std::vector<AxisBound> bound_axes = {});
 
     BinaryNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound,
-               std::vector<BoundAxisInfo> bound_axes = {});
+               std::vector<AxisBound> bound_axes = {});
     BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound,
-               std::vector<BoundAxisInfo> bound_axes = {});
+               std::vector<AxisBound> bound_axes = {});
     BinaryNode(ssize_t size, double lower_bound, double upper_bound,
-               std::vector<BoundAxisInfo> bound_axes = {});
+               std::vector<AxisBound> bound_axes = {});
 
     // Flip the value (0 -> 1 or 1 -> 0) at index i in the given state.
     void flip(State& state, ssize_t i) const;
