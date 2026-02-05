@@ -725,10 +725,10 @@ class TestBinaryVariable(utils.SymbolTests):
         self.assertTrue(np.all(x.upper_bound() == [[1, 0, 0], [1, 0, 0]]))
 
         with self.assertRaises(ValueError):
-            model.integer((2, 3), upper_bound=np.nan)
+            model.binary((2, 3), upper_bound=np.nan)
 
         with self.assertRaises(ValueError):
-            model.integer((2, 3), upper_bound=np.arange(6))
+            model.binary((2, 3), upper_bound=np.arange(6))
 
     def test_no_shape(self):
         model = Model()
@@ -1856,10 +1856,10 @@ class TestIntegerVariable(utils.SymbolTests):
         model = Model()
 
         with self.assertRaises(TypeError):
-            model.binary(3.5)
+            model.integer(3.5)
 
         with self.assertRaises(ValueError):
-            model.binary([0.5])
+            model.integer([0.5])
 
     def test_serialization(self):
         model = Model()
