@@ -348,6 +348,15 @@ void NumberNode::initialize_state(State& state) const {
     }
 }
 
+void NumberNode::propagate(State& state) const {
+    // Should only propagate states that obey the axis-wise bounds.
+    assert(satisfies_axis_wise_bounds(bound_axes_info_, bound_axis_sums(state)));
+    // Technically vestigial but will keep it for forms sake.
+    for (const auto& sv : successors()) {
+        sv->update(state, sv.index);
+    }
+}
+
 void NumberNode::commit(State& state) const noexcept {
     auto node_data = data_ptr<NumberNodeStateData>(state);
     // Manually store a copy of bound_axes_sums.
@@ -372,16 +381,15 @@ void NumberNode::exchange(State& state, ssize_t i, ssize_t j) const {
     // assert() that i and j are valid indices occurs in ptr->exchange().
     // State change occurs IFF (i != j) and (buffer[i] != buffer[j]).
     if (ptr->exchange(i, j)) {
-        // No need to update slice sums as they will be unchanged.
-        if (!bound_axis_ops_all_equals_) {
-            // If exchange occurred, update the bound axis sums.
+        // If change occurred and axis-wise bounds exist, update bound axis sums.
+        // Nothing to update if all axis bound operators are Equals.
+        if (!bound_axis_ops_all_equals_ && bound_axes_info_.size() > 0) {
             const double difference = ptr->get(i) - ptr->get(j);
             // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
             update_bound_axis_slice_sums(state, i, difference);
             // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
             update_bound_axis_slice_sums(state, j, -difference);
         }
-        assert(satisfies_axis_wise_bounds(bound_axes_info_, ptr->bound_axes_sums));
     }
 }
 
@@ -429,9 +437,10 @@ void NumberNode::clip_and_set_value(State& state, ssize_t index, double value) c
     // assert() that i is a valid index occurs in ptr->set().
     // State change occurs IFF `value` != buffer[index].
     if (ptr->set(index, value)) {
-        // If change occurred, update bound axis sums by difference.
-        update_bound_axis_slice_sums(state, index, value - diff(state).back().old);
-        assert(satisfies_axis_wise_bounds(bound_axes_info_, ptr->bound_axes_sums));
+        // If change occurred and axis-wise bounds exist, update bound axis sums.
+        if (bound_axes_info_.size() > 0) {
+            update_bound_axis_slice_sums(state, index, value - diff(state).back().old);
+        }
     }
 }
 
@@ -569,9 +578,9 @@ NumberNode::NumberNode(std::span<const ssize_t> shape, std::vector<double> lower
 
 void NumberNode::update_bound_axis_slice_sums(State& state, const ssize_t index,
                                               const double value_change) const {
-    assert(value_change != 0);  // Should not call when no change occurs.
     const auto& bound_axes_info = bound_axes_info_;
-    if (bound_axes_info.size() == 0) return;  // No axis-wise bounds to satisfy.
+    assert(value_change != 0);            // Should not call when no change occurs.
+    assert(bound_axes_info.size() != 0);  // Should only call where applicable.
 
     // Get multidimensional indices for `index` so we can identify the slices
     // `index` lies on per bound axis.
@@ -698,9 +707,10 @@ void IntegerNode::set_value(State& state, ssize_t index, double value) const {
     // assert() that i is a valid index occurs in ptr->set().
     // State change occurs IFF `value` != buffer[index].
     if (ptr->set(index, value)) {
-        // If change occurred, update bound axis sums by difference.
-        update_bound_axis_slice_sums(state, index, value - diff(state).back().old);
-        assert(satisfies_axis_wise_bounds(bound_axes_info_, ptr->bound_axes_sums));
+        // If change occurred and axis-wise bounds exist, update bound axis sums.
+        if (bound_axes_info_.size() > 0) {
+            update_bound_axis_slice_sums(state, index, value - diff(state).back().old);
+        }
     }
 }
 
@@ -808,10 +818,12 @@ void BinaryNode::flip(State& state, ssize_t i) const {
     // assert() that i is a valid index occurs in ptr->set().
     // State change occurs IFF `value` != buffer[i].
     if (ptr->set(i, !ptr->get(i))) {
-        // If value changed from 0 -> 1, update the bound axis sums by 1.
-        // If value changed from 1 -> 0, update the bound axis sums by -1.
-        update_bound_axis_slice_sums(state, i, (ptr->get(i) == 1) ? 1 : -1);
-        assert(satisfies_axis_wise_bounds(bound_axes_info_, ptr->bound_axes_sums));
+        // If change occurred and axis-wise bounds exist, update bound axis sums.
+        if (bound_axes_info_.size() > 0) {
+            // If value changed from 0 -> 1, update by 1.
+            // If value changed from 1 -> 0, update by -1.
+            update_bound_axis_slice_sums(state, i, (ptr->get(i) == 1) ? 1 : -1);
+        }
     }
 }
 
@@ -822,9 +834,11 @@ void BinaryNode::set(State& state, ssize_t i) const {
     // assert() that i is a valid index occurs in ptr->set().
     // State change occurs IFF `value` != buffer[i].
     if (ptr->set(i, 1.0)) {
-        // If value changed from 0 -> 1, update the bound axis sums by 1.
-        update_bound_axis_slice_sums(state, i, 1.0);
-        assert(satisfies_axis_wise_bounds(bound_axes_info_, ptr->bound_axes_sums));
+        // If change occurred and axis-wise bounds exist, update bound axis sums.
+        if (bound_axes_info_.size() > 0) {
+            // If value changed from 0 -> 1, update by 1.
+            update_bound_axis_slice_sums(state, i, 1.0);
+        }
     }
 }
 
@@ -835,9 +849,11 @@ void BinaryNode::unset(State& state, ssize_t i) const {
     // assert() that i is a valid index occurs in ptr->set().
     // State change occurs IFF `value` != buffer[i].
     if (ptr->set(i, 0.0)) {
-        // If value changed from 1 -> 0, update the bound axis sums by -1.
-        update_bound_axis_slice_sums(state, i, -1.0);
-        assert(satisfies_axis_wise_bounds(bound_axes_info_, ptr->bound_axes_sums));
+        // If change occurred and axis-wise bounds exist, update bound axis sums.
+        if (bound_axes_info_.size() > 0) {
+            // If value changed from 1 -> 0, update by -1.
+            update_bound_axis_slice_sums(state, i, -1.0);
+        }
     }
 }
 
