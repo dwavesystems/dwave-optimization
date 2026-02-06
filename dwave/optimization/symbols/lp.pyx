@@ -90,10 +90,50 @@ cdef class LinearProgram(Symbol):
         x.initialize_node(symbol.model, ptr)
         return x
 
+    def feasible(self, Py_ssize_t index = 0):
+        """Return whether the parent LP symbol's current solution is feasible.
+
+        Note that this method returns a boolean value.
+        If you wish to use the feasibility in the model,
+        use :class:`LinearProgramFeasible`.
+
+        .. versionadded:: 0.6.12
+        """
+        self.state(index)  # initialize/check the existance of the state
+
+        cdef States states = self.model.states
+        cdef bint feas = self.ptr.feasible(states._states.at(index))
+
+        return bool(feas)
+
+    def objective_value(self, Py_ssize_t index = 0):
+        """Return the objective value of the parent LP symbol's current solution.
+
+        If the LP is not feasible, the objective value is not meaningful.
+
+        Note that this method returns a numeric value.
+        If you wish to use the objective value in the model,
+        use :class:`LinearProgramObjectiveValue`.
+
+        .. versionadded:: 0.6.12
+        """
+        self.state(index)  # initialize/check the existance of the state
+
+        cdef States states = self.model.states
+        cdef double value = self.ptr.objective_value(states._states.at(index))
+
+        return float(value)
+
     def state(self, Py_ssize_t index = 0):
         """Return the current solution to the LP.
 
         If the LP is not feasible, the solution is not meaningful.
+
+        Note that this method returns an array.
+        If you wish to use the state in the model,
+        use :class:`LinearProgramSolution`.
+
+        .. versionadded:: 0.6.0
         """
 
         # While LP is not an ArraySymbol, we nonetheless can access the state

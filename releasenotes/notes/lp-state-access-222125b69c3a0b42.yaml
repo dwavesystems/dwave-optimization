@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Add ``LinearProgram.feasible()`` and ``LinearProgram.objective_value()``
+    methods. These allow the user to access information about the state of the
+    linear program without needing the associated symbols.
+    See `#475 <https://github.com/dwavesystems/dwave-optimization/issues/475>`_.
