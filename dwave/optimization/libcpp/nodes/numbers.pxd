@@ -29,7 +29,7 @@ cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimi
                 LessEqual
                 GreaterEqual
 
-            AxisBound(Py_ssize_t axis, vector[Operator] axis_opertors, 
+            AxisBound(Py_ssize_t axis, vector[Operator] axis_operators,
                       vector[double] axis_bounds)
             Py_ssize_t axis
             vector[Operator] operators

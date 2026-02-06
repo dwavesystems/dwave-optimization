@@ -166,8 +166,8 @@ class Model(_Graph):
     def binary(self, shape: None | _ShapeLike = None,
                lower_bound: None | np.typing.ArrayLike = None,
                upper_bound: None | np.typing.ArrayLike = None,
-               subject_to: None | list[tuple(int, str | list[str], float |
-                                       list[float])] = None) -> BinaryVariable:
+               subject_to: None | list[tuple[int, str | list[str], float |
+                                            list[float]]] = None) -> BinaryVariable:
         r"""Create a binary symbol as a decision variable.
 
         Args:
@@ -509,8 +509,8 @@ class Model(_Graph):
             shape: None | _ShapeLike = None,
             lower_bound: None | numpy.typing.ArrayLike = None,
             upper_bound: None | numpy.typing.ArrayLike = None,
-               subject_to: None | list[tuple(int, str | list[str], float |
-                                       list[float])] = None) -> IntegerVariable:
+            subject_to: None | list[tuple[int, str | list[str], float |
+                                          list[float]]] = None) -> IntegerVariable:
         r"""Create an integer symbol as a decision variable.
 
         Args:

@@ -28,10 +28,10 @@ namespace dwave::optimization {
 /// A contiguous block of numbers.
 class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
-    /// Struct for stateless axis-wise bound information. Given an `axis`, define
-    /// constraints on the sum of the values in each slice along `axis`.
-    /// Constraints can be defined for ALL slices along `axis` or PER slice along
-    /// `axis`. Allowable operators are defined by `Operator`.
+    /// Struct for stateless axis-wise bound information. Given an `axis`,
+    /// define constraints on the sum of the values in each slice along `axis`.
+    /// Constraints can be defined for ALL slices along `axis` or PER slice
+    /// along `axis`. Allowable operators are defined by `Operator`.
     struct AxisBound {
         /// Allowable axis-wise bound operators.
         enum class Operator { Equal, LessEqual, GreaterEqual };
@@ -43,11 +43,11 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
         /// The bound axis
         ssize_t axis;
-        /// Operator for ALL axis slices (vector has length one) or operators PER
-        /// slice (length of vector is equal to the number of slices).
+        /// Operator for ALL axis slices (vector has length one) or operators
+        /// PER slice (length of vector is equal to the number of slices).
         std::vector<Operator> operators;
-        /// Bound for ALL axis slices (vector has length one) or bounds PER slice
-        /// (length of vector is equal to the number of slices).
+        /// Bound for ALL axis slices (vector has length one) or bounds PER
+        /// slice (length of vector is equal to the number of slices).
         std::vector<double> bounds;
 
         /// Obtain the bound associated with a given slice along `axis`.
@@ -143,7 +143,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     /// Return the stateless axis-wise bound information i.e. bound_axes_info_.
     const std::vector<AxisBound>& axis_wise_bounds() const;
 
-    /// Return the state-dependent sum of the values within each hyperslice
+    /// Return the state-dependent sum of the values within each slice
     /// along each bound axis. The returned vector is indexed by the
     /// bound axes in the same ordering that `axis_wise_bounds()` returns.
     const std::vector<std::vector<double>>& bound_axis_sums(State& state) const;
@@ -173,6 +173,8 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     /// Stateless information on each bound axis.
     std::vector<AxisBound> bound_axes_info_;
+    /// Indicator variable that all axis-wise bound operators are "==".
+    bool bound_axis_ops_all_equals_;
 };
 
 /// A contiguous block of integer numbers.
