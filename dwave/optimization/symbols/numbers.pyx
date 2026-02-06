@@ -247,11 +247,11 @@ cdef class BinaryVariable(ArraySymbol):
         output = []
         for i in range(bound_axes.size()):
             bound_axis = &bound_axes[i]
-            py_axis_ops = [_parse_cpp_operators(bound_axis.operators[j]) 
-                           for j in range(bound_axis.operators.size())]
-            py_axis_bounds = [bound_axis.bounds[j] for j in range(bound_axis.bounds.size())]
-
-            output.append((bound_axis.axis, py_axis_ops, py_axis_bounds))
+            py_axis_ops = [_parse_cpp_operators(bound_axis.get_operator(j))
+                           for j in range(bound_axis.num_operators())]
+            py_axis_bounds = [bound_axis.get_bound(j)
+                              for j in range(bound_axis.num_bounds())]
+            output.append((bound_axis.axis(), py_axis_ops, py_axis_bounds))
 
         return output
 
@@ -461,11 +461,11 @@ cdef class IntegerVariable(ArraySymbol):
         output = []
         for i in range(bound_axes.size()):
             bound_axis = &bound_axes[i]
-            py_axis_ops = [_parse_cpp_operators(bound_axis.operators[j]) 
-                           for j in range(bound_axis.operators.size())]
-            py_axis_bounds = [bound_axis.bounds[j] for j in range(bound_axis.bounds.size())]
-
-            output.append((bound_axis.axis, py_axis_ops, py_axis_bounds))
+            py_axis_ops = [_parse_cpp_operators(bound_axis.get_operator(j))
+                           for j in range(bound_axis.num_operators())]
+            py_axis_bounds = [bound_axis.get_bound(j)
+                              for j in range(bound_axis.num_bounds())]
+            output.append((bound_axis.axis(), py_axis_ops, py_axis_bounds))
 
         return output
 
