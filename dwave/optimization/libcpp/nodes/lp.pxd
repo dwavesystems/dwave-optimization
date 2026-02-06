@@ -25,6 +25,8 @@ cdef extern from "dwave-optimization/nodes/lp.hpp" namespace "dwave::optimizatio
         pass
 
     cdef cppclass LinearProgramNode(Node):
+        double objective_value(const State& state) const
+        bint feasible(const State&) const
         unordered_map[string, ssize_t] get_arguments()
         void initialize_state(State&, ...) except +  # Cython gets confused between span<double> and span<const double>
         span[const double] solution(const State&) const
