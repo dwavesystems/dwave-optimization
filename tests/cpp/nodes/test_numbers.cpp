@@ -50,38 +50,46 @@ TEST_CASE("AxisBound") {
     }
 
     GIVEN("AxisBound(axis = 2, operators = {==, <=, >=}, bounds = {1.0})") {
-        std::vector<Operator> operators{Equal, LessEqual, GreaterEqual};
-        std::vector<double> bounds{1.0};
         AxisBound bound_axis(2, {Equal, LessEqual, GreaterEqual}, {1.0});
 
         THEN("The bound axis info is correct") {
-            CHECK(bound_axis.axis == 2);
-            CHECK_THAT(bound_axis.operators, RangeEquals(operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(bounds));
+            CHECK(bound_axis.axis() == 2);
+            CHECK(bound_axis.num_bounds() == 1);
+            CHECK(bound_axis.get_bound(0) == 1.0);
+            CHECK(bound_axis.num_operators() == 3);
+            CHECK(bound_axis.get_operator(0) == Equal);
+            CHECK(bound_axis.get_operator(1) == LessEqual);
+            CHECK(bound_axis.get_operator(2) == GreaterEqual);
         }
     }
 
     GIVEN("AxisBound(axis = 2, operators = {==}, bounds = {1.0, 2.0, 3.0})") {
-        std::vector<Operator> operators{Equal};
-        std::vector<double> bounds{1.0, 2.0, 3.0};
-        AxisBound bound_axis(2, operators, bounds);
+        AxisBound bound_axis(2, {Equal}, {1.0, 2.0, 3.0});
 
         THEN("The bound axis info is correct") {
-            CHECK(bound_axis.axis == 2);
-            CHECK_THAT(bound_axis.operators, RangeEquals(operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(bounds));
+            CHECK(bound_axis.axis() == 2);
+            CHECK(bound_axis.num_bounds() == 3);
+            CHECK(bound_axis.get_bound(0) == 1.0);
+            CHECK(bound_axis.get_bound(1) == 2.0);
+            CHECK(bound_axis.get_bound(2) == 3.0);
+            CHECK(bound_axis.num_operators() == 1);
+            CHECK(bound_axis.get_operator(0) == Equal);
         }
     }
 
     GIVEN("AxisBound(axis = 2, operators = {==, <=, >=}, bounds = {1.0, 2.0, 3.0})") {
-        std::vector<Operator> operators{Equal, LessEqual, GreaterEqual};
-        std::vector<double> bounds{1.0, 2.0, 3.0};
-        AxisBound bound_axis(2, operators, bounds);
+        AxisBound bound_axis(2, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0});
 
         THEN("The bound axis info is correct") {
-            CHECK(bound_axis.axis == 2);
-            CHECK_THAT(bound_axis.operators, RangeEquals(operators));
-            CHECK_THAT(bound_axis.bounds, RangeEquals(bounds));
+            CHECK(bound_axis.axis() == 2);
+            CHECK(bound_axis.num_bounds() == 3);
+            CHECK(bound_axis.get_bound(0) == 1.0);
+            CHECK(bound_axis.get_bound(1) == 2.0);
+            CHECK(bound_axis.get_bound(2) == 3.0);
+            CHECK(bound_axis.num_operators() == 3);
+            CHECK(bound_axis.get_operator(0) == Equal);
+            CHECK(bound_axis.get_operator(1) == LessEqual);
+            CHECK(bound_axis.get_operator(2) == GreaterEqual);
         }
     }
 }
@@ -620,9 +628,15 @@ TEST_CASE("BinaryNode") {
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
             AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(bnode_bound_axis.axis() == 0);
+            CHECK(bnode_bound_axis.num_bounds() == 3);
+            CHECK(bnode_bound_axis.get_bound(0) == 1.0);
+            CHECK(bnode_bound_axis.get_bound(1) == 2.0);
+            CHECK(bnode_bound_axis.get_bound(2) == 3.0);
+            CHECK(bnode_bound_axis.num_operators() == 3);
+            CHECK(bnode_bound_axis.get_operator(0) == Equal);
+            CHECK(bnode_bound_axis.get_operator(1) == LessEqual);
+            CHECK(bnode_bound_axis.get_operator(2) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -665,9 +679,13 @@ TEST_CASE("BinaryNode") {
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
             AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(bnode_bound_axis.axis() == 1);
+            CHECK(bnode_bound_axis.num_bounds() == 2);
+            CHECK(bnode_bound_axis.get_bound(0) == 1.0);
+            CHECK(bnode_bound_axis.get_bound(1) == 5.0);
+            CHECK(bnode_bound_axis.num_operators() == 2);
+            CHECK(bnode_bound_axis.get_operator(0) == LessEqual);
+            CHECK(bnode_bound_axis.get_operator(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -709,9 +727,13 @@ TEST_CASE("BinaryNode") {
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
             AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(bnode_bound_axis.axis() == 2);
+            CHECK(bnode_bound_axis.num_bounds() == 2);
+            CHECK(bnode_bound_axis.get_bound(0) == 3.0);
+            CHECK(bnode_bound_axis.get_bound(1) == 6.0);
+            CHECK(bnode_bound_axis.num_operators() == 2);
+            CHECK(bnode_bound_axis.get_operator(0) == Equal);
+            CHECK(bnode_bound_axis.get_operator(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -751,9 +773,15 @@ TEST_CASE("BinaryNode") {
         THEN("Axis wise bound is correct") {
             CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
             AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(bnode_bound_axis.axis() == 0);
+            CHECK(bnode_bound_axis.num_bounds() == 3);
+            CHECK(bnode_bound_axis.get_bound(0) == 1.0);
+            CHECK(bnode_bound_axis.get_bound(1) == 2.0);
+            CHECK(bnode_bound_axis.get_bound(2) == 3.0);
+            CHECK(bnode_bound_axis.num_operators() == 3);
+            CHECK(bnode_bound_axis.get_operator(0) == Equal);
+            CHECK(bnode_bound_axis.get_operator(1) == LessEqual);
+            CHECK(bnode_bound_axis.get_operator(2) == GreaterEqual);
         }
 
         WHEN("We create a state using a random number generator") {
@@ -1414,15 +1442,19 @@ TEST_CASE("IntegerNode") {
     GIVEN("(2x3x2)-IntegerNode with feasible axis-wise bound on axis: 0") {
         auto graph = Graph();
         std::vector<AxisBound> bound_axes{{0, {Equal, GreaterEqual}, {-21.0, 9.0}}};
-        auto bnode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
                                                          -5, 8, bound_axes);
 
         THEN("Axis wise bound is correct") {
-            CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
+            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
+            CHECK(inode_bound_axis.axis() == 0);
+            CHECK(inode_bound_axis.num_bounds() == 2);
+            CHECK(inode_bound_axis.get_bound(0) == -21.0);
+            CHECK(inode_bound_axis.get_bound(1) == 9.0);
+            CHECK(inode_bound_axis.num_operators() == 2);
+            CHECK(inode_bound_axis.get_operator(0) == Equal);
+            CHECK(inode_bound_axis.get_operator(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -1443,13 +1475,13 @@ TEST_CASE("IntegerNode") {
             // repair slice 1
             // [4, -5, -5, -5, -5, -5, 8, 8, 8, -5, -5, -5]
             std::vector<double> expected_init{4, -5, -5, -5, -5, -5, 8, 8, 8, -5, -5, -5};
-            auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
+            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
 
             THEN("The bound axis sums and state are correct") {
-                CHECK(bnode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(bnode_ptr->bound_axis_sums(state).data()[0].size() == 2);
-                CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({-21.0, 9.0}));
-                CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
+                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
+                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({-21.0, 9.0}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
         }
     }
@@ -1457,15 +1489,21 @@ TEST_CASE("IntegerNode") {
     GIVEN("(2x3x2)-IntegerNode with feasible axis-wise bound on axis: 1") {
         auto graph = Graph();
         std::vector<AxisBound> bound_axes{{1, {Equal, GreaterEqual, LessEqual}, {0.0, -2.0, 0.0}}};
-        auto bnode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
                                                          -5, 8, bound_axes);
 
         THEN("Axis wise bound is correct") {
-            CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
+            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
+            CHECK(inode_bound_axis.axis() == 1);
+            CHECK(inode_bound_axis.num_bounds() == 3);
+            CHECK(inode_bound_axis.get_bound(0) == 0.0);
+            CHECK(inode_bound_axis.get_bound(1) == -2.0);
+            CHECK(inode_bound_axis.get_bound(2) == 0.0);
+            CHECK(inode_bound_axis.num_operators() == 3);
+            CHECK(inode_bound_axis.get_operator(0) == Equal);
+            CHECK(inode_bound_axis.get_operator(1) == GreaterEqual);
+            CHECK(inode_bound_axis.get_operator(2) == LessEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -1489,13 +1527,13 @@ TEST_CASE("IntegerNode") {
             // [8, 2, 8, 0, -5, -5, -5, -5, -5, -5, -5, -5]
             // no need to repair slice 2
             std::vector<double> expected_init{8, 2, 8, 0, -5, -5, -5, -5, -5, -5, -5, -5};
-            auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
+            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
 
             THEN("The bound axis sums and state are correct") {
-                CHECK(bnode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(bnode_ptr->bound_axis_sums(state).data()[0].size() == 3);
-                CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({0.0, -2.0, -20.0}));
-                CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
+                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
+                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 3);
+                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({0.0, -2.0, -20.0}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
         }
     }
@@ -1503,15 +1541,19 @@ TEST_CASE("IntegerNode") {
     GIVEN("(2x3x2)-IntegerNode with feasible axis-wise bound on axis: 2") {
         auto graph = Graph();
         std::vector<AxisBound> bound_axes{{2, {Equal, GreaterEqual}, {23.0, 14.0}}};
-        auto bnode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
                                                          -5, 8, bound_axes);
 
         THEN("Axis wise bound is correct") {
-            CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bound_axes[0].axis == bnode_bound_axis.axis);
-            CHECK_THAT(bound_axes[0].operators, RangeEquals(bnode_bound_axis.operators));
-            CHECK_THAT(bound_axes[0].bounds, RangeEquals(bnode_bound_axis.bounds));
+            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
+            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
+            CHECK(inode_bound_axis.axis() == 2);
+            CHECK(inode_bound_axis.num_bounds() == 2);
+            CHECK(inode_bound_axis.get_bound(0) == 23.0);
+            CHECK(inode_bound_axis.get_bound(1) == 14.0);
+            CHECK(inode_bound_axis.num_operators() == 2);
+            CHECK(inode_bound_axis.get_operator(0) == Equal);
+            CHECK(inode_bound_axis.get_operator(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -1532,13 +1574,13 @@ TEST_CASE("IntegerNode") {
             // repair slice 0 w/ [8, 8, 8, 0, -5, -5]
             // [8, 8, 8, 8, 8, 8, 8, 0, -4, -5, -5, -5]
             std::vector<double> expected_init{8, 8, 8, 8, 8, 8, 8, 0, -4, -5, -5, -5};
-            auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
+            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
 
             THEN("The bound axis sums and state are correct") {
-                CHECK(bnode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(bnode_ptr->bound_axis_sums(state).data()[0].size() == 2);
-                CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({23.0, 14.0}));
-                CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
+                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
+                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({23.0, 14.0}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
         }
     }
@@ -1551,10 +1593,16 @@ TEST_CASE("IntegerNode") {
 
         THEN("Axis wise bound is correct") {
             CHECK(inode_ptr->axis_wise_bounds().size() == 1);
-            const AxisBound inode_bound_axis_ptr = inode_ptr->axis_wise_bounds().data()[0];
-            CHECK(bound_axes[0].axis == inode_bound_axis_ptr.axis);
-            CHECK_THAT(bound_axes[0].operators, RangeEquals(inode_bound_axis_ptr.operators));
-            CHECK_THAT(bound_axes[0].bounds, RangeEquals(inode_bound_axis_ptr.bounds));
+            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
+            CHECK(inode_bound_axis.axis() == 1);
+            CHECK(inode_bound_axis.num_bounds() == 3);
+            CHECK(inode_bound_axis.get_bound(0) == 11.0);
+            CHECK(inode_bound_axis.get_bound(1) == 2.0);
+            CHECK(inode_bound_axis.get_bound(2) == 5.0);
+            CHECK(inode_bound_axis.num_operators() == 3);
+            CHECK(inode_bound_axis.get_operator(0) == Equal);
+            CHECK(inode_bound_axis.get_operator(1) == LessEqual);
+            CHECK(inode_bound_axis.get_operator(2) == GreaterEqual);
         }
 
         WHEN("We create a state using a random number generator") {
@@ -1730,10 +1778,12 @@ TEST_CASE("IntegerNode") {
 
         THEN("Axis wise bound is correct") {
             CHECK(inode_ptr->axis_wise_bounds().size() == 1);
-            const AxisBound inode_bound_axis_ptr = inode_ptr->axis_wise_bounds().data()[0];
-            CHECK(bound_axes[0].axis == inode_bound_axis_ptr.axis);
-            CHECK_THAT(bound_axes[0].operators, RangeEquals(inode_bound_axis_ptr.operators));
-            CHECK_THAT(bound_axes[0].bounds, RangeEquals(inode_bound_axis_ptr.bounds));
+            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
+            CHECK(inode_bound_axis.axis() == 0);
+            CHECK(inode_bound_axis.num_bounds() == 1);
+            CHECK(inode_bound_axis.get_bound(0) == 1.0);
+            CHECK(inode_bound_axis.num_operators() == 1);
+            CHECK(inode_bound_axis.get_operator(0) == Equal);
         }
 
         WHEN("We initialize a valid state by construction") {

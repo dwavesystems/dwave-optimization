@@ -33,6 +33,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     /// Constraints can be defined for ALL slices along `axis` or PER slice
     /// along `axis`. Allowable operators are defined by `Operator`.
     struct AxisBound {
+     public:
         /// Allowable axis-wise bound operators.
         enum class Operator { Equal, LessEqual, GreaterEqual };
 
@@ -41,20 +42,27 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         AxisBound(ssize_t axis, std::vector<Operator> axis_operators,
                   std::vector<double> axis_bounds);
 
-        /// The bound axis
-        ssize_t axis;
-        /// Operator for ALL axis slices (vector has length one) or operators
-        /// PER slice (length of vector is equal to the number of slices).
-        std::vector<Operator> operators;
-        /// Bound for ALL axis slices (vector has length one) or bounds PER
-        /// slice (length of vector is equal to the number of slices).
-        std::vector<double> bounds;
+        ssize_t axis() const { return axis_; };
 
         /// Obtain the bound associated with a given slice along `axis`.
         double get_bound(const ssize_t slice) const;
 
         /// Obtain the operator associated with a given slice along `axis`.
         Operator get_operator(const ssize_t slice) const;
+
+        ssize_t num_bounds() const { return bounds_.size(); };
+
+        ssize_t num_operators() const { return operators_.size(); };
+
+     private:
+        /// The bound axis
+        ssize_t axis_;
+        /// Operator for ALL axis slices (vector has length one) or operators
+        /// PER slice (length of vector is equal to the number of slices).
+        std::vector<Operator> operators_;
+        /// Bound for ALL axis slices (vector has length one) or bounds PER
+        /// slice (length of vector is equal to the number of slices).
+        std::vector<double> bounds_;
     };
 
     NumberNode() = delete;
