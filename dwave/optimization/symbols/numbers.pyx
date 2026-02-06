@@ -51,7 +51,7 @@ cdef NumberNode.AxisBound.Operator _parse_python_operator(str op) except *:
 # Convert the user-defined axis-wise bounds for NumberNode into the 
 # corresponding C++ objects passed to NumberNode.
 cdef vector[NumberNode.AxisBound] _convert_python_bound_axes(
-        bound_axes_data : None | list[tuple(int, str | list[str], float | list[float])]) except *:
+        bound_axes_data : None | list[tuple[int, str | list[str], float | list[float]]]) except *:
     cdef vector[NumberNode.AxisBound] output
 
     if bound_axes_data is None:
@@ -82,7 +82,7 @@ cdef vector[NumberNode.AxisBound] _convert_python_bound_axes(
             for op in py_ops:
                 cpp_ops.push_back(_parse_python_operator(op))
         else:
-            raise TypeError("Bound axis operator(s) should be str or a 1D-array"
+            raise TypeError("Bound axis operator(s) should be str or an iterable"
                             " of str(s).")
 
         bound_array = np.asarray_chkfinite(py_bounds, dtype=np.double)
@@ -117,7 +117,7 @@ cdef class BinaryVariable(ArraySymbol):
         :meth:`~dwave.optimization.model.Model.binary`: equivalent method.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
-                 subject_to=None):
+                 subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )
@@ -325,7 +325,7 @@ cdef class IntegerVariable(ArraySymbol):
         :meth:`~dwave.optimization.model.Model.integer`: equivalent method.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
-                 subject_to=None):
+                 subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )

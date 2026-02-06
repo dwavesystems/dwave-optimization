@@ -579,9 +579,9 @@ TEST_CASE("BinaryNode") {
     GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 0") {
         auto graph = Graph();
         std::vector<AxisBound> bound_axes{{0, {Equal, LessEqual, GreaterEqual}, {5.0, 2.0, 3.0}}};
-        // Each hyperslice along axis 0 has size 4. There is no feasible
-        // assignment to the values in slice 0 (along axis 0) that results in a
-        // sum equal to 5.
+        // Each slice along axis 0 has size 4. There is no feasible assignment
+        // to the values in slice 0 (along axis 0) that results in a sum equal
+        // to 5.
         REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
                                                            std::nullopt, std::nullopt, bound_axes),
                             "Infeasible axis-wise bounds.");
@@ -590,9 +590,9 @@ TEST_CASE("BinaryNode") {
     GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 1") {
         auto graph = Graph();
         std::vector<AxisBound> bound_axes{{1, {Equal, GreaterEqual}, {5.0, 7.0}}};
-        // Each hyperslice along axis 1 has size 6. There is no feasible
-        // assignment to the values in slice 1 (along axis 1) that results in a
-        // sum greater than or equal to 7.
+        // Each slice along axis 1 has size 6. There is no feasible assignment
+        // to the values in slice 1 (along axis 1) that results in a sum
+        // greater than or equal to 7.
         REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
                                                            std::nullopt, std::nullopt, bound_axes),
                             "Infeasible axis-wise bounds.");
@@ -601,9 +601,9 @@ TEST_CASE("BinaryNode") {
     GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 2") {
         auto graph = Graph();
         std::vector<AxisBound> bound_axes{{2, {Equal, LessEqual}, {5.0, -1.0}}};
-        // Each hyperslice along axis 2 has size 6. There is no feasible
-        // assignment to the values in slice 1 (along axis 2) that results in a
-        // sum less than or equal to -1.
+        // Each slice along axis 2 has size 6. There is no feasible assignment
+        // to the values in slice 1 (along axis 2) that results in a sum less
+        // than or equal to -1.
         REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
                                                            std::nullopt, std::nullopt, bound_axes),
                             "Infeasible axis-wise bounds.");
@@ -765,7 +765,7 @@ TEST_CASE("BinaryNode") {
 
         WHEN("We initialize three invalid states") {
             auto state = graph.empty_state();
-            // This state violates the 0th hyperslice along axis 0
+            // This state violates slice 0 along axis 0
             std::vector<double> init_values{1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1};
             // import numpy as np
             // a = np.asarray([1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
@@ -776,7 +776,7 @@ TEST_CASE("BinaryNode") {
                               "Initialized values do not satisfy axis-wise bounds.");
 
             state = graph.empty_state();
-            // This state violates the 1st hyperslice along axis 0
+            // This state violates the slice 1 along axis 0
             init_values = {0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1};
             // import numpy as np
             // a = np.asarray([0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1])
@@ -787,7 +787,7 @@ TEST_CASE("BinaryNode") {
                               "Initialized values do not satisfy axis-wise bounds.");
 
             state = graph.empty_state();
-            // This state violates the 2nd hyperslice along axis 0
+            // This state violates the slice 2 along axis 0
             init_values = {0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0};
             // import numpy as np
             // a = np.asarray([0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0])
@@ -1381,9 +1381,9 @@ TEST_CASE("IntegerNode") {
     GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 0") {
         auto graph = Graph();
         std::vector<AxisBound> bound_axes{{0, {Equal, LessEqual}, {5.0, -31.0}}};
-        // Each hyperslice along axis 0 has size 6. There is no feasible
-        // assignment to the values in slice 1 (along axis 0) that results in a
-        // sum less than or equal to -5*6 - 1 = -31.
+        // Each slice along axis 0 has size 6. There is no feasible assignment
+        // to the values in slice 1 (along axis 0) that results in a sum less
+        // than or equal to -5*6 - 1 = -31.
         REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
                                                             -5, 8, bound_axes),
                             "Infeasible axis-wise bounds.");
@@ -1392,9 +1392,9 @@ TEST_CASE("IntegerNode") {
     GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 1") {
         auto graph = Graph();
         std::vector<AxisBound> bound_axes{{1, {GreaterEqual, Equal, Equal}, {33.0, 0.0, 0.0}}};
-        // Each hyperslice along axis 1 has size 4. There is no feasible
-        // assignment to the values in slice 0 (along axis 1) that results in a
-        // sum greater than or equal to 4*8 + 1 = 33.
+        // Each slice along axis 1 has size 4. There is no feasible assignment
+        // to the values in slice 0 (along axis 1) that results in a sum
+        // greater than or equal to 4*8 + 1 = 33.
         REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
                                                             -5, 8, bound_axes),
                             "Infeasible axis-wise bounds.");
@@ -1403,9 +1403,9 @@ TEST_CASE("IntegerNode") {
     GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 2") {
         auto graph = Graph();
         std::vector<AxisBound> bound_axes{{2, {GreaterEqual, Equal}, {-1.0, 49.0}}};
-        // Each hyperslice along axis 2 has size 6. There is no feasible
-        // assignment to the values in slice 1 (along axis 2) that results in a
-        // sum or equal to 6*8 + 1 = 49
+        // Each slice along axis 2 has size 6. There is no feasible assignment
+        // to the values in slice 1 (along axis 2) that results in a sum or
+        // equal to 6*8 + 1 = 49
         REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
                                                             -5, 8, bound_axes),
                             "Infeasible axis-wise bounds.");
@@ -1566,7 +1566,7 @@ TEST_CASE("IntegerNode") {
 
         WHEN("We initialize three invalid states") {
             auto state = graph.empty_state();
-            // This state violates the 0th hyperslice along axis 1
+            // This state violates the slice 0 along axis 1
             std::vector<double> init_values{5, 6, 0, 0, 3, 1, 4, 0, 2, 0, 0, 3};
             // import numpy as np
             // a = np.asarray([5, 6, 0, 0, 3, 1, 4, 0, 2, 0, 0, 3])
@@ -1577,7 +1577,7 @@ TEST_CASE("IntegerNode") {
                               "Initialized values do not satisfy axis-wise bounds.");
 
             state = graph.empty_state();
-            // This state violates the 1st hyperslice along axis 1
+            // This state violates the slice 1 along axis 1
             init_values = {5, 2, 0, 0, 3, 1, 4, 0, 2, 1, 0, 3};
             // import numpy as np
             // a = np.asarray([5, 2, 0, 0, 3, 1, 4, 0, 2, 1, 0, 3])
@@ -1588,7 +1588,7 @@ TEST_CASE("IntegerNode") {
                               "Initialized values do not satisfy axis-wise bounds.");
 
             state = graph.empty_state();
-            // This state violates the 2nd hyperslice along axis 1
+            // This state violates the slice 2 along axis 1
             init_values = {5, 2, 0, 0, 3, 1, 4, 0, 1, 0, 0, 0};
             // import numpy as np
             // a = np.asarray([5, 2, 0, 0, 3, 1, 4, 0, 1, 0, 0, 0])
@@ -1717,6 +1717,46 @@ TEST_CASE("IntegerNode") {
                         CHECK_THAT(bound_axis_sums[0], RangeEquals({11, 2, 7}));
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
+                }
+            }
+        }
+    }
+
+    GIVEN("(2x3)-IntegerNode and an axis-wise bound on axis: 0 with operator `==`") {
+        auto graph = Graph();
+        std::vector<AxisBound> bound_axes{{0, {Equal}, {1.0}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3},
+                                                         std::nullopt, std::nullopt, bound_axes);
+
+        THEN("Axis wise bound is correct") {
+            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
+            const AxisBound inode_bound_axis_ptr = inode_ptr->axis_wise_bounds().data()[0];
+            CHECK(bound_axes[0].axis == inode_bound_axis_ptr.axis);
+            CHECK_THAT(bound_axes[0].operators, RangeEquals(inode_bound_axis_ptr.operators));
+            CHECK_THAT(bound_axes[0].bounds, RangeEquals(inode_bound_axis_ptr.bounds));
+        }
+
+        WHEN("We initialize a valid state by construction") {
+            auto state = graph.empty_state();
+            graph.initialize_state(state);
+
+            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
+
+            THEN("The bound axis sums and state are correct") {
+                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
+                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({1.0, 1.0}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals({1, 0, 0, 1, 0, 0}));
+            }
+
+            THEN("We exchange() some values") {
+                inode_ptr->exchange(state, 0, 1);
+                inode_ptr->exchange(state, 3, 4);
+
+                THEN("The bound axis sums and state updated correctly") {
+                    CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({1.0, 1.0}));
+                    CHECK(inode_ptr->diff(state).size() == 4);  // 2 updates per exchange
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals({0, 1, 0, 0, 1, 0}));
                 }
             }
         }
