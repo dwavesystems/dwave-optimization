@@ -128,6 +128,9 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         return initialize_state(state, std::move(values));
     }
 
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
     // NumberNode methods *****************************************************
 
     // In the given state, swap the value of index i with the value of index j.
