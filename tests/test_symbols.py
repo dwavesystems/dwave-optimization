@@ -2286,6 +2286,11 @@ class TestLinearProgram(utils.SymbolTests):
                     res.state()
                     sol.state()
 
+                    # check consistency
+                    np.testing.assert_array_equal(sol.state(), lp.state())
+                    self.assertEqual(feas.state(), lp.feasible())
+                    self.assertEqual(res.state(), lp.objective_value())
+
     def test_inputs_invalid(self):
         for name, kwargs, msg in utils.iter_invalid_lp_kwargs():
             with self.subTest(name), self.assertRaisesRegex(ValueError, msg):
@@ -2331,6 +2336,11 @@ class TestLinearProgram(utils.SymbolTests):
             np.testing.assert_allclose(feasible.state(), 1)
             np.testing.assert_allclose(obj.state(), -1 * 10 + 4 * -3)
 
+            # check consistency
+            np.testing.assert_array_equal(sol.state(), res.lp.state())
+            self.assertEqual(feasible.state(), res.lp.feasible())
+            self.assertEqual(obj.state(), res.lp.objective_value())
+
     def test_set_state(self):
         # min:
         #   -x0 - x1
@@ -2354,14 +2364,17 @@ class TestLinearProgram(utils.SymbolTests):
         lp._set_state(0, [0, 1])
         np.testing.assert_array_equal(lp.state(), [0, 1])
         self.assertEqual(feas.state(), True)
+        self.assertEqual(feas.state(), lp.feasible())
 
         lp._set_state(0, [1, 0])
         np.testing.assert_array_equal(lp.state(), [1, 0])
         self.assertEqual(feas.state(), True)
+        self.assertEqual(feas.state(), lp.feasible())
 
         lp._set_state(0, [1, 1])
         np.testing.assert_array_equal(lp.state(), [1, 1])
         self.assertEqual(feas.state(), False)
+        self.assertEqual(feas.state(), lp.feasible())
 
     def test_serialization_with_states(self):
         # min:
