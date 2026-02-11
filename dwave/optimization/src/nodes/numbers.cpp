@@ -448,7 +448,7 @@ const std::vector<NumberNode::AxisBound>& NumberNode::axis_wise_bounds() const {
     return bound_axes_info_;
 }
 
-const std::vector<std::vector<double>>& NumberNode::bound_axis_sums(State& state) const {
+const std::vector<std::vector<double>>& NumberNode::bound_axis_sums(const State& state) const {
     return data_ptr<NumberNodeStateData>(state)->bound_axes_sums;
 }
 
@@ -614,7 +614,7 @@ void check_bound_axes_integrality(const std::vector<NumberNode::AxisBound>& boun
             const double bound = bound_axis_info.get_bound(i);
             if (bound != std::floor(bound)) {
                 throw std::invalid_argument(
-                        "Axis wise bounds for integral number arrays must be intregral.");
+                        "Axis wise bounds for integral number arrays must be integral.");
             }
         }
     }

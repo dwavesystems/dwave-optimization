@@ -332,7 +332,7 @@ cdef class IntegerVariable(ArraySymbol):
 
         cdef optional[vector[double]] cpplower_bound = nullopt
         cdef optional[vector[double]] cppupper_bound = nullopt
-        cdef vector[BinaryNode.AxisBound] cppbound_axes = _convert_python_bound_axes(subject_to)
+        cdef vector[IntegerNode.AxisBound] cppbound_axes = _convert_python_bound_axes(subject_to)
         cdef const double[:] mem
 
         if lower_bound is not None:
