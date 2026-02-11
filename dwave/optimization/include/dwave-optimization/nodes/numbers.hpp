@@ -157,7 +157,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     /// Return the state-dependent sum of the values within each slice
     /// along each bound axis. The returned vector is indexed by the
     /// bound axes in the same ordering that `axis_wise_bounds()` returns.
-    const std::vector<std::vector<double>>& bound_axis_sums(State& state) const;
+    const std::vector<std::vector<double>>& bound_axis_sums(const State& state) const;
 
  protected:
     explicit NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,

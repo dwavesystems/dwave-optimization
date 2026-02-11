@@ -581,7 +581,7 @@ TEST_CASE("BinaryNode") {
 
         REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3, 4},
                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Axis wise bounds for integral number arrays must be intregral.");
+                            "Axis wise bounds for integral number arrays must be integral.");
     }
 
     GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 0") {
@@ -1403,7 +1403,7 @@ TEST_CASE("IntegerNode") {
 
         REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
                                                             std::nullopt, std::nullopt, bound_axes),
-                            "Axis wise bounds for integral number arrays must be intregral.");
+                            "Axis wise bounds for integral number arrays must be integral.");
     }
 
     GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 0") {
