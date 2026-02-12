@@ -16,6 +16,7 @@
 
 import json
 
+import collections.abc
 import numpy as np
 
 from cython.operator cimport typeid
@@ -27,10 +28,86 @@ from dwave.optimization._model cimport _Graph, _register, ArraySymbol, Symbol
 from dwave.optimization._utilities cimport as_cppshape
 from dwave.optimization.libcpp cimport dynamic_cast_ptr
 from dwave.optimization.libcpp.nodes.numbers cimport (
+    NumberNode,
     BinaryNode,
     IntegerNode,
 )
 from dwave.optimization.states cimport States
+
+
+# Convert the str operators "==", "<=", ">=" into their corresponding
+# C++ objects.
+cdef NumberNode.AxisBound.Operator _parse_python_operator(str op) except *:
+    if op == "==":
+        return NumberNode.AxisBound.Operator.Equal
+    elif op == "<=":
+        return NumberNode.AxisBound.Operator.LessEqual
+    elif op == ">=":
+        return NumberNode.AxisBound.Operator.GreaterEqual
+    else:
+        raise TypeError(f"Invalid bound axis operator: {op!r}")
+
+
+# Convert the user-defined axis-wise bounds for NumberNode into the 
+# corresponding C++ objects passed to NumberNode.
+cdef vector[NumberNode.AxisBound] _convert_python_bound_axes(
+        bound_axes_data : None | list[tuple[int, str | list[str], float | list[float]]]) except *:
+    cdef vector[NumberNode.AxisBound] output
+
+    if bound_axes_data is None:
+        return output
+
+    output.reserve(len(bound_axes_data))
+    cdef vector[NumberNode.AxisBound.Operator] cpp_ops
+    cdef vector[double] cpp_bounds
+    cdef double[:] mem
+
+    for bound_axis_data in bound_axes_data:
+        if not isinstance(bound_axis_data, tuple) or len(bound_axis_data) != 3:
+            raise TypeError("Each bound axis entry must be a tuple with"
+                            " three elements: axis, operator(s), bound(s)")
+
+        axis, py_ops, py_bounds = bound_axis_data
+
+        if not isinstance(axis, int):
+            raise TypeError("Bound axis must be an int.")
+
+        if isinstance(py_ops, str):
+            cpp_ops.resize(1)
+            # One operator defined for all slices.
+            cpp_ops[0] = _parse_python_operator(py_ops)
+        elif isinstance(py_ops, collections.abc.Iterable):
+            # Operator defined per slice.
+            cpp_ops.reserve(len(py_ops))
+            for op in py_ops:
+                cpp_ops.push_back(_parse_python_operator(op))
+        else:
+            raise TypeError("Bound axis operator(s) should be str or an iterable"
+                            " of str(s).")
+
+        bound_array = np.asarray_chkfinite(py_bounds, dtype=np.double)
+        if (bound_array.ndim <= 1):
+            mem = bound_array.ravel()
+            cpp_bounds.reserve(mem.shape[0])
+            for i in range(mem.shape[0]):
+                cpp_bounds.push_back(mem[i])
+        else:
+            raise TypeError("Bound axis bound(s) should be scalar or 1D-array.")
+
+        output.push_back(NumberNode.AxisBound(axis, move(cpp_ops), move(cpp_bounds)))
+
+    return output
+
+# Convert the C++ operators into their corresponding str
+cdef str _parse_cpp_operators(NumberNode.AxisBound.Operator op):
+    if op == NumberNode.AxisBound.Operator.Equal:
+        return "=="
+    elif op == NumberNode.AxisBound.Operator.LessEqual:
+        return "<="
+    elif op == NumberNode.AxisBound.Operator.GreaterEqual:
+        return ">="
+    else:
+        raise ValueError(f"Invalid bound axis operator: {op!r}")
 
 
 cdef class BinaryVariable(ArraySymbol):
@@ -39,13 +116,15 @@ cdef class BinaryVariable(ArraySymbol):
     See also:
         :meth:`~dwave.optimization.model.Model.binary`: equivalent method.
     """
-    def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
+    def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
+                 subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )
 
         cdef optional[vector[double]] cpplower_bound = nullopt
         cdef optional[vector[double]] cppupper_bound = nullopt
+        cdef vector[BinaryNode.AxisBound] cppbound_axes = _convert_python_bound_axes(subject_to)
         cdef const double[:] mem
 
         if lower_bound is not None:
@@ -75,7 +154,7 @@ cdef class BinaryVariable(ArraySymbol):
                 raise ValueError("upper bound should be None, scalar, or the same shape")
 
         self.ptr = model._graph.emplace_node[BinaryNode](
-            cppshape, cpplower_bound, cppupper_bound
+            cppshape, cpplower_bound, cppupper_bound, cppbound_axes
         )
         self.initialize_arraynode(model, self.ptr)
 
@@ -116,10 +195,22 @@ cdef class BinaryVariable(ArraySymbol):
             with zf.open(info, "r") as f:
                 upper_bound = np.load(f, allow_pickle=False)
 
+        # needs to be compatible with older versions
+        try:
+            info = zf.getinfo(directory + "subject_to.json")
+        except KeyError:
+            subject_to = None
+        else:
+            with zf.open(info, "r") as f:
+                # Note that import is a list of lists, not a list of tuples.
+                # Hence we convert to tuple. We could also support lists.
+                subject_to = [(axis, ops, bounds) for axis, ops, bounds in json.load(f)]
+
         return BinaryVariable(model,
                               shape=shape_info["shape"],
                               lower_bound=lower_bound,
                               upper_bound=upper_bound,
+                              subject_to=subject_to
                               )
 
     def _into_zipfile(self, zf, directory):
@@ -142,6 +233,27 @@ cdef class BinaryVariable(ArraySymbol):
         # NumPy serialization is overkill but it's type-safe
         with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, upper_bound, allow_pickle=False)
+
+        subject_to = self.axis_wise_bounds()
+        if len(subject_to) > 0:
+            # Using json here converts the tuples to lists
+            zf.writestr(directory + "subject_to.json", encoder.encode(subject_to))
+
+    def axis_wise_bounds(self):
+        """Axis wise bound(s) of Binary symbol as a list of tuples where
+        each tuple is of the form: (axis, [operator(s)], [bound(s)])."""
+        cdef vector[NumberNode.AxisBound] bound_axes = self.ptr.axis_wise_bounds()
+
+        output = []
+        for i in range(bound_axes.size()):
+            bound_axis = &bound_axes[i]
+            py_axis_ops = [_parse_cpp_operators(bound_axis.get_operator(j))
+                           for j in range(bound_axis.num_operators())]
+            py_axis_bounds = [bound_axis.get_bound(j)
+                              for j in range(bound_axis.num_bounds())]
+            output.append((bound_axis.axis(), py_axis_ops, py_axis_bounds))
+
+        return output
 
     def lower_bound(self):
         """Lower bound(s) of Binary symbol."""
@@ -212,13 +324,15 @@ cdef class IntegerVariable(ArraySymbol):
     See Also:
         :meth:`~dwave.optimization.model.Model.integer`: equivalent method.
     """
-    def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
+    def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
+                 subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )
 
         cdef optional[vector[double]] cpplower_bound = nullopt
         cdef optional[vector[double]] cppupper_bound = nullopt
+        cdef vector[IntegerNode.AxisBound] cppbound_axes = _convert_python_bound_axes(subject_to)
         cdef const double[:] mem
 
         if lower_bound is not None:
@@ -248,7 +362,7 @@ cdef class IntegerVariable(ArraySymbol):
                 raise ValueError("upper bound should be None, scalar, or the same shape")
 
         self.ptr = model._graph.emplace_node[IntegerNode](
-            cppshape, cpplower_bound, cppupper_bound
+            cppshape, cpplower_bound, cppupper_bound, cppbound_axes
         )
         self.initialize_arraynode(model, self.ptr)
 
@@ -289,10 +403,22 @@ cdef class IntegerVariable(ArraySymbol):
             with zf.open(info, "r") as f:
                 upper_bound = np.load(f, allow_pickle=False)
 
+        # needs to be compatible with older versions
+        try:
+            info = zf.getinfo(directory + "subject_to.json")
+        except KeyError:
+            subject_to = None
+        else:
+            with zf.open(info, "r") as f:
+                # Note that import is a list of lists, not a list of tuples.
+                # Hence we convert to tuple. We could also support lists.
+                subject_to = [(axis, ops, bounds) for axis, ops, bounds in json.load(f)]
+
         return IntegerVariable(model,
                                shape=shape_info["shape"],
                                lower_bound=lower_bound,
                                upper_bound=upper_bound,
+                               subject_to=subject_to
                                )
 
     def _into_zipfile(self, zf, directory):
@@ -321,6 +447,27 @@ cdef class IntegerVariable(ArraySymbol):
         # NumPy serialization is overkill but it's type-safe
         with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, upper_bound, allow_pickle=False)
+
+        subject_to = self.axis_wise_bounds()
+        if len(subject_to) > 0:
+            # Using json here converts the tuples to lists
+            zf.writestr(directory + "subject_to.json", encoder.encode(subject_to))
+
+    def axis_wise_bounds(self):
+        """Axis wise bound(s) of Integer symbol as a list of tuples where
+        each tuple is of the form: (axis, [operator(s)], [bound(s)])."""
+        cdef vector[NumberNode.AxisBound] bound_axes = self.ptr.axis_wise_bounds()
+
+        output = []
+        for i in range(bound_axes.size()):
+            bound_axis = &bound_axes[i]
+            py_axis_ops = [_parse_cpp_operators(bound_axis.get_operator(j))
+                           for j in range(bound_axis.num_operators())]
+            py_axis_bounds = [bound_axis.get_bound(j)
+                              for j in range(bound_axis.num_bounds())]
+            output.append((bound_axis.axis(), py_axis_ops, py_axis_bounds))
+
+        return output
 
     def lower_bound(self):
         """Lower bound(s) of Integer symbol."""
