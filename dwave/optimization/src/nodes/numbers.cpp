@@ -72,6 +72,11 @@ struct NumberNodeStateData : public ArrayNodeStateData {
             : ArrayNodeStateData(std::move(input)),
               bound_axes_sums(std::move(bound_axes_sums)),
               prior_bound_axes_sums(this->bound_axes_sums) {}
+
+    std::unique_ptr<NodeStateData> copy() const override {
+        return std::make_unique<NumberNodeStateData>(*this);
+    }
+
     /// For each bound axis and for each slice along said axis, we track the
     /// sum of the values within the slice.
     /// bound_axes_sums[i][j] = "sum of the values within the jth slice along
