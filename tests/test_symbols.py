@@ -361,6 +361,15 @@ class TestAll(utils.SymbolTests):
         model.lock()
         yield from nodes
 
+    def test_sizeinfo_awareness(self):
+        model = Model()
+        s = model.set(10)
+        r = s.reshape([-1, 1])
+        x = r.all(axis=1)
+        y = r.all(axis=1)
+        # only possible if both `x` and `y` know their size is derived from `r`.
+        z = y + x
+
     def test_empty(self):
         model = Model()
         empty = model.constant([]).all()
@@ -461,6 +470,15 @@ class TestAny(utils.SymbolTests):
 
         model.lock()
         yield from nodes
+
+    def test_sizeinfo_awareness(self):
+        model = Model()
+        s = model.set(10)
+        r = s.reshape([-1, 1])
+        x = r.any(axis=1)
+        y = r.any(axis=1)
+        # only possible if both `x` and `y` know their size is derived from `r`.
+        z = y + x
 
     def test_empty(self):
         model = Model()
@@ -2589,6 +2607,15 @@ class TestMax(utils.ReduceTests):
     def op(self, x, *args, **kwargs):
         return x.max(*args, **kwargs)
 
+    def test_sizeinfo_awareness(self):
+        model = Model()
+        s = model.set(10)
+        r = s.reshape([-1, 1])
+        x = r.max(axis=1)
+        y = r.max(axis=1)
+        # only possible if both `x` and `y` know their size is derived from `r`.
+        z = y + x
+
     def test_empty(self):
         model = Model()
         with self.assertRaisesRegex(ValueError, "no identity"):
@@ -2676,6 +2703,15 @@ class TestMin(utils.ReduceTests):
 
     def op(self, x, *args, **kwargs):
         return x.min(*args, **kwargs)
+
+    def test_sizeinfo_awareness(self):
+        model = Model()
+        s = model.set(10)
+        r = s.reshape([-1, 1])
+        x = r.min(axis=1)
+        y = r.min(axis=1)
+        # only possible if both `x` and `y` know their size is derived from `r`.
+        z = y + x
 
     def test_empty(self):
         model = Model()
@@ -3213,6 +3249,15 @@ class TestProd(utils.ReduceTests):
 
     def op(self, x, *args, **kwargs):
         return x.prod(*args, **kwargs)
+
+    def test_sizeinfo_awareness(self):
+        model = Model()
+        s = model.set(10)
+        r = s.reshape([-1, 1])
+        x = r.prod(axis=1)
+        y = r.prod(axis=1)
+        # only possible if both `x` and `y` know their size is derived from `r`.
+        z = y + x
 
     def test_empty(self):
         model = Model()
@@ -3870,6 +3915,15 @@ class TestSum(utils.ReduceTests):
 
     def op(self, x, *args, **kwargs):
         return x.sum(*args, **kwargs)
+
+    def test_sizeinfo_awareness(self):
+        model = Model()
+        s = model.set(10)
+        r = s.reshape([-1, 1])
+        x = r.sum(axis=1)
+        y = r.sum(axis=1)
+        # only possible if both `x` and `y` know their size is derived from `r`.
+        z = y + x
 
     def test_axis(self):
         model = Model()
