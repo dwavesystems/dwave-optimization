@@ -30,6 +30,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
     /// Struct for stateless axis-wise bound information. Given an `axis`,
     /// define constraints on the sum of the values in each slice along `axis`.
+    /// Should `axis` be undefined, the constraint applies to the entire dataset.
     /// Constraints can be defined for ALL slices along `axis` or PER slice
     /// along `axis`. Allowable operators are defined by `Operator`.
     struct AxisBound {
@@ -39,10 +40,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
         /// To reduce the # of `IntegerNode` and `BinaryNode` constructors, we
         /// allow only one constructor.
-        AxisBound(ssize_t axis, std::vector<Operator> axis_operators,
+        AxisBound(std::optional<ssize_t> axis, std::vector<Operator> axis_operators,
                   std::vector<double> axis_bounds);
 
-        ssize_t axis() const { return axis_; };
+        std::optional<ssize_t> axis() const { return axis_; };
 
         /// Obtain the bound associated with a given slice along `axis`.
         double get_bound(const ssize_t slice) const;
@@ -55,8 +56,9 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         ssize_t num_operators() const { return operators_.size(); };
 
      private:
-        /// The bound axis
-        ssize_t axis_;
+        /// The bound axis (should it be defined). If axis_=nullopt, bound
+        /// applies to entire dataset.
+        std::optional<ssize_t> axis_ = std::nullopt;
         /// Operator for ALL axis slices (vector has length one) or operators
         /// PER slice (length of vector is equal to the number of slices).
         std::vector<Operator> operators_;
