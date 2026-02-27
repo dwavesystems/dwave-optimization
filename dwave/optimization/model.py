@@ -166,8 +166,9 @@ class Model(_Graph):
     def binary(self, shape: None | _ShapeLike = None,
                lower_bound: None | np.typing.ArrayLike = None,
                upper_bound: None | np.typing.ArrayLike = None,
-               subject_to: None | list[tuple[int, str | list[str], float |
-                                            list[float]]] = None) -> BinaryVariable:
+               subject_to: None | list[tuple[int, str | list[str], float | list[float]] |
+                                       tuple[str | list[str], float | list[float]]] = None
+               ) -> BinaryVariable:
         r"""Create a binary symbol as a decision variable.
 
         Args:
@@ -182,7 +183,9 @@ class Model(_Graph):
                 [0,1]. If None, the default value of 1 is used.
             subject_to (optional): Axis-wise bounds applied to the symbol. Must be an
                 array of tuples where each tuple has the form: (axis, operators, bounds)
-                - axis (int): The axis along which the bounds are applied.
+                or (operators, bounds).
+                - axis (optional int): The axis along which the bounds are applied. If
+                not axis is provided, the bound will be applied to the entire array.
                 - operators (str | array[str]): The operator(s) ("<=", "==", or ">="). 
                 A single operator applies to all slices along the axis; an
                 array specifies one operator per slice.
@@ -239,7 +242,17 @@ class Model(_Graph):
             >>> model = Model()
             >>> b = model.binary([2, 3], lower_bound=[[0, 1, 1], [0, 1, 0]],
             ... subject_to=[(1, ["<=", "==", ">="], [0, 2, 1])])
-            >>> np.all(n.axis_wise_bounds() == [(1, ["<=", "==", ">="], [0, 2, 1])])
+            >>> np.all(b.axis_wise_bounds() == [(1, ["<=", "==", ">="], [0, 2, 1])])
+            True
+
+            This example adds a :math:`6`-sized binary symbol such that
+            the sum of the values within the array is equal to 2.
+
+            >>> from dwave.optimization.model import Model
+            >>> import numpy as np
+            >>> model = Model()
+            >>> b = model.binary(6, subject_to=[("==", 2)])
+            >>> np.all(b.axis_wise_bounds() == [(["=="], [2])])
             True
 
         See Also:
@@ -519,8 +532,9 @@ class Model(_Graph):
             shape: None | _ShapeLike = None,
             lower_bound: None | numpy.typing.ArrayLike = None,
             upper_bound: None | numpy.typing.ArrayLike = None,
-            subject_to: None | list[tuple[int, str | list[str], float |
-                                          list[float]]] = None) -> IntegerVariable:
+            subject_to: None | list[tuple[int, str | list[str], float | list[float]] |
+                                    tuple[str | list[str], float | list[float]]] = None
+               ) -> IntegerVariable:
         r"""Create an integer symbol as a decision variable.
 
         Args:
@@ -535,7 +549,9 @@ class Model(_Graph):
                 default value is used.
             subject_to (optional): Axis-wise bounds applied to the symbol. Must be an
                 array of tuples where each tuple has the form: (axis, operators, bounds)
-                - axis (int): The axis along which the bounds are applied.
+                or (operators, bounds).
+                - axis (optional int): The axis along which the bounds are applied. If
+                not axis is provided, the bound will be applied to the entire array.
                 - operators (str | array[str]): The operator(s) ("<=", "==", or ">="). 
                 A single operator applies to all slice along the axis; an array
                 specifies one operator per slice.
@@ -594,6 +610,17 @@ class Model(_Graph):
             >>> i = model.integer([2, 3], lower_bound=1, upper_bound=3,
             ... subject_to=[(1, "<=", [2, 4, 5])])
             >>> np.all(i.axis_wise_bounds() == [(1, ["<="], [2, 4, 5])])
+            True
+
+            This example adds a :math:`6`-sized integer symbol such that
+            the sum of the values within the array is less than or equal
+            to 20.
+
+            >>> from dwave.optimization.model import Model
+            >>> import numpy as np
+            >>> model = Model()
+            >>> i = model.integer(6, subject_to=[("<=", 20)])
+            >>> np.all(i.axis_wise_bounds() == [(["<="], [20])])
             True
 
         See Also:

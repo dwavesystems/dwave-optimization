@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from libcpp.optional cimport optional
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.graph cimport ArrayNode
@@ -29,10 +30,10 @@ cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimi
                 LessEqual
                 GreaterEqual
 
-            AxisBound(Py_ssize_t axis, vector[Operator] axis_operators,
+            AxisBound(optional[Py_ssize_t] axis, vector[Operator] axis_operators,
                       vector[double] axis_bounds)
 
-            Py_ssize_t axis()
+            optional[Py_ssize_t] axis()
             double get_bound(Py_ssize_t slice)
             Operator get_operator(Py_ssize_t slice)
             Py_ssize_t num_bounds()

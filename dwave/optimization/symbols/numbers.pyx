@@ -51,26 +51,33 @@ cdef NumberNode.AxisBound.Operator _parse_python_operator(str op) except *:
 # Convert the user-defined axis-wise bounds for NumberNode into the 
 # corresponding C++ objects passed to NumberNode.
 cdef vector[NumberNode.AxisBound] _convert_python_bound_axes(
-        bound_axes_data : None | list[tuple[int, str | list[str], float | list[float]]]) except *:
+        bound_axes_data : None | list[tuple[int, str | list[str], float | list[float]] |
+                                      tuple[str | list[str], float | list[float]]]) except *:
     cdef vector[NumberNode.AxisBound] output
 
     if bound_axes_data is None:
         return output
 
     output.reserve(len(bound_axes_data))
+    cdef optional[Py_ssize_t] cpp_axis = nullopt
     cdef vector[NumberNode.AxisBound.Operator] cpp_ops
     cdef vector[double] cpp_bounds
     cdef double[:] mem
 
     for bound_axis_data in bound_axes_data:
-        if not isinstance(bound_axis_data, tuple) or len(bound_axis_data) != 3:
-            raise TypeError("Each bound axis entry must be a tuple with"
-                            " three elements: axis, operator(s), bound(s)")
+        if not isinstance(bound_axis_data, tuple) or len(bound_axis_data) not in [2, 3]:
+            raise TypeError("Each bound axis entry must be a tuple with two or "
+                            "three elements: axis (optional), operator(s), "
+                            "bound(s)")
 
-        axis, py_ops, py_bounds = bound_axis_data
-
-        if not isinstance(axis, int):
-            raise TypeError("Bound axis must be an int.")
+        if len(bound_axis_data) == 2:
+            py_ops, py_bounds = bound_axis_data
+            cpp_axis = nullopt
+        else:
+            axis, py_ops, py_bounds = bound_axis_data
+            if not isinstance(axis, int):
+                raise TypeError("Bound axis must be an int or None.")
+            cpp_axis = <Py_ssize_t> axis
 
         if isinstance(py_ops, str):
             cpp_ops.resize(1)
@@ -94,7 +101,7 @@ cdef vector[NumberNode.AxisBound] _convert_python_bound_axes(
         else:
             raise TypeError("Bound axis bound(s) should be scalar or 1D-array.")
 
-        output.push_back(NumberNode.AxisBound(axis, move(cpp_ops), move(cpp_bounds)))
+        output.push_back(NumberNode.AxisBound(cpp_axis, move(cpp_ops), move(cpp_bounds)))
 
     return output
 
@@ -118,7 +125,8 @@ cdef class BinaryVariable(ArraySymbol):
         usage of this symbol.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
-                 subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None):
+                 subject_to: None | list[tuple[int, str | list[str], float | list[float]] |
+                                         tuple[str | list[str], float | list[float]]] = None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )
@@ -205,7 +213,8 @@ cdef class BinaryVariable(ArraySymbol):
             with zf.open(info, "r") as f:
                 # Note that import is a list of lists, not a list of tuples.
                 # Hence we convert to tuple. We could also support lists.
-                subject_to = [(axis, ops, bounds) for axis, ops, bounds in json.load(f)]
+                subject_to = [(item[0], item[1], item[2]) if len(item) == 3
+                              else (item[0], item[1]) for item in json.load(f)]
 
         return BinaryVariable(model,
                               shape=shape_info["shape"],
@@ -241,18 +250,24 @@ cdef class BinaryVariable(ArraySymbol):
             zf.writestr(directory + "subject_to.json", encoder.encode(subject_to))
 
     def axis_wise_bounds(self):
-        """Axis wise bound(s) of Binary symbol as a list of tuples where
-        each tuple is of the form: (axis, [operator(s)], [bound(s)])."""
+        """Axis wise bound(s) of Binary symbol as a list of tuples where each tuple is
+        of the form: (axis, [operator(s)], [bound(s)]) or ([operator(s)], [bound(s)])."""
         cdef vector[NumberNode.AxisBound] bound_axes = self.ptr.axis_wise_bounds()
+        cdef optional[Py_ssize_t] axis
 
         output = []
         for i in range(bound_axes.size()):
             bound_axis = &bound_axes[i]
+            axis = bound_axis.axis()
             py_axis_ops = [_parse_cpp_operators(bound_axis.get_operator(j))
                            for j in range(bound_axis.num_operators())]
             py_axis_bounds = [bound_axis.get_bound(j)
                               for j in range(bound_axis.num_bounds())]
-            output.append((bound_axis.axis(), py_axis_ops, py_axis_bounds))
+            # axis may be nullopt
+            if axis.has_value():
+                output.append((axis.value(), py_axis_ops, py_axis_bounds))
+            else:
+                output.append((py_axis_ops, py_axis_bounds))
 
         return output
 
@@ -331,7 +346,8 @@ cdef class IntegerVariable(ArraySymbol):
         usage of this symbol.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
-                 subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None):
+                 subject_to: None | list[tuple[int, str | list[str], float | list[float]] |
+                                         tuple[str | list[str], float | list[float]]] = None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )
@@ -418,7 +434,8 @@ cdef class IntegerVariable(ArraySymbol):
             with zf.open(info, "r") as f:
                 # Note that import is a list of lists, not a list of tuples.
                 # Hence we convert to tuple. We could also support lists.
-                subject_to = [(axis, ops, bounds) for axis, ops, bounds in json.load(f)]
+                subject_to = [(item[0], item[1], item[2]) if len(item) == 3
+                              else (item[0], item[1]) for item in json.load(f)]
 
         return IntegerVariable(model,
                                shape=shape_info["shape"],
@@ -460,18 +477,24 @@ cdef class IntegerVariable(ArraySymbol):
             zf.writestr(directory + "subject_to.json", encoder.encode(subject_to))
 
     def axis_wise_bounds(self):
-        """Axis wise bound(s) of Integer symbol as a list of tuples where
-        each tuple is of the form: (axis, [operator(s)], [bound(s)])."""
+        """Axis wise bound(s) of Integer symbol as a list of tuples where each tuple is
+        of the form: (axis, [operator(s)], [bound(s)]) or ([operator(s)], [bound(s)])."""
         cdef vector[NumberNode.AxisBound] bound_axes = self.ptr.axis_wise_bounds()
+        cdef optional[Py_ssize_t] axis
 
         output = []
         for i in range(bound_axes.size()):
             bound_axis = &bound_axes[i]
+            axis = bound_axis.axis()
             py_axis_ops = [_parse_cpp_operators(bound_axis.get_operator(j))
                            for j in range(bound_axis.num_operators())]
             py_axis_bounds = [bound_axis.get_bound(j)
                               for j in range(bound_axis.num_bounds())]
-            output.append((bound_axis.axis(), py_axis_ops, py_axis_bounds))
+            # axis may be nullopt
+            if axis.has_value():
+                output.append((axis.value(), py_axis_ops, py_axis_bounds))
+            else:
+                output.append((py_axis_ops, py_axis_bounds))
 
         return output
 
