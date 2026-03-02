@@ -36,7 +36,7 @@ class Copier : public StateManager {
         Backup(Copier& outer) : copier_(outer) {
             size_ = copier_.store.size();
             for (const auto& st_ptr : copier_.store) {
-                backup_store_.emplace_back(std::move(st_ptr->save()));
+                backup_store_.emplace_back(st_ptr->save());
             }
         }
 
