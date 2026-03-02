@@ -35,7 +35,7 @@ class StateInt : virtual public State<ssize_t> {
     StateInt(ssize_t value) : v_(value) {}
 
     ssize_t get_value() override { return v_; }
-    void set_value(int64_t value) override { v_ = value; }
+    void set_value(ssize_t value) override { v_ = value; }
 
     virtual void increment() { v_++; }
     virtual void decrement() { v_--; }
