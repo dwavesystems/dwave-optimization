@@ -27,7 +27,7 @@ class StateManager {
     virtual void save_state() = 0;
     virtual void restore_state() = 0;
     virtual void restore_state_until(int level) = 0;
-    virtual StateInt* make_state_int(int init_value) = 0;
+    virtual StateInt* make_state_int(ssize_t init_value) = 0;
     virtual StateBool* make_state_bool(bool init_value) = 0;
     virtual StateReal* make_state_real(double init_value) = 0;
 };

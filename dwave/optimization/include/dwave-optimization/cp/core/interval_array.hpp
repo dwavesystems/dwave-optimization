@@ -47,7 +47,7 @@ class IntervalArray : public DomainArray {
     std::vector<State<T>*> max_;
 };
 
-using IntIntervalArray = IntervalArray<int64_t>;
+using IntIntervalArray = IntervalArray<ssize_t>;
 using RealIntervalArray = IntervalArray<double>;
 
 }  // namespace dwave::optimization::cp

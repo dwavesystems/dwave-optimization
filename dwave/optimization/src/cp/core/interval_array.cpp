@@ -31,15 +31,15 @@ IntervalArray<double>::IntervalArray(StateManager* sm, ssize_t size) {
 }
 
 template <>
-IntervalArray<int64_t>::IntervalArray(StateManager* sm, ssize_t size) {
+IntervalArray<ssize_t>::IntervalArray(StateManager* sm, ssize_t size) {
     min_.resize(size, sm->make_state_int(0));
-    max_.resize(size, sm->make_state_int((int64_t)1 << 51));
+    max_.resize(size, sm->make_state_int((ssize_t)1 << 51));
 
     min_.resize(size);
     max_.resize(size);
     for (size_t i = 0; i < min_.size(); ++i) {
         min_[i] = sm->make_state_int(0);
-        max_[i] = sm->make_state_int((int64_t)1 << 51);
+        max_[i] = sm->make_state_int((ssize_t)1 << 51);
     }
 }
 
@@ -59,11 +59,11 @@ IntervalArray<double>::IntervalArray(StateManager* sm, ssize_t size, double lb, 
 }
 
 template <>
-IntervalArray<int64_t>::IntervalArray(StateManager* sm, ssize_t size, double lb, double ub) {
-    if (lb < std::numeric_limits<int64_t>::min())
-        throw std::invalid_argument("lower bound too small for int64_t");
-    if (ub > std::numeric_limits<int64_t>::max())
-        throw std::invalid_argument("upper bound too big for int64_t");
+IntervalArray<ssize_t>::IntervalArray(StateManager* sm, ssize_t size, double lb, double ub) {
+    if (lb < std::numeric_limits<ssize_t>::min())
+        throw std::invalid_argument("lower bound too small for ssize_t");
+    if (ub > std::numeric_limits<ssize_t>::max())
+        throw std::invalid_argument("upper bound too big for ssize_t");
 
     if (std::ceil(lb) > std::floor(ub)) {
         throw std::invalid_argument("lower bound larger than upper bound");
@@ -98,7 +98,7 @@ IntervalArray<double>::IntervalArray(StateManager* sm, std::vector<double> lb,
 }
 
 template <>
-IntervalArray<int64_t>::IntervalArray(StateManager* sm, std::vector<double> lb,
+IntervalArray<ssize_t>::IntervalArray(StateManager* sm, std::vector<double> lb,
                                       std::vector<double> ub) {
     if (lb.size() != ub.size()) {
         throw std::invalid_argument("lower bounds and upper bounds have different sizes");
@@ -108,10 +108,10 @@ IntervalArray<int64_t>::IntervalArray(StateManager* sm, std::vector<double> lb,
     max_.resize(ub.size());
 
     for (size_t i = 0; i < lb.size(); ++i) {
-        if (lb[i] < std::numeric_limits<int64_t>::min())
-            throw std::invalid_argument("lower bound too small for int64_t");
-        if (ub[i] > std::numeric_limits<int64_t>::max())
-            throw std::invalid_argument("upper bound too big for int64_t");
+        if (lb[i] < std::numeric_limits<ssize_t>::min())
+            throw std::invalid_argument("lower bound too small for ssize_t");
+        if (ub[i] > std::numeric_limits<ssize_t>::max())
+            throw std::invalid_argument("upper bound too big for ssize_t");
         if (lb[i] > ub[i]) throw std::invalid_argument("lower bound larger than upper bound");
         min_[i] = sm->make_state_int(std::ceil(lb[i]));
         max_[i] = sm->make_state_int(std::floor(ub[i]));
@@ -137,7 +137,7 @@ double IntervalArray<double>::size(int index) const {
 }
 
 template <>
-double IntervalArray<int64_t>::size(int index) const {
+double IntervalArray<ssize_t>::size(int index) const {
     assert(index < min_.size());
     return max_[index]->get_value() - min_[index]->get_value() + 1;
 }
@@ -148,7 +148,7 @@ bool IntervalArray<double>::is_bound(int index) const {
 }
 
 template <>
-bool IntervalArray<int64_t>::is_bound(int index) const {
+bool IntervalArray<ssize_t>::is_bound(int index) const {
     return (this->size(index) == 1);
 }
 
@@ -160,7 +160,7 @@ bool IntervalArray<double>::contains(double value, int index) const {
 }
 
 template <>
-bool IntervalArray<int64_t>::contains(double value, int index) const {
+bool IntervalArray<ssize_t>::contains(double value, int index) const {
     if (value > max_[index]->get_value()) return false;
     if (value < min_[index]->get_value()) return false;
     if (std::floor(value) != std::ceil(value)) return false;
@@ -174,7 +174,7 @@ CPStatus IntervalArray<double>::remove(double value, int index, DomainListener* 
 }
 
 template <>
-CPStatus IntervalArray<int64_t>::remove(double value, int index, DomainListener* l) {
+CPStatus IntervalArray<ssize_t>::remove(double value, int index, DomainListener* l) {
     // can only remove from the boundary
     if (this->contains(value, index)) {
         // if there's only this value, then domain is wiped out
@@ -208,7 +208,7 @@ CPStatus IntervalArray<double>::remove_above(double value, int index, DomainList
 }
 
 template <>
-CPStatus IntervalArray<int64_t>::remove_above(double value, int index, DomainListener* l) {
+CPStatus IntervalArray<ssize_t>::remove_above(double value, int index, DomainListener* l) {
     // wipe-out all domain
     if (min_[index]->get_value() > value) return CPStatus::Inconsistency;
 
@@ -234,7 +234,7 @@ CPStatus IntervalArray<double>::remove_below(double value, int index, DomainList
 }
 
 template <>
-CPStatus IntervalArray<int64_t>::remove_below(double value, int index, DomainListener* l) {
+CPStatus IntervalArray<ssize_t>::remove_below(double value, int index, DomainListener* l) {
     // wipe-out all domain
     if (max_[index]->get_value() < value) return CPStatus::Inconsistency;
 
@@ -264,6 +264,6 @@ CPStatus IntervalArray<T>::remove_all_but(double value, int index, DomainListene
 }
 
 template class IntervalArray<double>;
-template class IntervalArray<int64_t>;
+template class IntervalArray<ssize_t>;
 
 }  // namespace dwave::optimization::cp

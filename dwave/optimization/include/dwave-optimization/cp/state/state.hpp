@@ -29,19 +29,19 @@ class State {
     virtual void set_value(T v) = 0;
 };
 
-class StateInt : virtual public State<int64_t> {
+class StateInt : virtual public State<ssize_t> {
  public:
     StateInt() : v_(0) {}
-    StateInt(int value) : v_(value) {}
+    StateInt(ssize_t value) : v_(value) {}
 
-    int64_t get_value() override { return v_; }
+    ssize_t get_value() override { return v_; }
     void set_value(int64_t value) override { v_ = value; }
 
     virtual void increment() { v_++; }
     virtual void decrement() { v_--; }
 
  protected:
-    int v_;
+    ssize_t v_;
 };
 
 class StateBool : virtual public State<bool> {

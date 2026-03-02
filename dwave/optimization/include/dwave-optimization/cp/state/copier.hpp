@@ -74,7 +74,7 @@ class Copier : public StateManager {
     void with_new_state(std::function<void()> body) override;
 
     // TODO: the next two methods have a dynamic cast that doesn't make me really comfortable
-    StateInt* make_state_int(int init_value) override;
+    StateInt* make_state_int(ssize_t init_value) override;
 
     StateBool* make_state_bool(bool init_value) override;
 

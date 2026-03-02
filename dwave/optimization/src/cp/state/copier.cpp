@@ -39,7 +39,7 @@ void Copier::with_new_state(std::function<void()> body) {
     this->restore_state_until(level);
 }
 
-StateInt* Copier::make_state_int(int init_value) {
+StateInt* Copier::make_state_int(ssize_t init_value) {
     store.emplace_back(std::make_unique<CopyInt>(init_value));
     return dynamic_cast<StateInt*>(store.back().get());
 }
