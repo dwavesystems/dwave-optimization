@@ -120,25 +120,25 @@ IntervalArray<ssize_t>::IntervalArray(StateManager* sm, std::vector<double> lb,
 
 template <typename T>
 double IntervalArray<T>::min(int index) const {
-    assert(index < min_.size());
+    assert(index < static_cast<int>(min_.size()));
     return min_[index]->get_value();
 }
 
 template <typename T>
 double IntervalArray<T>::max(int index) const {
-    assert(index < max_.size());
+    assert(index < static_cast<int>(max_.size()));
     return max_[index]->get_value();
 }
 
 template <>
 double IntervalArray<double>::size(int index) const {
-    assert(index < min_.size());
+    assert(index < static_cast<int>(min_.size()));
     return max_[index]->get_value() - min_[index]->get_value();
 }
 
 template <>
 double IntervalArray<ssize_t>::size(int index) const {
-    assert(index < min_.size());
+    assert(index < static_cast<int>(min_.size()));
     return max_[index]->get_value() - min_[index]->get_value() + 1;
 }
 
@@ -251,8 +251,8 @@ CPStatus IntervalArray<T>::remove_all_but(double value, int index, DomainListene
     // if the value is not contained, wipe-out
     if (not this->contains(value, index)) return CPStatus::Inconsistency;
 
-    bool changed_min = value = min_[index]->get_value();
-    bool changed_max = value = max_[index]->get_value();
+    bool changed_min = (value = min_[index]->get_value());
+    bool changed_max = (value = max_[index]->get_value());
 
     min_[index]->set_value(value);
     max_[index]->set_value(value);

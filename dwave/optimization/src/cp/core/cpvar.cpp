@@ -81,7 +81,7 @@ void CPVar::propagate_on_domain_change(Propagator* p) { on_domain.push_back(p); 
 
 void CPVar::initialize_state(CPState& state) const {
     assert(this->cp_var_index_ >= 0);
-    assert(state.var_state_.size() > cp_var_index_);
+    assert(static_cast<ssize_t>(state.var_state_.size()) > cp_var_index_);
 
     // TODO: for now we don't handle dynamically sized nodes
     assert(node_->size() > 0);

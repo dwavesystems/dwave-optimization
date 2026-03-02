@@ -59,7 +59,7 @@ class Propagator {
 
     bool active(const CPPropagatorsState& state) const;
 
-    bool set_active(CPPropagatorsState& state, bool active) const;
+    void set_active(CPPropagatorsState& state, bool active) const;
 
     virtual CPStatus propagate(CPPropagatorsState& p_state, CPVarsState& v_state) = 0;
 
