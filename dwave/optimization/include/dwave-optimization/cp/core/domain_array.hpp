@@ -15,6 +15,7 @@
 #pragma once
 #include <cstddef>
 
+#include "dwave-optimization/common.hpp"
 #include "dwave-optimization/cp/core/domain_listener.hpp"
 #include "dwave-optimization/cp/core/status.hpp"
 

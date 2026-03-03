@@ -16,9 +16,10 @@
 
 #include <cassert>
 #include <cmath>
-#include <cstddef>
 #include <numeric>
 #include <stdexcept>
+
+#include "dwave-optimization/common.hpp"
 
 namespace dwave::optimization::cp {
 template <class T>
