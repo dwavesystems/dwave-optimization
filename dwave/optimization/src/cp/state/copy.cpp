@@ -22,7 +22,7 @@ std::unique_ptr<StateEntry> Copy<T>::save() {
     return std::make_unique<CopyStateEntry>(this->get_value(), this);
 }
 
-template class Copy<int64_t>;
+template class Copy<ssize_t>;
 template class Copy<bool>;
 template class Copy<double>;
 }  // namespace dwave::optimization::cp
