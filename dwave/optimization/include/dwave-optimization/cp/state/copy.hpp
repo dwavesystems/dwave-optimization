@@ -41,10 +41,10 @@ class Copy : virtual public State<T>, public Storage {
     virtual std::unique_ptr<StateEntry> save() override;
 };
 
-class CopyInt : virtual public StateInt, virtual public Copy<int64_t> {
+class CopyInt : virtual public StateInt, virtual public Copy<ssize_t> {
  public:
     // constructor
-    CopyInt(int initial) : StateInt(initial) {}
+    CopyInt(ssize_t initial) : StateInt(initial) {}
     using StateInt::decrement;
     using StateInt::get_value;
     using StateInt::increment;
