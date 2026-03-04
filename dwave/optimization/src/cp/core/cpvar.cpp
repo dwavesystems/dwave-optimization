@@ -17,10 +17,10 @@
 #include <cassert>
 namespace dwave::optimization::cp {
 
+// ------ CPVar -------
+
 CPVar::CPVar(const CPModel& model, const dwave::optimization::ArrayNode* node_ptr, int index)
         : model_(model), node_(node_ptr), cp_var_index_(index) {}
-
-// ------ CPVar -------
 
 double CPVar::min(const CPVarsState& state, int index) const {
     const CPVarData* data = data_ptr<CPVarData>(state);
@@ -47,6 +47,26 @@ bool CPVar::contains(const CPVarsState& state, double value, int index) const {
     return data->contains(value, index);
 }
 
+bool CPVar::is_active(const CPVarsState& state, int index) const {
+    const CPVarData* data = data_ptr<CPVarData>(state);
+    return data->is_active(index);
+}
+
+bool CPVar::maybe_active(const CPVarsState& state, int index) const {
+    const CPVarData* data = data_ptr<CPVarData>(state);
+    return data->maybe_active(index);
+}
+
+ssize_t CPVar::min_size(const CPVarsState& state) const {
+    const CPVarData* data = data_ptr<CPVarData>(state);
+    return data->min_size();
+}
+
+ssize_t CPVar::max_size(const CPVarsState& state) const {
+    const CPVarData* data = data_ptr<CPVarData>(state);
+    return data->max_size();
+}
+
 CPStatus CPVar::remove(CPVarsState& state, double value, int index) const {
     CPVarData* data = data_ptr<CPVarData>(state);
     return data->remove(value, index);
@@ -67,6 +87,16 @@ CPStatus CPVar::assign(CPVarsState& state, double value, int index) const {
     return data->remove_all_but(value, index);
 }
 
+CPStatus CPVar::set_min_size(CPVarsState& state, int new_min_size) const {
+    CPVarData* data = data_ptr<CPVarData>(state);
+    return data->update_min_size(new_min_size);
+}
+
+CPStatus CPVar::set_max_size(CPVarsState& state, int new_max_size) const {
+    CPVarData* data = data_ptr<CPVarData>(state);
+    return data->update_max_size(new_max_size);
+}
+
 void CPVar::schedule_all(CPState& state, const std::vector<Propagator*>& propagators) const {
     for (auto p : propagators) {
         state.schedule(p);
@@ -84,10 +114,30 @@ void CPVar::initialize_state(CPState& state) const {
     assert(static_cast<ssize_t>(state.var_state_.size()) > cp_var_index_);
 
     // TODO: for now we don't handle dynamically sized nodes
-    assert(node_->size() > 0);
+
+    ssize_t max_size, min_size;
+
+    if (node_->size() > 0) {
+        // Static array
+        max_size = node_->size();
+        min_size = node_->size();
+    } else {
+        // Dynamic arrays
+        SizeInfo sizeinfo = node_->sizeinfo();
+        if (not sizeinfo.max.has_value()) {
+            throw std::invalid_argument("Array has no max size available");
+        }
+
+        if (not sizeinfo.min.has_value()) {
+            throw std::invalid_argument("Array has no min size available");
+        }
+
+        max_size = sizeinfo.max.value();
+        min_size = sizeinfo.min.value();
+    }
 
     state.var_state_[cp_var_index_] = std::make_unique<CPVarData>(
-            state.get_state_manager(), node_->size(), node_->min(), node_->max(),
+            state.get_state_manager(), min_size, max_size, node_->min(), node_->max(),
             std::make_unique<Listener>(this, state), node_->integral());
 }
 

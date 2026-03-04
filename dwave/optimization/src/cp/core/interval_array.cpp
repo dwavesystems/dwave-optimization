@@ -20,37 +20,65 @@
 #include <stdexcept>
 
 namespace dwave::optimization::cp {
+
 template <>
-IntervalArray<double>::IntervalArray(StateManager* sm, ssize_t size) {
-    min_.resize(size);
-    max_.resize(size);
-    for (size_t i = 0; i < min_.size(); ++i) {
+IntervalArray<double>::IntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size) {
+    if (min_size > max_size) {
+        throw std::invalid_argument("Min size larger than max size");
+    }
+
+    assert(min_size <= max_size);
+    min_size_ = sm->make_state_int(min_size);
+    max_size_ = sm->make_state_int(max_size);
+
+    // Set the bounds for each index
+    min_.resize(max_size);
+    max_.resize(max_size);
+    for (ssize_t i = 0; i < max_size; ++i) {
         min_[i] = sm->make_state_real(-std::numeric_limits<double>::max() / 2);
         max_[i] = sm->make_state_real(std::numeric_limits<double>::max() / 2);
     }
 }
 
 template <>
-IntervalArray<ssize_t>::IntervalArray(StateManager* sm, ssize_t size) {
-    min_.resize(size, sm->make_state_int(0));
-    max_.resize(size, sm->make_state_int((ssize_t)1 << 51));
+IntervalArray<ssize_t>::IntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size) {
+    if (min_size > max_size) {
+        throw std::invalid_argument("Min size larger than max size");
+    }
 
-    min_.resize(size);
-    max_.resize(size);
+    assert(min_size <= max_size);
+    min_size_ = sm->make_state_int(min_size);
+    max_size_ = sm->make_state_int(max_size);
+
+    min_.resize(max_size);
+    max_.resize(max_size);
     for (size_t i = 0; i < min_.size(); ++i) {
         min_[i] = sm->make_state_int(0);
         max_[i] = sm->make_state_int((ssize_t)1 << 51);
     }
 }
 
+template <typename T>
+IntervalArray<T>::IntervalArray(StateManager* sm, ssize_t size)
+        : IntervalArray<T>(sm, size, size) {}
+
 template <>
-IntervalArray<double>::IntervalArray(StateManager* sm, ssize_t size, double lb, double ub) {
+IntervalArray<double>::IntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size,
+                                     double lb, double ub) {
+    if (min_size > max_size) {
+        throw std::invalid_argument("Min size larger than max size");
+    }
+
     if (lb > ub) {
         throw std::invalid_argument("lower bound larger than upper bound");
     }
 
-    min_.resize(size);
-    max_.resize(size);
+    assert(min_size <= max_size);
+    min_size_ = sm->make_state_int(min_size);
+    max_size_ = sm->make_state_int(max_size);
+
+    min_.resize(max_size);
+    max_.resize(max_size);
 
     for (size_t i = 0; i < min_.size(); ++i) {
         min_[i] = sm->make_state_real(lb);
@@ -59,7 +87,10 @@ IntervalArray<double>::IntervalArray(StateManager* sm, ssize_t size, double lb, 
 }
 
 template <>
-IntervalArray<ssize_t>::IntervalArray(StateManager* sm, ssize_t size, double lb, double ub) {
+IntervalArray<ssize_t>::IntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size,
+                                      double lb, double ub) {
+    if (min_size > max_size) throw std::invalid_argument("Min size larger than max size");
+
     if (lb < std::numeric_limits<ssize_t>::min())
         throw std::invalid_argument("lower bound too small for ssize_t");
     if (ub > std::numeric_limits<ssize_t>::max())
@@ -69,8 +100,13 @@ IntervalArray<ssize_t>::IntervalArray(StateManager* sm, ssize_t size, double lb,
         throw std::invalid_argument("lower bound larger than upper bound");
     }
 
-    min_.resize(size);
-    max_.resize(size);
+    assert(min_size <= max_size);
+    min_size_ = sm->make_state_int(min_size);
+    max_size_ = sm->make_state_int(max_size);
+
+    // Set the bounds for each index
+    min_.resize(max_size);
+    max_.resize(max_size);
 
     for (size_t i = 0; i < min_.size(); ++i) {
         min_[i] = sm->make_state_int(std::ceil(lb));
@@ -78,15 +114,27 @@ IntervalArray<ssize_t>::IntervalArray(StateManager* sm, ssize_t size, double lb,
     }
 }
 
+template <typename T>
+IntervalArray<T>::IntervalArray(StateManager* sm, ssize_t size, double lb, double ub)
+        : IntervalArray<T>(sm, size, size, lb, ub) {}
+
 template <>
-IntervalArray<double>::IntervalArray(StateManager* sm, std::vector<double> lb,
+IntervalArray<double>::IntervalArray(StateManager* sm, ssize_t min_size, std::vector<double> lb,
                                      std::vector<double> ub) {
     if (lb.size() != ub.size()) {
         throw std::invalid_argument("lower bounds and upper bounds have different sizes");
     }
 
+    if (min_size > static_cast<ssize_t>(lb.size())) {
+        throw std::invalid_argument("Min size larger than max size");
+    }
+
+    assert(min_size <= static_cast<ssize_t>(lb.size()));
+    min_size_ = sm->make_state_int(min_size);
+    max_size_ = sm->make_state_int(static_cast<ssize_t>(lb.size()));
+
     min_.resize(lb.size());
-    max_.resize(ub.size());
+    max_.resize(lb.size());
     for (size_t i = 0; i < lb.size(); ++i) {
         if (lb[i] > ub[i]) {
             throw std::invalid_argument("lower bound larger than upper bound");
@@ -98,11 +146,19 @@ IntervalArray<double>::IntervalArray(StateManager* sm, std::vector<double> lb,
 }
 
 template <>
-IntervalArray<ssize_t>::IntervalArray(StateManager* sm, std::vector<double> lb,
+IntervalArray<ssize_t>::IntervalArray(StateManager* sm, ssize_t min_size, std::vector<double> lb,
                                       std::vector<double> ub) {
     if (lb.size() != ub.size()) {
         throw std::invalid_argument("lower bounds and upper bounds have different sizes");
     }
+
+    if (min_size > static_cast<ssize_t>(lb.size())) {
+        throw std::invalid_argument("Min size larger than max size");
+    }
+
+    assert(min_size <= static_cast<ssize_t>(lb.size()));
+    min_size_ = sm->make_state_int(min_size);
+    max_size_ = sm->make_state_int(lb.size());
 
     min_.resize(lb.size());
     max_.resize(ub.size());
@@ -117,6 +173,10 @@ IntervalArray<ssize_t>::IntervalArray(StateManager* sm, std::vector<double> lb,
         max_[i] = sm->make_state_int(std::floor(ub[i]));
     }
 }
+
+template <typename T>
+IntervalArray<T>::IntervalArray(StateManager* sm, std::vector<double> lb, std::vector<double> ub)
+        : IntervalArray<T>(sm, lb.size(), lb, ub) {}
 
 template <typename T>
 double IntervalArray<T>::min(int index) const {
@@ -167,6 +227,16 @@ bool IntervalArray<ssize_t>::contains(double value, int index) const {
     return true;
 }
 
+template <typename T>
+bool IntervalArray<T>::is_active(int index) const {
+    return index < min_size_->get_value();
+}
+
+template <typename T>
+bool IntervalArray<T>::maybe_active(int index) const {
+    return index < max_size_->get_value();
+}
+
 template <>
 CPStatus IntervalArray<double>::remove(double value, int index, DomainListener* l) {
     // can't really remove a double, even from the boundary
@@ -175,10 +245,17 @@ CPStatus IntervalArray<double>::remove(double value, int index, DomainListener* 
 
 template <>
 CPStatus IntervalArray<ssize_t>::remove(double value, int index, DomainListener* l) {
-    // can only remove from the boundary
+    // This is an interval so we can only remove from the boundary
     if (this->contains(value, index)) {
         // if there's only this value, then domain is wiped out
-        if (this->is_bound(index)) return CPStatus::Inconsistency;
+        if (this->is_bound(index) and this->is_active(index)) return CPStatus::Inconsistency;
+
+        // The variable domain is fixed at the value we want to remove, but the variable is
+        // optional. Then this variabe becomes inactive. We can set the maximum size of the domain
+        // to the current index
+        if (this->is_bound(index) and this->maybe_active(index)) {
+            return this->update_max_size(index, l);
+        }
 
         bool change_max = value == max_[index]->get_value();
         bool change_min = value == min_[index]->get_value();
@@ -196,8 +273,14 @@ CPStatus IntervalArray<ssize_t>::remove(double value, int index, DomainListener*
 
 template <>
 CPStatus IntervalArray<double>::remove_above(double value, int index, DomainListener* l) {
-    // wipe-out all domain
-    if (min_[index]->get_value() > value) return CPStatus::Inconsistency;
+    // Wipe-out all domain on a mandatory variable, inconsistency.
+    if (min_[index]->get_value() > value and this->is_active(index)) return CPStatus::Inconsistency;
+
+    // Wipe out of the domain of an optional variable. We can set the maximum size of the domain
+    // to the current index
+    if (min_[index]->get_value() > value and this->maybe_active(index)) {
+        return this->update_max_size(index, l);
+    }
 
     // nothing to do
     if (max_[index]->get_value() <= value) return CPStatus::OK;
@@ -209,8 +292,14 @@ CPStatus IntervalArray<double>::remove_above(double value, int index, DomainList
 
 template <>
 CPStatus IntervalArray<ssize_t>::remove_above(double value, int index, DomainListener* l) {
-    // wipe-out all domain
-    if (min_[index]->get_value() > value) return CPStatus::Inconsistency;
+    // Wipe-out all domain on a mandatory variable, inconsistency.
+    if (min_[index]->get_value() > value and this->is_active(index)) return CPStatus::Inconsistency;
+
+    // Wipe out of the domain of an optional variable. We can set the maximum size of the domain
+    // to the current index
+    if (min_[index]->get_value() > value and this->maybe_active(index)) {
+        return this->update_max_size(index, l);
+    }
 
     // nothing to do
     if (max_[index]->get_value() <= value) return CPStatus::OK;
@@ -222,8 +311,14 @@ CPStatus IntervalArray<ssize_t>::remove_above(double value, int index, DomainLis
 
 template <>
 CPStatus IntervalArray<double>::remove_below(double value, int index, DomainListener* l) {
-    // wipe-out all domain
-    if (max_[index]->get_value() < value) return CPStatus::Inconsistency;
+    // Wipe-out all domain on a mandatory variable, inconsistency.
+    if (max_[index]->get_value() < value and this->is_active(index)) return CPStatus::Inconsistency;
+
+    // Wipe out of the domain of an optional variable. We can set the maximum size of the domain
+    // to the current index
+    if (max_[index]->get_value() < value and this->maybe_active(index)) {
+        return this->update_max_size(index, l);
+    }
 
     // nothing to do
     if (min_[index]->get_value() >= value) return CPStatus::OK;
@@ -235,8 +330,14 @@ CPStatus IntervalArray<double>::remove_below(double value, int index, DomainList
 
 template <>
 CPStatus IntervalArray<ssize_t>::remove_below(double value, int index, DomainListener* l) {
-    // wipe-out all domain
-    if (max_[index]->get_value() < value) return CPStatus::Inconsistency;
+    // Wipe-out all domain on a mandatory variable, inconsistency.
+    if (max_[index]->get_value() < value and this->is_active(index)) return CPStatus::Inconsistency;
+
+    // Wipe out of the domain of an optional variable. We can set the maximum size of the domain
+    // to the current index
+    if (max_[index]->get_value() < value and this->maybe_active(index)) {
+        return this->update_max_size(index, l);
+    }
 
     // nothing to do
     if (min_[index]->get_value() >= value) return CPStatus::OK;
@@ -248,8 +349,14 @@ CPStatus IntervalArray<ssize_t>::remove_below(double value, int index, DomainLis
 
 template <typename T>
 CPStatus IntervalArray<T>::remove_all_but(double value, int index, DomainListener* l) {
-    // if the value is not contained, wipe-out
-    if (not this->contains(value, index)) return CPStatus::Inconsistency;
+    // If the value is not contained, wipe-out a mandatory variable, cause an inconsistency
+    if (not this->contains(value, index) and this->is_active(index)) return CPStatus::Inconsistency;
+
+    // Wipe out of the domain of an optional variable. We can set the maximum size of the domain
+    // to the current index
+    if (not this->contains(value, index) and this->maybe_active(index)) {
+        return this->update_max_size(index, l);
+    }
 
     bool changed_min = (value = min_[index]->get_value());
     bool changed_max = (value = max_[index]->get_value());
@@ -260,6 +367,36 @@ CPStatus IntervalArray<T>::remove_all_but(double value, int index, DomainListene
     if (changed_max) l->change_max();
     if (changed_min) l->change_min();
 
+    return CPStatus::OK;
+}
+
+template <typename T>
+CPStatus IntervalArray<T>::update_min_size(int new_min_size, DomainListener* l) {
+    // Simple case, nothing to do
+    if (new_min_size < min_size_->get_value()) return CPStatus::OK;
+
+    // Wipeout of the domain for the size variable
+    if (new_min_size > max_size_->get_value()) return CPStatus::Inconsistency;
+
+    if (new_min_size != min_size_->get_value()) {
+        min_size_->set_value(new_min_size);
+        l->change_array_size();
+    }
+    return CPStatus::OK;
+}
+
+template <typename T>
+CPStatus IntervalArray<T>::update_max_size(int new_max_size, DomainListener* l) {
+    // Simple case, nothing to do
+    if (new_max_size > max_size_->get_value()) return CPStatus::OK;
+
+    // Wipeout of the domain for the size variable
+    if (new_max_size < min_size_->get_value()) return CPStatus::Inconsistency;
+
+    if (new_max_size != max_size_->get_value()) {
+        max_size_->set_value(new_max_size);
+        l->change_array_size();
+    }
     return CPStatus::OK;
 }
 

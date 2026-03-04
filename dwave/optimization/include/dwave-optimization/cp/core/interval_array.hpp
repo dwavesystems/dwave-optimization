@@ -25,26 +25,43 @@ template <typename T>
 class IntervalArray : public DomainArray {
  public:
     IntervalArray(StateManager* sm, ssize_t size);
+    IntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size);
+    IntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size, double lb, double up);
     IntervalArray(StateManager* sm, ssize_t size, double lb, double up);
+    IntervalArray(StateManager* sm, ssize_t min_size, std::vector<double> lb,
+                  std::vector<double> ub);
     IntervalArray(StateManager* sm, std::vector<double> lb, std::vector<double> ub);
 
     size_t num_domains() const override { return min_.size(); }
+
+    ssize_t min_size() const override { return min_size_->get_value(); }
+    ssize_t max_size() const override { return max_size_->get_value(); }
     double min(int index) const override;
     double max(int index) const override;
     double size(int index) const override;
     bool is_bound(int index) const override;
     bool contains(double value, int index) const override;
 
+    bool is_active(int index) const override;
+    bool maybe_active(int index) const override;
+
     CPStatus remove(double value, int index, DomainListener* l) override;
     CPStatus remove_above(double value, int index, DomainListener* l) override;
     CPStatus remove_below(double value, int index, DomainListener* l) override;
     CPStatus remove_all_but(double value, int index, DomainListener* l) override;
+    CPStatus update_min_size(int new_min_size, DomainListener* l) override;
+    CPStatus update_max_size(int new_max_size, DomainListener* l) override;
 
  private:
     // Change double do an object that can be backtracked.
     // And maybe get
     std::vector<State<T>*> min_;
     std::vector<State<T>*> max_;
+
+    StateInt* min_size_;
+    StateInt* max_size_;
+
+    void set_sizes(ssize_t size, ssize_t min_size, ssize_t max_size);
 };
 
 using IntIntervalArray = IntervalArray<ssize_t>;

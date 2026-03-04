@@ -16,14 +16,13 @@
 
 #include "dwave-optimization/cp/core/domain_listener.hpp"
 
-namespace dwave::optimization::cp
-{
-    class TestListener : public DomainListener {
-        public:
-        void bind() override {}
-        void change() override {}
-        void change_max() override {}
-        void change_min() override {}
-    };
-
-} // namespace dwave::optimization::cp
+namespace dwave::optimization::cp {
+class TestListener : public DomainListener {
+ public:
+    void bind() override {}
+    void change() override {}
+    void change_max() override {}
+    void change_min() override {}
+    void change_array_size() override {}
+};
+}  // namespace dwave::optimization::cp

@@ -83,7 +83,7 @@ class CPModel {
 };
 
 /// Interface for CP variables, allows query and modify their domain. It assumes a flattened array
-/// of variables
+/// of variables.
 class CPVar {
  public:
     virtual ~CPVar() = default;
@@ -111,18 +111,27 @@ class CPVar {
     double size(const CPVarsState& state, int index) const;
     bool is_bound(const CPVarsState& state, int index) const;
     bool contains(const CPVarsState& state, double value, int index) const;
+    bool is_active(const CPVarsState& state, int index) const;
+    bool maybe_active(const CPVarsState& state, int index) const;
+    ssize_t max_size(const CPVarsState& state) const;
+    ssize_t min_size(const CPVarsState& state) const;
 
     // actions on the domains
     CPStatus remove(CPVarsState& state, double value, int index) const;
     CPStatus remove_above(CPVarsState& state, double value, int index) const;
     CPStatus remove_below(CPVarsState& state, double value, int index) const;
     CPStatus assign(CPVarsState& state, double value, int index) const;
+    CPStatus set_min_size(CPVarsState& state, int index) const;
+    CPStatus set_max_size(CPVarsState& state, int index) const;
 
     // actions for the propagation engine
     void schedule_all(CPState& state, const std::vector<Propagator*>& propagators) const;
 
     // Note: maybe we need the state here.. especially if we want to attach propagators dynamically
     // during the search...
+    // Another note: it is als possible to use a vector or struct where the struct holds the
+    // propagator and the event type (as an enum) that triggers it. Still considering what to do
+    // here..
     void propagate_on_domain_change(Propagator* p);
     void propagate_on_bounds_change(Propagator* p);
     void propagate_on_assignment(Propagator* p);
@@ -136,6 +145,7 @@ class CPVar {
     std::vector<Propagator*> on_bind;
     std::vector<Propagator*> on_domain;
     std::vector<Propagator*> on_bounds;
+    std::vector<Propagator*> on_array_size_change;
 
  protected:
     const CPModel& model_;
@@ -149,6 +159,7 @@ class CPVar {
         Listener(const CPVar* var, CPState& state) : var_(var), state_(state) {}
 
         // domain listener overrides
+
         void bind() override { var_->schedule_all(state_, var_->on_bind); }
 
         void change() override { var_->schedule_all(state_, var_->on_domain); }
@@ -157,7 +168,9 @@ class CPVar {
 
         void change_max() override { var_->schedule_all(state_, var_->on_bounds); }
 
-        //   void empty() override { return CPStatus::Inconsistency; }
+        void change_array_size() override {
+            var_->schedule_all(state_, var_->on_array_size_change);
+        }
 
      private:
         const CPVar* var_;

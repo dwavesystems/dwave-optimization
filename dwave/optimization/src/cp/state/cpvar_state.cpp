@@ -20,13 +20,13 @@
 
 namespace dwave::optimization::cp {
 
-CPVarData::CPVarData(StateManager* sm, ssize_t size, double lb, double ub,
+CPVarData::CPVarData(StateManager* sm, ssize_t min_size, ssize_t max_size, double lb, double ub,
                      std::unique_ptr<DomainListener> listener, bool integral) {
     // Set a real interval
     if (integral) {
-        domains_ = std::make_unique<IntIntervalArray>(sm, size, lb, ub);
+        domains_ = std::make_unique<IntIntervalArray>(sm, min_size, max_size, lb, ub);
     } else {
-        domains_ = std::make_unique<RealIntervalArray>(sm, size, lb, ub);
+        domains_ = std::make_unique<RealIntervalArray>(sm, min_size, max_size, lb, ub);
     }
 
     listen_ = std::move(listener);
@@ -44,6 +44,14 @@ bool CPVarData::is_bound(int index) const { return domains_->is_bound(index); }
 
 bool CPVarData::contains(double value, int index) const { return domains_->contains(value, index); }
 
+bool CPVarData::is_active(int index) const { return domains_->is_active(index); }
+
+bool CPVarData::maybe_active(int index) const { return domains_->maybe_active(index); }
+
+ssize_t CPVarData::min_size() const { return domains_->min_size(); }
+
+ssize_t CPVarData::max_size() const { return domains_->max_size(); }
+
 CPStatus CPVarData::remove(double value, int index) {
     return domains_->remove(value, index, listen_.get());
 }
@@ -58,6 +66,14 @@ CPStatus CPVarData::remove_below(double value, int index) {
 
 CPStatus CPVarData::remove_all_but(double value, int index) {
     return domains_->remove_all_but(value, index, listen_.get());
+}
+
+CPStatus CPVarData::update_min_size(ssize_t new_min_size) {
+    return domains_->update_min_size(new_min_size, listen_.get());
+}
+
+CPStatus CPVarData::update_max_size(ssize_t new_max_size) {
+    return domains_->update_max_size(new_max_size, listen_.get());
 }
 
 }  // namespace dwave::optimization::cp

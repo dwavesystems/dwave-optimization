@@ -23,7 +23,7 @@ namespace dwave::optimization::cp {
 
 class CPVarData {
  public:
-    CPVarData(StateManager* sm, ssize_t size, double lb, double ub,
+    CPVarData(StateManager* sm, ssize_t min_size, ssize_t max_size, double lb, double ub,
               std::unique_ptr<DomainListener> listener, bool integral);
 
     // actions on the underlying domain
@@ -34,11 +34,17 @@ class CPVarData {
     double size(int index) const;
     bool is_bound(int index) const;
     bool contains(double value, int index) const;
+    bool is_active(int index) const;
+    bool maybe_active(int index) const;
+    ssize_t min_size() const;
+    ssize_t max_size() const;
 
     CPStatus remove(double value, int index);
     CPStatus remove_above(double value, int index);
     CPStatus remove_below(double value, int index);
     CPStatus remove_all_but(double value, int index);
+    CPStatus update_min_size(ssize_t new_min_size);
+    CPStatus update_max_size(ssize_t new_min_size);
 
  protected:
     // keeping it as a unique pointer in case we wanna have different types of domains..

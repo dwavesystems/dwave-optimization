@@ -25,5 +25,6 @@ class DomainListener {
     virtual void change() = 0;
     virtual void change_max() = 0;
     virtual void change_min() = 0;
+    virtual void change_array_size() = 0;
 };
 }  // namespace dwave::optimization::cp
