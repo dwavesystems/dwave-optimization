@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    The symbols: `All`, `Any`, `Max`, `Min`, `Prod`, and `Sum` can infer
+    their size from their predecessor's size.

@@ -86,6 +86,9 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
     using ArrayOutputMixin::size;
     ssize_t size(const State& state) const override;
 
+    /// @copydoc Array::sizeinfo()
+    SizeInfo sizeinfo() const override { return sizeinfo_; };
+
     /// @copydoc Array::size_diff()
     ssize_t size_diff(const State& state) const override;
 
@@ -110,6 +113,8 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
     // The minimum and maximum (inclusive) value that might be returned as well
     // as whether we're integral or not.
     const ValuesInfo values_info_;
+
+    const SizeInfo sizeinfo_;
 
     // During propagation, we need to take a predecessor's `update` and apply
     // it to the correct `index` in the ReduceNode buffer. This method
