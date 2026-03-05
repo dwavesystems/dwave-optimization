@@ -250,7 +250,8 @@ void BroadcastToNode::propagate(State& state) const {
             assert(([&]() {
                        std::vector<ssize_t> multi_index =
                                unravel_index(update.index, array_ptr_->shape());
-                       multi_index.insert(multi_index.begin(), this->ndim() - array_ptr_->ndim(), 0);
+                       multi_index.insert(multi_index.begin(), this->ndim() - array_ptr_->ndim(),
+                                          0);
                        const ssize_t assert_index = ravel_multi_index(multi_index, this->shape());
                        return assert_index == index;
                    })() &&
@@ -1478,7 +1479,8 @@ TransposeNode::TransposeNode(ArrayNode* array_ptr)
           shape_(reverse_span_helper(array_ptr->shape(), ndim_)),
           strides_(reverse_span_helper(array_ptr->strides(), ndim_)),
           contiguous_(is_contiguous(ndim_, shape_.get(), strides_.get())),
-          values_info_(array_ptr) {
+          values_info_(array_ptr),
+          sizeinfo_(array_ptr_->sizeinfo()) {
     add_predecessor(array_ptr);
 }
 
@@ -1510,6 +1512,8 @@ std::span<const ssize_t> TransposeNode::strides() const {
 ssize_t TransposeNode::size() const { return array_ptr_->size(); }
 
 ssize_t TransposeNode::size(const State& state) const { return array_ptr_->size(state); }
+
+SizeInfo TransposeNode::sizeinfo() const { return this->sizeinfo_; }
 
 double TransposeNode::min() const { return values_info_.min; }
 

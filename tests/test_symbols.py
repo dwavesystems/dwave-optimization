@@ -4013,6 +4013,14 @@ class TestTranspose(utils.SymbolTests):
         with model.lock():
             yield transpose
 
+    def test_sizeinfo_awareness(self):
+        model = Model()
+        s = model.set(10)
+        x = dwave.optimization.symbols.Transpose(s)
+        y = dwave.optimization.symbols.Transpose(s)
+        # only possible if both `x` and `y` know their size is derived from `s`.
+        z = y + x
+
     def test(self):
         from dwave.optimization.symbols import Transpose
         model = Model()
