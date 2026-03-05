@@ -540,6 +540,8 @@ class TransposeNode : public ArrayNode {
     const ssize_t ndim_;
     const std::unique_ptr<ssize_t[]> shape_;
     const std::unique_ptr<ssize_t[]> strides_;
+    /// The number of indices per stride in the predecessor array.
+    const std::vector<ssize_t> array_indices_per_stride_;
     const bool contiguous_;
     const ValuesInfo values_info_;
     const SizeInfo sizeinfo_;
