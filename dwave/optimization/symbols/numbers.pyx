@@ -37,84 +37,92 @@ from dwave.optimization.states cimport States
 
 # Convert the str operators "==", "<=", ">=" into their corresponding
 # C++ objects.
-cdef NumberNode.AxisBound.Operator _parse_python_operator(str op) except *:
+cdef NumberNode.SumConstraint.Operator _parse_python_operator(str op) except *:
     if op == "==":
-        return NumberNode.AxisBound.Operator.Equal
+        return NumberNode.SumConstraint.Operator.Equal
     elif op == "<=":
-        return NumberNode.AxisBound.Operator.LessEqual
+        return NumberNode.SumConstraint.Operator.LessEqual
     elif op == ">=":
-        return NumberNode.AxisBound.Operator.GreaterEqual
+        return NumberNode.SumConstraint.Operator.GreaterEqual
     else:
-        raise TypeError(f"Invalid bound axis operator: {op!r}")
+        raise TypeError(f"Invalid sum constraint operator: {op!r}")
 
 
-# Convert the user-defined axis-wise bounds for NumberNode into the 
+# Convert the user-defined sum constraints for NumberNode into the 
 # corresponding C++ objects passed to NumberNode.
-cdef vector[NumberNode.AxisBound] _convert_python_bound_axes(
-        bound_axes_data : None | list[tuple[int, str | list[str], float | list[float]] |
-                                      tuple[str | list[str], float | list[float]]]) except *:
-    cdef vector[NumberNode.AxisBound] output
-
-    if bound_axes_data is None:
-        return output
-
-    output.reserve(len(bound_axes_data))
+cdef vector[NumberNode.SumConstraint] _convert_python_sum_constraints(
+         subject_to: None | list[tuple[str, float]],
+         axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]]) except *:
+    cdef vector[NumberNode.SumConstraint] output
     cdef optional[Py_ssize_t] cpp_axis = nullopt
-    cdef vector[NumberNode.AxisBound.Operator] cpp_ops
+    cdef vector[NumberNode.SumConstraint.Operator] cpp_ops
     cdef vector[double] cpp_bounds
     cdef double[:] mem
 
-    for bound_axis_data in bound_axes_data:
-        if not isinstance(bound_axis_data, tuple) or len(bound_axis_data) not in [2, 3]:
-            raise TypeError("Each bound axis entry must be a tuple with two or "
-                            "three elements: axis (optional), operator(s), "
-                            "bound(s)")
+    if subject_to is not None:
+        for constraint in subject_to:
+            if not isinstance(constraint, tuple) or len(constraint) != 2:
+                raise TypeError("A sum constraint on an entire number array must be"
+                                " a tuple with two elements: `operator` and `bound`")
 
-        if len(bound_axis_data) == 2:
-            py_ops, py_bounds = bound_axis_data
+            py_ops, py_bounds = constraint
             cpp_axis = nullopt
-        else:
-            axis, py_ops, py_bounds = bound_axis_data
+            if not isinstance(py_ops, str):
+                raise TypeError("Sum constraint operator on entire number array should be a str.")
+
+            cpp_ops.resize(1)
+            cpp_bounds.resize(1)
+            cpp_ops[0] = _parse_python_operator(py_ops)
+            cpp_bounds[0] = py_bounds
+            output.push_back(NumberNode.SumConstraint(cpp_axis, move(cpp_ops), move(cpp_bounds)))
+
+    if axes_subject_to is not None:
+        for axis_constraint in axes_subject_to:
+            if not isinstance(axis_constraint, tuple) or len(axis_constraint) != 3:
+                raise TypeError("Each axis sum constraint must be a tuple with "
+                                "three elements: axis, operator(s), bound(s)")
+
+            axis, py_ops, py_bounds = axis_constraint
             if not isinstance(axis, int):
-                raise TypeError("Bound axis must be an int or None.")
+                raise TypeError("Constrained axis must be an int or None.")
             cpp_axis = <Py_ssize_t> axis
 
-        if isinstance(py_ops, str):
-            cpp_ops.resize(1)
-            # One operator defined for all slices.
-            cpp_ops[0] = _parse_python_operator(py_ops)
-        elif isinstance(py_ops, collections.abc.Iterable):
-            # Operator defined per slice.
-            cpp_ops.reserve(len(py_ops))
-            for op in py_ops:
-                cpp_ops.push_back(_parse_python_operator(op))
-        else:
-            raise TypeError("Bound axis operator(s) should be str or an iterable"
-                            " of str(s).")
+            if isinstance(py_ops, str):
+                cpp_ops.resize(1)
+                # One operator defined for all slices.
+                cpp_ops[0] = _parse_python_operator(py_ops)
+            elif isinstance(py_ops, collections.abc.Iterable):
+                # Operator defined per slice.
+                cpp_ops.reserve(len(py_ops))
+                for op in py_ops:
+                    cpp_ops.push_back(_parse_python_operator(op))
+            else:
+                raise TypeError("Axis sum constraint operator(s) should be str or an"
+                                " iterable of str(s).")
 
-        bound_array = np.asarray_chkfinite(py_bounds, dtype=np.double)
-        if (bound_array.ndim <= 1):
-            mem = bound_array.ravel()
-            cpp_bounds.reserve(mem.shape[0])
-            for i in range(mem.shape[0]):
-                cpp_bounds.push_back(mem[i])
-        else:
-            raise TypeError("Bound axis bound(s) should be scalar or 1D-array.")
+            bound_array = np.asarray_chkfinite(py_bounds, dtype=np.double)
+            if (bound_array.ndim <= 1):
+                mem = bound_array.ravel()
+                cpp_bounds.reserve(mem.shape[0])
+                for i in range(mem.shape[0]):
+                    cpp_bounds.push_back(mem[i])
+            else:
+                raise TypeError("Axis sum constraint bound(s) should be scalar or 1D-array.")
 
-        output.push_back(NumberNode.AxisBound(cpp_axis, move(cpp_ops), move(cpp_bounds)))
+            output.push_back(NumberNode.SumConstraint(cpp_axis, move(cpp_ops), move(cpp_bounds)))
 
     return output
 
 # Convert the C++ operators into their corresponding str
-cdef str _parse_cpp_operators(NumberNode.AxisBound.Operator op):
-    if op == NumberNode.AxisBound.Operator.Equal:
+cdef str _parse_cpp_operators(NumberNode.SumConstraint.Operator op):
+    if op == NumberNode.SumConstraint.Operator.Equal:
         return "=="
-    elif op == NumberNode.AxisBound.Operator.LessEqual:
+    elif op == NumberNode.SumConstraint.Operator.LessEqual:
         return "<="
-    elif op == NumberNode.AxisBound.Operator.GreaterEqual:
+    elif op == NumberNode.SumConstraint.Operator.GreaterEqual:
         return ">="
     else:
-        raise ValueError(f"Invalid bound axis operator: {op!r}")
+        raise TypeError(f"Invalid sum constraint operator: {op!r}")
 
 
 cdef class BinaryVariable(ArraySymbol):
@@ -124,15 +132,15 @@ cdef class BinaryVariable(ArraySymbol):
         :meth:`~dwave.optimization.model.Model.binary`: equivalent method.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
-                 subject_to: None | list[tuple[int, str | list[str], float | list[float]] |
-                                         tuple[str | list[str], float | list[float]]] = None):
+                 subject_to: None | list[tuple[str, float]] = None,
+                 axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )
 
         cdef optional[vector[double]] cpplower_bound = nullopt
         cdef optional[vector[double]] cppupper_bound = nullopt
-        cdef vector[BinaryNode.AxisBound] cppbound_axes = _convert_python_bound_axes(subject_to)
+        cdef vector[BinaryNode.SumConstraint] cpp_sum_constraints = _convert_python_sum_constraints(subject_to, axes_subject_to)
         cdef const double[:] mem
 
         if lower_bound is not None:
@@ -162,7 +170,7 @@ cdef class BinaryVariable(ArraySymbol):
                 raise ValueError("upper bound should be None, scalar, or the same shape")
 
         self.ptr = model._graph.emplace_node[BinaryNode](
-            cppshape, cpplower_bound, cppupper_bound, cppbound_axes
+            cppshape, cpplower_bound, cppupper_bound, cpp_sum_constraints
         )
         self.initialize_arraynode(model, self.ptr)
 
@@ -205,20 +213,29 @@ cdef class BinaryVariable(ArraySymbol):
 
         # needs to be compatible with older versions
         try:
-            info = zf.getinfo(directory + "subject_to.json")
+            info = zf.getinfo(directory + "sum_constraint.json")
         except KeyError:
             subject_to = None
+            axes_subject_to = None
         else:
             with zf.open(info, "r") as f:
+                subject_to = []
+                axes_subject_to = []
                 # Note that import is a list of lists, not a list of tuples.
                 # Hence we convert to tuple. We could also support lists.
-                subject_to = [tuple(item) for item in json.load(f)]
+                for item in json.load(f):
+                    if len(item) == 2:
+                        # Inconvenient but `subject_to` expects scalars, not lists
+                        subject_to.append((item[0][0], item[1][0]))
+                    else:
+                        axes_subject_to.append(tuple(item))
 
         return BinaryVariable(model,
                               shape=shape_info["shape"],
                               lower_bound=lower_bound,
                               upper_bound=upper_bound,
-                              subject_to=subject_to
+                              subject_to=subject_to,
+                              axes_subject_to=axes_subject_to
                               )
 
     def _into_zipfile(self, zf, directory):
@@ -242,30 +259,29 @@ cdef class BinaryVariable(ArraySymbol):
         with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, upper_bound, allow_pickle=False)
 
-        subject_to = self.axis_wise_bounds()
-        if len(subject_to) > 0:
+        sum_constraint = self.sum_constraint()
+        if len(sum_constraint) > 0:
             # Using json here converts the tuples to lists
-            zf.writestr(directory + "subject_to.json", encoder.encode(subject_to))
+            zf.writestr(directory + "sum_constraint.json", encoder.encode(sum_constraint))
 
-    def axis_wise_bounds(self):
-        """Axis wise bound(s) of Binary symbol as a list of tuples where each tuple is
-        of the form: (axis, [operator(s)], [bound(s)]) or ([operator(s)], [bound(s)])."""
-        cdef vector[NumberNode.AxisBound] bound_axes = self.ptr.axis_wise_bounds()
+    def sum_constraint(self):
+        """Sum constraints of Integer symbol as a list of tuples where each tuple
+        is of the form: ([operator], [bound]) or (axis, [operator(s)], [bound(s)])."""
+        cdef vector[NumberNode.SumConstraint] sum_constraint = self.ptr.sum_constraint()
         cdef optional[Py_ssize_t] axis
 
         output = []
-        for i in range(bound_axes.size()):
-            bound_axis = &bound_axes[i]
-            axis = bound_axis.axis()
-            py_axis_ops = [_parse_cpp_operators(bound_axis.get_operator(j))
-                           for j in range(bound_axis.num_operators())]
-            py_axis_bounds = [bound_axis.get_bound(j)
-                              for j in range(bound_axis.num_bounds())]
+        for i in range(sum_constraint.size()):
+            constraint = &sum_constraint[i]
+            axis = constraint.axis()
+            py_ops = [_parse_cpp_operators(constraint.get_operator(j)) for j in
+                      range(constraint.num_operators())]
+            py_bounds = [constraint.get_bound(j) for j in range(constraint.num_bounds())]
             # axis may be nullopt
             if axis.has_value():
-                output.append((axis.value(), py_axis_ops, py_axis_bounds))
+                output.append((axis.value(), py_ops, py_bounds))
             else:
-                output.append((py_axis_ops, py_axis_bounds))
+                output.append((py_ops, py_bounds))
 
         return output
 
@@ -339,15 +355,15 @@ cdef class IntegerVariable(ArraySymbol):
         :meth:`~dwave.optimization.model.Model.integer`: equivalent method.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
-                 subject_to: None | list[tuple[int, str | list[str], float | list[float]] |
-                                         tuple[str | list[str], float | list[float]]] = None):
+                 subject_to: None | list[tuple[str, float]] = None,
+                 axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )
 
         cdef optional[vector[double]] cpplower_bound = nullopt
         cdef optional[vector[double]] cppupper_bound = nullopt
-        cdef vector[IntegerNode.AxisBound] cppbound_axes = _convert_python_bound_axes(subject_to)
+        cdef vector[IntegerNode.SumConstraint] cpp_sum_constraints = _convert_python_sum_constraints(subject_to, axes_subject_to)
         cdef const double[:] mem
 
         if lower_bound is not None:
@@ -377,7 +393,7 @@ cdef class IntegerVariable(ArraySymbol):
                 raise ValueError("upper bound should be None, scalar, or the same shape")
 
         self.ptr = model._graph.emplace_node[IntegerNode](
-            cppshape, cpplower_bound, cppupper_bound, cppbound_axes
+            cppshape, cpplower_bound, cppupper_bound, cpp_sum_constraints
         )
         self.initialize_arraynode(model, self.ptr)
 
@@ -420,20 +436,29 @@ cdef class IntegerVariable(ArraySymbol):
 
         # needs to be compatible with older versions
         try:
-            info = zf.getinfo(directory + "subject_to.json")
+            info = zf.getinfo(directory + "sum_constraint.json")
         except KeyError:
             subject_to = None
+            axes_subject_to = None
         else:
             with zf.open(info, "r") as f:
+                subject_to = []
+                axes_subject_to = []
                 # Note that import is a list of lists, not a list of tuples.
                 # Hence we convert to tuple. We could also support lists.
-                subject_to = [tuple(item) for item in json.load(f)]
+                for item in json.load(f):
+                    if len(item) == 2:
+                        # Inconvenient but `subject_to` expects scalars, not lists
+                        subject_to.append((item[0][0], item[1][0]))
+                    else:
+                        axes_subject_to.append(tuple(item))
 
         return IntegerVariable(model,
                                shape=shape_info["shape"],
                                lower_bound=lower_bound,
                                upper_bound=upper_bound,
-                               subject_to=subject_to
+                               subject_to=subject_to,
+                               axes_subject_to=axes_subject_to
                                )
 
     def _into_zipfile(self, zf, directory):
@@ -463,30 +488,29 @@ cdef class IntegerVariable(ArraySymbol):
         with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, upper_bound, allow_pickle=False)
 
-        subject_to = self.axis_wise_bounds()
-        if len(subject_to) > 0:
+        sum_constraint = self.sum_constraint()
+        if len(sum_constraint) > 0:
             # Using json here converts the tuples to lists
-            zf.writestr(directory + "subject_to.json", encoder.encode(subject_to))
+            zf.writestr(directory + "sum_constraint.json", encoder.encode(sum_constraint))
 
-    def axis_wise_bounds(self):
-        """Axis wise bound(s) of Integer symbol as a list of tuples where each tuple is
-        of the form: (axis, [operator(s)], [bound(s)]) or ([operator(s)], [bound(s)])."""
-        cdef vector[NumberNode.AxisBound] bound_axes = self.ptr.axis_wise_bounds()
+    def sum_constraint(self):
+        """Sum constraints of Integer symbol as a list of tuples where each tuple
+        is of the form: ([operator], [bound]) or (axis, [operator(s)], [bound(s)])."""
+        cdef vector[NumberNode.SumConstraint] sum_constraint = self.ptr.sum_constraint()
         cdef optional[Py_ssize_t] axis
 
         output = []
-        for i in range(bound_axes.size()):
-            bound_axis = &bound_axes[i]
-            axis = bound_axis.axis()
-            py_axis_ops = [_parse_cpp_operators(bound_axis.get_operator(j))
-                           for j in range(bound_axis.num_operators())]
-            py_axis_bounds = [bound_axis.get_bound(j)
-                              for j in range(bound_axis.num_bounds())]
+        for i in range(sum_constraint.size()):
+            constraint = &sum_constraint[i]
+            axis = constraint.axis()
+            py_ops = [_parse_cpp_operators(constraint.get_operator(j)) for j in
+                      range(constraint.num_operators())]
+            py_bounds = [constraint.get_bound(j) for j in range(constraint.num_bounds())]
             # axis may be nullopt
             if axis.has_value():
-                output.append((axis.value(), py_axis_ops, py_axis_bounds))
+                output.append((axis.value(), py_ops, py_bounds))
             else:
-                output.append((py_axis_ops, py_axis_bounds))
+                output.append((py_ops, py_bounds))
 
         return output
 
