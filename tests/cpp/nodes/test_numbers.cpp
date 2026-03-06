@@ -26,102 +26,102 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
-using AxisBound = NumberNode::AxisBound;
-using Operator = NumberNode::AxisBound::Operator;
-using NumberNode::AxisBound::Operator::Equal;
-using NumberNode::AxisBound::Operator::GreaterEqual;
-using NumberNode::AxisBound::Operator::LessEqual;
+using SumConstraint = NumberNode::SumConstraint;
+using Operator = NumberNode::SumConstraint::Operator;
+using NumberNode::SumConstraint::Operator::Equal;
+using NumberNode::SumConstraint::Operator::GreaterEqual;
+using NumberNode::SumConstraint::Operator::LessEqual;
 
-TEST_CASE("AxisBound") {
-    GIVEN("AxisBound(axis = nullopt, operators = {}, bounds = {1.0})") {
-        REQUIRE_THROWS_WITH(AxisBound(std::nullopt, {}, {1.0}),
-                            "Axis-wise `operators` and `bounds` must have non-zero size.");
+TEST_CASE("SumConstraint") {
+    GIVEN("SumConstraint(axis = nullopt, operators = {}, bounds = {1.0})") {
+        REQUIRE_THROWS_WITH(SumConstraint(std::nullopt, {}, {1.0}),
+                            "`operators` and `bounds` must have non-zero size.");
     }
 
-    GIVEN("AxisBound(axis = nullopt, operators = {<=}, bounds = {})") {
-        REQUIRE_THROWS_WITH(AxisBound(std::nullopt, {LessEqual}, {}),
-                            "Axis-wise `operators` and `bounds` must have non-zero size.");
+    GIVEN("SumConstraint(axis = nullopt, operators = {<=}, bounds = {})") {
+        REQUIRE_THROWS_WITH(SumConstraint(std::nullopt, {LessEqual}, {}),
+                            "`operators` and `bounds` must have non-zero size.");
     }
 
-    GIVEN("AxisBound(axis = nullopt, operators = {<=, ==}, bounds = {1.0})") {
-        REQUIRE_THROWS_WITH(AxisBound(std::nullopt, {LessEqual, Equal}, {1.0}),
+    GIVEN("SumConstraint(axis = nullopt, operators = {<=, ==}, bounds = {1.0})") {
+        REQUIRE_THROWS_WITH(SumConstraint(std::nullopt, {LessEqual, Equal}, {1.0}),
                             "If `axis` is undefined, `operators` and `bounds` must have size 1.");
     }
 
-    GIVEN("AxisBound(axis = nullopt, operators = {<=}, bounds = {1.0, 2.0})") {
-        REQUIRE_THROWS_WITH(AxisBound(std::nullopt, {LessEqual}, {1.0, 2.0}),
+    GIVEN("SumConstraint(axis = nullopt, operators = {<=}, bounds = {1.0, 2.0})") {
+        REQUIRE_THROWS_WITH(SumConstraint(std::nullopt, {LessEqual}, {1.0, 2.0}),
                             "If `axis` is undefined, `operators` and `bounds` must have size 1.");
     }
 
-    GIVEN("AxisBound(axis = 0, operators = {}, bounds = {1.0})") {
-        REQUIRE_THROWS_WITH(AxisBound(0, {}, {1.0}),
-                            "Axis-wise `operators` and `bounds` must have non-zero size.");
+    GIVEN("SumConstraint(axis = 0, operators = {}, bounds = {1.0})") {
+        REQUIRE_THROWS_WITH(SumConstraint(0, {}, {1.0}),
+                            "`operators` and `bounds` must have non-zero size.");
     }
 
-    GIVEN("AxisBound(axis = 0, operators = {<=}, bounds = {})") {
-        REQUIRE_THROWS_WITH(AxisBound(0, {LessEqual}, {}),
-                            "Axis-wise `operators` and `bounds` must have non-zero size.");
+    GIVEN("SumConstraint(axis = 0, operators = {<=}, bounds = {})") {
+        REQUIRE_THROWS_WITH(SumConstraint(0, {LessEqual}, {}),
+                            "`operators` and `bounds` must have non-zero size.");
     }
 
-    GIVEN("AxisBound(axis = 1, operators = {<=, ==, ==}, bounds = {2.0, 1.0})") {
+    GIVEN("SumConstraint(axis = 1, operators = {<=, ==, ==}, bounds = {2.0, 1.0})") {
         REQUIRE_THROWS_WITH(
-                AxisBound(1, {LessEqual, Equal, Equal}, {2.0, 1.0}),
-                "Axis-wise `operators` and `bounds` should have same size if neither has size 1.");
+                SumConstraint(1, {LessEqual, Equal, Equal}, {2.0, 1.0}),
+                "`operators` and `bounds` should have same size if neither has size 1.");
     }
 
-    GIVEN("AxisBound(axis = nullopt, operators = {==}, bounds = {1.0})") {
-        AxisBound bound_axis(std::nullopt, {Equal}, {1.0});
+    GIVEN("SumConstraint(axis = nullopt, operators = {==}, bounds = {1.0})") {
+        SumConstraint sum_constraint(std::nullopt, {Equal}, {1.0});
 
-        THEN("The bound axis info is correct") {
-            CHECK(bound_axis.axis() == std::nullopt);
-            CHECK(bound_axis.num_bounds() == 1);
-            CHECK(bound_axis.get_bound(0) == 1.0);
-            CHECK(bound_axis.num_operators() == 1);
-            CHECK(bound_axis.get_operator(0) == Equal);
+        THEN("The sum constraint info is correct") {
+            CHECK(sum_constraint.axis() == std::nullopt);
+            CHECK(sum_constraint.num_bounds() == 1);
+            CHECK(sum_constraint.get_bound(0) == 1.0);
+            CHECK(sum_constraint.num_operators() == 1);
+            CHECK(sum_constraint.get_operator(0) == Equal);
         }
     }
 
-    GIVEN("AxisBound(axis = 2, operators = {==, <=, >=}, bounds = {1.0})") {
-        AxisBound bound_axis(2, {Equal, LessEqual, GreaterEqual}, {1.0});
+    GIVEN("SumConstraint(axis = 2, operators = {==, <=, >=}, bounds = {1.0})") {
+        SumConstraint sum_constraint(2, {Equal, LessEqual, GreaterEqual}, {1.0});
 
-        THEN("The bound axis info is correct") {
-            CHECK(bound_axis.axis() == 2);
-            CHECK(bound_axis.num_bounds() == 1);
-            CHECK(bound_axis.get_bound(0) == 1.0);
-            CHECK(bound_axis.num_operators() == 3);
-            CHECK(bound_axis.get_operator(0) == Equal);
-            CHECK(bound_axis.get_operator(1) == LessEqual);
-            CHECK(bound_axis.get_operator(2) == GreaterEqual);
+        THEN("The sum constraint info is correct") {
+            CHECK(sum_constraint.axis() == 2);
+            CHECK(sum_constraint.num_bounds() == 1);
+            CHECK(sum_constraint.get_bound(0) == 1.0);
+            CHECK(sum_constraint.num_operators() == 3);
+            CHECK(sum_constraint.get_operator(0) == Equal);
+            CHECK(sum_constraint.get_operator(1) == LessEqual);
+            CHECK(sum_constraint.get_operator(2) == GreaterEqual);
         }
     }
 
-    GIVEN("AxisBound(axis = 2, operators = {==}, bounds = {1.0, 2.0, 3.0})") {
-        AxisBound bound_axis(2, {Equal}, {1.0, 2.0, 3.0});
+    GIVEN("SumConstraint(axis = 2, operators = {==}, bounds = {1.0, 2.0, 3.0})") {
+        SumConstraint sum_constraint(2, {Equal}, {1.0, 2.0, 3.0});
 
-        THEN("The bound axis info is correct") {
-            CHECK(bound_axis.axis() == 2);
-            CHECK(bound_axis.num_bounds() == 3);
-            CHECK(bound_axis.get_bound(0) == 1.0);
-            CHECK(bound_axis.get_bound(1) == 2.0);
-            CHECK(bound_axis.get_bound(2) == 3.0);
-            CHECK(bound_axis.num_operators() == 1);
-            CHECK(bound_axis.get_operator(0) == Equal);
+        THEN("The sum constraint info is correct") {
+            CHECK(sum_constraint.axis() == 2);
+            CHECK(sum_constraint.num_bounds() == 3);
+            CHECK(sum_constraint.get_bound(0) == 1.0);
+            CHECK(sum_constraint.get_bound(1) == 2.0);
+            CHECK(sum_constraint.get_bound(2) == 3.0);
+            CHECK(sum_constraint.num_operators() == 1);
+            CHECK(sum_constraint.get_operator(0) == Equal);
         }
     }
 
-    GIVEN("AxisBound(axis = 2, operators = {==, <=, >=}, bounds = {1.0, 2.0, 3.0})") {
-        AxisBound bound_axis(2, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0});
+    GIVEN("SumConstraint(axis = 2, operators = {==, <=, >=}, bounds = {1.0, 2.0, 3.0})") {
+        SumConstraint sum_constraint(2, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0});
 
-        THEN("The bound axis info is correct") {
-            CHECK(bound_axis.axis() == 2);
-            CHECK(bound_axis.num_bounds() == 3);
-            CHECK(bound_axis.get_bound(0) == 1.0);
-            CHECK(bound_axis.get_bound(1) == 2.0);
-            CHECK(bound_axis.get_bound(2) == 3.0);
-            CHECK(bound_axis.num_operators() == 3);
-            CHECK(bound_axis.get_operator(0) == Equal);
-            CHECK(bound_axis.get_operator(1) == LessEqual);
-            CHECK(bound_axis.get_operator(2) == GreaterEqual);
+        THEN("The sum constraint info is correct") {
+            CHECK(sum_constraint.axis() == 2);
+            CHECK(sum_constraint.num_bounds() == 3);
+            CHECK(sum_constraint.get_bound(0) == 1.0);
+            CHECK(sum_constraint.get_bound(1) == 2.0);
+            CHECK(sum_constraint.get_bound(2) == 3.0);
+            CHECK(sum_constraint.num_operators() == 3);
+            CHECK(sum_constraint.get_operator(0) == Equal);
+            CHECK(sum_constraint.get_operator(1) == LessEqual);
+            CHECK(sum_constraint.get_operator(2) == GreaterEqual);
         }
     }
 }
@@ -541,210 +541,230 @@ TEST_CASE("BinaryNode") {
                             "Number array cannot have dynamic size.");
     }
 
-    // *********************** Axis-wise bounds tests *************************
-    GIVEN("(2x3)-BinaryNode with axis-wise bounds on the invalid axis -1") {
-        std::vector<AxisBound> bound_axes{{-1, {Equal}, {1.0}}};
-
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Invalid bound axis given number array shape.");
-    }
-
-    GIVEN("(2x3)-BinaryNode with axis-wise bounds on the invalid axis 2") {
-        std::vector<AxisBound> bound_axes{{2, {Equal}, {1.0}}};
-
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Invalid bound axis given number array shape.");
-    }
-
-    GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too many operators.") {
-        std::vector<AxisBound> bound_axes{{1, {LessEqual, Equal, Equal, Equal}, {1.0}}};
-
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Invalid number of axis-wise operators given number array shape.");
-    }
-
-    GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too few operators.") {
-        std::vector<AxisBound> bound_axes{{1, {LessEqual, Equal}, {1.0}}};
-
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Invalid number of axis-wise operators given number array shape.");
-    }
-
-    GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too many bounds.") {
-        std::vector<AxisBound> bound_axes{{1, {Equal}, {1.0, 2.0, 3.0, 4.0}}};
-
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Invalid number of axis-wise bounds given number array shape.");
-    }
-
-    GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 1 with too few bounds.") {
-        std::vector<AxisBound> bound_axes{{1, {LessEqual}, {1.0, 2.0}}};
-
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Invalid number of axis-wise bounds given number array shape.");
-    }
-
-    GIVEN("(6)-BinaryNode with duplicate bounds over the entire array") {
-        AxisBound bound_axis{std::nullopt, {Equal}, {1.0}};
-        std::vector<AxisBound> bound_axes{bound_axis, bound_axis};
+    // *********************** Sum Constraint tests *************************
+    GIVEN("(2x3)-BinaryNode with a sum constraint on the invalid axis -1") {
+        std::vector<SumConstraint> sum_constraints{{-1, {Equal}, {1.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(6, std::nullopt, std::nullopt, bound_axes),
-                "Cannot define multiple bounds for the entire array.");
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid constrained axis given number array shape.");
     }
 
-    GIVEN("(2x3)-BinaryNode with duplicate axis-wise bounds on axis: 1") {
-        AxisBound bound_axis{1, {Equal}, {1.0}};
-        std::vector<AxisBound> bound_axes{bound_axis, bound_axis};
+    GIVEN("(2x3)-BinaryNode with a sum constraint on the invalid axis 2") {
+        std::vector<SumConstraint> sum_constraints{{2, {Equal}, {1.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Cannot define multiple axis-wise bounds for a single axis.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid constrained axis given number array shape.");
     }
 
-    GIVEN("(2x3)-BinaryNode with axis-wise bounds on axis: 0 and the entire array.") {
-        AxisBound bound_axis{std::nullopt, {LessEqual}, {1.0}};
-        AxisBound bound_axis_1{1, {LessEqual}, {1.0}};
-        std::vector<AxisBound> bound_axes{bound_axis, bound_axis_1};
+    GIVEN("(2x3)-BinaryNode with a sum constraint on axis: 1 with too many operators.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal, Equal, Equal}, {1.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Axis-wise bounds are supported for at most one axis.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid number of operators given number array shape.");
     }
 
-    GIVEN("(2x3)-BinaryNode with axis-wise bounds on axes: 0 and 1") {
-        AxisBound bound_axis_0{0, {LessEqual}, {1.0}};
-        AxisBound bound_axis_1{1, {LessEqual}, {1.0}};
-        std::vector<AxisBound> bound_axes{bound_axis_0, bound_axis_1};
+    GIVEN("(2x3)-BinaryNode with a sum constraint on axis: 1 with too few operators.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal}, {1.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Axis-wise bounds are supported for at most one axis.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid number of operators given number array shape.");
     }
 
-    GIVEN("(2x3x4)-BinaryNode with non-integral axis-wise bounds") {
-        std::vector<AxisBound> bound_axes{{1, {Equal}, {0.1}}};
+    GIVEN("(2x3)-BinaryNode with a sum constraint on axis: 1 with too many bounds.") {
+        std::vector<SumConstraint> sum_constraints{{1, {Equal}, {1.0, 2.0, 3.0, 4.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3, 4},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Axis wise bounds for integral number arrays must be integral.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid number of bounds given number array shape.");
     }
 
-    GIVEN("(6)-BinaryNode with an infeasible bound over the entire array.") {
+    GIVEN("(2x3)-BinaryNode with a sum constraint on axis: 1 with too few bounds.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {1.0, 2.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid number of bounds given number array shape.");
+    }
+
+    GIVEN("(6)-BinaryNode with duplicate sum constraints over the entire array") {
+        SumConstraint sum_constraint{std::nullopt, {Equal}, {1.0}};
+        std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(6, std::nullopt, std::nullopt, sum_constraints),
+                "Cannot define multiple sum constraints for the entire number array.");
+    }
+
+    GIVEN("(2x3)-BinaryNode with duplicate sum constraints on axis: 1") {
+        SumConstraint sum_constraint{1, {Equal}, {1.0}};
+        std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Cannot define multiple sum constraints for a single axis.");
+    }
+
+    GIVEN("(2x3)-BinaryNode with sum constraints on axis: 0 and the entire array.") {
+        SumConstraint sum_constraint{std::nullopt, {LessEqual}, {1.0}};
+        SumConstraint sum_constraint_1{1, {LessEqual}, {1.0}};
+        std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint_1};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Can define at most one sum constraint per number array.");
+    }
+
+    GIVEN("(2x3)-BinaryNode with sum constraints on axes: 0 and 1") {
+        SumConstraint sum_constraint_0{0, {LessEqual}, {1.0}};
+        SumConstraint sum_constraint_1{1, {LessEqual}, {1.0}};
+        std::vector<SumConstraint> sum_constraints{sum_constraint_0, sum_constraint_1};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Can define at most one sum constraint per number array.");
+    }
+
+    GIVEN("(2x3x4)-BinaryNode with a non-integral sum constraint") {
+        std::vector<SumConstraint> sum_constraints{{1, {Equal}, {0.1}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                               std::nullopt, std::nullopt, sum_constraints),
+                "Sum constraint(s) for integral arrays must be integral.");
+    }
+
+    GIVEN("(6)-BinaryNode with an infeasible sum constraint over the entire array.") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {Equal}, {7.0}}};
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{6},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Infeasible axis-wise bounds.");
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {7.0}}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{6}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
     }
 
-    GIVEN("(3x2)-BinaryNode with an infeasible bound over the entire array.") {
+    GIVEN("(3x2)-BinaryNode with an infeasible sum constraint over the entire array.") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {GreaterEqual}, {7.0}}};
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Infeasible axis-wise bounds.");
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {7.0}}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
     }
 
-    GIVEN("(2x2x2)-BinaryNode with an infeasible bound over the entire array.") {
+    GIVEN("(2x2x2)-BinaryNode with an infeasible sum constraint over the entire array.") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {LessEqual}, {-1.0}}};
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 2, 2},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Infeasible axis-wise bounds.");
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {-1.0}}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
     }
 
-    GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 0") {
+    GIVEN("(3x2x2)-BinaryNode with an infeasible sum constraint on axis: 0") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{0, {Equal, LessEqual, GreaterEqual}, {5.0, 2.0, 3.0}}};
+        std::vector<SumConstraint> sum_constraints{
+                {0, {Equal, LessEqual, GreaterEqual}, {5.0, 2.0, 3.0}}};
         // Each slice along axis 0 has size 4. There is no feasible assignment
         // to the values in slice 0 (along axis 0) that results in a sum equal
         // to 5.
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Infeasible axis-wise bounds.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
     }
 
-    GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 1") {
+    GIVEN("(3x2x2)-BinaryNode with an infeasible sum constraint on axis: 1") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{1, {Equal, GreaterEqual}, {5.0, 7.0}}};
+        std::vector<SumConstraint> sum_constraints{{1, {Equal, GreaterEqual}, {5.0, 7.0}}};
         // Each slice along axis 1 has size 6. There is no feasible assignment
         // to the values in slice 1 (along axis 1) that results in a sum
         // greater than or equal to 7.
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Infeasible axis-wise bounds.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
     }
 
-    GIVEN("(3x2x2)-BinaryNode with infeasible axis-wise bound on axis: 2") {
+    GIVEN("(3x2x2)-BinaryNode with an infeasible sum constraint on axis: 2") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{2, {Equal, LessEqual}, {5.0, -1.0}}};
+        std::vector<SumConstraint> sum_constraints{{2, {Equal, LessEqual}, {5.0, -1.0}}};
         // Each slice along axis 2 has size 6. There is no feasible assignment
         // to the values in slice 1 (along axis 2) that results in a sum less
         // than or equal to -1.
-        REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
-                                                           std::nullopt, std::nullopt, bound_axes),
-                            "Infeasible axis-wise bounds.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
     }
 
-    GIVEN("(6)-BinaryNode with a feasible bound over the entire array.") {
+    GIVEN("(6)-BinaryNode with a feasible sum constraint over the entire array.") {
         auto graph = Graph();
         std::vector<double> lower_bounds{0, 0, 1, 0, 0, 1};
         std::vector<double> upper_bounds{0, 1, 1, 1, 1, 1};
-        std::vector<AxisBound> bound_axes{{std::nullopt, {Equal}, {3.0}}};
-        auto bnode_ptr = graph.emplace_node<BinaryNode>(6, lower_bounds, upper_bounds, bound_axes);
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {3.0}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(6, lower_bounds, upper_bounds, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bnode_bound_axis.axis() == std::nullopt);
-            CHECK(bnode_bound_axis.num_bounds() == 1);
-            CHECK(bnode_bound_axis.get_bound(0) == 3.0);
-            CHECK(bnode_bound_axis.num_operators() == 1);
-            CHECK(bnode_bound_axis.get_operator(0) == Equal);
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraint().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_sum_constraint.axis() == std::nullopt);
+            CHECK(bnode_sum_constraint.num_bounds() == 1);
+            CHECK(bnode_sum_constraint.get_bound(0) == 3.0);
+            CHECK(bnode_sum_constraint.num_operators() == 1);
+            CHECK(bnode_sum_constraint.get_operator(0) == Equal);
         }
 
         WHEN("We create a state by initialize_state()") {
             auto state = graph.initialize_state();
             graph.initialize_state(state);
             std::vector<double> expected_init{0, 1, 1, 0, 0, 1};
-            auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
-                CHECK(bnode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(bnode_ptr->bound_axis_sums(state).data()[0].size() == 1);
-                CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({3}));
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 1);
+                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({3}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
     }
 
-    GIVEN("(3x2x2)-BinaryNode with feasible axis-wise bound on axis: 0") {
+    GIVEN("(3x2x2)-BinaryNode with a feasible sum constraint on axis: 0") {
         auto graph = Graph();
         std::vector<double> lower_bounds{0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0};
         std::vector<double> upper_bounds{0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1};
-        std::vector<AxisBound> bound_axes{{0, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0}}};
-        auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
-                                                        lower_bounds, upper_bounds, bound_axes);
+        std::vector<SumConstraint> sum_constraints{
+                {0, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               lower_bounds, upper_bounds, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bnode_bound_axis.axis() == 0);
-            CHECK(bnode_bound_axis.num_bounds() == 3);
-            CHECK(bnode_bound_axis.get_bound(0) == 1.0);
-            CHECK(bnode_bound_axis.get_bound(1) == 2.0);
-            CHECK(bnode_bound_axis.get_bound(2) == 3.0);
-            CHECK(bnode_bound_axis.num_operators() == 3);
-            CHECK(bnode_bound_axis.get_operator(0) == Equal);
-            CHECK(bnode_bound_axis.get_operator(1) == LessEqual);
-            CHECK(bnode_bound_axis.get_operator(2) == GreaterEqual);
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraint().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_sum_constraint.axis() == 0);
+            CHECK(bnode_sum_constraint.num_bounds() == 3);
+            CHECK(bnode_sum_constraint.get_bound(0) == 1.0);
+            CHECK(bnode_sum_constraint.get_bound(1) == 2.0);
+            CHECK(bnode_sum_constraint.get_bound(2) == 3.0);
+            CHECK(bnode_sum_constraint.num_operators() == 3);
+            CHECK(bnode_sum_constraint.get_operator(0) == Equal);
+            CHECK(bnode_sum_constraint.get_operator(1) == LessEqual);
+            CHECK(bnode_sum_constraint.get_operator(2) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -759,41 +779,42 @@ TEST_CASE("BinaryNode") {
             // print(a[2, :, :].flatten())
             // >>> [ 8  9 10 11]
             //
-            // Cannonically least state that satisfies the index- and axis-wise
-            // bounds
+            // Cannonically least state that satisfies the index-wise bounds
+            // and sum constraints.
             // slice 0  slice 1 slice 2
             //  0, 0     0, 0    1, 1
             //  1, 0     0, 0    0, 1
             std::vector<double> expected_init{0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1};
-            auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
-                CHECK(bnode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(bnode_ptr->bound_axis_sums(state).data()[0].size() == 3);
-                CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 0, 3}));
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 3);
+                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 0, 3}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
     }
 
-    GIVEN("(3x2x2)-BinaryNode with feasible axis-wise bound on axis: 1") {
+    GIVEN("(3x2x2)-BinaryNode with a feasible sum constraint on axis: 1") {
         auto graph = Graph();
         std::vector<double> lower_bounds{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
         std::vector<double> upper_bounds{0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1};
-        std::vector<AxisBound> bound_axes{{1, {LessEqual, GreaterEqual}, {1.0, 5.0}}};
-        auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
-                                                        lower_bounds, upper_bounds, bound_axes);
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual, GreaterEqual}, {1.0, 5.0}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               lower_bounds, upper_bounds, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bnode_bound_axis.axis() == 1);
-            CHECK(bnode_bound_axis.num_bounds() == 2);
-            CHECK(bnode_bound_axis.get_bound(0) == 1.0);
-            CHECK(bnode_bound_axis.get_bound(1) == 5.0);
-            CHECK(bnode_bound_axis.num_operators() == 2);
-            CHECK(bnode_bound_axis.get_operator(0) == LessEqual);
-            CHECK(bnode_bound_axis.get_operator(1) == GreaterEqual);
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraint().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_sum_constraint.axis() == 1);
+            CHECK(bnode_sum_constraint.num_bounds() == 2);
+            CHECK(bnode_sum_constraint.get_bound(0) == 1.0);
+            CHECK(bnode_sum_constraint.get_bound(1) == 5.0);
+            CHECK(bnode_sum_constraint.num_operators() == 2);
+            CHECK(bnode_sum_constraint.get_operator(0) == LessEqual);
+            CHECK(bnode_sum_constraint.get_operator(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -806,42 +827,43 @@ TEST_CASE("BinaryNode") {
             // print(a[:, 1, :].flatten())
             // >>> [ 2  3  6  7 10 11]
             //
-            // Cannonically least state that satisfies bounds
+            // Cannonically least state that satisfies sum constraint
             // slice 0  slice 1
             //  0, 0     1, 1
             //  0, 0     1, 1
             //  0, 0     0, 1
             std::vector<double> expected_init{0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1};
 
-            auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
-                CHECK(bnode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(bnode_ptr->bound_axis_sums(state).data()[0].size() == 2);
-                CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({0, 5}));
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 2);
+                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({0, 5}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
     }
 
-    GIVEN("(3x2x2)-BinaryNode with feasible axis-wise bound on axis: 2") {
+    GIVEN("(3x2x2)-BinaryNode with a feasible sum constraint on axis: 2") {
         auto graph = Graph();
         std::vector<double> lower_bounds{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0};
         std::vector<double> upper_bounds{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-        std::vector<AxisBound> bound_axes{{2, {Equal, GreaterEqual}, {3.0, 6.0}}};
-        auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
-                                                        lower_bounds, upper_bounds, bound_axes);
+        std::vector<SumConstraint> sum_constraints{{2, {Equal, GreaterEqual}, {3.0, 6.0}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               lower_bounds, upper_bounds, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bnode_bound_axis.axis() == 2);
-            CHECK(bnode_bound_axis.num_bounds() == 2);
-            CHECK(bnode_bound_axis.get_bound(0) == 3.0);
-            CHECK(bnode_bound_axis.get_bound(1) == 6.0);
-            CHECK(bnode_bound_axis.num_operators() == 2);
-            CHECK(bnode_bound_axis.get_operator(0) == Equal);
-            CHECK(bnode_bound_axis.get_operator(1) == GreaterEqual);
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraint().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_sum_constraint.axis() == 2);
+            CHECK(bnode_sum_constraint.num_bounds() == 2);
+            CHECK(bnode_sum_constraint.get_bound(0) == 3.0);
+            CHECK(bnode_sum_constraint.get_bound(1) == 6.0);
+            CHECK(bnode_sum_constraint.num_operators() == 2);
+            CHECK(bnode_sum_constraint.get_operator(0) == Equal);
+            CHECK(bnode_sum_constraint.get_operator(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -854,91 +876,95 @@ TEST_CASE("BinaryNode") {
             // print(a[:, :, 1].flatten())
             // >>> [ 1  3  5  7  9 11]
             //
-            // Cannonically least state that satisfies the index- and axis-wise
-            // bounds
+            // Cannonically least state that satisfies the index-wise bounds
+            // and sum constraint.
             // slice 0  slice 1
             //  0, 1     1, 1
             //  1, 0     1, 1
             //  0, 1     1, 1
             std::vector<double> expected_init{0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1};
-            auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
-                CHECK(bnode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(bnode_ptr->bound_axis_sums(state).data()[0].size() == 2);
-                CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({3, 6}));
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 2);
+                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({3, 6}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
     }
 
-    GIVEN("(2)-BinaryNode with a bound over the entire array") {
+    GIVEN("(2)-BinaryNode with a sum constraint over the entire array") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {Equal}, {1}}};
-        auto bnode_ptr = graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, bound_axes);
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {1}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
 
         WHEN("We initialize an invalid states") {
             auto state = graph.empty_state();
             std::vector<double> init_values{0, 0};
             CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
         }
 
         WHEN("We initialize an invalid states") {
             auto state = graph.empty_state();
             std::vector<double> init_values{1, 1};
             CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
         }
     }
 
-    GIVEN("(2)-BinaryNode with a bound over the entire array") {
+    GIVEN("(2)-BinaryNode with a sum constraint over the entire array") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {GreaterEqual}, {1}}};
-        auto bnode_ptr = graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, bound_axes);
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {1}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
 
         WHEN("We initialize an invalid states") {
             auto state = graph.empty_state();
             std::vector<double> init_values{0, 0};
             CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
         }
     }
 
-    GIVEN("(2)-BinaryNode with a bound over the entire array") {
+    GIVEN("(2)-BinaryNode with a sum constraint over the entire array") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {LessEqual}, {1}}};
-        auto bnode_ptr = graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, bound_axes);
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {1}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
 
         WHEN("We initialize an invalid states") {
             auto state = graph.empty_state();
             std::vector<double> init_values{1, 1};
             CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
         }
     }
 
-    GIVEN("(2x2x2)-BinaryNode with a bound over the entire array") {
+    GIVEN("(2x2x2)-BinaryNode with a sum constraint over the entire array") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {LessEqual}, {5}}};
-        auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 2, 2},
-                                                        std::nullopt, std::nullopt, bound_axes);
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {5}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bnode_bound_axis.axis() == std::nullopt);
-            CHECK(bnode_bound_axis.num_bounds() == 1);
-            CHECK(bnode_bound_axis.get_bound(0) == 5.0);
-            CHECK(bnode_bound_axis.num_operators() == 1);
-            CHECK(bnode_bound_axis.get_operator(0) == LessEqual);
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraint().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_sum_constraint.axis() == std::nullopt);
+            CHECK(bnode_sum_constraint.num_bounds() == 1);
+            CHECK(bnode_sum_constraint.get_bound(0) == 5.0);
+            CHECK(bnode_sum_constraint.num_operators() == 1);
+            CHECK(bnode_sum_constraint.get_operator(0) == LessEqual);
         }
 
         WHEN("We create a state using a random number generator") {
             auto state = graph.empty_state();
             auto rng = std::default_random_engine(42);
             CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, rng),
-                              "Cannot randomly initialize_state with bound axes.");
+                              "Cannot randomly initialize_state with sum constraints.");
         }
 
         WHEN("We initialize a valid state") {
@@ -947,12 +973,12 @@ TEST_CASE("BinaryNode") {
             bnode_ptr->initialize_state(state, init_values);
             graph.initialize_state(state);
 
-            auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
-                CHECK(bnode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(bnode_ptr->bound_axis_sums(state).data()[0].size() == 1);
-                CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({2.0}));
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 1);
+                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({2.0}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
             }
 
@@ -963,8 +989,8 @@ TEST_CASE("BinaryNode") {
                 std::swap(init_values[2], init_values[3]);
                 // state is now: [0, 0, 1, 0, 1, 0, 0, 0]
 
-                THEN("The bound axis sums and state updated correctly") {
-                    CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({2.0}));
+                THEN("Sum constraint sums and state updated correctly") {
+                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({2.0}));
                     CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -972,8 +998,8 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("The bound axis sums reverted correctly") {
-                        CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({2.0}));
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({2.0}));
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -981,31 +1007,33 @@ TEST_CASE("BinaryNode") {
         }
     }
 
-    GIVEN("(3x2x2)-BinaryNode with an axis-wise bound on axis: 0") {
+    GIVEN("(3x2x2)-BinaryNode with a sum constraint on axis: 0") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{0, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0}}};
-        auto bnode_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
-                                                        std::nullopt, std::nullopt, bound_axes);
+        std::vector<SumConstraint> sum_constraints{
+                {0, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(bnode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound bnode_bound_axis = bnode_ptr->axis_wise_bounds()[0];
-            CHECK(bnode_bound_axis.axis() == 0);
-            CHECK(bnode_bound_axis.num_bounds() == 3);
-            CHECK(bnode_bound_axis.get_bound(0) == 1.0);
-            CHECK(bnode_bound_axis.get_bound(1) == 2.0);
-            CHECK(bnode_bound_axis.get_bound(2) == 3.0);
-            CHECK(bnode_bound_axis.num_operators() == 3);
-            CHECK(bnode_bound_axis.get_operator(0) == Equal);
-            CHECK(bnode_bound_axis.get_operator(1) == LessEqual);
-            CHECK(bnode_bound_axis.get_operator(2) == GreaterEqual);
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraint().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_sum_constraint.axis() == 0);
+            CHECK(bnode_sum_constraint.num_bounds() == 3);
+            CHECK(bnode_sum_constraint.get_bound(0) == 1.0);
+            CHECK(bnode_sum_constraint.get_bound(1) == 2.0);
+            CHECK(bnode_sum_constraint.get_bound(2) == 3.0);
+            CHECK(bnode_sum_constraint.num_operators() == 3);
+            CHECK(bnode_sum_constraint.get_operator(0) == Equal);
+            CHECK(bnode_sum_constraint.get_operator(1) == LessEqual);
+            CHECK(bnode_sum_constraint.get_operator(2) == GreaterEqual);
         }
 
         WHEN("We create a state using a random number generator") {
             auto state = graph.empty_state();
             auto rng = std::default_random_engine(42);
             CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, rng),
-                              "Cannot randomly initialize_state with bound axes.");
+                              "Cannot randomly initialize_state with sum constraints.");
         }
 
         WHEN("We initialize three invalid states") {
@@ -1018,7 +1046,7 @@ TEST_CASE("BinaryNode") {
             // a.sum(axis=(1, 2))
             // >>> array([2, 2, 4])
             CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
 
             state = graph.empty_state();
             // This state violates the slice 1 along axis 0
@@ -1029,7 +1057,7 @@ TEST_CASE("BinaryNode") {
             // a.sum(axis=(1, 2))
             // >>> array([1, 3, 4])
             CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
 
             state = graph.empty_state();
             // This state violates the slice 2 along axis 0
@@ -1040,7 +1068,7 @@ TEST_CASE("BinaryNode") {
             // a.sum(axis=(1, 2))
             // >>> array([1, 2, 2])
             CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
         }
 
         WHEN("We initialize a valid state") {
@@ -1049,18 +1077,18 @@ TEST_CASE("BinaryNode") {
             bnode_ptr->initialize_state(state, init_values);
             graph.initialize_state(state);
 
-            auto bound_axis_sums = bnode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
+            THEN("Sum constraint sums and state are correct") {
                 // **Python Code 1**
                 // import numpy as np
                 // a = np.asarray([0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
                 // a = a.reshape(3, 2, 2)
                 // a.sum(axis=(1, 2))
                 // >>> array([1, 2, 4])
-                CHECK(bnode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(bnode_ptr->bound_axis_sums(state).data()[0].size() == 3);
-                CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 3);
+                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 2, 4}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
             }
 
@@ -1073,13 +1101,13 @@ TEST_CASE("BinaryNode") {
                 std::swap(init_values[1], init_values[3]);
                 // state is now: [0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1]
 
-                THEN("The bound axis sums and state updated correctly") {
+                THEN("Sum constraint sums and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(1, a.shape)] = 0
                     // a[np.unravel_index(3, a.shape)] = 1
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 2, 4])
-                    CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 2, 4}));
                     CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1087,8 +1115,9 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("The bound axis sums reverted correctly") {
-                        CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
+                                   RangeEquals({1, 2, 4}));
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1108,7 +1137,7 @@ TEST_CASE("BinaryNode") {
                 init_values[10] = 0;
                 // state is now: [0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1]
 
-                THEN("The bound axis sums and state updated correctly") {
+                THEN("Sum constraint sums and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(5, a.shape)] = 0
                     // a[np.unravel_index(7, a.shape)] = 0
@@ -1117,7 +1146,7 @@ TEST_CASE("BinaryNode") {
                     // a[np.unravel_index(10, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 1, 3])
-                    CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 1, 3}));
+                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 1, 3}));
                     CHECK(bnode_ptr->diff(state).size() == 4);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1125,8 +1154,9 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("The bound axis sums reverted correctly") {
-                        CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
+                                   RangeEquals({1, 2, 4}));
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1147,7 +1177,7 @@ TEST_CASE("BinaryNode") {
                 init_values[11] = 0;
                 // state is now: [0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0]
 
-                THEN("The bound axis sums and state updated correctly") {
+                THEN("Sum constraint sums and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(0, a.shape)] = 0
                     // a[np.unravel_index(6, a.shape)] = 0
@@ -1157,7 +1187,7 @@ TEST_CASE("BinaryNode") {
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 1, 3])
-                    CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 1, 3}));
+                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 1, 3}));
                     CHECK(bnode_ptr->diff(state).size() == 4);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1165,8 +1195,9 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("The bound axis sums reverted correctly") {
-                        CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
+                                   RangeEquals({1, 2, 4}));
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1181,14 +1212,14 @@ TEST_CASE("BinaryNode") {
                 init_values[11] = !init_values[11];
                 // state is now: [0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0]
 
-                THEN("The bound axis sums and state updated correctly") {
+                THEN("Sum constraint sums and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(6, a.shape)] = 0
                     // a[np.unravel_index(4, a.shape)] = 1
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 2, 3])
-                    CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 3}));
+                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 2, 3}));
                     CHECK(bnode_ptr->diff(state).size() == 3);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1196,8 +1227,9 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("The bound axis sums reverted correctly") {
-                        CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 2, 4}));
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
+                                   RangeEquals({1, 2, 4}));
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1212,14 +1244,14 @@ TEST_CASE("BinaryNode") {
                 init_values[11] = 0;
                 // state is now: [0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0]
 
-                THEN("The bound axis sums and state updated correctly") {
+                THEN("Sum constraint sums and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(0, a.shape)] = 0
                     // a[np.unravel_index(6, a.shape)] = 0
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 1, 3])
-                    CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 1, 3}));
+                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 1, 3}));
                     CHECK(bnode_ptr->diff(state).size() == 2);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1233,8 +1265,9 @@ TEST_CASE("BinaryNode") {
                     init_values[11] = 1;
                     // state is now: [0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
 
-                    THEN("The bound axis sums updated correctly") {
-                        CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0], RangeEquals({1, 1, 4}));
+                    THEN("sum constraint sums updated correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
+                                   RangeEquals({1, 1, 4}));
                         CHECK(bnode_ptr->diff(state).size() == 1);
                         CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                     }
@@ -1242,8 +1275,8 @@ TEST_CASE("BinaryNode") {
                     AND_WHEN("We revert") {
                         graph.revert(state);
 
-                        THEN("The bound axis sums reverted correctly") {
-                            CHECK_THAT(bnode_ptr->bound_axis_sums(state)[0],
+                        THEN("Sum constraint sums reverted correctly") {
+                            CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
                                        RangeEquals({1, 1, 3}));
                             CHECK(bnode_ptr->diff(state).size() == 0);
                         }
@@ -1252,7 +1285,7 @@ TEST_CASE("BinaryNode") {
             }
         }
     }
-    // *********************** Axis-wise bounds tests *************************
+    // *********************** Sum Constraint tests *************************
 }
 
 TEST_CASE("IntegerNode") {
@@ -1552,197 +1585,210 @@ TEST_CASE("IntegerNode") {
                             "Number array cannot have dynamic size.");
     }
 
-    // *********************** Axis-wise bounds tests *************************
-    GIVEN("(2x3)-IntegerNode with axis-wise bounds on the invalid axis -2") {
-        std::vector<AxisBound> bound_axes{{-2, {Equal}, {20.0}}};
+    // *********************** Sum Constraint tests *************************
+    GIVEN("(2x3)-IntegerNode with a sum constraint on the invalid axis -2") {
+        std::vector<SumConstraint> sum_constraints{{-2, {Equal}, {20.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3},
-                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Invalid bound axis given number array shape.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                                std::nullopt, sum_constraints),
+                "Invalid constrained axis given number array shape.");
     }
 
-    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on the invalid axis 3") {
-        std::vector<AxisBound> bound_axes{{3, {Equal}, {10.0}}};
+    GIVEN("(2x3x4)-IntegerNode with a sum constraint on the invalid axis 3") {
+        std::vector<SumConstraint> sum_constraints{{3, {Equal}, {10.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
-                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Invalid bound axis given number array shape.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Invalid constrained axis given number array shape.");
     }
 
-    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too many operators.") {
-        std::vector<AxisBound> bound_axes{{1, {LessEqual, Equal, Equal, Equal}, {-10.0}}};
+    GIVEN("(2x3x4)-IntegerNode with a sum constraint on axis: 1 with too many operators.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal, Equal, Equal}, {-10.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
-                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Invalid number of axis-wise operators given number array shape.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Invalid number of operators given number array shape.");
     }
 
-    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too few operators.") {
-        std::vector<AxisBound> bound_axes{{1, {LessEqual, Equal}, {-11.0}}};
+    GIVEN("(2x3x4)-IntegerNode with a sum constraint on axis: 1 with too few operators.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal}, {-11.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
-                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Invalid number of axis-wise operators given number array shape.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Invalid number of operators given number array shape.");
     }
 
-    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too many bounds.") {
-        std::vector<AxisBound> bound_axes{{1, {LessEqual}, {-10.0, 20.0, 30.0, 40.0}}};
+    GIVEN("(2x3x4)-IntegerNode with a sum constraint on axis: 1 with too many bounds.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {-10.0, 20.0, 30.0, 40.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
-                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Invalid number of axis-wise bounds given number array shape.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Invalid number of bounds given number array shape.");
     }
 
-    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 with too few bounds.") {
-        std::vector<AxisBound> bound_axes{{1, {LessEqual}, {111.0, -223.0}}};
+    GIVEN("(2x3x4)-IntegerNode with a sum constraint on axis: 1 with too few bounds.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {111.0, -223.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
-                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Invalid number of axis-wise bounds given number array shape.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Invalid number of bounds given number array shape.");
     }
 
-    GIVEN("(6)-IntegerNode with duplicate bounds over the entire array") {
-        AxisBound bound_axis{std::nullopt, {Equal}, {10.0}};
-        std::vector<AxisBound> bound_axes{bound_axis, bound_axis};
+    GIVEN("(6)-IntegerNode with duplicate sum constraints over the entire array") {
+        SumConstraint sum_constraint{std::nullopt, {Equal}, {10.0}};
+        std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{6},
-                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Cannot define multiple bounds for the entire array.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{6}, std::nullopt,
+                                                std::nullopt, sum_constraints),
+                "Cannot define multiple sum constraints for the entire number array.");
     }
 
-    GIVEN("(2x3x4)-IntegerNode with duplicate axis-wise bounds on axis: 1") {
-        std::vector<AxisBound> bound_axes{{1, {Equal}, {100.0}}, {1, {Equal}, {100.0}}};
+    GIVEN("(2x3x4)-IntegerNode with duplicate sum constraints on axis: 1") {
+        std::vector<SumConstraint> sum_constraints{{1, {Equal}, {100.0}}, {1, {Equal}, {100.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
-                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Cannot define multiple axis-wise bounds for a single axis.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Cannot define multiple sum constraints for a single axis.");
     }
 
-    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axis: 1 and the entire array.") {
-        std::vector<AxisBound> bound_axes{{std::nullopt, {Equal}, {100.0}}, {1, {Equal}, {100.0}}};
+    GIVEN("(2x3x4)-IntegerNode with sum constraints on axis: 1 and the entire array.") {
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {100.0}},
+                                                   {1, {Equal}, {100.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
-                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Axis-wise bounds are supported for at most one axis.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Can define at most one sum constraint per number array.");
     }
 
-    GIVEN("(2x3x4)-IntegerNode with axis-wise bounds on axes: 0 and 1") {
-        std::vector<AxisBound> bound_axes{{0, {Equal}, {100.0}}, {1, {Equal}, {100.0}}};
+    GIVEN("(2x3x4)-IntegerNode with sum constraints on axes: 0 and 1") {
+        std::vector<SumConstraint> sum_constraints{{0, {Equal}, {100.0}}, {1, {Equal}, {100.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
-                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Axis-wise bounds are supported for at most one axis.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Can define at most one sum constraint per number array.");
     }
 
-    GIVEN("(2x3x4)-IntegerNode with non-integral axis-wise bounds") {
-        std::vector<AxisBound> bound_axes{{1, {LessEqual}, {11.0, 12.0001, 0.0}}};
+    GIVEN("(2x3x4)-IntegerNode with a non-integral sum constraint") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {11.0, 12.0001, 0.0}}};
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
-                                                            std::nullopt, std::nullopt, bound_axes),
-                            "Axis wise bounds for integral number arrays must be integral.");
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Sum constraint(s) for integral arrays must be integral.");
     }
 
-    GIVEN("(6)-IntegerNode with an infeasible bound over the entire array.") {
+    GIVEN("(6)-IntegerNode with an infeasible sum constraint over the entire array.") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {Equal}, {-7.0}}};
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(6, -1, 8, bound_axes),
-                            "Infeasible axis-wise bounds.");
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {-7.0}}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(6, -1, 8, sum_constraints),
+                            "Infeasible sum constraint.");
     }
 
-    GIVEN("(6)-IntegerNode with an infeasible bound over the entire array.") {
+    GIVEN("(6)-IntegerNode with an infeasible sum constraint over the entire array.") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {LessEqual}, {-7.0}}};
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(6, -1, 8, bound_axes),
-                            "Infeasible axis-wise bounds.");
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {-7.0}}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(6, -1, 8, sum_constraints),
+                            "Infeasible sum constraint.");
     }
 
-    GIVEN("(6)-IntegerNode with an infeasible bound over the entire array.") {
+    GIVEN("(6)-IntegerNode with an infeasible sum constraint over the entire array.") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {GreaterEqual}, {13}}};
-        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(6, -1, 2, bound_axes),
-                            "Infeasible axis-wise bounds.");
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {13}}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(6, -1, 2, sum_constraints),
+                            "Infeasible sum constraint.");
     }
 
-    GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 0") {
+    GIVEN("(2x3x2)-IntegerNode with an infeasible sum constraint on axis: 0") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{0, {Equal, LessEqual}, {5.0, -31.0}}};
+        std::vector<SumConstraint> sum_constraints{{0, {Equal, LessEqual}, {5.0, -31.0}}};
         // Each slice along axis 0 has size 6. There is no feasible assignment
         // to the values in slice 1 (along axis 0) that results in a sum less
         // than or equal to -5*6 - 1 = -31.
         REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
-                                                            -5, 8, bound_axes),
-                            "Infeasible axis-wise bounds.");
+                                                            -5, 8, sum_constraints),
+                            "Infeasible sum constraint.");
     }
 
-    GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 1") {
+    GIVEN("(2x3x2)-IntegerNode with an infeasible sum constraint on axis: 1") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{1, {GreaterEqual, Equal, Equal}, {33.0, 0.0, 0.0}}};
+        std::vector<SumConstraint> sum_constraints{
+                {1, {GreaterEqual, Equal, Equal}, {33.0, 0.0, 0.0}}};
         // Each slice along axis 1 has size 4. There is no feasible assignment
         // to the values in slice 0 (along axis 1) that results in a sum
         // greater than or equal to 4*8 + 1 = 33.
         REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
-                                                            -5, 8, bound_axes),
-                            "Infeasible axis-wise bounds.");
+                                                            -5, 8, sum_constraints),
+                            "Infeasible sum constraint.");
     }
 
-    GIVEN("(2x3x2)-IntegerNode with infeasible axis-wise bound on axis: 2") {
+    GIVEN("(2x3x2)-IntegerNode with an infeasible sum constraint on axis: 2") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{2, {GreaterEqual, Equal}, {-1.0, 49.0}}};
+        std::vector<SumConstraint> sum_constraints{{2, {GreaterEqual, Equal}, {-1.0, 49.0}}};
         // Each slice along axis 2 has size 6. There is no feasible assignment
         // to the values in slice 1 (along axis 2) that results in a sum or
         // equal to 6*8 + 1 = 49
         REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
-                                                            -5, 8, bound_axes),
-                            "Infeasible axis-wise bounds.");
+                                                            -5, 8, sum_constraints),
+                            "Infeasible sum constraint.");
     }
 
-    GIVEN("(2x2x2)-IntegerNode with a feasible bound over the entire array ") {
+    GIVEN("(2x2x2)-IntegerNode with a feasible sum constraint over the entire array ") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {GreaterEqual}, {40}}};
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {40}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 2, 2},
-                                                         -5, 8, bound_axes);
+                                                         -5, 8, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
-            CHECK(inode_bound_axis.axis() == std::nullopt);
-            CHECK(inode_bound_axis.num_bounds() == 1);
-            CHECK(inode_bound_axis.get_bound(0) == 40.0);
-            CHECK(inode_bound_axis.num_operators() == 1);
-            CHECK(inode_bound_axis.get_operator(0) == GreaterEqual);
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraint().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_sum_constraint.axis() == std::nullopt);
+            CHECK(inode_sum_constraint.num_bounds() == 1);
+            CHECK(inode_sum_constraint.get_bound(0) == 40.0);
+            CHECK(inode_sum_constraint.num_operators() == 1);
+            CHECK(inode_sum_constraint.get_operator(0) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
             auto state = graph.initialize_state();
             graph.initialize_state(state);
             std::vector<double> expected_init{8, 8, 8, 8, 8, 8, -3, -5};
-            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
-                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 1);
-                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({40}));
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 1);
+                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({40}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
         }
     }
 
-    GIVEN("(2x3x2)-IntegerNode with feasible axis-wise bound on axis: 0") {
+    GIVEN("(2x3x2)-IntegerNode with a feasible sum constraint on axis: 0") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{0, {Equal, GreaterEqual}, {-21.0, 9.0}}};
+        std::vector<SumConstraint> sum_constraints{{0, {Equal, GreaterEqual}, {-21.0, 9.0}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
-                                                         -5, 8, bound_axes);
+                                                         -5, 8, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
-            CHECK(inode_bound_axis.axis() == 0);
-            CHECK(inode_bound_axis.num_bounds() == 2);
-            CHECK(inode_bound_axis.get_bound(0) == -21.0);
-            CHECK(inode_bound_axis.get_bound(1) == 9.0);
-            CHECK(inode_bound_axis.num_operators() == 2);
-            CHECK(inode_bound_axis.get_operator(0) == Equal);
-            CHECK(inode_bound_axis.get_operator(1) == GreaterEqual);
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraint().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_sum_constraint.axis() == 0);
+            CHECK(inode_sum_constraint.num_bounds() == 2);
+            CHECK(inode_sum_constraint.get_bound(0) == -21.0);
+            CHECK(inode_sum_constraint.get_bound(1) == 9.0);
+            CHECK(inode_sum_constraint.num_operators() == 2);
+            CHECK(inode_sum_constraint.get_operator(0) == Equal);
+            CHECK(inode_sum_constraint.get_operator(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -1755,7 +1801,7 @@ TEST_CASE("IntegerNode") {
             // print(a[1, :, :].flatten())
             // >>> [ 6  7  8  9 10 11]
             //
-            // The method `construct_state_given_exactly_one_bound_axis()`
+            // The method `construct_state_given_exactly_one_sum_constraint()`
             // will construct a state as follows:
             // [-5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5]
             // repair slice 0
@@ -1763,35 +1809,36 @@ TEST_CASE("IntegerNode") {
             // repair slice 1
             // [4, -5, -5, -5, -5, -5, 8, 8, 8, -5, -5, -5]
             std::vector<double> expected_init{4, -5, -5, -5, -5, -5, 8, 8, 8, -5, -5, -5};
-            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
-                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 2);
-                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({-21.0, 9.0}));
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({-21.0, 9.0}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
         }
     }
 
-    GIVEN("(2x3x2)-IntegerNode with feasible axis-wise bound on axis: 1") {
+    GIVEN("(2x3x2)-IntegerNode with a feasible sum constraint on axis: 1") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{1, {Equal, GreaterEqual, LessEqual}, {0.0, -2.0, 0.0}}};
+        std::vector<SumConstraint> sum_constraints{
+                {1, {Equal, GreaterEqual, LessEqual}, {0.0, -2.0, 0.0}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
-                                                         -5, 8, bound_axes);
+                                                         -5, 8, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
-            CHECK(inode_bound_axis.axis() == 1);
-            CHECK(inode_bound_axis.num_bounds() == 3);
-            CHECK(inode_bound_axis.get_bound(0) == 0.0);
-            CHECK(inode_bound_axis.get_bound(1) == -2.0);
-            CHECK(inode_bound_axis.get_bound(2) == 0.0);
-            CHECK(inode_bound_axis.num_operators() == 3);
-            CHECK(inode_bound_axis.get_operator(0) == Equal);
-            CHECK(inode_bound_axis.get_operator(1) == GreaterEqual);
-            CHECK(inode_bound_axis.get_operator(2) == LessEqual);
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraint().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_sum_constraint.axis() == 1);
+            CHECK(inode_sum_constraint.num_bounds() == 3);
+            CHECK(inode_sum_constraint.get_bound(0) == 0.0);
+            CHECK(inode_sum_constraint.get_bound(1) == -2.0);
+            CHECK(inode_sum_constraint.get_bound(2) == 0.0);
+            CHECK(inode_sum_constraint.num_operators() == 3);
+            CHECK(inode_sum_constraint.get_operator(0) == Equal);
+            CHECK(inode_sum_constraint.get_operator(1) == GreaterEqual);
+            CHECK(inode_sum_constraint.get_operator(2) == LessEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -1806,7 +1853,7 @@ TEST_CASE("IntegerNode") {
             // print(a[:, 2, :].flatten())
             // >>> [ 4  5 10 11]
             //
-            // The method `construct_state_given_exactly_one_bound_axis()`
+            // The method `construct_state_given_exactly_one_sum_constraint()`
             // will construct a state as follows:
             // [-5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5]
             // repair slice 0 w/ [8, 2, -5, -5]
@@ -1815,33 +1862,34 @@ TEST_CASE("IntegerNode") {
             // [8, 2, 8, 0, -5, -5, -5, -5, -5, -5, -5, -5]
             // no need to repair slice 2
             std::vector<double> expected_init{8, 2, 8, 0, -5, -5, -5, -5, -5, -5, -5, -5};
-            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
-                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 3);
-                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({0.0, -2.0, -20.0}));
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 3);
+                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0],
+                           RangeEquals({0.0, -2.0, -20.0}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
         }
     }
 
-    GIVEN("(2x3x2)-IntegerNode with feasible axis-wise bound on axis: 2") {
+    GIVEN("(2x3x2)-IntegerNode with a feasible sum constraint on axis: 2") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{2, {Equal, GreaterEqual}, {23.0, 14.0}}};
+        std::vector<SumConstraint> sum_constraints{{2, {Equal, GreaterEqual}, {23.0, 14.0}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
-                                                         -5, 8, bound_axes);
+                                                         -5, 8, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
-            CHECK(inode_bound_axis.axis() == 2);
-            CHECK(inode_bound_axis.num_bounds() == 2);
-            CHECK(inode_bound_axis.get_bound(0) == 23.0);
-            CHECK(inode_bound_axis.get_bound(1) == 14.0);
-            CHECK(inode_bound_axis.num_operators() == 2);
-            CHECK(inode_bound_axis.get_operator(0) == Equal);
-            CHECK(inode_bound_axis.get_operator(1) == GreaterEqual);
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraint().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_sum_constraint.axis() == 2);
+            CHECK(inode_sum_constraint.num_bounds() == 2);
+            CHECK(inode_sum_constraint.get_bound(0) == 23.0);
+            CHECK(inode_sum_constraint.get_bound(1) == 14.0);
+            CHECK(inode_sum_constraint.num_operators() == 2);
+            CHECK(inode_sum_constraint.get_operator(0) == Equal);
+            CHECK(inode_sum_constraint.get_operator(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -1854,7 +1902,7 @@ TEST_CASE("IntegerNode") {
             // print(a[:, :, 1].flatten())
             // >>> [ 1  3  5  7  9 11]
             //
-            // The method `construct_state_given_exactly_one_bound_axis()`
+            // The method `construct_state_given_exactly_one_sum_constraint()`
             // will construct a state as follows:
             // [-5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5]
             // repair slice 0 w/ [8, 8, 8, 8, -4, -5]
@@ -1862,82 +1910,82 @@ TEST_CASE("IntegerNode") {
             // repair slice 0 w/ [8, 8, 8, 0, -5, -5]
             // [8, 8, 8, 8, 8, 8, 8, 0, -4, -5, -5, -5]
             std::vector<double> expected_init{8, 8, 8, 8, 8, 8, 8, 0, -4, -5, -5, -5};
-            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
-                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 2);
-                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({23.0, 14.0}));
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({23.0, 14.0}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
         }
     }
 
-    GIVEN("(2)-IntegerNode with a bound over the entire array") {
+    GIVEN("(2)-IntegerNode with a sum constraint over the entire array") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {Equal}, {15}}};
-        auto inode_ptr = graph.emplace_node<IntegerNode>(2, -5, 8, bound_axes);
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {15}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(2, -5, 8, sum_constraints);
 
         WHEN("We initialize two invalid states") {
             auto state = graph.empty_state();
             std::vector<double> init_values{0.0, 0.0};
             CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
 
             state = graph.empty_state();
             init_values = {8.0, 8.0};
             CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
         }
     }
 
-    GIVEN("(2)-IntegerNode with a bound over the entire array") {
+    GIVEN("(2)-IntegerNode with a sum constraint over the entire array") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {LessEqual}, {10}}};
-        auto inode_ptr = graph.emplace_node<IntegerNode>(2, -5, 8, bound_axes);
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {10}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(2, -5, 8, sum_constraints);
 
         WHEN("We initialize an invalid states") {
             auto state = graph.empty_state();
             std::vector<double> init_values{8.0, 7.0};
             CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
         }
     }
 
-    GIVEN("(2)-IntegerNode with a bound over the entire array") {
+    GIVEN("(2)-IntegerNode with a sum constraint over the entire array") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {GreaterEqual}, {10}}};
-        auto inode_ptr = graph.emplace_node<IntegerNode>(2, -5, 8, bound_axes);
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {10}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(2, -5, 8, sum_constraints);
 
         WHEN("We initialize an invalid states") {
             auto state = graph.empty_state();
             std::vector<double> init_values{-5.0, -4.0};
             CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
         }
     }
 
-    GIVEN("(2x2)-BinaryNode with a bound over the entire array") {
+    GIVEN("(2x2)-BinaryNode with a sum constraint over the entire array") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{std::nullopt, {GreaterEqual}, {5.0}}};
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {5.0}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 2}, -5,
-                                                         8, bound_axes);
+                                                         8, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
-            CHECK(inode_bound_axis.axis() == std::nullopt);
-            CHECK(inode_bound_axis.num_bounds() == 1);
-            CHECK(inode_bound_axis.get_bound(0) == 5.0);
-            CHECK(inode_bound_axis.num_operators() == 1);
-            CHECK(inode_bound_axis.get_operator(0) == GreaterEqual);
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraint().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_sum_constraint.axis() == std::nullopt);
+            CHECK(inode_sum_constraint.num_bounds() == 1);
+            CHECK(inode_sum_constraint.get_bound(0) == 5.0);
+            CHECK(inode_sum_constraint.num_operators() == 1);
+            CHECK(inode_sum_constraint.get_operator(0) == GreaterEqual);
         }
 
         WHEN("We create a state using a random number generator") {
             auto state = graph.empty_state();
             auto rng = std::default_random_engine(42);
             CHECK_THROWS_WITH(inode_ptr->initialize_state(state, rng),
-                              "Cannot randomly initialize_state with bound axes.");
+                              "Cannot randomly initialize_state with sum constraints.");
         }
 
         WHEN("We initialize a valid state") {
@@ -1946,12 +1994,12 @@ TEST_CASE("IntegerNode") {
             inode_ptr->initialize_state(state, init_values);
             graph.initialize_state(state);
 
-            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
-                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 1);
-                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({5.0}));
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 1);
+                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({5.0}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
             }
 
@@ -1962,8 +2010,8 @@ TEST_CASE("IntegerNode") {
                 init_values[2] = 3;
                 // state is now: [1.0, -1.0, 3.0, 5.0]
 
-                THEN("The bound axis sums and state updated correctly") {
-                    CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({8.0}));
+                THEN("Sum constraint sums and state updated correctly") {
+                    CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({8.0}));
                     CHECK(inode_ptr->diff(state).size() == 1);
                     CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1971,8 +2019,8 @@ TEST_CASE("IntegerNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("The bound axis sums reverted correctly") {
-                        CHECK_THAT(bound_axis_sums[0], RangeEquals({5.0}));
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(sum_constraint_sums[0], RangeEquals({5.0}));
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1980,31 +2028,32 @@ TEST_CASE("IntegerNode") {
         }
     }
 
-    GIVEN("(2x3x2)-IntegerNode with index-wise bounds and an axis-wise bound on axis: 1") {
+    GIVEN("(2x3x2)-IntegerNode with index-wise bounds and a sum constraint on axis: 1") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{1, {Equal, LessEqual, GreaterEqual}, {11.0, 2.0, 5.0}}};
+        std::vector<SumConstraint> sum_constraints{
+                {1, {Equal, LessEqual, GreaterEqual}, {11.0, 2.0, 5.0}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
-                                                         -5, 8, bound_axes);
+                                                         -5, 8, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
-            CHECK(inode_bound_axis.axis() == 1);
-            CHECK(inode_bound_axis.num_bounds() == 3);
-            CHECK(inode_bound_axis.get_bound(0) == 11.0);
-            CHECK(inode_bound_axis.get_bound(1) == 2.0);
-            CHECK(inode_bound_axis.get_bound(2) == 5.0);
-            CHECK(inode_bound_axis.num_operators() == 3);
-            CHECK(inode_bound_axis.get_operator(0) == Equal);
-            CHECK(inode_bound_axis.get_operator(1) == LessEqual);
-            CHECK(inode_bound_axis.get_operator(2) == GreaterEqual);
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraint().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_sum_constraint.axis() == 1);
+            CHECK(inode_sum_constraint.num_bounds() == 3);
+            CHECK(inode_sum_constraint.get_bound(0) == 11.0);
+            CHECK(inode_sum_constraint.get_bound(1) == 2.0);
+            CHECK(inode_sum_constraint.get_bound(2) == 5.0);
+            CHECK(inode_sum_constraint.num_operators() == 3);
+            CHECK(inode_sum_constraint.get_operator(0) == Equal);
+            CHECK(inode_sum_constraint.get_operator(1) == LessEqual);
+            CHECK(inode_sum_constraint.get_operator(2) == GreaterEqual);
         }
 
         WHEN("We create a state using a random number generator") {
             auto state = graph.empty_state();
             auto rng = std::default_random_engine(42);
             CHECK_THROWS_WITH(inode_ptr->initialize_state(state, rng),
-                              "Cannot randomly initialize_state with bound axes.");
+                              "Cannot randomly initialize_state with sum constraints.");
         }
 
         WHEN("We initialize three invalid states") {
@@ -2017,7 +2066,7 @@ TEST_CASE("IntegerNode") {
             // a.sum(axis=(0, 2))
             // >>> array([15, 2, 7])
             CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
 
             state = graph.empty_state();
             // This state violates the slice 1 along axis 1
@@ -2028,7 +2077,7 @@ TEST_CASE("IntegerNode") {
             // a.sum(axis=(0, 2))
             // >>> array([11, 3, 7])
             CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
 
             state = graph.empty_state();
             // This state violates the slice 2 along axis 1
@@ -2039,7 +2088,7 @@ TEST_CASE("IntegerNode") {
             // a.sum(axis=(0, 2))
             // >>> array([11, 1, 4])
             CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
-                              "Initialized values do not satisfy axis-wise bounds.");
+                              "Initialized values do not satisfy sum constraint(s).");
         }
 
         WHEN("We initialize a valid state") {
@@ -2048,18 +2097,18 @@ TEST_CASE("IntegerNode") {
             inode_ptr->initialize_state(state, init_values);
             graph.initialize_state(state);
 
-            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
+            THEN("Sum constraint sums and state are correct") {
                 // **Python Code 2**
                 // import numpy as np
                 // a = np.asarray([5, 2, 0, 0, 3, 1, 4, 0, 2, 0, 0, 3])
                 // a = a.reshape(2, 3, 2)
                 // a.sum(axis=(0, 2))
                 // >>> array([11, 2, 7])
-                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 3);
-                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, 2, 7}));
+                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 3);
+                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({11, 2, 7}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
             }
 
@@ -2074,7 +2123,7 @@ TEST_CASE("IntegerNode") {
                 std::swap(init_values[0], init_values[1]);
                 // state is now: [2, 5, 0, 0, 3, 1, 4, 0, 0, 0, 2, 3]
 
-                THEN("The bound axis sums and state updated correctly") {
+                THEN("Sum constraint sums and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 2**
                     // a[np.unravel_index(8, a.shape)] = 0
                     // a[np.unravel_index(10, a.shape)] = 2
@@ -2082,7 +2131,7 @@ TEST_CASE("IntegerNode") {
                     // a[np.unravel_index(1, a.shape)] = 5
                     // a.sum(axis=(0, 2))
                     // >>> array([11,  0,  9])
-                    CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, 0, 9}));
+                    CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({11, 0, 9}));
                     CHECK(inode_ptr->diff(state).size() == 4);  // 2 updates per exchange
                     CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -2090,8 +2139,9 @@ TEST_CASE("IntegerNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("The bound axis sums reverted correctly") {
-                        CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, 2, 7}));
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0],
+                                   RangeEquals({11, 2, 7}));
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -2105,13 +2155,13 @@ TEST_CASE("IntegerNode") {
                 init_values[10] = 8;
                 // state is now: [5,  2,  0,  0,  3,  1,  4,  0, -5,  0,  8,  3]
 
-                THEN("The bound axis sums and state updated correctly") {
+                THEN("Sum constraint sums and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 2**
                     // a[np.unravel_index(8, a.shape)] = -5
                     // a[np.unravel_index(10, a.shape)] = 8
                     // a.sum(axis=(0, 2))
                     // >>> array([11, -5, 15])
-                    CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, -5, 15}));
+                    CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({11, -5, 15}));
                     CHECK(inode_ptr->diff(state).size() == 2);
                     CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -2119,8 +2169,9 @@ TEST_CASE("IntegerNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("The bound axis sums reverted correctly") {
-                        CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, 2, 7}));
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0],
+                                   RangeEquals({11, 2, 7}));
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -2139,7 +2190,7 @@ TEST_CASE("IntegerNode") {
                 init_values[11] = 0;
                 // state is now: [5, 2, 0, 0, 3, 1, 4, 0, 0, 1, 5, 0]
 
-                THEN("The bound axis sums and state updated correctly") {
+                THEN("Sum constraint sums and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 2**
                     // a[np.unravel_index(0, a.shape)] = 5
                     // a[np.unravel_index(8, a.shape)] = 0
@@ -2148,7 +2199,7 @@ TEST_CASE("IntegerNode") {
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(0, 2))
                     // >>> array([11,  1,  9])
-                    CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({11, 1, 9}));
+                    CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({11, 1, 9}));
                     CHECK(inode_ptr->diff(state).size() == 4);
                     CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -2156,8 +2207,8 @@ TEST_CASE("IntegerNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("The bound axis sums reverted correctly") {
-                        CHECK_THAT(bound_axis_sums[0], RangeEquals({11, 2, 7}));
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(sum_constraint_sums[0], RangeEquals({11, 2, 7}));
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -2165,32 +2216,32 @@ TEST_CASE("IntegerNode") {
         }
     }
 
-    GIVEN("(2x3)-IntegerNode and an axis-wise bound on axis: 0 with operator `==`") {
+    GIVEN("(2x3)-IntegerNode and a sum constraint on axis: 0 with operator `==`") {
         auto graph = Graph();
-        std::vector<AxisBound> bound_axes{{0, {Equal}, {1.0}}};
-        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3},
-                                                         std::nullopt, std::nullopt, bound_axes);
+        std::vector<SumConstraint> sum_constraints{{0, {Equal}, {1.0}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints);
 
-        THEN("Axis wise bound is correct") {
-            CHECK(inode_ptr->axis_wise_bounds().size() == 1);
-            AxisBound inode_bound_axis = inode_ptr->axis_wise_bounds()[0];
-            CHECK(inode_bound_axis.axis() == 0);
-            CHECK(inode_bound_axis.num_bounds() == 1);
-            CHECK(inode_bound_axis.get_bound(0) == 1.0);
-            CHECK(inode_bound_axis.num_operators() == 1);
-            CHECK(inode_bound_axis.get_operator(0) == Equal);
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraint().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_sum_constraint.axis() == 0);
+            CHECK(inode_sum_constraint.num_bounds() == 1);
+            CHECK(inode_sum_constraint.get_bound(0) == 1.0);
+            CHECK(inode_sum_constraint.num_operators() == 1);
+            CHECK(inode_sum_constraint.get_operator(0) == Equal);
         }
 
         WHEN("We initialize a valid state by construction") {
             auto state = graph.empty_state();
             graph.initialize_state(state);
 
-            auto bound_axis_sums = inode_ptr->bound_axis_sums(state);
+            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
 
-            THEN("The bound axis sums and state are correct") {
-                CHECK(inode_ptr->bound_axis_sums(state).size() == 1);
-                CHECK(inode_ptr->bound_axis_sums(state).data()[0].size() == 2);
-                CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({1.0, 1.0}));
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
+                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({1.0, 1.0}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals({1, 0, 0, 1, 0, 0}));
             }
 
@@ -2198,15 +2249,15 @@ TEST_CASE("IntegerNode") {
                 inode_ptr->exchange(state, 0, 1);
                 inode_ptr->exchange(state, 3, 4);
 
-                THEN("The bound axis sums and state updated correctly") {
-                    CHECK_THAT(inode_ptr->bound_axis_sums(state)[0], RangeEquals({1.0, 1.0}));
+                THEN("Sum constraint sums and state updated correctly") {
+                    CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({1.0, 1.0}));
                     CHECK(inode_ptr->diff(state).size() == 4);  // 2 updates per exchange
                     CHECK_THAT(inode_ptr->view(state), RangeEquals({0, 1, 0, 0, 1, 0}));
                 }
             }
         }
     }
-    // *********************** Axis-wise bounds tests *************************
+    // *********************** Sum Constraint tests *************************
 }
 
 }  // namespace dwave::optimization
