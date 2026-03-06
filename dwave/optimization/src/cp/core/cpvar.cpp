@@ -67,6 +67,28 @@ ssize_t CPVar::max_size(const CPVarsState& state) const {
     return data->max_size();
 }
 
+ssize_t CPVar::min_size() const {
+    if (node_->size() > 0) {
+        // Static array
+        return node_->size();
+    }
+    SizeInfo info = node_->sizeinfo();
+    // The minimum size value existence should be guaranteed at construction of the CPVar
+    assert(info.min.has_value());
+    return info.min.value();
+}
+
+ssize_t CPVar::max_size() const {
+    if (node_->size() > 0) {
+        // Static array
+        return node_->size();
+    }
+    SizeInfo info = node_->sizeinfo();
+    // The maximum size value existence should be guaranteed at construction of the CPVar
+    assert(info.max.has_value());
+    return info.max.value();
+}
+
 CPStatus CPVar::remove(CPVarsState& state, double value, int index) const {
     CPVarData* data = data_ptr<CPVarData>(state);
     return data->remove(value, index);
@@ -97,17 +119,19 @@ CPStatus CPVar::set_max_size(CPVarsState& state, int new_max_size) const {
     return data->update_max_size(new_max_size);
 }
 
-void CPVar::schedule_all(CPState& state, const std::vector<Propagator*>& propagators) const {
-    for (auto p : propagators) {
-        state.schedule(p);
+void CPVar::schedule_all(CPState& state, const std::vector<Advisor>& advisors, ssize_t i) const {
+    CPPropagatorsState& p_state = state.get_propagators_state();
+    for (const Advisor& adv : advisors) {
+        adv.notify(p_state, i);
+        state.schedule(adv.get_propagator());
     }
 }
 
-void CPVar::propagate_on_assignment(Propagator* p) { on_bind.push_back(p); }
+void CPVar::propagate_on_assignment(Advisor&& adv) { on_bind.push_back(std::move(adv)); }
 
-void CPVar::propagate_on_bounds_change(Propagator* p) { on_bounds.push_back(p); }
+void CPVar::propagate_on_bounds_change(Advisor&& adv) { on_bounds.push_back(std::move(adv)); }
 
-void CPVar::propagate_on_domain_change(Propagator* p) { on_domain.push_back(p); }
+void CPVar::propagate_on_domain_change(Advisor&& adv) { on_domain.push_back(std::move(adv)); }
 
 void CPVar::initialize_state(CPState& state) const {
     assert(this->cp_var_index_ >= 0);

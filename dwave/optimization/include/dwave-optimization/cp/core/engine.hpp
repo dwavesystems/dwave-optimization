@@ -15,6 +15,7 @@
 #pragma once
 
 #include <deque>
+#include <iostream>
 #include <memory>
 
 #include "dwave-optimization/cp/core/propagator.hpp"
@@ -48,6 +49,9 @@ class CPState {
     }
 
     void schedule(Propagator* p) {
+        std::cout << "scheduling propagator from the state...\n";
+        std::cout << "propagator active " << p->active(propagator_state_) << "\n";
+        std::cout << "propagator scheduled " << p->scheduled(propagator_state_) << "\n";
         if (p->active(propagator_state_) and not p->scheduled(propagator_state_)) {
             p->set_scheduled(propagator_state_, true);
             propagation_queue_.push_back(p);

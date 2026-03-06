@@ -262,11 +262,12 @@ CPStatus IntervalArray<ssize_t>::remove(double value, int index, DomainListener*
 
         if (change_max) {
             max_[index]->set_value(value - 1);
-            l->change_max();
+            l->change_max(index);
         } else if (change_min) {
             min_[index]->set_value(value + 1);
-            l->change_min();
+            l->change_min(index);
         }
+        l->change(index);
     }
     return CPStatus::OK;
 }
@@ -286,7 +287,8 @@ CPStatus IntervalArray<double>::remove_above(double value, int index, DomainList
     if (max_[index]->get_value() <= value) return CPStatus::OK;
 
     max_[index]->set_value(value);
-    l->change_max();
+    l->change_max(index);
+    l->change(index);
     return CPStatus::OK;
 }
 
@@ -305,7 +307,8 @@ CPStatus IntervalArray<ssize_t>::remove_above(double value, int index, DomainLis
     if (max_[index]->get_value() <= value) return CPStatus::OK;
 
     max_[index]->set_value(std::floor(value));
-    l->change_max();
+    l->change_max(index);
+    l->change(index);
     return CPStatus::OK;
 }
 
@@ -324,7 +327,8 @@ CPStatus IntervalArray<double>::remove_below(double value, int index, DomainList
     if (min_[index]->get_value() >= value) return CPStatus::OK;
 
     min_[index]->set_value(value);
-    l->change_min();
+    l->change_min(index);
+    l->change(index);
     return CPStatus::OK;
 }
 
@@ -343,7 +347,8 @@ CPStatus IntervalArray<ssize_t>::remove_below(double value, int index, DomainLis
     if (min_[index]->get_value() >= value) return CPStatus::OK;
 
     min_[index]->set_value(std::ceil(value));
-    l->change_min();
+    l->change_min(index);
+    l->change(index);
     return CPStatus::OK;
 }
 
@@ -364,8 +369,10 @@ CPStatus IntervalArray<T>::remove_all_but(double value, int index, DomainListene
     min_[index]->set_value(value);
     max_[index]->set_value(value);
 
-    if (changed_max) l->change_max();
-    if (changed_min) l->change_min();
+    if (changed_max) l->change_max(index);
+    if (changed_min) l->change_min(index);
+    l->change(index);
+    l->bind(index);
 
     return CPStatus::OK;
 }
@@ -380,7 +387,7 @@ CPStatus IntervalArray<T>::update_min_size(int new_min_size, DomainListener* l) 
 
     if (new_min_size != min_size_->get_value()) {
         min_size_->set_value(new_min_size);
-        l->change_array_size();
+        l->change_array_size(new_min_size);
     }
     return CPStatus::OK;
 }
@@ -395,7 +402,7 @@ CPStatus IntervalArray<T>::update_max_size(int new_max_size, DomainListener* l) 
 
     if (new_max_size != max_size_->get_value()) {
         max_size_->set_value(new_max_size);
-        l->change_array_size();
+        l->change_array_size(new_max_size);
     }
     return CPStatus::OK;
 }

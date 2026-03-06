@@ -12,19 +12,19 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#pragma once
+#include "dwave-optimization/cp/core/advisor.hpp"
 
 namespace dwave::optimization::cp {
-class DomainListener {
- public:
-    virtual ~DomainListener() = default;
+Advisor::Advisor(Propagator* p, ssize_t p_input, std::unique_ptr<IndexTransform> index_transform)
+        : p_(p), p_input_(p_input), index_transform_(std::move(index_transform)) {}
 
-    // TODO: check whether this should be removed or not
-    // virtual void empty() = 0;
-    virtual void bind(ssize_t i) = 0;
-    virtual void change(ssize_t i) = 0;
-    virtual void change_max(ssize_t i) = 0;
-    virtual void change_min(ssize_t i) = 0;
-    virtual void change_array_size(ssize_t i) = 0;
-};
+void Advisor::notify(CPPropagatorsState& p_state, ssize_t i) const {
+    std::vector<ssize_t> out;
+    index_transform_->affected(i, out);
+    for (ssize_t j : out) {
+        p_->mark_index(p_state, j);
+    }
+}
+
+Propagator* Advisor::get_propagator() const { return p_; }
 }  // namespace dwave::optimization::cp

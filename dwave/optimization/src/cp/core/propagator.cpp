@@ -13,21 +13,13 @@
 //    limitations under the License.
 
 #include "dwave-optimization/cp/core/propagator.hpp"
-
 namespace dwave::optimization::cp {
 
-template <std::derived_from<PropagatorData> PData>
-PData* Propagator::data_ptr(CPPropagatorsState& state) const {
-    assert(propagator_index_ >= 0);
-    assert(propagator_index_ < static_cast<ssize_t>(state.size()));
-    return static_cast<PData*>(state[propagator_index_].get());
-}
-
-template <std::derived_from<PropagatorData> PData>
-const PData* Propagator::data_ptr(const CPPropagatorsState& state) const {
-    assert(propagator_index_ >= 0);
-    assert(propagator_index_ < static_cast<ssize_t>(state.size()));
-    return static_cast<const PData*>(state[propagator_index_].get());
+void PropagatorData::mark_index(ssize_t index) {
+    assert(index < static_cast<ssize_t>(indices.is_scheduled.size()));
+    if (indices.is_scheduled[index]) return;
+    indices.is_scheduled[index] = true;
+    indices.to_process.push_back(index);
 }
 
 bool Propagator::scheduled(const CPPropagatorsState& state) const {
@@ -52,5 +44,11 @@ void Propagator::set_active(CPPropagatorsState& state, bool active) const {
     assert(propagator_index_ >= 0);
     assert(propagator_index_ < static_cast<ssize_t>(state.size()));
     state[propagator_index_]->set_active(active);
+}
+
+void Propagator::mark_index(CPPropagatorsState& state, ssize_t index) const {
+    assert(propagator_index_ >= 0);
+    assert(index >= 0);
+    state[propagator_index_]->mark_index(index);
 }
 }  // namespace dwave::optimization::cp

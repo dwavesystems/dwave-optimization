@@ -10,6 +10,7 @@ tests_all = executable(
         'cp/test_interval.cpp',
         'cp/test_copier.cpp',
         'cp/test_cp_var.cpp',
+        'cp/test_propagator.cpp',
 
         'nodes/indexing/test_advanced.cpp',
         'nodes/indexing/test_basic.cpp',

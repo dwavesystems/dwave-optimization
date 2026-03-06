@@ -17,6 +17,7 @@
 #include <memory>
 
 #include "dwave-optimization/array.hpp"
+#include "dwave-optimization/cp/core/advisor.hpp"
 #include "dwave-optimization/cp/core/engine.hpp"
 #include "dwave-optimization/cp/core/propagator.hpp"
 #include "dwave-optimization/cp/core/status.hpp"
@@ -116,6 +117,9 @@ class CPVar {
     ssize_t max_size(const CPVarsState& state) const;
     ssize_t min_size(const CPVarsState& state) const;
 
+    ssize_t max_size() const;
+    ssize_t min_size() const;
+
     // actions on the domains
     CPStatus remove(CPVarsState& state, double value, int index) const;
     CPStatus remove_above(CPVarsState& state, double value, int index) const;
@@ -125,16 +129,16 @@ class CPVar {
     CPStatus set_max_size(CPVarsState& state, int index) const;
 
     // actions for the propagation engine
-    void schedule_all(CPState& state, const std::vector<Propagator*>& propagators) const;
+    void schedule_all(CPState& state, const std::vector<Advisor>& advisors, ssize_t index) const;
 
     // Note: maybe we need the state here.. especially if we want to attach propagators dynamically
     // during the search...
     // Another note: it is als possible to use a vector or struct where the struct holds the
     // propagator and the event type (as an enum) that triggers it. Still considering what to do
     // here..
-    void propagate_on_domain_change(Propagator* p);
-    void propagate_on_bounds_change(Propagator* p);
-    void propagate_on_assignment(Propagator* p);
+    void propagate_on_domain_change(Advisor&& advisor);
+    void propagate_on_bounds_change(Advisor&& advisor);
+    void propagate_on_assignment(Advisor&& advisor);
 
     void initialize_state(CPState& state) const;
 
@@ -142,10 +146,10 @@ class CPVar {
     /// simple vectors (static in terms of the search for now)
     // They represent the propagators to trigger when the variable gets-assigned/changes
     // domain/bounds change
-    std::vector<Propagator*> on_bind;
-    std::vector<Propagator*> on_domain;
-    std::vector<Propagator*> on_bounds;
-    std::vector<Propagator*> on_array_size_change;
+    std::vector<Advisor> on_bind;
+    std::vector<Advisor> on_domain;
+    std::vector<Advisor> on_bounds;
+    std::vector<Advisor> on_array_size_change;
 
  protected:
     const CPModel& model_;
@@ -160,16 +164,16 @@ class CPVar {
 
         // domain listener overrides
 
-        void bind() override { var_->schedule_all(state_, var_->on_bind); }
+        void bind(ssize_t i) override { var_->schedule_all(state_, var_->on_bind, i); }
 
-        void change() override { var_->schedule_all(state_, var_->on_domain); }
+        void change(ssize_t i) override { var_->schedule_all(state_, var_->on_domain, i); }
 
-        void change_min() override { var_->schedule_all(state_, var_->on_bounds); }
+        void change_min(ssize_t i) override { var_->schedule_all(state_, var_->on_bounds, i); }
 
-        void change_max() override { var_->schedule_all(state_, var_->on_bounds); }
+        void change_max(ssize_t i) override { var_->schedule_all(state_, var_->on_bounds, i); }
 
-        void change_array_size() override {
-            var_->schedule_all(state_, var_->on_array_size_change);
+        void change_array_size(ssize_t i) override {
+            var_->schedule_all(state_, var_->on_array_size_change, i);
         }
 
      private:

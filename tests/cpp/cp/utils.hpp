@@ -19,10 +19,10 @@
 namespace dwave::optimization::cp {
 class TestListener : public DomainListener {
  public:
-    void bind() override {}
-    void change() override {}
-    void change_max() override {}
-    void change_min() override {}
-    void change_array_size() override {}
+    void bind(ssize_t i) override {}
+    void change(ssize_t i) override {}
+    void change_max(ssize_t i) override {}
+    void change_min(ssize_t i) override {}
+    void change_array_size(ssize_t i) override {}
 };
 }  // namespace dwave::optimization::cp
