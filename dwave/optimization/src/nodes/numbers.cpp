@@ -75,24 +75,24 @@ struct NumberNodeStateData : public ArrayNodeStateData {
     NumberNodeStateData(std::vector<double> input) : ArrayNodeStateData(std::move(input)) {}
     // User provides sum constraints.
     NumberNodeStateData(std::vector<double> input,
-                        std::vector<std::vector<double>> sum_constraint_sums)
+                        std::vector<std::vector<double>> sum_constraints_lhs)
             : ArrayNodeStateData(std::move(input)),
-              sum_constraint_sums(std::move(sum_constraint_sums)),
-              prior_sum_constraint_sums(this->sum_constraint_sums) {}
+              sum_constraints_lhs(std::move(sum_constraints_lhs)),
+              prior_sum_constraints_lhs(this->sum_constraints_lhs) {}
 
     std::unique_ptr<NodeStateData> copy() const override {
         return std::make_unique<NumberNodeStateData>(*this);
     }
 
     /// For each sum constraint, track the sum of the values within each slice.
-    /// `sum_constraint_sums[i][j]` is the sum of the values within the `j`th slice
+    /// `sum_constraints_lhs[i][j]` is the sum of the values within the `j`th slice
     /// along the `axis`* defined by the `i`th sum constraint.
     ///
     /// (*) If `axis == std::nullopt`, the constraint is applied to the entire
     /// array, which is treated as a flat array with a single slice.
-    std::vector<std::vector<double>> sum_constraint_sums;
+    std::vector<std::vector<double>> sum_constraints_lhs;
     // Store a copy for NumberNode::revert() and commit()
-    std::vector<std::vector<double>> prior_sum_constraint_sums;
+    std::vector<std::vector<double>> prior_sum_constraints_lhs;
 };
 
 double const* NumberNode::buff(const State& state) const noexcept {
@@ -113,32 +113,32 @@ double NumberNode::max() const { return max_; }
 ///
 /// (*) If `axis == std::nullopt`, the constraint is applied to the entire
 /// array, which is treated as a flat array with a single slice.
-std::vector<std::vector<double>> get_sum_constraint_sums(const NumberNode* node,
+std::vector<std::vector<double>> get_sum_constraints_lhs(const NumberNode* node,
                                                          const std::vector<double>& number_data) {
     std::span<const ssize_t> node_shape = node->shape();
-    const auto& sum_constraint = node->sum_constraint();
-    const ssize_t num_sum_constraints = static_cast<ssize_t>(sum_constraint.size());
+    const auto& sum_constraints = node->sum_constraints();
+    const ssize_t num_sum_constraints = static_cast<ssize_t>(sum_constraints.size());
     assert(num_sum_constraints <= static_cast<ssize_t>(node_shape.size()));
     assert(std::accumulate(node_shape.begin(), node_shape.end(), 1, std::multiplies<ssize_t>()) ==
            static_cast<ssize_t>(number_data.size()));
 
     // For each sum constraint, initialize the sum of the values contained in
     // each of its slice to 0.
-    std::vector<std::vector<double>> sum_constraint_sums;
-    sum_constraint_sums.reserve(num_sum_constraints);
-    for (const NumberNode::SumConstraint& constraint : sum_constraint) {
+    std::vector<std::vector<double>> sum_constraints_lhs;
+    sum_constraints_lhs.reserve(num_sum_constraints);
+    for (const NumberNode::SumConstraint& constraint : sum_constraints) {
         const std::optional<const ssize_t> axis = constraint.axis();
         // Handle the case where the sum constraint applies to the entire array.
         if (!axis.has_value()) {
             // Array is treated as a flat array with a single axis.
-            sum_constraint_sums.emplace_back(1, 0.0);
+            sum_constraints_lhs.emplace_back(1, 0.0);
             continue;
         }
         assert(axis.has_value());
         assert(0 <= *axis && *axis < static_cast<ssize_t>(node_shape.size()));
         // Emplace an all zeros vector of size equal to the number of slice
         // along the given constrained axis.
-        sum_constraint_sums.emplace_back(node_shape[*axis], 0.0);
+        sum_constraints_lhs.emplace_back(node_shape[*axis], 0.0);
     }
 
     // Define a BufferIterator for `number_data` given the shape and strides of
@@ -147,46 +147,46 @@ std::vector<std::vector<double>> get_sum_constraint_sums(const NumberNode* node,
          it != std::default_sentinel; ++it) {
         // Increment the sum of the appropriate slice per sum constraint.
         for (ssize_t i = 0; i < num_sum_constraints; ++i) {
-            const std::optional<const ssize_t> axis = sum_constraint[i].axis();
+            const std::optional<const ssize_t> axis = sum_constraints[i].axis();
             // Handle the case where the sum constraint applies to the entire array.
             if (!axis.has_value()) {
-                assert(sum_constraint_sums[i].size() == 1);
-                sum_constraint_sums[i].front() += *it;
+                assert(sum_constraints_lhs[i].size() == 1);
+                sum_constraints_lhs[i].front() += *it;
                 continue;
             }
             assert(axis.has_value());
             assert(0 <= *axis && *axis < static_cast<ssize_t>(it.location().size()));
             const ssize_t slice = it.location()[*axis];
             assert(0 <= slice);
-            assert(slice < static_cast<ssize_t>(sum_constraint_sums[i].size()));
-            sum_constraint_sums[i][slice] += *it;
+            assert(slice < static_cast<ssize_t>(sum_constraints_lhs[i].size()));
+            sum_constraints_lhs[i][slice] += *it;
         }
     }
 
-    return sum_constraint_sums;
+    return sum_constraints_lhs;
 }
 
 /// Determine whether the sum constraints are satisfied.
-bool satisfies_sum_constraint(const std::vector<NumberNode::SumConstraint>& sum_constraint,
-                              const std::vector<std::vector<double>>& sum_constraint_sums) {
-    assert(sum_constraint.size() == sum_constraint_sums.size());
+bool satisfies_sum_constraint(const std::vector<NumberNode::SumConstraint>& sum_constraints,
+                              const std::vector<std::vector<double>>& sum_constraints_lhs) {
+    assert(sum_constraints.size() == sum_constraints_lhs.size());
     // Iterate over each sum constraint.
-    for (ssize_t i = 0, stop_i = static_cast<ssize_t>(sum_constraint.size()); i < stop_i; ++i) {
-        const auto& constraint = sum_constraint[i];
-        const auto& contraint_sums = sum_constraint_sums[i];
+    for (ssize_t i = 0, stop_i = static_cast<ssize_t>(sum_constraints.size()); i < stop_i; ++i) {
+        const auto& constraint = sum_constraints[i];
+        const auto& lhs = sum_constraints_lhs[i];
 
         // Return `false` if any slice does not satisfy the constraint.
-        for (ssize_t slice = 0, stop_slice = static_cast<ssize_t>(contraint_sums.size());
-             slice < stop_slice; ++slice) {
+        for (ssize_t slice = 0, stop_slice = static_cast<ssize_t>(lhs.size()); slice < stop_slice;
+             ++slice) {
             switch (constraint.get_operator(slice)) {
                 case NumberNode::SumConstraint::Operator::Equal:
-                    if (contraint_sums[slice] != constraint.get_bound(slice)) return false;
+                    if (lhs[slice] != constraint.get_bound(slice)) return false;
                     break;
                 case NumberNode::SumConstraint::Operator::LessEqual:
-                    if (contraint_sums[slice] > constraint.get_bound(slice)) return false;
+                    if (lhs[slice] > constraint.get_bound(slice)) return false;
                     break;
                 case NumberNode::SumConstraint::Operator::GreaterEqual:
-                    if (contraint_sums[slice] < constraint.get_bound(slice)) return false;
+                    if (lhs[slice] < constraint.get_bound(slice)) return false;
                     break;
                 default:
                     assert(false && "Unexpected operator type.");
@@ -208,19 +208,19 @@ void NumberNode::initialize_state(State& state, std::vector<double>&& number_dat
         }
     }
 
-    if (sum_constraint_.size() == 0) {  // No sum constraints to consider.
+    if (sum_constraints_.size() == 0) {  // No sum constraints to consider.
         emplace_data_ptr<NumberNodeStateData>(state, std::move(number_data));
     } else {
         // Given the assignment to NumberNode `number_data`, compute the sum
         // of the values within each slice per sum constraint.
-        auto sum_constraint_sums = get_sum_constraint_sums(this, number_data);
+        auto sum_constraints_lhs = get_sum_constraints_lhs(this, number_data);
 
-        if (!satisfies_sum_constraint(sum_constraint_, sum_constraint_sums)) {
+        if (!satisfies_sum_constraint(sum_constraints_, sum_constraints_lhs)) {
             throw std::invalid_argument("Initialized values do not satisfy sum constraint(s).");
         }
 
         emplace_data_ptr<NumberNodeStateData>(state, std::move(number_data),
-                                              std::move(sum_constraint_sums));
+                                              std::move(sum_constraints_lhs));
     }
 }
 
@@ -254,27 +254,27 @@ std::vector<ssize_t> undo_shift_axis_data(const std::span<const ssize_t> span, c
     return output;
 }
 
-/// Given a `sum`, operator (`op`), and a `bound`, determine the non-negative amount
-/// `delta` needed to be added to `sum` to satisfy the constraint: (sum+delta) op bound.
-/// e.g. Given (sum, op, bound) := (10, ==, 12), delta = 2
-/// e.g. Given (sum, op, bound) := (10, <=, 12), delta = 0
-/// e.g. Given (sum, op, bound) := (10, >=, 12), delta = 2
+/// Given a `lhs`, operator (`op`), and a `bound`, determine the non-negative amount
+/// `delta` needed to be added to `lhs` to satisfy the constraint: (lhs+delta) op bound.
+/// e.g. Given (lhs, op, bound) := (10, ==, 12), delta = 2
+/// e.g. Given (lhs, op, bound) := (10, <=, 12), delta = 0
+/// e.g. Given (lhs, op, bound) := (10, >=, 12), delta = 2
 /// Throws an error if `delta` is negative (corresponding with an infeasible sum constraint)
-double sum_constraint_delta(const double sum, const NumberNode::SumConstraint::Operator op,
+double sum_constraint_delta(const double lhs, const NumberNode::SumConstraint::Operator op,
                             const double bound) {
     switch (op) {
         case NumberNode::SumConstraint::Operator::Equal:
-            if (sum > bound) throw std::invalid_argument("Infeasible sum constraint.");
+            if (lhs > bound) throw std::invalid_argument("Infeasible sum constraint.");
             // If error was not thrown, return amount needed to satisfy constraint.
-            return bound - sum;
+            return bound - lhs;
         case NumberNode::SumConstraint::Operator::LessEqual:
-            if (sum > bound) throw std::invalid_argument("Infeasible sum constraint.");
+            if (lhs > bound) throw std::invalid_argument("Infeasible sum constraint.");
             // If error was not thrown, sum satisfies constraint.
             return 0.0;
         case NumberNode::SumConstraint::Operator::GreaterEqual:
             // If sum is less than bound, return the amount needed to equal it.
             // Otherwise, sum satisfies constraint.
-            return (sum < bound) ? (bound - sum) : 0.0;
+            return (lhs < bound) ? (bound - lhs) : 0.0;
         default:
             assert(false && "Unexpected operator type.");
             unreachable();
@@ -297,17 +297,17 @@ void construct_state_given_exactly_one_sum_constraint(const NumberNode* node,
     }
     // 2) Determine the slice sums for the sum constraint. To improve performance,
     // compute sum during previous loop.
-    assert(node->sum_constraint().size() == 1);
-    const std::vector<double> constraint_sums = get_sum_constraint_sums(node, values).front();
+    assert(node->sum_constraints().size() == 1);
+    const std::vector<double> lhs = get_sum_constraints_lhs(node, values).front();
     // Obtain the stateless sum constraint information.
-    const NumberNode::SumConstraint& constraint = node->sum_constraint().front();
+    const NumberNode::SumConstraint& constraint = node->sum_constraints().front();
     const std::optional<const ssize_t> axis = constraint.axis();
 
     // Handle the case where the constraint applies to the entire array.
     if (!axis.has_value()) {
-        assert(constraint_sums.size() == 1);
+        assert(lhs.size() == 1);
         // Determine the amount needed to adjust the values within the array.
-        double delta = sum_constraint_delta(constraint_sums.front(), constraint.get_operator(0),
+        double delta = sum_constraint_delta(lhs.front(), constraint.get_operator(0),
                                             constraint.get_bound(0));
         if (delta == 0) return;  // Bound is satisfied for entire array.
 
@@ -346,7 +346,7 @@ void construct_state_given_exactly_one_sum_constraint(const NumberNode* node,
     // sum constraint.
     for (ssize_t slice = 0, stop = node_shape[*axis]; slice < stop; ++slice) {
         // Determine the amount needed to adjust the values within the slice.
-        double delta = sum_constraint_delta(constraint_sums[slice], constraint.get_operator(slice),
+        double delta = sum_constraint_delta(lhs[slice], constraint.get_operator(slice),
                                             constraint.get_bound(slice));
         if (delta == 0) continue;  // Sum constraint is satisfied for slice.
         assert(delta >= 0);        // Should only increment.
@@ -383,13 +383,13 @@ void NumberNode::initialize_state(State& state) const {
     std::vector<double> values;
     values.reserve(this->size());
 
-    if (sum_constraint_.size() == 0) {
+    if (sum_constraints_.size() == 0) {
         // No sum constraint to consider, initialize by default.
         for (ssize_t i = 0, stop = this->size(); i < stop; ++i) {
             values.push_back(default_value(i));
         }
         initialize_state(state, std::move(values));
-    } else if (sum_constraint_.size() == 1) {
+    } else if (sum_constraints_.size() == 1) {
         construct_state_given_exactly_one_sum_constraint(this, values);
         initialize_state(state, std::move(values));
     } else {
@@ -400,7 +400,7 @@ void NumberNode::initialize_state(State& state) const {
 
 void NumberNode::propagate(State& state) const {
     // Should only propagate states that obey the sum constraint(s).
-    assert(satisfies_sum_constraint(sum_constraint_, sum_constraint_sums(state)));
+    assert(satisfies_sum_constraint(sum_constraints_, sum_constraints_lhs(state)));
     // Technically vestigial but will keep it for forms sake.
     for (const auto& sv : successors()) {
         sv->update(state, sv.index);
@@ -409,15 +409,15 @@ void NumberNode::propagate(State& state) const {
 
 void NumberNode::commit(State& state) const noexcept {
     auto node_data = data_ptr<NumberNodeStateData>(state);
-    // Manually store a copy of sum_constraint_sums.
-    node_data->prior_sum_constraint_sums = node_data->sum_constraint_sums;
+    // Manually store a copy of sum_constraints_lhs.
+    node_data->prior_sum_constraints_lhs = node_data->sum_constraints_lhs;
     node_data->commit();
 }
 
 void NumberNode::revert(State& state) const noexcept {
     auto node_data = data_ptr<NumberNodeStateData>(state);
-    // Manually reset sum_constraint_sums.
-    node_data->sum_constraint_sums = node_data->prior_sum_constraint_sums;
+    // Manually reset sum_constraints_lhs.
+    node_data->sum_constraints_lhs = node_data->prior_sum_constraints_lhs;
     node_data->revert();
 }
 
@@ -433,12 +433,12 @@ void NumberNode::exchange(State& state, ssize_t i, ssize_t j) const {
     if (ptr->exchange(i, j)) {
         // If change occurred and sum constraint exist, update running sums.
         // Nothing to update if all sum constraints are Equals.
-        if (!sum_constraint_all_equals_ && sum_constraint_.size() > 0) {
+        if (!sum_constraints_all_equals_ && sum_constraints_.size() > 0) {
             const double difference = ptr->get(i) - ptr->get(j);
             // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-            update_sum_constraint_sums(state, i, difference);
+            update_sum_constraints_lhs(state, i, difference);
             // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-            update_sum_constraint_sums(state, j, -difference);
+            update_sum_constraints_lhs(state, j, -difference);
         }
     }
 }
@@ -488,18 +488,18 @@ void NumberNode::clip_and_set_value(State& state, ssize_t index, double value) c
     // State change occurs IFF `value` != buffer[index].
     if (ptr->set(index, value)) {
         // If change occurred and sum constraint exist, update running sums.
-        if (sum_constraint_.size() > 0) {
-            update_sum_constraint_sums(state, index, value - diff(state).back().old);
+        if (sum_constraints_.size() > 0) {
+            update_sum_constraints_lhs(state, index, value - diff(state).back().old);
         }
     }
 }
 
-const std::vector<NumberNode::SumConstraint>& NumberNode::sum_constraint() const {
-    return sum_constraint_;
+const std::vector<NumberNode::SumConstraint>& NumberNode::sum_constraints() const {
+    return sum_constraints_;
 }
 
-const std::vector<std::vector<double>>& NumberNode::sum_constraint_sums(const State& state) const {
-    return data_ptr<NumberNodeStateData>(state)->sum_constraint_sums;
+const std::vector<std::vector<double>>& NumberNode::sum_constraints_lhs(const State& state) const {
+    return data_ptr<NumberNodeStateData>(state)->sum_constraints_lhs;
 }
 
 template <bool maximum>
@@ -515,8 +515,8 @@ double get_extreme_index_wise_bound(const std::vector<double>& bound) {
 }
 
 bool all_sum_constraint_operators_are_equals(
-        std::vector<NumberNode::SumConstraint>& sum_constraint) {
-    for (const NumberNode::SumConstraint& constraint : sum_constraint) {
+        std::vector<NumberNode::SumConstraint>& sum_constraints) {
+    for (const NumberNode::SumConstraint& constraint : sum_constraints) {
         for (ssize_t i = 0, stop = constraint.num_operators(); i < stop; ++i) {
             if (constraint.get_operator(i) != NumberNode::SumConstraint::Operator::Equal)
                 return false;
@@ -556,8 +556,8 @@ void check_index_wise_bounds(const NumberNode& node, const std::vector<double>& 
 
 /// Check the user defined sum constraint(s).
 void check_sum_constraints(const NumberNode* node) {
-    const std::vector<NumberNode::SumConstraint>& sum_constraint = node->sum_constraint();
-    if (sum_constraint.size() == 0) return;  // No sum constraints to check.
+    const std::vector<NumberNode::SumConstraint>& sum_constraints = node->sum_constraints();
+    if (sum_constraints.size() == 0) return;  // No sum constraints to check.
 
     const std::span<const ssize_t> shape = node->shape();
     // Used to assess if an axis is subject to multiple constraints.
@@ -565,7 +565,7 @@ void check_sum_constraints(const NumberNode* node) {
     // Used to assess if array is subject to multiple constraints.
     bool constrained_array = false;
 
-    for (const NumberNode::SumConstraint& constraint : sum_constraint) {
+    for (const NumberNode::SumConstraint& constraint : sum_constraints) {
         const std::optional<const ssize_t> axis = constraint.axis();
         const ssize_t num_operators = static_cast<ssize_t>(constraint.num_operators());
         const ssize_t num_bounds = static_cast<ssize_t>(constraint.num_bounds());
@@ -607,7 +607,7 @@ void check_sum_constraints(const NumberNode* node) {
     }
 
     // *Currently*, we only support one sum constraint.
-    if (sum_constraint.size() > 1) {
+    if (sum_constraints.size() > 1) {
         throw std::invalid_argument("Can define at most one sum constraint per number array.");
     }
 
@@ -620,14 +620,14 @@ void check_sum_constraints(const NumberNode* node) {
 
 // Base class to be used as interfaces.
 NumberNode::NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,
-                       std::vector<double> upper_bound, std::vector<SumConstraint> sum_constraint)
+                       std::vector<double> upper_bound, std::vector<SumConstraint> sum_constraints)
         : ArrayOutputMixin(shape),
           min_(get_extreme_index_wise_bound<false>(lower_bound)),
           max_(get_extreme_index_wise_bound<true>(upper_bound)),
           lower_bounds_(std::move(lower_bound)),
           upper_bounds_(std::move(upper_bound)),
-          sum_constraint_(std::move(sum_constraint)),
-          sum_constraint_all_equals_(all_sum_constraint_operators_are_equals(sum_constraint_)) {
+          sum_constraints_(std::move(sum_constraints)),
+          sum_constraints_all_equals_(all_sum_constraint_operators_are_equals(sum_constraints_)) {
     if ((shape.size() > 0) && (shape[0] < 0)) {
         throw std::invalid_argument("Number array cannot have dynamic size.");
     }
@@ -640,36 +640,36 @@ NumberNode::NumberNode(std::span<const ssize_t> shape, std::vector<double> lower
     check_sum_constraints(this);
 }
 
-void NumberNode::update_sum_constraint_sums(State& state, const ssize_t index,
+void NumberNode::update_sum_constraints_lhs(State& state, const ssize_t index,
                                             const double value_change) const {
-    const auto& sum_constraint = this->sum_constraint();
-    assert(value_change != 0);           // Should not call when no change occurs.
-    assert(sum_constraint.size() != 0);  // Should only call where applicable.
+    const auto& sum_constraints = this->sum_constraints();
+    assert(value_change != 0);            // Should not call when no change occurs.
+    assert(sum_constraints.size() != 0);  // Should only call where applicable.
 
     // Get multidimensional indices for `index` so we can identify the slices
     // `index` lies on per sum constraint.
     const std::vector<ssize_t> multi_index = unravel_index(index, this->shape());
-    assert(sum_constraint.size() <= multi_index.size());
+    assert(sum_constraints.size() <= multi_index.size());
     // Get the slice sums for all sum constraints.
-    auto& sum_constraint_sums = data_ptr<NumberNodeStateData>(state)->sum_constraint_sums;
-    assert(sum_constraint.size() == sum_constraint_sums.size());
+    auto& sum_constraints_lhs = data_ptr<NumberNodeStateData>(state)->sum_constraints_lhs;
+    assert(sum_constraints.size() == sum_constraints_lhs.size());
 
     // For each sum constraint.
-    for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraint.size()); i < stop; ++i) {
-        const std::optional<const ssize_t> axis = sum_constraint[i].axis();
+    for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
+        const std::optional<const ssize_t> axis = sum_constraints[i].axis();
 
         // Handle the case where the constraint applies to the entire array.
         if (!axis.has_value()) {
-            assert(sum_constraint_sums[i].size() == 1);
-            sum_constraint_sums[i].front() += value_change;
+            assert(sum_constraints_lhs[i].size() == 1);
+            sum_constraints_lhs[i].front() += value_change;
             continue;
         }
 
         assert(axis.has_value() && 0 <= *axis && *axis < static_cast<ssize_t>(multi_index.size()));
         // Get the slice along the constrained axis the `value_change` occurs in.
         const ssize_t slice = multi_index[*axis];
-        assert(0 <= slice && slice < static_cast<ssize_t>(sum_constraint_sums[i].size()));
-        sum_constraint_sums[i][slice] += value_change;  // Offset slice sum.
+        assert(0 <= slice && slice < static_cast<ssize_t>(sum_constraints_lhs[i].size()));
+        sum_constraints_lhs[i][slice] += value_change;  // Offset slice sum.
     }
 }
 
@@ -677,10 +677,10 @@ void NumberNode::update_sum_constraint_sums(State& state, const ssize_t index,
 
 /// Check the user defined sum constraint for IntegerNode.
 void check_sum_constraint_integrality(
-        const std::vector<NumberNode::SumConstraint>& sum_constraint) {
-    if (sum_constraint.size() == 0) return;  // No sum constraints to check.
+        const std::vector<NumberNode::SumConstraint>& sum_constraints) {
+    if (sum_constraints.size() == 0) return;  // No sum constraints to check.
 
-    for (const NumberNode::SumConstraint& constraint : sum_constraint) {
+    for (const NumberNode::SumConstraint& constraint : sum_constraints) {
         for (ssize_t slice = 0, stop = constraint.num_bounds(); slice < stop; ++slice) {
             const double bound = constraint.get_bound(slice);
             if (bound != std::floor(bound)) {
@@ -694,14 +694,14 @@ void check_sum_constraint_integrality(
 IntegerNode::IntegerNode(std::span<const ssize_t> shape,
                          std::optional<std::vector<double>> lower_bound,
                          std::optional<std::vector<double>> upper_bound,
-                         std::vector<SumConstraint> sum_constraint)
+                         std::vector<SumConstraint> sum_constraints)
         : NumberNode(
                   shape,
                   lower_bound.has_value() ? std::move(*lower_bound)
                                           : std::vector<double>{default_lower_bound},
                   upper_bound.has_value() ? std::move(*upper_bound)
                                           : std::vector<double>{default_upper_bound},
-                  (check_sum_constraint_integrality(sum_constraint), std::move(sum_constraint))) {
+                  (check_sum_constraint_integrality(sum_constraints), std::move(sum_constraints))) {
     if (min_ < minimum_lower_bound || max_ > maximum_upper_bound) {
         throw std::invalid_argument("range provided for integers exceeds supported range");
     }
@@ -710,58 +710,58 @@ IntegerNode::IntegerNode(std::span<const ssize_t> shape,
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape,
                          std::optional<std::vector<double>> lower_bound,
                          std::optional<std::vector<double>> upper_bound,
-                         std::vector<SumConstraint> sum_constraint)
+                         std::vector<SumConstraint> sum_constraints)
         : IntegerNode(std::span(shape), std::move(lower_bound), std::move(upper_bound),
-                      std::move(sum_constraint)) {}
+                      std::move(sum_constraints)) {}
 IntegerNode::IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
                          std::optional<std::vector<double>> upper_bound,
-                         std::vector<SumConstraint> sum_constraint)
+                         std::vector<SumConstraint> sum_constraints)
         : IntegerNode({size}, std::move(lower_bound), std::move(upper_bound),
-                      std::move(sum_constraint)) {}
+                      std::move(sum_constraints)) {}
 
 IntegerNode::IntegerNode(std::span<const ssize_t> shape, double lower_bound,
                          std::optional<std::vector<double>> upper_bound,
-                         std::vector<SumConstraint> sum_constraint)
+                         std::vector<SumConstraint> sum_constraints)
         : IntegerNode(shape, std::vector<double>{lower_bound}, std::move(upper_bound),
-                      std::move(sum_constraint)) {}
+                      std::move(sum_constraints)) {}
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound,
                          std::optional<std::vector<double>> upper_bound,
-                         std::vector<SumConstraint> sum_constraint)
+                         std::vector<SumConstraint> sum_constraints)
         : IntegerNode(std::span(shape), std::vector<double>{lower_bound}, std::move(upper_bound),
-                      std::move(sum_constraint)) {}
+                      std::move(sum_constraints)) {}
 IntegerNode::IntegerNode(ssize_t size, double lower_bound,
                          std::optional<std::vector<double>> upper_bound,
-                         std::vector<SumConstraint> sum_constraint)
+                         std::vector<SumConstraint> sum_constraints)
         : IntegerNode({size}, std::vector<double>{lower_bound}, std::move(upper_bound),
-                      std::move(sum_constraint)) {}
+                      std::move(sum_constraints)) {}
 
 IntegerNode::IntegerNode(std::span<const ssize_t> shape,
                          std::optional<std::vector<double>> lower_bound, double upper_bound,
-                         std::vector<SumConstraint> sum_constraint)
+                         std::vector<SumConstraint> sum_constraints)
         : IntegerNode(shape, std::move(lower_bound), std::vector<double>{upper_bound},
-                      std::move(sum_constraint)) {}
+                      std::move(sum_constraints)) {}
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape,
                          std::optional<std::vector<double>> lower_bound, double upper_bound,
-                         std::vector<SumConstraint> sum_constraint)
+                         std::vector<SumConstraint> sum_constraints)
         : IntegerNode(std::span(shape), std::move(lower_bound), std::vector<double>{upper_bound},
-                      std::move(sum_constraint)) {}
+                      std::move(sum_constraints)) {}
 IntegerNode::IntegerNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
-                         double upper_bound, std::vector<SumConstraint> sum_constraint)
+                         double upper_bound, std::vector<SumConstraint> sum_constraints)
         : IntegerNode({size}, std::move(lower_bound), std::vector<double>{upper_bound},
-                      std::move(sum_constraint)) {}
+                      std::move(sum_constraints)) {}
 
 IntegerNode::IntegerNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound,
-                         std::vector<SumConstraint> sum_constraint)
+                         std::vector<SumConstraint> sum_constraints)
         : IntegerNode(shape, std::vector<double>{lower_bound}, std::vector<double>{upper_bound},
-                      std::move(sum_constraint)) {}
+                      std::move(sum_constraints)) {}
 IntegerNode::IntegerNode(std::initializer_list<ssize_t> shape, double lower_bound,
-                         double upper_bound, std::vector<SumConstraint> sum_constraint)
+                         double upper_bound, std::vector<SumConstraint> sum_constraints)
         : IntegerNode(std::span(shape), std::vector<double>{lower_bound},
-                      std::vector<double>{upper_bound}, std::move(sum_constraint)) {}
+                      std::vector<double>{upper_bound}, std::move(sum_constraints)) {}
 IntegerNode::IntegerNode(ssize_t size, double lower_bound, double upper_bound,
-                         std::vector<SumConstraint> sum_constraint)
+                         std::vector<SumConstraint> sum_constraints)
         : IntegerNode({size}, std::vector<double>{lower_bound}, std::vector<double>{upper_bound},
-                      std::move(sum_constraint)) {}
+                      std::move(sum_constraints)) {}
 
 bool IntegerNode::integral() const { return true; }
 
@@ -780,8 +780,8 @@ void IntegerNode::set_value(State& state, ssize_t index, double value) const {
     // State change occurs IFF `value` != buffer[index].
     if (ptr->set(index, value)) {
         // If change occurred and sum constraint exist, update running sums.
-        if (sum_constraint_.size() > 0) {
-            update_sum_constraint_sums(state, index, value - diff(state).back().old);
+        if (sum_constraints_.size() > 0) {
+            update_sum_constraints_lhs(state, index, value - diff(state).back().old);
         }
     }
 }
@@ -823,65 +823,65 @@ std::vector<double> limit_bound_to_bool_domain(std::optional<std::vector<double>
 BinaryNode::BinaryNode(std::span<const ssize_t> shape,
                        std::optional<std::vector<double>> lower_bound,
                        std::optional<std::vector<double>> upper_bound,
-                       std::vector<SumConstraint> sum_constraint)
+                       std::vector<SumConstraint> sum_constraints)
         : IntegerNode(shape, limit_bound_to_bool_domain<false>(lower_bound),
-                      limit_bound_to_bool_domain<true>(upper_bound), std::move(sum_constraint)) {}
+                      limit_bound_to_bool_domain<true>(upper_bound), std::move(sum_constraints)) {}
 
 BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape,
                        std::optional<std::vector<double>> lower_bound,
                        std::optional<std::vector<double>> upper_bound,
-                       std::vector<SumConstraint> sum_constraint)
+                       std::vector<SumConstraint> sum_constraints)
         : BinaryNode(std::span(shape), std::move(lower_bound), std::move(upper_bound),
-                     std::move(sum_constraint)) {}
+                     std::move(sum_constraints)) {}
 BinaryNode::BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
                        std::optional<std::vector<double>> upper_bound,
-                       std::vector<SumConstraint> sum_constraint)
+                       std::vector<SumConstraint> sum_constraints)
         : BinaryNode({size}, std::move(lower_bound), std::move(upper_bound),
-                     std::move(sum_constraint)) {}
+                     std::move(sum_constraints)) {}
 
 BinaryNode::BinaryNode(std::span<const ssize_t> shape, double lower_bound,
                        std::optional<std::vector<double>> upper_bound,
-                       std::vector<SumConstraint> sum_constraint)
+                       std::vector<SumConstraint> sum_constraints)
         : BinaryNode(shape, std::vector<double>{lower_bound}, std::move(upper_bound),
-                     std::move(sum_constraint)) {}
+                     std::move(sum_constraints)) {}
 BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound,
                        std::optional<std::vector<double>> upper_bound,
-                       std::vector<SumConstraint> sum_constraint)
+                       std::vector<SumConstraint> sum_constraints)
         : BinaryNode(std::span(shape), std::vector<double>{lower_bound}, std::move(upper_bound),
-                     std::move(sum_constraint)) {}
+                     std::move(sum_constraints)) {}
 BinaryNode::BinaryNode(ssize_t size, double lower_bound,
                        std::optional<std::vector<double>> upper_bound,
-                       std::vector<SumConstraint> sum_constraint)
+                       std::vector<SumConstraint> sum_constraints)
         : BinaryNode({size}, std::vector<double>{lower_bound}, std::move(upper_bound),
-                     std::move(sum_constraint)) {}
+                     std::move(sum_constraints)) {}
 
 BinaryNode::BinaryNode(std::span<const ssize_t> shape,
                        std::optional<std::vector<double>> lower_bound, double upper_bound,
-                       std::vector<SumConstraint> sum_constraint)
+                       std::vector<SumConstraint> sum_constraints)
         : BinaryNode(shape, std::move(lower_bound), std::vector<double>{upper_bound},
-                     std::move(sum_constraint)) {}
+                     std::move(sum_constraints)) {}
 BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape,
                        std::optional<std::vector<double>> lower_bound, double upper_bound,
-                       std::vector<SumConstraint> sum_constraint)
+                       std::vector<SumConstraint> sum_constraints)
         : BinaryNode(std::span(shape), std::move(lower_bound), std::vector<double>{upper_bound},
-                     std::move(sum_constraint)) {}
+                     std::move(sum_constraints)) {}
 BinaryNode::BinaryNode(ssize_t size, std::optional<std::vector<double>> lower_bound,
-                       double upper_bound, std::vector<SumConstraint> sum_constraint)
+                       double upper_bound, std::vector<SumConstraint> sum_constraints)
         : BinaryNode({size}, std::move(lower_bound), std::vector<double>{upper_bound},
-                     std::move(sum_constraint)) {}
+                     std::move(sum_constraints)) {}
 
 BinaryNode::BinaryNode(std::span<const ssize_t> shape, double lower_bound, double upper_bound,
-                       std::vector<SumConstraint> sum_constraint)
+                       std::vector<SumConstraint> sum_constraints)
         : BinaryNode(shape, std::vector<double>{lower_bound}, std::vector<double>{upper_bound},
-                     std::move(sum_constraint)) {}
+                     std::move(sum_constraints)) {}
 BinaryNode::BinaryNode(std::initializer_list<ssize_t> shape, double lower_bound, double upper_bound,
-                       std::vector<SumConstraint> sum_constraint)
+                       std::vector<SumConstraint> sum_constraints)
         : BinaryNode(std::span(shape), std::vector<double>{lower_bound},
-                     std::vector<double>{upper_bound}, std::move(sum_constraint)) {}
+                     std::vector<double>{upper_bound}, std::move(sum_constraints)) {}
 BinaryNode::BinaryNode(ssize_t size, double lower_bound, double upper_bound,
-                       std::vector<SumConstraint> sum_constraint)
+                       std::vector<SumConstraint> sum_constraints)
         : BinaryNode({size}, std::vector<double>{lower_bound}, std::vector<double>{upper_bound},
-                     std::move(sum_constraint)) {}
+                     std::move(sum_constraints)) {}
 
 void BinaryNode::flip(State& state, ssize_t i) const {
     auto ptr = data_ptr<NumberNodeStateData>(state);
@@ -891,10 +891,10 @@ void BinaryNode::flip(State& state, ssize_t i) const {
     // State change occurs IFF `value` != buffer[i].
     if (ptr->set(i, !ptr->get(i))) {
         // If change occurred and sum constraint exist, update running sums.
-        if (sum_constraint_.size() > 0) {
+        if (sum_constraints_.size() > 0) {
             // If value changed from 0 -> 1, update by 1.
             // If value changed from 1 -> 0, update by -1.
-            update_sum_constraint_sums(state, i, (ptr->get(i) == 1) ? 1 : -1);
+            update_sum_constraints_lhs(state, i, (ptr->get(i) == 1) ? 1 : -1);
         }
     }
 }
