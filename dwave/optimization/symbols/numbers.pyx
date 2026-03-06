@@ -213,8 +213,7 @@ cdef class BinaryVariable(ArraySymbol):
             with zf.open(info, "r") as f:
                 # Note that import is a list of lists, not a list of tuples.
                 # Hence we convert to tuple. We could also support lists.
-                subject_to = [(item[0], item[1], item[2]) if len(item) == 3
-                              else (item[0], item[1]) for item in json.load(f)]
+                subject_to = [tuple(item) for item in json.load(f)]
 
         return BinaryVariable(model,
                               shape=shape_info["shape"],
@@ -434,8 +433,7 @@ cdef class IntegerVariable(ArraySymbol):
             with zf.open(info, "r") as f:
                 # Note that import is a list of lists, not a list of tuples.
                 # Hence we convert to tuple. We could also support lists.
-                subject_to = [(item[0], item[1], item[2]) if len(item) == 3
-                              else (item[0], item[1]) for item in json.load(f)]
+                subject_to = [tuple(item) for item in json.load(f)]
 
         return IntegerVariable(model,
                                shape=shape_info["shape"],
