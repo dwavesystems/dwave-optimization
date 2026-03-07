@@ -29,6 +29,8 @@ class Advisor {
 
     Propagator* get_propagator() const;
 
+    ssize_t input_index() const { return p_input_; }
+
  private:
     // The propagator the advisor is watching
     Propagator* p_;
