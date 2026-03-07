@@ -45,6 +45,7 @@ class PropagatorData {
 
     PropagatorData(StateManager* sm, ssize_t constraint_size) : indices(constraint_size) {
       active_ = sm->make_state_bool(true);
+      scheduled_ = false;
     }
 
     /// Check whether the propagator is already scheduled

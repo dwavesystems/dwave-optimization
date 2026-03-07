@@ -78,7 +78,6 @@ TEST_CASE("ElementWiseIdentityPropagator") {
                         REQUIRE(p_state[0]->scheduled());
                         REQUIRE(p_state[0]->indices.to_process.size() == 1);
 
-                        std::cout << "Checking the scheduled indices...";
                         for (int i = 0; i < 10; ++i) {
                             if (i == 2) {
                                 REQUIRE(p_state[0]->indices.is_scheduled[i]);
