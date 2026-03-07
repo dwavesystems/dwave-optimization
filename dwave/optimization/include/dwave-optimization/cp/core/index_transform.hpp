@@ -21,6 +21,10 @@ namespace dwave::optimization::cp {
 
 /// Interface to transform index of the changing variable to output propagator index
 struct IndexTransform {
+
+    // Default destructor
+    virtual ~IndexTransform() = default;
+
     /// Return the affected indices of the propagator/constraint given the index of a changing
     /// variable
     /// TODO: keeping this as a vector of output indices, but could well change the signature to
