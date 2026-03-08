@@ -213,7 +213,7 @@ cdef class BinaryVariable(ArraySymbol):
 
         # needs to be compatible with older versions
         try:
-            info = zf.getinfo(directory + "sum_constraint.json")
+            info = zf.getinfo(directory + "sum_constraints.json")
         except KeyError:
             subject_to = None
             axes_subject_to = None
@@ -259,20 +259,20 @@ cdef class BinaryVariable(ArraySymbol):
         with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, upper_bound, allow_pickle=False)
 
-        sum_constraint = self.sum_constraint()
-        if len(sum_constraint) > 0:
+        sum_constraints = self.sum_constraints()
+        if len(sum_constraints) > 0:
             # Using json here converts the tuples to lists
-            zf.writestr(directory + "sum_constraint.json", encoder.encode(sum_constraint))
+            zf.writestr(directory + "sum_constraints.json", encoder.encode(sum_constraints))
 
-    def sum_constraint(self):
-        """Sum constraints of Integer symbol as a list of tuples where each tuple
+    def sum_constraints(self):
+        """Sum constraints of Binary symbol as a list of tuples where each tuple
         is of the form: ([operator], [bound]) or (axis, [operator(s)], [bound(s)])."""
-        cdef vector[NumberNode.SumConstraint] sum_constraint = self.ptr.sum_constraint()
+        cdef vector[NumberNode.SumConstraint] sum_constraints = self.ptr.sum_constraints()
         cdef optional[Py_ssize_t] axis
 
         output = []
-        for i in range(sum_constraint.size()):
-            constraint = &sum_constraint[i]
+        for i in range(sum_constraints.size()):
+            constraint = &sum_constraints[i]
             axis = constraint.axis()
             py_ops = [_parse_cpp_operators(constraint.get_operator(j)) for j in
                       range(constraint.num_operators())]
@@ -436,7 +436,7 @@ cdef class IntegerVariable(ArraySymbol):
 
         # needs to be compatible with older versions
         try:
-            info = zf.getinfo(directory + "sum_constraint.json")
+            info = zf.getinfo(directory + "sum_constraints.json")
         except KeyError:
             subject_to = None
             axes_subject_to = None
@@ -488,20 +488,20 @@ cdef class IntegerVariable(ArraySymbol):
         with zf.open(directory + "upper_bound.npy", mode="w", force_zip64=True) as f:
             np.save(f, upper_bound, allow_pickle=False)
 
-        sum_constraint = self.sum_constraint()
-        if len(sum_constraint) > 0:
+        sum_constraints = self.sum_constraints()
+        if len(sum_constraints) > 0:
             # Using json here converts the tuples to lists
-            zf.writestr(directory + "sum_constraint.json", encoder.encode(sum_constraint))
+            zf.writestr(directory + "sum_constraints.json", encoder.encode(sum_constraints))
 
-    def sum_constraint(self):
+    def sum_constraints(self):
         """Sum constraints of Integer symbol as a list of tuples where each tuple
         is of the form: ([operator], [bound]) or (axis, [operator(s)], [bound(s)])."""
-        cdef vector[NumberNode.SumConstraint] sum_constraint = self.ptr.sum_constraint()
+        cdef vector[NumberNode.SumConstraint] sum_constraints = self.ptr.sum_constraints()
         cdef optional[Py_ssize_t] axis
 
         output = []
-        for i in range(sum_constraint.size()):
-            constraint = &sum_constraint[i]
+        for i in range(sum_constraints.size()):
+            constraint = &sum_constraints[i]
             axis = constraint.axis()
             py_ops = [_parse_cpp_operators(constraint.get_operator(j)) for j in
                       range(constraint.num_operators())]

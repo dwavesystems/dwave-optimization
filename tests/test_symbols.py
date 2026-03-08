@@ -735,19 +735,19 @@ class TestBinaryVariable(utils.SymbolTests):
 
         # stores correct sum constraint
         x = model.binary((2, 3), subject_to=[("==", 1)])
-        self.assertEqual(x.sum_constraint(), [(["=="], [1])])
+        self.assertEqual(x.sum_constraints(), [(["=="], [1])])
         x = model.binary((2, 3), subject_to=[("==", 1)])
-        self.assertEqual(x.sum_constraint(), [(["=="], [1])])
+        self.assertEqual(x.sum_constraints(), [(["=="], [1])])
         x = model.binary((2, 3), axes_subject_to=[(0, ["<=", "=="], [1, 2])])
-        self.assertEqual(x.sum_constraint(), [(0, ["<=", "=="], [1, 2])])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1, 2])])
         x = model.binary((2, 3), axes_subject_to=[(1, "<=", [1, 2, 1])])
-        self.assertEqual(x.sum_constraint(), [(1, ["<="], [1, 2, 1])])
+        self.assertEqual(x.sum_constraints(), [(1, ["<="], [1, 2, 1])])
         x = model.binary((2, 3), axes_subject_to=[(0, ["<=", "=="], 1)])
-        self.assertEqual(x.sum_constraint(), [(0, ["<=", "=="], [1])])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1])])
         x = model.binary((2, 3), axes_subject_to=[(0, "<=", 1)])
-        self.assertEqual(x.sum_constraint(), [(0, ["<="], [1])])
+        self.assertEqual(x.sum_constraints(), [(0, ["<="], [1])])
         x = model.binary((2, 3), axes_subject_to=[(0, ["<=", "=="], np.asarray([1, 2]))])
-        self.assertEqual(x.sum_constraint(), [(0, ["<=", "=="], [1, 2])])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1, 2])])
 
         # infeasible sum constraint
         with self.assertRaises(ValueError):
@@ -841,7 +841,7 @@ class TestBinaryVariable(utils.SymbolTests):
             for i in range(old.size()):
                 self.assertTrue(np.all(old.lower_bound() == new.lower_bound()))
                 self.assertTrue(np.all(old.upper_bound() == new.upper_bound()))
-                self.assertEqual(old.sum_constraint(), new.sum_constraint())
+                self.assertEqual(old.sum_constraints(), new.sum_constraints())
 
     def test_set_state(self):
         with self.subTest("array-like"):
@@ -1946,20 +1946,19 @@ class TestIntegerVariable(utils.SymbolTests):
 
         # stores correct sum constraints
         x = model.integer((2, 3), subject_to=[("==", 2)])
-        self.assertEqual(x.sum_constraint(), [(["=="], [2])])
+        self.assertEqual(x.sum_constraints(), [(["=="], [2])])
         x = model.integer((2, 3), subject_to=[("==", 2)])
-        self.assertEqual(x.sum_constraint(), [(["=="], [2])])
-
+        self.assertEqual(x.sum_constraints(), [(["=="], [2])])
         x = model.integer((2, 3), axes_subject_to=[(0, ["<=", "=="], [1, 2])])
-        self.assertEqual(x.sum_constraint(), [(0, ["<=", "=="], [1, 2])])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1, 2])])
         x = model.integer((2, 3), axes_subject_to=[(1, "<=", [1, 2, 1])])
-        self.assertEqual(x.sum_constraint(), [(1, ["<="], [1, 2, 1])])
+        self.assertEqual(x.sum_constraints(), [(1, ["<="], [1, 2, 1])])
         x = model.integer((2, 3), axes_subject_to=[(0, ["<=", "=="], 1)])
-        self.assertEqual(x.sum_constraint(), [(0, ["<=", "=="], [1])])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1])])
         x = model.integer((2, 3), axes_subject_to=[(0, "<=", 1)])
-        self.assertEqual(x.sum_constraint(), [(0, ["<="], [1])])
+        self.assertEqual(x.sum_constraints(), [(0, ["<="], [1])])
         x = model.integer((2, 3), axes_subject_to=[(0, ["<=", "=="], np.asarray([1, 2]))])
-        self.assertEqual(x.sum_constraint(), [(0, ["<=", "=="], [1, 2])])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1, 2])])
 
         # infeasible sum constraint
         with self.assertRaises(ValueError):
@@ -2038,7 +2037,7 @@ class TestIntegerVariable(utils.SymbolTests):
             for i in range(old.size()):
                 self.assertTrue(np.all(old.lower_bound() == new.lower_bound()))
                 self.assertTrue(np.all(old.upper_bound() == new.upper_bound()))
-                self.assertEqual(old.sum_constraint(), new.sum_constraint())
+                self.assertEqual(old.sum_constraints(), new.sum_constraints())
 
     def test_set_state(self):
         with self.subTest("Simple positive integer"):

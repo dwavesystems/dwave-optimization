@@ -44,7 +44,7 @@ cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimi
         double upper_bound(Py_ssize_t index)
         double lower_bound() except+
         double upper_bound() except+
-        const vector[SumConstraint] sum_constraint()
+        const vector[SumConstraint] sum_constraints()
 
     cdef cppclass IntegerNode(NumberNode):
         pass

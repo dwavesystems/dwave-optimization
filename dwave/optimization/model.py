@@ -201,7 +201,7 @@ class Model(_Graph):
                 single value applies to all slices; an array specifies one
                 bound per slice.
                 If provided, the sum of values within each slice along the
-                specified axis must satisfy the corresponding operator–bound
+                specified axis must satisfy the corresponding operator–bound pair.
                 Note 1: At most one sum constraint may be provided.
                 Note 2: If provided, subject_to must None.
 
@@ -252,7 +252,7 @@ class Model(_Graph):
             >>> model = Model()
             >>> b = model.binary([2, 3], lower_bound=[[0, 1, 1], [0, 1, 0]],
             ... axes_subject_to=[(1, ["<=", "==", ">="], [0, 2, 1])])
-            >>> np.all(b.sum_constraint() == [(1, ["<=", "==", ">="], [0, 2, 1])])
+            >>> np.all(b.sum_constraints() == [(1, ["<=", "==", ">="], [0, 2, 1])])
             True
 
             This example adds a :math:`6`-sized binary symbol such that
@@ -262,7 +262,7 @@ class Model(_Graph):
             >>> import numpy as np
             >>> model = Model()
             >>> b = model.binary(6, subject_to=[("==", 2)])
-            >>> np.all(b.sum_constraint() == [(["=="], [2])])
+            >>> np.all(b.sum_constraints() == [(["=="], [2])])
             True
 
         See Also:
@@ -567,7 +567,7 @@ class Model(_Graph):
                 single value applies to all slices; an array specifies one
                 bound per slice.
                 If provided, the sum of values within each slice along the
-                specified axis must satisfy the corresponding operator–bound
+                specified axis must satisfy the corresponding operator–bound pair.
                 Note 1: At most one sum constraint may be provided.
                 Note 2: If provided, subject_to must None.
         Returns:
@@ -608,7 +608,7 @@ class Model(_Graph):
             True
 
             This example adds a :math:`(2x3)`-sized integer symbol with general
-            lower and upper bounds and sum constraint along axis 1. Let x_i
+            lower and upper bounds and a sum constraint along axis 1. Let x_i
             (int i : 0 <= i <= 2) denote the sum of the values within
             slice i along axis 1. For each state defined for this symbol:
             (x_0 <= 2), (x_1 <= 4), and (x_2 <= 5).
@@ -618,7 +618,7 @@ class Model(_Graph):
             >>> model = Model()
             >>> i = model.integer([2, 3], lower_bound=1, upper_bound=3,
             ... axes_subject_to=[(1, "<=", [2, 4, 5])])
-            >>> np.all(i.sum_constraint() == [(1, ["<="], [2, 4, 5])])
+            >>> np.all(i.sum_constraints() == [(1, ["<="], [2, 4, 5])])
             True
 
             This example adds a :math:`6`-sized integer symbol such that
@@ -629,7 +629,7 @@ class Model(_Graph):
             >>> import numpy as np
             >>> model = Model()
             >>> i = model.integer(6, subject_to=[("<=", 20)])
-            >>> np.all(i.sum_constraint() == [(["<="], [20])])
+            >>> np.all(i.sum_constraints() == [(["<="], [20])])
             True
 
         See Also:

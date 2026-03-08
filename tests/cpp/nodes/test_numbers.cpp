@@ -719,8 +719,8 @@ TEST_CASE("BinaryNode") {
                 graph.emplace_node<BinaryNode>(6, lower_bounds, upper_bounds, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(bnode_ptr->sum_constraint().size() == 1);
-            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == std::nullopt);
             CHECK(bnode_sum_constraint.num_bounds() == 1);
             CHECK(bnode_sum_constraint.get_bound(0) == 3.0);
@@ -754,8 +754,8 @@ TEST_CASE("BinaryNode") {
                                                lower_bounds, upper_bounds, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(bnode_ptr->sum_constraint().size() == 1);
-            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == 0);
             CHECK(bnode_sum_constraint.num_bounds() == 3);
             CHECK(bnode_sum_constraint.get_bound(0) == 1.0);
@@ -806,8 +806,8 @@ TEST_CASE("BinaryNode") {
                                                lower_bounds, upper_bounds, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(bnode_ptr->sum_constraint().size() == 1);
-            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == 1);
             CHECK(bnode_sum_constraint.num_bounds() == 2);
             CHECK(bnode_sum_constraint.get_bound(0) == 1.0);
@@ -855,8 +855,8 @@ TEST_CASE("BinaryNode") {
                                                lower_bounds, upper_bounds, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(bnode_ptr->sum_constraint().size() == 1);
-            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == 2);
             CHECK(bnode_sum_constraint.num_bounds() == 2);
             CHECK(bnode_sum_constraint.get_bound(0) == 3.0);
@@ -951,8 +951,8 @@ TEST_CASE("BinaryNode") {
                                                std::nullopt, std::nullopt, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(bnode_ptr->sum_constraint().size() == 1);
-            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == std::nullopt);
             CHECK(bnode_sum_constraint.num_bounds() == 1);
             CHECK(bnode_sum_constraint.get_bound(0) == 5.0);
@@ -1016,8 +1016,8 @@ TEST_CASE("BinaryNode") {
                                                std::nullopt, std::nullopt, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(bnode_ptr->sum_constraint().size() == 1);
-            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraint()[0];
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == 0);
             CHECK(bnode_sum_constraint.num_bounds() == 3);
             CHECK(bnode_sum_constraint.get_bound(0) == 1.0);
@@ -1749,8 +1749,8 @@ TEST_CASE("IntegerNode") {
                                                          -5, 8, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(inode_ptr->sum_constraint().size() == 1);
-            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == std::nullopt);
             CHECK(inode_sum_constraint.num_bounds() == 1);
             CHECK(inode_sum_constraint.get_bound(0) == 40.0);
@@ -1780,8 +1780,8 @@ TEST_CASE("IntegerNode") {
                                                          -5, 8, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(inode_ptr->sum_constraint().size() == 1);
-            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == 0);
             CHECK(inode_sum_constraint.num_bounds() == 2);
             CHECK(inode_sum_constraint.get_bound(0) == -21.0);
@@ -1828,8 +1828,8 @@ TEST_CASE("IntegerNode") {
                                                          -5, 8, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(inode_ptr->sum_constraint().size() == 1);
-            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == 1);
             CHECK(inode_sum_constraint.num_bounds() == 3);
             CHECK(inode_sum_constraint.get_bound(0) == 0.0);
@@ -1881,8 +1881,8 @@ TEST_CASE("IntegerNode") {
                                                          -5, 8, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(inode_ptr->sum_constraint().size() == 1);
-            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == 2);
             CHECK(inode_sum_constraint.num_bounds() == 2);
             CHECK(inode_sum_constraint.get_bound(0) == 23.0);
@@ -1972,8 +1972,8 @@ TEST_CASE("IntegerNode") {
                                                          8, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(inode_ptr->sum_constraint().size() == 1);
-            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == std::nullopt);
             CHECK(inode_sum_constraint.num_bounds() == 1);
             CHECK(inode_sum_constraint.get_bound(0) == 5.0);
@@ -2036,8 +2036,8 @@ TEST_CASE("IntegerNode") {
                                                          -5, 8, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(inode_ptr->sum_constraint().size() == 1);
-            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == 1);
             CHECK(inode_sum_constraint.num_bounds() == 3);
             CHECK(inode_sum_constraint.get_bound(0) == 11.0);
@@ -2223,8 +2223,8 @@ TEST_CASE("IntegerNode") {
                 std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints);
 
         THEN("Sum constraint is correct") {
-            CHECK(inode_ptr->sum_constraint().size() == 1);
-            SumConstraint inode_sum_constraint = inode_ptr->sum_constraint()[0];
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == 0);
             CHECK(inode_sum_constraint.num_bounds() == 1);
             CHECK(inode_sum_constraint.get_bound(0) == 1.0);
