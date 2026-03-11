@@ -732,12 +732,12 @@ TEST_CASE("BinaryNode") {
             auto state = graph.initialize_state();
             graph.initialize_state(state);
             std::vector<double> expected_init{0, 1, 1, 0, 0, 1};
-            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 1);
-                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({3}));
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 1);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({3}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
@@ -785,12 +785,12 @@ TEST_CASE("BinaryNode") {
             //  0, 0     0, 0    1, 1
             //  1, 0     0, 0    0, 1
             std::vector<double> expected_init{0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1};
-            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 3);
-                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 0, 3}));
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 3);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 0, 3}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
@@ -834,12 +834,12 @@ TEST_CASE("BinaryNode") {
             //  0, 0     0, 1
             std::vector<double> expected_init{0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1};
 
-            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 2);
-                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({0, 5}));
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({0, 5}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
@@ -883,12 +883,12 @@ TEST_CASE("BinaryNode") {
             //  1, 0     1, 1
             //  0, 1     1, 1
             std::vector<double> expected_init{0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1};
-            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 2);
-                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({3, 6}));
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({3, 6}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
@@ -973,12 +973,12 @@ TEST_CASE("BinaryNode") {
             bnode_ptr->initialize_state(state, init_values);
             graph.initialize_state(state);
 
-            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 1);
-                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({2.0}));
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 1);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
             }
 
@@ -990,7 +990,7 @@ TEST_CASE("BinaryNode") {
                 // state is now: [0, 0, 1, 0, 1, 0, 0, 0]
 
                 THEN("Sum constraint sums and state updated correctly") {
-                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({2.0}));
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
                     CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -999,7 +999,7 @@ TEST_CASE("BinaryNode") {
                     graph.revert(state);
 
                     THEN("Sum constraint sums reverted correctly") {
-                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({2.0}));
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1077,7 +1077,7 @@ TEST_CASE("BinaryNode") {
             bnode_ptr->initialize_state(state, init_values);
             graph.initialize_state(state);
 
-            auto sum_constraint_sums = bnode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
                 // **Python Code 1**
@@ -1086,9 +1086,9 @@ TEST_CASE("BinaryNode") {
                 // a = a.reshape(3, 2, 2)
                 // a.sum(axis=(1, 2))
                 // >>> array([1, 2, 4])
-                CHECK(bnode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(bnode_ptr->sum_constraint_sums(state).data()[0].size() == 3);
-                CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 2, 4}));
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 3);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4}));
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
             }
 
@@ -1107,7 +1107,7 @@ TEST_CASE("BinaryNode") {
                     // a[np.unravel_index(3, a.shape)] = 1
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 2, 4])
-                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 2, 4}));
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4}));
                     CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1116,7 +1116,7 @@ TEST_CASE("BinaryNode") {
                     graph.revert(state);
 
                     THEN("Sum constraint sums reverted correctly") {
-                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
@@ -1146,7 +1146,7 @@ TEST_CASE("BinaryNode") {
                     // a[np.unravel_index(10, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 1, 3])
-                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 1, 3}));
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
                     CHECK(bnode_ptr->diff(state).size() == 4);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1155,7 +1155,7 @@ TEST_CASE("BinaryNode") {
                     graph.revert(state);
 
                     THEN("Sum constraint sums reverted correctly") {
-                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
@@ -1187,7 +1187,7 @@ TEST_CASE("BinaryNode") {
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 1, 3])
-                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 1, 3}));
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
                     CHECK(bnode_ptr->diff(state).size() == 4);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1196,7 +1196,7 @@ TEST_CASE("BinaryNode") {
                     graph.revert(state);
 
                     THEN("Sum constraint sums reverted correctly") {
-                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
@@ -1219,7 +1219,7 @@ TEST_CASE("BinaryNode") {
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 2, 3])
-                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 2, 3}));
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 3}));
                     CHECK(bnode_ptr->diff(state).size() == 3);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1228,7 +1228,7 @@ TEST_CASE("BinaryNode") {
                     graph.revert(state);
 
                     THEN("Sum constraint sums reverted correctly") {
-                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
@@ -1251,7 +1251,7 @@ TEST_CASE("BinaryNode") {
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 1, 3])
-                    CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0], RangeEquals({1, 1, 3}));
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
                     CHECK(bnode_ptr->diff(state).size() == 2);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1266,7 +1266,7 @@ TEST_CASE("BinaryNode") {
                     // state is now: [0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
 
                     THEN("sum constraint sums updated correctly") {
-                        CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 1, 4}));
                         CHECK(bnode_ptr->diff(state).size() == 1);
                         CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
@@ -1276,7 +1276,7 @@ TEST_CASE("BinaryNode") {
                         graph.revert(state);
 
                         THEN("Sum constraint sums reverted correctly") {
-                            CHECK_THAT(bnode_ptr->sum_constraint_sums(state)[0],
+                            CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                        RangeEquals({1, 1, 3}));
                             CHECK(bnode_ptr->diff(state).size() == 0);
                         }
@@ -1762,12 +1762,12 @@ TEST_CASE("IntegerNode") {
             auto state = graph.initialize_state();
             graph.initialize_state(state);
             std::vector<double> expected_init{8, 8, 8, 8, 8, 8, -3, -5};
-            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 1);
-                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({40}));
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 1);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({40}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
         }
@@ -1809,12 +1809,12 @@ TEST_CASE("IntegerNode") {
             // repair slice 1
             // [4, -5, -5, -5, -5, -5, 8, 8, 8, -5, -5, -5]
             std::vector<double> expected_init{4, -5, -5, -5, -5, -5, 8, 8, 8, -5, -5, -5};
-            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 2);
-                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({-21.0, 9.0}));
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({-21.0, 9.0}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
         }
@@ -1862,12 +1862,12 @@ TEST_CASE("IntegerNode") {
             // [8, 2, 8, 0, -5, -5, -5, -5, -5, -5, -5, -5]
             // no need to repair slice 2
             std::vector<double> expected_init{8, 2, 8, 0, -5, -5, -5, -5, -5, -5, -5, -5};
-            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 3);
-                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0],
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 3);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0],
                            RangeEquals({0.0, -2.0, -20.0}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
@@ -1910,12 +1910,12 @@ TEST_CASE("IntegerNode") {
             // repair slice 0 w/ [8, 8, 8, 0, -5, -5]
             // [8, 8, 8, 8, 8, 8, 8, 0, -4, -5, -5, -5]
             std::vector<double> expected_init{8, 8, 8, 8, 8, 8, 8, 0, -4, -5, -5, -5};
-            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 2);
-                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({23.0, 14.0}));
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({23.0, 14.0}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
         }
@@ -1994,12 +1994,12 @@ TEST_CASE("IntegerNode") {
             inode_ptr->initialize_state(state, init_values);
             graph.initialize_state(state);
 
-            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 1);
-                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({5.0}));
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 1);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({5.0}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
             }
 
@@ -2011,7 +2011,7 @@ TEST_CASE("IntegerNode") {
                 // state is now: [1.0, -1.0, 3.0, 5.0]
 
                 THEN("Sum constraint sums and state updated correctly") {
-                    CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({8.0}));
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({8.0}));
                     CHECK(inode_ptr->diff(state).size() == 1);
                     CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -2020,7 +2020,7 @@ TEST_CASE("IntegerNode") {
                     graph.revert(state);
 
                     THEN("Sum constraint sums reverted correctly") {
-                        CHECK_THAT(sum_constraint_sums[0], RangeEquals({5.0}));
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({5.0}));
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -2097,7 +2097,7 @@ TEST_CASE("IntegerNode") {
             inode_ptr->initialize_state(state, init_values);
             graph.initialize_state(state);
 
-            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
                 // **Python Code 2**
@@ -2106,9 +2106,9 @@ TEST_CASE("IntegerNode") {
                 // a = a.reshape(2, 3, 2)
                 // a.sum(axis=(0, 2))
                 // >>> array([11, 2, 7])
-                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 3);
-                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({11, 2, 7}));
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 3);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 2, 7}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
             }
 
@@ -2131,7 +2131,7 @@ TEST_CASE("IntegerNode") {
                     // a[np.unravel_index(1, a.shape)] = 5
                     // a.sum(axis=(0, 2))
                     // >>> array([11,  0,  9])
-                    CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({11, 0, 9}));
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 0, 9}));
                     CHECK(inode_ptr->diff(state).size() == 4);  // 2 updates per exchange
                     CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -2140,7 +2140,7 @@ TEST_CASE("IntegerNode") {
                     graph.revert(state);
 
                     THEN("Sum constraint sums reverted correctly") {
-                        CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0],
+                        CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({11, 2, 7}));
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
@@ -2161,7 +2161,7 @@ TEST_CASE("IntegerNode") {
                     // a[np.unravel_index(10, a.shape)] = 8
                     // a.sum(axis=(0, 2))
                     // >>> array([11, -5, 15])
-                    CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({11, -5, 15}));
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, -5, 15}));
                     CHECK(inode_ptr->diff(state).size() == 2);
                     CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -2170,7 +2170,7 @@ TEST_CASE("IntegerNode") {
                     graph.revert(state);
 
                     THEN("Sum constraint sums reverted correctly") {
-                        CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0],
+                        CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({11, 2, 7}));
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
@@ -2199,7 +2199,7 @@ TEST_CASE("IntegerNode") {
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(0, 2))
                     // >>> array([11,  1,  9])
-                    CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({11, 1, 9}));
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 1, 9}));
                     CHECK(inode_ptr->diff(state).size() == 4);
                     CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -2208,7 +2208,7 @@ TEST_CASE("IntegerNode") {
                     graph.revert(state);
 
                     THEN("Sum constraint sums reverted correctly") {
-                        CHECK_THAT(sum_constraint_sums[0], RangeEquals({11, 2, 7}));
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({11, 2, 7}));
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -2236,12 +2236,12 @@ TEST_CASE("IntegerNode") {
             auto state = graph.empty_state();
             graph.initialize_state(state);
 
-            auto sum_constraint_sums = inode_ptr->sum_constraint_sums(state);
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(inode_ptr->sum_constraint_sums(state).size() == 1);
-                CHECK(inode_ptr->sum_constraint_sums(state).data()[0].size() == 2);
-                CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({1.0, 1.0}));
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1.0, 1.0}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals({1, 0, 0, 1, 0, 0}));
             }
 
@@ -2250,7 +2250,7 @@ TEST_CASE("IntegerNode") {
                 inode_ptr->exchange(state, 3, 4);
 
                 THEN("Sum constraint sums and state updated correctly") {
-                    CHECK_THAT(inode_ptr->sum_constraint_sums(state)[0], RangeEquals({1.0, 1.0}));
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1.0, 1.0}));
                     CHECK(inode_ptr->diff(state).size() == 4);  // 2 updates per exchange
                     CHECK_THAT(inode_ptr->view(state), RangeEquals({0, 1, 0, 0, 1, 0}));
                 }
