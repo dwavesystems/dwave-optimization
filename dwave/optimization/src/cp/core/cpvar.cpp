@@ -20,7 +20,7 @@ namespace dwave::optimization::cp {
 // ------ CPVar -------
 
 CPVar::CPVar(const CPModel& model, const dwave::optimization::ArrayNode* node_ptr, int index)
-        : model_(model), node_(node_ptr), cp_var_index_(index) {}
+        : node_(node_ptr), model_(model), cp_var_index_(index) {}
 
 double CPVar::min(const CPVarsState& state, int index) const {
     const CPVarData* data = data_ptr<CPVarData>(state);
