@@ -48,7 +48,7 @@ class CPState {
     }
 
     void schedule(Propagator* p) {
-        if (p->active(propagator_state_) and not p->scheduled(propagator_state_)) {
+        if ((not p->scheduled(propagator_state_)) and (p->num_indices_to_process(propagator_state_) > 0)){
             p->set_scheduled(propagator_state_, true);
             propagation_queue_.push_back(p);
         }
