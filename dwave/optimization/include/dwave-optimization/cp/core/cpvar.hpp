@@ -92,6 +92,9 @@ class CPVar {
     // constructor
     CPVar(const CPModel& model, const dwave::optimization::ArrayNode* node_ptr, int index);
 
+    CPVar(const CPVar& other) = delete;
+    CPVar() = delete;
+
     const CPModel& get_model() const { return model_; }
 
     template <std::derived_from<CPVarData> StateData>

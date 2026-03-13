@@ -35,11 +35,12 @@ void ElementWiseIdentityPropagator::initialize_state(CPState& state) const {
 CPStatus ElementWiseIdentityPropagator::propagate(CPPropagatorsState& p_state,
                                                   CPVarsState& v_state) const {
     auto data = data_ptr<PropagatorData>(p_state);
-    assert(data->indices.to_process.size() > 0);
-    while (data->indices.to_process.size() > 0) {
-        ssize_t i = data->indices.to_process.front();
-        data->indices.to_process.pop_front();
-        data->indices.is_scheduled[i] = false;
+    assert(data->num_indices_to_process() > 0);
+    std::deque<ssize_t> indices_to_process = data->indices_to_process();
+    while (data->num_indices_to_process() > 0) {
+        ssize_t i = indices_to_process.front();
+        indices_to_process.pop_front();
+        data->set_scheduled(false, i);
         /// Note: this is where other propagator would filter domains..
     }
     return CPStatus::OK;
@@ -62,11 +63,12 @@ void ReductionIdentityPropagator::initialize_state(CPState& state) const {
 CPStatus ReductionIdentityPropagator::propagate(CPPropagatorsState& p_state,
                                                 CPVarsState& v_state) const {
     auto data = data_ptr<PropagatorData>(p_state);
-    assert(data->indices.to_process.size() == 1);
-    while (data->indices.to_process.size() > 0) {
-        ssize_t i = data->indices.to_process.front();
-        data->indices.to_process.pop_front();
-        data->indices.is_scheduled[i] = false;
+    std::deque<ssize_t> indices_to_process = data->indices_to_process();
+    assert(indices_to_process.size() == 1);
+    while (data->num_indices_to_process() > 0) {
+        ssize_t i = indices_to_process.front();
+        indices_to_process.pop_front();
+        data->set_scheduled(false, i);
         /// Note: this is where other propagator would filter domains..
     }
     return CPStatus::OK;

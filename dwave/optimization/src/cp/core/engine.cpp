@@ -13,7 +13,6 @@
 //    limitations under the License.
 
 #include "dwave-optimization/cp/core/engine.hpp"
-
 namespace dwave::optimization::cp {
 
 CPStatus CPEngine::fix_point(CPState& state) const {
@@ -24,6 +23,10 @@ CPStatus CPEngine::fix_point(CPState& state) const {
     while (state.propagation_queue_.size() > 0) {
         Propagator* p = state.propagation_queue_.front();
         status = this->propagate(state, p);
+
+        // Note: After propagation, unscheduling the propagator manually
+        p->set_scheduled(p_state, false);
+        state.propagation_queue_.pop_front();
 
         if (status == CPStatus::Inconsistency) {
             while (state.propagation_queue_.size() > 0) {

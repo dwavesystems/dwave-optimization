@@ -14,6 +14,22 @@
 
 #pragma once
 
+#include "dwave-optimization/cp/core/cpvar.hpp"
+#include "dwave-optimization/cp/core/propagator.hpp"
+
 namespace dwave::optimization::cp {
-enum class CPStatus { OK, Inconsistency, Complete };
+
+template <class BinaryOp>
+class ReducePropagator : public Propagator {
+ public:
+    ReducePropagator(ssize_t index, CPVar* in, CPVar* out);
+    void initialize_state(CPState& state) const override;
+    CPStatus propagate(CPPropagatorsState& p_state, CPVarsState& v_state) const override;
+
+ private:
+    // The variables entering the binary op
+    CPVar *in_, *out_;
+};
+
+using SumPropagator = ReducePropagator<std::plus<double>>;
 }  // namespace dwave::optimization::cp

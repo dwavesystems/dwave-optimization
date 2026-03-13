@@ -60,7 +60,7 @@ TEST_CASE("ElementWiseIdentityPropagator") {
             Advisor advisor(p, 0, std::make_unique<ElementWiseTransform>());
             var->propagate_on_domain_change(std::move(advisor));
             REQUIRE(var->on_domain.size() == 1);
-            WHEN("We initialize the a state") {
+            WHEN("We initialize a state") {
                 CPState state = model.initialize_state<Copier>();
                 CPVarsState& s_state = state.get_variables_state();
                 CPPropagatorsState& p_state = state.get_propagators_state();
@@ -76,14 +76,32 @@ TEST_CASE("ElementWiseIdentityPropagator") {
                     REQUIRE(status == CPStatus::OK);
                     THEN("We see that the propagator is triggered to run on the same index") {
                         REQUIRE(p_state[0]->scheduled());
-                        REQUIRE(p_state[0]->indices.to_process.size() == 1);
+                        REQUIRE(p->num_indices_to_process(p_state) == 1);
 
                         for (int i = 0; i < 10; ++i) {
+                            REQUIRE(p->active(p_state, i));
                             if (i == 2) {
-                                REQUIRE(p_state[0]->indices.is_scheduled[i]);
+                                REQUIRE(p->scheduled(p_state, i));
                             } else {
-                                REQUIRE_FALSE(p_state[0]->indices.is_scheduled[i]);
+                                REQUIRE_FALSE(p->scheduled(p_state, i));
                             }
+                        }
+                    }
+                }
+
+                AND_WHEN("We alter the domain of a variable twice") {
+                    CPStatus status = var->remove_above(s_state, 4, 0);
+                    REQUIRE(status == CPStatus::OK);
+                    status = var->remove_below(s_state, 2, 0);
+                    REQUIRE(status == CPStatus::OK);
+
+                    THEN("We see that the propagator is triggered to run on the same index only "
+                         "once") {
+                        REQUIRE(p_state[0]->scheduled());
+                        REQUIRE(p->num_indices_to_process(p_state) == 1);
+                        REQUIRE(p->scheduled(p_state, 0));
+                        for (int i = 1; i < 10; ++i) {
+                            REQUIRE_FALSE(p->scheduled(p_state, i));
                         }
                     }
                 }

@@ -13,7 +13,6 @@
 //    limitations under the License.
 
 #include "dwave-optimization/cp/core/interval_array.hpp"
-
 #include <cassert>
 #include <cmath>
 #include <numeric>
@@ -363,8 +362,13 @@ CPStatus IntervalArray<T>::remove_all_but(double value, int index, DomainListene
         return this->update_max_size(index, l);
     }
 
-    bool changed_min = (value = min_[index]->get_value());
-    bool changed_max = (value = max_[index]->get_value());
+    if (this->contains(value, index) and this->is_bound(index)){
+        // nothing to do here, the domain is already fixed to this value
+        return CPStatus::OK;
+    }
+
+    bool changed_min = (value == min_[index]->get_value());
+    bool changed_max = (value == max_[index]->get_value());
 
     min_[index]->set_value(value);
     max_[index]->set_value(value);
