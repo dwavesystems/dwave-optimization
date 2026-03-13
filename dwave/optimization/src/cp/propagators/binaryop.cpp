@@ -15,6 +15,9 @@
 #include "dwave-optimization/cp/propagators/binaryop.hpp"
 
 #include <numeric>
+
+#include "dwave-optimization/functional.hpp"
+
 namespace dwave::optimization::cp {
 
 template <class BinaryOp>
@@ -42,6 +45,124 @@ void BinaryOpPropagator<BinaryOp>::initialize_state(CPState& state) const {
     assert(propagator_index_ < static_cast<ssize_t>(p_state.size()));
     p_state[propagator_index_] =
             std::make_unique<PropagatorData>(state.get_state_manager(), out_->max_size());
+}
+
+template <class BinaryOp>
+bool op_valid(double lhs, double rhs) {
+    if constexpr (std::same_as<BinaryOp, std::divides<double>>) {
+        return rhs != 0.0;
+    }
+    if constexpr (std::same_as<BinaryOp, std::multiplies<double>>) {
+        return true;
+    }
+    if constexpr (std::same_as<BinaryOp, functional::safe_divides<double>>) {
+        return true;
+    }
+    assert(false && "not implemeted");
+    unreachable();
+}
+
+template <class BinaryOp>
+CPStatus make_bounds_consistent_all_combos(CPVar* lhs, CPVar* rhs, CPVar* out, CPVarsState& v_state,
+                                           ssize_t i) {
+    auto op = BinaryOp();
+
+    double lhs_min = lhs->min(v_state, i);
+    double lhs_max = lhs->max(v_state, i);
+    double rhs_min = lhs->min(v_state, i);
+    double rhs_max = rhs->max(v_state, i);
+
+    double out_min = out->min(v_state, i);
+    double out_max = out->max(v_state, i);
+
+    if (op_valid<BinaryOp>(lhs_min, rhs_min)) {
+        out_min = std::min(out_min, op(lhs_min, rhs_min));
+        out_max = std::max(out_max, op(lhs_min, rhs_min));
+    }
+    if (op_valid<BinaryOp>(lhs_min, rhs_max)) {
+        out_min = std::min(out_min, op(lhs_min, rhs_max));
+        out_max = std::max(out_max, op(lhs_min, rhs_max));
+    }
+    if (op_valid<BinaryOp>(lhs_max, rhs_min)) {
+        out_min = std::min(out_min, op(lhs_max, rhs_min));
+        out_max = std::max(out_max, op(lhs_max, rhs_min));
+    }
+    if (op_valid<BinaryOp>(lhs_max, rhs_max)) {
+        out_min = std::min(out_min, op(lhs_max, rhs_max));
+        out_max = std::max(out_max, op(lhs_max, rhs_max));
+    }
+    // Prune the output
+    if (CPStatus status = out->remove_below(v_state, out_min, i); not status) return status;
+
+    if (CPStatus status = out->remove_above(v_state, out_max, i); not status) return status;
+
+    return CPStatus::OK;
+}
+
+template <>
+CPStatus BinaryOpPropagator<std::multiplies<double>>::propagate(CPPropagatorsState& p_state,
+                                                                CPVarsState& v_state) const {
+    auto data = data_ptr<PropagatorData>(p_state);
+
+    std::deque<ssize_t>& indices_to_process = data->indices_to_process();
+
+    while (data->num_indices_to_process() > 0) {
+        ssize_t i = indices_to_process.front();
+        indices_to_process.pop_front();
+        data->set_scheduled(false, i);
+
+        // Forward propagation
+        if (CPStatus status = make_bounds_consistent_all_combos<std::multiplies<double>>(
+                    lhs_, rhs_, out_, v_state, i);
+            status)
+            return status;
+
+        // Backward propagation to lhs
+        if (CPStatus status = make_bounds_consistent_all_combos<std::divides<double>>(
+                    out_, rhs_, lhs_, v_state, i);
+            status)
+            return status;
+
+        // Backward propagation to rhs
+        if (CPStatus status = make_bounds_consistent_all_combos<std::divides<double>>(
+                    out_, lhs_, rhs_, v_state, i);
+            status)
+            return status;
+    }
+    return CPStatus::OK;
+}
+
+template <>
+CPStatus BinaryOpPropagator<std::divides<double>>::propagate(CPPropagatorsState& p_state,
+                                                             CPVarsState& v_state) const {
+    auto data = data_ptr<PropagatorData>(p_state);
+
+    std::deque<ssize_t>& indices_to_process = data->indices_to_process();
+
+    while (data->num_indices_to_process() > 0) {
+        ssize_t i = indices_to_process.front();
+        indices_to_process.pop_front();
+        data->set_scheduled(false, i);
+
+        // Forward propagation
+        if (CPStatus status = make_bounds_consistent_all_combos<std::multiplies<double>>(
+                    lhs_, rhs_, out_, v_state, i);
+            not status)
+            return status;
+
+        // Backward propagation to lhs
+        if (CPStatus status = make_bounds_consistent_all_combos<std::divides<double>>(
+                    out_, rhs_, lhs_, v_state, i);
+            not status)
+            return status;
+
+        // Backward propagation to rhs
+        if (CPStatus status = make_bounds_consistent_all_combos<std::divides<double>>(
+                    out_, lhs_, rhs_, v_state, i);
+            not status)
+            return status;
+    }
+    return CPStatus::OK;
 }
 
 template <>
@@ -102,7 +223,6 @@ CPStatus BinaryOpPropagator<std::less_equal<double>>::propagate(CPPropagatorsSta
     std::deque<ssize_t>& indices_to_process = data->indices_to_process();
 
     while (data->num_indices_to_process() > 0) {
-        
         ssize_t i = indices_to_process.front();
         indices_to_process.pop_front();
         data->set_scheduled(false, i);
@@ -145,7 +265,6 @@ CPStatus BinaryOpPropagator<std::less_equal<double>>::propagate(CPPropagatorsSta
             // and probably this instruction is useless
             this->set_active(p_state, true, i);
         }
-
     }
 
     return status;

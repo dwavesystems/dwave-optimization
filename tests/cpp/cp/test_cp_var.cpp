@@ -31,6 +31,26 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization::cp {
 
+TEST_CASE("CPStatus") {
+    CPStatus status;  // Can default initialize
+
+    static_assert(CPStatus(CPStatus::OK).status == CPStatus::OK);
+    static_assert(CPStatus(CPStatus::Inconsistency).status == CPStatus::Inconsistency);
+    static_assert(static_cast<bool>(CPStatus(CPStatus::OK)));
+    static_assert(static_cast<bool>(CPStatus(CPStatus::Complete)));
+    static_assert(not static_cast<bool>(CPStatus(CPStatus::Inconsistency)));
+
+    // Check implicit conversion
+    bool ok = CPStatus(CPStatus::OK);
+    CHECK(ok);
+
+    bool complete = CPStatus(CPStatus::Complete);
+    CHECK(complete);
+
+    bool inconsistency = CPStatus(CPStatus::Inconsistency);
+    CHECK(inconsistency);
+}
+
 TEST_CASE("IntegerNode -> CPVar") {
     GIVEN("A Graph and an integer node") {
         dwave::optimization::Graph graph;
