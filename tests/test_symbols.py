@@ -729,7 +729,7 @@ class TestBinaryVariable(utils.SymbolTests):
 
         model.binary([10])
 
-    def test_bounds(self):
+    def test_index_wise_bounds(self):
         model = Model()
         x = model.binary(lower_bound=0, upper_bound=1)
         self.assertEqual(x.lower_bound(), 0)
@@ -747,6 +747,67 @@ class TestBinaryVariable(utils.SymbolTests):
 
         with self.assertRaises(ValueError):
             model.binary((2, 3), upper_bound=np.arange(6))
+
+    def test_sum_constraints(self):
+        model = Model()
+
+        # stores correct sum constraint
+        x = model.binary((2, 3), subject_to=[("==", 1)])
+        self.assertEqual(x.sum_constraints(), [(["=="], [1])])
+        x = model.binary((2, 3), subject_to=[("==", 1)])
+        self.assertEqual(x.sum_constraints(), [(["=="], [1])])
+        x = model.binary((2, 3), axes_subject_to=[(0, ["<=", "=="], [1, 2])])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1, 2])])
+        x = model.binary((2, 3), axes_subject_to=[(1, "<=", [1, 2, 1])])
+        self.assertEqual(x.sum_constraints(), [(1, ["<="], [1, 2, 1])])
+        x = model.binary((2, 3), axes_subject_to=[(0, ["<=", "=="], 1)])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1])])
+        x = model.binary((2, 3), axes_subject_to=[(0, "<=", 1)])
+        self.assertEqual(x.sum_constraints(), [(0, ["<="], [1])])
+        x = model.binary((2, 3), axes_subject_to=[(0, ["<=", "=="], np.asarray([1, 2]))])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1, 2])])
+
+        # infeasible sum constraint
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), upper_bound=[0, 1, 0, 0, 1, 0], subject_to=[(">=", 3)])
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), lower_bound=[0, 1, 0, 0, 1, 0], axes_subject_to=[(0, "==", 0)])
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), lower_bound=[0, 1, 0, 0, 1, 0], axes_subject_to=[(0, "<=", 0)])
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), upper_bound=[0, 1, 0, 0, 1, 0], axes_subject_to=[(0, ">=", 2)])
+
+        # incorrect number of operators and or bounds
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), subject_to=[("==", [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), subject_to=[(["==", "<=", "=="], [0])])
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), axes_subject_to=[(0, "==", [0, 0, 0])])
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), axes_subject_to=[(0, ["==", "<=", "=="], [0, 0])])
+
+        # check bad argument format
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), axes_subject_to=[(1.1, "<=", [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), axes_subject_to=[(1, 4, [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), axes_subject_to=[(1, ["!="], [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), axes_subject_to=[(1, ["=="], [[0, 0, 0]])])
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), axes_subject_to=[(1, [["<="]], [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), subject_to=[([["<="]], [0, 0, 0])])
+
+        # invalid number of sum constraints
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), subject_to=[("==", 1), ("<=", 0)])
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), subject_to=[("==", 1)], axes_subject_to=[(1, "<=", [1, 1, 1])])
+        with self.assertRaises(ValueError):
+            model.binary((2, 3), axes_subject_to=[(0, "==", 1), (1, "<=", [1, 1, 1])])
 
     def test_no_shape(self):
         model = Model()
@@ -783,6 +844,10 @@ class TestBinaryVariable(utils.SymbolTests):
             model.binary(),
             model.binary(3, lower_bound=1),
             model.binary(2, upper_bound=[0,1]),
+            model.binary(6, subject_to=[("<=", 2)]),
+            model.binary((2, 3), subject_to=[("<=", 2)]),
+            model.binary((2, 3), axes_subject_to=[(1, "<=", [0, 1, 2])]),
+            model.binary((2, 3), axes_subject_to=[(0, ["<=", "=="], 1)]),
         ]
 
         model.lock()
@@ -794,6 +859,7 @@ class TestBinaryVariable(utils.SymbolTests):
             for i in range(old.size()):
                 self.assertTrue(np.all(old.lower_bound() == new.lower_bound()))
                 self.assertTrue(np.all(old.upper_bound() == new.upper_bound()))
+                self.assertEqual(old.sum_constraints(), new.sum_constraints())
 
     def test_set_state(self):
         with self.subTest("array-like"):
@@ -816,7 +882,7 @@ class TestBinaryVariable(utils.SymbolTests):
             with np.testing.assert_raises(ValueError):
                 x.set_state(0, 2)
 
-        with self.subTest("Simple bounds test"):
+        with self.subTest("Simple index-wise bounds test"):
             model = Model()
             model.states.resize(1)
             x = model.binary(2, lower_bound=[-1, 0.9], upper_bound=[1.1, 1.2])
@@ -825,6 +891,32 @@ class TestBinaryVariable(utils.SymbolTests):
                 x.set_state(0, 2)
             with np.testing.assert_raises(ValueError):
                 x.set_state(1, 0)
+
+        with self.subTest("Simple sum constraint test"):
+            model = Model()
+            model.states.resize(1)
+
+            x = model.binary((2, 2), subject_to=[("<=", 1)])
+            x.set_state(0, [0, 1, 0, 0])
+            # Do not satisfy sum constraint
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [1, 1, 0, 1])
+
+            x = model.binary((2, 3), axes_subject_to=[(0, "==", 1)])
+            x.set_state(0, [0, 1, 0, 1, 0, 0])
+            # Do not satisfy sum constraint
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [1, 1, 0, 1, 0, 0])
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [0, 1, 0, 0, 0, 0])
+
+            x = model.binary((2, 2), axes_subject_to=[(1, ["<=", ">="], [0, 2])])
+            x.set_state(0, [0, 1, 0, 1])
+            # Do not satisfy sum constraint
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [1, 1, 0, 1])
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [0, 0, 0, 1])
 
         with self.subTest("invalid state index"):
             model = Model()
@@ -1848,7 +1940,7 @@ class TestIntegerVariable(utils.SymbolTests):
         model.states.resize(1)
         self.assertEqual(x.state(0).shape, tuple())
 
-    def test_bounds(self):
+    def test_index_wise_bounds(self):
         model = Model()
         x = model.integer(lower_bound=4, upper_bound=5)
         self.assertEqual(x.lower_bound(), 4)
@@ -1866,6 +1958,67 @@ class TestIntegerVariable(utils.SymbolTests):
 
         with self.assertRaises(ValueError):
             model.integer((2, 3), upper_bound=np.arange(6))
+
+    def test_sum_constraints(self):
+        model = Model()
+
+        # stores correct sum constraints
+        x = model.integer((2, 3), subject_to=[("==", 2)])
+        self.assertEqual(x.sum_constraints(), [(["=="], [2])])
+        x = model.integer((2, 3), subject_to=[("==", 2)])
+        self.assertEqual(x.sum_constraints(), [(["=="], [2])])
+        x = model.integer((2, 3), axes_subject_to=[(0, ["<=", "=="], [1, 2])])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1, 2])])
+        x = model.integer((2, 3), axes_subject_to=[(1, "<=", [1, 2, 1])])
+        self.assertEqual(x.sum_constraints(), [(1, ["<="], [1, 2, 1])])
+        x = model.integer((2, 3), axes_subject_to=[(0, ["<=", "=="], 1)])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1])])
+        x = model.integer((2, 3), axes_subject_to=[(0, "<=", 1)])
+        self.assertEqual(x.sum_constraints(), [(0, ["<="], [1])])
+        x = model.integer((2, 3), axes_subject_to=[(0, ["<=", "=="], np.asarray([1, 2]))])
+        self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1, 2])])
+
+        # infeasible sum constraint
+        with self.assertRaises(ValueError):
+            model.integer((2, 2), upper_bound=2, subject_to=[(">=", 9)])
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), axes_subject_to=[(0, "==", -1)])
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), lower_bound=0, axes_subject_to=[(0, "<=", -1)])
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), upper_bound=2, axes_subject_to=[(0, ">=", 7)])
+
+        # incorrect number of operators and or bounds
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), subject_to=[("==", [10, 20, 30])])
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), subject_to=[(["==", "<=", "=="], 10)])
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), axes_subject_to=[(0, "==", [10, 20, 30])])
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), axes_subject_to=[(0, ["==", "<=", "=="], [10, 20])])
+
+        # bad argument format
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), subject_to=[([["=="]], 0)])
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), axes_subject_to=[(1.1, "<=", [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), axes_subject_to=[(1, 4, [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), axes_subject_to=[(1, ["!="], [0, 0, 0])])
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), axes_subject_to=[(1, ["=="], [[0, 0, 0]])])
+        with self.assertRaises(TypeError):
+            model.integer((2, 3), axes_subject_to=[(1, [["=="]], [0, 0, 0])])
+
+        # invalid number of sum constraints
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), subject_to=[("==", 1), ("<=", 0)])
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), subject_to=[("==", 1)], axes_subject_to=[(1, "<=", [1, 1, 1])])
+        with self.assertRaises(ValueError):
+            model.integer((2, 3), axes_subject_to=[(0, "==", 1), (1, "<=", [1, 1, 1])])
 
     # Todo: we can generalize many of these tests for all decisions that can have
     # their state set
@@ -1887,6 +2040,10 @@ class TestIntegerVariable(utils.SymbolTests):
             model.integer(upper_bound=105),
             model.integer(15, lower_bound=4, upper_bound=6),
             model.integer(2, lower_bound=[1, 2], upper_bound=[3, 4]),
+            model.integer(6, subject_to=[("<=", 2)]),
+            model.integer((2, 3), subject_to=[("<=", 2)]),
+            model.integer((2, 3), axes_subject_to=[(1, "<=", [0, 1, 2])]),
+            model.integer((2, 3), axes_subject_to=[(0, ["<=", ">="], 2)]),
         ]
 
         model.lock()
@@ -1898,6 +2055,7 @@ class TestIntegerVariable(utils.SymbolTests):
             for i in range(old.size()):
                 self.assertTrue(np.all(old.lower_bound() == new.lower_bound()))
                 self.assertTrue(np.all(old.upper_bound() == new.upper_bound()))
+                self.assertEqual(old.sum_constraints(), new.sum_constraints())
 
     def test_set_state(self):
         with self.subTest("Simple positive integer"):
@@ -1922,7 +2080,7 @@ class TestIntegerVariable(utils.SymbolTests):
             with np.testing.assert_raises(ValueError):
                 x.set_state(0, -1234)
 
-        with self.subTest("Simple bounds test"):
+        with self.subTest("Simple index-wise bounds test"):
             model = Model()
             model.states.resize(1)
             x = model.integer(1, lower_bound=-1, upper_bound=1)
@@ -1932,6 +2090,34 @@ class TestIntegerVariable(utils.SymbolTests):
                 x.set_state(0, 2)
             with np.testing.assert_raises(ValueError):
                 x.set_state(0, -2)
+
+        with self.subTest("Simple sum constraint test"):
+            model = Model()
+            model.states.resize(1)
+
+            x = model.integer((2, 2), subject_to=[("==", 2)])
+            x.set_state(0, [0, 2, 0, 0])
+            # Do not satisfy sum constraint
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [1, 1, 1, 1])
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [0, 0, 0, 1])
+
+            x = model.integer((2, 3), axes_subject_to=[(0, "==", 3)])
+            x.set_state(0, [0, 3, 0, 1, 1, 1])
+            # Do not satisfy sum constraint
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [0, 3, 1, 1, 1, 1])
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [0, 3, 0, 1, 1, 0])
+
+            x = model.integer((2, 2), axes_subject_to=[(1, ["<=", ">="], [2, 6])])
+            x.set_state(0, [1, 6, 1, 10])
+            # Do not satisfy sum constraint
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [1, 2, 1, 1])
+            with np.testing.assert_raises(ValueError):
+                x.set_state(0, [1, 6, 2, 10])
 
         with self.subTest("array-like"):
             model = Model()

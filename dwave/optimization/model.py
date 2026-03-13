@@ -165,7 +165,10 @@ class Model(_Graph):
 
     def binary(self, shape: None | _ShapeLike = None,
                lower_bound: None | np.typing.ArrayLike = None,
-               upper_bound: None | np.typing.ArrayLike = None) -> BinaryVariable:
+               upper_bound: None | np.typing.ArrayLike = None,
+               subject_to: None | list[tuple[str, float]] = None,
+               axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None
+               ) -> BinaryVariable:
         r"""Create a binary symbol as a decision variable.
 
         Args:
@@ -178,6 +181,29 @@ class Model(_Graph):
                 scalar (one bound for all variables) or an array (one bound for
                 each variable). Non-boolean values are rounded down to the domain
                 [0,1]. If None, the default value of 1 is used.
+            subject_to (optional): Constraint on the sum of the values in the
+                array. Must be an array of tuples where each tuple has the form:
+                (operator, bound).
+                - operator (str): The constraint operator ("<=", "==", or ">=").
+                - bound (float): The constraint bound.
+                If provided, the sum of values within the array must satisfy
+                the corresponding operator–bound pair.
+                Note 1: At most one sum constraint may be provided.
+                Note 2: If provided, axes_subject_to must None.
+            axes_subject_to (optional): Constraint on the sum of the values in
+                each slice along a fixed axis in the array. Must be an array of
+                tuples where each tuple has the form: (axis, operator(s), bound(s)).
+                - axis (int): The axis that the constraint is applied to.
+                - operator(s) (str | array[str]): The constraint operator(s)
+                ("<=", "==", or ">="). A single operator applies to all slice
+                along the axis; an array specifies one operator per slice.
+                - bound(s) (float | array[float]): The constraint bound. A
+                single value applies to all slices; an array specifies one
+                bound per slice.
+                If provided, the sum of values within each slice along the
+                specified axis must satisfy the corresponding operator–bound pair.
+                Note 1: At most one sum constraint may be provided.
+                Note 2: If provided, subject_to must None.
 
         Returns:
             A binary symbol.
@@ -215,15 +241,43 @@ class Model(_Graph):
             >>> np.all([1, 0] == b.upper_bound())
             True
 
+            This example adds a :math:`(2x3)`-sized binary symbol with
+            index-wise lower bounds and a sum constraint along axis 1. Let
+            x_i (int i : 0 <= i <= 2) denote the sum of the values within
+            slice i along axis 1. For each state defined for this symbol:
+            (x_0 <= 0), (x_1 == 2), and (x_2 >= 1).
+
+            >>> from dwave.optimization.model import Model
+            >>> import numpy as np
+            >>> model = Model()
+            >>> b = model.binary([2, 3], lower_bound=[[0, 1, 1], [0, 1, 0]],
+            ... axes_subject_to=[(1, ["<=", "==", ">="], [0, 2, 1])])
+            >>> np.all(b.sum_constraints() == [(1, ["<=", "==", ">="], [0, 2, 1])])
+            True
+
+            This example adds a :math:`6`-sized binary symbol such that
+            the sum of the values within the array is equal to 2.
+
+            >>> from dwave.optimization.model import Model
+            >>> import numpy as np
+            >>> model = Model()
+            >>> b = model.binary(6, subject_to=[("==", 2)])
+            >>> np.all(b.sum_constraints() == [(["=="], [2])])
+            True
+
         See Also:
             :class:`~dwave.optimization.symbols.numbers.BinaryVariable`: equivalent symbol.
 
         .. versionchanged:: 0.6.7
-            Beginning in version 0.6.7, user-defined bounds and index-wise
-            bounds are supported.
+            Beginning in version 0.6.7, user-defined index-wise bounds are
+            supported.
+
+        .. versionchanged:: 0.6.12
+            Beginning in version 0.6.12, user-defined sum constraints are
+            supported.
         """
         from dwave.optimization.symbols import BinaryVariable  # avoid circular import
-        return BinaryVariable(self, shape, lower_bound, upper_bound)
+        return BinaryVariable(self, shape, lower_bound, upper_bound, subject_to, axes_subject_to)
 
     def constant(self, array_like: numpy.typing.ArrayLike) -> Constant:
         r"""Create a constant symbol.
@@ -487,7 +541,9 @@ class Model(_Graph):
             shape: None | _ShapeLike = None,
             lower_bound: None | numpy.typing.ArrayLike = None,
             upper_bound: None | numpy.typing.ArrayLike = None,
-            ) -> IntegerVariable:
+            subject_to: None | list[tuple[str, float]] = None,
+            axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None
+               ) -> IntegerVariable:
         r"""Create an integer symbol as a decision variable.
 
         Args:
@@ -500,7 +556,29 @@ class Model(_Graph):
                 scalar (one bound for all variables) or an array (one bound for
                 each variable). Non-integer values are down up. If None, the
                 default value is used.
-
+            subject_to (optional): Constraint on the sum of the values in the
+                array. Must be an array of tuples where each tuple has the form:
+                (operator, bound).
+                - operator (str): The constraint operator ("<=", "==", or ">=").
+                - bound (float): The constraint bound.
+                If provided, the sum of values within the array must satisfy
+                the corresponding operator–bound pair.
+                Note 1: At most one sum constraint may be provided.
+                Note 2: If provided, axes_subject_to must None.
+            axes_subject_to (optional): Constraint on the sum of the values in
+                each slice along a fixed axis in the array. Must be an array of
+                tuples where each tuple has the form: (axis, operator(s), bound(s)).
+                - axis (int): The axis that the constraint is applied to.
+                - operator(s) (str | array[str]): The constraint operator(s)
+                ("<=", "==", or ">="). A single operator applies to all slice
+                along the axis; an array specifies one operator per slice.
+                - bound(s) (float | array[float]): The constraint bound. A
+                single value applies to all slices; an array specifies one
+                bound per slice.
+                If provided, the sum of values within each slice along the
+                specified axis must satisfy the corresponding operator–bound pair.
+                Note 1: At most one sum constraint may be provided.
+                Note 2: If provided, subject_to must None.
         Returns:
             An integer symbol.
 
@@ -538,15 +616,44 @@ class Model(_Graph):
             >>> np.all([1, 2] == i.upper_bound())
             True
 
+            This example adds a :math:`(2x3)`-sized integer symbol with general
+            lower and upper bounds and a sum constraint along axis 1. Let x_i
+            (int i : 0 <= i <= 2) denote the sum of the values within
+            slice i along axis 1. For each state defined for this symbol:
+            (x_0 <= 2), (x_1 <= 4), and (x_2 <= 5).
+
+            >>> from dwave.optimization.model import Model
+            >>> import numpy as np
+            >>> model = Model()
+            >>> i = model.integer([2, 3], lower_bound=1, upper_bound=3,
+            ... axes_subject_to=[(1, "<=", [2, 4, 5])])
+            >>> np.all(i.sum_constraints() == [(1, ["<="], [2, 4, 5])])
+            True
+
+            This example adds a :math:`6`-sized integer symbol such that
+            the sum of the values within the array is less than or equal
+            to 20.
+
+            >>> from dwave.optimization.model import Model
+            >>> import numpy as np
+            >>> model = Model()
+            >>> i = model.integer(6, subject_to=[("<=", 20)])
+            >>> np.all(i.sum_constraints() == [(["<="], [20])])
+            True
+
         See Also:
             :class:`~dwave.optimization.symbols.numbers.IntegerVariable`: equivalent symbol.
 
         .. versionchanged:: 0.6.7
             Beginning in version 0.6.7, user-defined index-wise bounds are
             supported.
+
+        .. versionchanged:: 0.6.12
+            Beginning in version 0.6.12, user-defined sum constraints are
+            supported.
         """
         from dwave.optimization.symbols import IntegerVariable  # avoid circular import
-        return IntegerVariable(self, shape, lower_bound, upper_bound)
+        return IntegerVariable(self, shape, lower_bound, upper_bound, subject_to, axes_subject_to)
 
     def list(self,
             n: int,
