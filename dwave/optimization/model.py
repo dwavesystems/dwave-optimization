@@ -381,6 +381,12 @@ class Model(_Graph):
             10
             >>> disjoint_lists.num_disjoint_lists()
             4
+            >>> for i, disjoint_list in enumerate(disjoint_lists):
+            ...     print(f"Type of element {i}: {type(disjoint_list)}")
+            Type of element 0: <class 'dwave.optimization.symbols.collections.DisjointList'>
+            Type of element 1: <class 'dwave.optimization.symbols.collections.DisjointList'>
+            Type of element 2: <class 'dwave.optimization.symbols.collections.DisjointList'>
+            Type of element 3: <class 'dwave.optimization.symbols.collections.DisjointList'>
         """
         from dwave.optimization.symbols import DisjointLists, DisjointList  # avoid circular import
         disjoint_lists = DisjointLists(self, primary_set_size, num_disjoint_lists)
