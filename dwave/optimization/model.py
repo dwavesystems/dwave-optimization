@@ -381,6 +381,15 @@ class Model(_Graph):
             10
             >>> disjoint_lists.num_disjoint_lists()
             4
+            >>> with model.lock():
+            ...    model.states.resize(1)
+            ...    disjoint_lists.set_state(0, [[0, 1, 2], [3, 5, 6], [4], [7, 8, 9]])
+            ...    for i, disjoint_list in enumerate(disjoint_lists):
+            ...        print(f"Element {i}: {disjoint_list.state(0)}")
+            Element 0: [0. 1. 2.]
+            Element 1: [3. 5. 6.]
+            Element 2: [4.]
+            Element 3: [7. 8. 9.]
         """
         from dwave.optimization.symbols import DisjointLists, DisjointList  # avoid circular import
         disjoint_lists = DisjointLists(self, primary_set_size, num_disjoint_lists)

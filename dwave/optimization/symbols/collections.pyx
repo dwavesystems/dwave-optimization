@@ -399,7 +399,7 @@ cdef class DisjointLists(Symbol):
     """Disjoint-lists decision-variable symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_lists`: equivalent method.
+        :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`: equivalent method.
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists
