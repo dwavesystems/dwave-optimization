@@ -341,9 +341,14 @@ struct AdvancedIndexingNode::IndexParser_ {
                     "there must be at least one array-type index to use AdvancedIndexingNode");
         }
 
-        if (bullet1mode && array_ptr->dynamic() && std::holds_alternative<Slice>(indices_[0])) {
+        if (bullet1mode and array_ptr->dynamic() and std::holds_alternative<Slice>(indices_[0])) {
+            // It is technically possible to support this in the case that the indexers are scalar,
+            // because even then in non-grouped-indexers mode, resulting array would be dynamic
+            // only in the first dimension. However the current implementation of this mode does
+            // not support that case.
             throw std::invalid_argument(
-                    "Indexed Array cannot be dynamic with an empty slice in the first dimension");
+                    "Indexed array cannot be dynamic with an empty slice in the first dimension "
+                    "and non-grouped indexers");
         }
 
         assert(first_array != nullptr);
@@ -351,12 +356,6 @@ struct AdvancedIndexingNode::IndexParser_ {
         if (!bullet1mode && std::holds_alternative<ArrayNode*>(indices_[0])) {
             // Technically either mode can handle this case (all array indices grouped at
             // the start) but we will use bullet1mode to allow these arrays to be dynamic
-            bullet1mode = true;
-        }
-
-        if (indexing_arrays_ndim == 0) {
-            // Again, technically this could be the bullet 2 case, the output is the same
-            // for both but bullet1mode can handle this more easily.
             bullet1mode = true;
         }
 
@@ -393,11 +392,6 @@ struct AdvancedIndexingNode::IndexParser_ {
                 }
             } else {
                 // bullet2mode
-                if (indexing_arrays_ndim != 1) {
-                    throw std::invalid_argument(
-                            "Currently only 1d indexing arrays are supported when using in-place "
-                            "combined indexing");
-                }
                 size_t slice_idx = 0;
                 bool hit_first_array = false;
                 for (size_t idx = 0; idx < indices_.size(); ++idx) {
@@ -430,6 +424,7 @@ struct AdvancedIndexingNode::IndexParser_ {
             }
 
             strides = shape_to_strides(this->ndim, shape.get());
+
             if (indexing_arrays_ndim == 0) {
                 subspace_stride = ndim > 0 ? strides[0] * shape[0] : array_ptr->itemsize();
             } else {
@@ -493,6 +488,7 @@ std::span<const Update> AdvancedIndexingNode::diff(const State& state) const {
 
 void AdvancedIndexingNode::fill_subspace(State& state, ssize_t array_offset,
                                          std::vector<double>& data, ssize_t index_in_arrays) const {
+    assert(index_in_arrays == 0 or subspace_stride_ >= 0);
     ssize_t starting_output_axis = bullet1mode_ ? indexing_arrays_ndim_ : 0;
     fill_subspace_recurse<false, false, false>(array_ptr_->shape(state), array_ptr_->buff(state),
                                                array_offset * static_cast<ssize_t>(itemsize()), 0,
@@ -504,6 +500,7 @@ template <bool placement, bool removal>
 void AdvancedIndexingNode::fill_subspace(State& state, ssize_t array_item_offset,
                                          std::vector<double>& data, ssize_t index_in_arrays,
                                          std::vector<Update>& diff) const {
+    assert(index_in_arrays == 0 or subspace_stride_ >= 0);
     ssize_t starting_output_axis = bullet1mode_ ? indexing_arrays_ndim_ : 0;
     fill_subspace_recurse<true, placement, removal>(
             array_ptr_->shape(state), array_ptr_->buff(state),
@@ -517,6 +514,7 @@ void AdvancedIndexingNode::fill_axis0_subspace(State& state, ssize_t axis0_index
                                                ssize_t index_in_arrays,
                                                std::vector<Update>& diff) const {
     assert(!bullet1mode_ && "fill_axis0_subspace should only be called with bullet 2 mode");
+    assert(index_in_arrays == 0 or subspace_stride_ >= 0);
     ssize_t array_offset = axis0_index * array_ptr_->strides()[0] + array_item_offset * itemsize();
     size_t data_offset = axis0_index * strides()[0] + index_in_arrays * subspace_stride_;
     fill_subspace_recurse<true, placement, removal>(array_ptr_->shape(state),
@@ -575,8 +573,14 @@ void AdvancedIndexingNode::fill_subspace_recurse(const std::span<const ssize_t>&
                 }
             }
         } else {
-            // NOTE: I think output_dim should be incremented by the ndim of the indexing arrays
-            if (!bullet1mode_ && array_dim == first_array_index_) output_dim++;
+            // We have encountered an array indexer. In the case of grouped-indexers, we need to
+            // increment the output dimension only once by the ndim of the indexers in order
+            // to stay aligned with the (output) strides. Otherwise, in non-grouped-indexers mode,
+            // these dimensions have already been "moved" to the start of the shape, so we don't
+            // need to change the output dimension.
+            if (!bullet1mode_ && array_dim == first_array_index_) {
+                output_dim += indexing_arrays_ndim_;
+            }
             fill_subspace_recurse<fill_diff, placement, removal>(array_shape, array_buffer,
                                                                  array_offset, array_dim + 1, data,
                                                                  data_offset, output_dim, diff);
@@ -613,8 +617,14 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
     ssize_t array_axis0_size = array_ptr_->size(state) / array_item_strides()[0];
 
     // Now get the values
-    ssize_t data_size = bullet1mode_ ? size * (subspace_stride_ / itemsize())
-                                     : array_axis0_size * (strides()[0] / itemsize());
+    ssize_t subspace_size = subspace_stride_ / itemsize();
+    if (subspace_size < 0) {
+        assert(array_ptr_->dynamic());
+        assert(this->dynamic());
+        subspace_size *= -1 * array_ptr_->shape(state)[0];
+    }
+    ssize_t data_size =
+            bullet1mode_ ? size * subspace_size : array_axis0_size * (strides()[0] / itemsize());
     std::vector<double> data(data_size);
 
     for (size_t idx = 0; idx < offsets.size(); ++idx) {
@@ -1087,7 +1097,8 @@ struct BasicIndexingNode::IndexParser_ {
     std::optional<Slice> axis0_slice;
 };
 
-SizeInfo basicindexing_calculate_sizeinfo(const Array* this_node_ptr, const Array* array_ptr_, const std::optional<Slice>& axis0_slice_) {
+SizeInfo basicindexing_calculate_sizeinfo(const Array* this_node_ptr, const Array* array_ptr_,
+                                          const std::optional<Slice>& axis0_slice_) {
     // easy case, fixed size
     if (!this_node_ptr->dynamic()) return SizeInfo(this_node_ptr->size());
 
