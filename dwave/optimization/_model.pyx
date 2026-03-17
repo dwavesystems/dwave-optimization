@@ -940,8 +940,10 @@ cdef class _Graph:
 cdef class Symbol:
     """Base class for symbols.
 
-    Each symbol corresponds to a node in the directed acyclic graph representing
-    the problem.
+    :ref:`Symbols <opt_model_construction_nl_symbols>` are a model's decision
+    variables, intermediate variables, constants, and mathematical operations.
+    Each symbol corresponds to a node in the :term:`directed acyclic graph`
+    representing the problem.
     """
     def __init__(self, *args, **kwargs):
         # disallow direct construction of symbols, they should be constructed
@@ -979,9 +981,26 @@ cdef class Symbol:
 
         Note that comparing symbols across models is expensive.
 
+        Returns: Boolean
+
+        Examples:
+            This example compares
+            :class:`~dwave.optimization.symbols.IntegerVariable` symbols
+            of different sizes.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(3, lower_bound=0, upper_bound=20)
+            >>> j = model.integer(3, lower_bound=-10, upper_bound=10)
+            >>> k = model.integer(5, upper_bound=55)
+            >>> i.equals(j)
+            True
+            >>> i.equals(k)
+            False
+
         See Also:
-            :meth:`Symbol.maybe_equals`: an alternative for equality testing
-            that can return false positives but is faster.
+            :meth:`~Symbol.maybe_equals`: A faster alternative for equality
+            testing but that can return false positives.
         """
         cdef Py_ssize_t maybe = self.maybe_equals(other)
         if maybe != 1:
@@ -1053,6 +1072,16 @@ cdef class Symbol:
 
         Returns:
             True if the state is initialized.
+
+        Examples:
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(3, lower_bound=0, upper_bound=20)
+            >>> with model.lock():
+            ...     model.states.resize(5)
+            ...     i.set_state(1, [2, 4, 15])
+            ...     print(i.has_state(0), i.has_state(1))
+            False True
         """
         if not self.model.is_locked() and self.node_ptr.topological_index() < 0:
             raise TypeError("the state of an intermediate variable cannot be accessed without "
@@ -1105,7 +1134,7 @@ cdef class Symbol:
 
         See Also:
             :meth:`.shares_memory`: ``a.shares_memory(b)`` is equivalent to ``a.id() == b.id()``.
-            
+
             :meth:`.equals`: ``a.equals(b)`` will return ``True`` if ``a.id() == b.id()``. Though
             the inverse is not necessarily true.
 
@@ -1140,7 +1169,7 @@ cdef class Symbol:
         Examples:
             This example constructs a :math:`b = \sum a` model, where :math:`a`
             is a multiplication of two symbols, and iterates over the
-            predecessor's of :math:`b` (which is just :math:`a`).
+            predecessors of :math:`b` (which is just :math:`a`).
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
@@ -1161,9 +1190,8 @@ cdef class Symbol:
         """Iterate over a symbol's successors in the model.
 
         Examples:
-            This example constructs iterates over the successor symbols
-            of a :class:`~dwave.optimization.symbols.DisjointLists`
-            symbol.
+            This example constructs a :math:`y = x + 5` model and iterates over
+            the successors of :math:`x` (which is just :math:`y`).
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
@@ -1180,17 +1208,18 @@ cdef class Symbol:
 
     def maybe_equals(self, other):
         """Compare to another symbol.
-        
+
         This method exists because a complete equality test can be expensive.
 
         Args:
             other: Another symbol in the model's directed acyclic graph.
 
-        Returns: integer
+        Returns: Integer
             Supported return values are:
 
             *   ``0``---Not equal (with certainty)
-            *   ``1``---Might be equal (no guarantees); a complete equality test is necessary
+            *   ``1``---Might be equal (no guarantees); a complete equality test
+                is necessary
             *   ``2``---Are equal (with certainty)
 
         Examples:
@@ -1209,7 +1238,7 @@ cdef class Symbol:
             0
 
         See Also:
-            :meth:`.equals`: a more expensive form of equality testing.
+            :meth:`.equals`: A guaranteed but more expensive equality test.
         """
         cdef Py_ssize_t NOT = 0
         cdef Py_ssize_t MAYBE = 1
@@ -1297,6 +1326,15 @@ cdef class Symbol:
 
         Returns:
             True if the two symbols share memory.
+
+        Examples:
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> c1 = model.constant([5])
+            >>> c2 = model.constant([22])
+            >>> c3 = model.constant([5])
+            >>> print(c2.shares_memory(c1), c3.shares_memory(c1))
+            False True
         """
         cdef Symbol other_
         try:
@@ -1333,14 +1371,32 @@ cdef class Symbol:
             :meth:`Model.state_size()` An estimate of the size of a model's
             state.
 
-            
+        Examples:
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> c1 = model.constant([5])
+            >>> c2 = model.constant([22, 3])
+            >>> model.state_size() == 3 * c1.state_size()
+            True
         """
         return 0
 
     def topological_index(self):
-        """Topological index of the symbol.
+        """Return the topological index of the symbol.
 
-        Return ``None`` if the model is not topologically sorted.
+        Returns:
+            Integer value of the symbol's topological index or ``None`` if the
+            model is not topologically sorted.
+
+        Examples:
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> c1 = model.constant([5])
+            >>> c1.topological_index() is None
+            True
+            >>> with model.lock():
+            ...     print(c1.topological_index() is None)
+            False
         """
         index = self.node_ptr.topological_index()
         return index if index >= 0 else None
