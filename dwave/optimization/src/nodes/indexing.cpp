@@ -427,8 +427,14 @@ struct AdvancedIndexingNode::IndexParser_ {
 
             strides = shape_to_strides(this->ndim, shape.get());
 
-            if (indexing_arrays_ndim == 0) {
+            if (indexing_arrays_ndim == 0 and array_ptr->dynamic()) {
+                assert(grouped_indexers_mode and
+                       "If the parent array is dynamic and indexers are scalar, only "
+                       "grouped-indexers mode is supported");
+                subspace_stride = Array::DYNAMIC_SIZE;
+            } else if (indexing_arrays_ndim == 0) {
                 subspace_stride = ndim > 0 ? strides[0] * shape[0] : array_ptr->itemsize();
+                assert(subspace_stride >= 0);
             } else {
                 subspace_stride = grouped_indexers_mode ? strides[first_array_index]
                                                         : strides[indexing_arrays_ndim - 1];
@@ -449,6 +455,12 @@ struct AdvancedIndexingNode::IndexParser_ {
     ssize_t ndim = 0;
     ssize_t indexing_arrays_ndim = -1;
     ssize_t first_array_index;
+    // The stride (in bytes) of the subspace equal to the memory address difference between
+    // consecutive items in the "indexer" dimension(s). In other words, how far foward do
+    // you advance in the output buffer between consecutive indexes of the indexers.
+    // NOTE: this may not be valid in the case of scalar indexers in grouped-indexers mode with
+    // a dynamic main array. In the case, the size of the subspace is dependent on the size
+    // of the main array, so this stride is not well defined.
     ssize_t subspace_stride;
     std::unique_ptr<ssize_t[]> strides = nullptr;
     std::unique_ptr<ssize_t[]> shape = nullptr;
@@ -601,10 +613,10 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
 
     auto array_strides = array_ptr_->strides();
 
-    const ssize_t size = std::get<ArrayNode*>(indices_[first_array_index_])->size(state);
+    const ssize_t indexers_size = std::get<ArrayNode*>(indices_[first_array_index_])->size(state);
 
-    std::vector<ssize_t> offsets(size);
-    if (size) {
+    std::vector<ssize_t> offsets(indexers_size);
+    if (indexers_size) {
         for (ssize_t index = 0; index < static_cast<ssize_t>(indices_.size()); ++index) {
             if (std::holds_alternative<ArrayNode*>(indices_[index])) {
                 assert(array_strides[index] % static_cast<ssize_t>(itemsize()) == 0);
@@ -621,17 +633,18 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
         }
     }
 
-    ssize_t array_axis0_size = array_ptr_->size(state) / array_item_strides()[0];
+    // The size of our output. If we are in grouped-indexers mode, this is simply the size of the
+    // first axis of the main array (which may be dynamic and state-dependent) times our first
+    // stride.
+    //
+    // If we are in non-grouped-indexers mode, then it is the length of the indexers (which must
+    // be the same for all indexers) times the subspace stride (see note in
+    // IndexParser_::subspace_stride_)
+    ssize_t data_size =
+            (grouped_indexers_mode_ ? array_ptr_->shape(state)[0] * (strides()[0] / itemsize())
+                                    : indexers_size * subspace_stride_ / itemsize());
 
     // Now get the values
-    ssize_t subspace_size = subspace_stride_ / itemsize();
-    if (subspace_size < 0) {
-        assert(array_ptr_->dynamic());
-        assert(this->dynamic());
-        subspace_size *= -1 * array_ptr_->shape(state)[0];
-    }
-    ssize_t data_size = grouped_indexers_mode_ ? array_axis0_size * (strides()[0] / itemsize())
-                                               : size * subspace_size;
     std::vector<double> data(data_size);
 
     for (size_t idx = 0; idx < offsets.size(); ++idx) {
