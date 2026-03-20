@@ -980,7 +980,7 @@ cdef class Symbol:
             other: A symbol for comparison.
 
         Returns:
-            Boolean: True if the symbols are identical.
+            bool: True if the symbols are identical.
 
         Note that comparing symbols across models is expensive.
 
@@ -1072,7 +1072,7 @@ cdef class Symbol:
             index: Index of the queried state.
 
         Returns:
-            Boolean: True if the state is initialized.
+            bool: True if the state is initialized.
 
         Examples:
             >>> from dwave.optimization import Model
@@ -1119,7 +1119,7 @@ cdef class Symbol:
         Therefore, ``symdol.id()`` is not the same as ``id(symbol)``!
 
         Returns:
-            Integer: Identity of the underlying node.
+            int: Identity of the underlying node.
 
         Examples:
             >>> from dwave.optimization import Model
@@ -1225,7 +1225,7 @@ cdef class Symbol:
             other: Another symbol in the model's directed acyclic graph.
 
         Returns:
-            Integer: Supported return values are the following.
+            int: Supported return values are the following.
 
             *   ``0``---Not equal (with certainty)
             *   ``1``---Might be equal (no guarantees); a complete equality test
@@ -1335,7 +1335,7 @@ cdef class Symbol:
             other: Another symbol.
 
         Returns:
-            Boolean: True if the two symbols share memory.
+            bool: True if the two symbols share memory.
 
         Examples:
             >>> from dwave.optimization import Model
@@ -1375,7 +1375,7 @@ cdef class Symbol:
         method.
 
         Returns:
-            Integer: Estimated size.
+            int: Estimated size.
 
         See also:
             :meth:`ArraySymbol.state_size()` An estimate of the size of an array
@@ -1398,7 +1398,7 @@ cdef class Symbol:
         """Return the topological index of the symbol.
 
         Returns:
-            Integer or ``None``: Value of the symbol's topological index if the
+            int or None: Value of the symbol's topological index if the
             model is topologically sorted; otherwise ``None``.
 
         Examples:
@@ -2011,7 +2011,7 @@ cdef class ArraySymbol(Symbol):
         r"""Return the number of dimensions for a symbol.
 
         Returns:
-            Integer: Number of dimensions.
+            int: Number of dimensions.
 
         Examples:
             >>> from dwave.optimization.model import Model
@@ -2192,7 +2192,7 @@ cdef class ArraySymbol(Symbol):
         """Return the shape of the symbol.
 
         Returns:
-            Tuple: Dimensions of the array. A
+            tuple: Dimensions of the array. A
             :ref:`dynamic <optimization_philosophy_tensor_programming_dynamic>`
             array symbol returns a :math:`-1` in the first dimension.
 
@@ -2220,7 +2220,7 @@ cdef class ArraySymbol(Symbol):
         r"""Return the number of elements in the symbol.
 
         Returns:
-            Integer or :class:`~dwave.optimization.symbols.Size`: Number of
+            int or :class:`~dwave.optimization.symbols.Size`: Number of
             elements in the array. For
             :ref:`dynamic <optimization_philosophy_tensor_programming_dynamic>`
             symbols, returns a :class:`~dwave.optimization.symbols.Size` symbol.
@@ -2351,7 +2351,7 @@ cdef class ArraySymbol(Symbol):
         r"""Return an estimate of the size, in bytes, of the symbol's state.
 
         Returns:
-            Integer: Number of bytes needed to encode the array.
+            int: Number of bytes needed to encode the array.
 
         Examples:
             This example returns the size of an
@@ -2395,7 +2395,7 @@ cdef class ArraySymbol(Symbol):
         """Return the stride length, in bytes, for traversing a symbol.
 
         Returns:
-            Tuple: Number of bytes to step in each dimension when
+            tuple: Number of bytes to step in each dimension when
             traversing a symbol.
 
         Examples:
