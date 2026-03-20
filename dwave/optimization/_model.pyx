@@ -985,19 +985,20 @@ cdef class Symbol:
         Note that comparing symbols across models is expensive.
 
         Examples:
-            This example compares
+            This example creates two symbols that are the sum of the same two
             :class:`~dwave.optimization.symbols.IntegerVariable` symbols
-            of different sizes.
+            and a third that is the difference between them, and checks
+            equality.
 
             >>> from dwave.optimization import Model
             >>> model = Model()
-            >>> i = model.integer(3, lower_bound=0, upper_bound=20)
-            >>> j = model.integer(3, lower_bound=-10, upper_bound=10)
-            >>> k = model.integer(5, upper_bound=55)
-            >>> i.equals(j)
-            True
-            >>> i.equals(k)
-            False
+            >>> i = model.integer(3)
+            >>> j = model.integer(3)
+            >>> a = i + j
+            >>> b = i + j
+            >>> c = i - j
+            >>> print(a.equals(a), a.equals(b), a.equals(c))
+            True True False
 
         See Also:
             :meth:`~Symbol.maybe_equals`: A faster alternative for equality
