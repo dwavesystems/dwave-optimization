@@ -21,9 +21,11 @@ import json
 import numbers
 import operator
 import struct
+from typing_extensions import Self
 import zipfile
 
 import numpy as np
+import numpy.typing as npt
 
 from cpython cimport Py_buffer
 from cpython.ref cimport PyObject
@@ -971,7 +973,7 @@ cdef class Symbol:
         """
         return self.node_ptr.deterministic_state()
 
-    def equals(self, other):
+    def equals(self, other) -> bool:
         """Compare whether two symbols are identical.
 
         Equal symbols represent the same quantity in the model.
@@ -980,7 +982,7 @@ cdef class Symbol:
             other: A symbol for comparison.
 
         Returns:
-            Boolean: True if the symbols are identical.
+            True if the symbols are identical.
 
         Note that comparing symbols across models is expensive.
 
@@ -1065,14 +1067,14 @@ cdef class Symbol:
         # Many symbols are constructed using this pattern, so we do it as default.
         return cls(*predecessors)
 
-    def has_state(self, Py_ssize_t index = 0):
+    def has_state(self, Py_ssize_t index = 0) -> bool:
         """Return the initialization status of the indexed state.
 
         Args:
             index: Index of the queried state.
 
         Returns:
-            Boolean: True if the state is initialized.
+            True if the state is initialized.
 
         Examples:
             >>> from dwave.optimization import Model
@@ -1216,7 +1218,7 @@ cdef class Symbol:
             yield symbol_from_ptr(self.model, deref(it).ptr)
             inc(it)
 
-    def maybe_equals(self, other):
+    def maybe_equals(self, other) -> int:
         """Compare to another symbol.
 
         This method exists because a complete equality test can be expensive.
@@ -1224,8 +1226,8 @@ cdef class Symbol:
         Args:
             other: Another symbol in the model's directed acyclic graph.
 
-        Returns: Integer
-            Supported return values are:
+        Returns:
+            Comparison results. Supported return values are the following.
 
             *   ``0``---Not equal (with certainty)
             *   ``1``---Might be equal (no guarantees); a complete equality test
@@ -1328,14 +1330,14 @@ cdef class Symbol:
 
         self.model._graph.recursive_reset(states._states[index], self.node_ptr)
 
-    def shares_memory(self, other):
+    def shares_memory(self, other) -> bool:
         """Determine if two symbols share memory.
 
         Args:
             other: Another symbol.
 
         Returns:
-            Boolean: True if the two symbols share memory.
+            True if the two symbols share memory.
 
         Examples:
             >>> from dwave.optimization import Model
@@ -1363,7 +1365,7 @@ cdef class Symbol:
         # this is being called, it must have a state
         raise NotImplementedError(f"{type(self).__name__} has not implemented state serialization")
 
-    def state_size(self):
+    def state_size(self) -> int:
         """Return an estimated size, in bytes, of a symbol's state.
 
         The number of bytes returned by this method is only an estimate. Some
@@ -1375,7 +1377,7 @@ cdef class Symbol:
         method.
 
         Returns:
-            Boolean: Estimated size.
+            Estimated size.
 
         See also:
             :meth:`ArraySymbol.state_size()` An estimate of the size of an array
@@ -1394,12 +1396,12 @@ cdef class Symbol:
         """
         return 0
 
-    def topological_index(self):
+    def topological_index(self) -> int | None:
         """Return the topological index of the symbol.
 
         Returns:
-            Integer or ``None``: Value of the symbol's topological index if the
-            model is topologically sorted; otherwise ``None``.
+            Value of the symbol's topological index if the model is
+            topologically sorted; otherwise ``None``.
 
         Examples:
             >>> from dwave.optimization import Model
@@ -1686,7 +1688,7 @@ cdef class ArraySymbol(Symbol):
     def __truediv__(self, rhs):
         return dwave.optimization.mathematical.divide(self, rhs)
 
-    def all(self, *, axis=None, initial=_NoValue):
+    def all(self, *, axis=None, initial=_NoValue) -> All:
         r"""Create a symbol that tests whether all array elements evaluate to True.
 
         Args:
@@ -1704,8 +1706,8 @@ cdef class ArraySymbol(Symbol):
                 .. versionadded:: 0.6.8
 
         Returns:
-            :class:`~dwave.optimization.symbols.All`: A successor symbol that
-            returns True if all elements of the predecessor symbol are True.
+            A successor symbol that returns True if all elements of the
+            predecessor symbol are True.
 
         Examples:
             This example tests the columns of a :math:`2 \times 3` array.
@@ -1727,7 +1729,7 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import All  # avoid circular import
         return All(self, axis=axis, initial=_NoValue)
 
-    def any(self, *, axis=None, initial=False):
+    def any(self, *, axis=None, initial=False) -> Any:
         r"""Create a symbol that tests whether any array element evaluates to True.
 
         Args:
@@ -1745,8 +1747,8 @@ cdef class ArraySymbol(Symbol):
                 .. versionadded:: 0.6.8
 
         Returns:
-            :class:`~dwave.optimization.symbols.Any`: A successor symbol that
-            returns True when any element of the predecessor symbol is True.
+            A successor symbol that returns True when any element of the
+            predecessor symbol is True.
 
         .. versionadded:: 0.4.1
 
@@ -1769,12 +1771,11 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Any  # avoid circular import
         return Any(self, axis=axis, initial=_NoValue)
 
-    def copy(self):
+    def copy(self) -> Copy:
         """Create a duplicate symbol.
 
         Returns:
-            :class:`~dwave.optimization.symbols.Copy`: A successor symbol that
-            is a copy of the predecessor symbol.
+            A successor symbol that is a copy of the predecessor symbol.
 
         .. versionadded:: 0.5.1
 
@@ -1792,13 +1793,12 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Copy  # avoid circular import
         return Copy(self)
 
-    def flatten(self):
+    def flatten(self) -> Reshape:
         """Create a symbol with the array reshaped to one dimension.
 
         Returns:
-            :class:`~dwave.optimization.symbols.Reshape`: A successor symbol
-            that is equivalent to ``symbol.reshape(-1)``, with the predecessor
-            symbol's array collapsed into one dimension.
+            A successor symbol that is equivalent to ``symbol.reshape(-1)``,
+            with the predecessor symbol's array collapsed into one dimension.
 
         Examples:
             >>> from dwave.optimization import Model
@@ -1816,7 +1816,7 @@ cdef class ArraySymbol(Symbol):
         """
         return self.reshape(-1)
 
-    def info(self):
+    def info(self) -> dataclasses.dataclass:
         r"""Return information about the values and size of the symbol.
 
         Symbols might need information about their predecessor(s) to determine
@@ -1825,8 +1825,7 @@ cdef class ArraySymbol(Symbol):
         zero-value denominator.
 
         Returns:
-            :func:`~dataclasses.dataclass`: A :func:`~dataclasses.dataclass`
-            object with the following fields:
+            A :func:`~dataclasses.dataclass` object with the following fields.
 
             *   ``min``: Lower bound (inclusive) on the array values.
             *   ``max``: Upper bound (inclusive) on the array values.
@@ -1901,7 +1900,7 @@ cdef class ArraySymbol(Symbol):
         """
         return ArrayInfo._from_array(self)
 
-    def max(self, *, axis=None, initial=_NoValue):
+    def max(self, *, axis=None, initial=_NoValue) -> Max:
         r"""Create a symbol that returns the maximum value of the array.
 
         Args:
@@ -1920,8 +1919,8 @@ cdef class ArraySymbol(Symbol):
                 .. versionadded:: 0.6.4
 
         Returns:
-            :class:`~dwave.optimization.symbols.Max`: A successor symbol that
-            returns the maximum value among elements of the predecessor symbol.
+            A successor symbol that returns the maximum value among elements of
+            the predecessor symbol.
 
         Examples:
             This example creates a symbol that returns the maximum values in
@@ -1964,7 +1963,7 @@ cdef class ArraySymbol(Symbol):
 
         return MAYBE
 
-    def min(self, *, axis=None, initial=_NoValue):
+    def min(self, *, axis=None, initial=_NoValue) -> Min:
         r"""Create a symbol that returns the minimum value of the array.
 
         Args:
@@ -1983,8 +1982,8 @@ cdef class ArraySymbol(Symbol):
                 .. versionadded:: 0.6.4
 
         Returns:
-            :class:`~dwave.optimization.symbols.Min`: A successor symbol that
-            returns the minimum value among elements of the predecessor symbol.
+            A successor symbol that returns the minimum value among elements of
+            the predecessor symbol.
 
         Examples:
             This example creates a symbol that returns the minimum values in
@@ -2007,11 +2006,11 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Min  # avoid circular import
         return Min(self, axis=axis, initial=initial)
 
-    def ndim(self):
+    def ndim(self) -> int:
         r"""Return the number of dimensions for a symbol.
 
         Returns:
-            Integer: Number of dimensions.
+            Number of dimensions.
 
         Examples:
             >>> from dwave.optimization.model import Model
@@ -2027,7 +2026,7 @@ cdef class ArraySymbol(Symbol):
         """
         return self.array_ptr.ndim()
 
-    def prod(self, *, axis=None, initial=_NoValue):
+    def prod(self, *, axis=None, initial=_NoValue) -> Prod:
         r"""Create a symbol that returns the product of the array elements.
 
         Args:
@@ -2046,8 +2045,8 @@ cdef class ArraySymbol(Symbol):
                 .. versionadded:: 0.6.4
 
         Returns:
-            :class:`~dwave.optimization.symbols.Prod`: A successor symbol that
-            returns the product of the elements of the predecessor symbol.
+            A successor symbol that returns the product of the elements of the
+            predecessor symbol.
 
         Examples:
             This example creates a symbol that returns the product of values in
@@ -2068,7 +2067,7 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Prod
         return Prod(self, axis=axis, initial=initial)
 
-    def reshape(self, *shape):
+    def reshape(self, *shape) -> Reshape | Self:
         r"""Create a symbol with the array reshaped.
 
         Args:
@@ -2085,8 +2084,7 @@ cdef class ArraySymbol(Symbol):
                 array symbol, as shown in the examples below.
 
         Returns:
-            :class:`~dwave.optimization.symbols.Reshape` or ``self``: A
-            successor symbol that reshapes the predecessor symbol without
+            A successor symbol that reshapes the predecessor symbol without
             changing its values, except when the provided shape exactly matches
             the shape of the symbol, in which case the predecessor symbol is
             returned.
@@ -2153,7 +2151,7 @@ cdef class ArraySymbol(Symbol):
 
         return Reshape(self, shape)
 
-    def resize(self, shape, fill_value=None):
+    def resize(self, shape, fill_value=None) -> Resize:
         """Create a symbol with the specified shape.
 
         Args:
@@ -2163,8 +2161,7 @@ cdef class ArraySymbol(Symbol):
                 the predecessor array. Defaults to 0.
 
         Returns:
-            :class:`~dwave.optimization.symbols.Resize`: A successor symbol with
-            the specified shape.
+            A successor symbol with the specified shape.
 
         Examples:
             >>> from dwave.optimization import Model
@@ -2188,11 +2185,11 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.mathematical import resize  # avoid circular import
         return resize(self, shape, fill_value)
 
-    def shape(self):
+    def shape(self) -> tuple:
         """Return the shape of the symbol.
 
         Returns:
-            Tuple: Dimensions of the array. A
+            Dimensions of the array. A
             :ref:`dynamic <optimization_philosophy_tensor_programming_dynamic>`
             array symbol returns a :math:`-1` in the first dimension.
 
@@ -2216,12 +2213,11 @@ cdef class ArraySymbol(Symbol):
         shape = self.array_ptr.shape()
         return tuple(shape[i] for i in range(shape.size()))
 
-    def size(self):
+    def size(self) -> int | Size:
         r"""Return the number of elements in the symbol.
 
         Returns:
-            Integer or :class:`~dwave.optimization.symbols.Size`: Number of
-            elements in the array. For
+            Number of elements in the array. For
             :ref:`dynamic <optimization_philosophy_tensor_programming_dynamic>`
             symbols, returns a :class:`~dwave.optimization.symbols.Size` symbol.
 
@@ -2242,7 +2238,7 @@ cdef class ArraySymbol(Symbol):
 
         return self.array_ptr.size()
 
-    def state(self, Py_ssize_t index = 0, *, bool copy = True):
+    def state(self, Py_ssize_t index = 0, *, bool copy = True) -> npt.NDArray[float]:
         """Return the state of the symbol.
 
         Args:
@@ -2251,7 +2247,7 @@ cdef class ArraySymbol(Symbol):
             copy: Currently only True is supported.
 
         Returns:
-            :class:`numpy.ndarray`: State of the symbol.
+            State of the symbol.
 
         Examples:
             This example prints a symbol's two states: initialized
@@ -2347,11 +2343,11 @@ cdef class ArraySymbol(Symbol):
             with zf.open(f"{directory}states.npy", mode="w", force_zip64=True) as f:
                 np.save(f, states, allow_pickle=False)
 
-    def state_size(self):
+    def state_size(self) -> int:
         r"""Return an estimate of the size, in bytes, of the symbol's state.
 
         Returns:
-            Integer: Number of bytes needed to encode the array.
+            Number of bytes needed to encode the array.
 
         Examples:
             This example returns the size of an
@@ -2391,12 +2387,11 @@ cdef class ArraySymbol(Symbol):
 
         return sizeinfo.max.value() * self.array_ptr.itemsize()
 
-    def strides(self):
+    def strides(self) -> tuple:
         """Return the stride length, in bytes, for traversing a symbol.
 
         Returns:
-            Tuple: Number of bytes to step in each dimension when
-            traversing a symbol.
+            Number of bytes to step in each dimension when traversing a symbol.
 
         Examples:
             This example returns the stride length of an
@@ -2411,7 +2406,7 @@ cdef class ArraySymbol(Symbol):
         strides = self.array_ptr.strides()
         return tuple(strides[i] for i in range(strides.size()))
 
-    def sum(self, *, axis=None, initial=_NoValue):
+    def sum(self, *, axis=None, initial=_NoValue) -> Sum:
         r"""Create a symbol that returns the sum of the array elements.
 
         Args:
@@ -2430,8 +2425,8 @@ cdef class ArraySymbol(Symbol):
                 .. versionadded:: 0.6.4
 
         Returns:
-            :class:`~dwave.optimization.symbols.Sum`: A successor symbol that
-            returns the sum of the elements of the predecessor symbol.
+            A successor symbol that returns the sum of the elements of the
+            predecessor symbol.
 
         Examples:
             This example creates a symbol that returns the sum of values in
