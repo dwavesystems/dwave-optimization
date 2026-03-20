@@ -21,7 +21,6 @@ import json
 import numbers
 import operator
 import struct
-from typing_extensions import Self
 import zipfile
 
 import numpy as np
@@ -2067,7 +2066,7 @@ cdef class ArraySymbol(Symbol):
         from dwave.optimization.symbols import Prod
         return Prod(self, axis=axis, initial=initial)
 
-    def reshape(self, *shape) -> Reshape | Self:
+    def reshape(self, *shape) -> Reshape | "self":
         r"""Create a symbol with the array reshaped.
 
         Args:
