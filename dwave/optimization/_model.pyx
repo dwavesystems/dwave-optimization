@@ -974,14 +974,15 @@ cdef class Symbol:
     def equals(self, other):
         """Compare whether two symbols are identical.
 
+        Equal symbols represent the same quantity in the model.
+
         Args:
             other: A symbol for comparison.
 
-        Equal symbols represent the same quantity in the model.
+        Returns:
+            Boolean: True if the symbols are identical.
 
         Note that comparing symbols across models is expensive.
-
-        Returns: Boolean
 
         Examples:
             This example compares
@@ -1071,7 +1072,7 @@ cdef class Symbol:
             index: Index of the queried state.
 
         Returns:
-            True if the state is initialized.
+            Boolean: True if the state is initialized.
 
         Examples:
             >>> from dwave.optimization import Model
@@ -1117,9 +1118,11 @@ cdef class Symbol:
         of the Python object representing it.
         Therefore, ``symdol.id()`` is not the same as ``id(symbol)``!
 
+        Returns:
+            Integer: Identity of the underlying node.
+
         Examples:
             >>> from dwave.optimization import Model
-            ...
             >>> model = Model()
             >>> a = model.binary()
             >>> aa, = model.iter_symbols()
@@ -1133,10 +1136,11 @@ cdef class Symbol:
             >>> seen = {x.id()}
 
         See Also:
-            :meth:`.shares_memory`: ``a.shares_memory(b)`` is equivalent to ``a.id() == b.id()``.
+            :meth:`.shares_memory`: ``a.shares_memory(b)`` is equivalent to
+            ``a.id() == b.id()``.
 
-            :meth:`.equals`: ``a.equals(b)`` will return ``True`` if ``a.id() == b.id()``. Though
-            the inverse is not necessarily true.
+            :meth:`.equals`: ``a.equals(b)`` will return ``True`` if
+            ``a.id() == b.id()``. Though the inverse is not necessarily true.
 
         """
         # We refer to the node_ptr, which is not necessarily the address of the
@@ -1166,6 +1170,9 @@ cdef class Symbol:
     def iter_predecessors(self):
         """Iterate over a symbol's predecessors in the model.
 
+        Yields:
+            The symbol's predecessors.
+
         Examples:
             This example constructs a :math:`b = \sum a` model, where :math:`a`
             is a multiplication of two symbols, and iterates over the
@@ -1188,6 +1195,9 @@ cdef class Symbol:
 
     def iter_successors(self):
         """Iterate over a symbol's successors in the model.
+
+        Yields:
+            The symbol's successors.
 
         Examples:
             This example constructs a :math:`y = x + 5` model and iterates over
@@ -1325,7 +1335,7 @@ cdef class Symbol:
             other: Another symbol.
 
         Returns:
-            True if the two symbols share memory.
+            Boolean: True if the two symbols share memory.
 
         Examples:
             >>> from dwave.optimization import Model
@@ -1360,9 +1370,12 @@ cdef class Symbol:
         symbols hold additional information that is not accounted for.
 
         For most symbols, which are arrays, this method is
-        subclassed by the :class:`~dwave.optimization.model.ArraySymbol
+        subclassed by the :class:`~dwave.optimization.model.ArraySymbol`
         class's :meth:`~dwave.optimization.model.ArraySymbol.state_size`
         method.
+
+        Returns:
+            Boolean: Estimated size.
 
         See also:
             :meth:`ArraySymbol.state_size()` An estimate of the size of an array
@@ -1385,8 +1398,8 @@ cdef class Symbol:
         """Return the topological index of the symbol.
 
         Returns:
-            Integer value of the symbol's topological index or ``None`` if the
-            model is not topologically sorted.
+            Integer or ``None``: Value of the symbol's topological index if the
+            model is topologically sorted; otherwise ``None``.
 
         Examples:
             >>> from dwave.optimization import Model
@@ -1692,7 +1705,7 @@ cdef class ArraySymbol(Symbol):
 
         Returns:
             :class:`~dwave.optimization.symbols.All`: A successor symbol that
-            returns True if all elements of the antecedent symbol are True.
+            returns True if all elements of the predecessor symbol are True.
 
         Examples:
             This example tests the columns of a :math:`2 \times 3` array.
@@ -1733,7 +1746,7 @@ cdef class ArraySymbol(Symbol):
 
         Returns:
             :class:`~dwave.optimization.symbols.Any`: A successor symbol that
-            returns True when any element of the antecedent symbol is True.
+            returns True when any element of the predecessor symbol is True.
 
         .. versionadded:: 0.4.1
 
@@ -1761,7 +1774,7 @@ cdef class ArraySymbol(Symbol):
 
         Returns:
             :class:`~dwave.optimization.symbols.Copy`: A successor symbol that
-            is a copy of the antecedent symbol.
+            is a copy of the predecessor symbol.
 
         .. versionadded:: 0.5.1
 
@@ -1784,7 +1797,7 @@ cdef class ArraySymbol(Symbol):
 
         Returns:
             :class:`~dwave.optimization.symbols.Reshape`: A successor symbol
-            that is equivalent to ``symbol.reshape(-1)``, with the antecedent
+            that is equivalent to ``symbol.reshape(-1)``, with the predecessor
             symbol's array collapsed into one dimension.
 
         Examples:
@@ -1908,7 +1921,7 @@ cdef class ArraySymbol(Symbol):
 
         Returns:
             :class:`~dwave.optimization.symbols.Max`: A successor symbol that
-            returns the maximum value among elements of the antecedent symbol.
+            returns the maximum value among elements of the predecessor symbol.
 
         Examples:
             This example creates a symbol that returns the maximum values in
@@ -1971,7 +1984,7 @@ cdef class ArraySymbol(Symbol):
 
         Returns:
             :class:`~dwave.optimization.symbols.Min`: A successor symbol that
-            returns the minimum value among elements of the antecedent symbol.
+            returns the minimum value among elements of the predecessor symbol.
 
         Examples:
             This example creates a symbol that returns the minimum values in
@@ -2034,7 +2047,7 @@ cdef class ArraySymbol(Symbol):
 
         Returns:
             :class:`~dwave.optimization.symbols.Prod`: A successor symbol that
-            returns the product of the elements of the antecedent symbol.
+            returns the product of the elements of the predecessor symbol.
 
         Examples:
             This example creates a symbol that returns the product of values in
@@ -2068,14 +2081,14 @@ cdef class ArraySymbol(Symbol):
                 from the other dimensions.
                 For dynamically sized array symbols, the first dimension must
                 be specified as -1 and the remaining dimensions must be even
-                divisions or multiplications of the dimensions of the antecedent
+                divisions or multiplications of the dimensions of the predecessor
                 array symbol, as shown in the examples below.
 
         Returns:
             :class:`~dwave.optimization.symbols.Reshape` or ``self``: A
-            successor symbol that reshapes the antecedent symbol without
+            successor symbol that reshapes the predecessor symbol without
             changing its values, except when the provided shape exactly matches
-            the shape of the symbol, in which case the antecedent symbol is
+            the shape of the symbol, in which case the predecessor symbol is
             returned.
 
         Examples:
@@ -2147,7 +2160,7 @@ cdef class ArraySymbol(Symbol):
             shape: Shape of the successor array. Dimension values must be
                 non-negative.
             fill_value: Value to use if the successor array is larger than
-                the antecedent array. Defaults to 0.
+                the predecessor array. Defaults to 0.
 
         Returns:
             :class:`~dwave.optimization.symbols.Resize`: A successor symbol with
@@ -2418,7 +2431,7 @@ cdef class ArraySymbol(Symbol):
 
         Returns:
             :class:`~dwave.optimization.symbols.Sum`: A successor symbol that
-            returns the sum of the elements of the antecedent symbol.
+            returns the sum of the elements of the predecessor symbol.
 
         Examples:
             This example creates a symbol that returns the sum of values in
