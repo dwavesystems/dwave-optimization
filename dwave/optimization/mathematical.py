@@ -79,6 +79,7 @@ __all__ = [
     "absolute",
     "add",
     "arange",
+    "argsort",
     "as_array_symbols",
     "atleast_1d",
     "atleast_2d",
@@ -308,9 +309,6 @@ def argsort(array: ArraySymbol) -> ArgSort:
         ...    print(indices.state())
         [[5. 1. 3.]
          [0. 2. 4.]]
-
-    See Also:
-        :class:`~dwave.optimization.ArgSort`: equivalent symbol.
 
     .. versionadded:: 0.6.4
     """
