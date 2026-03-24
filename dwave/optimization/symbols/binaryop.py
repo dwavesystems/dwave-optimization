@@ -18,8 +18,7 @@ from dwave.optimization.symbols._binaryop import _BinaryOpSymbol, _BinaryOpNodeT
 class Add(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Add):
     """Addition element-wise of two symbols.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.add`: equivalent function.
+    See the :func:`~dwave.optimization.mathematical.add` function for usage.
     """
     pass
 
@@ -27,8 +26,8 @@ class Add(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Add):
 class And(_BinaryOpSymbol, node_type=_BinaryOpNodeType.And):
     """Boolean AND element-wise between two symbols.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.logical_and`: equivalent function.
+    See the :func:`~dwave.optimization.mathematical.logical_and` function for
+    usage.
     """
     pass
 

@@ -18,8 +18,8 @@ from dwave.optimization.symbols._unaryop import _UnaryOpSymbol, _UnaryOpNodeType
 class Absolute(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Absolute):
     """Absolute value element-wise on a symbol.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.absolute`: equivalent function.
+    See the :func:`~dwave.optimization.mathematical.absolute` function for
+    usage.
     """
     pass
 

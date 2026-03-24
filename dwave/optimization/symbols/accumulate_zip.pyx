@@ -27,22 +27,23 @@ from dwave.optimization.libcpp.nodes.lambda_ cimport AccumulateZipNode
 
 
 cdef class AccumulateZip(ArraySymbol):
-    """Using a supplied :class:`~dwave.optimization.model.Expression`, perform
-    an element-wise accumulate operation along one or more array operands. The
-    accumulate operation (represented by the ``Expression``) takes as input one
-    value from each of the operand arrays, as well as the result of the
-    previously computed operation, and computes a new value at the next output
-    index.
+    """Accumulates element-wise operations over operand symbols.
 
-    This takes inspiration from
-    `numpy.ufunc.accumulate <https://numpy.org/doc/2.1/reference/generated/numpy.ufunc.accumulate.html>`_ 
-    but is different in that the accumulate operation can take an arbitrary
-    number of arguments, instead of always two. These arguments come from
-    "zipping" the supplied predecessor arrays together.
+    .. note:: This symbol is used by direct instantiation, as shown in the
+        example below.
 
-    Thus if we are given an expression `expr`, predecessor arrays `A`, `B`,
-    `C`, and an initial value `init`, this node is equivalent to the
-    pseudocode:
+    Performs an element-wise accumulate operation, as specified by a
+    :class:`~dwave.optimization.expression.Expression`, along one or more array
+    operands. For each output index, the operation inputs one value from each
+    array symbol and the result of the previous operation, or, for the first
+    index, the ``initial`` parameter.
+
+    This symbol expands the :doc:`NumPy <numpy:index>`
+    :meth:`~numpy.ufunc.accumulate` function by enabling the accumulate
+    operation to accept an arbitrary number of array inputs and "zipping" them
+    together. For a given expression ``expr``, predecessor array symbols ``A``,
+    ``B``, ``C``, and an initial value, ``init``, this symbol is equivalent to
+    the pseudocode:
 
     .. code-block::
 
@@ -55,18 +56,50 @@ cdef class AccumulateZip(ArraySymbol):
 
     Args:
         expression:
-            An :class:`~dwave.optimization.model.Expression` representing the
-            accumulate operation. The first input on the expression will be given
-            the previous output of the operation at each iteration over the
-            values of the operands.
+            An :class:`~dwave.optimization.expression.Expression` specifying the
+            accumulate operation. Its first argument takes the value of the
+            ``initial`` parameter for index zero of its element-wise operation
+            and then, for the remaining array elements, the output of the
+            previous index. The expression's next arguments are assigned to the
+            symbols specified by the ``operands`` parameter.
         operands:
-            A list of the 1d-array symbols that will be the operands to the
-            accumulate. There should be one fewer operands than inputs on the
+            Operands to the accumulate operation as an iterable of 1D-array
+            symbols. There should be one fewer operands than arguments of the
             expression.
         initial (optional):
-            A float representing the value used to start the accumulate. This
-            will be used to set the last input of the expression on the very
-            first iteration.
+            Start value, as a float, of the accumulate operation. Used to set
+            the first argument of the expression on the very first iteration
+            (index zero).
+
+    Examples:
+        This example directly adds an :class:`.AccumulateZip` symbol to a model
+        that calculates the cumulative value of the expression
+        :math:`-v_0*(v_1 + v_2)`, where, for each iteration, :math:`v_1, v_2`
+        are sequential elements of two
+        :class:`~dwave.optimization.symbols.IntegerVariable` symbols and
+        :math:`v_0` is the result from the previous elements or, for the first
+        elements, defined by the configured ``initial`` value.
+
+        For example, for inputs
+        :math:`v_1, v_2 = [1, 1, 0, 1, 1], [0, 0, 2, 2, 2]` and an initial
+        value, :math:`v_0[0]` of 2, the first element of the
+        :class:`.AccumulateZip` symbol  is :math:`-2 * (1 + 0) = -2`, the 2nd is
+        therefore :math:`-(-2) * (1 + 0) = 2`, the 3rd is
+        :math:`-2 * (0 + 2) = -4`, etc.
+
+        >>> from dwave.optimization import expression, Model
+        >>> from dwave.optimization.symbols import AccumulateZip
+        ...
+        >>> model = Model()
+        >>> i1 = model.integer(5, lower_bound=-10, upper_bound=15)
+        >>> i2 = model.integer(5, upper_bound=10)
+        >>> j = AccumulateZip(expression(lambda v0, v1, v2: -v0*(v1 + v2)), (i1, i2), initial=2)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i1.set_state(0,[1, 1, 0, 1, 1])
+        ...     i2.set_state(0, [0, 0, 2, 2, 2])
+        ...     print(j.state(0))
+        [ -2.   2.  -4.  12. -36.]
 
     .. versionadded:: 0.6.4
     """

@@ -40,7 +40,21 @@ cdef bool _empty_slice(object slice_) noexcept:
 
 
 cdef class AdvancedIndexing(ArraySymbol):
-    """Advanced indexing."""
+    """Advanced indexing.
+
+    This symbol is instantiated by operations similar to those of
+    :ref:`NumPy's advanced indexing <numpy:advanced-indexing>`, such as in the
+    following example that selects row zero and column zero of an array symbol,
+    not together (:math:`A[i,j]`) but separately (:math:`A[[i],[j]]`):
+
+    >>> from dwave.optimization import Model
+    >>> model = Model()
+    >>> a = model.constant([[1, 2], [3, 4]])
+    >>> type(a[0, 0])
+    dwave.optimization.symbols.indexing.BasicIndexing
+    >>> type(a[[0], [0]])
+    dwave.optimization.symbols.indexing.AdvancedIndexing
+    """
     def __init__(self, ArraySymbol array, *indices):
         cdef _Graph model = array.model
 

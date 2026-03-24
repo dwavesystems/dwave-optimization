@@ -18,8 +18,8 @@ from dwave.optimization.symbols._reduce import _ReduceSymbol, _ReduceNodeType
 class All(_ReduceSymbol, node_type=_ReduceNodeType.All, default_initial=True):
     """Tests whether all elements evaluate to True.
 
-    See Also:
-        :meth:`~dwave.optimization.model.ArraySymbol.all()` equivalent method.
+    See the :meth:`~dwave.optimization.model.ArraySymbol.all` method for
+    usage.
     """
     pass
 
@@ -27,8 +27,8 @@ class All(_ReduceSymbol, node_type=_ReduceNodeType.All, default_initial=True):
 class Any(_ReduceSymbol, node_type=_ReduceNodeType.Any, default_initial=False):
     """Tests whether any elements evaluate to True.
 
-    See Also:
-        :meth:`~dwave.optimization.model.ArraySymbol.any()` equivalent method.
+    See the :meth:`~dwave.optimization.model.ArraySymbol.any` method for
+    usage.
     """
     pass
 
