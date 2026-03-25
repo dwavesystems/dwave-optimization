@@ -48,7 +48,7 @@ TEST_CASE("CPStatus") {
     CHECK(complete);
 
     bool inconsistency = CPStatus(CPStatus::Inconsistency);
-    CHECK(inconsistency);
+    CHECK(not inconsistency);
 }
 
 TEST_CASE("IntegerNode -> CPVar") {

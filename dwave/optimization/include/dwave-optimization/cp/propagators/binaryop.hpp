@@ -37,6 +37,5 @@ using AddPropagator = BinaryOpPropagator<std::plus<double>>;
 using LessEqualPropagator = BinaryOpPropagator<std::less_equal<double>>;
 using MultiplyPropagator = BinaryOpPropagator<std::multiplies<double>>;
 using DividePropagator = BinaryOpPropagator<std::divides<double>>;
-using SafeDividePropagator = BinaryOpPropagator<functional::safe_divides<double>>;
 
 }  // namespace dwave::optimization::cp

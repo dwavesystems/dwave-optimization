@@ -22,6 +22,10 @@ struct CPStatus {
     constexpr CPStatus() {}
     constexpr CPStatus(Status status) : status(status) {}
 
+    constexpr bool operator==(const CPStatus& other) { return this->status == other.status; }
+
+    constexpr bool operator==(const CPStatus::Status& other) { return this->status == other; }
+
     constexpr operator bool() const { return status != Inconsistency; }
 
     Status status;
