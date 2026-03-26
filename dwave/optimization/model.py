@@ -270,6 +270,8 @@ class Model(_Graph):
             ) -> tuple[DisjointBitSets, tuple[DisjointBitSet, ...]]:
         """Create a disjoint-sets symbol as a decision variable.
 
+        Test text
+
         Divides a set of the elements of ``range(primary_set_size)`` into
         ``num_disjoint_sets`` ordered partitions, stored as bit sets (arrays
         of length ``primary_set_size``, with ones at the indices of elements

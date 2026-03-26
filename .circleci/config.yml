@@ -286,8 +286,6 @@ jobs:
 
     steps:
       - checkout
-      - attach_workspace:
-          at: dist
 
       - run:
           name: install doxygen
