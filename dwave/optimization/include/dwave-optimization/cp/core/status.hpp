@@ -15,5 +15,20 @@
 #pragma once
 
 namespace dwave::optimization::cp {
-enum class CPStatus { OK, Inconsistency, Complete };
+
+struct CPStatus {
+    enum Status { OK, Inconsistency, Complete };
+
+    constexpr CPStatus() {}
+    constexpr CPStatus(Status status) : status(status) {}
+
+    constexpr bool operator==(const CPStatus& other) { return this->status == other.status; }
+
+    constexpr bool operator==(const CPStatus::Status& other) { return this->status == other; }
+
+    constexpr operator bool() const { return status != Inconsistency; }
+
+    Status status;
+};
+
 }  // namespace dwave::optimization::cp

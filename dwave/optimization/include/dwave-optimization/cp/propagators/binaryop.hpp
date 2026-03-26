@@ -16,6 +16,7 @@
 
 #include "dwave-optimization/cp/core/cpvar.hpp"
 #include "dwave-optimization/cp/core/propagator.hpp"
+#include "dwave-optimization/functional.hpp"
 
 namespace dwave::optimization::cp {
 
@@ -34,5 +35,7 @@ class BinaryOpPropagator : public Propagator {
 
 using AddPropagator = BinaryOpPropagator<std::plus<double>>;
 using LessEqualPropagator = BinaryOpPropagator<std::less_equal<double>>;
+using MultiplyPropagator = BinaryOpPropagator<std::multiplies<double>>;
+using DividePropagator = BinaryOpPropagator<std::divides<double>>;
 
 }  // namespace dwave::optimization::cp
