@@ -15,7 +15,6 @@
 #pragma once
 
 #include <deque>
-#include <iostream>
 #include <memory>
 
 #include "dwave-optimization/cp/core/propagator.hpp"
