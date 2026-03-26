@@ -128,8 +128,8 @@ class CPVar {
     CPStatus remove_above(CPVarsState& state, double value, int index) const;
     CPStatus remove_below(CPVarsState& state, double value, int index) const;
     CPStatus assign(CPVarsState& state, double value, int index) const;
-    CPStatus set_min_size(CPVarsState& state, int index) const;
-    CPStatus set_max_size(CPVarsState& state, int index) const;
+    CPStatus set_min_size(CPVarsState& state, int new_min_size) const;
+    CPStatus set_max_size(CPVarsState& state, int new_max_size) const;
 
     // actions for the propagation engine
     void schedule_all(CPState& state, const std::vector<Advisor>& advisors, ssize_t index) const;

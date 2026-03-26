@@ -32,4 +32,20 @@ class ReducePropagator : public Propagator {
 };
 
 using SumPropagator = ReducePropagator<std::plus<double>>;
+
+
+template <class BinaryOp>
+class DynamicReducePropagator : public Propagator {
+   public:
+   DynamicReducePropagator(ssize_t index, CPVar* in, CPVar* out);
+   void initialize_state(CPState& state) const override;
+   CPStatus propagate(CPPropagatorsState& p_state, CPVarsState& v_state) const override;
+
+   private:
+   // The variables entering the binary op
+    CPVar *in_, *out_;
+};
+
+using DynamicSumPropagator = DynamicReducePropagator<std::plus<double>>;
+
 }  // namespace dwave::optimization::cp
