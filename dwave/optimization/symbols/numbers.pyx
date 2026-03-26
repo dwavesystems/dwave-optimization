@@ -36,8 +36,8 @@ from dwave.optimization.states cimport States
 cdef class BinaryVariable(ArraySymbol):
     """Binary decision-variable symbol.
 
-    See also:
-        :meth:`~dwave.optimization.model.Model.binary`: equivalent method.
+    See the :meth:`~dwave.optimization.model.Model.binary` method for
+    instantiating and additional information.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
@@ -144,7 +144,7 @@ cdef class BinaryVariable(ArraySymbol):
             np.save(f, upper_bound, allow_pickle=False)
 
     def lower_bound(self):
-        """Lower bound(s) of Binary symbol."""
+        """Lower bound(s) of the binary symbol."""
         try:
             return np.asarray(self.ptr.lower_bound())
         except IndexError:
@@ -193,7 +193,7 @@ cdef class BinaryVariable(ArraySymbol):
         self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
     def upper_bound(self):
-        """Upper bound(s) of Binary symbol."""
+        """Upper bound(s) of the binary symbol."""
         try:
             return np.asarray(self.ptr.upper_bound())
         except IndexError:

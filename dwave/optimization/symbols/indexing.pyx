@@ -50,10 +50,13 @@ cdef class AdvancedIndexing(ArraySymbol):
     >>> from dwave.optimization import Model
     >>> model = Model()
     >>> a = model.constant([[1, 2], [3, 4]])
-    >>> type(a[0, 0])
-    dwave.optimization.symbols.indexing.BasicIndexing
-    >>> type(a[[0], [0]])
-    dwave.optimization.symbols.indexing.AdvancedIndexing
+    >>> print(type(a[0, 0]))
+    <class 'dwave.optimization.symbols.indexing.BasicIndexing'>
+    >>> print(type(a[[0], [0]]))
+    <class 'dwave.optimization.symbols.indexing.AdvancedIndexing'>
+
+    See Also:
+        :class:`.BasicIndexing`
     """
     def __init__(self, ArraySymbol array, *indices):
         cdef _Graph model = array.model
@@ -175,7 +178,24 @@ _register(AdvancedIndexing, typeid(AdvancedIndexingNode))
 
 
 cdef class BasicIndexing(ArraySymbol):
-    """Basic indexing."""
+    """Basic indexing.
+
+    This symbol is instantiated by operations similar to those of
+    :ref:`NumPy's basic indexing <numpy:basic-indexing>`, such as in the
+    following example that selects row zero and column zero of an array symbol
+    together (:math:`A[i,j]`) but not separately (:math:`A[[i],[j]]`) :
+
+    >>> from dwave.optimization import Model
+    >>> model = Model()
+    >>> a = model.constant([[1, 2], [3, 4]])
+    >>> print(type(a[0, 0]))
+    <class 'dwave.optimization.symbols.indexing.BasicIndexing'>
+    >>> print(type(a[[0], [0]]))
+    <class 'dwave.optimization.symbols.indexing.AdvancedIndexing'>
+
+    See Also:
+        :class:`.AdvancedIndexing`
+    """
     def __init__(self, ArraySymbol array, *indices):
 
         cdef _Graph model = array.model

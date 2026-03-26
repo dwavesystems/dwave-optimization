@@ -42,10 +42,10 @@ from dwave.optimization.libcpp.nodes.manipulation cimport (
 
 
 cdef class BroadcastTo(ArraySymbol):
-    """BroadcastTo symbol.
+    """Broadcasts an array symbol to a new shape.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.broadcast_to`: equivalent function.
+    See the :func:`~dwave.optimization.mathematical.broadcast_to` function for
+    usage.
 
     .. versionadded:: 0.6.5
     """
@@ -79,10 +79,10 @@ _register(BroadcastTo, typeid(BroadcastToNode))
 
 
 cdef class Concatenate(ArraySymbol):
-    """Concatenate symbol.
+    """A symbol that concatenates one or more symbols.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.concatenate()` equivalent function.
+    See the :func:`~dwave.optimization.mathematical.concatenate()` function for
+    usage.
 
     .. versionadded:: 0.4.3
     """
@@ -137,10 +137,9 @@ _register(Concatenate, typeid(ConcatenateNode))
 
 
 cdef class Copy(ArraySymbol):
-    """An array symbol that is a copy of another array symbol.
+    """A duplicate symbol.
 
-    See Also:
-        :meth:`ArraySymbol.copy` Equivalent method.
+    See the :meth:`~dwave.optimization.model.ArraySymbol.copy` method for usage.
 
     .. versionadded:: 0.5.1
     """

@@ -41,8 +41,8 @@ from dwave.optimization.states cimport States
 cdef class DisjointBitSet(ArraySymbol):
     """Disjoint-sets successor symbol.
 
-    See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: equivalent method.
+    See the :meth:`~dwave.optimization.model.Model.disjoint_bit_sets` method for
+    usage.
     """
     def __init__(self, DisjointBitSets parent, Py_ssize_t set_index):
         if set_index < 0 or set_index >= parent.num_disjoint_sets():
@@ -127,7 +127,15 @@ cdef class DisjointBitSet(ArraySymbol):
         zf.writestr(directory + "index.json", encoder.encode(self.set_index()))
 
     def set_index(self):
-        """Return the index for the set."""
+        """Return the index for the set.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> parts_set, parts_subsets = model.disjoint_bit_sets(10, 4)
+            >>> parts_subsets[2].set_index()
+            2
+        """
         return self.ptr.set_index()
 
     # An observing pointer to the C++ DisjointBitSetNode
@@ -139,8 +147,8 @@ _register(DisjointBitSet, typeid(DisjointBitSetNode))
 cdef class DisjointBitSets(Symbol):
     """Disjoint-sets decision-variable symbol.
 
-    See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: equivalent method.
+    See the :meth:`~dwave.optimization.model.Model.disjoint_bit_sets` method for
+    instantiation and additional information.
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets
@@ -225,9 +233,11 @@ cdef class DisjointBitSets(Symbol):
     def set_state(self, Py_ssize_t index, state):
         r"""Set the state of the disjoint-sets symbol.
 
-        The given state must be a partition of ``range(primary_set_size)``
+        The given state must be a partition of ``range(primary_set_size)``,
+        where the primary set size is a parameter of the instantiating
+        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets` method,
         into :meth:`.num_disjoint_sets` partitions, encoded as a 2D
-        :code:`num_disjoint_sets` :math:`\times` :code:`primary_set_size` 
+        :code:`num_disjoint_sets` :math:`\times` :code:`primary_set_size`
         Boolean array.
 
         Args:
@@ -235,6 +245,16 @@ cdef class DisjointBitSets(Symbol):
                 Index of the state to set
             state:
                 Assignment of values for the state.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> parts_set, parts_subsets = model.disjoint_bit_sets(8, 3)
+            >>> with model.lock():
+            ...     model.states.resize(1)
+            ...     parts_set.set_state(0, [[0, 1, 1, 0, 0, 0, 0, 0],
+            ...                             [1, 0, 0, 0, 0, 1, 0, 1],
+            ...                             [0, 0, 0, 1, 1, 0, 1, 0]])
         """
         # Reset our state, and check whether that's possible
         self.reset_state(index)
@@ -288,7 +308,15 @@ cdef class DisjointBitSets(Symbol):
                 )
 
     def num_disjoint_sets(self):
-        """Return the number of disjoint sets in the symbol."""
+        """Return the number of disjoint sets in the symbol.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> parts_set, parts_subsets = model.disjoint_bit_sets(10, 4)
+            >>> parts_set.num_disjoint_sets()
+            4
+        """
         return self.ptr.num_disjoint_sets()
 
     # An observing pointer to the C++ DisjointBitSetsNode
@@ -300,8 +328,8 @@ _register(DisjointBitSets, typeid(DisjointBitSetsNode))
 cdef class DisjointList(ArraySymbol):
     """Disjoint-lists successor symbol.
 
-    See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_lists`: associated method.
+    See the :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol` method
+    for usage.
     """
     def __init__(self, DisjointLists parent, Py_ssize_t list_index):
         if list_index < 0 or list_index >= parent.num_disjoint_lists():
@@ -386,7 +414,16 @@ cdef class DisjointList(ArraySymbol):
         zf.writestr(directory + "index.json", encoder.encode(self.list_index()))
 
     def list_index(self):
-        """Return the index for the list."""
+        """Return the index for the list.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> lists_symbol = model.disjoint_lists_symbol(
+            ...     primary_set_size=5, num_disjoint_lists=3)
+            >>> lists_symbol[1].list_index()
+            1
+        """
         return self.ptr.list_index()
 
     # An observing pointer to the C++ DisjointListNode
@@ -398,8 +435,8 @@ _register(DisjointList, typeid(DisjointListNode))
 cdef class DisjointLists(Symbol):
     """Disjoint-lists decision-variable symbol.
 
-    See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`: equivalent method.
+    See the :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol` method
+    for instantiation and additional information.
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists
@@ -614,7 +651,7 @@ cdef class ListVariable(ArraySymbol):
         with zf.open(directory + "shape.json", "r") as f:
             shape_info = json.load(f)
 
-        return ListVariable(model, 
+        return ListVariable(model,
                             n=shape_info.get("max_value"),
                             min_size=shape_info.get("min_size"),
                             max_size=shape_info.get("max_size")

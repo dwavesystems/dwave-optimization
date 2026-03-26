@@ -279,16 +279,17 @@ def arange(start: typing.Union[int, ArraySymbol, None] = None,
 
 
 def argsort(array: ArraySymbol) -> ArgSort:
-    """Return an ordering of the indices that would sort (flattened) values
-    of the given symbol. Note that while it will return an array with
-    identical shape to the given symbol, the returned indices will always be
-    indices on flattened array, similar to ``numpy.argsort(a, axis=None)``.
+    """Order a symbol's indices to sort the flattened array's values.
 
-    Always performs a index-wise stable sort such that the relative order of
-    values is maintained in the returned order.
+    Creates a symbol that, for the given symbol, returns an ordering of indices
+    that represents a
+    `stable sort <https://en.wikipedia.org/wiki/Category:Stable_sorts>`_ of
+    the values. Although the indices are for a flattened array, similar
+    to NumPy's :func:`~numpy.argsort` function with ``axis=None``, this symbol
+    is shaped identically to the predecessor symbol.
 
     Args:
-        array: Input array to perform the argsort on.
+        array: Input array symbol to sort.
 
     Examples:
         >>> from dwave.optimization import Model

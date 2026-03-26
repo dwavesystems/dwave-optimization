@@ -27,8 +27,7 @@ class Absolute(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Absolute):
 class Cos(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Cos):
     """Cosine element-wise on a symbol.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.cos`: equivalent function.
+    See the :func:`~dwave.optimization.mathematical.cos` function for usage.
 
     .. versionadded:: 0.6.5
     """
