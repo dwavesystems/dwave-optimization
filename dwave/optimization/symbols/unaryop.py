@@ -35,10 +35,9 @@ class Cos(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Cos):
 
 
 class Exp(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Exp):
-    """Takes the values of a symbol and returns the corresponding base-e exponential.
+    """Natural (base-e) exponential element-wise on a symbol.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.exp`: equivalent function.
+    See the :func:`~dwave.optimization.mathematical.exp` function for usage.
 
     .. versionadded:: 0.6.2
     """
@@ -46,10 +45,9 @@ class Exp(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Exp):
 
 
 class Expit(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Expit):
-    """Takes the values of a symbol and returns the corresponding logistic sigmoid (expit).
+    """Logistic sigmoid (expit) element-wise on a symbol.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.expit`: equivalent function.
+    See the :func:`~dwave.optimization.mathematical.expit` function for usage.
 
     .. versionadded:: 0.5.2
     """

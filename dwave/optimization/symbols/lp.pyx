@@ -35,10 +35,26 @@ from dwave.optimization.states cimport States
 
 
 cdef class LinearProgram(Symbol):
-    """Find a solution to the linear program (LP) defined by the predecessors.
+    """Solves a linear program (LP) defined by the predecessors.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.linprog`
+    See the :func:`~dwave.optimization.mathematical.linprog` function for
+    instantiation and additional information.
+
+    Examples:
+
+        >>> from dwave.optimization import linprog, Model
+        ...
+        >>> model = Model()
+        >>> c = model.constant([-1, -2])
+        >>> A_ub = model.constant([[1, 1]])
+        >>> b_ub = model.constant([1])
+        >>> res = linprog(c, A_ub=A_ub, b_ub=b_ub)
+        >>> _ = model.add_constraint(res.success)  # tell the model you want feasible solutions
+        ...
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     print(res.lp.feasible(), res.lp.objective_value(), res.lp.state())
+        True -2.0 [0. 1.]
 
     .. versionadded:: 0.6.0
     """
@@ -91,11 +107,13 @@ cdef class LinearProgram(Symbol):
         return x
 
     def feasible(self, Py_ssize_t index = 0):
-        """Return whether the parent LP symbol's current solution is feasible.
+        """Return True if the indexed state is a feasible solution.
 
-        Note that this method returns a boolean value.
-        If you wish to use the feasibility in the model,
-        use :class:`LinearProgramFeasible`.
+        This method returns a boolean value. To use feasibility in the model,
+        use the :class:`LinearProgramFeasible` symbol.
+
+        Examples:
+            See the example in the :class:`.LinearProgram` class.
 
         .. versionadded:: 0.6.12
         """
@@ -107,13 +125,16 @@ cdef class LinearProgram(Symbol):
         return bool(feas)
 
     def objective_value(self, Py_ssize_t index = 0):
-        """Return the objective value of the parent LP symbol's current solution.
+        """Return the objective value for the indexed state.
 
-        If the LP is not feasible, the objective value is not meaningful.
+        If the state is not a feasible solution, the objective value is not
+        meaningful.
 
-        Note that this method returns a numeric value.
-        If you wish to use the objective value in the model,
-        use :class:`LinearProgramObjectiveValue`.
+        This method returns a numeric value. To use the objective value in the
+        model, use the :class:`LinearProgramObjectiveValue` class.
+
+        Examples:
+            See the example in the :class:`.LinearProgram` class.
 
         .. versionadded:: 0.6.12
         """
@@ -125,13 +146,13 @@ cdef class LinearProgram(Symbol):
         return float(value)
 
     def state(self, Py_ssize_t index = 0):
-        """Return the current solution to the LP.
+        """Return the indexed state's values.
 
-        If the LP is not feasible, the solution is not meaningful.
+        This method returns an array. To use the state in the model, use the
+        :class:`LinearProgramSolution` class.
 
-        Note that this method returns an array.
-        If you wish to use the state in the model,
-        use :class:`LinearProgramSolution`.
+        Examples:
+            See the example in the :class:`.LinearProgram` class.
 
         .. versionadded:: 0.6.0
         """
@@ -256,10 +277,9 @@ _register(LinearProgram, typeid(LinearProgramNode))
 
 
 cdef class LinearProgramFeasible(ArraySymbol):
-    """Return whether the parent LP symbol's current solution is feasible.
+    """Returns True if the predecessor symbol's indexed state is a feasible solution.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.linprog`
+    See the :func:`~dwave.optimization.mathematical.linprog` function for usage.
 
     .. versionadded:: 0.6.0
     """
@@ -278,10 +298,9 @@ _register(LinearProgramFeasible, typeid(LinearProgramFeasibleNode))
 
 
 cdef class LinearProgramObjectiveValue(ArraySymbol):
-    """Return the objective value of the parent LP symbol's current solution.
+    """Return the objective value for the predecessor symbol's indexed state.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.linprog`
+    See the :func:`~dwave.optimization.mathematical.linprog` function for usage.
 
     .. versionadded:: 0.6.0
     """
@@ -300,10 +319,9 @@ _register(LinearProgramObjectiveValue, typeid(LinearProgramObjectiveValueNode))
 
 
 cdef class LinearProgramSolution(ArraySymbol):
-    """Return the current solution of the parent LP symbol as an array.
+    """Returns the current solution of the predecessor symbol as an array.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.linprog`
+    See the :func:`~dwave.optimization.mathematical.linprog` function for usage.
 
     .. versionadded:: 0.6.0
     """

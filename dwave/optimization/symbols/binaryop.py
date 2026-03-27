@@ -35,8 +35,7 @@ class And(_BinaryOpSymbol, node_type=_BinaryOpNodeType.And):
 class Divide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Divide):
     """Division element-wise between two symbols.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.divide`: equivalent function.
+    See the :func:`~dwave.optimization.mathematical.divide` function for usage.
     """
     pass
 
@@ -44,8 +43,7 @@ class Divide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Divide):
 class Equal(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Equal):
     """Equality comparison element-wise between two symbols.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.equal`: equivalent function.
+    See the :func:`~dwave.optimization.mathematical.equal` function for usage.
     """
     pass
 
@@ -53,8 +51,8 @@ class Equal(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Equal):
 class LessEqual(_BinaryOpSymbol, node_type=_BinaryOpNodeType.LessEqual):
     """Smaller-or-equal comparison element-wise between two symbols.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.less_equal`: equivalent function.
+    See the :func:`~dwave.optimization.mathematical.less_equal` function for
+    usage.
     """
     pass
 

@@ -24,10 +24,9 @@ from dwave.optimization.libcpp.nodes.flow cimport (
 
 
 cdef class Extract(ArraySymbol):
-    """Return elements chosen from x or y depending on condition.
+    """Elements chosen conditionally from two array symbols.
 
-    See Also:
-        :func:`~dwave.optimization.mathematical.where`: equivalent function.
+    See the :func:`~dwave.optimization.mathematical.where` function for usage.
     """
     def __init__(self, ArraySymbol condition, ArraySymbol arr):
         cdef _Graph model = condition.model
