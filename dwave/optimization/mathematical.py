@@ -298,7 +298,7 @@ def argsort(array: ArraySymbol) -> ArgSort:
         >>> a = model.constant([5, 2, 7, 4, 9, 1])
         >>> indices = argsort(a)
         >>> indices.shape()
-        (5,)
+        (6,)
         >>> with model.lock():
         ...    model.states.resize(1)
         ...    print(indices.state())
