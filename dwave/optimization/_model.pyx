@@ -1722,7 +1722,8 @@ cdef class ArraySymbol(Symbol):
             [1. 0. 0.]
 
         See also:
-            :func:`~dwave.optimization.model.ArraySymbol.any`
+            *   :class:`~dwave.optimization.symbols.All`: Generated symbol
+            *   :func:`~dwave.optimization.model.ArraySymbol.any`
 
         """
         from dwave.optimization.symbols import All  # avoid circular import
@@ -1765,7 +1766,8 @@ cdef class ArraySymbol(Symbol):
             [0. 1.]
 
         See also:
-            :func:`~dwave.optimization.model.ArraySymbol.all`
+            *   :class:`~dwave.optimization.symbols.Any`: Generated symbol
+            *   :func:`~dwave.optimization.model.ArraySymbol.all`
         """
         from dwave.optimization.symbols import Any  # avoid circular import
         return Any(self, axis=axis, initial=_NoValue)
@@ -1775,7 +1777,7 @@ cdef class ArraySymbol(Symbol):
 
         Returns:
             :class:`~dwave.optimization.symbols.Copy`: A successor symbol that
-            is a copy of the predecessor symbol.
+            maintains an identical copy of the values of the predecessor symbol.
 
         .. versionadded:: 0.5.1
 
@@ -1789,6 +1791,9 @@ cdef class ArraySymbol(Symbol):
             ...     x.set_state(0, [[False, False], [True, False]])
             ...     print((y.state() == x.state()).all())
             True
+
+        See Also:
+            :class:`~dwave.optimization.symbols.Copy`: Generated symbol
         """
         from dwave.optimization.symbols import Copy  # avoid circular import
         return Copy(self)
@@ -1813,7 +1818,8 @@ cdef class ArraySymbol(Symbol):
             True
 
         See also:
-            :func:`~dwave.optimization.model.ArraySymbol.reshape`
+            *   :class:`~dwave.optimization.symbols.Reshape`: generated symbol
+            *   :func:`~dwave.optimization.model.ArraySymbol.reshape`
         """
         return self.reshape(-1)
 
@@ -1940,7 +1946,8 @@ cdef class ArraySymbol(Symbol):
             [8. 0. 7.]
 
         See also:
-            :func:`~dwave.optimization.model.ArraySymbol.min`
+            *   :class:`~dwave.optimization.symbols.Max`: Generated symbol
+            *   :func:`~dwave.optimization.model.ArraySymbol.min`
         """
         from dwave.optimization.symbols import Max  # avoid circular import
         return Max(self, axis=axis, initial=initial)
@@ -2003,7 +2010,8 @@ cdef class ArraySymbol(Symbol):
             [-4.  0. -7.]
 
         See also:
-            :func:`~dwave.optimization.model.ArraySymbol.max`
+            *   :class:`~dwave.optimization.symbols.Min`: Generated symbol
+            *   :func:`~dwave.optimization.model.ArraySymbol.max`
         """
         from dwave.optimization.symbols import Min  # avoid circular import
         return Min(self, axis=axis, initial=initial)
@@ -2065,6 +2073,8 @@ cdef class ArraySymbol(Symbol):
             ...     print(prod_i.state())
             [32. 16. 70.]
 
+        See also:
+            :class:`~dwave.optimization.symbols.Prod`: Generated symbol
         """
         from dwave.optimization.symbols import Prod
         return Prod(self, axis=axis, initial=initial)
@@ -2130,8 +2140,9 @@ cdef class ArraySymbol(Symbol):
             Add support for reshaping dynamic array symbols.
 
         See also:
-            :func:`~dwave.optimization.mathematical.resize`,
-            :func:`~dwave.optimization.model.ArraySymbol.flatten`
+            *   :class:`~dwave.optimization.symbols.Reshape`: Generated symbol
+            *   :func:`~dwave.optimization.mathematical.resize`,
+            *   :func:`~dwave.optimization.model.ArraySymbol.flatten`
 
         """
         from dwave.optimization.symbols import Reshape  # avoid circular import
@@ -2182,7 +2193,9 @@ cdef class ArraySymbol(Symbol):
              [ 2. -1.]]
 
         See also:
-            :func:`~dwave.optimization.model.ArraySymbol.reshape`
+            *   :class:`~dwave.optimization.symbols.Resize`: Generated
+                symbol
+            *   :func:`~dwave.optimization.model.ArraySymbol.reshape`
 
         .. versionadded:: 0.6.4
         """
@@ -2236,6 +2249,8 @@ cdef class ArraySymbol(Symbol):
             >>> x.size()
             6
 
+        See also:
+            :class:`~dwave.optimization.symbols.Size`: Generated symbol
         """
         if self.array_ptr.dynamic():
             from dwave.optimization.symbols import Size
@@ -2449,6 +2464,8 @@ cdef class ArraySymbol(Symbol):
             ...     print(sum_i.state())
             [ 7. -9.  9.]
 
+        See Also:
+            :class:`~dwave.optimization.symbols.Sum`: Genertaed symbol
         """
         from dwave.optimization.symbols import Sum
         return Sum(self, axis=axis, initial=initial)
