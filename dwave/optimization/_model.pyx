@@ -1829,7 +1829,7 @@ cdef class ArraySymbol(Symbol):
         Symbols might need information about their predecessor(s) to determine
         whether they define a valid operation. For example,
         a :class:`~dwave.optimization.symbols.Divide` symbol does not permit a
-        zero-value denominator.
+        denominator with zero in its possible values.
 
         Returns:
             :func:`~dataclasses.dataclass`: A :func:`~dataclasses.dataclass`
