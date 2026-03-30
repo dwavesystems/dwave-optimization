@@ -79,6 +79,7 @@ __all__ = [
     "absolute",
     "add",
     "arange",
+    "argsort",
     "as_array_symbols",
     "atleast_1d",
     "atleast_2d",
@@ -89,11 +90,13 @@ __all__ = [
     "concatenate",
     "cos",
     "divide",
+    "equal",
     "exp",
     "expit",
     "extract",
     "hstack",
     "isin",
+    "less_equal",
     "linprog",
     "log",
     "logical",
@@ -116,6 +119,7 @@ __all__ = [
     "softmax",
     "sqrt",
     "stack",
+    "subtract",
     "tanh",
     "transpose",
     "vstack",
@@ -302,7 +306,7 @@ def argsort(array: ArraySymbol) -> ArgSort:
         >>> a = model.constant([[5, 2, 7], [4, 9, 1]])
         >>> indices = argsort(a)
         >>> indices.shape()
-        (5,)
+        (2, 3)
         >>> with model.lock():
         ...    model.states.resize(1)
         ...    print(indices.state())
