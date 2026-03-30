@@ -1734,7 +1734,7 @@ cdef class ArraySymbol(Symbol):
         Args:
             axis (int or tuple[int, ...], optional):
                 Axis or axes along which the operation is performed.
-                If unspecifed, reduction is performed over all dimensions.
+                If unspecified, reduction is performed over all dimensions.
                 If ``tuple[int, ...]``, reduction is performed along the
                 specified axes.
 
