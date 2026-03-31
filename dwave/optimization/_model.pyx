@@ -977,7 +977,7 @@ cdef class Symbol:
         Equal symbols represent the same quantity in the model.
 
         Args:
-            other: A symbol for comparison.
+            other(:class:`.Symbol`): A symbol for comparison.
 
         Returns:
             bool: True if the symbols are identical.
@@ -1070,7 +1070,7 @@ cdef class Symbol:
         """Return the initialization status of the indexed state.
 
         Args:
-            index: Index of the queried state.
+            index(int, optional, default=0): Index of the queried state.
 
         Returns:
             bool: True if the state is initialized.
@@ -1251,7 +1251,8 @@ cdef class Symbol:
         This method exists because a complete equality test can be expensive.
 
         Args:
-            other: Another symbol in the model's directed acyclic graph.
+            other(:class:`.Symbol`): Another symbol in the model's
+            :term:`directed acyclic graph`.
 
         Returns:
             int: Supported return values are the following.
@@ -1315,7 +1316,7 @@ cdef class Symbol:
         """Reset the state of a symbol and any successor symbols.
 
         Args:
-            index: Index of the state to reset.
+            index(int): Index of the state to reset.
 
         Examples:
             This example sets two states on a symbol with two successor symbols
@@ -1364,7 +1365,7 @@ cdef class Symbol:
         """Determine if two symbols share memory.
 
         Args:
-            other: Another symbol.
+            other(:class:`.Symbol`): Another symbol.
 
         Returns:
             bool: True if the two symbols share memory.
@@ -1708,7 +1709,7 @@ cdef class ArraySymbol(Symbol):
         r"""Create a symbol that tests whether all array elements evaluate to True.
 
         Args:
-            axis (int or tuple[int, ...], optional):
+            axis (int or tuple[int, ...], optional, default=None):
                 Axis or axes along which the operation is performed.
                 If unspecified, reduction is performed over all dimensions.
                 If ``tuple[int, ...]``, reduction is performed along the
@@ -1751,7 +1752,7 @@ cdef class ArraySymbol(Symbol):
         r"""Create a symbol that tests whether any array element evaluates to True.
 
         Args:
-            axis (int or tuple[int, ...], optional):
+            axis (int or tuple[int, ...], optional, default=None):
                 Axis or axes along which the operation is performed.
                 If unspecified, reduction is performed over all dimensions.
                 If ``tuple[int, ...]``, reduction is performed along the
@@ -1935,7 +1936,7 @@ cdef class ArraySymbol(Symbol):
         r"""Create a symbol that returns the maximum value of the array.
 
         Args:
-            axis (int or tuple[int, ...], optional):
+            axis (int or tuple[int, ...], optional, default=None):
                 Axis or axes along which the operation is performed.
                 If unspecified, reduction is performed over all dimensions.
                 If ``tuple[int, ...]``, reduction is performed along the
@@ -2000,7 +2001,7 @@ cdef class ArraySymbol(Symbol):
         r"""Create a symbol that returns the minimum value of the array.
 
         Args:
-            axis (int or tuple[int, ...], optional):
+            axis (int or tuple[int, ...], optional, default=None):
                 Axis or axes along which the operation is performed.
                 If unspecified, reduction is performed over all dimensions.
                 If ``tuple[int, ...]``, reduction is performed along the
@@ -2066,7 +2067,7 @@ cdef class ArraySymbol(Symbol):
         r"""Create a symbol that returns the product of the array elements.
 
         Args:
-            axis (int or tuple[int, ...], optional):
+            axis (int or tuple[int, ...], optional, default=None):
                 Axis or axes along which the operation is performed.
                 If unspecified, reduction is performed over all dimensions.
                 If ``tuple[int, ...]``, reduction is performed along the
@@ -2110,7 +2111,7 @@ cdef class ArraySymbol(Symbol):
         r"""Create a symbol with the array reshaped.
 
         Args:
-            shape:
+            shape(int or tuple[int, ...]):
                 Shape of the created symbol, specified as an integer argument
                 per dimension or a single argument formatted as a tuple or list;
                 e.g., :code:`a.reshape((1, 2))` is equivalent to
@@ -2197,10 +2198,11 @@ cdef class ArraySymbol(Symbol):
         """Create a symbol with the specified shape.
 
         Args:
-            shape: Shape of the successor array. Dimension values must be
-                non-negative.
-            fill_value: Value to use if the successor array is larger than
-                the predecessor array. Defaults to 0.
+            shape(tuple[int, ...]): Shape of the successor array. Dimension
+                values must be non-negative.
+            fill_value(int, optional, default=None): Value to use if the
+                successor array is larger than the predecessor array. Defaults
+                to 0.
 
         Returns:
             :class:`~dwave.optimization.symbols.Resize`: A successor symbol with
@@ -2293,9 +2295,9 @@ cdef class ArraySymbol(Symbol):
         """Return the state of the symbol.
 
         Args:
-            index: Index of the state.
+            index(int, optional, default=0): Index of the state.
 
-            copy: Currently only True is supported.
+            copy(bool, optional): Currently only True is supported.
 
         Returns:
             :class:`numpy.ndarray`: State of the symbol.
