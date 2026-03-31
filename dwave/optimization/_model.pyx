@@ -1084,6 +1084,9 @@ cdef class Symbol:
             ...     i.set_state(1, [2, 4, 15])
             ...     print(i.has_state(0), i.has_state(1))
             False True
+
+        See Also:
+            :meth:`reset_state`
         """
         if not self.model.is_locked() and self.node_ptr.topological_index() < 0:
             raise TypeError("the state of an intermediate variable cannot be accessed without "
@@ -1118,7 +1121,7 @@ cdef class Symbol:
 
         This identity is unique to the underlying node, rather than the identity
         of the Python object representing it.
-        Therefore, ``symdol.id()`` is not the same as ``id(symbol)``!
+        Therefore, ``symbol.id()`` is not the same as ``id(symbol)``!
 
         Returns:
             int: Identity of the underlying node.
@@ -1138,11 +1141,11 @@ cdef class Symbol:
             >>> seen = {x.id()}
 
         See Also:
-            :meth:`.shares_memory`: ``a.shares_memory(b)`` is equivalent to
-            ``a.id() == b.id()``.
-
-            :meth:`.equals`: ``a.equals(b)`` will return ``True`` if
-            ``a.id() == b.id()``. Though the inverse is not necessarily true.
+            *   :meth:`.shares_memory`: ``a.shares_memory(b)`` is equivalent to
+                ``a.id() == b.id()``.
+            *   :meth:`.equals`: ``a.equals(b)`` returns ``True`` if
+                ``a.id() == b.id()``; the inverse is not necessarily true.
+            *   :meth:`~Symbol.maybe_equals`
 
         """
         # We refer to the node_ptr, which is not necessarily the address of the
@@ -1188,6 +1191,18 @@ cdef class Symbol:
             >>> b = a.sum()
             >>> a.equals(next(b.iter_predecessors()))
             True
+
+            .. figure:: /_images/iter_predecessors.svg
+               :width: 500 px
+               :name: dwave-optimization-iter-predecessors-example
+               :alt: Image of the model constructed in this example
+
+               Visualization of the model as a :term:`directed acyclic graph`.
+               See the :func:`~dwave.optimization.model.Model.to_networkx`
+               function for information on visualizing models.
+
+        See Also:
+            :meth:`.iter_successors`
         """
         cdef vector[cppNode*].const_iterator it = self.node_ptr.predecessors().begin()
         cdef vector[cppNode*].const_iterator end = self.node_ptr.predecessors().end()
@@ -1211,6 +1226,18 @@ cdef class Symbol:
             >>> y = x + 5
             >>> y.equals(next(x.iter_successors()))
             True
+
+            .. figure:: /_images/iter_successors.svg
+               :width: 500 px
+               :name: dwave-optimization-iter-successors-example
+               :alt: Image of the model constructed in this example
+
+               Visualization of the model as a :term:`directed acyclic graph`.
+               See the :func:`~dwave.optimization.model.Model.to_networkx`
+               function for information on visualizing models.
+
+        See Also:
+            :meth:`.iter_predecessors`
         """
         cdef vector[cppNode.SuccessorView].const_iterator it = self.node_ptr.successors().begin()
         cdef vector[cppNode.SuccessorView].const_iterator end = self.node_ptr.successors().end()
@@ -1312,6 +1339,9 @@ cdef class Symbol:
             After reset:
             state 0: [0. 1. 2. 3. 4.] and []
             state 1: [3. 4.] and [0. 1. 2.]
+
+        See Also:
+            :meth:`has_state`
         """
         cdef States states = self.model.states
 
@@ -1347,6 +1377,9 @@ cdef class Symbol:
             >>> c3 = model.constant([5])
             >>> print(c2.shares_memory(c1), c3.shares_memory(c1))
             False True
+
+        See Also:
+            :meth:`id`
         """
         cdef Symbol other_
         try:
