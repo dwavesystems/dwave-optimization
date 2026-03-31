@@ -1369,15 +1369,6 @@ cdef class Symbol:
         Returns:
             bool: True if the two symbols share memory.
 
-        Examples:
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> c1 = model.constant([5])
-            >>> c2 = model.constant([22])
-            >>> c3 = model.constant([5])
-            >>> print(c2.shares_memory(c1), c3.shares_memory(c1))
-            False True
-
         See Also:
             :meth:`id`
         """
@@ -1410,7 +1401,7 @@ cdef class Symbol:
         method.
 
         Returns:
-            int: Estimated size.
+            int: Estimated size in bytes.
 
         See also:
             :meth:`ArraySymbol.state_size()` An estimate of the size of an array
@@ -1418,14 +1409,6 @@ cdef class Symbol:
 
             :meth:`Model.state_size()` An estimate of the size of a model's
             state.
-
-        Examples:
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> c1 = model.constant([5])
-            >>> c2 = model.constant([22, 3])
-            >>> model.state_size() == 3 * c1.state_size()
-            True
         """
         return 0
 
@@ -2512,7 +2495,7 @@ cdef class ArraySymbol(Symbol):
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> i = model.integer((2, 3), lower_bound=-10, upper_bound=10)
-            >>> sum_i = i.prod(axis=0, initial=-3)
+            >>> sum_i = i.sum(axis=0, initial=-3)
             >>> with model.lock():
             ...     model.states.resize(1)
             ...     i.set_state(0, [[2, -4, 5], [8, -2, 7]])
