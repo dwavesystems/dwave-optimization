@@ -1828,6 +1828,8 @@ cdef class ArraySymbol(Symbol):
             that is equivalent to ``symbol.reshape(-1)``, with the predecessor
             symbol's array collapsed into one dimension.
 
+        .. versionadded:: 0.5.1
+
         Examples:
             >>> from dwave.optimization import Model
             >>> model = Model()
@@ -1877,6 +1879,8 @@ cdef class ArraySymbol(Symbol):
                         ``None`` if the bound is uknown.
                     *   ``max``: Upper bound (inclusive) on the array size or
                         ``None`` if the bound is unknown.
+
+        .. versionadded:: 0.6.8
 
         Examples:
             For a :class:`~dwave.optimization.symbols.Constant` symbol, ``min``,
