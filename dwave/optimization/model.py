@@ -273,8 +273,8 @@ class Model(_Graph):
             Beginning in version 0.6.7, user-defined index-wise bounds are
             supported.
 
-        .. versionchanged:: 0.6.12
-            Beginning in version 0.6.12, user-defined sum constraints are
+        .. versionchanged:: 0.6.13
+            Beginning in version 0.6.13, user-defined sum constraints are
             supported.
         """
         from dwave.optimization.symbols import BinaryVariable  # avoid circular import
@@ -649,8 +649,8 @@ class Model(_Graph):
             Beginning in version 0.6.7, user-defined index-wise bounds are
             supported.
 
-        .. versionchanged:: 0.6.12
-            Beginning in version 0.6.12, user-defined sum constraints are
+        .. versionchanged:: 0.6.13
+            Beginning in version 0.6.13, user-defined sum constraints are
             supported.
         """
         from dwave.optimization.symbols import IntegerVariable  # avoid circular import
