@@ -1099,7 +1099,8 @@ cdef class Symbol:
         cdef Py_ssize_t num_states = states.size()
 
         if not -num_states <= index < num_states:
-            raise ValueError(f"index out of range: {index}")
+            raise ValueError(f"state index {index} out of bounds. "
+                              "Initialize the state with model.states.resize(...).")
         if index < 0:  # allow negative indexing
             index += num_states
 
@@ -1773,11 +1774,12 @@ cdef class ArraySymbol(Symbol):
         return Any(self, axis=axis, initial=_NoValue)
 
     def copy(self):
-        """Create a duplicate symbol.
+        """Create a duplicating symbol.
 
         Returns:
             :class:`~dwave.optimization.symbols.Copy`: A successor symbol that
-            maintains an identical copy of the values of the predecessor symbol.
+            maintains an identical copy of the values of the predecessor symbol,
+            using contiguous memory for performance.
 
         .. versionadded:: 0.5.1
 
