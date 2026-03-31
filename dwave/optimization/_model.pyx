@@ -1758,6 +1758,7 @@ cdef class ArraySymbol(Symbol):
         See also:
             *   :class:`~dwave.optimization.symbols.All`: Generated symbol
             *   :func:`~dwave.optimization.model.ArraySymbol.any`
+            *   :func:`~numpy.all`: :doc:`NumPy <numpy:index>` function
 
         """
         from dwave.optimization.symbols import All  # avoid circular import
@@ -1802,6 +1803,7 @@ cdef class ArraySymbol(Symbol):
         See also:
             *   :class:`~dwave.optimization.symbols.Any`: Generated symbol
             *   :func:`~dwave.optimization.model.ArraySymbol.all`
+            *   :func:`~numpy.any`: :doc:`NumPy <numpy:index>` function
         """
         from dwave.optimization.symbols import Any  # avoid circular import
         return Any(self, axis=axis, initial=_NoValue)
@@ -1828,7 +1830,8 @@ cdef class ArraySymbol(Symbol):
             True
 
         See Also:
-            :class:`~dwave.optimization.symbols.Copy`: Generated symbol
+            *   :class:`~dwave.optimization.symbols.Copy`: Generated symbol
+            *   :func:`~numpy.copy`: :doc:`NumPy <numpy:index>` function
         """
         from dwave.optimization.symbols import Copy  # avoid circular import
         return Copy(self)
@@ -1855,6 +1858,8 @@ cdef class ArraySymbol(Symbol):
         See also:
             *   :class:`~dwave.optimization.symbols.Reshape`: generated symbol
             *   :func:`~dwave.optimization.model.ArraySymbol.reshape`
+            *   :meth:`~numpy.ndarray.flatten`: :doc:`NumPy <numpy:index>`
+                method
         """
         return self.reshape(-1)
 
@@ -1983,6 +1988,7 @@ cdef class ArraySymbol(Symbol):
         See also:
             *   :class:`~dwave.optimization.symbols.Max`: Generated symbol
             *   :func:`~dwave.optimization.model.ArraySymbol.min`
+            *   :func:`~numpy.max`: :doc:`NumPy <numpy:index>` function
         """
         from dwave.optimization.symbols import Max  # avoid circular import
         return Max(self, axis=axis, initial=initial)
@@ -2047,6 +2053,7 @@ cdef class ArraySymbol(Symbol):
         See also:
             *   :class:`~dwave.optimization.symbols.Min`: Generated symbol
             *   :func:`~dwave.optimization.model.ArraySymbol.max`
+            *   :func:`~numpy.min`: :doc:`NumPy <numpy:index>` function
         """
         from dwave.optimization.symbols import Min  # avoid circular import
         return Min(self, axis=axis, initial=initial)
@@ -2067,7 +2074,8 @@ cdef class ArraySymbol(Symbol):
             x: 1
 
         See also:
-            :func:`~dwave.optimization.model.ArraySymbol.shape`
+            *   :func:`~dwave.optimization.model.ArraySymbol.shape`
+            *   :func:`~numpy.ndim`: :doc:`NumPy <numpy:index>` function
         """
         return self.array_ptr.ndim()
 
@@ -2109,7 +2117,8 @@ cdef class ArraySymbol(Symbol):
             [32. 16. 70.]
 
         See also:
-            :class:`~dwave.optimization.symbols.Prod`: Generated symbol
+            *   :class:`~dwave.optimization.symbols.Prod`: Generated symbol
+            *   :func:`~numpy.prod`: :doc:`NumPy <numpy:index>` function
         """
         from dwave.optimization.symbols import Prod
         return Prod(self, axis=axis, initial=initial)
@@ -2123,12 +2132,12 @@ cdef class ArraySymbol(Symbol):
                 per dimension or a single argument formatted as a tuple or list;
                 e.g., :code:`a.reshape((1, 2))` is equivalent to
                 :code:`a.reshape(1, 2)`.
-                One dimension can be -1, in which case its size is inferred
-                from the other dimensions.
+                One dimension can be :math:`-1`, in which case its size is
+                inferred from the other dimensions.
                 For dynamically sized array symbols, the first dimension must
-                be specified as -1 and the remaining dimensions must be even
-                divisions or multiplications of the dimensions of the predecessor
-                array symbol, as shown in the examples below.
+                be specified as :math:`-1` and the remaining dimensions must be
+                even divisions or multiplications of the dimensions of the
+                predecessor array symbol, as shown in the examples below.
 
         Returns:
             :class:`~dwave.optimization.symbols.Reshape` or ``self``: A
@@ -2177,7 +2186,8 @@ cdef class ArraySymbol(Symbol):
         See also:
             *   :class:`~dwave.optimization.symbols.Reshape`: Generated symbol
             *   :func:`~dwave.optimization.mathematical.resize`,
-            *   :func:`~dwave.optimization.model.ArraySymbol.flatten`
+                :func:`~dwave.optimization.model.ArraySymbol.flatten`
+            *   :func:`~numpy.reshape`: :doc:`NumPy <numpy:index>` function
 
         """
         from dwave.optimization.symbols import Reshape  # avoid circular import
@@ -2231,6 +2241,7 @@ cdef class ArraySymbol(Symbol):
             *   :class:`~dwave.optimization.symbols.Resize`: Generated
                 symbol
             *   :func:`~dwave.optimization.model.ArraySymbol.reshape`
+            *   :func:`~numpy.resize`: :doc:`NumPy <numpy:index>` function
 
         .. versionadded:: 0.6.4
         """
@@ -2258,7 +2269,8 @@ cdef class ArraySymbol(Symbol):
             (-1,)
 
         See also:
-            :func:`~dwave.optimization.model.ArraySymbol.ndim`
+            *   :func:`~dwave.optimization.model.ArraySymbol.ndim`
+            *   :func:`~numpy.shape`: :doc:`NumPy <numpy:index>` function
         """
         # We could do the whole buffer format thing and return a numpy array
         # but I think it's better to follow NumPy and return a tuple
@@ -2285,7 +2297,8 @@ cdef class ArraySymbol(Symbol):
             6
 
         See also:
-            :class:`~dwave.optimization.symbols.Size`: Generated symbol
+            *   :class:`~dwave.optimization.symbols.Size`: Generated symbol
+            *   :func:`~numpy.size`: :doc:`NumPy <numpy:index>` function
         """
         if self.array_ptr.dynamic():
             from dwave.optimization.symbols import Size
@@ -2319,6 +2332,10 @@ cdef class ArraySymbol(Symbol):
             ...     print(z.state(1))
             3.0
             0.0
+
+        See also:
+            :meth:`has_state`, :meth:`reset_state`
+
         """
         if not copy:
             # todo: document once implemented
@@ -2458,6 +2475,9 @@ cdef class ArraySymbol(Symbol):
             >>> i = model.integer((2, 3), upper_bound=20)
             >>> i.strides()
             (24, 8)
+
+        See Also:
+            :attr:`~numpy.ndarray.strides`: :doc:`NumPy <numpy:index>` attribute
         """
         strides = self.array_ptr.strides()
         return tuple(strides[i] for i in range(strides.size()))
@@ -2500,7 +2520,8 @@ cdef class ArraySymbol(Symbol):
             [ 7. -9.  9.]
 
         See Also:
-            :class:`~dwave.optimization.symbols.Sum`: Genertaed symbol
+            *   :class:`~dwave.optimization.symbols.Sum`: Genertaed symbol
+            *   :func:`~numpy.sum`: :doc:`NumPy <numpy:index>` function
         """
         from dwave.optimization.symbols import Sum
         return Sum(self, axis=axis, initial=initial)
