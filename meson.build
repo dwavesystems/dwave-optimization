@@ -125,6 +125,20 @@ else
     limited_api = ''  # i.e. no limited api
 endif
 
+# Cython allows the creation of a "shared" file for some of their datastructures
+# See https://cython.readthedocs.io/en/latest/src/userguide/source_files_and_compilation.html#shared-module
+py.extension_module(
+    '_cyutility',
+    custom_target(
+        output: '_cyutility.c',
+        command: [meson.get_compiler('cython').cmd_array()[0], '--generate-shared', '@OUTPUT0@'],
+    ),
+    install: true,
+    install_rpath: '$ORIGIN',
+    subdir: 'dwave/optimization/',
+    limited_api: limited_api,
+)
+
 foreach name : [
     '_binaryop',
     '_reduce',
@@ -157,7 +171,7 @@ foreach name : [
         install: true,
         install_rpath: '$ORIGIN/..',
         override_options : ['cython_language=cpp'],
-        cython_args : ['-Xfreethreading_compatible=True'],
+        cython_args : ['--shared=dwave.optimization._cyutility', '-Xfreethreading_compatible=True'],
         subdir: 'dwave/optimization/symbols/',
         limited_api: limited_api,
     )
@@ -171,7 +185,7 @@ py.extension_module(
     install: true,
     install_rpath: '$ORIGIN',
     override_options : ['cython_language=cpp'],
-    cython_args : ['-Xfreethreading_compatible=True'],
+    cython_args : ['--shared=dwave.optimization._cyutility', '-Xfreethreading_compatible=True'],
     subdir: 'dwave/optimization/',
     limited_api: limited_api,
 )
@@ -184,7 +198,7 @@ py.extension_module(
     install: true,
     install_rpath: '$ORIGIN',
     override_options : ['cython_language=cpp'],
-    cython_args : ['-Xfreethreading_compatible=True'],
+    cython_args : ['--shared=dwave.optimization._cyutility', '-Xfreethreading_compatible=True'],
     subdir: 'dwave/optimization/',
     limited_api: limited_api,
 )
@@ -196,7 +210,7 @@ py.extension_module(
     install: true,
     install_rpath: '$ORIGIN',
     override_options : ['cython_language=cpp'],
-    cython_args : ['-Xfreethreading_compatible=True'],
+    cython_args : ['--shared=dwave.optimization._cyutility', '-Xfreethreading_compatible=True'],
     subdir: 'dwave/optimization/',
     limited_api: limited_api,
 )
