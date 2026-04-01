@@ -1252,7 +1252,7 @@ cdef class Symbol:
 
         Args:
             other (:class:`.Symbol`): Another symbol in the model's
-            :term:`directed acyclic graph`.
+                :term:`directed acyclic graph`.
 
         Returns:
             int: Supported return values are the following.
