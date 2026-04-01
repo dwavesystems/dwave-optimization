@@ -977,7 +977,7 @@ cdef class Symbol:
         Equal symbols represent the same quantity in the model.
 
         Args:
-            other(:class:`.Symbol`): A symbol for comparison.
+            other (:class:`.Symbol`): A symbol for comparison.
 
         Returns:
             bool: True if the symbols are identical.
@@ -1070,7 +1070,7 @@ cdef class Symbol:
         """Return the initialization status of the indexed state.
 
         Args:
-            index(int, optional, default=0): Index of the queried state.
+            index (int, optional, default=0): Index of the queried state.
 
         Returns:
             bool: True if the state is initialized.
@@ -1251,7 +1251,7 @@ cdef class Symbol:
         This method exists because a complete equality test can be expensive.
 
         Args:
-            other(:class:`.Symbol`): Another symbol in the model's
+            other (:class:`.Symbol`): Another symbol in the model's
             :term:`directed acyclic graph`.
 
         Returns:
@@ -1316,7 +1316,7 @@ cdef class Symbol:
         """Reset the state of a symbol and any successor symbols.
 
         Args:
-            index(int): Index of the state to reset.
+            index (int): Index of the state to reset.
 
         Examples:
             This example sets two states on a symbol with two successor symbols
@@ -1365,7 +1365,7 @@ cdef class Symbol:
         """Determine if two symbols share memory.
 
         Args:
-            other(:class:`.Symbol`): Another symbol.
+            other (:class:`.Symbol`): Another symbol.
 
         Returns:
             bool: True if the two symbols share memory.
@@ -2115,7 +2115,7 @@ cdef class ArraySymbol(Symbol):
         r"""Create a symbol with the array reshaped.
 
         Args:
-            shape(int or tuple[int, ...]):
+            shape (int or tuple[int, ...]):
                 Shape of the created symbol, specified as an integer argument
                 per dimension or a single argument formatted as a tuple or list;
                 e.g., :code:`a.reshape((1, 2))` is equivalent to
@@ -2202,9 +2202,9 @@ cdef class ArraySymbol(Symbol):
         """Create a symbol with the specified shape.
 
         Args:
-            shape(tuple[int, ...]): Shape of the successor array. Dimension
+            shape (tuple[int, ...]): Shape of the successor array. Dimension
                 values must be non-negative.
-            fill_value(int, optional, default=None): Value to use if the
+            fill_value (int, optional, default=None): Value to use if the
                 successor array is larger than the predecessor array. Defaults
                 to 0.
 
@@ -2299,9 +2299,9 @@ cdef class ArraySymbol(Symbol):
         """Return the state of the symbol.
 
         Args:
-            index(int, optional, default=0): Index of the state.
+            index (int, optional, default=0): Index of the state.
 
-            copy(bool, optional): Currently only True is supported.
+            copy (bool, optional): Currently only True is supported.
 
         Returns:
             :class:`numpy.ndarray`: State of the symbol.
