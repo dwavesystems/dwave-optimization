@@ -1554,7 +1554,7 @@ TEST_CASE("SizeNode") {
 
                 // these should always be true
                 CHECK(len.min() >= 0);
-                CHECK(len.max() <= std::numeric_limits<ssize_t>::max());
+                CHECK(len.max() <= static_cast<double>(std::numeric_limits<ssize_t>::max()));
 
                 // These should be one less than the min/max of the original set node
                 CHECK(len.min() == 1.0);
