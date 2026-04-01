@@ -37,8 +37,9 @@ from dwave.optimization.states cimport States
 cdef class LinearProgram(Symbol):
     """Solves a linear program (LP) defined by the predecessors.
 
-    See the :func:`~dwave.optimization.mathematical.linprog` function for
-    instantiation and additional information.
+    See Also:
+        :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
+        usage.
 
     Examples:
 
@@ -279,7 +280,9 @@ _register(LinearProgram, typeid(LinearProgramNode))
 cdef class LinearProgramFeasible(ArraySymbol):
     """Returns True if the predecessor symbol's indexed state is a feasible solution.
 
-    See the :func:`~dwave.optimization.mathematical.linprog` function for usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
+        usage.
 
     .. versionadded:: 0.6.0
     """
@@ -300,7 +303,9 @@ _register(LinearProgramFeasible, typeid(LinearProgramFeasibleNode))
 cdef class LinearProgramObjectiveValue(ArraySymbol):
     """Return the objective value for the predecessor symbol's indexed state.
 
-    See the :func:`~dwave.optimization.mathematical.linprog` function for usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
+        usage.
 
     .. versionadded:: 0.6.0
     """
@@ -321,7 +326,9 @@ _register(LinearProgramObjectiveValue, typeid(LinearProgramObjectiveValueNode))
 cdef class LinearProgramSolution(ArraySymbol):
     """Returns the current solution of the predecessor symbol as an array.
 
-    See the :func:`~dwave.optimization.mathematical.linprog` function for usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
+        usage.
 
     .. versionadded:: 0.6.0
     """

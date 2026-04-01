@@ -41,8 +41,9 @@ from dwave.optimization.states cimport States
 cdef class DisjointBitSet(ArraySymbol):
     """Disjoint-sets successor symbol.
 
-    See the :meth:`~dwave.optimization.model.Model.disjoint_bit_sets` method for
-    usage.
+    See Also:
+        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: Instantiation
+        and usage.
     """
     def __init__(self, DisjointBitSets parent, Py_ssize_t set_index):
         if set_index < 0 or set_index >= parent.num_disjoint_sets():
@@ -147,8 +148,9 @@ _register(DisjointBitSet, typeid(DisjointBitSetNode))
 cdef class DisjointBitSets(Symbol):
     """Disjoint-sets decision-variable symbol.
 
-    See the :meth:`~dwave.optimization.model.Model.disjoint_bit_sets` method for
-    instantiation and additional information.
+    See Also:
+        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: Instantiation
+        and usage.
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets
@@ -328,8 +330,9 @@ _register(DisjointBitSets, typeid(DisjointBitSetsNode))
 cdef class DisjointList(ArraySymbol):
     """Disjoint-lists successor symbol.
 
-    See the :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol` method
-    for usage.
+    See Also:
+        :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
+        Instantiation and usage.
     """
     def __init__(self, DisjointLists parent, Py_ssize_t list_index):
         if list_index < 0 or list_index >= parent.num_disjoint_lists():
@@ -435,8 +438,9 @@ _register(DisjointList, typeid(DisjointListNode))
 cdef class DisjointLists(Symbol):
     """Disjoint-lists decision-variable symbol.
 
-    See the :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol` method
-    for instantiation and additional information.
+    See Also:
+        :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
+        Instantiation and usage.
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists
@@ -622,7 +626,7 @@ _register(DisjointLists, typeid(DisjointListsNode))
 cdef class ListVariable(ArraySymbol):
     """List decision-variable symbol.
 
-    A list variable's possible states are the ordered subsets of ``range(n)``.
+    The variable's possible states are the ordered subsets of ``range(n)``.
 
     See Also:
         :meth:`~dwave.optimization.model.Model.list`: equivalent method.
@@ -672,10 +676,18 @@ cdef class ListVariable(ArraySymbol):
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
 
     def set_state(self, Py_ssize_t index, values):
-        """Set the state of the list node.
+        """Set the state of the symbol.
 
-        The given values must be a sub-permuation of ``range(n)`` where ``n`` is
+        The given values must be a permuation of ``range(n)`` where ``n`` is
         the size of the list.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> i = model.integer(5)
+            >>> with model.lock():
+            ...     model.states.resize(2)
+            ...     i.set_state(0, [0, 2, 1, 3, 4])
+            ...     i.set_state(1, [4, 3, 0, 1, 2])
         """
         # Convert the values into something we can handle in C++.
         # This also does some type checking etc

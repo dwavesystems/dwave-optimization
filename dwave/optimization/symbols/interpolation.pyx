@@ -29,8 +29,9 @@ from dwave.optimization.libcpp.nodes.interpolation cimport BSplineNode
 cdef class BSpline(ArraySymbol):
     """B-spline for a symbol.
 
-    See the :func:`~dwave.optimization.mathematical.bspline()` function for
-    usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.bspline()`: Instantiation and
+        usage.
     """
     def __init__(self, ArraySymbol x, k, t, c):
 

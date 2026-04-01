@@ -52,8 +52,9 @@ cdef extern from *:
 cdef class Constant(ArraySymbol):
     """Constant symbol.
 
-    See the :meth:`~dwave.optimization.model.Model.constant` method for
-    instantiating and additional information.
+    See Also:
+        :meth:`~dwave.optimization.model.Model.constant`: Instantiation and
+        usage.
     """
     def __init__(self, _Graph model, array_like):
         # In the future we won't need to be contiguous, but we do need to be right now

@@ -18,8 +18,9 @@ from dwave.optimization.symbols._unaryop import _UnaryOpSymbol, _UnaryOpNodeType
 class Absolute(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Absolute):
     """Absolute value element-wise on a symbol.
 
-    See the :func:`~dwave.optimization.mathematical.absolute` function for
-    usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.absolute`: Instantiation and
+        usage.
     """
     pass
 
@@ -27,7 +28,8 @@ class Absolute(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Absolute):
 class Cos(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Cos):
     """Cosine element-wise on a symbol.
 
-    See the :func:`~dwave.optimization.mathematical.cos` function for usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.cos`: Instantiation and usage.
 
     .. versionadded:: 0.6.5
     """
@@ -37,7 +39,8 @@ class Cos(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Cos):
 class Exp(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Exp):
     """Natural (base-e) exponential element-wise on a symbol.
 
-    See the :func:`~dwave.optimization.mathematical.exp` function for usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.exp`: Instantiation and usage.
 
     .. versionadded:: 0.6.2
     """
@@ -47,7 +50,9 @@ class Exp(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Exp):
 class Expit(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Expit):
     """Logistic sigmoid (expit) element-wise on a symbol.
 
-    See the :func:`~dwave.optimization.mathematical.expit` function for usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.expit`: Instantiation and
+        usage.
 
     .. versionadded:: 0.5.2
     """
@@ -55,7 +60,7 @@ class Expit(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Expit):
 
 
 class Log(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Log):
-    """Takes the values of a symbol and returns the corresponding natural logarithm (log).
+    """Natural logarithm (log) element-wise on a symbol.
 
     See Also:
         :func:`~dwave.optimization.mathematical.log`: equivalent function.

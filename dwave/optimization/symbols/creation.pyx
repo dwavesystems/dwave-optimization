@@ -41,8 +41,9 @@ ctypedef fused _step_type:
 cdef class ARange(ArraySymbol):
     """Evenly spaced integer values within an interval.
 
-    See the :func:`~dwave.optimization.mathematical.arange` function for
-    usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.arange`: Instantiation and
+        usage.
 
     .. versionadded:: 0.5.2
     """

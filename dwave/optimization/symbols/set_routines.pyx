@@ -23,7 +23,9 @@ from dwave.optimization.libcpp.nodes.set_routines cimport IsInNode
 cdef class IsIn(ArraySymbol):
     """Tests which values of one symbol are in another symbol.
 
-    See the :func:`~dwave.optimization.mathematical.isin` method for usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.isin`: Instantiation and
+        usage.
 
     .. versionadded:: 0.6.8
     """

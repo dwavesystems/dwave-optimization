@@ -36,8 +36,9 @@ from dwave.optimization.states cimport States
 cdef class BinaryVariable(ArraySymbol):
     """Binary decision-variable symbol.
 
-    See the :meth:`~dwave.optimization.model.Model.binary` method for
-    instantiating and additional information.
+    See Also:
+        :meth:`~dwave.optimization.model.Model.binary`: Instantiation and
+        usage.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
@@ -209,8 +210,9 @@ _register(BinaryVariable, typeid(BinaryNode))
 cdef class IntegerVariable(ArraySymbol):
     """Integer decision-variable symbol.
 
-    See the :meth:`~dwave.optimization.model.Model.integer` method for
-    instantiation and additional information.
+    See Also:
+        :meth:`~dwave.optimization.model.Model.integer`: Instantiation and
+        usage.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(

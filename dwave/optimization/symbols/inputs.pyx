@@ -35,8 +35,8 @@ from dwave.optimization.states cimport States
 cdef class Input(ArraySymbol):
     """An input symbol that acts as a placeholder in a model.
 
-    See the :func:`~dwave.optimization.model.Model.input` function for
-    instantiation and additional information.
+    See Also:
+        :func:`~dwave.optimization.model.Model.input`: Instantiation and usage.
     """
 
     def __init__(

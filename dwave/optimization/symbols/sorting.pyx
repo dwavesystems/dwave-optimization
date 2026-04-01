@@ -23,7 +23,9 @@ from dwave.optimization.libcpp.nodes.sorting cimport ArgSortNode
 cdef class ArgSort(ArraySymbol):
     """Orders a symbol's indices to sort the flattened array's values.
 
-    See the :func:`~dwave.optimization.mathematical.argsort` function for usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.argsort`: Instantiation and
+        usage.
 
     .. versionadded:: 0.6.4
     """

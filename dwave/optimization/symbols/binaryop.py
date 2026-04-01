@@ -18,7 +18,8 @@ from dwave.optimization.symbols._binaryop import _BinaryOpSymbol, _BinaryOpNodeT
 class Add(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Add):
     """Addition element-wise of two symbols.
 
-    See the :func:`~dwave.optimization.mathematical.add` function for usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.add`: Instantiation and usage.
     """
     pass
 
@@ -26,8 +27,9 @@ class Add(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Add):
 class And(_BinaryOpSymbol, node_type=_BinaryOpNodeType.And):
     """Boolean AND element-wise between two symbols.
 
-    See the :func:`~dwave.optimization.mathematical.logical_and` function for
-    usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.logical_and`: Instantiation and
+        usage.
     """
     pass
 
@@ -35,7 +37,9 @@ class And(_BinaryOpSymbol, node_type=_BinaryOpNodeType.And):
 class Divide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Divide):
     """Division element-wise between two symbols.
 
-    See the :func:`~dwave.optimization.mathematical.divide` function for usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.divide`: Instantiation and
+        usage.
     """
     pass
 
@@ -43,7 +47,9 @@ class Divide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Divide):
 class Equal(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Equal):
     """Equality comparison element-wise between two symbols.
 
-    See the :func:`~dwave.optimization.mathematical.equal` function for usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.equal`: Instantiation and
+        usage.
     """
     pass
 
@@ -51,8 +57,9 @@ class Equal(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Equal):
 class LessEqual(_BinaryOpSymbol, node_type=_BinaryOpNodeType.LessEqual):
     """Smaller-or-equal comparison element-wise between two symbols.
 
-    See the :func:`~dwave.optimization.mathematical.less_equal` function for
-    usage.
+    See Also:
+        :func:`~dwave.optimization.mathematical.less_equal`: Instantiation and
+        usage.
     """
     pass
 
