@@ -43,7 +43,7 @@ cdef class ARange(ArraySymbol):
 
     See Also:
         :func:`~dwave.optimization.mathematical.arange`: Instantiation and
-        usage.
+        usage of this symbol.
 
     .. versionadded:: 0.5.2
     """

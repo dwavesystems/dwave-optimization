@@ -27,7 +27,8 @@ cdef class Extract(ArraySymbol):
     """Elements chosen conditionally from two array symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.where`: Instantiation and usage.
+        :func:`~dwave.optimization.mathematical.where`: Instantiation and usage
+        of this symbol.
     """
     def __init__(self, ArraySymbol condition, ArraySymbol arr):
         cdef _Graph model = condition.model

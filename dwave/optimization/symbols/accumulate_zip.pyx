@@ -55,21 +55,20 @@ cdef class AccumulateZip(ArraySymbol):
         return r
 
     Args:
-        expression:
-            An :class:`~dwave.optimization.expression.Expression` specifying the
-            accumulate operation. Its first argument takes the value of the
-            ``initial`` parameter for index zero of its element-wise operation
-            and then, for the remaining array elements, the output of the
-            previous index. The expression's next arguments are assigned to the
-            symbols specified by the ``operands`` parameter.
-        operands:
+        expression (:class:`~dwave.optimization.expression.Expression`):
+            An operation to accumulate, specified as an expression. Its first
+            argument takes the value of the ``initial`` parameter for index zero
+            of its element-wise operation and then, for the remaining array
+            elements, the output of the previous index. The expression's next
+            arguments are assigned to the symbols specified by the ``operands``
+            parameter.
+        operands (tuple[:class:`~dwave.optimization.model.Symbol`, ...]):
             Operands to the accumulate operation as an iterable of 1D-array
             symbols. There should be one fewer operands than arguments of the
             expression.
-        initial (optional):
-            Start value, as a float, of the accumulate operation. Used to set
-            the first argument of the expression on the very first iteration
-            (index zero).
+        initial (float, optional):
+            Start value of the accumulate operation. Used to set the first
+            argument of the expression on the very first iteration (index zero).
 
     Examples:
         This example directly adds an :class:`.AccumulateZip` symbol to a model
@@ -100,6 +99,9 @@ cdef class AccumulateZip(ArraySymbol):
         ...     i2.set_state(0, [0, 0, 2, 2, 2])
         ...     print(j.state(0))
         [ -2.   2.  -4.  12. -36.]
+
+    See Also:
+        :meth:`~numpy.ufunc.accumulate`: :doc:`NumPy <numpy:index>` function
 
     .. versionadded:: 0.6.4
     """

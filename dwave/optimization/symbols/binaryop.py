@@ -19,7 +19,8 @@ class Add(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Add):
     """Addition element-wise of two symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.add`: Instantiation and usage.
+        :func:`~dwave.optimization.mathematical.add`: Instantiation and usage of
+        this symbol.
     """
     pass
 
@@ -29,7 +30,7 @@ class And(_BinaryOpSymbol, node_type=_BinaryOpNodeType.And):
 
     See Also:
         :func:`~dwave.optimization.mathematical.logical_and`: Instantiation and
-        usage.
+        usage of this symbol.
     """
     pass
 
@@ -39,7 +40,7 @@ class Divide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Divide):
 
     See Also:
         :func:`~dwave.optimization.mathematical.divide`: Instantiation and
-        usage.
+        usage of this symbol.
     """
     pass
 
@@ -49,7 +50,7 @@ class Equal(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Equal):
 
     See Also:
         :func:`~dwave.optimization.mathematical.equal`: Instantiation and
-        usage.
+        usage of this symbol.
     """
     pass
 
@@ -59,7 +60,7 @@ class LessEqual(_BinaryOpSymbol, node_type=_BinaryOpNodeType.LessEqual):
 
     See Also:
         :func:`~dwave.optimization.mathematical.less_equal`: Instantiation and
-        usage.
+        usage of this symbol.
     """
     pass
 
@@ -68,7 +69,8 @@ class Maximum(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Maximum):
     """Maximum values in an element-wise comparison of two symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.maximum`: equivalent function.
+        :func:`~dwave.optimization.mathematical.maximum`: Instantiation and
+        usage of this symbol.
     """
     pass
 
@@ -77,7 +79,8 @@ class Minimum(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Minimum):
     """Minimum values in an element-wise comparison of two symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.minimum`: equivalent function.
+        :func:`~dwave.optimization.mathematical.minimum`: Instantiation and
+        usage of this symbol.
     """
     pass
 
@@ -86,7 +89,8 @@ class Modulus(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Modulus):
     """Modulus element-wise between two symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.mod`: equivalent function.
+        :func:`~dwave.optimization.mathematical.mod`: Instantiation and
+        usage of this symbol.
     """
     pass
 
@@ -95,7 +99,8 @@ class Multiply(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Multiply):
     """Multiplication element-wise between two symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.multiply`: equivalent function.
+        :func:`~dwave.optimization.mathematical.multiply`: Instantiation and
+        usage of this symbol.
     """
     pass
 
@@ -104,7 +109,8 @@ class Or(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Or):
     """Boolean OR element-wise between two symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.logical_or`: equivalent function.
+        :func:`~dwave.optimization.mathematical.logical_or`: Instantiation and
+        usage of this symbol.
     """
     pass
 
@@ -113,7 +119,8 @@ class SafeDivide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.SafeDivide):
     """Safe division element-wise between two symbols.
 
     See also:
-        :func:`~dwave.optimization.mathematical.safe_divide`: equivalent function.
+        :func:`~dwave.optimization.mathematical.safe_divide`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.6.2
     """
@@ -124,7 +131,8 @@ class Subtract(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Subtract):
     """Subtraction element-wise of two symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.subtract`: equivalent function.
+        :func:`~dwave.optimization.mathematical.subtract`: Instantiation and
+        usage of this symbol.
     """
     pass
 
@@ -133,7 +141,8 @@ class Xor(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Xor):
     """Boolean XOR element-wise between two symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.logical_xor`: equivalent function.
+        :func:`~dwave.optimization.mathematical.logical_xor`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.4.1
     """

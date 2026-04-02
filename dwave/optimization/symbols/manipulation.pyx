@@ -46,7 +46,7 @@ cdef class BroadcastTo(ArraySymbol):
 
     See Also:
         :func:`~dwave.optimization.mathematical.broadcast_to`: Instantiation and
-        usage.
+        usage of this symbol.
 
     .. versionadded:: 0.6.5
     """
@@ -73,7 +73,8 @@ cdef class BroadcastTo(ArraySymbol):
         zf.writestr(directory + "shape.json", encoder.encode(self.shape()))
 
     def state_size(self):
-        """Broadcasting symbols are stateless"""
+        """Returns zero (broadcasting symbols are effectively stateless).
+        """
         return 0
 
 _register(BroadcastTo, typeid(BroadcastToNode))
@@ -84,7 +85,7 @@ cdef class Concatenate(ArraySymbol):
 
     See Also:
         :func:`~dwave.optimization.mathematical.concatenate()`: Instantiation
-        and usage.
+        and usage of this symbol.
 
     .. versionadded:: 0.4.3
     """
@@ -139,11 +140,11 @@ _register(Concatenate, typeid(ConcatenateNode))
 
 
 cdef class Copy(ArraySymbol):
-    """A duplicate symbol.
+    """A duplicating symbol.
 
     See Also:
         :meth:`~dwave.optimization.model.ArraySymbol.copy`: Instantiation and
-        usage.
+        usage of this symbol.
 
     .. versionadded:: 0.5.1
     """

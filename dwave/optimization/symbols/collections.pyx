@@ -42,8 +42,9 @@ cdef class DisjointBitSet(ArraySymbol):
     """Disjoint-sets successor symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: Instantiation
-        and usage.
+        *   :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`:
+            Instantiation and usage of this symbol.
+        *   :class:`.DisjointBitSets`
     """
     def __init__(self, DisjointBitSets parent, Py_ssize_t set_index):
         if set_index < 0 or set_index >= parent.num_disjoint_sets():
@@ -149,8 +150,9 @@ cdef class DisjointBitSets(Symbol):
     """Disjoint-sets decision-variable symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: Instantiation
-        and usage.
+        *   :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`:
+            Instantiation and usage of this symbol.
+        *   :class:`.DisjointBitSet`
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets
@@ -235,18 +237,17 @@ cdef class DisjointBitSets(Symbol):
     def set_state(self, Py_ssize_t index, state):
         r"""Set the state of the disjoint-sets symbol.
 
-        The given state must be a partition of ``range(primary_set_size)``,
-        where the primary set size is a parameter of the instantiating
-        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets` method,
-        into :meth:`.num_disjoint_sets` partitions, encoded as a 2D
-        :code:`num_disjoint_sets` :math:`\times` :code:`primary_set_size`
-        Boolean array.
-
         Args:
-            index:
-                Index of the state to set
-            state:
-                Assignment of values for the state.
+            index (int):
+                Index of the state to set.
+            state (\ |array-like|_\ ):
+                Assignment of values for the state. The specified state must be
+                a partition of ``range(primary_set_size)``, where the primary
+                set size is a parameter of the instantiating
+                :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`
+                method, into :meth:`.num_disjoint_sets` partitions, encoded as a
+                2D :code:`num_disjoint_sets` :math:`\times`
+                :code:`primary_set_size` Boolean array.
 
         Examples:
             >>> from dwave.optimization.model import Model
@@ -316,8 +317,8 @@ cdef class DisjointBitSets(Symbol):
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> parts_set, parts_subsets = model.disjoint_bit_sets(10, 4)
-            >>> parts_set.num_disjoint_sets()
-            4
+            >>> parts_set.num_disjoint_sets() == 4
+            True
         """
         return self.ptr.num_disjoint_sets()
 
@@ -331,8 +332,9 @@ cdef class DisjointList(ArraySymbol):
     """Disjoint-lists successor symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
-        Instantiation and usage.
+        *   :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
+            Instantiation and usage of this symbol.
+        *   :class:`.DisjointLists`
     """
     def __init__(self, DisjointLists parent, Py_ssize_t list_index):
         if list_index < 0 or list_index >= parent.num_disjoint_lists():
@@ -439,8 +441,9 @@ cdef class DisjointLists(Symbol):
     """Disjoint-lists decision-variable symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
-        Instantiation and usage.
+        *   :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
+            Instantiation and usage of this symbol.
+        *   :class:`.DisjointList`
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists
@@ -527,14 +530,13 @@ cdef class DisjointLists(Symbol):
     def set_state(self, Py_ssize_t index, state):
         r"""Set the state of the disjoint-lists symbol.
 
-        The given state must be a partition of ``range(primary_set_size)``
-        into :meth:`.num_disjoint_lists` partitions as a list of lists.
-
         Args:
-            index:
+            index (int):
                 Index of the state to set
-            state:
-                Assignment of values for the state.
+            state (list[list, ...]):
+                Assignment of values for the state. The specified state must be
+                a partition of ``range(primary_set_size)`` into
+                :meth:`.num_disjoint_lists` partitions as a list of lists.
 
         Examples:
             This example sets the state of a disjoint-lists symbol. You can
@@ -610,11 +612,21 @@ cdef class DisjointLists(Symbol):
                 )
 
     def num_disjoint_lists(self):
-        """Return the number of disjoint lists in the symbol."""
+        """Return the number of disjoint lists in the symbol.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> lists_symbol = model.disjoint_lists_symbol(
+            ...     primary_set_size=5,
+            ...     num_disjoint_lists=3)
+            >>> lists_symbol.num_disjoint_lists() == 3
+            True
+        """
         return self.ptr.num_disjoint_lists()
 
     def primary_set_size(self):
-        """Return the size of primary set of elements that the lists contain."""
+        """Return the total number of elements in the partitioned lists."""
         return self.ptr.primary_set_size()
 
     # An observing pointer to the C++ DisjointListsNode

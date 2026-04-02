@@ -20,7 +20,7 @@ class Absolute(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Absolute):
 
     See Also:
         :func:`~dwave.optimization.mathematical.absolute`: Instantiation and
-        usage.
+        usage of this symbol.
     """
     pass
 
@@ -29,7 +29,8 @@ class Cos(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Cos):
     """Cosine element-wise on a symbol.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.cos`: Instantiation and usage.
+        :func:`~dwave.optimization.mathematical.cos`: Instantiation and usage
+        of this symbol.
 
     .. versionadded:: 0.6.5
     """
@@ -40,7 +41,8 @@ class Exp(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Exp):
     """Natural (base-e) exponential element-wise on a symbol.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.exp`: Instantiation and usage.
+        :func:`~dwave.optimization.mathematical.exp`: Instantiation and usage
+        of this symbol.
 
     .. versionadded:: 0.6.2
     """
@@ -52,7 +54,7 @@ class Expit(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Expit):
 
     See Also:
         :func:`~dwave.optimization.mathematical.expit`: Instantiation and
-        usage.
+        usage of this symbol.
 
     .. versionadded:: 0.5.2
     """
@@ -63,7 +65,8 @@ class Log(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Log):
     """Natural logarithm (log) element-wise on a symbol.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.log`: equivalent function.
+        :func:`~dwave.optimization.mathematical.log`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.5.2
     """
@@ -74,7 +77,8 @@ class Logical(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Logical):
     """Logical truth value element-wise on a symbol.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.logical`: equivalent function.
+        :func:`~dwave.optimization.mathematical.logical`: Instantiation and
+        usage of this symbol.
     """
     pass
 
@@ -88,7 +92,8 @@ class Not(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Not):
     """Logical negation element-wise on a symbol.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.logical_not`: equivalent function.
+        :func:`~dwave.optimization.mathematical.logical_not`: Instantiation and
+        usage of this symbol.
     """
     pass
 
@@ -102,7 +107,8 @@ class Sin(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Sin):
     """Sine element-wise on a symbol.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.sin`: equivalent function.
+        :func:`~dwave.optimization.mathematical.sin`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.6.5
     """
@@ -123,7 +129,8 @@ class Tanh(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Tanh):
     """Tanh element-wise on a symbol.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.tanh`: equivalent function.
+        :func:`~dwave.optimization.mathematical.tanh`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.6.11
     """

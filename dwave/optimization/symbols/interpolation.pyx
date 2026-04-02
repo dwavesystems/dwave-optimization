@@ -31,7 +31,7 @@ cdef class BSpline(ArraySymbol):
 
     See Also:
         :func:`~dwave.optimization.mathematical.bspline()`: Instantiation and
-        usage.
+        usage of this symbol.
     """
     def __init__(self, ArraySymbol x, k, t, c):
 

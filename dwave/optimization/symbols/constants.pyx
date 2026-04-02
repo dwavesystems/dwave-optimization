@@ -54,7 +54,7 @@ cdef class Constant(ArraySymbol):
 
     See Also:
         :meth:`~dwave.optimization.model.Model.constant`: Instantiation and
-        usage.
+        usage of this symbol.
     """
     def __init__(self, _Graph model, array_like):
         # In the future we won't need to be contiguous, but we do need to be right now
@@ -241,12 +241,12 @@ cdef class Constant(ArraySymbol):
         return DEFINITELY if equal else NOT
 
     def state(self, Py_ssize_t index=0, *, bool copy = True):
-        """Return the state of the constant symbol.
+        """Return the state of the symbol.
 
         Args:
-            index:
+            index (int):
                 Index of the state.
-            copy:
+            copy (bool):
                 Copy the state. Currently only ``True`` is supported.
         Returns:
             A copy of the state.

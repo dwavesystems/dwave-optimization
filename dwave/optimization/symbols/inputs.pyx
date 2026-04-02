@@ -36,7 +36,8 @@ cdef class Input(ArraySymbol):
     """An input symbol that acts as a placeholder in a model.
 
     See Also:
-        :func:`~dwave.optimization.model.Model.input`: Instantiation and usage.
+        :func:`~dwave.optimization.model.Model.input`: Instantiation and usage
+        of this symbol.
     """
 
     def __init__(
