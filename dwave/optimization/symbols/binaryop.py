@@ -69,8 +69,9 @@ class Maximum(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Maximum):
     """Maximum values in an element-wise comparison of two symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.maximum`: Instantiation and
-        usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.maximum`: Instantiation and
+            usage of this symbol.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.max`
     """
     pass
 
@@ -79,8 +80,9 @@ class Minimum(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Minimum):
     """Minimum values in an element-wise comparison of two symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.minimum`: Instantiation and
-        usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.minimum`: Instantiation and
+            usage of this symbol.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.min`
     """
     pass
 
@@ -99,8 +101,10 @@ class Multiply(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Multiply):
     """Multiplication element-wise between two symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.multiply`: Instantiation and
-        usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.multiply`: Instantiation and
+            usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.matmul`,
+            :meth:`~dwave.optimization.model.ArraySymbol.prod`
     """
     pass
 

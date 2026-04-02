@@ -39,8 +39,9 @@ class Max(_ReduceSymbol, node_type=_ReduceNodeType.Max):
     """Maximum value in the elements of a symbol.
 
     See also:
-        :meth:`~dwave.optimization.model.ArraySymbol.max()`: Instantiation and
-        usage of this symbol.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.max`: Instantiation
+            and usage of this symbol.
+        *   :meth:`~dwave.optimization.mathematical.maximum`
     """
     pass
 
@@ -49,8 +50,9 @@ class Min(_ReduceSymbol, node_type=_ReduceNodeType.Min):
     """Minimum value in the elements of a symbol.
 
     See also:
-        :meth:`~dwave.optimization.model.ArraySymbol.min()`: Instantiation and
-        usage of this symbol.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.min()`: Instantiation
+            and usage of this symbol.
+        *   :meth:`~dwave.optimization.mathematical.minimum`
     """
     pass
 
@@ -59,8 +61,10 @@ class Prod(_ReduceSymbol, node_type=_ReduceNodeType.Prod, default_initial=1):
     """Product of the elements of a symbol.
 
     See also:
-        :meth:`~dwave.optimization.model.ArraySymbol.prod()`: Instantiation and
-        usage of this symbol.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.prod()`: Instantiation
+            and usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.matmul`,
+            :func:`~dwave.optimization.mathematical.multiply`
     """
     pass
 

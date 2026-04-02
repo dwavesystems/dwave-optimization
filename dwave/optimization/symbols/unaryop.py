@@ -107,7 +107,12 @@ class Not(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Not):
 
 
 class Rint(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Rint):
-    """Takes the values of a symbol and rounds them to the nearest integer."""
+    """Rounds the values of a symbol to the nearest integer.
+
+    See also:
+        *   :func:`~dwave.optimization.mathematical.rint`: Instantiation and
+            usage of this symbol.
+    """
     pass
 
 

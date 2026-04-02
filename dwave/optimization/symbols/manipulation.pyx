@@ -158,10 +158,11 @@ _register(Copy, typeid(CopyNode))
 
 
 cdef class Put(ArraySymbol):
-    """A symbol that replaces the specified elements in an array with given values.
+    """Replaces the specified elements in a symbol with given values.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.put`: equivalent function.
+        :func:`~dwave.optimization.mathematical.put`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.4.4
     """
@@ -184,7 +185,8 @@ cdef class Reshape(ArraySymbol):
     """Reshaped symbol.
 
     See Also:
-        :meth:`ArraySymbol.reshape() <dwave.optimization.model.ArraySymbol.reshape>`: equivalent method.
+        :meth:`~dwave.optimization.model.ArraySymbol.reshape`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.5.1
     """
@@ -230,9 +232,10 @@ cdef class Resize(ArraySymbol):
     """Resize symbol.
 
     See also:
-        :func:`~dwave.optimization.mathematical.resize`: equivalent function.
-
-        :meth:`ArraySymbol.resize() <dwave.optimization.model.ArraySymbol.resize>`: equivalent method.
+        *   :func:`~dwave.optimization.mathematical.resize`: Instantiation and
+            usage of this symbol.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.resize`:
+            :class:`~dwave.optimization.model.ArraySymbol` method.
 
     .. versionadded:: 0.6.4
     """
@@ -288,10 +291,11 @@ _register(Resize, typeid(ResizeNode))
 
 
 cdef class Roll(ArraySymbol):
-    """Roll symbol.
+    """Roll elements of a symbol along an axis.
 
     See also:
-        :func:`~dwave.optimization.mathematical.roll`: equivalent function.
+        :func:`~dwave.optimization.mathematical.roll`: Instantiation and usage
+        of this symbol.
 
     .. versionadded:: 0.6.9
     """

@@ -29,7 +29,13 @@ from dwave.optimization.libcpp.nodes.quadratic_model cimport (
 
 
 cdef class QuadraticModel(ArraySymbol):
-    """Quadratic model."""
+    """A quadratic model derived from a predecessor symbol and quadratic
+    interactions.
+
+    See Also:
+        :meth:`~dwave.optimization.model.quadratic_model`: Instantiation and
+        usage of this symbol.
+    """
     def __init__(self, ArraySymbol x, quadratic, linear=None):
         # Some checking on x
         if x.array_ptr.dynamic():
@@ -165,13 +171,37 @@ cdef class QuadraticModel(ArraySymbol):
         return qm
 
     def get_linear(self, Py_ssize_t v):
-        """Get the linear bias of v"""
+        """Return the linear bias of a variable.
+
+        Args:
+            v (int): A variable (or node) of the model.
+
+        Returns:
+            float: Linear bias.
+        """
         if not 0 <= v < self.num_variables():
             raise ValueError(f"v out of range for a model with {self.num_variables()} variables")
         return self.ptr.get_quadratic_model().get_linear(v)
 
     def get_quadratic(self, Py_ssize_t u, Py_ssize_t v):
-        """Get the quadratic bias of u and v. Returns 0 if not present."""
+        """Return the quadratic interaction between two variables.
+
+        Args:
+            u (int): A variable (or node) of the model.
+            v (int): A variable (or node) of the model.
+
+        Returns:
+            float: Quadratic bias. Returns 0 if not present.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> x = model.binary(3)
+            >>> Q = {(0, 0): 0, (0, 1): 1, (0, 2): 2, (1, 1): 1, (1, 2): 3, (2, 2): 2}
+            >>> qm = model.quadratic_model(x, Q)
+            qm.get_quadratic(1, 2)
+            3.0
+        """
         if not 0 <= u < self.num_variables():
             raise ValueError(f"u out of range for a model with {self.num_variables()} variables")
         if not 0 <= v < self.num_variables():
@@ -234,11 +264,11 @@ cdef class QuadraticModel(ArraySymbol):
             np.save(f, coords, allow_pickle=False)
 
     cpdef Py_ssize_t num_interactions(self) noexcept:
-        """The number of quadratic interactions in the quadratic model"""
+        """Number of quadratic interactions in the quadratic model."""
         return self.ptr.get_quadratic_model().num_interactions()
 
     cpdef Py_ssize_t num_variables(self) noexcept:
-        """The number of variables in the quadratic model."""
+        """Number of variables in the quadratic model."""
         return self.ptr.get_quadratic_model().num_variables()
 
     cdef QuadraticModelNode* ptr
