@@ -238,25 +238,11 @@ std::vector<const Node*> Graph::descendants(State& state, std::vector<const Node
 }
 
 std::vector<const Node*> Graph::descendants(std::vector<const Node*> sources) const {
-    // Same as above, just need a vector to mark visited nodes
-    std::vector<bool> marks(num_nodes(), false);
-
-    // Perform BFS starting from the sources
-    ssize_t exploration_index = 0;
-    while (exploration_index != static_cast<ssize_t>(sources.size())) {
-        const Node* n_ptr = sources[exploration_index++];
-        for (Node* m_ptr : n_ptr->successors()) {
-            if (marks[m_ptr->topological_index()]) continue;
-
-            marks[m_ptr->topological_index()] = true;
-            sources.emplace_back(m_ptr);
-        }
+    State state;
+    for (ssize_t i = 0, stop = num_nodes(); i < stop; ++i) {
+        state.emplace_back(std::make_unique<NodeStateData>());
     }
-    // Sort the nodes according to topological number
-    std::sort(sources.begin(), sources.end(), [](const Node* n_ptr, const Node* m_ptr) {
-        return n_ptr->topological_index() < m_ptr->topological_index();
-    });
-    return sources;
+    return descendants(state, sources);
 }
 
 void Graph::propagate(State& state) const {
