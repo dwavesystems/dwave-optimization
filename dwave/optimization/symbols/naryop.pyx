@@ -30,7 +30,12 @@ from dwave.optimization.libcpp.nodes.naryop cimport (
 
 
 cdef class NaryAdd(ArraySymbol):
-    """Addition element-wise of `N` symbols."""
+    """Addition element-wise of `N` symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.add`: Instantiation and usage of
+        this symbol.
+    """
     def __init__(self, *inputs):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")
@@ -78,7 +83,12 @@ _register(NaryAdd, typeid(NaryAddNode))
 
 
 cdef class NaryMaximum(ArraySymbol):
-    """Maximum values in an element-wise comparison of `N` symbols."""
+    """Maximum values in an element-wise comparison of `N` symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.maximum`: Instantiation and
+        usage of this symbol.
+    """
     def __init__(self, *inputs):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")
@@ -100,7 +110,12 @@ _register(NaryMaximum, typeid(NaryMaximumNode))
 
 
 cdef class NaryMinimum(ArraySymbol):
-    """Minimum values in an element-wise comparison of `N` symbols."""
+    """Minimum values in an element-wise comparison of `N` symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.minimum`: Instantiation and
+        usage of this symbol.
+    """
     def __init__(self, *inputs):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")
@@ -122,7 +137,12 @@ _register(NaryMinimum, typeid(NaryMinimumNode))
 
 
 cdef class NaryMultiply(ArraySymbol):
-    """Multiplication element-wise between `N` symbols."""
+    """Multiplication element-wise between `N` symbols.
+
+    See Also:
+        :func:`~dwave.optimization.mathematical.multiply`: Instantiation and
+        usage of this symbol.
+    """
     def __init__(self, *inputs):
         if len(inputs) == 0:
             raise TypeError("must have at least one predecessor node")

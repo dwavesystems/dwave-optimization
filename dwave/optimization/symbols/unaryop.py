@@ -84,7 +84,15 @@ class Logical(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Logical):
 
 
 class Negative(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Negative):
-    """Numerical negative element-wise on a symbol."""
+    """Numerical negative element-wise on a symbol.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> i = model.integer(3)
+        >>> j = - i
+        >>> type(j)
+        <class 'dwave.optimization.symbols.unaryop.Negative'>
+    """
     pass
 
 

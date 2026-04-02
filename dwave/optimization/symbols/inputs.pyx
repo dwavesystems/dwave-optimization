@@ -74,9 +74,9 @@ cdef class Input(ArraySymbol):
         """Set the state of the symbol.
 
         Args:
-            index:
+            index (int):
                 Index of the state to set.
-            state:
+            state (\ |array-like|_\ ):
                 Assignment of values for the state. The specified state must
                 have the same shape as the symbol.
 

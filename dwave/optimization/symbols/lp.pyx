@@ -39,7 +39,7 @@ cdef class LinearProgram(Symbol):
 
     See Also:
         :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
-        usage.
+        usage of this symbol.
 
     Examples:
 
@@ -113,6 +113,10 @@ cdef class LinearProgram(Symbol):
         This method returns a boolean value. To use feasibility in the model,
         use the :class:`LinearProgramFeasible` symbol.
 
+        Args:
+            index (int):
+                Index of the state to test.
+
         Examples:
             See the example in the :class:`.LinearProgram` class.
 
@@ -134,6 +138,10 @@ cdef class LinearProgram(Symbol):
         This method returns a numeric value. To use the objective value in the
         model, use the :class:`LinearProgramObjectiveValue` class.
 
+        Args:
+            index (int):
+                Index of the returned state.
+
         Examples:
             See the example in the :class:`.LinearProgram` class.
 
@@ -151,6 +159,10 @@ cdef class LinearProgram(Symbol):
 
         This method returns an array. To use the state in the model, use the
         :class:`LinearProgramSolution` class.
+
+        Args:
+            index (int):
+                Index of the returned state.
 
         Examples:
             See the example in the :class:`.LinearProgram` class.
@@ -282,7 +294,7 @@ cdef class LinearProgramFeasible(ArraySymbol):
 
     See Also:
         :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
-        usage.
+        usage of this symbol.
 
     .. versionadded:: 0.6.0
     """
@@ -301,11 +313,11 @@ _register(LinearProgramFeasible, typeid(LinearProgramFeasibleNode))
 
 
 cdef class LinearProgramObjectiveValue(ArraySymbol):
-    """Return the objective value for the predecessor symbol's indexed state.
+    """Returns the objective value for the predecessor symbol's indexed state.
 
     See Also:
         :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
-        usage.
+        usage of this symbol.
 
     .. versionadded:: 0.6.0
     """
@@ -328,7 +340,7 @@ cdef class LinearProgramSolution(ArraySymbol):
 
     See Also:
         :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
-        usage.
+        usage of this symbol.
 
     .. versionadded:: 0.6.0
     """

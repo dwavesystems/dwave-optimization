@@ -641,7 +641,8 @@ cdef class ListVariable(ArraySymbol):
     The variable's possible states are the ordered subsets of ``range(n)``.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.list`: equivalent method.
+        :meth:`~dwave.optimization.model.Model.list`: Instantiation and usage of
+        this symbol.
     """
     def __init__(self, _Graph model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
         self.ptr = model._graph.emplace_node[ListNode](n, min_size, max_size)
@@ -690,8 +691,13 @@ cdef class ListVariable(ArraySymbol):
     def set_state(self, Py_ssize_t index, values):
         """Set the state of the symbol.
 
-        The given values must be a permuation of ``range(n)`` where ``n`` is
-        the size of the list.
+        Args:
+            index (int):
+                Index of the state to set.
+            values (\ |array-like|_\ ):
+                Assignment of values for the state. The specified values must be
+                a permuation of ``range(n)`` where ``n`` is the size of the
+                list.
 
         Examples:
             >>> from dwave.optimization.model import Model

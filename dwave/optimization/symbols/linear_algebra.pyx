@@ -34,10 +34,11 @@ cdef extern from * nogil:
 
 
 cdef class MatrixMultiply(ArraySymbol):
-    """MatrixMultiply symbol.
+    """Matrix product of two array symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.matmul`: equivalent function.
+        :func:`~dwave.optimization.mathematical.matmul`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.6.10
     """
@@ -55,7 +56,9 @@ cdef class MatrixMultiply(ArraySymbol):
     def implementation():
         """Return the matrix multiplication implementation.
 
-        Either `"blas"` or `"fallback"`.
+        Either `"blas"`
+        (`BLAS <https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms>`_)
+        or `"fallback"`.
         """
         return bytes(matmul_implementation()).decode()
 

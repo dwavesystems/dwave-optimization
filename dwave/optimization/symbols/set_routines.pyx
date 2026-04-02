@@ -25,7 +25,7 @@ cdef class IsIn(ArraySymbol):
 
     See Also:
         :func:`~dwave.optimization.mathematical.isin`: Instantiation and
-        usage.
+        usage of this symbol.
 
     .. versionadded:: 0.6.8
     """

@@ -216,7 +216,7 @@ cdef class IntegerVariable(ArraySymbol):
 
     See Also:
         :meth:`~dwave.optimization.model.Model.integer`: Instantiation and
-        usage.
+        usage of this symbol.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
@@ -340,9 +340,9 @@ cdef class IntegerVariable(ArraySymbol):
         r"""Set the state of the integer symbol.
 
         Args:
-            index:
+            index (int):
                 Index of the state to set.
-            state:
+            state (\ |array-like|_\ ):
                 Assignment of values for the state. The specified state must
                 have the same shape as the symbol.
 
