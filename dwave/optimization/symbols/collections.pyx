@@ -153,6 +153,8 @@ cdef class DisjointBitSets(Symbol):
         *   :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`:
             Instantiation and usage of this symbol.
         *   :class:`.DisjointBitSet`
+        *   :class:`.DisjointLists`, :class:`.ListVariable`,
+            :class:`.SetVariable`,
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets
@@ -444,6 +446,8 @@ cdef class DisjointLists(Symbol):
         *   :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
             Instantiation and usage of this symbol.
         *   :class:`.DisjointList`
+        *   :class:`.DisjointBitSets`, :class:`.ListVariable`,
+            :class:`.SetVariable`
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists
@@ -641,8 +645,10 @@ cdef class ListVariable(ArraySymbol):
     The variable's possible states are the ordered subsets of ``range(n)``.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.list`: Instantiation and usage of
-        this symbol.
+        *   :meth:`~dwave.optimization.model.Model.list`: Instantiation and
+            usage of this symbol.
+        *   :class:`.DisjointBitSets`, :class:`.DisjointLists`,
+            :class:`.SetVariable`
     """
     def __init__(self, _Graph model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
         self.ptr = model._graph.emplace_node[ListNode](n, min_size, max_size)
@@ -738,7 +744,10 @@ cdef class SetVariable(ArraySymbol):
     A set variable's possible states are the subsets of ``range(n)``.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.set`: equivalent method.
+        *   :meth:`~dwave.optimization.model.Model.set`: Instantiation and usage
+            of this symbol.
+        *   :class:`.DisjointBitSets`, :class:`.DisjointLists`,
+            :class:`.ListVariable`
     """
     def __init__(self, _Graph model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
         self.ptr = model._graph.emplace_node[SetNode](n, min_size, max_size)
@@ -785,10 +794,22 @@ cdef class SetVariable(ArraySymbol):
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
 
     def set_state(self, Py_ssize_t index, values):
-        """Set the state of the set node.
+        """Set the state of the symbol.
 
-        The given state must be a subset of ``range(n)`` where ``n`` is the size
-        of the set.
+        index (int):
+            Index of the state to set.
+        values (\ |array-like|_\ ):
+            Assignment of values for the state. The given state must be a subset
+            of ``range(n)`` where ``n`` is the size of the set.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> s = model.set(10, min_size=2, max_size=5)
+            >>> with model.lock():
+            ...     model.states.resize(2)
+            ...     s.set_state(0, {0, 2, 1})
+            ...     s.set_state(1, {2, 3, 4, 7, 9})
         """
         if isinstance(values, collections.abc.Set):
             values = sorted(values)

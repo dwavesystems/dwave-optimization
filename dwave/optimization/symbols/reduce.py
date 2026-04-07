@@ -19,8 +19,9 @@ class All(_ReduceSymbol, node_type=_ReduceNodeType.All, default_initial=True):
     """Tests whether all elements evaluate to True.
 
     See Also:
-        :meth:`~dwave.optimization.model.ArraySymbol.all`: Instantiation and
-        usage of this symbol.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.all`: Instantiation and
+            usage of this symbol.
+        *   :class:`.Any`
     """
     pass
 
@@ -29,8 +30,9 @@ class Any(_ReduceSymbol, node_type=_ReduceNodeType.Any, default_initial=False):
     """Tests whether any elements evaluate to True.
 
     See Also:
-        :meth:`~dwave.optimization.model.ArraySymbol.any`: Instantiation and
-        usage of this symbol.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.any`: Instantiation and
+            usage of this symbol.
+        *   :class:`.All`
     """
     pass
 
@@ -41,7 +43,8 @@ class Max(_ReduceSymbol, node_type=_ReduceNodeType.Max):
     See also:
         *   :meth:`~dwave.optimization.model.ArraySymbol.max`: Instantiation
             and usage of this symbol.
-        *   :meth:`~dwave.optimization.mathematical.maximum`
+        *   :class:`~dwave.optimization.symbols.Maximum`
+        *   :class:`.Min`, :class:`.Prod`, :class:`.Sum`
     """
     pass
 
@@ -52,7 +55,8 @@ class Min(_ReduceSymbol, node_type=_ReduceNodeType.Min):
     See also:
         *   :meth:`~dwave.optimization.model.ArraySymbol.min()`: Instantiation
             and usage of this symbol.
-        *   :meth:`~dwave.optimization.mathematical.minimum`
+        *   :class:`~dwave.optimization.symbols.Minimum`
+        *   :class:`.Max`, :class:`.Prod`, :class:`.Sum`
     """
     pass
 
@@ -63,8 +67,9 @@ class Prod(_ReduceSymbol, node_type=_ReduceNodeType.Prod, default_initial=1):
     See also:
         *   :meth:`~dwave.optimization.model.ArraySymbol.prod()`: Instantiation
             and usage of this symbol.
-        *   :func:`~dwave.optimization.mathematical.matmul`,
-            :func:`~dwave.optimization.mathematical.multiply`
+        *   :class:`~dwave.optimization.symbols.MatrixMultiply`,
+            :class:`~dwave.optimization.symbols.Multiply`
+        *   :class:`.Max`, :class:`.Min`, :class:`.Sum`
     """
     pass
 
@@ -73,8 +78,9 @@ class Sum(_ReduceSymbol, node_type=_ReduceNodeType.Sum, default_initial=0):
     """Sum of the elements of a symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.ArraySymbol.sum()`: Instantiation and
-        usage of this symbol.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.sum()`: Instantiation
+            and usage of this symbol.
+        *   :class:`.Max`, :class:`.Min`, :class:`.Prod`
     """
     pass
 

@@ -39,8 +39,8 @@ cdef class MatrixMultiply(ArraySymbol):
     See Also:
         *   :func:`~dwave.optimization.mathematical.matmul`: Instantiation and
             usage of this symbol.
-        *   :func:`~dwave.optimization.mathematical.multiply`,
-            :meth:`~dwave.optimization.model.ArraySymbol.prod`
+        *   :class:`~dwave.optimization.symbols.Multiply`,
+            :class:`~dwave.optimization.symbols.Prod`
 
     .. versionadded:: 0.6.10
     """

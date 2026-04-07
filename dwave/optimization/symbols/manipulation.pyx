@@ -45,8 +45,13 @@ cdef class BroadcastTo(ArraySymbol):
     """Broadcasts an array symbol to a new shape.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.broadcast_to`: Instantiation and
-        usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.broadcast_to`: Instantiation
+            and usage of this symbol.
+        *   :class:`~dwave.optimization.symbols.Copy`,
+            :class:`~dwave.optimization.symbols.Reshape`,
+            :class:`~dwave.optimization.symbols.Resize`,
+            :class:`~dwave.optimization.symbols.Roll`,
+            :class:`~dwave.optimization.symbols.Transpose`
 
     .. versionadded:: 0.6.5
     """
@@ -84,8 +89,11 @@ cdef class Concatenate(ArraySymbol):
     """A symbol that concatenates one or more symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.concatenate()`: Instantiation
-        and usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.concatenate()`:
+            Instantiation and usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.hstack`,
+            :func:`~dwave.optimization.mathematical.stack`,
+            :func:`~dwave.optimization.mathematical.vstack`
 
     .. versionadded:: 0.4.3
     """
@@ -143,8 +151,13 @@ cdef class Copy(ArraySymbol):
     """A duplicating symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.ArraySymbol.copy`: Instantiation and
-        usage of this symbol.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.copy`: Instantiation
+            and usage of this symbol.
+        *   :class:`~dwave.optimization.symbols.BroadcastTo`
+            :class:`~dwave.optimization.symbols.Reshape`,
+            :class:`~dwave.optimization.symbols.Resize`,
+            :class:`~dwave.optimization.symbols.Roll`,
+            :class:`~dwave.optimization.symbols.Transpose`
 
     .. versionadded:: 0.5.1
     """
@@ -185,8 +198,14 @@ cdef class Reshape(ArraySymbol):
     """Reshaped symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.ArraySymbol.reshape`: Instantiation and
-        usage of this symbol.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.reshape`: Instantiation
+            and usage of this symbol.
+        *   :class:`~dwave.optimization.symbols.BroadcastTo`,
+            :class:`~dwave.optimization.symbols.Copy`,
+            :class:`~dwave.optimization.symbols.Reshape`,
+            :class:`~dwave.optimization.symbols.Resize`,
+            :class:`~dwave.optimization.symbols.Roll`,
+            :class:`~dwave.optimization.symbols.Transpose`
 
     .. versionadded:: 0.5.1
     """
@@ -236,6 +255,12 @@ cdef class Resize(ArraySymbol):
             usage of this symbol.
         *   :meth:`~dwave.optimization.model.ArraySymbol.resize`:
             :class:`~dwave.optimization.model.ArraySymbol` method.
+        *   :meth:`~dwave.optimization.model.ArraySymbol.reshape`
+        *   :class:`~dwave.optimization.symbols.BroadcastTo`,
+            :class:`~dwave.optimization.symbols.Copy`,
+            :class:`~dwave.optimization.symbols.Reshape`,
+            :class:`~dwave.optimization.symbols.Roll`,
+            :class:`~dwave.optimization.symbols.Transpose`
 
     .. versionadded:: 0.6.4
     """
@@ -294,8 +319,14 @@ cdef class Roll(ArraySymbol):
     """Roll elements of a symbol along an axis.
 
     See also:
-        :func:`~dwave.optimization.mathematical.roll`: Instantiation and usage
-        of this symbol.
+        *   :func:`~dwave.optimization.mathematical.roll`: Instantiation and
+            usage of this symbol.
+        *   :class:`~dwave.optimization.symbols.BroadcastTo`,
+            :class:`~dwave.optimization.symbols.Copy`,
+            :class:`~dwave.optimization.symbols.Reshape`,
+            :class:`~dwave.optimization.symbols.Resize`,
+            :class:`~dwave.optimization.symbols.Transpose`
+
 
     .. versionadded:: 0.6.9
     """
@@ -417,6 +448,12 @@ _register(Roll, typeid(RollNode))
 
 
 cdef class Size(ArraySymbol):
+    """Size of the symbol.
+
+    See Also:
+        :meth:`~dwave.optimization.model.ArraySymbol.size`: Instantiation and
+        usage of this symbol.
+    """
     def __init__(self, ArraySymbol array):
         cdef _Graph model = array.model
 
@@ -430,7 +467,13 @@ cdef class Transpose(ArraySymbol):
     """Tranpose symbol.
 
     See Also:
-       :meth:`~dwave.optimization.mathematical.transpose`: equivalent function.
+        *   :meth:`~dwave.optimization.mathematical.transpose`: Instantiation
+            and usage of this symbol.
+        *   :class:`~dwave.optimization.symbols.BroadcastTo`,
+            :class:`~dwave.optimization.symbols.Copy`,
+            :class:`~dwave.optimization.symbols.Reshape`,
+            :class:`~dwave.optimization.symbols.Resize`
+            :class:`~dwave.optimization.symbols.Roll`
 
     .. versionadded:: 0.6.8
     """

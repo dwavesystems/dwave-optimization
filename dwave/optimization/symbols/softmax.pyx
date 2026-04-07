@@ -24,7 +24,8 @@ cdef class SoftMax(ArraySymbol):
     """Softmax of a symbol.
 
     See Also:
-        :meth:`~dwave.optimization.mathematical.softmax`: equivalent method.
+        :meth:`~dwave.optimization.mathematical.softmax`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.6.5
     """

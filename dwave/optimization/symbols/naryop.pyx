@@ -33,8 +33,9 @@ cdef class NaryAdd(ArraySymbol):
     """Addition element-wise of `N` symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.add`: Instantiation and usage of
-        this symbol.
+        *   :func:`~dwave.optimization.mathematical.add`: Instantiation and
+            usage of this symbol.
+        *   :class:`~dwave.optimization.symbols.Add`
     """
     def __init__(self, *inputs):
         if len(inputs) == 0:
@@ -86,8 +87,9 @@ cdef class NaryMaximum(ArraySymbol):
     """Maximum values in an element-wise comparison of `N` symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.maximum`: Instantiation and
-        usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.maximum`: Instantiation and
+            usage of this symbol.
+        *   :class:`~dwave.optimization.symbols.Maximum`
     """
     def __init__(self, *inputs):
         if len(inputs) == 0:
@@ -113,8 +115,9 @@ cdef class NaryMinimum(ArraySymbol):
     """Minimum values in an element-wise comparison of `N` symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.minimum`: Instantiation and
-        usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.minimum`: Instantiation and
+            usage of this symbol.
+        *   :class:`~dwave.optimization.symbols.Minimum`
     """
     def __init__(self, *inputs):
         if len(inputs) == 0:
@@ -140,8 +143,9 @@ cdef class NaryMultiply(ArraySymbol):
     """Multiplication element-wise between `N` symbols.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.multiply`: Instantiation and
-        usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.multiply`: Instantiation and
+            usage of this symbol.
+        *   :class:`~dwave.optimization.symbols.Multiply`
     """
     def __init__(self, *inputs):
         if len(inputs) == 0:

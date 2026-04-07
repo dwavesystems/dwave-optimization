@@ -33,8 +33,8 @@ cdef class QuadraticModel(ArraySymbol):
     interactions.
 
     See Also:
-        :meth:`~dwave.optimization.model.quadratic_model`: Instantiation and
-        usage of this symbol.
+        :meth:`~dwave.optimization.model.Model.quadratic_model`: Instantiation
+        and usage of this symbol.
     """
     def __init__(self, ArraySymbol x, quadratic, linear=None):
         # Some checking on x
