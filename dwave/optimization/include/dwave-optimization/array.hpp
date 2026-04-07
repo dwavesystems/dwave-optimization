@@ -363,10 +363,10 @@ struct Update {
 class Array {
  public:
     /// A std::random_access_iterator over the values in the array.
-    using iterator = BufferIterator<double, double, false>;
+    using iterator = BufferIterator<double, double>;
 
     /// A std::random_access_iterator over the values in the array.
-    using const_iterator = BufferIterator<double, double, true>;
+    using const_iterator = BufferIterator<const double, const double>;
 
     template <class T>
     using cache_type = std::unordered_map<const Array*, T>;
@@ -374,7 +374,7 @@ class Array {
     template <class T>
     using optional_cache_type = std::optional<std::reference_wrapper<cache_type<T>>>;
 
-    using View = std::ranges::subrange<const_iterator>;
+    using View = std::ranges::subrange<const_iterator, const_iterator>;
 
     /// Constant used to signal that the size is based on the state.
     static constexpr ssize_t DYNAMIC_SIZE = -1;
@@ -436,16 +436,25 @@ class Array {
     // Interface methods ******************************************************
 
     /// Return an iterator to the beginning of the array.
-    const_iterator begin(const State& state) const {
-        if (contiguous()) return const_iterator(buff(state));
+    auto begin(const State& state) const {
+        if (ndim() == 0) {
+            // A 0d iterator is pretty ill-defined, so we return a 1d one.
+            // The iterator doesn't manage the lifespan of the shape/strides
+            // so we need them to be static here.
+            static constexpr ssize_t shape = 1;
+            static constexpr ssize_t strides = 0;
+            return const_iterator(buff(state), 1, &shape, &strides);
+        }
         return const_iterator(buff(state), ndim(), shape().data(), strides().data());
     }
 
-    /// Return an iterator to the end of the array.
-    const_iterator end(const State& state) const { return this->begin(state) + this->size(state); }
+    /// Return a sentinel indicating the end of the array's state as a flattened array.
+    auto end(const State& state) const { return begin(state) + size(state); }
 
     /// Return a container-like view over the array.
-    const View view(const State& state) const { return View(begin(state), end(state)); }
+    const View view(const State& state) const {
+        return std::ranges::subrange(begin(state), end(state));
+    }
 
     /// The number of doubles in the flattened array.
     /// If the size is dependent on the state, returns Array::DYNAMIC_SIZE.

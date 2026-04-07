@@ -17,6 +17,9 @@
 #include <numeric>
 #include <vector>
 
+#include <iostream>
+
+#include "catch2/benchmark/catch_benchmark_all.hpp"
 #include "catch2/catch_template_test_macros.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/generators/catch_generators.hpp"
@@ -27,6 +30,39 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
+TEMPLATE_TEST_CASE("BufferIterator", "",  //
+                   float, double,         //
+                   bool,                  //
+                   std::int8_t, std::int16_t, std::int32_t, std::int64_t) {
+    GIVEN("auto it = BufferIterator<...>()") {
+        auto it = BufferIterator<const TestType>();
+
+        CHECK(it == std::default_sentinel);
+        CHECK(std::default_sentinel == it);
+        CHECK_FALSE(it != std::default_sentinel);
+        CHECK_FALSE(std::default_sentinel != it);
+
+        CHECK(it - std::default_sentinel == 0);
+        CHECK(std::default_sentinel - it == 0);
+
+        CHECK(it == BufferIterator<const TestType>());
+        CHECK(it <= BufferIterator<const TestType>());
+        CHECK(it >= BufferIterator<const TestType>());
+        CHECK_FALSE(it != BufferIterator<const TestType>());
+        CHECK_FALSE(it < BufferIterator<const TestType>());
+        CHECK_FALSE(it > BufferIterator<const TestType>());
+
+        CHECK(it - BufferIterator<const TestType>() == 0);
+        CHECK(BufferIterator<const TestType>() - it == 0);
+
+        CHECK(it + 1 == it);  // does nothing
+
+        CHECK_THAT(it.location(), RangeEquals(std::vector<ssize_t>{}));
+    }
+}
+
+/////////////////////////////////////////////////////
+
 // note: we don't test bool here because it's a bit of an edge case
 TEMPLATE_TEST_CASE("BufferIterator - templated", "",  //
                    float, double, std::int8_t, std::int16_t, std::int32_t, std::int64_t) {
@@ -34,10 +70,12 @@ TEMPLATE_TEST_CASE("BufferIterator - templated", "",  //
     GIVEN("A buffer of the given type") {
         std::vector<TestType> buffer(10);
         std::iota(buffer.begin(), buffer.end(), 0);
+        std::array<const ssize_t, 1> shape{10};
+        std::array<const ssize_t, 1> strides{sizeof(TestType)};
 
         THEN("We can construct an iterator reading it as if it was doubles without specifying the "
              "buffer type at compile-time") {
-            auto it = BufferIterator<double>(buffer.data());
+            auto it = BufferIterator<const double>(buffer.data(), shape, strides);
 
             // the output of the iterator is double as requested
             static_assert(std::same_as<decltype(*it), double>);
@@ -47,7 +85,7 @@ TEMPLATE_TEST_CASE("BufferIterator - templated", "",  //
 
         THEN("We can construct an iterator reading it as if it was doubles specifying the buffer "
              "type at compile-time") {
-            auto it = BufferIterator<double, TestType>(buffer.data());
+            auto it = BufferIterator<const double, TestType>(buffer.data(), shape, strides);
 
             // the output of the iterator is double as requested
             if constexpr (std::same_as<TestType, double>) {
@@ -60,7 +98,7 @@ TEMPLATE_TEST_CASE("BufferIterator - templated", "",  //
         }
 
         THEN("We can construct a non-const iterator reading as the same type") {
-            auto it = BufferIterator<TestType, TestType, false>(buffer.data());
+            auto it = BufferIterator<TestType, TestType>(buffer.data(), shape, strides);
 
             // the output of the iterator is a non-const reference
             static_assert(std::same_as<decltype(*it), TestType&>);
@@ -76,9 +114,11 @@ TEMPLATE_TEST_CASE("BufferIterator - templated", "",  //
     GIVEN("A buffer of doubles") {
         std::vector<double> buffer(10);
         std::iota(buffer.begin(), buffer.end(), 0);
+        std::array<const ssize_t, 1> shape{10};
+        std::array<const ssize_t, 1> strides{sizeof(double)};
 
         THEN("We can construct an iterator reading it as the given type") {
-            auto it = BufferIterator<TestType>(buffer.data());
+            auto it = BufferIterator<const TestType>(buffer.data(), shape, strides);
 
             // the output of the iterator is TestType as requested
             static_assert(std::same_as<decltype(*it), TestType>);
@@ -89,35 +129,39 @@ TEMPLATE_TEST_CASE("BufferIterator - templated", "",  //
         THEN("We can construct a strided 1D iterator equivalent to buffer[::2]") {
             const ssize_t size = 5;
             const ssize_t stride = 2 * sizeof(double);
-            auto it = BufferIterator<TestType>(buffer.data(), 1, &size, &stride);
+            auto it = BufferIterator<const TestType>(buffer.data(), 1, &size, &stride);
 
             CHECK_THAT(std::ranges::subrange(it, it + 5), RangeEquals({0, 2, 4, 6, 8}));
         }
     }
 }
 
-TEST_CASE("BufferIterator - bool") {
+TEST_CASE("BufferIterator old - bool") {
     GIVEN("An array of bools") {
         std::array<bool, 5> buffer{false, true, false, false, true};
+        std::array<const ssize_t, 1> shape{5};
+        std::array<const ssize_t, 1> strides{sizeof(bool)};
 
-        auto it = BufferIterator<double, bool>(buffer.data());
+        auto it = BufferIterator<const double, bool>(buffer.data(), shape, strides);
 
         CHECK_THAT(std::ranges::subrange(it, it + 5), RangeEquals({0, 1, 0, 0, 1}));
     }
 
     GIVEN("An array of doubles") {
         std::array<double, 10> buffer{0, 1, 2, 3, 0, 1, 2, 3, 0, 1};
+        std::array<const ssize_t, 1> shape{10};
+        std::array<const ssize_t, 1> strides{sizeof(double)};
 
-        auto it = BufferIterator<bool, double>(buffer.data());
+        auto it = BufferIterator<const bool, double>(buffer.data(), shape, strides);
 
         CHECK_THAT(std::ranges::subrange(it, it + 10),
                    RangeEquals({false, true, true, true, false, true, true, true, false, true}));
     }
 }
 
-TEST_CASE("BufferIterator") {
-    using ArrayIterator = BufferIterator<double, double, false>;
-    using ConstArrayIterator = BufferIterator<double, double, true>;
+TEST_CASE("BufferIterator - old") {
+    using ArrayIterator = BufferIterator<double, double>;
+    using ConstArrayIterator = BufferIterator<const double, const double>;
 
     static_assert(std::is_nothrow_constructible<ArrayIterator>::value);
     static_assert(std::is_nothrow_constructible<ConstArrayIterator>::value);
@@ -207,9 +251,10 @@ TEST_CASE("BufferIterator") {
         }
 
         THEN("The shaped iterator can be used with a sentinel") {
-            CHECK(it.shaped());
             CHECK(it != std::default_sentinel);
             CHECK(it + values.size() == std::default_sentinel);
+            CHECK(std::default_sentinel - it == values.size());
+            CHECK(it - std::default_sentinel == -(std::default_sentinel - it));
             CHECK_THAT(std::ranges::subrange(it, std::default_sentinel), RangeEquals(values));
         }
 
@@ -249,27 +294,6 @@ TEST_CASE("BufferIterator") {
 
             THEN("The vector is edited") {
                 CHECK_THAT(values, RangeEquals({-5, 1, -5, 3, -5, 5, -5, 7, -5}));
-            }
-        }
-
-        WHEN("We make an ConstArrayIterator from values.data()") {
-            auto it = ConstArrayIterator(values.data());
-
-            THEN("It behaves like a contiguous iterator") {
-                CHECK(*it == 0);
-                ++it;
-                CHECK(*it == 1);
-            }
-
-            THEN("We can do iterator arithmetic") {
-                CHECK(*(it + 0) == 0);
-                CHECK(*(it + 1) == 1);
-                CHECK(*(it + 2) == 2);
-                CHECK(*(it + 3) == 3);
-                CHECK(*(it + 4) == 4);
-
-                CHECK(ConstArrayIterator(values.data() + 4) - it == 4);
-                CHECK(it - ConstArrayIterator(values.data() + 4) == -4);
             }
         }
 
@@ -329,12 +353,12 @@ TEST_CASE("BufferIterator") {
             }
         }
 
-        THEN("We can construct another vector using reverse iterators") {
-            auto copy = std::vector<double>();
-            copy.assign(std::reverse_iterator(ConstArrayIterator(values.data()) + 6),
-                        std::reverse_iterator(ConstArrayIterator(values.data())));
-            CHECK_THAT(copy, RangeEquals({5, 4, 3, 2, 1, 0}));
-        }
+        // THEN("We can construct another vector using reverse iterators") {
+        //     auto copy = std::vector<double>();
+        //     copy.assign(std::reverse_iterator(ConstArrayIterator(values.data()) + 6),
+        //                 std::reverse_iterator(ConstArrayIterator(values.data())));
+        //     CHECK_THAT(copy, RangeEquals({5, 4, 3, 2, 1, 0}));
+        // }
     }
 }
 

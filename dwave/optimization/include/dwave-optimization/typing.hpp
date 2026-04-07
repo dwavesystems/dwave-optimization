@@ -25,19 +25,19 @@ namespace dwave::optimization {
 /// See https://numpy.org/doc/stable/reference/arrays.dtypes.html for more
 /// information.
 template <typename T>
-concept DType = std::same_as<T, float> ||         // np.float32
-                std::same_as<T, double> ||        // np.float64
-                std::same_as<T, bool> ||          // np.bool
-                std::same_as<T, std::int8_t> ||   // np.int8
-                std::same_as<T, std::int16_t> ||  // np.int16
-                std::same_as<T, std::int32_t> ||  // np.int32
-                std::same_as<T, std::int64_t>;    // np.int64
+concept DType = std::same_as<const T, const float> ||         // np.float32
+                std::same_as<const T, const double> ||        // np.float64
+                std::same_as<const T, const bool> ||          // np.bool
+                std::same_as<const T, const std::int8_t> ||   // np.int8
+                std::same_as<const T, const std::int16_t> ||  // np.int16
+                std::same_as<const T, const std::int32_t> ||  // np.int32
+                std::same_as<const T, const std::int64_t>;    // np.int64
 
 /// The `OptionalDType<T>` concept is satisfied if and only if `T` is `void`
 /// or satisfies `DType<T>`.
 /// `void` is used to signal that the dtype is unknown at compile-time.
 template <typename T>
-concept OptionalDType = DType<T> || std::same_as<T, void>;
+concept OptionalDType = DType<T> || std::same_as<const T, const void>;
 
 // Dev note: We'd like to work with `DType` only, but in order to work with the
 // buffer protocol (https://docs.python.org/3/c-api/buffer.html) we need to
@@ -62,14 +62,14 @@ enum class FormatCharacter : char {
 /// Get the format character associated with a supported DType.
 template <DType T>
 constexpr FormatCharacter format_of() {
-    if constexpr (std::same_as<T, float>) return FormatCharacter::float_;
-    if constexpr (std::same_as<T, double>) return FormatCharacter::double_;
-    if constexpr (std::same_as<T, bool>) return FormatCharacter::bool_;
-    if constexpr (std::same_as<T, int>) return FormatCharacter::int_;
-    if constexpr (std::same_as<T, signed char>) return FormatCharacter::signedchar_;
-    if constexpr (std::same_as<T, signed short>) return FormatCharacter::signedshort_;
-    if constexpr (std::same_as<T, signed long>) return FormatCharacter::signedlong_;
-    if constexpr (std::same_as<T, signed long long>) return FormatCharacter::signedlonglong_;
+    if constexpr (std::same_as<const T, const float>) return FormatCharacter::float_;
+    if constexpr (std::same_as<const T, const double>) return FormatCharacter::double_;
+    if constexpr (std::same_as<const T, const bool>) return FormatCharacter::bool_;
+    if constexpr (std::same_as<const T, const int>) return FormatCharacter::int_;
+    if constexpr (std::same_as<const T, const signed char>) return FormatCharacter::signedchar_;
+    if constexpr (std::same_as<const T, const signed short>) return FormatCharacter::signedshort_;
+    if constexpr (std::same_as<const T, const signed long>) return FormatCharacter::signedlong_;
+    if constexpr (std::same_as<const T, const signed long long>) return FormatCharacter::signedlonglong_;
 }
 
 }  // namespace dwave::optimization

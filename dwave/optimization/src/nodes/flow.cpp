@@ -72,8 +72,8 @@ std::span<const Update> ExtractNode::diff(const State& state) const {
 }
 
 void ExtractNode::initialize_state(State& state) const {
-    const Array::View condition = condition_ptr_->view(state);
-    const Array::View arr = arr_ptr_->view(state);
+    const std::ranges::sized_range auto condition = condition_ptr_->view(state);
+    const std::ranges::sized_range auto arr = arr_ptr_->view(state);
 
     std::vector<double> values;
     values.reserve(condition.size());
