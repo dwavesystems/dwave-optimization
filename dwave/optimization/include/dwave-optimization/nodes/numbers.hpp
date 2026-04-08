@@ -220,12 +220,6 @@ class BinaryNode : public IntegerNode {
 
     // Flip the value (0 -> 1 or 1 -> 0) at index i in the given state.
     void flip(State& state, ssize_t i) const;
-
-    // Set the value at index i to `true` in the given state.
-    void set(State& state, ssize_t i) const;
-
-    // Set the at index i to `false` in the given state.
-    void unset(State& state, ssize_t i) const;
 };
 
 }  // namespace dwave::optimization
