@@ -199,7 +199,7 @@ cdef class QuadraticModel(ArraySymbol):
             >>> x = model.binary(3)
             >>> Q = {(0, 0): 0, (0, 1): 1, (0, 2): 2, (1, 1): 1, (1, 2): 3, (2, 2): 2}
             >>> qm = model.quadratic_model(x, Q)
-            qm.get_quadratic(1, 2)
+            >>> qm.get_quadratic(1, 2)
             3.0
         """
         if not 0 <= u < self.num_variables():
