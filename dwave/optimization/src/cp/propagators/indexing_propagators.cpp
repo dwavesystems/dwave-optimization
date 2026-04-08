@@ -37,17 +37,16 @@ void BasicIndexingForwardTransform::affected(ssize_t i, std::vector<ssize_t>& ou
     std::vector<ssize_t> in_multi_index = unravel_index(i, array_ptr_->shape());
     std::vector<ssize_t> out_multi_index;
     bool belongs = true;
+    // Iterate through the axes to see if any index is outside the slice
     for (ssize_t axis = 0; axis < array_ptr_->ndim(); ++axis) {
-        if (std::holds_alternative<ssize_t>(slices[axis]) and
-            in_multi_index[axis] == std::get<ssize_t>(slices[axis])) {
-            continue;
-        }
-
-        assert(std::holds_alternative<Slice>(slices[axis]));
-        const auto& slice = std::get<Slice>(slices[axis]);
-        if (in_multi_index[axis] >= slice.start and in_multi_index[axis] < slice.stop) {
-            out_multi_index.push_back(in_multi_index[axis] - slice.start);
-            continue;
+        if (std::holds_alternative<ssize_t>(slices[axis])) {
+            if (in_multi_index[axis] == std::get<ssize_t>(slices[axis])) continue;
+        } else {
+            const auto& slice = std::get<Slice>(slices[axis]);
+            if (in_multi_index[axis] >= slice.start and in_multi_index[axis] < slice.stop) {
+                out_multi_index.push_back(in_multi_index[axis] - slice.start);
+                continue;
+            }
         }
 
         belongs = false;
