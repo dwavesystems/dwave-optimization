@@ -216,7 +216,8 @@ class Model(_Graph):
             True
 
         See Also:
-            :class:`~dwave.optimization.symbols.numbers.BinaryVariable`: equivalent symbol.
+            :class:`~dwave.optimization.symbols.numbers.BinaryVariable`: The
+                created symbol and its methods.
 
         .. versionchanged:: 0.6.7
             Beginning in version 0.6.7, user-defined bounds and index-wise

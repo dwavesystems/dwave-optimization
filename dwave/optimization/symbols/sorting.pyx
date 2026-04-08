@@ -21,16 +21,11 @@ from dwave.optimization.libcpp.nodes.sorting cimport ArgSortNode
 
 
 cdef class ArgSort(ArraySymbol):
-    """Return an ordering of the indices that would sort (flattened) values
-    of the given symbol. Note that while it will return an array with
-    identical shape to the given symbol, the returned indices will always be
-    indices on flattened array, similar to ``numpy.argsort(a, axis=None)``.
-
-    Always performs a index-wise stable sort such that the relative order of
-    values is maintained in the returned order.
+    """An ordering for a symbol's indices that sorts its flattened array's values.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.argsort`: equivalent function.
+        :func:`~dwave.optimization.mathematical.argsort`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.6.4
     """

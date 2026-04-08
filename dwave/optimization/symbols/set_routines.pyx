@@ -21,13 +21,15 @@ from dwave.optimization.libcpp.nodes.set_routines cimport IsInNode
 
 
 cdef class IsIn(ArraySymbol):
-    """Determine element-wise containment between two symbols. Given two
-    symbols: element and test_elements, returns an output array of the same
-    shape as element such that output[index] = True if element[index] is in
-    test_elements and False otherwise.
+    """Tests which values of one symbol are in another symbol.
 
     See Also:
-        :meth:`~dwave.optimization.mathematical.isin`: equivalent method.
+        :func:`~dwave.optimization.mathematical.isin`: Instantiation and usage
+        of this symbol.
+
+        :class:`~dwave.optimization.symbols.Extract`,
+        :class:`~dwave.optimization.symbols.Put`,
+        :class:`~dwave.optimization.symbols.Where`
 
     .. versionadded:: 0.6.8
     """

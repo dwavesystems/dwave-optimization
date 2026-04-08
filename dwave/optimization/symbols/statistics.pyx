@@ -23,10 +23,9 @@ from dwave.optimization.libcpp.nodes.statistics cimport MeanNode
 cdef class Mean(ArraySymbol):
     """Mean value of the elements of a symbol.
 
-    If symbol is empty, the mean defaults to 0.0.
-
     See Also:
-        :meth:`~dwave.optimization.mathematical.mean`: equivalent method.
+        :meth:`~dwave.optimization.mathematical.mean`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.6.4
     """

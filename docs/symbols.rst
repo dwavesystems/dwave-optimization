@@ -49,8 +49,9 @@ flow control is modeled using a symbol. The following symbols
 are available for modelling.
 
 In general, symbols should be created using the methods inherited from
-:class:`Symbol` and :class:`ArraySymbol`, rather than by the constructors
-of the following classes.
+:class:`Symbol` and :class:`ArraySymbol`, and from
+:ref:`mathematical <optimization_math>` functions, rather than by the
+constructors of the following classes. Some exceptions are noted below.
 
 .. automodule:: dwave.optimization.symbols
     :members:

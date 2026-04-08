@@ -39,10 +39,11 @@ ctypedef fused _step_type:
 
 
 cdef class ARange(ArraySymbol):
-    """Return evenly spaced integer values within a given interval.
+    """Evenly spaced integer values within an interval.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.arange`: equivalent function.
+        :func:`~dwave.optimization.mathematical.arange`: Instantiation and
+        usage of this symbol.
 
     .. versionadded:: 0.5.2
     """
@@ -87,7 +88,7 @@ cdef class ARange(ArraySymbol):
             if start.model is not stop.model or start.model is not step.model:
                 raise ValueError("start, stop, and step do not share the same underlying model")
             self.ptr = start.model._graph.emplace_node[ARangeNode](start.array_ptr, stop.array_ptr, step.array_ptr)
-            self.initialize_arraynode(start.model, self.ptr)   
+            self.initialize_arraynode(start.model, self.ptr)
         else:
             raise RuntimeError  # shouldn't be possible
 
