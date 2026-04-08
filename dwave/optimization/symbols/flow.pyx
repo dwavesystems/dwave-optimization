@@ -29,7 +29,8 @@ cdef class Extract(ArraySymbol):
     See Also:
         *   :func:`~dwave.optimization.mathematical.where`: Instantiation and
             usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.Put`,
+        *   :class:`~dwave.optimization.symbols.IsIn`,
+            :class:`~dwave.optimization.symbols.Put`,
             :class:`~dwave.optimization.symbols.Where`
     """
     def __init__(self, ArraySymbol condition, ArraySymbol arr):
@@ -52,6 +53,7 @@ cdef class Where(ArraySymbol):
         *   :func:`~dwave.optimization.mathematical.where`: Instantiation and
             usage of this symbol.
         *   :class:`~dwave.optimization.symbols.Extract`,
+            :class:`~dwave.optimization.symbols.IsIn`,
             :class:`~dwave.optimization.symbols.Put`
     """
     def __init__(self, ArraySymbol condition, ArraySymbol x, ArraySymbol y):

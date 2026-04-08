@@ -174,8 +174,11 @@ cdef class Put(ArraySymbol):
     """Replaces the specified elements in a symbol with given values.
 
     See Also:
-        :func:`~dwave.optimization.mathematical.put`: Instantiation and
-        usage of this symbol.
+        *   :func:`~dwave.optimization.mathematical.put`: Instantiation and
+            usage of this symbol.
+        *   :class:`~dwave.optimization.symbols.Extract`,
+            :class:`~dwave.optimization.symbols.IsIn`,
+            :class:`~dwave.optimization.symbols.Where`
 
     .. versionadded:: 0.4.4
     """
@@ -255,7 +258,6 @@ cdef class Resize(ArraySymbol):
             usage of this symbol.
         *   :meth:`~dwave.optimization.model.ArraySymbol.resize`:
             :class:`~dwave.optimization.model.ArraySymbol` method.
-        *   :meth:`~dwave.optimization.model.ArraySymbol.reshape`
         *   :class:`~dwave.optimization.symbols.BroadcastTo`,
             :class:`~dwave.optimization.symbols.Copy`,
             :class:`~dwave.optimization.symbols.Reshape`,

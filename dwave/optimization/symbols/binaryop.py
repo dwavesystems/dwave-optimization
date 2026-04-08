@@ -21,9 +21,9 @@ class Add(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Add):
     See Also:
         *   :func:`~dwave.optimization.mathematical.add`: Instantiation and
             usage of this symbol.
+        *   :class:`~dwave.optimization.symbols.NaryAdd`
         *   :class:`.Divide`, :class:`.Modulus`, :class:`.Multiply`,
             :class:`.SafeDivide`, :class:`.Subtract`
-        *   :class:`~dwave.optimization.symbols.NaryAdd`
     """
     pass
 

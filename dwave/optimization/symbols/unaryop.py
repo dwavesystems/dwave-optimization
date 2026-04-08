@@ -44,7 +44,8 @@ class Exp(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Exp):
     See Also:
         *   :func:`~dwave.optimization.mathematical.exp`: Instantiation and
             usage of this symbol.
-        *   :class:`.Expit`, :class:`.Log`
+        *   :class:`.Expit`, :class:`.Log`,
+            class:`~dwave.optimization.symbols.SoftMax`
 
     .. versionadded:: 0.6.2
     """
@@ -57,7 +58,8 @@ class Expit(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Expit):
     See Also:
         *   :func:`~dwave.optimization.mathematical.expit`: Instantiation and
             usage of this symbol.
-        *   :class:`.Exp`, :class:`.Log`
+        *   :class:`.Exp`, :class:`.Log`,
+            class:`~dwave.optimization.symbols.SoftMax`
 
     .. versionadded:: 0.5.2
     """
@@ -70,7 +72,8 @@ class Log(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Log):
     See Also:
         *   :func:`~dwave.optimization.mathematical.log`: Instantiation and
             usage of this symbol.
-        *   :class:`.Exp`, :class:`.Expit`
+        *   :class:`.Exp`, :class:`.Expit`,
+            class:`~dwave.optimization.symbols.SoftMax`
 
     .. versionadded:: 0.5.2
     """
