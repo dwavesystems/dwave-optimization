@@ -27,11 +27,12 @@ cdef class Extract(ArraySymbol):
     """Elements chosen conditionally from two array symbols.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.where`: Instantiation and
-            usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.IsIn`,
-            :class:`~dwave.optimization.symbols.Put`,
-            :class:`~dwave.optimization.symbols.Where`
+        :func:`~dwave.optimization.mathematical.where`: Instantiation and usage
+        of this symbol.
+
+        :class:`~dwave.optimization.symbols.IsIn`,
+        :class:`~dwave.optimization.symbols.Put`,
+        :class:`~dwave.optimization.symbols.Where`
     """
     def __init__(self, ArraySymbol condition, ArraySymbol arr):
         cdef _Graph model = condition.model
@@ -50,11 +51,12 @@ cdef class Where(ArraySymbol):
     """Return elements chosen from x or y depending on condition.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.where`: Instantiation and
-            usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.Extract`,
-            :class:`~dwave.optimization.symbols.IsIn`,
-            :class:`~dwave.optimization.symbols.Put`
+        :func:`~dwave.optimization.mathematical.where`: Instantiation and usage
+        of this symbol.
+
+        :class:`~dwave.optimization.symbols.Extract`,
+        :class:`~dwave.optimization.symbols.IsIn`,
+        :class:`~dwave.optimization.symbols.Put`
     """
     def __init__(self, ArraySymbol condition, ArraySymbol x, ArraySymbol y):
         cdef _Graph model = condition.model

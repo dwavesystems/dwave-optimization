@@ -37,10 +37,11 @@ cdef class MatrixMultiply(ArraySymbol):
     """Matrix product of two array symbols.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.matmul`: Instantiation and
-            usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.Multiply`,
-            :class:`~dwave.optimization.symbols.Prod`
+        :func:`~dwave.optimization.mathematical.matmul`: Instantiation and
+        usage of this symbol.
+
+        :class:`~dwave.optimization.symbols.Multiply`,
+        :class:`~dwave.optimization.symbols.Prod`
 
     .. versionadded:: 0.6.10
     """

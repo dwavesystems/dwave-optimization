@@ -42,9 +42,10 @@ cdef class DisjointBitSet(ArraySymbol):
     """Disjoint-sets successor symbol.
 
     See Also:
-        *   :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`:
-            Instantiation and usage of this symbol.
-        *   :class:`.DisjointBitSets`
+        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: Instantiation
+        and usage of this symbol.
+
+        :class:`.DisjointBitSets`
     """
     def __init__(self, DisjointBitSets parent, Py_ssize_t set_index):
         if set_index < 0 or set_index >= parent.num_disjoint_sets():
@@ -150,11 +151,12 @@ cdef class DisjointBitSets(Symbol):
     """Disjoint-sets decision-variable symbol.
 
     See Also:
-        *   :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`:
-            Instantiation and usage of this symbol.
-        *   :class:`.DisjointBitSet`
-        *   :class:`.DisjointLists`, :class:`.ListVariable`,
-            :class:`.SetVariable`,
+        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: Instantiation
+        and usage of this symbol.
+
+        :class:`.DisjointBitSet`
+
+        :class:`.DisjointLists`, :class:`.ListVariable`, :class:`.SetVariable`
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets
@@ -334,9 +336,10 @@ cdef class DisjointList(ArraySymbol):
     """Disjoint-lists successor symbol.
 
     See Also:
-        *   :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
-            Instantiation and usage of this symbol.
-        *   :class:`.DisjointLists`
+        :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
+        Instantiation and usage of this symbol.
+
+        :class:`.DisjointLists`
     """
     def __init__(self, DisjointLists parent, Py_ssize_t list_index):
         if list_index < 0 or list_index >= parent.num_disjoint_lists():
@@ -443,11 +446,12 @@ cdef class DisjointLists(Symbol):
     """Disjoint-lists decision-variable symbol.
 
     See Also:
-        *   :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
-            Instantiation and usage of this symbol.
-        *   :class:`.DisjointList`
-        *   :class:`.DisjointBitSets`, :class:`.ListVariable`,
-            :class:`.SetVariable`
+        :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
+        Instantiation and usage of this symbol.
+
+        :class:`.DisjointList`
+
+        :class:`.DisjointBitSets`, :class:`.ListVariable`, :class:`.SetVariable`
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists
@@ -645,10 +649,10 @@ cdef class ListVariable(ArraySymbol):
     The variable's possible states are the ordered subsets of ``range(n)``.
 
     See Also:
-        *   :meth:`~dwave.optimization.model.Model.list`: Instantiation and
-            usage of this symbol.
-        *   :class:`.DisjointBitSets`, :class:`.DisjointLists`,
-            :class:`.SetVariable`
+        :meth:`~dwave.optimization.model.Model.list`: Instantiation and usage of
+        this symbol.
+
+        :class:`.DisjointBitSets`, :class:`.DisjointLists`, :class:`.SetVariable`
     """
     def __init__(self, _Graph model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
         self.ptr = model._graph.emplace_node[ListNode](n, min_size, max_size)
@@ -744,10 +748,11 @@ cdef class SetVariable(ArraySymbol):
     A set variable's possible states are the subsets of ``range(n)``.
 
     See Also:
-        *   :meth:`~dwave.optimization.model.Model.set`: Instantiation and usage
-            of this symbol.
-        *   :class:`.DisjointBitSets`, :class:`.DisjointLists`,
-            :class:`.ListVariable`
+        :meth:`~dwave.optimization.model.Model.set`: Instantiation and usage of
+        this symbol.
+
+        :class:`.DisjointBitSets`, :class:`.DisjointLists`,
+        :class:`.ListVariable`
     """
     def __init__(self, _Graph model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
         self.ptr = model._graph.emplace_node[SetNode](n, min_size, max_size)

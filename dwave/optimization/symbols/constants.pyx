@@ -53,9 +53,10 @@ cdef class Constant(ArraySymbol):
     """Constant symbol.
 
     See Also:
-        *   :meth:`~dwave.optimization.model.Model.constant`: Instantiation and
-            usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.Input`
+        :meth:`~dwave.optimization.model.Model.constant`: Instantiation and
+        usage of this symbol.
+
+        :class:`~dwave.optimization.symbols.Input`
     """
     def __init__(self, _Graph model, array_like):
         # In the future we won't need to be contiguous, but we do need to be right now

@@ -36,9 +36,10 @@ cdef class Input(ArraySymbol):
     """An input symbol that acts as a placeholder in a model.
 
     See Also:
-        *   :func:`~dwave.optimization.model.Model.input`: Instantiation and
-            usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.Constant`
+        :func:`~dwave.optimization.model.Model.input`: Instantiation and usage
+        of this symbol.
+
+        :class:`~dwave.optimization.symbols.Constant`
     """
 
     def __init__(
@@ -68,7 +69,7 @@ cdef class Input(ArraySymbol):
         return self.ptr.integral()
 
     def lower_bound(self):
-        """Lowest value allowed in the symbol."""
+        """Lowest value allowed in the state."""
         return self.ptr.min()
 
     def set_state(self, Py_ssize_t index, state):
@@ -110,7 +111,7 @@ cdef class Input(ArraySymbol):
         )
 
     def upper_bound(self):
-        """Largest value allowed in the symbol."""
+        """Largest value allowed in the state."""
         return self.ptr.max()
 
     @classmethod

@@ -24,11 +24,12 @@ cdef class IsIn(ArraySymbol):
     """Tests which values of one symbol are in another symbol.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.isin`: Instantiation and
-            usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.Extract`,
-            :class:`~dwave.optimization.symbols.Put`,
-            :class:`~dwave.optimization.symbols.Where`
+        :func:`~dwave.optimization.mathematical.isin`: Instantiation and usage
+        of this symbol.
+
+        :class:`~dwave.optimization.symbols.Extract`,
+        :class:`~dwave.optimization.symbols.Put`,
+        :class:`~dwave.optimization.symbols.Where`
 
     .. versionadded:: 0.6.8
     """

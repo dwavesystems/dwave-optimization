@@ -38,11 +38,12 @@ cdef class LinearProgram(Symbol):
     """Solves a linear program (LP) defined by the predecessors.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
-            usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.LinearProgramFeasible`,
-            :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`,
-            :class:`~dwave.optimization.symbols.LinearProgramSolution`
+        :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
+        usage of this symbol.
+
+        :class:`~dwave.optimization.symbols.LinearProgramFeasible`,
+        :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`,
+        :class:`~dwave.optimization.symbols.LinearProgramSolution`
 
     Examples:
 
@@ -296,11 +297,12 @@ cdef class LinearProgramFeasible(ArraySymbol):
     """Returns True if the predecessor symbol's indexed state is a feasible solution.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
-            usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.LinearProgram`,
-            :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`,
-            :class:`~dwave.optimization.symbols.LinearProgramSolution`
+        :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
+        usage of this symbol.
+
+        :class:`~dwave.optimization.symbols.LinearProgram`,
+        :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`,
+        :class:`~dwave.optimization.symbols.LinearProgramSolution`
 
     .. versionadded:: 0.6.0
     """
@@ -322,11 +324,12 @@ cdef class LinearProgramObjectiveValue(ArraySymbol):
     """Returns the objective value for the predecessor symbol's indexed state.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
-            usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.LinearProgram`,
-            :class:`~dwave.optimization.symbols.LinearProgramFeasible`,
-            :class:`~dwave.optimization.symbols.LinearProgramSolution`
+        :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
+        usage of this symbol.
+
+        :class:`~dwave.optimization.symbols.LinearProgram`,
+        :class:`~dwave.optimization.symbols.LinearProgramFeasible`,
+        :class:`~dwave.optimization.symbols.LinearProgramSolution`
 
     .. versionadded:: 0.6.0
     """
@@ -348,11 +351,12 @@ cdef class LinearProgramSolution(ArraySymbol):
     """Returns the current solution of the predecessor symbol as an array.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
-            usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.LinearProgram`,
-            :class:`~dwave.optimization.symbols.LinearProgramFeasible`,
-            :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`
+        :func:`~dwave.optimization.mathematical.linprog`: Instantiation and
+        usage of this symbol.
+
+        :class:`~dwave.optimization.symbols.LinearProgram`,
+        :class:`~dwave.optimization.symbols.LinearProgramFeasible`,
+        :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`
 
     .. versionadded:: 0.6.0
     """

@@ -29,9 +29,10 @@ class Cos(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Cos):
     """Cosine element-wise on a symbol.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.cos`: Instantiation and
-            usage of this symbol.
-        *   :class:`.Sin`, :class:`.Tanh`
+        :func:`~dwave.optimization.mathematical.cos`: Instantiation and usage of
+        this symbol.
+
+        :class:`.Sin`, :class:`.Tanh`
 
     .. versionadded:: 0.6.5
     """
@@ -42,10 +43,11 @@ class Exp(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Exp):
     """Natural (base-e) exponential element-wise on a symbol.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.exp`: Instantiation and
-            usage of this symbol.
-        *   :class:`.Expit`, :class:`.Log`,
-            class:`~dwave.optimization.symbols.SoftMax`
+        :func:`~dwave.optimization.mathematical.exp`: Instantiation and usage of
+        this symbol.
+
+        :class:`.Expit`, :class:`.Log`,
+        :class:`~dwave.optimization.symbols.SoftMax`
 
     .. versionadded:: 0.6.2
     """
@@ -56,10 +58,11 @@ class Expit(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Expit):
     """Logistic sigmoid (expit) element-wise on a symbol.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.expit`: Instantiation and
-            usage of this symbol.
-        *   :class:`.Exp`, :class:`.Log`,
-            class:`~dwave.optimization.symbols.SoftMax`
+        :func:`~dwave.optimization.mathematical.expit`: Instantiation and usage
+        of this symbol.
+
+        :class:`.Exp`, :class:`.Log`,
+        :class:`~dwave.optimization.symbols.SoftMax`
 
     .. versionadded:: 0.5.2
     """
@@ -70,10 +73,11 @@ class Log(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Log):
     """Natural logarithm (log) element-wise on a symbol.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.log`: Instantiation and
-            usage of this symbol.
-        *   :class:`.Exp`, :class:`.Expit`,
-            class:`~dwave.optimization.symbols.SoftMax`
+        :func:`~dwave.optimization.mathematical.log`: Instantiation and usage of
+        this symbol.
+
+        :class:`.Exp`, :class:`.Expit`,
+        :class:`~dwave.optimization.symbols.SoftMax`
 
     .. versionadded:: 0.5.2
     """
@@ -84,11 +88,12 @@ class Logical(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Logical):
     """Logical truth value element-wise on a symbol.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.logical`: Instantiation and
-            usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.And`, :class:`.Not`,
-            :class:`~dwave.optimization.symbols.Or`,
-            :class:`~dwave.optimization.symbols.Xor`
+        :func:`~dwave.optimization.mathematical.logical`: Instantiation and
+        usage of this symbol.
+
+        :class:`~dwave.optimization.symbols.And`, :class:`.Not`,
+        :class:`~dwave.optimization.symbols.Or`,
+        :class:`~dwave.optimization.symbols.Xor`
     """
     pass
 
@@ -113,11 +118,12 @@ class Not(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Not):
     """Logical negation element-wise on a symbol.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.logical_not`: Instantiation
-            and usage of this symbol.
-        *   :class:`~dwave.optimization.symbols.And`, :class:`.Logical`,
-            :class:`~dwave.optimization.symbols.Or`,
-            :class:`~dwave.optimization.symbols.Xor`
+        :func:`~dwave.optimization.mathematical.logical_not`: Instantiation and
+        usage of this symbol.
+
+        :class:`~dwave.optimization.symbols.And`, :class:`.Logical`,
+        :class:`~dwave.optimization.symbols.Or`,
+        :class:`~dwave.optimization.symbols.Xor`
     """
     pass
 
@@ -136,9 +142,10 @@ class Sin(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Sin):
     """Sine element-wise on a symbol.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.sin`: Instantiation and
-            usage of this symbol.
-        *   :class:`.Cos`, :class:`.Tanh`
+        :func:`~dwave.optimization.mathematical.sin`: Instantiation and usage of
+        this symbol.
+
+        :class:`.Cos`, :class:`.Tanh`
 
     .. versionadded:: 0.6.5
     """
@@ -169,9 +176,10 @@ class SquareRoot(_UnaryOpSymbol, node_type=_UnaryOpNodeType.SquareRoot):
     """Square root of a symbol.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.sqrt`: Instantiation and
-            usage of this symbol.
-        *   :class:`Square`
+        :func:`~dwave.optimization.mathematical.sqrt`: Instantiation and usage
+        of this symbol.
+
+        :class:`Square`
     """
     pass
 
@@ -180,9 +188,10 @@ class Tanh(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Tanh):
     """Tanh element-wise on a symbol.
 
     See Also:
-        *   :func:`~dwave.optimization.mathematical.tanh`: Instantiation and
-            usage of this symbol.
-        *   :class:`.Cos`, :class:`.Sin`
+        :func:`~dwave.optimization.mathematical.tanh`: Instantiation and usage
+        of this symbol.
+
+        :class:`.Cos`, :class:`.Sin`
 
     .. versionadded:: 0.6.11
     """
