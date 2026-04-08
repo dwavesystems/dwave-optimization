@@ -7,6 +7,13 @@ catch2 = subproject(
 tests_all = executable(
     'tests-all',
     [
+        'cp/test_interval.cpp',
+        'cp/test_copier.cpp',
+        'cp/test_cp_var.cpp',
+        'cp/test_propagator.cpp',
+        'cp/propagators/test_binaryop.cpp',
+        'cp/propagators/test_reduce.cpp',
+
         'nodes/indexing/test_advanced.cpp',
         'nodes/indexing/test_basic.cpp',
         'nodes/test_binaryop.cpp',
@@ -29,6 +36,7 @@ tests_all = executable(
         'nodes/test_sorting.cpp',
         'nodes/test_statistics.cpp',
         'nodes/test_unaryop.cpp',
+
         'test_array.cpp',
         'test_double_kahan.cpp',
         'test_fraction.cpp',
