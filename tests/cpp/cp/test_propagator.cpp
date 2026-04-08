@@ -165,7 +165,7 @@ TEST_CASE("BasicIndexingPropagator") {
                     REQUIRE(status == CPStatus::OK);
                     THEN("We see that the propagator is not triggered") {
                         // Not clear to me if it should be scheduled or not
-                        // CHECK(not p_state[0]->scheduled());
+                        CHECK(not p_state[0]->scheduled());
                         CHECK(p_state[0]->indices_to_process().size() == 0);
                     }
                 }
@@ -178,6 +178,16 @@ TEST_CASE("BasicIndexingPropagator") {
                         REQUIRE(p_state[0]->indices_to_process().size() == 1);
 
                         CHECK(p_state[0]->scheduled(2));
+                    }
+
+                    AND_WHEN("We call the fix point engine") {
+                        CPEngine engine;
+                        engine.fix_point(state);
+
+                        THEN("The sum output variable 0 is correctly set to [0, 8]") {
+                            CHECK(vars[1]->min(s_state, 2) == -2);
+                            CHECK(vars[1]->max(s_state, 2) == -2);
+                        }
                     }
                 }
             }

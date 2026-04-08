@@ -82,7 +82,7 @@ CPStatus BasicIndexingPropagator::propagate(CPPropagatorsState& p_state,
                                             CPVarsState& v_state) const {
     auto data = data_ptr<PropagatorData>(p_state);
 
-    const BasicIndexingNode* bi = dynamic_cast<const BasicIndexingNode*>(array_->node_);
+    const BasicIndexingNode* bi = dynamic_cast<const BasicIndexingNode*>(basic_indexing_->node_);
     assert(bi);
     std::vector<BasicIndexingNode::slice_or_int> slices = bi->infer_indices();
     for (ssize_t axis = 0; axis < array_->node_->ndim(); ++axis) {
@@ -91,8 +91,6 @@ CPStatus BasicIndexingPropagator::propagate(CPPropagatorsState& p_state,
             slices[axis] = std::get<Slice>(slices[axis]).fit(array_->node_->shape()[axis]);
         }
     }
-
-    CPStatus status = CPStatus::OK;
 
     std::deque<ssize_t>& indices_to_process = data->indices_to_process();
 
@@ -113,37 +111,37 @@ CPStatus BasicIndexingPropagator::propagate(CPPropagatorsState& p_state,
             assert(std::holds_alternative<Slice>(slices[axis]));
             const auto& slice = std::get<Slice>(slices[axis]);
             assert(slice.step == 1);
-            out_multi_index.push_back(in_multi_index[++bi_axis] + slice.start);
+            out_multi_index.push_back(in_multi_index[bi_axis] + slice.start);
+            bi_axis++;
         }
 
         ssize_t array_index = ravel_multi_index(out_multi_index, array_->node_->shape());
 
         // Now we make the bounds of the array element and the basic indexing element equal
-        //
+
         // Make the upper bounds consistent
-        if (array_->max(v_state, array_index) < basic_indexing_->max(v_state, array_index)) {
-            status = basic_indexing_->remove_above(v_state, array_->max(v_state, array_index),
-                                                   bi_index);
-            if (status == CPStatus::Inconsistency) return status;
-        } else if (basic_indexing_->max(v_state, array_index) < array_->max(v_state, array_index)) {
-            status = array_->remove_above(v_state, basic_indexing_->max(v_state, array_index),
-                                          bi_index);
-            if (status == CPStatus::Inconsistency) return status;
-        }
+        if (CPStatus status = basic_indexing_->remove_above(
+                    v_state, array_->max(v_state, array_index), bi_index);
+            not status)
+            return status;
+        if (CPStatus status = array_->remove_above(v_state, basic_indexing_->max(v_state, bi_index),
+                                                   array_index);
+            not status)
+            return status;
 
         // Make the lower bounds consistent
-        if (array_->min(v_state, array_index) > basic_indexing_->min(v_state, array_index)) {
-            status = basic_indexing_->remove_below(v_state, array_->min(v_state, array_index),
-                                                   bi_index);
-            if (status == CPStatus::Inconsistency) return status;
-        } else if (basic_indexing_->min(v_state, array_index) > array_->min(v_state, array_index)) {
-            status = array_->remove_below(v_state, basic_indexing_->min(v_state, array_index),
-                                          bi_index);
-            if (status == CPStatus::Inconsistency) return status;
-        }
+        if (CPStatus status = basic_indexing_->remove_below(
+                    v_state, array_->min(v_state, array_index), bi_index);
+            not status)
+            return status;
+        if (CPStatus status = array_->remove_below(v_state, basic_indexing_->min(v_state, bi_index),
+                                                   array_index);
+            not status)
+            return status;
 
         data->set_scheduled(false, bi_index);
     }
+
     return CPStatus::OK;
 }
 
