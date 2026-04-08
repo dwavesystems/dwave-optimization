@@ -40,7 +40,24 @@ cdef bool _empty_slice(object slice_) noexcept:
 
 
 cdef class AdvancedIndexing(ArraySymbol):
-    """Advanced indexing."""
+    """Advanced indexing.
+
+    This symbol is instantiated by operations similar to those of
+    :ref:`NumPy's advanced indexing <numpy:advanced-indexing>`, such as in the
+    following example that selects row zero and column zero of an array symbol,
+    not together (:math:`A[i,j]`) but separately (:math:`A[[i],[j]]`):
+
+    >>> from dwave.optimization import Model
+    >>> model = Model()
+    >>> a = model.constant([[1, 2], [3, 4]])
+    >>> print(type(a[0, 0]))
+    <class 'dwave.optimization.symbols.indexing.BasicIndexing'>
+    >>> print(type(a[[0], [0]]))
+    <class 'dwave.optimization.symbols.indexing.AdvancedIndexing'>
+
+    See Also:
+        :class:`.BasicIndexing`, :class:`.Permutation`
+    """
     def __init__(self, ArraySymbol array, *indices):
         cdef _Graph model = array.model
 
@@ -161,7 +178,24 @@ _register(AdvancedIndexing, typeid(AdvancedIndexingNode))
 
 
 cdef class BasicIndexing(ArraySymbol):
-    """Basic indexing."""
+    """Basic indexing.
+
+    This symbol is instantiated by operations similar to those of
+    :ref:`NumPy's basic indexing <numpy:basic-indexing>`, such as in the
+    following example that selects row zero and column zero of an array symbol
+    together (:math:`A[i,j]`) but not separately (:math:`A[[i],[j]]`) :
+
+    >>> from dwave.optimization import Model
+    >>> model = Model()
+    >>> a = model.constant([[1, 2], [3, 4]])
+    >>> print(type(a[0, 0]))
+    <class 'dwave.optimization.symbols.indexing.BasicIndexing'>
+    >>> print(type(a[[0], [0]]))
+    <class 'dwave.optimization.symbols.indexing.AdvancedIndexing'>
+
+    See Also:
+        :class:`.AdvancedIndexing`, :class:`.Permutation`
+    """
     def __init__(self, ArraySymbol array, *indices):
 
         cdef _Graph model = array.model
@@ -257,7 +291,24 @@ _register(BasicIndexing, typeid(BasicIndexingNode))
 
 
 cdef class Permutation(ArraySymbol):
-    """Permutation of the elements of a symbol."""
+    """Permutation of the elements of a symbol.
+
+    This symbol is instantiated by operations similar to those of
+    :ref:`NumPy's advanced indexing <numpy:advanced-indexing>`, such as in the
+    following example.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> model = Model()
+        >>> c = model.constant([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> x = model.list(3)
+        >>> d = c[x, :][: ,x]
+        >>> print(type(d))
+        <class 'dwave.optimization.symbols.indexing.Permutation'>
+
+    See Also:
+        :class:`.BasicIndexing`, :class:`.AdvancedIndexing`
+    """
     def __init__(self, ArraySymbol array, ArraySymbol x):
         # todo: Loosen the types accepted. But this Cython code doesn't yet have
         # the type heirarchy needed so for how we specify explicitly

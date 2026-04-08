@@ -1554,7 +1554,7 @@ TEST_CASE("SizeNode") {
 
                 // these should always be true
                 CHECK(len.min() >= 0);
-                CHECK(len.max() <= std::numeric_limits<ssize_t>::max());
+                CHECK(len.max() <= static_cast<double>(std::numeric_limits<ssize_t>::max()));
 
                 // These should be one less than the min/max of the original set node
                 CHECK(len.min() == 1.0);
@@ -1622,6 +1622,7 @@ TEST_CASE("TransposeNode") {
             CHECK(transpose_ptr->max() == vec_ptr->max());
             CHECK(transpose_ptr->integral() == vec_ptr->integral());
             CHECK(transpose_ptr->contiguous() == vec_ptr->contiguous());
+            CHECK(transpose_ptr->sizeinfo() == vec_ptr->sizeinfo());
         }
 
         WHEN("We initialize an empty state") {
@@ -1697,6 +1698,7 @@ TEST_CASE("TransposeNode") {
             CHECK(transpose_ptr->max() == i_ptr->max());
             CHECK(transpose_ptr->integral() == i_ptr->integral());
             CHECK(transpose_ptr->contiguous() == i_ptr->contiguous());
+            CHECK(transpose_ptr->sizeinfo() == i_ptr->sizeinfo());
         }
 
         WHEN("We initialize a state") {
@@ -1756,6 +1758,7 @@ TEST_CASE("TransposeNode") {
             CHECK(transpose_ptr->max() == array_ptr->max());
             CHECK(transpose_ptr->integral() == array_ptr->integral());
             CHECK(!transpose_ptr->contiguous());
+            CHECK(transpose_ptr->sizeinfo() == array_ptr->sizeinfo());
         }
 
         WHEN("We initialize a state") {
@@ -1822,6 +1825,7 @@ TEST_CASE("TransposeNode") {
             CHECK_THAT(transpose_ptr_2->strides(), RangeEquals({24, 8}));
             CHECK_THAT(transpose_ptr_2->shape(), RangeEquals({2, 3}));
             CHECK(transpose_ptr_2->contiguous());
+            CHECK(transpose_ptr_2->sizeinfo() == array_ptr->sizeinfo());
         }
 
         WHEN("We initialize a state") {
@@ -1894,6 +1898,7 @@ TEST_CASE("TransposeNode") {
             CHECK(transpose_ptr->max() == array_ptr->max());
             CHECK(transpose_ptr->integral() == array_ptr->integral());
             CHECK(!transpose_ptr->contiguous());
+            CHECK(transpose_ptr->sizeinfo() == array_ptr->sizeinfo());
         }
 
         WHEN("We initialize a state") {

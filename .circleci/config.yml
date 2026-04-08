@@ -301,9 +301,14 @@ jobs:
             python -m venv env
             . env/bin/activate
             pip install pip --upgrade
-            pip install --group dev
-            pip install dwave-optimization --no-deps --find-links=dist
-            pip install --group docs
+            pip install --group dev --group docs
+            pip install dwave-optimization \
+              --find-links=dist \
+              --force-reinstall \
+              --no-cache-dir \
+              --no-deps  \
+              --no-index \
+              --only-binary :all:
 
       - run:
           name: build docs

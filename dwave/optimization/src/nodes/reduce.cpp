@@ -24,6 +24,8 @@
 #include <utility>
 
 #include "../functional_.hpp"
+#include "dwave-optimization/array.hpp"
+#include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {
 
@@ -281,7 +283,7 @@ class ReduceNodeData : public NodeStateData {
             if (flags_[index] == ReductionFlag::unchanged) {
                 reductions_diff_.emplace_back(index, reductions_[index]);
             }
-            flags_[index] = ReductionFlag::invalid;            
+            flags_[index] = ReductionFlag::invalid;
             return;
         }
         reduction = std::move(inverse.value());
@@ -581,6 +583,21 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
     return bounds;
 }
 
+SizeInfo reducenode_calculate_sizeinfo(const Array* node_ptr, const Array* array_ptr,
+                                       std::span<const ssize_t> axes) {
+    // Node is statically sized. Note: If node_shape = {}, product(node_shape) = 1.
+    if (!node_ptr->dynamic()) return SizeInfo(product(node_ptr->shape()));
+    assert(node_ptr->shape().size() and node_ptr->shape().front() == -1);
+
+    // Node is dynamically sized but predecessor, despite having non-trivial
+    // shape, is always empty. We cannot easily make any deductions about the
+    // resulting size as it likely depends on predecessor(s) of the input array.
+    if (array_ptr->size() == 0) return SizeInfo(node_ptr);
+
+    // Node size is derived from its predecessor's size.
+    return array_ptr->sizeinfo() / product(keep_axes(array_ptr->shape(), axes));
+}
+
 template <class BinaryOp>
 ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, {}) {}
 
@@ -591,7 +608,8 @@ ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> 
           initial(initial),
           array_ptr_(array_ptr),
           axes_(normalize_axes(array_ptr, axes)),
-          values_info_(values_info<BinaryOp>(array_ptr_, axes_, initial)) {
+          values_info_(values_info<BinaryOp>(array_ptr_, axes_, initial)),
+          sizeinfo_(reducenode_calculate_sizeinfo(this, array_ptr_, axes_)) {
     add_predecessor(array_ptr);
 }
 

@@ -42,7 +42,10 @@ cdef class DisjointBitSet(ArraySymbol):
     """Disjoint-sets successor symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: equivalent method.
+        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: Instantiation
+        and usage of this symbol.
+
+        :class:`.DisjointBitSets`
     """
     def __init__(self, DisjointBitSets parent, Py_ssize_t set_index):
         if set_index < 0 or set_index >= parent.num_disjoint_sets():
@@ -127,7 +130,15 @@ cdef class DisjointBitSet(ArraySymbol):
         zf.writestr(directory + "index.json", encoder.encode(self.set_index()))
 
     def set_index(self):
-        """Return the index for the set."""
+        """Return the index for the set.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> parts_set, parts_subsets = model.disjoint_bit_sets(10, 4)
+            >>> parts_subsets[2].set_index()
+            2
+        """
         return self.ptr.set_index()
 
     # An observing pointer to the C++ DisjointBitSetNode
@@ -140,7 +151,12 @@ cdef class DisjointBitSets(Symbol):
     """Disjoint-sets decision-variable symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: equivalent method.
+        :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`: Instantiation
+        and usage of this symbol.
+
+        :class:`.DisjointBitSet`
+
+        :class:`.DisjointLists`, :class:`.ListVariable`, :class:`.SetVariable`
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_sets
@@ -225,16 +241,27 @@ cdef class DisjointBitSets(Symbol):
     def set_state(self, Py_ssize_t index, state):
         r"""Set the state of the disjoint-sets symbol.
 
-        The given state must be a partition of ``range(primary_set_size)``
-        into :meth:`.num_disjoint_sets` partitions, encoded as a 2D
-        :code:`num_disjoint_sets` :math:`\times` :code:`primary_set_size` 
-        Boolean array.
-
         Args:
-            index:
-                Index of the state to set
-            state:
-                Assignment of values for the state.
+            index (int):
+                Index of the state to set.
+            state (\ |array-like|_\ ):
+                Assignment of values for the state. The specified state must be
+                a partition of ``range(primary_set_size)``, where the primary
+                set size is a parameter of the instantiating
+                :meth:`~dwave.optimization.model.Model.disjoint_bit_sets`
+                method, into :meth:`.num_disjoint_sets` partitions, encoded as a
+                2D :code:`num_disjoint_sets` :math:`\times`
+                :code:`primary_set_size` Boolean array.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> parts_set, parts_subsets = model.disjoint_bit_sets(8, 3)
+            >>> with model.lock():
+            ...     model.states.resize(1)
+            ...     parts_set.set_state(0, [[0, 1, 1, 0, 0, 0, 0, 0],
+            ...                             [1, 0, 0, 0, 0, 1, 0, 1],
+            ...                             [0, 0, 0, 1, 1, 0, 1, 0]])
         """
         # Reset our state, and check whether that's possible
         self.reset_state(index)
@@ -288,7 +315,15 @@ cdef class DisjointBitSets(Symbol):
                 )
 
     def num_disjoint_sets(self):
-        """Return the number of disjoint sets in the symbol."""
+        """Return the number of disjoint sets in the symbol.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> parts_set, parts_subsets = model.disjoint_bit_sets(10, 4)
+            >>> parts_set.num_disjoint_sets() == 4
+            True
+        """
         return self.ptr.num_disjoint_sets()
 
     # An observing pointer to the C++ DisjointBitSetsNode
@@ -301,7 +336,10 @@ cdef class DisjointList(ArraySymbol):
     """Disjoint-lists successor symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_lists`: associated method.
+        :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
+        Instantiation and usage of this symbol.
+
+        :class:`.DisjointLists`
     """
     def __init__(self, DisjointLists parent, Py_ssize_t list_index):
         if list_index < 0 or list_index >= parent.num_disjoint_lists():
@@ -386,7 +424,16 @@ cdef class DisjointList(ArraySymbol):
         zf.writestr(directory + "index.json", encoder.encode(self.list_index()))
 
     def list_index(self):
-        """Return the index for the list."""
+        """Return the index for the list.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> lists_symbol = model.disjoint_lists_symbol(
+            ...     primary_set_size=5, num_disjoint_lists=3)
+            >>> lists_symbol[1].list_index()
+            1
+        """
         return self.ptr.list_index()
 
     # An observing pointer to the C++ DisjointListNode
@@ -399,7 +446,12 @@ cdef class DisjointLists(Symbol):
     """Disjoint-lists decision-variable symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.disjoint_lists`: equivalent method.
+        :meth:`~dwave.optimization.model.Model.disjoint_lists_symbol`:
+        Instantiation and usage of this symbol.
+
+        :class:`.DisjointList`
+
+        :class:`.DisjointBitSets`, :class:`.ListVariable`, :class:`.SetVariable`
     """
     def __init__(
         self, _Graph model, Py_ssize_t primary_set_size, Py_ssize_t num_disjoint_lists
@@ -486,14 +538,13 @@ cdef class DisjointLists(Symbol):
     def set_state(self, Py_ssize_t index, state):
         r"""Set the state of the disjoint-lists symbol.
 
-        The given state must be a partition of ``range(primary_set_size)``
-        into :meth:`.num_disjoint_lists` partitions as a list of lists.
-
         Args:
-            index:
+            index (int):
                 Index of the state to set
-            state:
-                Assignment of values for the state.
+            state (list[list, ...]):
+                Assignment of values for the state. The specified state must be
+                a partition of ``range(primary_set_size)`` into
+                :meth:`.num_disjoint_lists` partitions as a list of lists.
 
         Examples:
             This example sets the state of a disjoint-lists symbol. You can
@@ -569,11 +620,21 @@ cdef class DisjointLists(Symbol):
                 )
 
     def num_disjoint_lists(self):
-        """Return the number of disjoint lists in the symbol."""
+        """Return the number of disjoint lists in the symbol.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> lists_symbol = model.disjoint_lists_symbol(
+            ...     primary_set_size=5,
+            ...     num_disjoint_lists=3)
+            >>> lists_symbol.num_disjoint_lists() == 3
+            True
+        """
         return self.ptr.num_disjoint_lists()
 
     def primary_set_size(self):
-        """Return the size of primary set of elements that the lists contain."""
+        """Return the total number of elements in the partitioned lists."""
         return self.ptr.primary_set_size()
 
     # An observing pointer to the C++ DisjointListsNode
@@ -585,10 +646,13 @@ _register(DisjointLists, typeid(DisjointListsNode))
 cdef class ListVariable(ArraySymbol):
     """List decision-variable symbol.
 
-    A list variable's possible states are the ordered subsets of ``range(n)``.
+    The variable's possible states are the ordered subsets of ``range(n)``.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.list`: equivalent method.
+        :meth:`~dwave.optimization.model.Model.list`: Instantiation and usage of
+        this symbol.
+
+        :class:`.DisjointBitSets`, :class:`.DisjointLists`, :class:`.SetVariable`
     """
     def __init__(self, _Graph model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
         self.ptr = model._graph.emplace_node[ListNode](n, min_size, max_size)
@@ -614,7 +678,7 @@ cdef class ListVariable(ArraySymbol):
         with zf.open(directory + "shape.json", "r") as f:
             shape_info = json.load(f)
 
-        return ListVariable(model, 
+        return ListVariable(model,
                             n=shape_info.get("max_value"),
                             min_size=shape_info.get("min_size"),
                             max_size=shape_info.get("max_size")
@@ -635,10 +699,23 @@ cdef class ListVariable(ArraySymbol):
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
 
     def set_state(self, Py_ssize_t index, values):
-        """Set the state of the list node.
+        """Set the state of the symbol.
 
-        The given values must be a sub-permuation of ``range(n)`` where ``n`` is
-        the size of the list.
+        Args:
+            index (int):
+                Index of the state to set.
+            values (\ |array-like|_\ ):
+                Assignment of values for the state. The specified values must be
+                a permuation of ``range(n)`` where ``n`` is the size of the
+                list.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> i = model.integer(5)
+            >>> with model.lock():
+            ...     model.states.resize(2)
+            ...     i.set_state(0, [0, 2, 1, 3, 4])
+            ...     i.set_state(1, [4, 3, 0, 1, 2])
         """
         # Convert the values into something we can handle in C++.
         # This also does some type checking etc
@@ -671,7 +748,11 @@ cdef class SetVariable(ArraySymbol):
     A set variable's possible states are the subsets of ``range(n)``.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.set`: equivalent method.
+        :meth:`~dwave.optimization.model.Model.set`: Instantiation and usage of
+        this symbol.
+
+        :class:`.DisjointBitSets`, :class:`.DisjointLists`,
+        :class:`.ListVariable`
     """
     def __init__(self, _Graph model, Py_ssize_t n, Py_ssize_t min_size, Py_ssize_t max_size):
         self.ptr = model._graph.emplace_node[SetNode](n, min_size, max_size)
@@ -718,10 +799,22 @@ cdef class SetVariable(ArraySymbol):
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
 
     def set_state(self, Py_ssize_t index, values):
-        """Set the state of the set node.
+        """Set the state of the symbol.
 
-        The given state must be a subset of ``range(n)`` where ``n`` is the size
-        of the set.
+        index (int):
+            Index of the state to set.
+        values (\ |array-like|_\ ):
+            Assignment of values for the state. The given state must be a subset
+            of ``range(n)`` where ``n`` is the size of the set.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> s = model.set(10, min_size=2, max_size=5)
+            >>> with model.lock():
+            ...     model.states.resize(2)
+            ...     s.set_state(0, {0, 2, 1})
+            ...     s.set_state(1, {2, 3, 4, 7, 9})
         """
         if isinstance(values, collections.abc.Set):
             values = sorted(values)
