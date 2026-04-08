@@ -129,7 +129,7 @@ TEST_CASE("QuadraticModelNode") {
             WHEN("We update the elements of the binary node and propagate") {
                 // Change to {1, 1, 1, 1, 1}
                 for (int i = 0; i < binary_node_ptr->size(); i++) {
-                    binary_node_ptr->set(state, i);
+                    binary_node_ptr->set_value(state, i, 1);
                 }
 
                 binary_node_ptr->propagate(state);
@@ -143,7 +143,7 @@ TEST_CASE("QuadraticModelNode") {
                     // Change to {0, 0, 0, 0, 0}
                     binary_node_ptr->commit(state);
                     for (int i = 0; i < binary_node_ptr->size(); i++) {
-                        binary_node_ptr->unset(state, i);
+                        binary_node_ptr->set_value(state, i, 0);
                     }
 
                     binary_node_ptr->propagate(state);
@@ -158,10 +158,10 @@ TEST_CASE("QuadraticModelNode") {
             WHEN("We update the binary node many times with relatively small effective change") {
                 // Change to {1, 1, 1, 1, 1}
                 for (int i = 0; i < binary_node_ptr->size(); i++) {
-                    binary_node_ptr->set(state, i);
-                    binary_node_ptr->unset(state, i);
+                    binary_node_ptr->set_value(state, i, 1);
+                    binary_node_ptr->set_value(state, i, 0);
                     binary_node_ptr->flip(state, i);
-                    binary_node_ptr->set(state, i);
+                    binary_node_ptr->set_value(state, i, 1);
                 }
 
                 binary_node_ptr->propagate(state);
