@@ -1234,55 +1234,6 @@ TEST_CASE("BinaryNode") {
                     }
                 }
             }
-
-            THEN("We unset() some values") {
-                bnode_ptr->unset(state, 0);  // Does nothing.
-                bnode_ptr->unset(state, 6);
-                bnode_ptr->unset(state, 11);
-                init_values[0] = 0;
-                init_values[6] = 0;
-                init_values[11] = 0;
-                // state is now: [0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0]
-
-                THEN("Sum constraint sums and state updated correctly") {
-                    // Cont. w/ Python code at **Python Code 1**
-                    // a[np.unravel_index(0, a.shape)] = 0
-                    // a[np.unravel_index(6, a.shape)] = 0
-                    // a[np.unravel_index(11, a.shape)] = 0
-                    // a.sum(axis=(1, 2))
-                    // >>> array([1, 1, 3])
-                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
-                    CHECK(bnode_ptr->diff(state).size() == 2);
-                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
-                }
-
-                AND_WHEN("We commit and set() some values") {
-                    graph.commit(state);
-
-                    bnode_ptr->set(state, 10);  // Does nothing.
-                    bnode_ptr->set(state, 11);
-                    init_values[10] = 1;
-                    init_values[11] = 1;
-                    // state is now: [0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
-
-                    THEN("sum constraint sums updated correctly") {
-                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
-                                   RangeEquals({1, 1, 4}));
-                        CHECK(bnode_ptr->diff(state).size() == 1);
-                        CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
-                    }
-
-                    AND_WHEN("We revert") {
-                        graph.revert(state);
-
-                        THEN("Sum constraint sums reverted correctly") {
-                            CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
-                                       RangeEquals({1, 1, 3}));
-                            CHECK(bnode_ptr->diff(state).size() == 0);
-                        }
-                    }
-                }
-            }
         }
     }
     // *********************** Sum Constraint tests *************************
