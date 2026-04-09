@@ -83,6 +83,9 @@ CPStatus BasicIndexingPropagator::propagate(CPPropagatorsState& p_state,
 
     const BasicIndexingNode* bi = dynamic_cast<const BasicIndexingNode*>(basic_indexing_->node_);
     assert(bi);
+
+    // Not caching this for now as we may need to fit these at propagate time for
+    // dynamic arrays
     std::vector<BasicIndexingNode::slice_or_int> slices = bi->infer_indices();
     for (ssize_t axis = 0; axis < array_->node_->ndim(); ++axis) {
         if (std::holds_alternative<Slice>(slices[axis])) {
@@ -98,23 +101,26 @@ CPStatus BasicIndexingPropagator::propagate(CPPropagatorsState& p_state,
         ssize_t bi_index = indices_to_process.front();
         indices_to_process.pop_front();
 
-        std::vector<ssize_t> in_multi_index =
+        // Derive the original array index based on the index of the basic indexing variable.
+        // We unravel the basic indexing variable index, transform the multi-index into
+        // one on the original array, and then ravel it to get the final linear index on
+        // the array.
+        std::vector<ssize_t> bi_multi_index =
                 unravel_index(bi_index, basic_indexing_->node_->shape());
-        std::vector<ssize_t> out_multi_index;
+        std::vector<ssize_t> arr_multi_index;
         ssize_t bi_axis = 0;
         for (ssize_t axis = 0; axis < array_->node_->ndim(); ++axis) {
             if (std::holds_alternative<ssize_t>(slices[axis])) {
-                out_multi_index.push_back(std::get<ssize_t>(slices[axis]));
+                arr_multi_index.push_back(std::get<ssize_t>(slices[axis]));
                 continue;
             }
             assert(std::holds_alternative<Slice>(slices[axis]));
             const auto& slice = std::get<Slice>(slices[axis]);
             assert(slice.step == 1);
-            out_multi_index.push_back(in_multi_index[bi_axis] + slice.start);
+            arr_multi_index.push_back(bi_multi_index[bi_axis] + slice.start);
             bi_axis++;
         }
-
-        ssize_t array_index = ravel_multi_index(out_multi_index, array_->node_->shape());
+        ssize_t array_index = ravel_multi_index(arr_multi_index, array_->node_->shape());
 
         // Now we make the bounds of the array element and the basic indexing element equal
 
