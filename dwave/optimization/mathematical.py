@@ -180,24 +180,38 @@ def _binaryop(
 
 
 absolute = abs
-"""Absolute value element-wise on a symbol.
+"""Return the absolute value element-wise on a symbol.
 
-An alias for :func:`abs`.
+An alias for the Python :func:`abs` function.
+
+Args:
+    x (:class:`~dwave.optimization.model.Symbol`): Predecessor symbol for the
+        operation.
+Returns:
+    :class:`~dwave.optimization.symbols.Absolute`: A successor symbol that
+    returns the absolute value element-wise on the predecessor symbol.
 
 Examples:
-    This example adds the absolute value of an integer decision
-    variable to a model.
+    This example adds the minimum absolute value of an integer decision variable
+    to a model.
 
     >>> from dwave.optimization.model import Model
+    >>> from dwave.optimization.mathematical import absolute
+    ...
     >>> model = Model()
-    >>> x = abs(model.constant([-2, 0, 1]))
+    >>> i = model.integer((3, 3), lower_bound=-10)
+    >>> j = absolute(i).min()
     >>> model.states.resize(1)
     >>> with model.lock():
-    ...     print(x.state())
-    [2. 0. 1.]
+    ...     i.set_state(0, [[4, -3, 1], [-2, 1, 2], [-4, 7, 22]])
+    ...     print(j.state(0))
+    1.0
 
 See Also:
-    :class:`~dwave.optimization.symbols.Absolute`: equivalent symbol.
+    :class:`~dwave.optimization.symbols.Absolute`: Generated symbol.
+
+    :func:`abs` (Python function), :data:`~numpy.absolute`
+    (:doc:`NumPy <numpy:index>` function)
 
 .. versionadded:: 0.6.2
 """
@@ -205,24 +219,22 @@ See Also:
 
 @_binaryop(binaryop=Add, naryop=NaryAdd)
 def add(x1: ArraySymbolLike, x2: ArraySymbolLike, *xi: ArraySymbolLike) -> Add | NaryAdd:
-    r"""Return an element-wise addition on the given symbols.
+    r"""Return an element-wise addition on two or more symbols.
 
-    In the underlying directed acyclic expression graph, produces an ``Add``
-    node if two array nodes are provided and a ``NaryAdd`` node otherwise.
+    Equivalently, you can use the ``+`` operator (e.g., :code:`i + j`).
 
     Args:
         x1, x2: Input array symbol to be added.
         *xi: Additional input array symbols to be added.
 
     Returns:
-        A symbol that sums the given symbols element-wise.
-        Adding two symbols returns a :class:`~dwave.optimization.symbols.Add`.
-        Adding three or more symbols returns a
-        :class:`~dwave.optimization.symbols.NaryAdd`.
+        Symbol that sums the predecessor symbols element-wise. For two
+        symbols, creates an :class:`~dwave.optimization.symbols.Add` symbol on
+        the :term:`directed acyclic expression graph <DAG>`; for three or more
+        symbols, creates a :class:`~dwave.optimization.symbols.NaryAdd` symbol.
 
     Examples:
         This example adds two integer symbols of size :math:`1 \times 2`.
-        Equivalently, you can use the ``+`` operator (e.g., :code:`i + j`).
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import add
@@ -239,9 +251,13 @@ def add(x1: ArraySymbolLike, x2: ArraySymbolLike, *xi: ArraySymbolLike) -> Add |
         [10. 10.]
 
     See Also:
-        :class:`~dwave.optimization.Add`
+        :class:`~dwave.optimization.symbols.Add`,
+        :class:`~dwave.optimization.symbols.NaryAdd`: Generated symbol
 
-        :class:`~dwave.optimization.NaryAdd`
+        :data:`~numpy.add`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.divide`, :func:`.mod`, :func:`.multiply`,
+        :func:`.safe_divide`, :func:`.subtract`
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
@@ -250,16 +266,40 @@ def arange(start: typing.Union[int, ArraySymbol, None] = None,
            stop: typing.Union[int, ArraySymbol, None] = None,
            step: typing.Union[int, ArraySymbol, None] = None,
            ) -> ArraySymbol:
-    """Return an array symbol with evenly spaced values within a given interval.
+    """Return evenly spaced values within an interval.
 
     Args:
-        start: Start of the interval. Unless only one argument is provided in
-            which it is interpreted as the ``stop``.
+        start: Start of the interval; if only one argument is provided,
+            interpreted as the ``stop`` argument. Default is 0.
         stop: End of the interval.
-        step: Spacing between values.
+        step: Spacing between values. Default is 1
+
+    To add the generated :class:`~dwave.optimization.symbols.ARange` symbol to
+    the model's underlying :term:`directed acyclic graph`, at least one argument
+    must be a symbol in the model, thus providing one or more predecessors.
+
+    Returns:
+        Symbol with evenly spaced integer values.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import arange
+        ...
+        >>> i = model.integer(1, lower_bound=-5)
+        >>> points = arange(i, 4, 2)
+        >>> with model.lock():
+        ...     model.states.resize(2)
+        ...     i.set_state(0, -4)
+        ...     i.set_state(1, 0)
+        ...     print(points.state(0))
+        ...     print(points.state(1))
+        [-4. -2.  0.  2.]
+        [0. 2.]
 
     See Also:
-        :class:`~dwave.optimization.ARange`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.ARange`: Generated symbol
+
+        :func:`~numpy.arange`: :doc:`NumPy <numpy:index>` function
 
     .. versionadded:: 0.5.2
     """
@@ -291,6 +331,10 @@ def argsort(array: ArraySymbol) -> ArgSort:
     Args:
         array: Input array symbol to sort.
 
+    Returns:
+        Symbol with an ordering of the predecessor symbol's indices that sorts
+        its flattened array's values.
+
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import argsort
@@ -315,7 +359,9 @@ def argsort(array: ArraySymbol) -> ArgSort:
          [0. 2. 4.]]
 
     See Also:
-        :class:`~dwave.optimization.ArgSort`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.ArgSort`: Generated symbol
+
+        :func:`~numpy.argsort`: :doc:`NumPy <numpy:index>` function
 
     .. versionadded:: 0.6.4
     """
@@ -326,17 +372,40 @@ def as_array_symbols(
     *arrays: ArraySymbolLike,
     model: Model | None = None,
 ) -> tuple[ArraySymbol, ...]:
-    """Convert the given inputs into ``ArraySymbol``.
+    """Convert inputs to ``ArraySymbol`` symbols.
 
     Args:
-        *arrays:
-            Either :class:`dwave.optimization.model.ArraySymbol` or array-like objects.
-        model:
-            If provided, defines the model that holds the returned ArraySymbols.
-            If not provided, the model is inferred from the given inputs.
+        *arrays: Inputs to convert.
+        model: Model to which to add the generated
+            :class:`~dwave.optimization.model.ArraySymbol` symbols. If not
+            specified, inferred from the given inputs.
 
     Returns:
-        A tuple of :class:`dwave.optimization.model.ArraySymbol`.
+        Tuple of symbols representing the converted arrays.
+
+    Examples:
+        >>> import numpy as np
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import as_array_symbols
+        ...
+        >>> model = Model()
+        >>> c = as_array_symbols(np.random.randint(
+        ...     low=-3,
+        ...     high=5,
+        ...     size=(15, 25)),
+        ...     model=model)
+        >>> min_c = c[0].min()
+        >>> with model.lock():
+        ...    model.states.resize(1)
+        ...    print(min_c.state(0) >= -3)
+        True
+
+    See Also:
+        :class:`~dwave.optimization.model.ArraySymbol`: Generated symbol
+
+        :func:`.atleast_1d`, :func:`.atleast_2d`,
+        :meth:`~dwave.optimization.model.Model.constant`,
+        :func:`~dwave.optimization.model.Model.input`
 
     .. versionadded:: 0.6.11
     """
@@ -372,12 +441,13 @@ def atleast_1d(*arrays: ArraySymbol) -> tuple[ArraySymbol, ...]: ...
 
 
 def atleast_1d(*arrays):
-    """Convert array symbols to array symbols with at least one dimension.
+    """Ensure array symbols are at least one dimensional.
 
     Args:
         arrays: One or more array symbols.
     Returns:
-        An array symbol, or a tuple of array symbols.
+        An array symbol, or a tuple of array symbols, with at least one
+        dimension.
 
     Examples:
         >>> from dwave.optimization import atleast_1d, Model
@@ -400,7 +470,7 @@ def atleast_1d(*arrays):
         True
 
     See Also:
-        :func:`atleast_2d()`
+        :func:`.as_array_symbols`, :func:`.atleast_2d()`
 
     .. versionadded:: 0.6.0
     """
@@ -424,12 +494,13 @@ def atleast_2d(*arrays: ArraySymbol) -> tuple[ArraySymbol, ...]: ...
 
 
 def atleast_2d(*arrays):
-    """Convert array symbols to array symbols with at least two dimensions.
+    """Ensure array symbols are at least two dimensional.
 
     Args:
         arrays: One or more array symbols.
     Returns:
-        An array symbol, or a tuple of array symbols.
+        An array symbol, or a tuple of array symbols, with at least two
+        dimensions.
 
     Examples:
         >>> from dwave.optimization import atleast_2d, Model
@@ -452,7 +523,7 @@ def atleast_2d(*arrays):
         True
 
     See Also:
-        :func:`atleast_1d()`
+        :func:`.as_array_symbols`, :func:`atleast_1d()`
 
     .. versionadded:: 0.6.0
     """
@@ -473,19 +544,21 @@ def atleast_2d(*arrays):
 
 
 def broadcast_shapes(*shapes: int | tuple[int, ...]) -> tuple[int, ...]:
-    """Broadcast the input shapes into a single shape.
+    """Calculate the broadcast shape.
 
-    See NumPy's `broadcasting <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_
-    documentation for more information about broadcasting.
+    You can set a value of :math:`-1` for a dimension to calculate the broadcast
+    shape for
+    :ref:`dynamically sized <optimization_philosophy_tensor_programming_dynamic>`
+    array symbols.
 
-    ``broadcast_shapes()`` differs from :func:`numpy.broadcast_shapes()` by
-    handling dynamically shaped arrays.
+    See NumPy's :ref:`broadcasting <basics.broadcasting>` documentation for
+    an introduction to broadcasting.
 
     Args:
-        *shapes: The shapes to be broadcast.
+        *shapes: Shapes to be broadcast.
 
     Returns:
-        The broadcasted shape.
+        Calculated broadcasted shape.
 
     Examples:
         >>> from dwave.optimization import broadcast_shapes
@@ -495,9 +568,15 @@ def broadcast_shapes(*shapes: int | tuple[int, ...]) -> tuple[int, ...]:
         (-1, 5)
 
     See Also:
-        :func:`numpy.broadcast_shapes`
+        :func:`.broadcast_symbols`, :func:`.broadcast_to`
 
-        :func:`~dwave.optimization.mathematical.broadcast_symbols`
+        :meth:`~dwave.optimization.model.ArraySymbol.copy`,
+        :meth:`~dwave.optimization.model.ArraySymbol.reshape`
+        :meth:`~dwave.optimization.model.ArraySymbol.resize`
+        :func:`.roll`
+        :func:`.transpose`
+
+        :func:`~numpy.broadcast_shapes`: :doc:`NumPy <numpy:index>` function
 
     .. versionadded:: 0.6.11
     """
@@ -511,22 +590,28 @@ def broadcast_shapes(*shapes: int | tuple[int, ...]) -> tuple[int, ...]:
 
 
 def broadcast_symbols(*args: ArraySymbol) -> tuple[ArraySymbol, ...]:
-    """Broadcast array symbols to the same shape.
+    """Broadcast multiple array symbols to a single shape.
 
-    See NumPy's `broadcasting <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_
-    documentation for more information about broadcasting.
+    For
+    :ref:`dynamically sized <optimization_philosophy_tensor_programming_dynamic>`
+    array symbols, you can make use of the :math:`-1` value in the dynamic
+    dimension, as shown in the examples.
+
+    See NumPy's :ref:`broadcasting <basics.broadcasting>` documentation for
+    an introduction to broadcasting.
 
     Args:
-        *args: Array symbols.
+        *args (:class:`~dwave.optimization.model.ArraySymbol`, ...): Array
+            symbols to broadcast.
 
     Returns:
-        A tuple of array symbols, all with the same shape.
-        If any given symbol already has the desired shape, then it is returned.
-        Otherwise a new :class:`~dwave.optimization.symbols.BroadcastTo` symbol
-        is returned.
+        Tuple of array symbols, all with the same shape. For each input symbol,
+        a new :class:`~dwave.optimization.symbols.BroadcastTo` symbol is
+        returned unless it already has the broadcast shape, in which case it is
+        itself returned.
 
     Examples:
-        >>> from dwave.optimization import broadcast_symbols, Model
+        >>> from dwave.optimization import broadcast_symbols, broadcast_to, Model
         ...
         >>> model = Model()
         >>> x = model.integer(3)  # shape = (3,)
@@ -536,11 +621,31 @@ def broadcast_symbols(*args: ArraySymbol) -> tuple[ArraySymbol, ...]:
         (2, 3)
         >>> yb.shape()
         (2, 3)
+        >>> # Dynamically sized array:
+        >>> s1 = model.set(4).reshape(-1, 1)
+        >>> s1.shape()
+        (-1, 1)
+        >>> s2 = broadcast_to(s1, (-1, 2))
+        >>> s2.shape()
+        (-1, 2)
+        >>> s3, s4 = broadcast_symbols(s1, s2)
+        >>> s3.shape()
+        (-1, 2)
+        >>> s4 is s2
+        True
 
     See Also:
-        :func:`~dwave.optimization.mathematical.broadcast_shapes`
+        :class:`~dwave.optimization.symbols.BroadcastTo`: Generated symbol
 
-        :func:`~dwave.optimization.mathematical.broadcast_to`
+        :func:`.broadcast_shapes`, :func:`.broadcast_to`
+
+        :meth:`~dwave.optimization.model.ArraySymbol.copy`,
+        :meth:`~dwave.optimization.model.ArraySymbol.reshape`
+        :meth:`~dwave.optimization.model.ArraySymbol.resize`
+        :func:`.roll`
+        :func:`.transpose`
+
+        :class:`~numpy.broadcast`: :doc:`NumPy <numpy:index>` function
 
     .. versionadded:: 0.6.5
     """
@@ -551,17 +656,22 @@ def broadcast_symbols(*args: ArraySymbol) -> tuple[ArraySymbol, ...]:
 def broadcast_to(x: ArraySymbol, shape: tuple[int, ...] | int) -> ArraySymbol:
     """Broadcast an array symbol to a new shape.
 
-    See NumPy's `broadcasting <https://numpy.org/doc/stable/user/basics.broadcasting.html>`_
-    documentation for more information about broadcasting.
+    For
+    :ref:`dynamically sized <optimization_philosophy_tensor_programming_dynamic>`
+    array symbols, you can make use of the :math:`-1` value in the dynamic
+    dimension, as shown in the examples.
+
+    See NumPy's :ref:`broadcasting <basics.broadcasting>` documentation for
+    an introduction to broadcasting.
 
     Args:
-        x: An array symbol.
-        shape: The desired shape. A single integer ``i`` is interpreted as ``(i,)``.
+        x: Array symbol to broadcast to a new shape.
+        shape: Shape for the broadcasted symbol. A single integer ``i`` is
+            interpreted as ``(i,)``.
 
     Returns:
-        If ``x`` already has the desired shape, then ``x`` is returned.
-        Otherwise a new :class:`~dwave.optimization.symbols.BroadcastTo` symbol
-        is returned.
+        New :class:`~dwave.optimization.symbols.BroadcastTo` symbol unless ``x``
+        has the requested shape, in which case ``x`` itself is returned.
 
     Examples:
         >>> from dwave.optimization import broadcast_to, Model
@@ -576,15 +686,31 @@ def broadcast_to(x: ArraySymbol, shape: tuple[int, ...] | int) -> ArraySymbol:
         >>> model.states.resize(1)
         >>> with model.lock():
         ...     y.state()
-        array([[0., 1., 2., 3., 4.], 
+        array([[0., 1., 2., 3., 4.],
                [0., 1., 2., 3., 4.]])
+        >>> # Dynamically sized array:
+        >>> s = model.set(4)
+        >>> s.shape()
+        (-1,)
+        >>> s4 = broadcast_to(s.reshape(-1, 1), (-1, 4))
+        >>> with model.lock():
+        ...     s.set_state(0, {2, 3})
+        ...     print(s4.state(0))
+        [[2. 2. 2. 2.]
+         [3. 3. 3. 3.]]
 
     See Also:
-        :class:`~dwave.optimization.symbols.BroadcastTo`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.BroadcastTo`: Generated symbol
 
-        :func:`~dwave.optimization.mathematical.broadcast_shapes`
+        :func:`.broadcast_shapes`, :func:`.broadcast_symbols`
 
-        :func:`~dwave.optimization.mathematical.broadcast_symbols`
+        :meth:`~dwave.optimization.model.ArraySymbol.copy`,
+        :meth:`~dwave.optimization.model.ArraySymbol.reshape`
+        :meth:`~dwave.optimization.model.ArraySymbol.resize`
+        :func:`.roll`
+        :func:`.transpose`
+
+        :func:`~numpy.broadcast_to`: :doc:`NumPy <numpy:index>` function
 
     .. versionadded:: 0.6.5
     """
@@ -596,15 +722,33 @@ def broadcast_to(x: ArraySymbol, shape: tuple[int, ...] | int) -> ArraySymbol:
 
 
 def bspline(x: ArraySymbol, k: int, t: list, c: list) -> ArraySymbol:
-    """Return an array symbol with bspline values corresponding to x.
+    """Return B-spline values for a symbol.
 
     Args:
-        k: degree
-        t: knots
-        c: coefficients
+        x: Array symbol for which to create B-spline values.
+        k: B-spline degree.
+        t: Knots.
+        c: Spline coefficients.
+
+    Returns:
+        Symbol with B-spline values for the predecessor symbol.
+
+    Examples:
+        >>> from dwave.optimization import bspline, Model
+        ...
+        >>> model = Model()
+        >>> x = model.integer(3, lower_bound=2, upper_bound=4)
+        >>> bs = bspline(x, k=2, t=[0, 1, 2, 3, 4, 5, 6], c=[-1, 2, 0, -1])
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     x.set_state(0, [2, 3, 4])
+        ...     print(bs.state(0))
+        [ 0.5  1.  -0.5]
 
     See Also:
-        :class:`~dwave.optimization.BSpline`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.BSpline`: Generated symbol
+
+        :class:`~scipy.interpolate.BSpline`: :doc:`SciPy <scipy:index>` class
 
     .. versionadded:: 0.5.4
     """
