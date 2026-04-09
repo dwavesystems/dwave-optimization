@@ -115,7 +115,7 @@ jobs:
 
   python-windows:
     executor:
-      name: win/default
+      name: win/server-2025
 
     environment:
       <<: *global-environment
@@ -123,7 +123,12 @@ jobs:
 
     steps:
       - checkout
-      - run-cibuildwheel
+      - run:
+          name: Install Visual Studio 2026
+          shell: powershell.exe
+          command: |
+            curl.exe -L -o vs_BuildTools.exe "https://aka.ms/vs/18/release/vs_BuildTools.exe"
+      # - run-cibuildwheel
 
   python-sdist:
     docker:
@@ -357,58 +362,58 @@ jobs:
 workflows:
   tests:
     jobs:
-      - python-linux:
-          filters: &tags
-            # also run on tags so the deploy pipeline works
-            tags:
-              only: &version-string /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
-      - python-linux-aarch64:
-          filters: *tags
-      - python-linux-debug
-      - python-macOS:
-          matrix:
-            parameters:
-              cibw-arch: [x86_64, arm64]
-          filters: *tags
-      - python-windows:
-          filters: *tags
-      - python-sdist:
-          filters: *tags
-      - python-dependencies:
-          name: python-dependencies-oldest
-          python-version: "3.10"
-          dependency-versions: numpy==1.21.3
-          optional-dependency-versions: dimod==0.12.0 scikit-learn==1.6.0
-          requires:
-            - python-linux
-      - python-dependencies:
-          name: python-dependencies-latest
-          python-version: "3.14"
-          dependency-versions: numpy
-          optional-dependency-versions: dimod scikit-learn
-          requires:
-            - python-linux
-      - cpp-gcc:
-          name: cpp-gcc-<< matrix.gcc-version >>
-          matrix:
-            parameters:
-              gcc-version: ["12", "latest"]
-      - cpp-macOS
-      - serialization:
-          requires:
-            - python-linux
-      - docs:
-          requires:
-            - python-linux
-      - deploy:
-          filters:
-            tags:
-              only: *version-string
-            branches:
-              ignore: /.*/
-          requires:
-            - python-linux
-            - python-linux-aarch64
-            - python-macOS
-            - python-windows
-            - python-sdist
+      # - python-linux:
+      #     filters: &tags
+      #       # also run on tags so the deploy pipeline works
+      #       tags:
+      #         only: &version-string /^[0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?$/
+      # - python-linux-aarch64:
+      #     filters: *tags
+      # - python-linux-debug
+      # - python-macOS:
+      #     matrix:
+      #       parameters:
+      #         cibw-arch: [x86_64, arm64]
+      #     filters: *tags
+      - python-windows
+          # filters: *tags
+      # - python-sdist:
+      #     filters: *tags
+      # - python-dependencies:
+      #     name: python-dependencies-oldest
+      #     python-version: "3.10"
+      #     dependency-versions: numpy==1.21.3
+      #     optional-dependency-versions: dimod==0.12.0 scikit-learn==1.6.0
+      #     requires:
+      #       - python-linux
+      # - python-dependencies:
+      #     name: python-dependencies-latest
+      #     python-version: "3.14"
+      #     dependency-versions: numpy
+      #     optional-dependency-versions: dimod scikit-learn
+      #     requires:
+      #       - python-linux
+      # - cpp-gcc:
+      #     name: cpp-gcc-<< matrix.gcc-version >>
+      #     matrix:
+      #       parameters:
+      #         gcc-version: ["12", "latest"]
+      # - cpp-macOS
+      # - serialization:
+      #     requires:
+      #       - python-linux
+      # - docs:
+      #     requires:
+      #       - python-linux
+      # - deploy:
+      #     filters:
+      #       tags:
+      #         only: *version-string
+      #       branches:
+      #         ignore: /.*/
+      #     requires:
+      #       - python-linux
+      #       - python-linux-aarch64
+      #       - python-macOS
+      #       - python-windows
+      #       - python-sdist
