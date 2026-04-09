@@ -15,7 +15,6 @@
 #include "dwave-optimization/cp/propagators/reduce.hpp"
 
 #include <algorithm>
-#include <iostream>
 
 namespace dwave::optimization::cp {
 class SumPropagatorData : public PropagatorData {
@@ -244,9 +243,6 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
         double lb_present, ub_present;
         std::tie(lb_present, ub_present) = compute_present_bounds(in_, out_, v_state, 0, 0, 0);
 
-        // std::cout << "lb present " << lb_present << "\n";
-        // std::cout << "ub present " << ub_present << "\n";
-
         // The following vectors store the lower and upper bounds calculations for each size of the
         // vector.
         //  They are used for
@@ -259,15 +255,6 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
         // Fill the vectors above
         compute_bounds_for_size(in_, out_, v_state, lb_optional, ub_optional, lb_acc, ub_acc,
                                 lb_present, ub_present);
-
-        // =======================
-        // for (auto lb : lb_optional){
-        //     std::cout << "lb opt " << lb << "\n";
-        // }
-        // for (auto ub : ub_optional){
-        //     std::cout << "ub opt " << ub << "\n";
-        // }
-        // =======================
 
         // Prune out_ min value
         status = out_->remove_below(v_state,
@@ -310,10 +297,6 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
         assert(min_size_new >= in_->min_size(v_state));
         bool changed_min_size = (min_size_new > in_->min_size(v_state)) ? true : false;
 
-        // std::cout << "Changed min size? " << changed_min_size << "\n";
-        // std::cout << "min size new "  << min_size_new << "\n";
-        // std::cout << "max size new "  << max_size_new << "\n";
-
         // After this we set the min and max size
         status = in_->set_min_size(v_state, min_size_new);
         if (status == CPStatus::Inconsistency) return status;
@@ -337,23 +320,12 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
                                     lb_present, ub_present);
         }
 
-        // =======================
-        // for (auto lb : lb_optional){
-        //     std::cout << "lb opt " << lb << "\n";
-        // }
-        // for (auto ub : ub_optional){
-        //     std::cout << "ub opt " << ub << "\n";
-        // }
-        // =======================
-
         // Prune the present variables
         // first compute the widest possible sum that there can be gven present and optional
         // variables
         {
             double sum_max = *std::max_element(ub_optional.begin(), ub_optional.end());
             double sum_min = *std::min_element(lb_optional.begin(), lb_optional.end());
-            // std::cout << "sum min " << sum_min << "\n";
-            // std::cout << "sum max " << sum_max << "\n";
             for (ssize_t j = 0; j < in_->min_size(v_state); ++j) {
                 assert(in_->is_active(v_state, j));
                 status = in_->remove_above(
@@ -374,18 +346,11 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
                 assert(not in_->is_active(v_state, in_->min_size(v_state) + j));
                 assert(in_->maybe_active(v_state, in_->min_size(v_state) + j));
 
-                // std::cout << "j " << j << "\n";
-                // std::cout << lb_optional.size() << "\n";
-                // std::cout << ub_optional.size() << "\n";
-
                 auto smin_it = std::min_element(lb_optional.begin() + j + 1, lb_optional.end());
                 auto smax_it = std::max_element(ub_optional.begin() + j + 1, ub_optional.end());
 
                 double sum_min = (smin_it != lb_optional.end()) ? *smin_it : lb_optional.back();
                 double sum_max = (smax_it != ub_optional.end()) ? *smax_it : ub_optional.back();
-
-                // std::cout << "sum min " << sum_min << "\n";
-                // std::cout << "sum max " << sum_max << "\n";
 
                 status = in_->remove_above(
                         v_state, out_->max(v_state, 0) - (sum_min - in_->min(v_state, j)), j);
