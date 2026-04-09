@@ -164,7 +164,6 @@ DynamicReducePropagator<BinaryOp>::DynamicReducePropagator(ssize_t index, CPVar*
 template <class BinaryOp>
 void DynamicReducePropagator<BinaryOp>::initialize_state(CPState& state) const {
     CPPropagatorsState& p_state = state.get_propagators_state();
-    CPVarsState& v_state = state.get_variables_state();
     assert(propagator_index_ >= 0);
     assert(propagator_index_ < static_cast<ssize_t>(p_state.size()));
     p_state[propagator_index_] = std::make_unique<PropagatorData>(state.get_state_manager(), 1);
