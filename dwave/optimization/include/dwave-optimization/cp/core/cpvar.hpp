@@ -176,7 +176,8 @@ class CPVar {
         void change_max(ssize_t i) override { var_->schedule_all(state_, var_->on_bounds, i); }
 
         void change_array_size(ssize_t i) override {
-            var_->schedule_all(state_, var_->on_array_size_change, i);
+            var_->schedule_all(state_, var_->on_bounds, i);
+            var_->schedule_all(state_, var_->on_domain, i);
         }
 
      private:
