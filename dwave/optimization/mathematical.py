@@ -98,6 +98,7 @@ __all__ = [
     "isin",
     "less_equal",
     "linprog",
+    "LPResult",
     "log",
     "logical",
     "logical_and",
@@ -1132,27 +1133,46 @@ def isin(element: ArraySymbol, test_elements: ArraySymbol) -> IsIn:
 
 
 class LPResult:
-    """The outputs of a linear program run."""
+    """Outputs of a linear program.
+
+    See the :func:`.linprog` function for information and usage.
+    """
 
     lp: LinearProgram
-    """The LinearProgram symbol."""
+    """Linear-program symbol.
+
+    See Also:
+        :class:`~dwave.optimization.symbols.LinearProgram`
+    """
 
     def __init__(self, lp: LinearProgram):
         self.lp = lp
 
     @functools.cached_property
     def fun(self) -> LinearProgramObjectiveValue:
-        """The value of the objective as an array symbol."""
+        """Value of the objective.
+
+        See Also:
+            :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`
+        """
         return LinearProgramObjectiveValue(self.lp)
 
     @functools.cached_property
     def success(self) -> LinearProgramFeasible:
-        """``True`` if the linear program found the optimal value as an array symbol."""
+        """True if the linear program's indexed state is a feasible solution.
+
+        See Also:
+            :class:`~dwave.optimization.symbols.LinearProgramFeasible`
+        """
         return LinearProgramFeasible(self.lp)
 
     @functools.cached_property
     def x(self) -> LinearProgramSolution:
-        """The assignments to the decision variables as an array symbol."""
+        """Assignments of the decision variables.
+
+        See Also:
+            :class:`~dwave.optimization.symbols.LinearProgramSolution`
+        """
         return LinearProgramSolution(self.lp)
 
 
@@ -1240,7 +1260,7 @@ def linprog(
         ub: A 1D array symbol giving the upper bounds on ``x``.
 
     Returns:
-        An ``LPResult`` class containing the results of the LP. It has the
+        An :class:`.LPResult` class containing the results of the LP. It has the
         following attributes:
 
         * **fun** - The value of the objective as a

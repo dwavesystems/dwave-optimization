@@ -11,3 +11,10 @@ mathematical operations on predecessor symbols and inputs.
 
 .. automodule:: dwave.optimization.mathematical
     :members:
+    :exclude-members: LPResult
+
+Classes
+=======
+
+.. autoclass:: LPResult
+    :members:
