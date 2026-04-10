@@ -816,8 +816,8 @@ def cos(x) -> Cos:
         x: Array giving the angles, in radians.
 
     Returns:
-        Symbol that propagates the trigonometric cosine of the values in its
-        predecessor symbol.
+        Symbol that is the trigonometric cosine of the values in its predecessor
+        symbol.
 
     Examples:
         >>> import numpy as np
@@ -936,8 +936,8 @@ def exp(x: ArraySymbol) -> Exp:
         x: Array symbol.
 
     Returns:
-        Symbol that propagates the base-e exponential values of its predecessor
-        symbol's array elements.
+        Symbol that is the base-e exponential values of its predecessor symbol's
+        array elements.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -969,8 +969,8 @@ def expit(x: ArraySymbol) -> Expit:
         x: Array symbol.
 
     Returns:
-        Symbol that propagates the logistic sigmoid values of its predecessor
-        symbol's array elements.
+        Symbol that is the logistic sigmoid values of its predecessor symbol's
+        array elements.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1225,7 +1225,7 @@ def linprog(
         lb: None | ArraySymbol = None,
         ub: None | ArraySymbol = None,
         ) -> LPResult:
-    r"""Solve a :term:`linear program` defined by the input array symbol(s).
+    r"""Solve a :term:`linear program`.
 
     Linear programs solve problems of the form:
 
@@ -1233,9 +1233,9 @@ def linprog(
         \text{minimize:} \\
         & c^T x \\
         \text{subject to:} \\
-        b_{lb} &\leq A x &\leq b_{ub} \\
-        b_{eq} &= A_{eq} x \\
-        l &\leq x &\leq u
+        &b_{lb} \leq A x \leq b_{ub} \\
+        &A_{eq} x = b_{eq} \\
+        &lb \leq x \leq ub
 
     Or, equivalently:
 
@@ -1243,53 +1243,35 @@ def linprog(
         \text{minimize:} \\
         & c^T x \\
         \text{subject to:} \\
-        A_{ub} x &\leq b_{ub} \\
-        A_{eq} x &= b_{eq} \\
-        l &\leq x &\leq u
+        &A_{ub} x \leq b_{ub} \\
+        &A_{eq} x = b_{eq} \\
+        &lb \leq x \leq ub
 
     Args:
-        c: A 1D array symbol giving the coefficients of the linear objective.
-        b_lb: A 1D array symbol giving the linear inequality lower bounds.
-        A: A 2D array symbol giving the linear inequality matrix. At most one
-            of ``A_ub`` and ``A`` may be provided.
-        b_ub: A 1D array symbol giving the linear inequality upper bounds.
-        A_eq: A 2D array symbol giving the linear equality matrix.
-        b_eq: A 1D array symbol giving the linear equality bounds.
-        A_ub: An alias of ``A``.
-        lb: A 1D array symbol giving the lower bounds on ``x``.
-        ub: A 1D array symbol giving the upper bounds on ``x``.
+        c: Coefficients of the linear objective as a 1D array symbol.
+        A_ub: Alias of ``A``. At most one of
+            ``A_ub`` and ``A`` may be specified.
+        b_ub: Linear inequality upper bounds as a 1D array symbol.
+        A_eq: Linear equality matrix as a 2D array symbol.
+        b_eq: Linear equality bounds as a 1D array symbol.
+        b_lb: Linear inequality lower bounds as a 1D array symbol.
+        A: Linear inequality matrix as a 2D array symbol. At most one of
+            ``A_ub`` and ``A`` may be specified.
+        lb: Lower bounds on ``x`` as a 1D array symbol.
+        ub: Upper bounds on ``x`` as a 1D array symbol.
 
     Returns:
-        An :class:`.LPResult` class containing the results of the LP. It has the
-        following attributes:
-
-        * **fun** - The value of the objective as a
-          :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`.
-        * **success** - Whether the linear program found an optimial value as a
-          :class:`~dwave.optimization.symbols.LinearProgramFeasible`.
-        * **x** - The assignments to the decision variables as a
-          :class:`~dwave.optimization.symbols.LinearProgramSolution`.
-
-    See Also:
-        :class:`~dwave.optimization.symbols.LinearProgram`,
-        :class:`~dwave.optimization.symbols.LinearProgramFeasible`,
-        :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`,
-        :class:`~dwave.optimization.symbols.LinearProgramSolution`: The associated symbols.
-
-        :func:`scipy.optimize.linprog()`: A function in SciPy that this function
-        is designed to mimic.
+        :class:`.LPResult` class containing the results of the linear program.
 
     Examples:
-        The linear program
+        This example adds the following linear program to a model.
 
         .. math::
             \text{minimize: } & -x_0 - 2x_1 \\
-            \text{subject to: } & x_0 + x_1 &<= 1
-
-        can be represented with symbols
+            \text{subject to: } & x_0 + x_1 <= 1
 
         >>> from dwave.optimization import linprog, Model
-
+        ...
         >>> model = Model()
         >>> c = model.constant([-1, -2])
         >>> A_ub = model.constant([[1, 1]])
@@ -1303,6 +1285,15 @@ def linprog(
         ...     x.state()
         array([0., 1.])
 
+    See Also:
+        :class:`~dwave.optimization.symbols.LinearProgram`,
+        :class:`~dwave.optimization.symbols.LinearProgramFeasible`,
+        :class:`~dwave.optimization.symbols.LinearProgramObjectiveValue`,
+        :class:`~dwave.optimization.symbols.LinearProgramSolution`: generated
+        symbols.
+
+        :func:`~scipy.optimize.linprog`: :doc:`SciPy <scipy:index>` function
+
     .. versionadded:: 0.6.0
     """
     if A is not None and A_ub is not None:
@@ -1314,13 +1305,14 @@ def linprog(
 
 
 def log(x: ArraySymbol) -> Log:
-    """Return an element-wise natural logarithm on the given symbol.
+    """Return an element-wise natural logarithm on a symbol.
 
     Args:
-        x: Input symbol.
+        x: Array symbol.
 
     Returns:
-        A symbol that propagates the values of the natural logarithm of a given symbol.
+        Symbol that is the natural logarithm values of of its predecessor
+        symbol's array elements.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1335,7 +1327,11 @@ def log(x: ArraySymbol) -> Log:
         0.0
 
     See Also:
-        :class:`~dwave.optimization.symbols.Log`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.Log`: Generated symbol.
+
+        :data:`~numpy.log`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.exp`, :func:`.expit`, :func:`.softmax`
 
     .. versionadded:: 0.5.2
     """
@@ -1343,17 +1339,16 @@ def log(x: ArraySymbol) -> Log:
 
 
 def logical(x: ArraySymbol) -> Logical:
-    r"""Return the element-wise truth value on the given symbol.
+    r"""Return the element-wise truth value on a symbol.
 
     Args:
-        x: Input array symbol.
+        x: Array symbol.
 
     Returns:
-        A symbol that propagates the element-wise truth value of the given symbol.
+        Symbol that is the element-wise truth value of its predecessor symbol's
+        array elements.
 
     Examples:
-        This example shows the truth values an array symbol.
-
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical
         ...
@@ -1366,24 +1361,26 @@ def logical(x: ArraySymbol) -> Logical:
         [0. 1. 1. 1.]
 
     See Also:
-        :class:`~dwave.optimization.symbols.Logical`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.Logical`: Generated symbol.
+
+        :func:`.logical_and`, :func:`.logical_not`, :func:`.logical_or`,
+        :func:`.logical_xor`
     """
     return Logical(x)
 
 
 @_binaryop(And)
 def logical_and(x1: ArraySymbolLike, x2: ArraySymbolLike) -> And:
-    r"""Return an element-wise logical AND on the given symbols.
+    r"""Return an element-wise logical AND on two symbols (or arrays).
 
     Args:
-        x1, x2: Input array symbol.
+        x1, x2: Array symbol or |array-like|_.
 
     Returns:
-        A symbol that is the element-wise AND of the given symbols.
+        Symbol that is the element-wise AND of the array elements of its
+        predecessor symbols (or arrays).
 
     Examples:
-        This example ANDs two binary symbols of size :math:`1 \times 3`.
-
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical_and
         ...
@@ -1397,25 +1394,31 @@ def logical_and(x1: ArraySymbolLike, x2: ArraySymbolLike) -> And:
         ...     y.set_state(0, [False, True, False])
         ...     print(z.state(0))
         [0. 1. 0.]
+        >>> # AND between a symbol and an array
+        >>> z_array = logical_and(x, [True, False, True])
 
     See Also:
-        :class:`~dwave.optimization.symbols.And`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.And`: Generated symbol.
+
+        :data:`~numpy.logical_and`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.logical`, :func:`.logical_not`, :func:`.logical_or`,
+        :func:`.logical_xor`
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 def logical_not(x: ArraySymbol) -> Not:
-    r"""Return an element-wise logical NOT on the given symbol.
+    r"""Return an element-wise logical NOT on a symbol.
 
     Args:
-        x: Input array symbol.
+        x: Array symbol.
 
     Returns:
-        A symbol that propagates the element-wise NOT of the given symbol.
+        Symbol that is the element-wise NOT of the array elements of its
+        predecessor symbol.
 
     Examples:
-        This example negates an array symbol.
-
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical_not
         ...
@@ -1428,24 +1431,28 @@ def logical_not(x: ArraySymbol) -> Not:
         [1. 0. 0. 0.]
 
     See Also:
-        :class:`~dwave.optimization.symbols.Not`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.Not`: Generated symbol.
+
+        :data:`~numpy.logical_not`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.logical`, :func:`.logical_and`, :func:`.logical_or`,
+        :func:`.logical_xor`
     """
     return Not(x)
 
 
 @_binaryop(Or)
 def logical_or(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Or:
-    r"""Return an element-wise logical OR on the given symbols.
+    r"""Return an element-wise logical OR on two symbols (or arrays).
 
     Args:
-        x1, x2: Input array symbol.
+        x1, x2: Array symbol or |array-like|_.
 
     Returns:
-        A symbol that is the element-wise OR of the given symbols.
+        Symbol that is the element-wise OR of the array elements of its
+        predecessor symbols (or arrays).
 
     Examples:
-        This example ORs two binary symbols of size :math:`1 \times 3`.
-
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical_or
         ...
@@ -1459,26 +1466,32 @@ def logical_or(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Or:
         ...     y.set_state(0, [False, True, False])
         ...     print(z.state(0))
         [1. 1. 0.]
+        >>> # OR between a symbol and an array
+        >>> z_array = logical_or(x, [True, False, True])
 
     See Also:
         :class:`~dwave.optimization.symbols.Or`: equivalent symbol.
+
+        :data:`~numpy.logical_or`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.logical`, :func:`.logical_and`, :func:`.logical_not`,
+        :func:`.logical_xor`
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 @_binaryop(Xor)
 def logical_xor(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Xor:
-    r"""Return an element-wise logical XOR on the given symbols.
+    r"""Return an element-wise logical XOR on two symbols (or arrays).
 
     Args:
-        x1, x2: Input array symbol.
+        x1, x2: Array symbol or |array-like|_.
 
     Returns:
-        A symbol that is the element-wise XOR of the given symbols.
+        Symbol that is the element-wise XOR of the array elements of its
+        predecessor symbols (or arrays).
 
     Examples:
-        This example XORs two binary symbols of size :math:`1 \times 3`.
-
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical_xor
         ...
@@ -1492,9 +1505,16 @@ def logical_xor(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Xor:
         ...     y.set_state(0, [False, True, False])
         ...     print(z.state(0))
         [1. 0. 0.]
+        >>> # XOR between a symbol and an array
+        >>> z_array = logical_xor(x, [True, False, True])
 
     See Also:
         :class:`~dwave.optimization.symbols.Xor`: equivalent symbol.
+
+        :data:`~numpy.logical_xor`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.logical`, :func:`.logical_and`, :func:`.logical_not`,
+        :func:`.logical_or`
 
     .. versionadded:: 0.4.1
     """
