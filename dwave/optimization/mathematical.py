@@ -189,7 +189,7 @@ Args:
     x (:class:`~dwave.optimization.model.Symbol`): Predecessor symbol for the
         operation.
 Returns:
-    :class:`~dwave.optimization.symbols.Absolute`: A successor symbol that
+    :class:`~dwave.optimization.symbols.Absolute`: Successor symbol that
     returns the absolute value element-wise on the predecessor symbol.
 
 Examples:
@@ -225,7 +225,7 @@ def add(x1: ArraySymbolLike, x2: ArraySymbolLike, *xi: ArraySymbolLike) -> Add |
     Equivalently, you can use the ``+`` operator (e.g., :code:`i + j`).
 
     Args:
-        x1, x2: Array symbol or |array-like|_ to be added.
+        x1, x2: Operand array symbol or |array-like|_ to be added.
         *xi: Additional array symbols or |array-like|_ to be added.
 
     Returns:
@@ -334,8 +334,8 @@ def argsort(array: ArraySymbol) -> ArgSort:
         array: Array symbol to sort.
 
     Returns:
-        Symbol with an ordering of the predecessor symbol's indices that sorts
-        its flattened array's values.
+        Successor symbol with an ordering of the predecessor symbol's indices
+        that sorts its flattened array's values.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -448,7 +448,7 @@ def atleast_1d(*arrays):
     Args:
         arrays: One or more array symbols.
     Returns:
-        An array symbol, or a tuple of array symbols, with at least one
+        Array symbol, or a tuple of array symbols, with at least one
         dimension.
 
     Examples:
@@ -503,7 +503,7 @@ def atleast_2d(*arrays):
     Args:
         arrays: One or more array symbols.
     Returns:
-        An array symbol, or a tuple of array symbols, with at least two
+        Array symbol, or a tuple of array symbols, with at least two
         dimensions.
 
     Examples:
@@ -607,8 +607,7 @@ def broadcast_symbols(*args: ArraySymbol) -> tuple[ArraySymbol, ...]:
     an introduction to broadcasting.
 
     Args:
-        *args (:class:`~dwave.optimization.model.ArraySymbol`, ...): Array
-            symbols to broadcast.
+        *args: Array symbols to broadcast.
 
     Returns:
         Tuple of array symbols, all with the same shape. For each predecessor
@@ -676,8 +675,8 @@ def broadcast_to(x: ArraySymbol, shape: tuple[int, ...] | int) -> ArraySymbol:
             interpreted as ``(i,)``.
 
     Returns:
-        New :class:`~dwave.optimization.symbols.BroadcastTo` symbol unless its
-        predecessor symbol has the requested shape, in which case the
+        Successor :class:`~dwave.optimization.symbols.BroadcastTo` symbol unless
+        its predecessor symbol has the requested shape, in which case the
         predecessor itself is returned.
 
     Examples:
@@ -738,7 +737,7 @@ def bspline(x: ArraySymbol, k: int, t: list, c: list) -> ArraySymbol:
         c: Spline coefficients.
 
     Returns:
-        Symbol with B-spline values for the predecessor symbol.
+        Successor symbol with B-spline values for the predecessor symbol.
 
     Examples:
         >>> from dwave.optimization import bspline, Model
@@ -809,15 +808,15 @@ def concatenate(arrays: typing.Sequence[ArraySymbol],
     return Concatenate(arrays, axis=axis)
 
 
-def cos(x) -> Cos:
+def cos(x: ArraySymbol) -> Cos:
     """Return an element-wise trigonometric cosine on a symbol.
 
     Args:
         x: Array giving the angles, in radians.
 
     Returns:
-        Symbol that is the trigonometric cosine of the values in its predecessor
-        symbol.
+        Successor symbol that is the trigonometric cosine of the values in its
+        predecessor symbol.
 
     Examples:
         >>> import numpy as np
@@ -933,11 +932,11 @@ def exp(x: ArraySymbol) -> Exp:
     """Return the element-wise natural (base-e) exponential of a symbol.
 
     Args:
-        x: Array symbol.
+        x: Predecessor array symbol.
 
     Returns:
-        Symbol that is the base-e exponential values of its predecessor symbol's
-        array elements.
+        Successor symbol that is the base-e exponential values of its
+        predecessor symbol's array elements.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -966,11 +965,11 @@ def expit(x: ArraySymbol) -> Expit:
     """Return an element-wise logistic sigmoid on a symbol.
 
     Args:
-        x: Array symbol.
+        x: Predecessor array symbol.
 
     Returns:
-        Symbol that is the logistic sigmoid values of its predecessor symbol's
-        array elements.
+        Successor symbol that is the logistic sigmoid values of its predecessor
+        symbol's array elements.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1004,11 +1003,11 @@ def extract(condition: ArraySymbol, arr: ArraySymbol) -> Extract:
             Condition under which to return elements of ``arr`` when it
             evaluates as ``True``.
         arr:
-            Array symbol.
+            Predecessor array symbol.
 
     Returns:
-        Symbol that contains the elements of its predecessor symbol that meet
-        the specified condition.
+        Successor symbol that contains the elements of its predecessor symbol
+        that meet the specified condition.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1181,7 +1180,7 @@ def less_equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> LessEqual:
     """Return element-wise less than or equal between two symbols (or arrays).
 
     Args:
-        x1, x2: Input array symbol or |array-like|_.
+        x1, x2: Operand array symbol or |array-like|_.
 
     Returns:
         Symbol that is the element-wise less than or equal for its predecessor
@@ -1308,11 +1307,11 @@ def log(x: ArraySymbol) -> Log:
     """Return an element-wise natural logarithm on a symbol.
 
     Args:
-        x: Array symbol.
+        x: Predecessor array symbol.
 
     Returns:
-        Symbol that is the natural logarithm values of of its predecessor
-        symbol's array elements.
+        Successor symbol that is the natural logarithm values of of its
+        predecessor symbol's array elements.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1342,11 +1341,11 @@ def logical(x: ArraySymbol) -> Logical:
     r"""Return the element-wise truth value on a symbol.
 
     Args:
-        x: Array symbol.
+        x: Predecessor array symbol.
 
     Returns:
-        Symbol that is the element-wise truth value of its predecessor symbol's
-        array elements.
+        Successor symbol that is the element-wise truth value of its predecessor
+        symbol's array elements.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1374,7 +1373,7 @@ def logical_and(x1: ArraySymbolLike, x2: ArraySymbolLike) -> And:
     r"""Return an element-wise logical AND on two symbols (or arrays).
 
     Args:
-        x1, x2: Array symbol or |array-like|_.
+        x1, x2: Operand array symbol or |array-like|_.
 
     Returns:
         Symbol that is the element-wise AND of the array elements of its
@@ -1412,11 +1411,11 @@ def logical_not(x: ArraySymbol) -> Not:
     r"""Return an element-wise logical NOT on a symbol.
 
     Args:
-        x: Array symbol.
+        x: Predecessor array symbol.
 
     Returns:
-        Symbol that is the element-wise NOT of the array elements of its
-        predecessor symbol.
+        Successor ymbol that is the element-wise NOT of the array elements of
+        its predecessor symbol.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1446,7 +1445,7 @@ def logical_or(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Or:
     r"""Return an element-wise logical OR on two symbols (or arrays).
 
     Args:
-        x1, x2: Array symbol or |array-like|_.
+        x1, x2: Operand array symbol or |array-like|_.
 
     Returns:
         Symbol that is the element-wise OR of the array elements of its
@@ -1485,7 +1484,7 @@ def logical_xor(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Xor:
     r"""Return an element-wise logical XOR on two symbols (or arrays).
 
     Args:
-        x1, x2: Array symbol or |array-like|_.
+        x1, x2: Operand array symbol or |array-like|_.
 
     Returns:
         Symbol that is the element-wise XOR of the array elements of its
@@ -1522,29 +1521,33 @@ def logical_xor(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Xor:
 
 
 def matmul(x: ArraySymbolLike, y: ArraySymbolLike) -> MatrixMultiply:
-    r"""Compute the matrix product of two array symbols.
+    r"""Compute the matrix product of two array symbols (or arrays).
 
     Args:
-        x, y: Operand array symbols. The size of the last axis of `x` must be
-            equal to the size of the second to last axis of `y`. If `x` or `y`
-            are 1-d, they will treated as if they a row or column vector
-            respectively. If both are 1-d, this will produce a scalar (and the
-            operation is equivalent to the dot product of two vectors).
+        x, y: Operand array symbol or |array-like|_.
 
-            Otherwise, if it is possible that the shapes can be broadcast
-            together, either by broadcasting missing leading axes (e.g.
-            `(2, 5, 3, 4, 2)` and `(2, 6)` -> `(2, 5, 3, 4, 6)`) or by
-            broadcasting axes for which one of the operands has size 1 (e.g.
-            `(3, 1, 4, 2)` and `(1, 7, 2, 3)` -> `(3, 7, 4, 3)`), then this
-            will return the result after broadcasting.
+    The size of the last axis of ``x`` must be equal to the size of the
+    second-to-last axis of ``y``. If either ``x`` or ``y`` is one-dimensional,
+    they are treated as a row or column vector respectively. If both are 1D,
+    produces a scalar (and the operation is equivalent to the dot product of two
+    vectors).
+
+    Otherwise, if the shapes can be broadcast together, either by broadcasting
+    missing leading axes (e.g.
+    :math:`(2, 5, 3, 4, 2), (2, 6) \rightarrow (2, 5, 3, 4, 6)`) or by
+    broadcasting axes for which one of the operands has size 1 (e.g.
+    :math:`(3, 1, 4, 2), (1, 7, 2, 3) \rightarrow (3, 7, 4, 3)`), returns the
+    result after broadcasting.
 
     Returns:
-        A MatrixMultiply symbol representing the matrix product. If `x` and
-        `y` have shapes `(..., n, k)` and `(..., k, m)`, then the output will
-        have shape `(..., n, m)`.
+        Symbol representing the matrix product. For ``x`` and ``y`` with shapes
+        :math:`(..., n, k)` and :math:`(..., k, m)`, the generated
+        :class:`~dwave.optimization.symbols.MatrixMultiply` has shape
+        :math:`(..., n, m)`.
 
     Examples:
-        This example computes the dot product of two integer arrays.
+        This example computes the dot product of two integer arrays and also
+        multiplies the first symbol by an array with a different shape.
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import matmul
@@ -1553,15 +1556,23 @@ def matmul(x: ArraySymbolLike, y: ArraySymbolLike) -> MatrixMultiply:
         >>> i = model.integer(3)
         >>> j = model.integer(3)
         >>> m = matmul(i, j)
+        >>> m_array = matmul(i, [[1, 2], [3, 4], [5, 6]])
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     i.set_state(0, [1, 2, 3])
         ...     j.set_state(0, [4, 5, 6])
         ...     print(m.state(0))
+        ...     print(m_array.state(0))
         32.0
+        [22. 28.]
 
     See Also:
-        :class:`~dwave.optimization.symbols.MatrixMultiply`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.MatrixMultiply`: Generated symbol.
+
+        :data:`~numpy.matmul`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.multiply` function and
+        :meth:`~dwave.optimization.model.ArraySymbol.prod()` method
 
     .. versionadded:: 0.6.10
     """
@@ -1598,26 +1609,21 @@ def maximum(
     x2: ArraySymbolLike,
     *xi: ArraySymbolLike,
 ) -> Maximum | NaryMaximum:
-    """Return an element-wise maximum of the given symbols.
-
-    In the underlying directed acyclic expression graph, produces a
-    ``Maximum`` node if two array nodes are provided and a
-    ``NaryMaximum`` node otherwise.
+    r"""Return an element-wise maximum of two or more symbols and arrays.
 
     Args:
-        x1, x2: Input array symbol.
-        *xi: Additional input array symbols.
+        x1, x2: Operand array symbol or |array-like|_.
+        *xi: Additional array symbols or |array-like|_.
 
     Returns:
-        A symbol that is the element-wise maximum of the given symbols.
-        Taking the element-wise maximum of two symbols returns a
-        :class:`~dwave.optimization.symbols.Maximum`.
-        Taking the element-wise maximum of three or more symbols returns a
-        :class:`~dwave.optimization.symbols.NaryMaximum`.
+        Symbol that is the element-wise maximum of the given symbols (or
+        arrays). For two symbols, creates an
+        :class:`~dwave.optimization.symbols.Maximum` symbol on the
+        :term:`directed acyclic expression graph <DAG>`; for three
+        or more symbols, creates a
+        :class:`~dwave.optimization.symbols.NaryMaximum` symbol.
 
     Examples:
-        This example maximizes two integer symbols of size :math:`1 \times 2`.
-
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import maximum
         ...
@@ -1631,28 +1637,31 @@ def maximum(
         ...     j.set_state(0, [7, 2])
         ...     print(m.state(0))
         [7. 5.]
+        >>> # Maximum between a symbol and an array
+        >>>  m_array = maximum(i, [2, 6])
 
     See Also:
-        :class:`~dwave.optimization.symbols.Maximum`
+        :class:`~dwave.optimization.symbols.Maximum`,
+        :class:`~dwave.optimization.symbols.NaryMaximum`: Generated symbol
 
-        :class:`~dwave.optimization.symbols.NaryMaximum`
+        :data:`~numpy.maximum`: :doc:`NumPy <numpy:index>` function
+
+        :meth:`~dwave.optimization.model.ArraySymbol.max` method
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 def mean(array: ArraySymbol) -> Mean:
-    r"""Return mean of given symbol.
+    r"""Return the mean value of a symbol.
 
     Args:
-        array: Input array symbol.
+        array: Predecessor array symbol.
 
     Returns:
-        A symbol that is the mean of given symbol. If given symbol is empty, 
-        mean defaults to 0.0.
+        Successor symbol that is the mean of its predecessor symbol's array
+        elements. If the predecessor symbol is empty, mean defaults to 0.0.
 
     Examples:
-        This example takes the mean of one symbol.
-
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import mean
         ...
@@ -1666,7 +1675,9 @@ def mean(array: ArraySymbol) -> Mean:
         5.0
 
     See Also:
-        :class:`~dwave.optimization.symbols.Mean`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.Mean`: Generated symbol.
+
+        :func:`~numpy.mean`: :doc:`NumPy <numpy:index>` function
 
     .. versionadded:: 0.6.4
     """
