@@ -1004,6 +1004,31 @@ TEST_CASE("BinaryNode") {
                     }
                 }
             }
+
+            THEN("We exchange() some values with slice arguments") {
+                // Sum constraint is over entire array, therefore slice is 0.
+                // Does nothing.
+                bnode_ptr->exchange(state, 0, 1, std::vector<ssize_t>{0}, std::vector<ssize_t>{0});
+                bnode_ptr->exchange(state, 2, 3, std::vector<ssize_t>{0}, std::vector<ssize_t>{0});
+                std::swap(init_values[0], init_values[1]);
+                std::swap(init_values[2], init_values[3]);
+                // state is now: [0, 0, 1, 0, 1, 0, 0, 0]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                    CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
         }
     }
 
@@ -1123,6 +1148,40 @@ TEST_CASE("BinaryNode") {
                 }
             }
 
+            THEN("We exchange() some values with slice arguments") {
+                // Does nothing. Indices 0 and 3 fall in slice 0 along axis 0.
+                bnode_ptr->exchange(state, 0, 3, std::vector<ssize_t>{0}, std::vector<ssize_t>{0});
+                // Does nothing. Indices 1 and 6 fall in slices 0 and 1, respectively, along axis 0.
+                bnode_ptr->exchange(state, 1, 6, std::vector<ssize_t>{0}, std::vector<ssize_t>{1});
+                // Indices 1 and 3 fall in slice 0 along axis 0.
+                bnode_ptr->exchange(state, 1, 3, std::vector<ssize_t>{0}, std::vector<ssize_t>{0});
+                std::swap(init_values[0], init_values[3]);
+                std::swap(init_values[1], init_values[6]);
+                std::swap(init_values[1], init_values[3]);
+                // state is now: [0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(1, a.shape)] = 0
+                    // a[np.unravel_index(3, a.shape)] = 1
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 2, 4])
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4}));
+                    CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
             THEN("We clip_and_set_value() some values") {
                 bnode_ptr->clip_and_set_value(state, 5, -1);  // Does nothing.
                 bnode_ptr->clip_and_set_value(state, 7, -1);
@@ -1130,6 +1189,51 @@ TEST_CASE("BinaryNode") {
                 bnode_ptr->clip_and_set_value(state, 11, 0);
                 bnode_ptr->clip_and_set_value(state, 11, 1);
                 bnode_ptr->clip_and_set_value(state, 10, 0);
+                init_values[5] = 0;
+                init_values[7] = 0;
+                init_values[9] = 1;
+                init_values[11] = 1;
+                init_values[10] = 0;
+                // state is now: [0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(5, a.shape)] = 0
+                    // a[np.unravel_index(7, a.shape)] = 0
+                    // a[np.unravel_index(9, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 1, 3])
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
+                    CHECK(bnode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We clip_and_set_value() some values with slice arguments") {
+                // Does nothing. Index 5 falls in slice 1 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 5, -1, std::vector<ssize_t>{1});
+                // Index 7 falls in slice 1 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 7, -1, std::vector<ssize_t>{1});
+                // Does nothing. Index 9 falls in slice 2 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 9, 1, std::vector<ssize_t>{2});
+                // Index 11 falls in slice 2 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 11, 0, std::vector<ssize_t>{2});
+                // Index 11 falls in slice 2 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 11, 1, std::vector<ssize_t>{2});
+                // Index 10 falls in slice 2 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 10, 0, std::vector<ssize_t>{2});
                 init_values[5] = 0;
                 init_values[7] = 0;
                 init_values[9] = 1;
@@ -1203,10 +1307,92 @@ TEST_CASE("BinaryNode") {
                 }
             }
 
+            THEN("We set_value() some values with slice arguments") {
+                // Index 0 falls in slice 0 along axis 0.
+                bnode_ptr->set_value(state, 0, 0, std::vector<ssize_t>{0});  // Does nothing.
+                // Index 6 falls in slice 1 along axis 0.
+                bnode_ptr->set_value(state, 6, 0, std::vector<ssize_t>{1});
+                // Index 7 falls in slice 1 along axis 0.
+                bnode_ptr->set_value(state, 7, 0, std::vector<ssize_t>{1});
+                // Index 4 falls in slice 1 along axis 0.
+                bnode_ptr->set_value(state, 4, 1, std::vector<ssize_t>{1});
+                // Index 10 falls in slice 2 along axis 0.
+                bnode_ptr->set_value(state, 10, 1, std::vector<ssize_t>{2});  // Does nothing.
+                // Index 11 falls in slice 2 along axis 0.
+                bnode_ptr->set_value(state, 11, 0, std::vector<ssize_t>{2});
+                init_values[0] = 0;
+                init_values[6] = 0;
+                init_values[7] = 0;
+                init_values[4] = 1;
+                init_values[10] = 1;
+                init_values[11] = 0;
+                // state is now: [0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(0, a.shape)] = 0
+                    // a[np.unravel_index(6, a.shape)] = 0
+                    // a[np.unravel_index(7, a.shape)] = 0
+                    // a[np.unravel_index(4, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 1, 3])
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
+                    CHECK(bnode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
             THEN("We flip() some values") {
                 bnode_ptr->flip(state, 6);   // 1 -> 0
                 bnode_ptr->flip(state, 4);   // 0 -> 1
                 bnode_ptr->flip(state, 11);  // 1 -> 0
+                init_values[6] = !init_values[6];
+                init_values[4] = !init_values[4];
+                init_values[11] = !init_values[11];
+                // state is now: [0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(6, a.shape)] = 0
+                    // a[np.unravel_index(4, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 2, 3])
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 3}));
+                    CHECK(bnode_ptr->diff(state).size() == 3);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We flip() some values with slice arguments") {
+                // Index 6 falls in slice 1 along axis 0.
+                bnode_ptr->flip(state, 6, std::vector<ssize_t>{1});  // 1 -> 0
+                // Index 4 falls in slice 1 along axis 0.
+                bnode_ptr->flip(state, 4, std::vector<ssize_t>{1});  // 0 -> 1
+                // Index 11 falls in slice 2 along axis 0.
+                bnode_ptr->flip(state, 11, std::vector<ssize_t>{2});  // 1 -> 0
                 init_values[6] = !init_values[6];
                 init_values[4] = !init_values[4];
                 init_values[11] = !init_values[11];
@@ -1916,7 +2102,7 @@ TEST_CASE("IntegerNode") {
         }
     }
 
-    GIVEN("(2x2)-BinaryNode with a sum constraint over the entire array") {
+    GIVEN("(2x2)-IntegerNode with a sum constraint over the entire array") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {5.0}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 2}, -5,
@@ -1957,6 +2143,30 @@ TEST_CASE("IntegerNode") {
             THEN("We set_value() some values") {
                 inode_ptr->set_value(state, 0, 1);  // Does nothing.
                 inode_ptr->set_value(state, 2, 3);
+                init_values[0] = 1;
+                init_values[2] = 3;
+                // state is now: [1.0, -1.0, 3.0, 5.0]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({8.0}));
+                    CHECK(inode_ptr->diff(state).size() == 1);
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({5.0}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We set_value() some values with slice arguments") {
+                // Sum constraint is over entire array, therefore slice is 0.
+                inode_ptr->set_value(state, 0, 1, std::vector<ssize_t>{0});  // Does nothing.
+                inode_ptr->set_value(state, 2, 3, std::vector<ssize_t>{0});
                 init_values[0] = 1;
                 init_values[2] = 3;
                 // state is now: [1.0, -1.0, 3.0, 5.0]
@@ -2098,10 +2308,82 @@ TEST_CASE("IntegerNode") {
                 }
             }
 
+            THEN("We exchange() some values with slice arguments") {
+                // Does nothing. Indices 2 and 3 fall in slice 1 along axis 1.
+                inode_ptr->exchange(state, 2, 3, std::vector<ssize_t>{1}, std::vector<ssize_t>{1});
+                // Does nothing. Indices 1 and 8 fall in slices 0 and 1, respectively, along axis 1.
+                inode_ptr->exchange(state, 1, 8, std::vector<ssize_t>{0}, std::vector<ssize_t>{1});
+                // Indices 8 and 10 fall in slices 1 and 2, respectively, along axis 1.
+                inode_ptr->exchange(state, 8, 10, std::vector<ssize_t>{1}, std::vector<ssize_t>{2});
+                // Indices 0 and 1 fall in slice 0 along axis 1.
+                inode_ptr->exchange(state, 0, 1, std::vector<ssize_t>{0}, std::vector<ssize_t>{0});
+                std::swap(init_values[2], init_values[3]);
+                std::swap(init_values[1], init_values[8]);
+                std::swap(init_values[8], init_values[10]);
+                std::swap(init_values[0], init_values[1]);
+                // state is now: [2, 5, 0, 0, 3, 1, 4, 0, 0, 0, 2, 3]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(8, a.shape)] = 0
+                    // a[np.unravel_index(10, a.shape)] = 2
+                    // a[np.unravel_index(0, a.shape)] = 2
+                    // a[np.unravel_index(1, a.shape)] = 5
+                    // a.sum(axis=(0, 2))
+                    // >>> array([11,  0,  9])
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 0, 9}));
+                    CHECK(inode_ptr->diff(state).size() == 4);  // 2 updates per exchange
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
             THEN("We clip_and_set_value() some values") {
                 inode_ptr->clip_and_set_value(state, 0, 5);  // Does nothing.
                 inode_ptr->clip_and_set_value(state, 8, -300);
                 inode_ptr->clip_and_set_value(state, 10, 100);
+                init_values[8] = -5;
+                init_values[10] = 8;
+                // state is now: [5,  2,  0,  0,  3,  1,  4,  0, -5,  0,  8,  3]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(8, a.shape)] = -5
+                    // a[np.unravel_index(10, a.shape)] = 8
+                    // a.sum(axis=(0, 2))
+                    // >>> array([11, -5, 15])
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, -5, 15}));
+                    CHECK(inode_ptr->diff(state).size() == 2);
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We clip_and_set_value() some values with slice arguments") {
+                // Does nothing. Index 0 falls in slice 0 along axis 1.
+                inode_ptr->clip_and_set_value(state, 0, 5, std::vector<ssize_t>{0});
+                // Index 8 falls in slice 0 along axis 1.
+                inode_ptr->clip_and_set_value(state, 8, -300, std::vector<ssize_t>{1});
+                // Index 10 falls in slice 2 along axis 1.
+                inode_ptr->clip_and_set_value(state, 10, 100, std::vector<ssize_t>{2});
                 init_values[8] = -5;
                 init_values[10] = 8;
                 // state is now: [5,  2,  0,  0,  3,  1,  4,  0, -5,  0,  8,  3]
@@ -2134,6 +2416,48 @@ TEST_CASE("IntegerNode") {
                 inode_ptr->set_value(state, 9, 1);
                 inode_ptr->set_value(state, 10, 5);
                 inode_ptr->set_value(state, 11, 0);
+                init_values[0] = 5;
+                init_values[8] = 0;
+                init_values[9] = 1;
+                init_values[10] = 5;
+                init_values[11] = 0;
+                // state is now: [5, 2, 0, 0, 3, 1, 4, 0, 0, 1, 5, 0]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(0, a.shape)] = 5
+                    // a[np.unravel_index(8, a.shape)] = 0
+                    // a[np.unravel_index(9, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 5
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(0, 2))
+                    // >>> array([11,  1,  9])
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 1, 9}));
+                    CHECK(inode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We set_value() some values with slice arguments") {
+                // Does nothing. Index 0 falls in slice 2 along axis 1.
+                inode_ptr->set_value(state, 0, 5, std::vector<ssize_t>{0});
+                // Index 8 falls in slice 1 along axis 1.
+                inode_ptr->set_value(state, 8, 0, std::vector<ssize_t>{1});
+                // Index 9 falls in slice 1 along axis 1.
+                inode_ptr->set_value(state, 9, 1, std::vector<ssize_t>{1});
+                // Index 10 falls in slice 2 along axis 1.
+                inode_ptr->set_value(state, 10, 5, std::vector<ssize_t>{2});
+                // Index 11 falls in slice 2 along axis 1.
+                inode_ptr->set_value(state, 11, 0, std::vector<ssize_t>{2});
                 init_values[0] = 5;
                 init_values[8] = 0;
                 init_values[9] = 1;

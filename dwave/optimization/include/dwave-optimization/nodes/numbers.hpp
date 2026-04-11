@@ -146,7 +146,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // NumberNode methods *****************************************************
 
     // In the given state, swap the value of index i with the value of index j.
-    void exchange(State& state, ssize_t i, ssize_t j) const;
+    // Users may pass the slices (per sum constraint) that each index lies on.
+    void exchange(State& state, ssize_t i, ssize_t j,
+                  std::optional<std::vector<ssize_t>> i_slices = std::nullopt,
+                  std::optional<std::vector<ssize_t>> j_slices = std::nullopt) const;
 
     // Return the value of index i in a given state.
     double get_value(State& state, ssize_t i) const;
@@ -160,8 +163,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     double upper_bound() const;
 
     // Clip value in a given state to fall within upper_bound and lower_bound
-    // in a given index.
-    void clip_and_set_value(State& state, ssize_t index, double value) const;
+    // in a given index. Users may pass the slices (per sum constraint) that
+    // each index lies on.
+    void clip_and_set_value(State& state, ssize_t index, double value,
+                            std::optional<std::vector<ssize_t>> slices = std::nullopt) const;
 
     /// Return the stateless sum constraints.
     const std::vector<SumConstraint>& sum_constraints() const;
@@ -171,8 +176,6 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     /// returned vector is indexed in the same ordering as the constraints
     /// given by `sum_constraints()`.
     const std::vector<std::vector<double>>& sum_constraints_lhs(const State& state) const;
-
-    std::vector<std::vector<double>>& sum_constraints_lhs(State& state) const;
 
  protected:
     explicit NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,
@@ -195,8 +198,6 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     /// Stateless sum constraints.
     std::vector<SumConstraint> sum_constraints_;
-    /// Indicator variable that all sum constraint operators are "==".
-    bool sum_constraints_all_equals_;
 };
 
 /// A contiguous block of integer numbers.
@@ -263,7 +264,9 @@ class IntegerNode : public NumberNode {
     // IntegerNode methods ****************************************************
 
     // Set the value at the given index in the given state.
-    void set_value(State& state, ssize_t index, double value) const;
+    // Users may pass the slices (per sum constraint) that each index lies on.
+    void set_value(State& state, ssize_t index, double value,
+                   std::optional<std::vector<ssize_t>> slices = std::nullopt) const;
 
  protected:
     // Overloads needed by the Node ABC ***************************************
@@ -317,8 +320,10 @@ class BinaryNode : public IntegerNode {
     BinaryNode(ssize_t size, double lower_bound, double upper_bound,
                std::vector<SumConstraint> sum_constraints = {});
 
-    // Flip the value (0 -> 1 or 1 -> 0) at index i in the given state.
-    void flip(State& state, ssize_t i) const;
+    // Flip the value (0 -> 1 or 1 -> 0) at `index` in the given state.
+    // Users may pass the slices (per sum constraint) that `index` lies on.
+    void flip(State& state, ssize_t index,
+              std::optional<std::vector<ssize_t>> slices = std::nullopt) const;
 };
 
 }  // namespace dwave::optimization
