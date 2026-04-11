@@ -172,6 +172,8 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     /// given by `sum_constraints()`.
     const std::vector<std::vector<double>>& sum_constraints_lhs(const State& state) const;
 
+    std::vector<std::vector<double>>& sum_constraints_lhs(State& state) const;
+
  protected:
     explicit NumberNode(std::span<const ssize_t> shape, std::vector<double> lower_bound,
                         std::vector<double> upper_bound,
@@ -182,11 +184,6 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     // Default value in a given index.
     virtual double default_value(ssize_t index) const = 0;
-
-    /// Update the relevant sum constraints running sums (`lhs`) given that the
-    /// value stored at `index` is changed by `value_change` in a given state.
-    void update_sum_constraints_lhs(State& state, const ssize_t index,
-                                    const double value_change) const;
 
     /// Statelss global minimum and maximum of the values stored in NumberNode.
     double min_;

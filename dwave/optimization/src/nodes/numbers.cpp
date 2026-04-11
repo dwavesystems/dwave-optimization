@@ -128,17 +128,10 @@ std::vector<std::vector<double>> get_sum_constraints_lhs(const NumberNode* node,
     sum_constraints_lhs.reserve(num_sum_constraints);
     for (const NumberNode::SumConstraint& constraint : sum_constraints) {
         const std::optional<const ssize_t> axis = constraint.axis();
-        // Handle the case where the sum constraint applies to the entire array.
-        if (!axis.has_value()) {
-            // Array is treated as a flat array with a single axis.
-            sum_constraints_lhs.emplace_back(1, 0.0);
-            continue;
-        }
-        assert(axis.has_value());
-        assert(0 <= *axis && *axis < static_cast<ssize_t>(node_shape.size()));
-        // Emplace an all zeros vector of size equal to the number of slice
-        // along the given constrained axis.
-        sum_constraints_lhs.emplace_back(node_shape[*axis], 0.0);
+        assert(!axis.has_value() || *axis < static_cast<ssize_t>(node_shape.size()));
+        const ssize_t num_slices = axis.has_value() ? node_shape[*axis] : 1;
+        // Emplace an all zeros vector of size equal to the number of slices.
+        sum_constraints_lhs.emplace_back(num_slices, 0.0);
     }
 
     // Define a BufferIterator for `number_data` given the shape and strides of
@@ -148,21 +141,12 @@ std::vector<std::vector<double>> get_sum_constraints_lhs(const NumberNode* node,
         // Increment the sum of the appropriate slice per sum constraint.
         for (ssize_t i = 0; i < num_sum_constraints; ++i) {
             const std::optional<const ssize_t> axis = sum_constraints[i].axis();
-            // Handle the case where the sum constraint applies to the entire array.
-            if (!axis.has_value()) {
-                assert(sum_constraints_lhs[i].size() == 1);
-                sum_constraints_lhs[i].front() += *it;
-                continue;
-            }
-            assert(axis.has_value());
-            assert(0 <= *axis && *axis < static_cast<ssize_t>(it.location().size()));
-            const ssize_t slice = it.location()[*axis];
-            assert(0 <= slice);
-            assert(slice < static_cast<ssize_t>(sum_constraints_lhs[i].size()));
+            assert(!axis.has_value() || *axis < static_cast<ssize_t>(it.location().size()));
+            const ssize_t slice = axis.has_value() ? it.location()[*axis] : 0;
+            assert(0 <= slice && slice < static_cast<ssize_t>(sum_constraints_lhs[i].size()));
             sum_constraints_lhs[i][slice] += *it;
         }
     }
-
     return sum_constraints_lhs;
 }
 
@@ -421,6 +405,41 @@ void NumberNode::revert(State& state) const noexcept {
     node_data->revert();
 }
 
+/// Update the relevant sum constraints running sums (`lhs`) given that the
+/// value stored at `index` is changed by `value_change` in a given state.
+void update_sum_constraints_lhs(const NumberNode& node, State& state, const ssize_t index,
+                                const double value_change) {
+    const auto& sum_constraints = node.sum_constraints();
+    assert(value_change != 0);            // Should not call when no change occurs.
+    assert(sum_constraints.size() != 0);  // Should only call where applicable.
+
+    // Get multidimensional indices for `index` so we can identify the slices
+    // `index` lies on per sum constraint.
+    const std::vector<ssize_t> multi_index = unravel_index(index, node.shape());
+    assert(sum_constraints.size() <= multi_index.size());
+    // Get the slice sums for all sum constraints.
+    auto& sum_constraints_lhs = node.sum_constraints_lhs(state);
+    assert(sum_constraints.size() == sum_constraints_lhs.size());
+
+    // For each sum constraint.
+    for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
+        const std::optional<const ssize_t> axis = sum_constraints[i].axis();
+
+        // Handle the case where the constraint applies to the entire array.
+        if (!axis.has_value()) {
+            assert(sum_constraints_lhs[i].size() == 1);
+            sum_constraints_lhs[i].front() += value_change;
+            continue;
+        }
+
+        assert(axis.has_value() && 0 <= *axis && *axis < static_cast<ssize_t>(multi_index.size()));
+        // Get the slice along the constrained axis the `value_change` occurs in.
+        const ssize_t slice = multi_index[*axis];
+        assert(0 <= slice && slice < static_cast<ssize_t>(sum_constraints_lhs[i].size()));
+        sum_constraints_lhs[i][slice] += value_change;  // Offset slice sum.
+    }
+}
+
 void NumberNode::exchange(State& state, ssize_t i, ssize_t j) const {
     auto ptr = data_ptr<NumberNodeStateData>(state);
     // We expect the exchange to obey the index-wise bounds.
@@ -436,9 +455,9 @@ void NumberNode::exchange(State& state, ssize_t i, ssize_t j) const {
         if (!sum_constraints_all_equals_ && sum_constraints_.size() > 0) {
             const double difference = ptr->get(i) - ptr->get(j);
             // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-            update_sum_constraints_lhs(state, i, difference);
+            update_sum_constraints_lhs(*this, state, i, difference);
             // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-            update_sum_constraints_lhs(state, j, -difference);
+            update_sum_constraints_lhs(*this, state, j, -difference);
         }
     }
 }
@@ -489,7 +508,7 @@ void NumberNode::clip_and_set_value(State& state, ssize_t index, double value) c
     if (ptr->set(index, value)) {
         // If change occurred and sum constraint exist, update running sums.
         if (sum_constraints_.size() > 0) {
-            update_sum_constraints_lhs(state, index, value - diff(state).back().old);
+            update_sum_constraints_lhs(*this, state, index, value - diff(state).back().old);
         }
     }
 }
@@ -499,6 +518,10 @@ const std::vector<NumberNode::SumConstraint>& NumberNode::sum_constraints() cons
 }
 
 const std::vector<std::vector<double>>& NumberNode::sum_constraints_lhs(const State& state) const {
+    return data_ptr<NumberNodeStateData>(state)->sum_constraints_lhs;
+}
+
+std::vector<std::vector<double>>& NumberNode::sum_constraints_lhs(State& state) const {
     return data_ptr<NumberNodeStateData>(state)->sum_constraints_lhs;
 }
 
@@ -640,39 +663,6 @@ NumberNode::NumberNode(std::span<const ssize_t> shape, std::vector<double> lower
     check_sum_constraints(this);
 }
 
-void NumberNode::update_sum_constraints_lhs(State& state, const ssize_t index,
-                                            const double value_change) const {
-    const auto& sum_constraints = this->sum_constraints();
-    assert(value_change != 0);            // Should not call when no change occurs.
-    assert(sum_constraints.size() != 0);  // Should only call where applicable.
-
-    // Get multidimensional indices for `index` so we can identify the slices
-    // `index` lies on per sum constraint.
-    const std::vector<ssize_t> multi_index = unravel_index(index, this->shape());
-    assert(sum_constraints.size() <= multi_index.size());
-    // Get the slice sums for all sum constraints.
-    auto& sum_constraints_lhs = data_ptr<NumberNodeStateData>(state)->sum_constraints_lhs;
-    assert(sum_constraints.size() == sum_constraints_lhs.size());
-
-    // For each sum constraint.
-    for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
-        const std::optional<const ssize_t> axis = sum_constraints[i].axis();
-
-        // Handle the case where the constraint applies to the entire array.
-        if (!axis.has_value()) {
-            assert(sum_constraints_lhs[i].size() == 1);
-            sum_constraints_lhs[i].front() += value_change;
-            continue;
-        }
-
-        assert(axis.has_value() && 0 <= *axis && *axis < static_cast<ssize_t>(multi_index.size()));
-        // Get the slice along the constrained axis the `value_change` occurs in.
-        const ssize_t slice = multi_index[*axis];
-        assert(0 <= slice && slice < static_cast<ssize_t>(sum_constraints_lhs[i].size()));
-        sum_constraints_lhs[i][slice] += value_change;  // Offset slice sum.
-    }
-}
-
 // Integer Node ***************************************************************
 
 /// Check the user defined sum constraint for IntegerNode.
@@ -781,7 +771,7 @@ void IntegerNode::set_value(State& state, ssize_t index, double value) const {
     if (ptr->set(index, value)) {
         // If change occurred and sum constraint exist, update running sums.
         if (sum_constraints_.size() > 0) {
-            update_sum_constraints_lhs(state, index, value - diff(state).back().old);
+            update_sum_constraints_lhs(*this, state, index, value - diff(state).back().old);
         }
     }
 }
@@ -894,7 +884,7 @@ void BinaryNode::flip(State& state, ssize_t i) const {
         if (sum_constraints_.size() > 0) {
             // If value changed from 0 -> 1, update by 1.
             // If value changed from 1 -> 0, update by -1.
-            update_sum_constraints_lhs(state, i, (ptr->get(i) == 1) ? 1 : -1);
+            update_sum_constraints_lhs(*this, state, i, (ptr->get(i) == 1) ? 1 : -1);
         }
     }
 }
