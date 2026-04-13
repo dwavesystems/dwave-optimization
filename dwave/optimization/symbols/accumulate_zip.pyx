@@ -119,7 +119,7 @@ cdef class AccumulateZip(ArraySymbol):
         for symbol in expr.iter_decisions():
             raise ValueError(
                 "expression must only have inputs and constants as roots, "
-                f"recieved an expression with {type(symbol).__name__} as a root"
+                f"received an expression with {type(symbol).__name__} as a root"
             )
 
         if len(operands) == 0:
