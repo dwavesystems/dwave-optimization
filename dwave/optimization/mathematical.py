@@ -209,7 +209,7 @@ Examples:
     1.0
 
 See Also:
-    :class:`~dwave.optimization.symbols.Absolute`: Generated symbol.
+    :class:`~dwave.optimization.symbols.Absolute`: Generated symbol
 
     :func:`abs` (Python function), :data:`~numpy.absolute`
     (:doc:`NumPy <numpy:index>` function)
@@ -229,11 +229,11 @@ def add(x1: ArraySymbolLike, x2: ArraySymbolLike, *xi: ArraySymbolLike) -> Add |
         *xi: Additional array symbols or |array-like|_ to be added.
 
     Returns:
-        Symbol that sums the predecessor symbols (and/or arrays) element-wise.
-        For two symbols, creates an :class:`~dwave.optimization.symbols.Add`
-        symbol on the :term:`directed acyclic expression graph <DAG>`; for three
-        or more symbols, creates a :class:`~dwave.optimization.symbols.NaryAdd`
-        symbol.
+        Successor symbol that sums the predecessor symbols (and/or arrays)
+        element-wise. For two symbols, creates an
+        :class:`~dwave.optimization.symbols.Add` symbol on the
+        :term:`directed acyclic expression graph <DAG>`; for three or more
+        symbols, creates a :class:`~dwave.optimization.symbols.NaryAdd` symbol.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -281,7 +281,7 @@ def arange(start: typing.Union[int, ArraySymbol, None] = None,
     must be a symbol in the model, thus providing one or more predecessors.
 
     Returns:
-        Symbol with evenly spaced integer values.
+        Successor symbol with evenly spaced integer values.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -448,8 +448,8 @@ def atleast_1d(*arrays):
     Args:
         arrays: One or more array symbols.
     Returns:
-        Array symbol, or a tuple of array symbols, with at least one
-        dimension.
+        Successor array symbol, or a tuple of successor array symbols, with at
+        least one dimension.
 
     Examples:
         >>> from dwave.optimization import atleast_1d, Model
@@ -503,8 +503,8 @@ def atleast_2d(*arrays):
     Args:
         arrays: One or more array symbols.
     Returns:
-        Array symbol, or a tuple of array symbols, with at least two
-        dimensions.
+        Successor array symbol, or a tuple of successor array symbols, with at
+        least two dimensions.
 
     Examples:
         >>> from dwave.optimization import atleast_2d, Model
@@ -610,10 +610,11 @@ def broadcast_symbols(*args: ArraySymbol) -> tuple[ArraySymbol, ...]:
         *args: Array symbols to broadcast.
 
     Returns:
-        Tuple of array symbols, all with the same shape. For each predecessor
-        symbol, a new :class:`~dwave.optimization.symbols.BroadcastTo` symbol is
-        returned unless the predecessor already has the broadcast shape, in
-        which case the predecessor itself returned.
+        Tuple of successor array symbols, all with the same shape. For each
+        predecessor symbol, a
+        new :class:`~dwave.optimization.symbols.BroadcastTo` symbol is returned
+        unless the predecessor already has the broadcast shape, in which case
+        the predecessor itself returned.
 
     Examples:
         >>> from dwave.optimization import broadcast_symbols, broadcast_to, Model
@@ -713,9 +714,9 @@ def broadcast_to(x: ArraySymbol, shape: tuple[int, ...] | int) -> ArraySymbol:
         :func:`.broadcast_shapes`, :func:`.broadcast_symbols`
 
         :meth:`~dwave.optimization.model.ArraySymbol.copy`,
-        :meth:`~dwave.optimization.model.ArraySymbol.reshape`
-        :meth:`~dwave.optimization.model.ArraySymbol.resize`
-        :func:`.roll`
+        :meth:`~dwave.optimization.model.ArraySymbol.reshape`,
+        :meth:`~dwave.optimization.model.ArraySymbol.resize`,
+        :func:`.roll`,
         :func:`.transpose`
 
     .. versionadded:: 0.6.5
@@ -772,8 +773,8 @@ def concatenate(arrays: typing.Sequence[ArraySymbol],
             the case of 2D arrays).
 
     Returns:
-        Symbol that concatenates the predecessor symbols along the specified
-        axis.
+        Successor symbol that concatenates the predecessor symbols along the
+        specified axis.
 
     Examples:
         This example concatenates two constant symbols along the first axis.
@@ -795,7 +796,7 @@ def concatenate(arrays: typing.Sequence[ArraySymbol],
          [4. 5.]]
 
     See Also:
-        :class:`~dwave.optimization.symbols.Concatenate`: Generated symbol.
+        :class:`~dwave.optimization.symbols.Concatenate`: Generated symbol
 
         :func:`~numpy.concatenate`: :doc:`NumPy <numpy:index>` function
 
@@ -832,7 +833,7 @@ def cos(x: ArraySymbol) -> Cos:
         [1.000000e+00 6.123234e-17]
 
     See Also:
-        :class:`~dwave.optimization.symbols.Cos`: Generated symbol.
+        :class:`~dwave.optimization.symbols.Cos`: Generated symbol
 
         :data:`~numpy.cos`: :doc:`NumPy <numpy:index>` function
 
@@ -854,7 +855,8 @@ def divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Divide:
         x2: Denominator array symbol or |array-like|_.
 
     Returns:
-        Symbol that divides the predecessor symbols (or arrays) element-wise.
+        Successor symbol that divides the predecessor symbols (or arrays)
+        element-wise.
 
     Raises:
         ValueError: If a denominator element is zero. See the
@@ -879,7 +881,7 @@ def divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Divide:
 
 
     See Also:
-        :class:`~dwave.optimization.symbols.Divide`: Generated symbol.
+        :class:`~dwave.optimization.symbols.Divide`: Generated symbol
 
         :data:`~numpy.divide`: :doc:`NumPy <numpy:index>` function
 
@@ -899,8 +901,8 @@ def equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Equal:
         x1, x2: Array symbol or |array-like|_.
 
     Returns:
-        Symbol that is the element-wise equality of its predecessor symbols (or
-        arrays).
+        Successor symbol that is the element-wise equality of its predecessor
+        symbols (or arrays).
 
     Examples:
         >>> from dwave.optimization import Model
@@ -951,7 +953,7 @@ def exp(x: ArraySymbol) -> Exp:
         2.718281828459045
 
     See Also:
-        :class:`~dwave.optimization.symbols.Exp`: Generated symbol.
+        :class:`~dwave.optimization.symbols.Exp`: Generated symbol
 
         :data:`~numpy.exp`: :doc:`NumPy <numpy:index>` function
 
@@ -984,7 +986,7 @@ def expit(x: ArraySymbol) -> Expit:
         0.7310585786300049
 
     See Also:
-        :class:`~dwave.optimization.symbols.Expit`: Generated symbol.
+        :class:`~dwave.optimization.symbols.Expit`: Generated symbol
 
         :data:`~scipy.special.expit`: :doc:`SciPy <scipy:index>` function
 
@@ -1024,7 +1026,7 @@ def extract(condition: ArraySymbol, arr: ArraySymbol) -> Extract:
         [4. 6.]
 
     See Also:
-        :class:`~dwave.optimization.symbols.Extract`: Generated symbol.
+        :class:`~dwave.optimization.symbols.Extract`: Generated symbol
 
         :func:`~numpy.extract`: :doc:`NumPy <numpy:index>` function
 
@@ -1046,7 +1048,7 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
             shape along all but the second axis unless they are 1D arrays.
 
     Returns:
-        Symbol that concatenates its predecessor array symbols.
+        Successor symbol that concatenates its predecessor array symbols.
 
     Examples:
 
@@ -1074,7 +1076,7 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
                [3., 4., 5.]])
 
     See Also:
-        :class:`~dwave.optimization.symbols.Concatenate`: Generated symbol.
+        :class:`~dwave.optimization.symbols.Concatenate`: Generated symbol
 
         :func:`~numpy.hstack`: :doc:`NumPy <numpy:index>` function
 
@@ -1096,15 +1098,18 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
 def isin(element: ArraySymbol, test_elements: ArraySymbol) -> IsIn:
     """Return which values of one symbol are in another symbol.
 
-    Determines element-wise containment between two symbols, returning an array
-    symbol of the same shape as the first symbol with values being true if the
-    corresponding element in the first symbol is contained in the second and
-    false otherwise.
+    Determines element-wise containment between two symbols.
 
     Args:
         element: Array symbol.
         test_elements: Array symbol containing the values against which to test
             each value of the ``element`` symbol.
+
+    Returns:
+        Successor array symbol, with the same shape as ``element``, with values
+        being the element-wise containment between its two predecessor symbols;
+        i.e., true if the corresponding element in the first symbol is contained
+        in the second and false otherwise.
 
     Examples:
         >>> from dwave.optimization.model import Model
@@ -1120,7 +1125,7 @@ def isin(element: ArraySymbol, test_elements: ArraySymbol) -> IsIn:
         [0. 1. 1.]
 
     See Also:
-        :class:`~dwave.optimization.symbols.IsIn`: Generated symbol.
+        :class:`~dwave.optimization.symbols.IsIn`: Generated symbol
 
         :func:`~numpy.isin`: :doc:`NumPy <numpy:index>` function
 
@@ -1183,8 +1188,8 @@ def less_equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> LessEqual:
         x1, x2: Operand array symbol or |array-like|_.
 
     Returns:
-        Symbol that is the element-wise less than or equal for its predecessor
-        symbols (or arrays).
+        Successor symbol that is the element-wise less than or equal for its
+        predecessor symbols (or arrays).
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1326,7 +1331,7 @@ def log(x: ArraySymbol) -> Log:
         0.0
 
     See Also:
-        :class:`~dwave.optimization.symbols.Log`: Generated symbol.
+        :class:`~dwave.optimization.symbols.Log`: Generated symbol
 
         :data:`~numpy.log`: :doc:`NumPy <numpy:index>` function
 
@@ -1360,7 +1365,7 @@ def logical(x: ArraySymbol) -> Logical:
         [0. 1. 1. 1.]
 
     See Also:
-        :class:`~dwave.optimization.symbols.Logical`: Generated symbol.
+        :class:`~dwave.optimization.symbols.Logical`: Generated symbol
 
         :func:`.logical_and`, :func:`.logical_not`, :func:`.logical_or`,
         :func:`.logical_xor`
@@ -1376,8 +1381,8 @@ def logical_and(x1: ArraySymbolLike, x2: ArraySymbolLike) -> And:
         x1, x2: Operand array symbol or |array-like|_.
 
     Returns:
-        Symbol that is the element-wise AND of the array elements of its
-        predecessor symbols (or arrays).
+        Successor symbol that is the element-wise AND of the array elements of
+        its predecessor symbols (or arrays).
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1397,7 +1402,7 @@ def logical_and(x1: ArraySymbolLike, x2: ArraySymbolLike) -> And:
         >>> z_array = logical_and(x, [True, False, True])
 
     See Also:
-        :class:`~dwave.optimization.symbols.And`: Generated symbol.
+        :class:`~dwave.optimization.symbols.And`: Generated symbol
 
         :data:`~numpy.logical_and`: :doc:`NumPy <numpy:index>` function
 
@@ -1414,7 +1419,7 @@ def logical_not(x: ArraySymbol) -> Not:
         x: Predecessor array symbol.
 
     Returns:
-        Successor ymbol that is the element-wise NOT of the array elements of
+        Successor symbol that is the element-wise NOT of the array elements of
         its predecessor symbol.
 
     Examples:
@@ -1430,7 +1435,7 @@ def logical_not(x: ArraySymbol) -> Not:
         [1. 0. 0. 0.]
 
     See Also:
-        :class:`~dwave.optimization.symbols.Not`: Generated symbol.
+        :class:`~dwave.optimization.symbols.Not`: Generated symbol
 
         :data:`~numpy.logical_not`: :doc:`NumPy <numpy:index>` function
 
@@ -1448,8 +1453,8 @@ def logical_or(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Or:
         x1, x2: Operand array symbol or |array-like|_.
 
     Returns:
-        Symbol that is the element-wise OR of the array elements of its
-        predecessor symbols (or arrays).
+        Successor symbol that is the element-wise OR of the array elements of
+        its predecessor symbols (or arrays).
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1487,8 +1492,8 @@ def logical_xor(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Xor:
         x1, x2: Operand array symbol or |array-like|_.
 
     Returns:
-        Symbol that is the element-wise XOR of the array elements of its
-        predecessor symbols (or arrays).
+        Successor symbol that is the element-wise XOR of the array elements of
+        its predecessor symbols (or arrays).
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1540,8 +1545,8 @@ def matmul(x: ArraySymbolLike, y: ArraySymbolLike) -> MatrixMultiply:
     result after broadcasting.
 
     Returns:
-        Symbol representing the matrix product. For ``x`` and ``y`` with shapes
-        :math:`(..., n, k)` and :math:`(..., k, m)`, the generated
+        Successor symbol representing the matrix product. For ``x`` and ``y``
+        with shapes :math:`(..., n, k)` and :math:`(..., k, m)`, the generated
         :class:`~dwave.optimization.symbols.MatrixMultiply` has shape
         :math:`(..., n, m)`.
 
@@ -1567,7 +1572,7 @@ def matmul(x: ArraySymbolLike, y: ArraySymbolLike) -> MatrixMultiply:
         [22. 28.]
 
     See Also:
-        :class:`~dwave.optimization.symbols.MatrixMultiply`: Generated symbol.
+        :class:`~dwave.optimization.symbols.MatrixMultiply`: Generated symbol
 
         :data:`~numpy.matmul`: :doc:`NumPy <numpy:index>` function
 
@@ -1616,8 +1621,8 @@ def maximum(
         *xi: Additional array symbols or |array-like|_.
 
     Returns:
-        Symbol that is the element-wise maximum of the given symbols (or
-        arrays). For two symbols, creates an
+        Successor symbol that is the element-wise maximum of the predecessor
+        symbols (or arrays). For two symbols, creates a
         :class:`~dwave.optimization.symbols.Maximum` symbol on the
         :term:`directed acyclic expression graph <DAG>`; for three
         or more symbols, creates a
@@ -1675,7 +1680,7 @@ def mean(array: ArraySymbol) -> Mean:
         5.0
 
     See Also:
-        :class:`~dwave.optimization.symbols.Mean`: Generated symbol.
+        :class:`~dwave.optimization.symbols.Mean`: Generated symbol
 
         :func:`~numpy.mean`: :doc:`NumPy <numpy:index>` function
 
@@ -1690,26 +1695,21 @@ def minimum(
     x2: ArraySymbolLike,
     *xi: ArraySymbolLike,
 ) -> Minimum | NaryMinimum:
-    r"""Return an element-wise minimum of the given symbols.
-
-    In the underlying directed acyclic expression graph, produces a
-    ``Minimum`` node if two array nodes are provided and a
-    ``NaryMinimum`` node otherwise.
+    r"""Return an element-wise minimum of two or more symbols and arrays.
 
     Args:
-        x1, x2: Input array symbol.
-        *xi: Additional input array symbols.
+        x1, x2: Operand array symbol or |array-like|_.
+        *xi: Additional array symbols or |array-like|_.
 
     Returns:
-        A symbol that is the element-wise minimum of the given symbols.
-        Taking the element-wise minimum of two symbols returns a
-        :class:`~dwave.optimization.symbols.Minimum`.
-        Taking the element-wise minimum of three or more symbols returns a
-        :class:`~dwave.optimization.symbols.NaryMinimum`.
+        Successor symbol that is the element-wise minimum of the given symbols
+        (or arrays). For two symbols, creates a
+        :class:`~dwave.optimization.symbols.Minimum` symbol on the
+        :term:`directed acyclic expression graph <DAG>`; for three or more
+        symbols, creates a :class:`~dwave.optimization.symbols.NaryMinimum`
+        symbol.
 
     Examples:
-        This example minimizes two integer symbols of size :math:`1 \times 2`.
-
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import minimum
         ...
@@ -1723,30 +1723,38 @@ def minimum(
         ...     j.set_state(0, [7, 2])
         ...     print(m.state(0))
         [3. 2.]
+        >>> # Minimum between a symbol and an array
+        >>> m_array = minimum(i, [2, 6])
 
     See Also:
-        :class:`~dwave.optimization.symbols.Minimum`
+        :class:`~dwave.optimization.symbols.Minimum`,
+        :class:`~dwave.optimization.symbols.NaryMinimum`: Generated symbol
 
-        :class:`~dwave.optimization.symbols.NaryMinimum`
+        :data:`~numpy.minimum`: :doc:`NumPy <numpy:index>` function
+
+        :meth:`~dwave.optimization.model.ArraySymbol.min` method
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 @_binaryop(Modulus)
 def mod(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Modulus:
-    r"""Return an element-wise modulus of the given symbols.
+    r"""Return an element-wise modulus of two symbols (or arrays).
+
+    Equivalently, you can use the ``%`` operator (e.g., :code:`i % j`).
 
     Args:
-        x1, x2: Input array symbol.
+        x1: Dividend array symbol or |array-like|_.
+        x2: Divisor array symbol or |array-like|_.
 
     Returns:
-        A symbol that is the element-wise modulus of the given symbols.
+        Successor symbol that is the remainder of the predecessor symbols (or
+        arrays) element-wise.
 
     Examples:
         This example demonstrates the behavior of the modulus of two integer
         symbols :math:`i \mod{j}` with different combinations of positive and
-        negative values. Equivalently, you can use the ``%`` operator
-        (e.g., :code:`i % j`).
+        negative values.
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import mod
@@ -1769,9 +1777,8 @@ def mod(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Modulus:
         >>> from dwave.optimization.mathematical import mod
         ...
         >>> model = Model()
-        >>> i = model.constant(0.33)
         >>> j = model.binary(2)
-        >>> k = mod(i, j) # alternatively: k = i % j
+        >>> k = 0.33 % j # equivalently: k = mod(0.33, j)
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     j.set_state(0, [0, 1])
@@ -1779,7 +1786,13 @@ def mod(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Modulus:
         [0.   0.33]
 
     See Also:
-        :class:`~dwave.optimization.symbols.Modulus`
+        See Also:
+        :class:`~dwave.optimization.symbols.Modulus`: Generated symbol
+
+        :data:`~numpy.mod`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.add`, :func:`.divide`, :func:`.multiply`,
+        :func:`.safe_divide`, :func:`.subtract`
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
@@ -1790,27 +1803,23 @@ def multiply(
     x2: ArraySymbolLike,
     *xi: ArraySymbolLike,
 ) -> Multiply | NaryMultiply:
-    r"""Return an element-wise multiplication on the given symbols.
+    r"""Return an element-wise multiplication on two or more symbols and arrays.
 
-    In the underlying directed acyclic expression graph, produces a
-    ``Multiply`` node if two array nodes are provided and a
-    ``NaryMultiply`` node otherwise.
+    Equivalently, you can use the ``*`` operator (e.g., :code:`i * j`).
 
     Args:
-        x1, x2: Input array symbol.
-        *xi: Additional input array symbols.
+        x1, x2: Operand array symbol or |array-like|_ to be multiplied.
+        *xi: Additional array symbol or |array-like|_ to be multiplied.
 
     Returns:
-        A symbol that multiplies the given symbols element-wise.
-        Multipying two symbols returns a
-        :class:`~dwave.optimization.symbols.Multiply`.
-        Multiplying three or more symbols returns a
-        :class:`~dwave.optimization.symbols.NaryMultiply`.
+        Successor symbol that multiplies the predecessor symbols (and/or arrays)
+        element-wise. For two symbols, creates an
+        :class:`~dwave.optimization.symbols.Multiply` symbol on the
+        :term:`directed acyclic expression graph <DAG>`; for three or more
+        symbols, creates a :class:`~dwave.optimization.symbols.NaryMultiply`
+        symbol.
 
     Examples:
-        This example multiplies two integer symbols of size :math:`1 \times 2`.
-        Equivalently, you can use the ``*`` operator (e.g., :code:`i * j`).
-
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import multiply
         ...
@@ -1824,20 +1833,27 @@ def multiply(
         ...     j.set_state(0, [7, 2])
         ...     print(k.state(0))
         [21. 10.]
+        >>> # Multiplying a symbol by an array
+        >>> k_array = i * [8, 4] # equivalently: k_array = multiply(i, [8, 4])
 
     See Also:
-        :class:`~dwave.optimization.symbols.Multiply`
+        See Also:
+        :class:`~dwave.optimization.symbols.Multiply`,
+        :class:`~dwave.optimization.symbols.NaryMultiply`: Generated symbol
 
-        :class:`~dwave.optimization.symbols.NaryMultiply`
+        :data:`~numpy.multiply`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.add`, :func:`.divide`, :func:`.modulus`,
+        :func:`.safe_divide`, :func:`.subtract`
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
-    r"""Replace the specified elements in an array with given values.
+    r"""Replace the specified array elements with the specified values.
 
     This function is roughly equivalent to the following function defined for
-    NumPy arrays.
+    :doc:`NumPy <numpy:index>` arrays.
 
     .. code-block:: python
 
@@ -1847,23 +1863,22 @@ def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
             return array
 
     Args:
-        array: Base array. Must be not be a dynamic array nor a scalar.
+        array: Array symbol to modify. Must be not be a
+            :ref:`dynamically sized <optimization_philosophy_tensor_programming_dynamic>`
+            array symbol or a scalar.
         indices:
-            The indices in the flattened base array to be replaced.
+            Indices in the flattened ``array`` of values to be replaced.
 
             .. warning::
-                If ``indices`` has duplicate values, it is undefined which
-                of the possible corresponding values from ``values`` will
-                be propagated.
-                This will likely hurt the performance of the model.
-                Care should be taken to ensure that ``indices`` does not
-                contain duplicates.
+                Ensure that ``indices`` does not contain duplicate values.
+                For duplicate values, it is undefined which of the possible
+                corresponding values of ``values`` is propagated and performance
+                of the model is likely to be affected.
 
-        values: Values to place in ``array`` at ``indices``.
+        values: Values to place in ``array`` in the elements specified by
+            indices of ``indices``.
 
     Examples:
-        For some models, it is useful to overwrite some elements in an array.
-
         >>> import numpy as np
         >>> from dwave.optimization import Model
         >>> from dwave.optimization import put
@@ -1873,7 +1888,7 @@ def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
         >>> array = model.constant(np.zeros((3, 3)))
         >>> indices = model.constant([0, 1, 2])
         >>> values = model.integer(3)
-        >>> array = put(array, indices, values)  # replace array with one that has been overwritten
+        >>> array = put(array, indices, values)  # replace values in array
         ...
         >>> model.states.resize(1)
         >>> with model.lock():
@@ -1884,10 +1899,11 @@ def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
          [ 0.  0.  0.]]
 
     See Also:
-        :class:`~dwave.optimization.symbols.Put`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.Put`: Generated symbol
 
-        :func:`numpy.put`: The NumPy function that this function emulates for
-        :class:`~dwave.optimization.model.ArraySymbol`\s.
+        :func:`~numpy.put`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.extract`, :func:`.isin`, :func:`.where`
 
     .. versionadded:: 0.4.4
     """
@@ -1899,13 +1915,16 @@ def resize(
         shape: typing.Union[int, collections.abc.Sequence[int]],
         fill_value: None | float = None,
 ) -> Resize:
-    """Return a new :class:`~dwave.optimization.symbols.Resize` symbol with the given shape.
+    """Return a symbol resized to a specified shape.
 
     Args:
-        array: An array symbol.
+        array: Array symbol to be resized.
         shape: Shape of the new array. All dimension sizes must be non-negative.
-        fill_value: The value to be used if the resulting array is larger than
-            the given one. Defaults to 0.
+        fill_value: Value to be used if the successor array is larger than
+            its predecessor. Defaults to 0.
+
+    Returns:
+        Successor symbol with the specified shape.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -1926,9 +1945,17 @@ def resize(
         A :class:`~dwave.optimization.symbols.Resize` symbol.
 
     See also:
-        :class:`~dwave.optimization.symbols.Resize`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.Resize`: Generated symbol
 
-        :meth:`ArraySymbol.resize() <dwave.optimization.model.ArraySymbol.resize>`: equivalent method.
+        :func:`~numpy.resize`: :doc:`NumPy <numpy:index>` function
+
+        :meth:`~dwave.optimization.model.ArraySymbol.resize` method
+
+        :func:`.broadcast_to`,
+        :meth:`~dwave.optimization.model.ArraySymbol.copy`,
+        :meth:`~dwave.optimization.model.ArraySymbol.reshape`,
+        :func:`.roll`,
+        :func:`.transpose`
 
     .. versionadded:: 0.6.4
     """
@@ -1936,13 +1963,15 @@ def resize(
 
 
 def rint(x: ArraySymbol) -> Rint:
-    """Return an element-wise round to the nearest integer on the given symbol.
+    """Return an element-wise rounding on a symbol.
+
+    Rounds the value of every element to its nearest integer.
 
     Args:
-        x: Input symbol.
+        x: Array symbol.
 
     Returns:
-        A symbol that propagates the values of the given symbol rounded to the
+        Successor symbol with values of its predecessor symbol rounded to the
         nearest integer.
 
     Examples:
@@ -1968,15 +1997,18 @@ def roll(
     shift: ArraySymbol | tuple[int, ...] | int,
     axis: None | tuple[int, ...] | int = None,
 ) -> Roll:
-    """Roll array elements along the given axis.
+    """Return a symbol with array elements rolled along an axis.
 
     Args:
-        array: The input array.
-        shift: The number of places to shift the elements. If ``axis`` is given
-            then ``shift`` must be a single number that applies to all axes, or
-            the same length as ``axis``.
-        axis: The axis or axes to be shifted. If not provided the array is treated
+        array: Array symbol.
+        shift: Number of places to shift the array elements. If ``axis`` is
+            specified, ``shift`` must be a single number that applies to all
+            axes or the same length as ``axis``.
+        axis: Axis or axes to be shifted. If not specified, the array is treated
             as flat while shifting.
+
+    Returns:
+        Successor symbol with the values of its predecessor shifted.
 
     Examples:
         >>> from dwave.optimization import Model, roll
@@ -2002,7 +2034,15 @@ def roll(
          [9. 5. 6. 7. 8.]]
 
     See Also:
-        :class:`~dwave.optimization.symbols.Roll`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.Roll`: Generated symbol
+
+        :func:`~numpy.roll`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.broadcast_to`,
+        :meth:`~dwave.optimization.model.ArraySymbol.copy`,
+        :meth:`~dwave.optimization.model.ArraySymbol.reshape`,
+        :func:`.resize`,
+        :func:`.transpose`
 
     .. versionadded:: 0.6.9
     """
@@ -2011,7 +2051,8 @@ def roll(
 
 @_binaryop(SafeDivide)
 def safe_divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> SafeDivide:
-    r"""Divide the symbols element-wise, substituting ``0`` where ``x2 == 0``.
+    r"""Return an element-wise division of two symbols and 0 where the denominator
+    is zero.
 
     This function is not strictly mathematical division. Rather it encodes
     the following function:
@@ -2019,16 +2060,25 @@ def safe_divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> SafeDivide:
     .. math::
         f(a, b) = \begin{cases}
             a / b & \text{for } b \neq 0 \\
-            0 & \text{else}
+            0 & \text{for } b \eq 0
         \end{cases}
 
     Such a definition is useful [#buzzard]_ in cases where ``x2`` is non-zero by
-    construction or otherwise enforced to be non-zero.
+    construction, or otherwise enforced to be non-zero, because you can create a
+    model with division using a symbol that might otherwise have zero values.
 
     .. [#buzzard] Buzzard, Kevin (5 Jul 2020),
        `"Division by zero in type theory: a FAQ" <xena_>`_,
        Xena Project (Blog), retrieved 2025-05-20
     .. _xena: https://xenaproject.wordpress.com/2020/07/05/division-by-zero-in-type-theory-a-faq/
+
+    Args:
+        x1: Numerator array symbol or |array-like|_.
+        x2: Denominator array symbol or |array-like|_.
+
+    Returns:
+        Successor symbol that divides the predecessor symbols (or arrays)
+        element-wise.
 
     Examples:
         >>> from dwave.optimization import Model
@@ -2044,7 +2094,12 @@ def safe_divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> SafeDivide:
         [-0.5  0.   0.  -2. ]
 
     See Also:
-        :class:`~dwave.optimization.symbols.SafeDivide`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.SafeDivide`: Generated symbol
+
+        :data:`~numpy.divide`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.add`, :func:`.divide`, :func:`.mod`, :func:`.multiply`,
+        :func:`.subtract`
 
     .. versionadded:: 0.6.2
     """
@@ -2052,16 +2107,14 @@ def safe_divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> SafeDivide:
 
 
 def sin(x) -> Sin:
-    """Return an element-wise trigonometric sine on the given symbol.
+    """Return an element-wise trigonometric sine on a symbol.
 
     Args:
         x: Array giving the angles, in radians.
 
     Returns:
-        A symbol that propagates the trigonometric sine of the values in ``x``.
-
-    See Also:
-        :class:`~dwave.optimization.symbols.Sin`: equivalent symbol.
+        Successor symbol that is the trigonometric sine of the values in its
+        predecessor symbol.
 
     Examples:
         >>> import numpy as np
@@ -2076,22 +2129,34 @@ def sin(x) -> Sin:
         ...     print(y.state())
         [0. 1.]
 
+    See Also:
+        :class:`~dwave.optimization.symbols.Sin`: Generated symbol
+
+        :data:`~numpy.sin`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.cos`, :func:`.tanh`
+
     .. versionadded:: 0.6.5
     """
     return Sin(x)
 
 
 def softmax(array: ArraySymbol) -> SoftMax:
-    """Return softmax of a given symbol. Given a flattened array 
-    x: [x_1, x_2, ..., x_n], softmax(x) returns an array [y_1, y_2, ..., y_n] 
-    such that y_i = exp(x_i) / (exp(x_1) + exp(x_2) + ... + exp(x_n)).
+    r"""Return softmax of a symbol.
+
+    Given a flattened array :math:`x: [x_1, x_2, ..., x_n]`,
+    :math:`\text{softmax}(x)` returns an array :math:`[y_1, y_2, ..., y_n]`
+    such that
+    :math:`y_i = \frac{\exp(x_i)}{(\exp(x_1) + \exp(x_2) + ... + \exp(x_n))}`.
 
     Args:
-        array: Input array symbol.
+        array: Array symbol.
+
+    Returns:
+        Successor symbol where elements are the softmax of the predecessor
+        symbol's corresponding elements.
 
     Example:
-        This example computes the softmax of one symbol.
-
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import softmax
         >>> import numpy as np
@@ -2109,17 +2174,25 @@ def softmax(array: ArraySymbol) -> SoftMax:
     See Also:
         :class:`~dwave.optimization.symbols.SoftMax`: equivalent symbol.
 
+        :func:`~scipy.special.softmax`: :doc:`SciPy <scipy:index>` function
+
+        :func:`.exp`, :func:`.expit`, :func:`.log`
+
     .. versionadded:: 0.6.5
     """
     return SoftMax(array)
 
 
 def sqrt(x: ArraySymbol) -> SquareRoot:
-    r"""Return an element-wise sqrt on the given symbol.
+    r"""Return an element-wise square root on a symbol.
+
     Args:
-        x: Input symbol.
+        x: Array symbol.
+
     Returns:
-        A symbol that propagates the sqrt of the given symbol.
+        Successor symbol that is the square root of the values of its
+        predecessor symbol.
+
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import sqrt
@@ -2131,21 +2204,26 @@ def sqrt(x: ArraySymbol) -> SquareRoot:
         >>> with model.lock():
         ...     print(sqrt_x.state())
         4.0
+
     See Also:
-        :class:`~dwave.optimization.symbols.SquareRoot`: equivalent symbol.
+        :class:`~dwave.optimization.symbols.SquareRoot`: Generated symbol
+
+        :class:`~dwave.optimization.symbols.Square`
     """
     return SquareRoot(x)
 
 
 def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> ArraySymbol:
-    """Joins a sequence of ArraySymbols along a new axis.
+    """Stack a sequence of array symbols.
 
     Args:
-        arrays: sequence of ArraySymbol
+        arrays: Sequence of array symbols to join.
+
     Returns:
-        The joined ArraySymbols on a new axis
+        Successor symbol that joins its predecessor array symbols on an axis.
+
     Examples:
-        This example stacks three scalars on the first axis.
+        This example stacks three scalars on axis 0.
 
         >>> from dwave.optimization import Model, stack
         ...
@@ -2159,7 +2237,7 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
         ...     print(s.state(0))
         [1. 2. 3.]
 
-        This example stacks three 1d arrays on axis 0 and 1
+        This example stacks three 1D arrays on axis 0 and 1.
 
         >>> from dwave.optimization import Model, stack
         ...
@@ -2184,6 +2262,10 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
          [2. 4. 6.]]
 
     See Also:
+        :class:`~dwave.optimization.symbols.Concatenate`: Generated symbol
+
+        :func:`~numpy.stack`: :doc:`NumPy <numpy:index>` function
+
         :func:`~dwave.optimization.mathematical.concatenate`,
         :func:`~dwave.optimization.mathematical.hstack`,
         :func:`~dwave.optimization.mathematical.vstack`
@@ -2212,31 +2294,54 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
 
 @_binaryop(Subtract)
 def subtract(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Subtract:
-    """Return the element-wise subtraction of two symbols.
+    """Return the element-wise subtraction of two symbols (or arrays).
+
+    Equivalently, you can use the ``-`` operator (e.g., :code:`i - j`).
 
     Args:
-        x1, x2: Input array symbol.
+        x1, x2: Operand array symbol or |array-like|_ to subtract.
 
     Returns:
-        A symbol that is the element-wise subtraction.
+        Successor symbol that subtracts the predecessor symbols (or arrays)
+        element-wise.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import subtract
+        ...
+        >>> model = Model()
+        >>> i = model.integer(2, lower_bound=3)
+        >>> j = model.integer(2, upper_bound=20)
+        >>> k = subtract(i, j)   # alternatively: k = i - j
+        >>> with model.lock():
+        ...    model.states.resize(1)
+        ...    i.set_state(0, [21, 10])
+        ...    j.set_state(0, [7, 2])
+        ...    print(k.state(0))
+        [14. 8.]
+        >>> # Subtracting a symbol and an array
+        >>> l = i - [2, 2] # equivalently: l = subtract(i, [2, 2])
 
     See Also:
-        :class:`~dwave.optimization.Subtract`
+        :class:`~dwave.optimization.symbols.Subtract`: Generated symbol
+
+        :data:`~numpy.subtract`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.add`, :func:`.divide`, :func:`.mod`, :func:`.multiply`,
+        :func:`.safe_divide`
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 def tanh(x) -> Tanh:
-    """Return an element-wise trigonometric hyperbolic tangent on the given symbol.
+    """Return an element-wise trigonometric hyperbolic tangent on a symbol.
 
     Args:
         x: Array giving the angles, in radians.
 
     Returns:
-        A symbol that propagates the trigonometric hyperbolic tangent of the values in ``x``.
-
-    See Also:
-        :class:`~dwave.optimization.symbols.Tanh`: equivalent symbol.
+        Successor symbol that is the trigonometric hyperbolic tangent of the
+        values in its predecessor symbol.
 
     Examples:
         >>> import numpy as np
@@ -2251,26 +2356,35 @@ def tanh(x) -> Tanh:
         ...     print(y.state())
         [0.         0.91715234]
 
+    See Also:
+        :class:`~dwave.optimization.symbols.Tanh`: equivalent symbol.
+
+        :data:`~numpy.tanh`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.cos`, :func:`.sin`
+
     .. versionadded:: 0.6.11
     """
     return Tanh(x)
 
 
 def transpose(array: ArraySymbol) -> Transpose:
-    r"""Return transpose of the given symbol.
+    r"""Return the transpose of a symbol.
 
     Args:
-        array: Input symbol. If array is dynamic, it must have dimension at
-        most one.
+        array: Array symbol to transpose. For a
+            :ref:`dynamically sized <optimization_philosophy_tensor_programming_dynamic>`
+            array, must have dimension at most one.
 
     Returns:
-        A symbol that is the transpose of the given symbol. For a 1-D array,
-        this returns an unchanged view of the original array. For a 2-D array,
-        this is the standard matrix transpose. For an n-D array, the transpose
-        simply reverses the order of the axes.
+        Successor symbol that is the transpose of its predecessor symbol. For a
+        one-dimensional array, returns an unchanged view of the predecessor
+        array. For a 2D array, returns the standard matrix transpose. For an
+        :math:`n`-dimensional array, the transpose simply reverses the order of
+        the axes.
 
     Examples:
-        This example takes the transpose of a 5 element vector.
+        This example transposes a 5-element vector.
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import transpose
@@ -2284,7 +2398,7 @@ def transpose(array: ArraySymbol) -> Transpose:
         [0. 1. 2. 3. 4.]
 
 
-        This example takes the transpose of a :math:`2 \times 3` matrix.
+        This example transposes a :math:`2 \times 3` matrix.
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import transpose
@@ -2300,7 +2414,7 @@ def transpose(array: ArraySymbol) -> Transpose:
          [2. 5.]]
 
 
-        This example takes the transpose of a :math:`2 \times 3 \times 2` matrix.
+        This example transposes a :math:`2 \times 3 \times 2` matrix.
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import transpose
@@ -2322,22 +2436,30 @@ def transpose(array: ArraySymbol) -> Transpose:
     See Also:
         :class:`~dwave.optimization.symbols.Transpose`: equivalent symbol.
 
+        :func:`~numpy.transpose`: :doc:`NumPy <numpy:index>` function
+
+        :func:`.broadcast_to`,
+        :meth:`~dwave.optimization.model.ArraySymbol.copy`,
+        :meth:`~dwave.optimization.model.ArraySymbol.reshape`
+        :meth:`~dwave.optimization.model.ArraySymbol.resize`
+        :func:`.roll`
+
     .. versionadded:: 0.6.8
     """
     return Transpose(array)
 
 
 def vstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
-    """Stack a sequence of array symbols vertically.
+    """Vertically stack a sequence of array symbols.
 
-    This is equivalent to concatenation along the first axis.
+    Equivalent to concatenation along the first axis.
 
     Args:
         arrays: Array symbols to be concatenated. Arrays must have the same
-            shape along all but the first axis unless they are 0d or 1d arrays.
+            shape along all but the first axis unless they are 0D or 1D arrays.
 
     Returns:
-        An array symbol.
+        Successor array symbol that concatenates its predecessor array symbols.
 
     Examples:
 
@@ -2367,9 +2489,13 @@ def vstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
                [6., 7., 8.]])
 
     See Also:
+        :class:`~dwave.optimization.symbols.Concatenate`: Generated symbol
+
+        :func:`~numpy.vstack`: :doc:`NumPy <numpy:index>` function
+
         :func:`~dwave.optimization.mathematical.concatenate`,
-        :func:`~dwave.optimization.mathematical.stack`,
-        :func:`~dwave.optimization.mathematical.vstack`
+        :func:`~dwave.optimization.mathematical.hstack`,
+        :func:`~dwave.optimization.mathematical.stack`
 
     .. versionadded:: 0.6.0
     """
