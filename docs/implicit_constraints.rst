@@ -319,7 +319,7 @@ Example: Knapsack Problem
 --------------------------
 
 The `knapsack_problem <https://en.wikipedia.org/wiki/Knapsack_problem>`_
-requires that for a given a set of items, each with a weight and a value, you
+requires that for a given set of items, each with a weight and a value, you
 determine which items to include in a collection so that the total weight is
 less than or equal to a given limit (capacity) and the total value is maximized.
 
@@ -651,10 +651,10 @@ Overview
     |                          |                                                                   |
     |                          | - Sets are disjoint.                                              |
     +--------------------------+-------------------------------------------------------------------+
-    | ``primary_set_size`` is  | The number of unique items (universe ``range(primary_set_size)``) |
+    | ``primary_set_size``     | The number of unique items (universe ``range(primary_set_size)``) |
     |                          | in the overall pool to be distributed.                            |
     +--------------------------+-------------------------------------------------------------------+
-    | ``num_disjoint_sets`` is | The number of separate, unordered sets (e.g., bins, clusters) to  |
+    | ``num_disjoint_sets``    | The number of separate, unordered sets (e.g., bins, clusters) to  |
     |                          | create.                                                           |
     +--------------------------+-------------------------------------------------------------------+
     | Output in Solution       | ``set_collection`` provides access to individual sets. Each set   |
@@ -679,7 +679,7 @@ Example: Bin Packing Problem
 ----------------------------
 
 The `bin packing problem <https://en.wikipedia.org/wiki/Bin_packing_problem>`_
-is, for a given a set of items with specified weights, to pack them into the
+is, for a given set of items with specified weights, to pack them into the
 minimum number of bins, each with a fixed capacity.
 
 .. code:: python

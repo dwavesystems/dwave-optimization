@@ -62,7 +62,7 @@ Example: Traveling Salesperson
 
 The goal of the
 `traveling salesperson problem <https://en.wikipedia.org/wiki/Travelling_salesman_problem>`_
-(TSP) is, for a given a list of cities and distances between each pair of cities, to
+(TSP) is, for a given list of cities and distances between each pair of cities, to
 find the shortest possible route that visits each city exactly once and returns
 to the city of origin.
 
