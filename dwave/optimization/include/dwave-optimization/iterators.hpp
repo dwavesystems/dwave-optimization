@@ -175,18 +175,13 @@ class BufferIterator {
 
     /// Increment the iterator by `rhs` steps.
     BufferIterator& operator+=(difference_type rhs) {
-        // Increment our pointer by a number of bytes while maintaining const-correctness.
-        using ptr_type = std::conditional<std::is_const<From>::value, const char*, char*>::type;
-        ptr_ = reinterpret_cast<From*>(reinterpret_cast<ptr_type>(ptr_) + increment_(rhs));
+        increment_(rhs);
         return *this;
     }
 
     template <shape_like Shape>
     BufferIterator& operator+=(Shape&& rhs) {
-        // Increment our pointer by a number of bytes while maintaining const-correctness.
-        using ptr_type = std::conditional<std::is_const<From>::value, const char*, char*>::type;
-        ptr_ = reinterpret_cast<From*>(reinterpret_cast<ptr_type>(ptr_) +
-                                       increment_(std::forward<Shape>(rhs)));
+        increment_(std::forward<Shape>(rhs));
         return *this;
     }
     BufferIterator& operator+=(std::initializer_list<std::ptrdiff_t> rhs) {
@@ -326,7 +321,7 @@ class BufferIterator {
 
  private:
     // TODO: doc
-    std::ptrdiff_t increment_(shape_like auto&& multi_increment) {
+    void increment_(shape_like auto&& multi_increment) {
         assert(static_cast<ssize_t>(std::ranges::size(multi_increment)) == ndim_);
 
         std::ptrdiff_t offset = 0;  // the number of bytes we need to move
@@ -343,17 +338,14 @@ class BufferIterator {
             loc_[axis] += multi_increment[axis];
         }
 
-        return offset;
+        using ptr_type = std::conditional<std::is_const<From>::value, const char*, char*>::type;
+        ptr_ = reinterpret_cast<From*>(reinterpret_cast<ptr_type>(ptr_) + offset);
     }
 
-    // Return the pointer offset (in bytes) relative to the current
-    // position in order to increment the iterator n times.
-    // n can be negative.
-    // This method *does* update the loc_ but does not increment the pointer
-    // TODO: make that clearer
-    std::ptrdiff_t increment_(const ssize_t n = 1) {
-        if (n == 0) return 0;
-        if (ndim_ == 0) return 0;  // incrementing a scalar does nothing
+    // Advance the location of the iterator `n` times. `n` can be negative.
+    void increment_(const ssize_t n = 1) {
+        if (n == 0) return;
+        if (ndim_ == 0) return;  // incrementing a scalar does nothing
 
         assert(ndim_ > 0);
 
@@ -401,13 +393,14 @@ class BufferIterator {
             // qr.rem = 0;  // overwritten later, so skip resetting the .rem
 
             // if there's nothing left to do then exit early
-            if (qr.quot == 0) return offset;
+            if (qr.quot == 0) break;
         }
 
         offset += qr.quot * strides_[0];
         loc_[0] += qr.quot;
 
-        return offset;
+        using ptr_type = std::conditional<std::is_const<From>::value, const char*, char*>::type;
+        ptr_ = reinterpret_cast<From*>(reinterpret_cast<ptr_type>(ptr_) + offset);
     }
 
     // If we're const, then hold a const void*, else hold void*
