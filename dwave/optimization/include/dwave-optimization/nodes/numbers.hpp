@@ -320,10 +320,91 @@ class BinaryNode : public IntegerNode {
     BinaryNode(ssize_t size, double lower_bound, double upper_bound,
                std::vector<SumConstraint> sum_constraints = {});
 
+    /// ** Redefined NumberNode methods since BinaryNode has custom StateData **
+
+    /// @copydoc Node::revert()
+    void revert(State&) const noexcept override;
+
+    /// Initialize the state. Defaults to 0 if 0 is in range, otherwise defaults
+    /// to lower bound.
+    void initialize_state(State& state) const override;
+
+    /// Initialize a state from an existing container, taking ownership.
+    void initialize_state(State& state, std::vector<double>&& number_data) const;
+
+    /// Initialize a state from an existing container, making a copy.
+    template <std::ranges::range R>
+    void initialize_state(State& state, const R& values) const {
+        return initialize_state(state, std::vector<double>(values.begin(), values.end()));
+    }
+
+    /// Initialize the state of the node randomly
+    template <std::uniform_random_bit_generator Generator>
+    void initialize_state(State& state, Generator& rng) const {
+        // Currently do not support random node initialization with sum constraints.
+        if (sum_constraints_.size() > 0) {
+            throw std::invalid_argument("Cannot randomly initialize_state with sum constraints.");
+        }
+
+        std::vector<double> values;
+        const ssize_t size = this->size();
+        values.reserve(size);
+
+        if (integral()) {
+            for (ssize_t i = 0; i < size; ++i) {
+                std::uniform_int_distribution<ssize_t> gen(lower_bound(i), upper_bound(i));
+                values.emplace_back(gen(rng));
+            }
+        } else {
+            for (ssize_t i = 0; i < size; ++i) {
+                std::uniform_real_distribution<double> gen(lower_bound(i), upper_bound(i));
+                values.emplace_back(gen(rng));
+            }
+        }
+        return initialize_state(state, std::move(values));
+    }
+
+    /// @copydoc NumberNode::exchange()
+    void exchange(State& state, ssize_t i, ssize_t j,
+                  std::optional<std::vector<ssize_t>> i_slices = std::nullopt,
+                  std::optional<std::vector<ssize_t>> j_slices = std::nullopt) const;
+
+    /// @copydoc NumberNode::clip_and_set_value()
+    void clip_and_set_value(State& state, ssize_t index, double value,
+                            std::optional<std::vector<ssize_t>> slices = std::nullopt) const;
+
+    /// ** Redefined IntegerNode method since BinaryNode has custom StateData **
+
+    /// @copydoc IntegerNode::set_value()
+    void set_value(State& state, ssize_t index, double value,
+                   std::optional<std::vector<ssize_t>> slices = std::nullopt) const;
+
+    /// ************************** BinaryNode methods **************************
+
     // Flip the value (0 -> 1 or 1 -> 0) at `index` in the given state.
     // Users may pass the slices (per sum constraint) that `index` lies on.
     void flip(State& state, ssize_t index,
               std::optional<std::vector<ssize_t>> slices = std::nullopt) const;
+
+    /// Given a state and slice (w.r.t a sum constraint), return the number of
+    /// buffer values in the slice equal to 1.
+    ssize_t num_true(const State& state, const ssize_t sum_constraint,
+                     const ssize_t slice) const;
+
+    /// Given a state and slice (w.r.t a sum constraint), return the number of
+    /// buffer values in the slice equal to 0.
+    ssize_t num_false(const State& state, const ssize_t sum_constraint,
+                      const ssize_t slice) const;
+
+    /// Given a state and slice (w.r.t a sum constraint), return the `i`th
+    /// index in in the slice whose buffer value is 1.
+    ssize_t get_ith_true_index(const State& state, const ssize_t sum_constraint,
+                               const ssize_t slice, const ssize_t i) const;
+
+    /// Given a state and slice (w.r.t a sum constraint), return the `i`th
+    /// index in in the slice whose buffer value is 0.
+    ssize_t get_ith_false_index(const State& state, const ssize_t sum_constraint,
+                                const ssize_t slice, const ssize_t i) const;
 };
 
 }  // namespace dwave::optimization

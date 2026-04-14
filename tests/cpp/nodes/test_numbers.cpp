@@ -12,6 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <algorithm>
 #include <initializer_list>
 #include <optional>
 
@@ -31,6 +32,29 @@ using Operator = NumberNode::SumConstraint::Operator;
 using NumberNode::SumConstraint::Operator::Equal;
 using NumberNode::SumConstraint::Operator::GreaterEqual;
 using NumberNode::SumConstraint::Operator::LessEqual;
+
+/// Given state, BinaryNode, a particular sum constraint, and a slice w.r.t.
+/// the sum constraint, check whether the indices expected (`expected_indices`)
+/// to have buffer value equal to 1 (True == 1) or 0 (True == 0) are the
+/// indices recorded in BinaryNodeStateData::slice_indices_ to have buffer
+/// value 1 (True == 1) or 0 (True == 0).
+template <bool True>
+void check_indices(const State& state, const BinaryNode* node, const ssize_t sum_constraint_id,
+                   const ssize_t slice, std::vector<ssize_t> expected_indices) {
+    std::vector<ssize_t> recorded_indices;
+    const ssize_t num_indices = True ? node->num_true(state, sum_constraint_id, slice)
+                                     : node->num_false(state, sum_constraint_id, slice);
+    recorded_indices.reserve(num_indices);
+    for (ssize_t i = 0; i < num_indices; ++i) {
+        recorded_indices.emplace_back(
+                True ? node->get_ith_true_index(state, sum_constraint_id, slice, i)
+                     : node->get_ith_false_index(state, sum_constraint_id, slice, i));
+    }
+
+    std::sort(expected_indices.begin(), expected_indices.end());
+    std::sort(recorded_indices.begin(), recorded_indices.end());
+    CHECK(recorded_indices == expected_indices);
+}
 
 TEST_CASE("SumConstraint") {
     GIVEN("SumConstraint(axis = nullopt, operators = {}, bounds = {1.0})") {
@@ -734,10 +758,12 @@ TEST_CASE("BinaryNode") {
             std::vector<double> expected_init{0, 1, 1, 0, 0, 1};
             auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
-            THEN("Sum constraint sums and state are correct") {
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
                 CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
                 CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 1);
                 CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({3}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {1, 2, 5});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 3, 4});
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
@@ -787,10 +813,16 @@ TEST_CASE("BinaryNode") {
             std::vector<double> expected_init{0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1};
             auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
-            THEN("Sum constraint sums and state are correct") {
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
                 CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
                 CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 3);
                 CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 0, 3}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {2});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 3});
+                check_indices<true>(state, bnode_ptr, 0, 1, {});
+                check_indices<false>(state, bnode_ptr, 0, 1, {4, 5, 6, 7});
+                check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 11});
+                check_indices<false>(state, bnode_ptr, 0, 2, {10});
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
@@ -836,10 +868,14 @@ TEST_CASE("BinaryNode") {
 
             auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
-            THEN("Sum constraint sums and state are correct") {
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
                 CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
                 CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
                 CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({0, 5}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 4, 5, 8, 9});
+                check_indices<true>(state, bnode_ptr, 0, 1, {2, 3, 6, 7, 11});
+                check_indices<false>(state, bnode_ptr, 0, 1, {10});
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
@@ -885,10 +921,14 @@ TEST_CASE("BinaryNode") {
             std::vector<double> expected_init{0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1};
             auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
-            THEN("Sum constraint sums and state are correct") {
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
                 CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
                 CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
                 CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({3, 6}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {2, 4, 10});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 6, 8});
+                check_indices<true>(state, bnode_ptr, 0, 1, {1, 3, 5, 7, 9, 11});
+                check_indices<false>(state, bnode_ptr, 0, 1, {});
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
             }
         }
@@ -975,10 +1015,12 @@ TEST_CASE("BinaryNode") {
 
             auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
-            THEN("Sum constraint sums and state are correct") {
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
                 CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
                 CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 1);
                 CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {3, 4});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 2, 5, 6, 7});
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
             }
 
@@ -989,8 +1031,10 @@ TEST_CASE("BinaryNode") {
                 std::swap(init_values[2], init_values[3]);
                 // state is now: [0, 0, 1, 0, 1, 0, 0, 0]
 
-                THEN("Sum constraint sums and state updated correctly") {
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
                     CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {2, 4});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 3, 5, 6, 7});
                     CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -998,8 +1042,10 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("Sum constraint sums reverted correctly") {
+                    THEN("Sum constraint sums and tracked indices are reverted correctly") {
                         CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {3, 4});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 2, 5, 6, 7});
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1014,8 +1060,10 @@ TEST_CASE("BinaryNode") {
                 std::swap(init_values[2], init_values[3]);
                 // state is now: [0, 0, 1, 0, 1, 0, 0, 0]
 
-                THEN("Sum constraint sums and state updated correctly") {
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
                     CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {2, 4});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 3, 5, 6, 7});
                     CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1023,8 +1071,10 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("Sum constraint sums reverted correctly") {
+                    THEN("Sum constraint sums and tracked indices are reverted correctly") {
                         CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {3, 4});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 2, 5, 6, 7});
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1104,16 +1154,33 @@ TEST_CASE("BinaryNode") {
 
             auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
 
-            THEN("Sum constraint sums and state are correct") {
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
                 // **Python Code 1**
                 // import numpy as np
                 // a = np.asarray([0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
                 // a = a.reshape(3, 2, 2)
                 // a.sum(axis=(1, 2))
                 // >>> array([1, 2, 4])
+                // b = np.asarray([i for i in range(a.size)]).reshape(a.shape)
+                // for i in range(a.shape[0]):
+                //     print(b[i][a[i] == 1])
+                // >>> [1]
+                // >>> [6 7]
+                // >>> [ 8  9 10 11]
+                // for i in range(a.shape[0]):
+                //     print(b[i][a[i] == 0])
+                // >>> [0 2 3]
+                // >>> [4 5]
+                // >>> []
                 CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
                 CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 3);
                 CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                check_indices<false>(state, bnode_ptr, 0, 2, {});
                 CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
             }
 
@@ -1126,13 +1193,29 @@ TEST_CASE("BinaryNode") {
                 std::swap(init_values[1], init_values[3]);
                 // state is now: [0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1]
 
-                THEN("Sum constraint sums and state updated correctly") {
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(1, a.shape)] = 0
                     // a[np.unravel_index(3, a.shape)] = 1
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 2, 4])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [3]
+                    // >>> [6 7]
+                    // >>> [ 8  9 10 11]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 1 2]
+                    // >>> [4 5]
+                    // >>> []
                     CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {3});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 2});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {});
                     CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1140,9 +1223,15 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("Sum constraint sums reverted correctly") {
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1160,13 +1249,29 @@ TEST_CASE("BinaryNode") {
                 std::swap(init_values[1], init_values[3]);
                 // state is now: [0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1]
 
-                THEN("Sum constraint sums and state updated correctly") {
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(1, a.shape)] = 0
                     // a[np.unravel_index(3, a.shape)] = 1
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 2, 4])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [3]
+                    // >>> [6 7]
+                    // >>> [ 8  9 10 11]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 1 2]
+                    // >>> [4 5]
+                    // >>> []
                     CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {3});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 2});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {});
                     CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1174,15 +1279,23 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("Sum constraint sums reverted correctly") {
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
             }
 
             THEN("We clip_and_set_value() some values") {
+                // 0  1  2  3  4  5  6  7  8  9  10  11
+                // a = np.asarray([0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
                 bnode_ptr->clip_and_set_value(state, 5, -1);  // Does nothing.
                 bnode_ptr->clip_and_set_value(state, 7, -1);
                 bnode_ptr->clip_and_set_value(state, 9, 1);  // Does nothing.
@@ -1196,7 +1309,7 @@ TEST_CASE("BinaryNode") {
                 init_values[10] = 0;
                 // state is now: [0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1]
 
-                THEN("Sum constraint sums and state updated correctly") {
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(5, a.shape)] = 0
                     // a[np.unravel_index(7, a.shape)] = 0
@@ -1205,7 +1318,23 @@ TEST_CASE("BinaryNode") {
                     // a[np.unravel_index(10, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 1, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [6]
+                    // >>> [ 8  9 11]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [4 5 7]
+                    // >>> [10]
                     CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {6});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {4, 5, 7});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 11});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {10});
                     CHECK(bnode_ptr->diff(state).size() == 4);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1213,9 +1342,15 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("Sum constraint sums reverted correctly") {
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1241,7 +1376,7 @@ TEST_CASE("BinaryNode") {
                 init_values[10] = 0;
                 // state is now: [0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1]
 
-                THEN("Sum constraint sums and state updated correctly") {
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(5, a.shape)] = 0
                     // a[np.unravel_index(7, a.shape)] = 0
@@ -1250,7 +1385,23 @@ TEST_CASE("BinaryNode") {
                     // a[np.unravel_index(10, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 1, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [6]
+                    // >>> [ 8  9 11]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [4 5 7]
+                    // >>> [10]
                     CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {6});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {4, 5, 7});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 11});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {10});
                     CHECK(bnode_ptr->diff(state).size() == 4);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1258,9 +1409,15 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("Sum constraint sums reverted correctly") {
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1281,7 +1438,7 @@ TEST_CASE("BinaryNode") {
                 init_values[11] = 0;
                 // state is now: [0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0]
 
-                THEN("Sum constraint sums and state updated correctly") {
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(0, a.shape)] = 0
                     // a[np.unravel_index(6, a.shape)] = 0
@@ -1291,7 +1448,23 @@ TEST_CASE("BinaryNode") {
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 1, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [4]
+                    // >>> [ 8  9 10]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [5 6 7]
+                    // >>> [11]
                     CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {4});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {5, 6, 7});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {11});
                     CHECK(bnode_ptr->diff(state).size() == 4);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1299,9 +1472,15 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("Sum constraint sums reverted correctly") {
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1328,7 +1507,7 @@ TEST_CASE("BinaryNode") {
                 init_values[11] = 0;
                 // state is now: [0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0]
 
-                THEN("Sum constraint sums and state updated correctly") {
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(0, a.shape)] = 0
                     // a[np.unravel_index(6, a.shape)] = 0
@@ -1338,7 +1517,23 @@ TEST_CASE("BinaryNode") {
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 1, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [4]
+                    // >>> [ 8  9 10]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [5 6 7]
+                    // >>> [11]
                     CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {4});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {5, 6, 7});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {11});
                     CHECK(bnode_ptr->diff(state).size() == 4);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1346,9 +1541,15 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("Sum constraint sums reverted correctly") {
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1363,14 +1564,30 @@ TEST_CASE("BinaryNode") {
                 init_values[11] = !init_values[11];
                 // state is now: [0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0]
 
-                THEN("Sum constraint sums and state updated correctly") {
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(6, a.shape)] = 0
                     // a[np.unravel_index(4, a.shape)] = 1
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 2, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [4, 7]
+                    // >>> [ 8  9 10]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [5 6]
+                    // >>> [11]
                     CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {4, 7});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {5, 6});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {11});
                     CHECK(bnode_ptr->diff(state).size() == 3);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1378,9 +1595,15 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("Sum constraint sums reverted correctly") {
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
@@ -1398,14 +1621,30 @@ TEST_CASE("BinaryNode") {
                 init_values[11] = !init_values[11];
                 // state is now: [0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0]
 
-                THEN("Sum constraint sums and state updated correctly") {
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
                     // Cont. w/ Python code at **Python Code 1**
                     // a[np.unravel_index(6, a.shape)] = 0
                     // a[np.unravel_index(4, a.shape)] = 1
                     // a[np.unravel_index(11, a.shape)] = 0
                     // a.sum(axis=(1, 2))
                     // >>> array([1, 2, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [4, 7]
+                    // >>> [ 8  9 10]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [5 6]
+                    // >>> [11]
                     CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {4, 7});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {5, 6});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {11});
                     CHECK(bnode_ptr->diff(state).size() == 3);
                     CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
                 }
@@ -1413,9 +1652,15 @@ TEST_CASE("BinaryNode") {
                 AND_WHEN("We revert") {
                     graph.revert(state);
 
-                    THEN("Sum constraint sums reverted correctly") {
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
                                    RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
                         CHECK(bnode_ptr->diff(state).size() == 0);
                     }
                 }
