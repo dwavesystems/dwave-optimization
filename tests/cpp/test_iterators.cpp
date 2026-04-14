@@ -15,6 +15,7 @@
 #include <array>
 #include <cstdint>
 #include <numeric>
+#include <random>
 #include <vector>
 
 #include <iostream>
@@ -23,12 +24,93 @@
 #include "catch2/catch_template_test_macros.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/generators/catch_generators.hpp"
+#include "catch2/generators/catch_generators_random.hpp"
 #include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/iterators.hpp"
 
 using Catch::Matchers::RangeEquals;
+using Catch::Generators::RandomIntegerGenerator;
 
 namespace dwave::optimization {
+
+TEST_CASE("BufferIterator benchmarks") {
+    const ssize_t length = 100000;
+    RandomIntegerGenerator<int> rng(0, length - 1, 42);
+    std::vector<double> buffer;
+    std::vector<int> indices;
+    for (ssize_t i = 0; i < length; ++i) {
+        buffer.emplace_back(rng.get());
+        rng.next();
+        indices.emplace_back(rng.get());
+        rng.next();
+    }
+
+    BENCHMARK_ADVANCED("iterate over buffer[:]")(Catch::Benchmark::Chronometer meter) {
+        std::array<ssize_t, 1> shape{length};
+        std::array<ssize_t, 1> strides{sizeof(double)};
+
+        auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
+        const auto end = it + length;
+
+        meter.measure([&it, &end] {
+            volatile double a = 0;
+            while (it != end) {
+                a += *it;
+                ++it;
+            }
+            return a;
+        });
+    };
+
+    BENCHMARK_ADVANCED("iterate over buffer[:] with default sentinel")
+    (Catch::Benchmark::Chronometer meter) {
+        std::array<ssize_t, 1> shape{length};
+        std::array<ssize_t, 1> strides{sizeof(double)};
+
+        auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
+
+        meter.measure([&it] {
+            volatile double a = 0;
+            while (it != std::default_sentinel) {
+                a += *it;
+                ++it;
+            }
+            return a;
+        });
+    };
+
+    BENCHMARK_ADVANCED("iterate over buffer[::2] with default sentinel")
+    (Catch::Benchmark::Chronometer meter) {
+        std::array<ssize_t, 1> shape{length / 2};
+        std::array<ssize_t, 1> strides{2 * sizeof(double)};
+
+        auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
+
+        meter.measure([&it] {
+            volatile double a = 0;
+            while (it != std::default_sentinel) {
+                a += *it;
+                ++it;
+            }
+            return a;
+        });
+    };
+
+    BENCHMARK_ADVANCED("random access over buffer[:]")(Catch::Benchmark::Chronometer meter) {
+        std::array<ssize_t, 1> shape{length};
+        std::array<ssize_t, 1> strides{sizeof(double)};
+
+        auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
+
+        meter.measure([&indices, &it] {
+            volatile double a = 0;
+            for (const auto& idx : indices) {
+                a += it[idx];
+            }
+            return a;
+        });
+    };
+}
 
 TEMPLATE_TEST_CASE("BufferIterator", "",  //
                    float, double,         //

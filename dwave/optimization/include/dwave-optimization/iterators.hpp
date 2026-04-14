@@ -51,9 +51,11 @@ class BufferIterator {
               ndim_(other.ndim_),
               shape_(other.shape_),
               strides_(other.strides_),
-              loc_(std::make_unique_for_overwrite<ssize_t[]>(ndim_)) {
+              loc_(ndim_ > 0 ? std::make_unique_for_overwrite<ssize_t[]>(ndim_) : nullptr) {
         assert(ndim_ >= 0);
-        std::copy(other.loc_.get(), other.loc_.get() + ndim_, loc_.get());
+        for (ssize_t axis = 0; axis < ndim_; ++axis) {
+            loc_[axis] = other.loc_[axis];
+        }
     }
 
     /// Move constructor
@@ -72,7 +74,7 @@ class BufferIterator {
               ndim_(ndim),
               shape_(shape),
               strides_(strides),
-              loc_(std::make_unique<ssize_t[]>(ndim_)) {
+              loc_(ndim_ > 0 ? std::make_unique<ssize_t[]>(ndim_) : nullptr) {
         assert(ndim_ >= 0);
     }
 
@@ -83,7 +85,7 @@ class BufferIterator {
               ndim_(std::ranges::size(shape)),
               shape_(shape.data()),
               strides_(strides.data()),
-              loc_(std::make_unique<ssize_t[]>(ndim_)) {
+              loc_(ndim_ > 0 ? std::make_unique<ssize_t[]>(ndim_) : nullptr) {
         assert(ndim_ >= 0);
         assert(std::ranges::size(shape) == std::ranges::size(strides));
     }
@@ -91,15 +93,19 @@ class BufferIterator {
     BufferIterator& operator=(const BufferIterator& other) noexcept {
         ptr_ = other.ptr_;
         format_ = other.format_;
-
-        // Reallocate the location only if we have a different ndim.
-        // We'll overwrite it shortly
-        if (ndim_ != other.ndim_) loc_ = std::make_unique<ssize_t[]>(ndim_);
-
         ndim_ = other.ndim_;
         shape_ = other.shape_;
         strides_ = other.strides_;
-        std::copy(other.loc_.get(), other.loc_.get() + ndim_, loc_.get());
+
+        if (ndim_ > 0) {
+            loc_ = std::make_unique_for_overwrite<ssize_t[]>(ndim_);
+            for (ssize_t axis = 0; axis < ndim_; ++axis) {
+                loc_[axis] = other.loc_[axis];
+            }
+        } else {
+            assert(ndim_ >= 0);
+            loc_ = nullptr;
+        }
     }
 
     BufferIterator& operator=(BufferIterator&&) = default;
@@ -199,7 +205,14 @@ class BufferIterator {
                                   std::span(rhs.strides_, rhs.ndim_)) &&
                "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
 
-        return std::equal(lhs.loc_.get(), lhs.loc_.get() + lhs.ndim_, rhs.loc_.get());
+        // developer note: it ends up being much faster to check equality with a for-loop than
+        // to use std::equals(). At least when tested with gcc13. Probably because we're doing
+        // a very simple, contiguous comparison.
+
+        for (ssize_t axis = 0; axis < lhs.ndim_; ++axis) {
+            if (lhs.loc_[axis] != rhs.loc_[axis]) return false;
+        }
+        return true;
     }
 
     friend bool operator==(const BufferIterator& lhs, std::default_sentinel_t) {
