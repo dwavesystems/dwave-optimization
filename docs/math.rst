@@ -4,8 +4,9 @@
 Mathematical Functions
 ======================
 
-These functions create :ref:`symbols <symbols_model_symbols>` that perform
-mathematical operations on predecessor symbols and inputs.
+These functions add successor :ref:`symbols <symbols_model_symbols>` to a
+model's underlying :term:`directed acyclic graph` that perform mathematical
+operations on the predecessor symbols and inputs.
 
 .. currentmodule:: dwave.optimization
 
