@@ -31,6 +31,10 @@
 using Catch::Matchers::RangeEquals;
 using Catch::Generators::RandomIntegerGenerator;
 
+// todo: test shapes with 0s
+// todo: scalars vs 1D
+// todo: vector of structs
+
 namespace dwave::optimization {
 
 TEST_CASE("BufferIterator benchmarks") {
