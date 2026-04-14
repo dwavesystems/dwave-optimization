@@ -352,7 +352,7 @@ less than or equal to a given limit (capacity) and the total value is maximized.
     # --- Constraints ---
     # The sum of weights of selected items must not exceed capacity.
     total_weight_of_selected = WEIGHTS[selected_items].sum()
-    model.add_constraint(total_weight_of_selected <= CAPACITY, label="capacity_constraint")
+    model.add_constraint(total_weight_of_selected <= CAPACITY)
 
     # --- Objective Function ---
     # Maximize the total value of selected items.
@@ -533,7 +533,7 @@ capacity, and to minimize total distance. Each vehicle follows an ordered route.
     for k in range(num_vehicles):
         vehicle_route_k = routes[k] # Symbolic representation of the k-th route
         demand_on_route_k = DEMANDS[vehicle_route_k].sum()
-        model.add_constraint(demand_on_route_k <= CAPACITY, label=f"capacity_vehicle_{k}")
+        model.add_constraint(demand_on_route_k <= CAPACITY)
 
         num_cust_on_route_k = vehicle_route_k.size()
         # Placeholder cost: a real model uses distance matrices
@@ -716,7 +716,7 @@ minimum number of bins, each with a fixed capacity.
     for i in range(max_possible_bins):
         bin_i_contents = bins_collection[i] # Symbolic representation of items in bin i
         weight_in_bin_i = WEIGHTS[bin_i_contents].sum()
-        model.add_constraint(weight_in_bin_i <= CAPACITY) # Removed label
+        model.add_constraint(weight_in_bin_i <= CAPACITY)
 
     # --- Objective Function (Mirroring generator logic) ---
     # Minimize the number of bins used
