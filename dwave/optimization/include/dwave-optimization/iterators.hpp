@@ -116,7 +116,7 @@ class BufferIterator {
     reference operator*() const noexcept
         requires(std::same_as<const To, const From>)
     {
-        return *static_cast<From*>(ptr_);
+        return *ptr_;
     }
 
     /// Dereference the iterator when the iterator is not an output iterator.
@@ -151,7 +151,18 @@ class BufferIterator {
     }
 
     /// Access the value of the iterator at the given offset
-    decltype(auto) operator[](difference_type index) const noexcept { return *(*this + index); }
+    // decltype(auto) operator[](difference_type index) const noexcept { return *(*this + index); }
+
+    reference operator[](difference_type index) const noexcept
+        requires(std::same_as<const To, const From>)
+    {
+        return *increment_ptr_(index);
+    }
+    value_type operator[](difference_type index) const noexcept
+        requires(not std::same_as<const To, const From>)
+    {
+        assert(false);
+    }
 
     /// Preincrement operator.
     BufferIterator& operator++() { return *this += 1; }
@@ -401,6 +412,67 @@ class BufferIterator {
 
         using ptr_type = std::conditional<std::is_const<From>::value, const char*, char*>::type;
         ptr_ = reinterpret_cast<From*>(reinterpret_cast<ptr_type>(ptr_) + offset);
+    }
+
+    // todo: deduplicate this function and increment_()
+    From* increment_ptr_(const ssize_t n = 1) const {
+        if (n == 0) return ptr_;
+        if (ndim_ == 0) return ptr_;
+
+        assert(ndim_ > 0);
+
+        // working from right-to-left, figure out how many steps in each
+        // axis. We handle axis 0 as a special case
+
+        std::ptrdiff_t offset = 0;  // the number of bytes we need to move
+
+        // We'll be using std::div() over ssize_t, so we'll store our
+        // current location in the struct returned by it.
+        // Unfortunately std::div() is not templated, but overloaded,
+        // so we use decltype instead.
+        decltype(std::div(ssize_t(), ssize_t())) qr{.quot = n, .rem = 0};
+
+        for (ssize_t axis = ndim_ - 1; axis >= 1; --axis) {
+            // A bit of sanity checking on our location
+            // We can go "beyond" the relevant memory on the 0th axis, but
+            // otherwise the location must be nonnegative and strictly less
+            // than the size in that dimension.
+            assert(0 <= loc_[axis]);
+            assert(axis == 0 || loc_[axis] < shape_[axis]);
+
+            // if we're partway through the axis, we shift to
+            // the beginning by adding the number of steps to the total
+            // that we want to go, and updating the offset accordingly
+            if (loc_[axis]) {
+                qr.quot += loc_[axis];
+                offset -= loc_[axis] * strides_[axis];
+                // loc_[axis] = 0;  // overwritten later, so skip resetting the loc
+            }
+
+            // now, the number of steps might be more than our axis
+            // can support, so we do a div
+            qr = std::div(qr.quot, shape_[axis]);
+
+            // adjust so that the remainder is positive
+            if (qr.rem < 0) {
+                qr.quot -= 1;
+                qr.rem += shape_[axis];
+            }
+
+            // finally adjust our location and offset
+            // loc_[axis] = qr.rem;
+            offset += qr.rem * strides_[axis];
+            // qr.rem = 0;  // overwritten later, so skip resetting the .rem
+
+            // if there's nothing left to do then exit early
+            if (qr.quot == 0) break;
+        }
+
+        offset += qr.quot * strides_[0];
+        // loc_[0] += qr.quot;
+
+        using ptr_type = std::conditional<std::is_const<From>::value, const char*, char*>::type;
+        return reinterpret_cast<From*>(reinterpret_cast<ptr_type>(ptr_) + offset);
     }
 
     // If we're const, then hold a const void*, else hold void*
