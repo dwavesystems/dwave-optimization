@@ -69,7 +69,7 @@ NumberNode::SumConstraint::Operator NumberNode::SumConstraint::get_operator(
     return operators_[slice];
 }
 
-/// State dependant data attached to NumberNode
+/// State dependent data attached to NumberNode
 struct NumberNodeStateData : public ArrayNodeStateData {
  public:
     // User does not provide sum constraints.
@@ -84,20 +84,21 @@ struct NumberNodeStateData : public ArrayNodeStateData {
         return std::make_unique<NumberNodeStateData>(*this);
     }
 
-    /// Commit the state dependant data of NumberNode.
+    /// Commit the state dependent data of NumberNode.
     void commit() {
         ArrayNodeStateData::commit();  // Commit changes to the buffer.
         slice_cache_.clear();          // Empty the slice cache.
     }
 
-    /// Revert the state dependant data of NumberNode.
+    /// Revert the state dependent data of NumberNode.
     void revert();
 
     /// Update the relevant sum constraints running sums (`lhs`) given that the
-    /// value stored at `index` is changed by `difference`. Users may pass the
-    /// slices (per sum constraint) that `index` lies on.
+    /// value stored at `index` is changed by `difference`.
+    void update(const NumberNode& node, const ssize_t index, const double difference);
+    /// Users may pass the slices (per sum constraint) that `index` lies on.
     void update(const NumberNode& node, const ssize_t index, const double difference,
-                std::optional<std::vector<ssize_t>> slices);
+                std::vector<ssize_t> slices);
 
     /// For each sum constraint, track the sum of the values within each slice.
     /// `sum_constraints_lhs[i][j]` is the sum of the values within the `j`th slice
@@ -139,51 +140,54 @@ void NumberNodeStateData::revert() {
 }
 
 void NumberNodeStateData::update(const NumberNode& node, const ssize_t index,
-                                 const double difference,
-                                 std::optional<std::vector<ssize_t>> slices) {
+                                 const double difference) {
     const auto& sum_constraints = node.sum_constraints();
     assert(sum_constraints.size() != 0);  // Should only call where applicable.
     assert(difference != 0);              // Should not call when no change occurs.
     assert(sum_constraints.size() == sum_constraints_lhs.size());
 
-    if (slices.has_value()) {
-        // No need to compute the multidimensional indices of `index` given hinted `slices`.
-        assert(sum_constraints.size() == (*slices).size());
-        // For each sum constraint.
-        for (size_t i = 0, stop = sum_constraints.size(); i < stop; ++i) {
-            // Sanity check that the user provided slices for `index` are correct.
-            assert(([&]() {
-                const std::optional<const ssize_t> axis = sum_constraints[i].axis();
-                /// Determine the "slice" that index lies on given the sum constraint.
-                /// If `axis == std::nullopt`, the array is treated as a flat array with a
-                /// single slice. Otherwise, the slice is defined by multi_index.
-                if (!axis.has_value()) return (*slices)[i] == 0;
-                return (*slices)[i] == unravel_index(index, node.shape())[*axis];
-            })());
-            sum_constraints_lhs[i][(*slices)[i]] += difference;  // Offset slice sum.
-        }
-        slice_cache_.emplace_back(std::move(*slices));  // Cache the slices.
-    } else {
-        std::vector<ssize_t> cache_entry;  // Initialize the slice cache.
-        cache_entry.reserve(sum_constraints.size());
-        // Get multidimensional indices for `index` so we can identify the slices
-        // `index` lies on per sum constraint.
-        const std::vector<ssize_t> multi_index = unravel_index(index, node.shape());
-        assert(sum_constraints.size() <= multi_index.size());
-        // For each sum constraint.
-        for (size_t i = 0, stop = sum_constraints.size(); i < stop; ++i) {
+    std::vector<ssize_t> cache_entry;  // Initialize the slice cache.
+    cache_entry.reserve(sum_constraints.size());
+    // Get multidimensional indices for `index` so we can identify the slices
+    // `index` lies on per sum constraint.
+    const std::vector<ssize_t> multi_index = unravel_index(index, node.shape());
+    assert(sum_constraints.size() <= multi_index.size());
+    // For each sum constraint.
+    for (size_t i = 0, stop = sum_constraints.size(); i < stop; ++i) {
+        const std::optional<const ssize_t> axis = sum_constraints[i].axis();
+        /// Determine the "slice" that index lies on given the sum constraint.
+        /// If `axis == std::nullopt`, the array is treated as a flat array with a
+        /// single slice. Otherwise, the slice is defined by multi_index.
+        assert(!axis.has_value() || *axis < static_cast<ssize_t>(multi_index.size()));
+        const ssize_t slice = axis.has_value() ? multi_index[*axis] : 0;
+        assert(0 <= slice && slice < static_cast<ssize_t>(sum_constraints_lhs[i].size()));
+        sum_constraints_lhs[i][slice] += difference;  // Offset slice sum.
+        cache_entry.push_back(slice);                 // Record the slice in the cache.
+    }
+    slice_cache_.emplace_back(std::move(cache_entry));  // Cache the slices.
+}
+
+void NumberNodeStateData::update(const NumberNode& node, const ssize_t index,
+                                 const double difference, std::vector<ssize_t> slices) {
+    const auto& sum_constraints = node.sum_constraints();
+    assert(sum_constraints.size() != 0);  // Should only call where applicable.
+    assert(difference != 0);              // Should not call when no change occurs.
+    assert(sum_constraints.size() == sum_constraints_lhs.size());
+    assert(sum_constraints.size() == slices.size());
+    // For each sum constraint.
+    for (size_t i = 0, stop = sum_constraints.size(); i < stop; ++i) {
+        // Sanity check that the user provided slices for `index` are correct.
+        assert(([&]() {
             const std::optional<const ssize_t> axis = sum_constraints[i].axis();
             /// Determine the "slice" that index lies on given the sum constraint.
             /// If `axis == std::nullopt`, the array is treated as a flat array with a
-            /// single slice. Otherwise, the slice is defined by multi_index.
-            assert(!axis.has_value() || *axis < static_cast<ssize_t>(multi_index.size()));
-            const ssize_t slice = axis.has_value() ? multi_index[*axis] : 0;
-            assert(0 <= slice && slice < static_cast<ssize_t>(sum_constraints_lhs[i].size()));
-            sum_constraints_lhs[i][slice] += difference;  // Offset slice sum.
-            cache_entry.push_back(slice);                 // Record the slice in the cache.
-        }
-        slice_cache_.emplace_back(std::move(cache_entry));  // Cache the slices.
+            /// single slice. Otherwise, the slice is defined by unravel_index().
+            if (!axis.has_value()) return slices[i] == 0;
+            return slices[i] == unravel_index(index, node.shape())[*axis];
+        })());
+        sum_constraints_lhs[i][slices[i]] += difference;  // Offset slice sum.
     }
+    slice_cache_.emplace_back(std::move(slices));  // Cache the slices.
 }
 
 double const* NumberNode::buff(const State& state) const noexcept {
@@ -507,11 +511,18 @@ void NumberNode::exchange(State& state, ssize_t i, ssize_t j,
         // If change occurred and sum constraint exist, update running sums.
         if (sum_constraints_.size() > 0) {
             const double difference = state_data->get(i) - state_data->get(j);
-            assert(i_slices.has_value() == j_slices.has_value());
-            // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-            state_data->update(*this, i, difference, i_slices);
-            // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-            state_data->update(*this, j, -difference, j_slices);
+            if (i_slices.has_value()) {
+                assert(j_slices.has_value());
+                // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
+                state_data->update(*this, i, difference, *i_slices);
+                // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
+                state_data->update(*this, j, -difference, *j_slices);
+            } else {
+                // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
+                state_data->update(*this, i, difference);
+                // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
+                state_data->update(*this, j, -difference);
+            }
         }
     }
 }
@@ -563,7 +574,11 @@ void NumberNode::clip_and_set_value(State& state, ssize_t index, double value,
     if (state_data->set(index, value)) {
         // If change occurred and sum constraint exist, update running sums.
         if (sum_constraints_.size() > 0) {
-            state_data->update(*this, index, value - diff(state).back().old, slices);
+            if (slices.has_value()) {
+                state_data->update(*this, index, value - diff(state).back().old, *slices);
+            } else {
+                state_data->update(*this, index, value - diff(state).back().old);
+            }
         }
     }
 }
@@ -810,7 +825,11 @@ void IntegerNode::set_value(State& state, ssize_t index, double value,
     if (state_data->set(index, value)) {
         // If change occurred and sum constraint exist, update running sums.
         if (sum_constraints_.size() > 0) {
-            state_data->update(*this, index, value - diff(state).back().old, slices);
+            if (slices.has_value()) {
+                state_data->update(*this, index, value - diff(state).back().old, *slices);
+            } else {
+                state_data->update(*this, index, value - diff(state).back().old);
+            }
         }
     }
 }
@@ -924,7 +943,11 @@ void BinaryNode::flip(State& state, ssize_t index,
         if (sum_constraints_.size() > 0) {
             // If value changed from 0 -> 1, update by 1.
             // If value changed from 1 -> 0, update by -1.
-            state_data->update(*this, index, (state_data->get(index) == 1) ? 1 : -1, slices);
+            if (slices.has_value()) {
+                state_data->update(*this, index, (state_data->get(index) == 1) ? 1 : -1, *slices);
+            } else {
+                state_data->update(*this, index, (state_data->get(index) == 1) ? 1 : -1);
+            }
         }
     }
 }
