@@ -210,7 +210,7 @@ def bin_packing(weights: numpy.typing.ArrayLike,
 
         where here the second item with weight 5 is in one bin and the remaining
         items are in a second bin. The objective value for this solution is 2,
-        as shown in the following code.\ [#]_
+        as shown in the following code.
 
         The :meth:`~dwave.optimization.model.Model.iter_decisions` method
         obtains the decision variables of the generated model.
@@ -366,17 +366,33 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 
         meaning one vehicle visits customer sites :math:`2, 7, 1, 5` and the
         other vehicle visits the remaining sites. The objective value for this
-        solution is :math:`\approx 424`, as shown below.
+        solution is :math:`\approx 424`, as shown in the following code.
+
+        The :meth:`~dwave.optimization.model.Model.iter_decisions` method
+        obtains the decision variables of the generated model.
+
+        >>> route = next(model.iter_decisions())
+
+        To test the solution above, set it in the model as the state of the
+        decision variable. **Skip these next lines** if you have submitted your
+        model to the `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid`
+        nonlinear :term:`solver`.
+
+        >>> model.states.resize(1)
+        >>> route.set_state(0, [[2., 7., 1., 5.], [4., 3., 8., 6., 0.]])
+
+        You can use the :meth:`~dwave.optimization.model.Model.iter_constraints`
+        method to check feasibility of constructed or returned solutions. Here,
+        the number of states (:meth:`~dwave.optimization.states.States.size`) is
+        set to 1 for the constructed solution so a single value of the
+        :attr:`~dwave.optimization.model.Model.objective` property is printed.
 
         >>> with model.lock():
-        ...     model.states.resize(1)
-        ...     route = next(model.iter_decisions())
         ...     capacity_constraint = next(model.iter_constraints())
-        ...     route.set_state(0, [[2., 7., 1., 5.], [4., 3., 8., 6., 0.]])
-        ...     print(f"Objective value is {model.objective.state(0).round(2)}")
-        ...     print(f"Solution is feasible: {capacity_constraint.state(0)}")
-        Objective value is 423.8
-        Solution is feasible: 1.0
+        ...     for i in range(model.states.size()):
+        ...         if capacity_constraint.state(i):    # Filter on feasibility
+        ...             print(f"Objective value #{i} is {model.objective.state(0).round(2)}")
+        Objective value #0 is 423.8
     """
 
     if not isinstance(number_of_vehicles, int):
