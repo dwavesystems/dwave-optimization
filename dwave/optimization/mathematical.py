@@ -98,7 +98,6 @@ __all__ = [
     "isin",
     "less_equal",
     "linprog",
-    "LPResult",
     "log",
     "logical",
     "logical_and",
@@ -555,9 +554,6 @@ def atleast_2d(*arrays):
 
 def broadcast_shapes(*shapes: int | tuple[int, ...]) -> tuple[int, ...]:
     """Calculate the broadcast shape.
-
-    .. note:: This is a helper function that does not add a symbol to the
-        :term:`directed acyclic expression graph <DAG>` of your model.
 
     You can set a value of :math:`-1` for a dimension to calculate the broadcast
     shape for
