@@ -362,7 +362,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         An example feasible solution might be,
 
         .. math::
-            \{2., 7., 1., 5\} \text{ and } \{4., 3., 8., 6., 0.\},
+            [2., 7., 1., 5], [4., 3., 8., 6., 0.],
 
         meaning one vehicle visits customer sites :math:`2, 7, 1, 5` and the
         other vehicle visits the remaining sites. The objective value for this
@@ -371,7 +371,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         The :meth:`~dwave.optimization.model.Model.iter_decisions` method
         obtains the decision variables of the generated model.
 
-        >>> route = next(model.iter_decisions())
+        >>> routes = next(model.iter_decisions())
 
         To test the solution above, set it in the model as the state of the
         decision variable. **Skip these next lines** if you have submitted your
@@ -379,7 +379,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         nonlinear :term:`solver`.
 
         >>> model.states.resize(1)
-        >>> route.set_state(0, [[2., 7., 1., 5.], [4., 3., 8., 6., 0.]])
+        >>> routes.set_state(0, [[2., 7., 1., 5.], [4., 3., 8., 6., 0.]])
 
         You can use the :meth:`~dwave.optimization.model.Model.iter_constraints`
         method to check feasibility of constructed or returned solutions. Here,
@@ -606,6 +606,42 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
         The :ref:`opt_example_nl_cvrp` example demonstrates the use of the
         `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid` nonlinear
         :term:`solver` and handles the returned solutions for a similar problem.
+
+        An example feasible solution might be,
+
+        .. math::
+            [0, 2], [1],
+
+        meaning one vehicle visits customer sites :math:`0, 2` and the
+        other vehicle visits site :math:`1`. The objective value for this
+        solution is :math:`\approx 103`, as shown in the following code.
+
+        The :meth:`~dwave.optimization.model.Model.iter_decisions` method
+        obtains the decision variables of the generated model.
+
+        >>> routes = next(model.iter_decisions())
+
+        To test the solution above, set it in the model as the state of the
+        decision variable. **Skip these next lines** if you have submitted your
+        model to the `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid`
+        nonlinear :term:`solver`.
+
+        >>> model.states.resize(1)
+        >>> routes.set_state(0, [[0, 2], [1]])
+
+        You can use the :meth:`~dwave.optimization.model.Model.iter_constraints`
+        method to check feasibility of constructed or returned solutions. Here,
+        the number of states (:meth:`~dwave.optimization.states.States.size`) is
+        set to 1 for the constructed solution so a single value of the
+        :attr:`~dwave.optimization.model.Model.objective` property is printed.
+
+        >>> with model.lock():
+        ...     for i in range(model.states.size()):
+        ...         if all(sym.state(i) for sym in model.iter_constraints()): # Filter on feasibility:    # Filter on feasibility
+        ...             print((f"Objective value #{i} is {model.objective.state(0).round(2)}\n\t"
+                               f"Routes #{i} are {[r.state(i).tolist() for r in routes]}"))
+        Objective value #0 is 103.0
+            Routes #0 are [[0.0, 2.0], [1.0]]
     """
 
     if not isinstance(number_of_vehicles, int):
@@ -851,7 +887,44 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
         >>> processing_times = [[10, 5, 7], [20, 10, 15]]
         >>> model = flow_shop_scheduling(processing_times=processing_times)
 
+        An example feasible solution might be :math:`[1, 0, 2]`, meaning the
+        order of jobs is job 1 first, job 0 second, and job 2 last. The
+        objective value (makespan) for this solution is :math:`50`, as shown in
+        the following code.
 
+        The :meth:`~dwave.optimization.model.Model.iter_decisions` method
+        obtains the decision variables of the generated model.
+
+        >>> order = next(model.iter_decisions())
+
+        To test the solution above, set it in the model as the state of the
+        decision variable. **Skip these next lines** if you have submitted your
+        model to the `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid`
+        nonlinear :term:`solver`.
+
+        >>> model.states.resize(1)
+        >>> order.set_state(0, [1, 0, 2])
+
+        Here, the number of states
+        (:meth:`~dwave.optimization.states.States.size`) is set to 1 for the
+        constructed solution so a single value of the
+        :attr:`~dwave.optimization.model.Model.objective` property is printed.
+
+        >>> with model.lock():
+        ...     for i in range(model.states.size()):
+        ...         print(f"Order #{i} is {order.state(i).tolist()} with makespan {model.objective.state(0).round(2)}")
+        Order #0 is [1.0, 0.0, 2.0] with makespan 50.0
+
+        This solution is shown in the figure below.
+
+        .. figure:: /_images/flow_shop_scheduling_2x3.png
+            :width: 800 px
+            :name: flow-shop-scheduling-2x3-example
+            :alt: Image of the model constructed in this example, showing
+                the machines in two colors across three rows representing each
+                job.
+
+            Visualization of the solution.
     """
     processing_times = _require("processing_times", processing_times,
                                 ndim=2, nonnegative=True)
