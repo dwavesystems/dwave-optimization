@@ -235,7 +235,7 @@ def bin_packing(weights: numpy.typing.ArrayLike,
         ...     capacity_constraint = next(model.iter_constraints())
         ...     for i in range(model.states.size()):
         ...         if capacity_constraint.state(i):    # Filter on feasibility
-        ...             print(f"Objective value #{i} is {model.objective.state(0)}")
+        ...             print(f"Objective value #{i} is {model.objective.state(i)}")
         Objective value #0 is 2.0
     """
 
@@ -391,7 +391,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         ...     capacity_constraint = next(model.iter_constraints())
         ...     for i in range(model.states.size()):
         ...         if capacity_constraint.state(i):    # Filter on feasibility
-        ...             print(f"Objective value #{i} is {model.objective.state(0).round(2)}")
+        ...             print(f"Objective value #{i} is {model.objective.state(i).round(2)}")
         Objective value #0 is 423.8
     """
 
@@ -637,9 +637,9 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
 
         >>> with model.lock():
         ...     for i in range(model.states.size()):
-        ...         if all(sym.state(i) for sym in model.iter_constraints()): # Filter on feasibility:    # Filter on feasibility
-        ...             print((f"Objective value #{i} is {model.objective.state(0).round(2)}\n\t"
-                               f"Routes #{i} are {[r.state(i).tolist() for r in routes]}"))
+        ...         if all(sym.state(i) for sym in model.iter_constraints()): # Filter feasibility
+        ...             print((f"Objective value #{i} is {model.objective.state(i).round(2)}\n"
+        ...                    f"    Routes #{i} are {[r.state(i).tolist() for r in routes]}"))
         Objective value #0 is 103.0
             Routes #0 are [[0.0, 2.0], [1.0]]
     """
@@ -912,7 +912,8 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
 
         >>> with model.lock():
         ...     for i in range(model.states.size()):
-        ...         print(f"Order #{i} is {order.state(i).tolist()} with makespan {model.objective.state(0).round(2)}")
+        ...         print((f"Order #{i} is {order.state(i).tolist()} with makespan "
+        ...                f"{model.objective.state(i).round(2)}"))
         Order #0 is [1.0, 0.0, 2.0] with makespan 50.0
 
         This solution is shown in the figure below.
@@ -1087,8 +1088,8 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
 
         >>> with model.lock():
         ...     for i in range(model.states.size()):
-        ...         if all(sym.state(i) for sym in model.iter_constraints()): # Filter on feasibility:    # Filter on feasibility
-        ...             print((f"Makespan #{i} is {model.objective.state(0).round(2)} for scheule\n"
+        ...         if all(sym.state(i) for sym in model.iter_constraints()): # Filter feasibility
+        ...             print((f"Makespan #{i} is {model.objective.state(i).round(2)} for scheule\n"
         ...                    f"{schedule.state(i)}"))
         Makespan #0 is 7.0 for scheule
         [[0. 3. 4.]
@@ -1207,12 +1208,12 @@ def knapsack(values: numpy.typing.ArrayLike,
 
     Args:
         values:
-            A 1D |array-like|_ (row vector or Python list) of values per item.
-            The length of ``values`` must be equal to the length of
-            ``weights``. Values can be any non-negative number.
+            Value per item as a 1D |array-like|_ (row vector or Python list).
+            Length of ``values`` must be equal to the length of ``weights``.
+            Values can be any non-negative number.
 
         weights:
-            A 1D |array-like|_ (row vector or Python list) of weights per item.
+            Weight per item as a 1D |array-like|_ (row vector or Python list).
             Weights can be any non-negative number.
 
         capacity:
@@ -1221,10 +1222,51 @@ def knapsack(values: numpy.typing.ArrayLike,
     Returns:
         A model encoding the knapsack problem.
 
-    The model generated uses a :class:`dwave.optimization.Model.set` class as
-    the decision variable being optimized, with permutations of subsets of this
-    set representing possible items included in the knapsack.
+    Notes:
+        The model generated uses a
+        :class:`~dwave.optimization.symbols.SetVariable` class as the decision
+        variable being optimized, with permutations of the subsets of this
+        set representing possible items included in the knapsack.
 
+    Examples:
+
+        This example creates a model for a knapsack problem
+        with four items.
+
+        >>> from dwave.optimization.generators import knapsack
+        ...
+        >>> weights = [30, 10, 40, 20]
+        >>> values = [10, 20, 30, 40]
+        >>> model = knapsack(values=values, weights=weights, capacity=30)
+
+        An example feasible solution might be :math:`[1, 2]`, meaning the
+        knapsack should include the second and fourth items. The objective value
+        for this solution is :math:`-1(20 + 40) = -60`, as shown in
+        the following code.
+
+        The :meth:`~dwave.optimization.model.Model.iter_decisions` method
+        obtains the decision variables of the generated model.
+
+        >>> items = next(model.iter_decisions())
+
+        To test the solution above, set it in the model as the state of the
+        decision variable. **Skip these next lines** if you have submitted your
+        model to the `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid`
+        nonlinear :term:`solver`.
+
+        >>> model.states.resize(1)
+        >>> items.set_state(0, [1, 3])
+
+        Here, the number of states
+        (:meth:`~dwave.optimization.states.States.size`) is set to 1 for the
+        constructed solution so a single value of the
+        :attr:`~dwave.optimization.model.Model.objective` property is printed.
+
+        >>> with model.lock():
+        ...     for i in range(model.states.size()):
+        ...         print((f"Items in solution #{i} are {items.state(i)} with value "
+        ...                f"{-model.objective.state(i)}"))
+        Items in solution #0 are [1. 3.] with value 60.0
     """
     weights = _require("weights", weights, dtype=float, nonnegative=True, ndim=1)
     values = _require("values", values, dtype=float, nonnegative=True, ndim=1)
@@ -1265,7 +1307,7 @@ def knapsack(values: numpy.typing.ArrayLike,
 # the example in the unittests line-for-line
 @functools.singledispatch
 def predict(estimator, X: ArraySymbol) -> ArraySymbol:
-    """Predict ``y`` from ``X`` using the given ``estimator``.
+    """Predict ``y`` from ``X`` using a fitted estimator.
 
     Args:
         estimator:
@@ -1277,10 +1319,10 @@ def predict(estimator, X: ArraySymbol) -> ArraySymbol:
             :class:`~sklearn.neural_network.MLPClassifier` is supported.
 
         X:
-            An array symbol representing the input data.
+            Input data as an array symbol.
 
     Returns:
-        The predicted values, ``y``.
+        Predicted values, ``y``.
 
     Raises:
         NotImplementedError: There are many ways to train estimators, some cases
@@ -1289,6 +1331,11 @@ def predict(estimator, X: ArraySymbol) -> ArraySymbol:
             cases.
 
     Examples:
+        This example solves a
+        `knapsack problem <https://en.wikipedia.org/wiki/Knapsack_problem>`_
+        (see also the :func:`knapsack` function) where weights are known but
+        values (prices) for these items are noisy observations.
+
         .. code-block:: python
 
             import itertools
@@ -1299,11 +1346,11 @@ def predict(estimator, X: ArraySymbol) -> ArraySymbol:
             from dwave.optimization.generators import predict
             from sklearn.neural_network import MLPRegressor
 
-            # The values are know exactly
+            # The weights are known exactly
             weights = np.asarray([12, 1, 1, 2, 4])
 
-            # But rather than the values being known directly, we only have observations
-            # with noise
+            # But the values, rather than being known directly, are given only
+            # through noisy observations
             def observations():
                 secret_values = np.asarray([4, 2, 1, 2, 10])
 
@@ -1316,11 +1363,11 @@ def predict(estimator, X: ArraySymbol) -> ArraySymbol:
 
             X, y = observations()
 
-            # We can now fit a multi-layer perceptron estimator to our observations. The
-            # estimator, given a collection of purchases, estimates the value
+            # You can now fit a multi-layer perceptron estimator to these observations. The
+            # estimator, given a collection of purchases, estimates the values of the items
             regr = MLPRegressor(max_iter=2000).fit(X, y)
 
-            # Now we can use that estimator to construct our knapsack problem
+            # Now you can use that estimator to construct a knapsack problem
             model = Model()
 
             items = model.binary(shape=(1, 5))
@@ -1328,8 +1375,8 @@ def predict(estimator, X: ArraySymbol) -> ArraySymbol:
             model.minimize(-predict(regr, items))
             model.add_constraint(items @ weights <= 15)
 
-            # Finally, we can solve it exactly by trying all possible solutions, and check
-            # that our solution is the correct one
+            # Finally, you can solve exactly by trying all possible solutions, and check
+            # that the solution is the correct one
             model.lock()
             model.states.resize(1)
 
@@ -1441,25 +1488,75 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
     The
     `quadratic assignment <https://en.wikipedia.org/wiki/Quadratic_assignment_problem>`_
     is, for a given list of facilities, the distances between them, and the flow
-    between each pair of facilities, minimize the sum of the products of distances
-    and flows.
+    between each pair of facilities, to minimize the sum of the products of
+    distances and flows.
 
     Args:
         distance_matrix:
-            An array-like where ``distance_matrix[n, m]`` is the distance
-            between location ``n`` and ``m``. Represents the (known and constant)
-            distances between every possible pair of facility locations: in real-world
-            problems, such a matrix can be generated from an application with
-            access to an online map.
+            Distances as an |array-like|_, where ``distance_matrix[n, m]`` is
+            the distance between location :math:`n` and :math:`m`. Represents
+            the (known and constant) distances between every possible pair of
+            facility locations: in real-world problems, such a matrix can be
+            generated from an application with access to an online map.
 
         flow_matrix:
-            A array-like where ``flow_matrix[n, m]`` is the flow
-            between location ``n`` and ``m``. Represents the (known and constant)
-            flow between every possible pair of facility location.
+            Flows as an |array-like|_, where ``flow_matrix[n, m]`` is the flow
+            between location :math:`n` and :math:`m`. Represents the (known and
+            constant) flow between every possible pair of facility location.
 
     Returns:
-        A model encoding the quadratic_assignment problem.
+        A model encoding the quadratic-assignment problem.
 
+    Notes:
+        The model generated uses a
+        :class:`~dwave.optimization.symbols.ListVariable` class as the decision
+        variable being optimized, with permutations of the values of this
+        list representing assignments of facilities to locations.
+
+    Examples:
+
+        This example creates a model for a quadratic-assignment problem
+        that has three facilites to place in three locations.
+
+        >>> from dwave.optimization.generators import quadratic_assignment
+        ...
+        >>> distance_matrix = [[0, 5, 3],
+        ...                    [5, 0, 2],
+        ...                    [3, 2, 0]]
+        >>> flow_matrix = [[0, 1, 3],
+        ...                [4, 0, 2],
+        ...                [1, 1, 0]]
+        >>> model = quadratic_assignment(distance_matrix=distance_matrix, flow_matrix=flow_matrix)
+
+        An example feasible solution might be :math:`[2, 1, 0]`, meaning that
+        facility two should be on site zero, facility one should be on site one,
+        and facility zero should be on site two,. The objective value
+        for this solution is :math:`37`, as shown in
+        the following code.
+
+        The :meth:`~dwave.optimization.model.Model.iter_decisions` method
+        obtains the decision variables of the generated model.
+
+        >>> locations = next(model.iter_decisions())
+
+        To test the solution above, set it in the model as the state of the
+        decision variable. **Skip these next lines** if you have submitted your
+        model to the `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid`
+        nonlinear :term:`solver`.
+
+        >>> model.states.resize(1)
+        >>> locations.set_state(0, [2, 1, 0])
+
+        Here, the number of states
+        (:meth:`~dwave.optimization.states.States.size`) is set to 1 for the
+        constructed solution so a single value of the
+        :attr:`~dwave.optimization.model.Model.objective` property is printed.
+
+        >>> with model.lock():
+        ...     for i in range(model.states.size()):
+        ...         print((f"Locations for solution #{i} are {locations.state(i)} with objective "
+        ...                f"value of {model.objective.state(i)}"))
+        Locations for solution #0 are [2. 1. 0.] with objective value of 37.0
     """
     distance_matrix = _require("distance_matrix", distance_matrix,
                                dtype=float, ndim=2, nonnegative=True, square=True)
