@@ -847,11 +847,11 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
 
     `Flow-shop scheduling <https://en.wikipedia.org/wiki/Flow-shop_scheduling>`_
     is a variant of the renowned :func:`.job_shop_scheduling` optimization problem.
-    Given `n` jobs to schedule on `m` machines, with specified processing
-    times for each job per machine, minimize the makespan (the total
+    Given :math:`n` jobs to schedule on :math:`m` machines, with specified
+    processing times for each job per machine, minimize the makespan (the total
     length of the schedule for processing all the jobs). For every job, the
-    `i`-th operation is executed on the `i`-th machine. No machine can
-    perform more than one operation simultaneously.
+    :math:`i`-th operation is executed on the :math:`i`-th machine. No machine
+    can perform more than one operation simultaneously.
 
     `E. Taillard <http://mistic.heig-vd.ch/taillard/problemes.dir/problemes.html>`_
     provides benchmark instances compatible with this generator.
@@ -865,7 +865,7 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
         processing_times:
             Processing times, as an :math:`m \times n` |array-like|_ of
             integers, where ``processing_times[m, n]`` is the time job
-            `n` is on machine `m`.
+            :math:`n` is on machine :math:`m`.
 
     Returns:
         A model encoding the flow-shop scheduling problem.
@@ -986,10 +986,13 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
                         ) -> Model:
     r"""Generate a model encoding a job-shop scheduling problem.
 
-    `Job-shop scheduling <https://en.wikipedia.org/wiki/Job-shop_scheduling>`_
-    has many variants. This generator implements a variant of job-shop
-    scheduling with the additional assumption that every job makes use of
-    every machine.
+    There are many variants of
+    `job-shop scheduling <https://en.wikipedia.org/wiki/Job-shop_scheduling>`_,
+    a problem where given :math:`n` jobs to schedule on :math:`m` machines, with
+    specified processing times for each job per machine, the aim is to minimize
+    the makespan (the total length of the schedule for processing all the jobs).
+    This generator implements a variant of job-shop scheduling with the
+    additional assumption that every job makes use of every machine.
 
     `E. Taillard <http://mistic.heig-vd.ch/taillard/problemes.dir/problemes.html>`_
     provides benchmark instances compatible with this generator.
@@ -1012,21 +1015,25 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
 
     Args:
         times:
-            Processing times as an ``n`` jobs by ``m`` machines |array-like|_
-            where ``times[n, m]`` is the processing time of job ``n`` on machine
-            ``m``.
+            Processing times as an :math:`n` jobs by :math:`m` machines
+            |array-like|_ where ``times[n, m]`` is the processing time of job
+            :math:`n` on machine :math:`m`.
         machines:
-            Machine order as an ``n`` jobs by ``m`` machines |array-like|_ where
-            ``machines[n, :]`` is the order of machines that job ``n`` is
-            processed on.
+            Machine order as an :math:`n` jobs by :math:`m` machines
+            |array-like|_ where ``machines[n, :]`` is the order of machines that
+            job :math:`n` is processed on.
         upper_bound:
-            Upper bound on the makespan.
-            If not given, defaults to ``times.sum()``.
-            Note that if ``upper_bound`` is too small the model may be
-            infeasible.
+            Upper bound on the makespan. If not given, defaults to
+            ``times.sum()``.  Note that if ``upper_bound`` is too small the
+            model may be infeasible.
 
     Returns:
         A model encoding the job-shop scheduling problem.
+
+    Notes:
+        The model uses a :class:`~dwave.optimization.symbols.IntegerVariable`
+        class as the decision variable being optimized, with permutations of its
+        values representing various start times for tasks.
 
     Examples:
 
@@ -1056,21 +1063,48 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
         job starts on the third machine at time 0, on the first machine at time
         2, and on the second machine at time 6; the third job starts on the
         third machine at time 2, on the second machine at time 4, and on the
-        first machine at time 6. The makespan (objective value) is 7.
+        first machine at time 6. The makespan (objective value) is 7, as shown
+        in the following code.
+
+        The :meth:`~dwave.optimization.model.Model.iter_decisions` method
+        obtains the decision variables of the generated model.
+
+        >>> schedule = next(model.iter_decisions())
+
+        To test the solution above, set it in the model as the state of the
+        decision variable. **Skip these next lines** if you have submitted your
+        model to the `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid`
+        nonlinear :term:`solver`.
+
+        >>> model.states.resize(1)
+        >>> schedule.set_state(0, [[0, 3, 4], [2, 6, 0], [6, 4, 2]])
+
+        You can use the :meth:`~dwave.optimization.model.Model.iter_constraints`
+        method to check feasibility of constructed or returned solutions. Here,
+        the number of states (:meth:`~dwave.optimization.states.States.size`) is
+        set to 1 for the constructed solution so a single value of the
+        :attr:`~dwave.optimization.model.Model.objective` property is printed.
 
         >>> with model.lock():
-        ...     model.states.resize(1)
-        ...     times, = model.iter_decisions()
-        ...     times.set_state(0, [[0., 3., 4.], [2., 6., 0.], [6., 4., 2.]])
-        ...     print(f"Makespan is {model.objective.state(0)}")
-        ...     print(f"Solution is feasible: {all(sym.state(0) for sym in model.iter_constraints())}")
-        Makespan is 7.0
-        Solution is feasible: True
+        ...     for i in range(model.states.size()):
+        ...         if all(sym.state(i) for sym in model.iter_constraints()): # Filter on feasibility:    # Filter on feasibility
+        ...             print((f"Makespan #{i} is {model.objective.state(0).round(2)} for scheule\n"
+        ...                    f"{schedule.state(i)}"))
+        Makespan #0 is 7.0 for scheule
+        [[0. 3. 4.]
+         [2. 6. 0.]
+         [6. 4. 2.]]
 
-    Notes:
-        The model uses a :class:`~dwave.optimization.symbols.IntegerVariable`
-        class as the decision variable being optimized, with permutations of its
-        values representing various start times for tasks.
+        This solution is shown in the figure below.
+
+        .. figure:: /_images/job_shop_scheduling_3x3.png
+            :width: 800 px
+            :name: job-shop-scheduling-3x3-example
+            :alt: Image of the model constructed in this example, showing
+                the jobs in three colors across three rows representing each
+                job.
+
+            Visualization of the solution.
     """
     times = _require("times", times, ndim=2, dtype=int, nonnegative=True)
     machines = _require("machines", machines, ndim=2, dtype=int, nonnegative=True)
