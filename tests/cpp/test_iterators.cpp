@@ -14,11 +14,10 @@
 
 #include <array>
 #include <cstdint>
+#include <iostream>
 #include <numeric>
 #include <random>
 #include <vector>
-
-#include <iostream>
 
 #include "catch2/benchmark/catch_benchmark_all.hpp"
 #include "catch2/catch_template_test_macros.hpp"
@@ -28,8 +27,8 @@
 #include "catch2/matchers/catch_matchers_all.hpp"
 #include "dwave-optimization/iterators.hpp"
 
-using Catch::Matchers::RangeEquals;
 using Catch::Generators::RandomIntegerGenerator;
+using Catch::Matchers::RangeEquals;
 
 // todo: test shapes with 0s
 // todo: scalars vs 1D
@@ -37,91 +36,140 @@ using Catch::Generators::RandomIntegerGenerator;
 
 namespace dwave::optimization {
 
-TEST_CASE("BufferIterator benchmarks") {
-    const ssize_t length = 100000;
-    RandomIntegerGenerator<int> rng(0, length - 1, 42);
-    std::vector<double> buffer;
-    std::vector<int> indices;
-    for (ssize_t i = 0; i < length; ++i) {
-        buffer.emplace_back(rng.get());
-        rng.next();
-        indices.emplace_back(rng.get());
-        rng.next();
+// TEST_CASE("BufferIterator benchmarks") {
+//     const ssize_t length = 100000;
+//     RandomIntegerGenerator<int> rng(0, length - 1, 42);
+//     std::vector<double> buffer;
+//     std::vector<int> indices;
+//     for (ssize_t i = 0; i < length; ++i) {
+//         buffer.emplace_back(rng.get());
+//         rng.next();
+//         indices.emplace_back(rng.get());
+//         rng.next();
+//     }
+
+//     BENCHMARK_ADVANCED("iterate over buffer[:]")(Catch::Benchmark::Chronometer meter) {
+//         std::array<ssize_t, 1> shape{length};
+//         std::array<ssize_t, 1> strides{sizeof(double)};
+
+//         auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
+//         const auto end = it + length;
+
+//         meter.measure([&it, &end] {
+//             volatile double a = 0;
+//             while (it != end) {
+//                 a += *it;
+//                 ++it;
+//             }
+//             return a;
+//         });
+//     };
+
+//     BENCHMARK_ADVANCED("iterate over buffer[:] with default sentinel")
+//     (Catch::Benchmark::Chronometer meter) {
+//         std::array<ssize_t, 1> shape{length};
+//         std::array<ssize_t, 1> strides{sizeof(double)};
+
+//         auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
+
+//         meter.measure([&it] {
+//             volatile double a = 0;
+//             while (it != std::default_sentinel) {
+//                 a += *it;
+//                 ++it;
+//             }
+//             return a;
+//         });
+//     };
+
+//     BENCHMARK_ADVANCED("iterate over buffer[::2] with default sentinel")
+//     (Catch::Benchmark::Chronometer meter) {
+//         std::array<ssize_t, 1> shape{length / 2};
+//         std::array<ssize_t, 1> strides{2 * sizeof(double)};
+
+//         auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
+
+//         meter.measure([&it] {
+//             volatile double a = 0;
+//             while (it != std::default_sentinel) {
+//                 a += *it;
+//                 ++it;
+//             }
+//             return a;
+//         });
+//     };
+
+//     BENCHMARK_ADVANCED("random access over buffer[:]")(Catch::Benchmark::Chronometer meter) {
+//         std::array<ssize_t, 1> shape{length};
+//         std::array<ssize_t, 1> strides{sizeof(double)};
+
+//         auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
+
+//         meter.measure([&indices, &it] {
+//             volatile double a = 0;
+//             for (const auto& idx : indices) {
+//                 a += it[idx];
+//             }
+//             return a;
+//         });
+//     };
+// }
+
+TEMPLATE_PRODUCT_TEST_CASE("BufferIterator", "", BufferIterator,
+                           (const float,                               //
+                            const double,                              //
+                            const bool,                                //
+                            const std::int8_t,                         //
+                            const std::int16_t,                        //
+                            const std::int32_t,                        //
+                            const std::int64_t,                        //
+                            (float, float),                            //
+                            (double, double),                          //
+                            (bool, bool),                              //
+                            (std::int8_t, std::int8_t),                //
+                            (std::int16_t, std::int16_t),              //
+                            (std::int32_t, std::int32_t),              //
+                            (std::int64_t, std::int64_t),              //
+                            (const float, float),                      //
+                            (const double, double),                    //
+                            (const bool, bool),                        //
+                            (const std::int8_t, std::int8_t),          //
+                            (const std::int16_t, std::int16_t),        //
+                            (const std::int32_t, std::int32_t),        //
+                            (const std::int64_t, std::int64_t),        //
+                            (const float, const float),                //
+                            (const double, const double),              //
+                            (const bool, const bool),                  //
+                            (const std::int8_t, const std::int8_t),    //
+                            (const std::int16_t, const std::int16_t),  //
+                            (const std::int32_t, const std::int32_t),  //
+                            (const std::int64_t, const std::int64_t))) {
+    using To = TestType::value_type;
+    using From = TestType::buffer_type;
+
+    static_assert(std::is_nothrow_constructible<TestType>::value);
+    static_assert(std::is_nothrow_copy_constructible<TestType>::value);
+    static_assert(std::is_nothrow_move_constructible<TestType>::value);
+    static_assert(std::is_nothrow_copy_assignable<TestType>::value);
+    static_assert(std::is_nothrow_move_assignable<TestType>::value);
+
+    static_assert(std::random_access_iterator<TestType>);
+    static_assert(std::random_access_iterator<TestType>);
+    static_assert(not std::contiguous_iterator<TestType>);
+    static_assert(not std::contiguous_iterator<TestType>);
+
+    // BufferIterator is always an input iterator
+    static_assert(std::input_iterator<TestType>);
+
+    // But it's only sometimes an output iterator
+    if constexpr (not std::is_const<To>::value) {
+        static_assert(std::output_iterator<TestType, To>);
+    } else {
+        static_assert(not std::output_iterator<TestType, To>);
     }
 
-    BENCHMARK_ADVANCED("iterate over buffer[:]")(Catch::Benchmark::Chronometer meter) {
-        std::array<ssize_t, 1> shape{length};
-        std::array<ssize_t, 1> strides{sizeof(double)};
-
-        auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
-        const auto end = it + length;
-
-        meter.measure([&it, &end] {
-            volatile double a = 0;
-            while (it != end) {
-                a += *it;
-                ++it;
-            }
-            return a;
-        });
-    };
-
-    BENCHMARK_ADVANCED("iterate over buffer[:] with default sentinel")
-    (Catch::Benchmark::Chronometer meter) {
-        std::array<ssize_t, 1> shape{length};
-        std::array<ssize_t, 1> strides{sizeof(double)};
-
-        auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
-
-        meter.measure([&it] {
-            volatile double a = 0;
-            while (it != std::default_sentinel) {
-                a += *it;
-                ++it;
-            }
-            return a;
-        });
-    };
-
-    BENCHMARK_ADVANCED("iterate over buffer[::2] with default sentinel")
-    (Catch::Benchmark::Chronometer meter) {
-        std::array<ssize_t, 1> shape{length / 2};
-        std::array<ssize_t, 1> strides{2 * sizeof(double)};
-
-        auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
-
-        meter.measure([&it] {
-            volatile double a = 0;
-            while (it != std::default_sentinel) {
-                a += *it;
-                ++it;
-            }
-            return a;
-        });
-    };
-
-    BENCHMARK_ADVANCED("random access over buffer[:]")(Catch::Benchmark::Chronometer meter) {
-        std::array<ssize_t, 1> shape{length};
-        std::array<ssize_t, 1> strides{sizeof(double)};
-
-        auto it = BufferIterator<const double, const double>(buffer.data(), shape, strides);
-
-        meter.measure([&indices, &it] {
-            volatile double a = 0;
-            for (const auto& idx : indices) {
-                a += it[idx];
-            }
-            return a;
-        });
-    };
-}
-
-TEMPLATE_TEST_CASE("BufferIterator", "",  //
-                   float, double,         //
-                   bool,                  //
-                   std::int8_t, std::int16_t, std::int32_t, std::int64_t) {
-    GIVEN("auto it = BufferIterator<...>()") {
-        auto it = BufferIterator<const TestType>();
+    SECTION("BufferIterator<...>()") {
+        auto it = TestType();
 
         CHECK(it == std::default_sentinel);
         CHECK(std::default_sentinel == it);
@@ -131,19 +179,34 @@ TEMPLATE_TEST_CASE("BufferIterator", "",  //
         CHECK(it - std::default_sentinel == 0);
         CHECK(std::default_sentinel - it == 0);
 
-        CHECK(it == BufferIterator<const TestType>());
-        CHECK(it <= BufferIterator<const TestType>());
-        CHECK(it >= BufferIterator<const TestType>());
-        CHECK_FALSE(it != BufferIterator<const TestType>());
-        CHECK_FALSE(it < BufferIterator<const TestType>());
-        CHECK_FALSE(it > BufferIterator<const TestType>());
+        CHECK(it == TestType());
+        CHECK(it <= TestType());
+        CHECK(it >= TestType());
+        CHECK_FALSE(it != TestType());
+        CHECK_FALSE(it < TestType());
+        CHECK_FALSE(it > TestType());
 
-        CHECK(it - BufferIterator<const TestType>() == 0);
-        CHECK(BufferIterator<const TestType>() - it == 0);
+        CHECK(it - TestType() == 0);
+        CHECK(TestType() - it == 0);
 
         CHECK(it + 1 == it);  // does nothing
 
         CHECK_THAT(it.location(), RangeEquals(std::vector<ssize_t>{}));
+    }
+}
+
+TEMPLATE_TEST_CASE("BufferIterator", "",
+                   float,         //
+                   double,        //
+                   bool,          //
+                   std::int8_t,   //
+                   std::int16_t,  //
+                   std::int32_t,  //
+                   std::int64_t) {
+    GIVEN("a buffer of doubles") {
+        std::array<double, 10> buffer{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        std::array<ssize_t, 1> shape{10};
+        std::array<ssize_t, 1> strides{sizeof(double)};
     }
 }
 

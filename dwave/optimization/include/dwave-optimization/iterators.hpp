@@ -36,10 +36,14 @@ template <DType To, OptionalDType From = void>
     }
 class BufferIterator {
  public:
+    // Iterator public types
     using difference_type = std::ptrdiff_t;
     using pointer = To*;
     using reference = To&;
     using value_type = To;
+
+    // The type of the held pointer to the underlying buffer.
+    using buffer_type = From;
 
     /// Default constructor.
     BufferIterator() = default;
@@ -62,6 +66,16 @@ class BufferIterator {
     BufferIterator(BufferIterator&&) = default;
 
     // todo: untemplated versions
+
+    BufferIterator(From* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
+            : ptr_(ptr),
+              format_(format_of<From>()),
+              ndim_(ndim),
+              shape_(shape),
+              strides_(strides),
+              loc_(ndim_ > 0 ? std::make_unique<ssize_t[]>(ndim_) : nullptr) {
+        assert(ndim_ >= 0);
+    }
 
     /// Construct a non-contiguous iterator from a shape/strides defined as
     /// observing pointers when `From` is `void`.
@@ -91,21 +105,22 @@ class BufferIterator {
     }
 
     BufferIterator& operator=(const BufferIterator& other) noexcept {
+        if (ndim_ == other.ndim_) {
+            // we don't need to reallocate our loc_, we'll overwrite it shortly
+        } else if (other.ndim_ == 0) {
+            loc_ = nullptr;
+        } else {
+            loc_ = std::make_unique_for_overwrite<ssize_t[]>(other.ndim_);
+        }
+        for (ssize_t axis = 0; axis < other.ndim_; ++axis) {
+            loc_[axis] = other.loc_[axis];
+        }
+
         ptr_ = other.ptr_;
         format_ = other.format_;
         ndim_ = other.ndim_;
         shape_ = other.shape_;
         strides_ = other.strides_;
-
-        if (ndim_ > 0) {
-            loc_ = std::make_unique_for_overwrite<ssize_t[]>(ndim_);
-            for (ssize_t axis = 0; axis < ndim_; ++axis) {
-                loc_[axis] = other.loc_[axis];
-            }
-        } else {
-            assert(ndim_ >= 0);
-            loc_ = nullptr;
-        }
     }
 
     BufferIterator& operator=(BufferIterator&&) = default;
@@ -113,46 +128,19 @@ class BufferIterator {
     /// Destructor
     ~BufferIterator() = default;
 
+    /// Dereference the iterator when the iterator is not an output iterator.
     reference operator*() const noexcept
         requires(std::same_as<const To, const From>)
     {
         return *ptr_;
     }
-
-    /// Dereference the iterator when the iterator is not an output iterator.
     value_type operator*() const noexcept
         requires(not std::same_as<const To, const From>)
     {
-        if constexpr (DType<From>) {
-            // In this case we know at compile-time what type we're converting from
-            return *ptr_;
-        } else {
-            // In this case we need to do some switch behavior at runtime
-            switch (format_) {
-                case FormatCharacter::float_:
-                    return *static_cast<const float*>(ptr_);
-                case FormatCharacter::double_:
-                    return *static_cast<const double*>(ptr_);
-                case FormatCharacter::bool_:
-                    return *static_cast<const bool*>(ptr_);
-                case FormatCharacter::int_:
-                    return *static_cast<const int*>(ptr_);
-                case FormatCharacter::signedchar_:
-                    return *static_cast<const signed char*>(ptr_);
-                case FormatCharacter::signedshort_:
-                    return *static_cast<const signed short*>(ptr_);
-                case FormatCharacter::signedlong_:
-                    return *static_cast<const signed long*>(ptr_);
-                case FormatCharacter::signedlonglong_:
-                    return *static_cast<const signed long long*>(ptr_);
-            }
-            unreachable();
-        }
+        return value_(ptr_);
     }
 
     /// Access the value of the iterator at the given offset
-    // decltype(auto) operator[](difference_type index) const noexcept { return *(*this + index); }
-
     reference operator[](difference_type index) const noexcept
         requires(std::same_as<const To, const From>)
     {
@@ -161,7 +149,7 @@ class BufferIterator {
     value_type operator[](difference_type index) const noexcept
         requires(not std::same_as<const To, const From>)
     {
-        assert(false);
+        return value_(increment_ptr_(index));
     }
 
     /// Preincrement operator.
@@ -473,6 +461,35 @@ class BufferIterator {
 
         using ptr_type = std::conditional<std::is_const<From>::value, const char*, char*>::type;
         return reinterpret_cast<From*>(reinterpret_cast<ptr_type>(ptr_) + offset);
+    }
+
+    /// Return the current value at the pointer as a copy.
+    value_type value_(From* ptr) const noexcept {
+        if constexpr (DType<From>) {
+            // In this case we know at compile-time what type we're converting from
+            return *ptr;
+        } else {
+            // In this case we need to do some switch behavior at runtime
+            switch (format_) {
+                case FormatCharacter::float_:
+                    return *static_cast<const float*>(ptr);
+                case FormatCharacter::double_:
+                    return *static_cast<const double*>(ptr);
+                case FormatCharacter::bool_:
+                    return *static_cast<const bool*>(ptr);
+                case FormatCharacter::int_:
+                    return *static_cast<const int*>(ptr);
+                case FormatCharacter::signedchar_:
+                    return *static_cast<const signed char*>(ptr);
+                case FormatCharacter::signedshort_:
+                    return *static_cast<const signed short*>(ptr);
+                case FormatCharacter::signedlong_:
+                    return *static_cast<const signed long*>(ptr);
+                case FormatCharacter::signedlonglong_:
+                    return *static_cast<const signed long long*>(ptr);
+            }
+            unreachable();
+        }
     }
 
     // If we're const, then hold a const void*, else hold void*
