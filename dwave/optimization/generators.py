@@ -574,10 +574,14 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
             element is the depot.
         time_window_close:
             Closing time for each customer, as an |array-like|_. The first
-            element is the depot.
+            element is the depot. Arrival at each customer :math:`i` must occur
+            earlier than ``time_window_close[i] - service_time[i]`` to enable
+            the delivery to be serviced before the window closes.
         service_time:
             Time it takes to serve each customer, as an |array-like|_. The first
-            element is the depot and must be zero.
+            element is the depot and must be zero. For feasible solutions,
+            ``service_time[i] <= time_window_close[i] - time_window_open[i]``
+            for each customer :math:`i`.
 
     Returns:
         A model encoding the CVRPTW problem.
@@ -1487,7 +1491,7 @@ else:
 def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
                          flow_matrix: numpy.typing.ArrayLike,
                          ) -> Model:
-    """Generate a model encoding a quadratic assignment problem.
+    r"""Generate a model encoding a quadratic assignment problem.
 
     The
     `quadratic assignment <https://en.wikipedia.org/wiki/Quadratic_assignment_problem>`_
@@ -1505,8 +1509,8 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
 
         flow_matrix:
             Flows as an |array-like|_, where ``flow_matrix[n, m]`` is the flow
-            between location :math:`n` and :math:`m`. Represents the (known and
-            constant) flow between every possible pair of facility location.
+            between facilities :math:`n` and :math:`m`. Represents the (known
+            and constant) flow between every possible pair of facilities.
 
     Returns:
         A model encoding the quadratic-assignment problem.
@@ -1534,7 +1538,7 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
 
         An example feasible solution might be :math:`[2, 1, 0]`, meaning that
         facility two should be on site zero, facility one should be on site one,
-        and facility zero should be on site two,. The objective value
+        and facility zero should be on site two.\ [#]_ The objective value
         for this solution is :math:`37`, as shown in
         the following code.
 
@@ -1577,6 +1581,67 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
             facilities 0 and 1, has the least total flow of :math:`1+2=3`, while
             the intermediate distance of 3 has an intermediate total flow of
             :math:`1+3=4`.
+
+    .. [#]
+
+        To understand how the :class:`~dwave.optimization.symbols.ListVariable`
+        decision variable orders facilities to locations, consider a simple
+        example of two facilities and two locations, where the flow is
+        asymmetric and the distance depends on direction. The cost given by the
+        multiplication of flow matrix by distance matrix, for example,
+
+        .. math::
+
+            \overbrace{
+                \begin{bmatrix} 0 & 2 \\ 1 & 0  \end{bmatrix}}^{\text{Flow}}
+            *
+            \overbrace{
+                \begin{bmatrix} 0 & 2 \\ 3 & 0  \end{bmatrix}}^{\text{Distance}}
+            =
+            \overbrace{
+                \begin{bmatrix} 0 & 4 \\ 3 & 0  \end{bmatrix}}^{\text{Cost}},
+
+        gives 3 in element :math:`(0, 1)`, meaning the cost of transfers between
+        facility 0 to facility 1 (element :math:`(0, 1)` in the flow matrix) in
+        location 0 and 1 (element :math:`(0, 1)` in the distance matrix) is 3.
+
+        This remains the product when the distance matrix is indexed as
+
+        .. math::
+
+            \text{distance_matrix}[\text{index}, :][:, \text{index}],
+
+        where the index, a :class:`~dwave.optimization.symbols.ListVariable`
+        decision variable, is the natural order, here :math:`[0, 1]`.
+
+        .. math::
+
+            \begin{bmatrix} 0 & 2 \\ 1 & 0  \end{bmatrix}
+            *
+            \begin{bmatrix} 0 & 2 \\ 3 & 0  \end{bmatrix}
+            *
+            \begin{bmatrix} 0 \\ 1 \end{bmatrix}
+            =
+            \begin{bmatrix} 0 & 4 \\ 3 & 0  \end{bmatrix}
+
+        Permutations of the index switch the resulting product around; here
+        :math:`[1, 0]` gives the cost for facilty 0 at location 1 and facility 1
+        at location 0:
+
+        .. math::
+
+            \begin{bmatrix} 0 & 2 \\ 1 & 0  \end{bmatrix}
+            *
+            \begin{bmatrix} 0 & 2 \\ 3 & 0  \end{bmatrix}
+            *
+            \begin{bmatrix} 1 \\ 0 \end{bmatrix}
+            =
+            \begin{bmatrix} 0 & 6 \\ 2 & 0  \end{bmatrix}
+
+        In this way, permutations of the
+        :class:`~dwave.optimization.symbols.ListVariable` decision variable
+        allow the model to represent all possible pairings of facilities and
+        locations and the cost for each.
     """
     distance_matrix = _require("distance_matrix", distance_matrix,
                                dtype=float, ndim=2, nonnegative=True, square=True)
