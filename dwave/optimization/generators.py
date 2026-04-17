@@ -1618,9 +1618,7 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
 
             \begin{bmatrix} 0 & 2 \\ 1 & 0  \end{bmatrix}
             *
-            \begin{bmatrix} 0 & 2 \\ 3 & 0  \end{bmatrix}
-            *
-            \begin{bmatrix} 0 \\ 1 \end{bmatrix}
+            \begin{bmatrix} 0 & 2 \\ 3 & 0  \end{bmatrix}[[0, 1], :][:, [0, 1]]
             =
             \begin{bmatrix} 0 & 4 \\ 3 & 0  \end{bmatrix}
 
@@ -1632,9 +1630,7 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
 
             \begin{bmatrix} 0 & 2 \\ 1 & 0  \end{bmatrix}
             *
-            \begin{bmatrix} 0 & 2 \\ 3 & 0  \end{bmatrix}
-            *
-            \begin{bmatrix} 1 \\ 0 \end{bmatrix}
+            \begin{bmatrix} 0 & 2 \\ 3 & 0  \end{bmatrix}[[1, 0], :][:, [1, 0]]
             =
             \begin{bmatrix} 0 & 6 \\ 2 & 0  \end{bmatrix}
 
