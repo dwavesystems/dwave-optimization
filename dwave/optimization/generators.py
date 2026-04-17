@@ -17,7 +17,7 @@
 See examples such as :ref:`opt_example_nl_tsp` and :ref:`opt_example_nl_cvrp`,
 as well as application examples in the
 `D-Wave Examples <https://github.com/dwave-examples>`_ GitHub repository, for
-usage.
+more detailed usage.
 """
 
 from __future__ import annotations
@@ -235,8 +235,10 @@ def bin_packing(weights: numpy.typing.ArrayLike,
         ...     capacity_constraint = next(model.iter_constraints())
         ...     for i in range(model.states.size()):
         ...         if capacity_constraint.state(i):    # Filter on feasibility
-        ...             print(f"Objective value #{i} is {model.objective.state(i)}")
-        Objective value #0 is 2.0
+        ...             print((f"Objective value #{i} is {model.objective.state(i)} for packing\n"
+        ...                    f"    {[b.state(i).tolist() for b in items.iter_successors()]}"))
+        Objective value #0 is 2.0 for packing
+            [[0.0, 1.0, 0.0, 0.0], [1.0, 0.0, 1.0, 1.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]
     """
 
     weights = _require("weights", weights, dtype=float, nonnegative=True, ndim=1)
@@ -391,8 +393,10 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         ...     capacity_constraint = next(model.iter_constraints())
         ...     for i in range(model.states.size()):
         ...         if capacity_constraint.state(i):    # Filter on feasibility
-        ...             print(f"Objective value #{i} is {model.objective.state(i).round(2)}")
-        Objective value #0 is 423.8
+        ...             print((f"Objective value #{i} is {model.objective.state(i).round(2)} for routes\n"
+        ...                    f"    {[r.state(i).tolist() for r in routes.iter_successors()]}"))
+        Objective value #0 is 423.8 for routes
+            [[2.0, 7.0, 1.0, 5.0], [4.0, 3.0, 8.0, 6.0, 0.0]]
     """
 
     if not isinstance(number_of_vehicles, int):
@@ -638,10 +642,10 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
         >>> with model.lock():
         ...     for i in range(model.states.size()):
         ...         if all(sym.state(i) for sym in model.iter_constraints()): # Filter feasibility
-        ...             print((f"Objective value #{i} is {model.objective.state(i).round(2)}\n"
-        ...                    f"    Routes #{i} are {[r.state(i).tolist() for r in routes]}"))
-        Objective value #0 is 103.0
-            Routes #0 are [[0.0, 2.0], [1.0]]
+        ...             print((f"Objective value #{i} is {model.objective.state(i).round(2)} for routes\n"
+        ...                    f"    {[r.state(i).tolist() for r in routes]}"))
+        Objective value #0 is 103.0 for routes
+            [[0.0, 2.0], [1.0]]
     """
 
     if not isinstance(number_of_vehicles, int):
@@ -1089,9 +1093,9 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
         >>> with model.lock():
         ...     for i in range(model.states.size()):
         ...         if all(sym.state(i) for sym in model.iter_constraints()): # Filter feasibility
-        ...             print((f"Makespan #{i} is {model.objective.state(i).round(2)} for scheule\n"
+        ...             print((f"Makespan #{i} is {model.objective.state(i).round(2)} for schedule\n"
         ...                    f"{schedule.state(i)}"))
-        Makespan #0 is 7.0 for scheule
+        Makespan #0 is 7.0 for schedule
         [[0. 3. 4.]
          [2. 6. 0.]
          [6. 4. 2.]]
@@ -1616,47 +1620,91 @@ def traveling_salesperson(distance_matrix: numpy.typing.ArrayLike,
 
     Args:
         distance_matrix:
-            An array-like where ``distance_matrix[n, m]`` is the distance
-            between city ``n`` and ``m``. Represents the (known and constant)
-            distances between every possible pair of cities: in real-world
-            problems, such a matrix can be generated from an application with
-            access to an online map.
+            Distances as an |array-like|_, where ``distance_matrix[n, m]`` is
+            the distance between city :math:`n` and :math:`m`. Represents the
+            (known and constant) distances between every possible pair of
+            cities: In real-world problems, such a matrix can be generated from
+            an application with access to an online map. Such matrices may be
+            asymmetric if the direction of travel matters, such as when
+            different routes are used depending on direction.
 
     Returns:
         A model encoding the traveling-salesperson problem.
 
-    Typically, solver performance strongly depends on the size of the solution
-    space for your modelled problem: models with smaller spaces of feasible
-    solutions tend to perform better than ones with larger spaces. A powerful
-    way to reduce the feasible-solutions space is by using variables that act
-    as implicit constraints. This is analogous to judicious typing of a variable
-    to meet but not exceed its required assignments: a Boolean variable, ``x``,
-    has a solution space of size 2 (:math:`\{True, False\}`) while an integer
-    variable, ``i``, might have a solution space of over 4 billion values.
+    Notes:
+        The model generated uses a
+        :class:`~dwave.optimization.symbols.ListVariable` class as the decision
+        variable being optimized, with permutations of this ordered list
+        representing possible itineraries through the required cities.\ [#]_
 
-    The model generated uses a :class:`dwave.optimization.Model.list` class as
-    the decision variable being optimized, with permutations of this ordered
-    list representing possible itineraries through the required cities.
+    Examples:
 
-    The :class:`dwave.optimization.Model.list` class used to represent the
-    decision variable as an ordered list is implicitly constrained in the
-    possible values that can be assigned to it; for example, compare a model
-    representing five cities as five variables of type ``int``,
-    :math:`i_{Rome}, i_{Turin}, i_{Naples}, i_{Milan}, i_{Genoa}`, where
-    :math:`i_{Rome} = 2` means Rome is the third city visited, versus a model
-    using an ordered list, :math:`(city_0, city_1, city_2, city_3, city_4)`.
-    The first model must explicitly constrain solutions to those that select
-    a value between 0 and 4 for each decision variable with no repetitions; such
-    constraints are implicit to the ordered-list variable.
+        This example creates a model for a traveling-salesperson problem
+        that visits three cities, where the distance depends on the direction of
+        travel.
 
-    The objective is to minimize the distance traveled. Permutations of indices
-    :math:`(0, 1, 2, ...)` that order ``distance_matrix`` represent itineraries
-    that travel from list-element :math:`i` to list-element :math:`i+1` for
-    :math:`i \in [0, N-1]`, where :math:`N` is the length of the list (and the
-    number of cities). Additionally, the problem requires a return to the city
-    of origin (first element of the list) from the last city visited (the last
-    element of the list).
+        >>> from dwave.optimization.generators import traveling_salesperson
+        ...
+        >>> distance_matrix = [
+        ...     [0, 3, 1],
+        ...     [1, 0, 3],
+        ...     [3, 1, 0]]
+        >>> model = traveling_salesperson(distance_matrix=distance_matrix)
 
+        Example solutions might be :math:`[0, 1, 2]` and :math:`[2, 1, 0]`,
+        the first solution meaning that the salesperson visits city 0 then city
+        1 then city 2 while the second solution reverses that order. The
+        objective value for the first solution is :math:`9` and for the second
+        :math:`3`, as shown in the following code.\ [#]_
+
+        The :meth:`~dwave.optimization.model.Model.iter_decisions` method
+        obtains the decision variables of the generated model.
+
+        >>> itinerary = next(model.iter_decisions())
+
+        To test the solution above, set it in the model as the state of the
+        decision variable. **Skip these next lines** if you have submitted your
+        model to the `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid`
+        nonlinear :term:`solver`.
+
+        >>> model.states.resize(2)
+        >>> itinerary.set_state(0, [2, 1, 0])
+        >>> itinerary.set_state(1, [0, 1, 2])
+
+        Here, the number of states
+        (:meth:`~dwave.optimization.states.States.size`) is set to 2 for the
+        constructed solutions so two values of the
+        :attr:`~dwave.optimization.model.Model.objective` property are printed.
+
+        >>> with model.lock():
+        ...     for i in range(model.states.size()):
+        ...         print((f"Itinerary #{i} is {itinerary.state(i)} with objective "
+        ...                f"value of {model.objective.state(i)}"))
+        Itinerary #0 is [2. 1. 0.] with objective value of 3.0
+        Itinerary #1 is [0. 1. 2.] with objective value of 9.0
+
+        .. [#]
+            The :class:`~dwave.optimization.symbols.ListVariable` class used to
+            represent the decision variable as an ordered list is implicitly
+            constrained in the possible values that can be assigned to it; for
+            example, compare a model representing five cities as five variables
+            of type ``int``,
+            :math:`i_{Rome}, i_{Turin}, i_{Naples}, i_{Milan}, i_{Genoa}`, where
+            :math:`i_{Rome} = 2` means Rome is the third city visited, versus a
+            model using an ordered list,
+            :math:`(city_0, city_1, city_2, city_3, city_4)`. The first model
+            must explicitly constrain solutions to those that select a value
+            between 0 and 4 for each decision variable with no repetitions; such
+            constraints are implicit to the ordered-list variable.
+
+        .. [#]
+            Permutations of indices :math:`(0, 1, 2, ...)` that order
+            ``distance_matrix`` represent itineraries that travel from
+            list-element :math:`i` to list-element :math:`i+1` for
+            :math:`i \in [0, N-1]`, where :math:`N` is the length of the list
+            (and the number of cities). Additionally, the problem requires a
+            return to the city of origin (first element of the list) from the
+            last city visited (the last element of the list).
     """
     distance_matrix = _require("distance_matrix", distance_matrix,
                                dtype=float, ndim=2, nonnegative=True, square=True)
