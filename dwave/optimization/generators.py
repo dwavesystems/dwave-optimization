@@ -1557,6 +1557,22 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
         ...         print((f"Locations for solution #{i} are {locations.state(i)} with objective "
         ...                f"value of {model.objective.state(i)}"))
         Locations for solution #0 are [2. 1. 0.] with objective value of 37.0
+
+        This solution is shown in the figure below.
+
+        .. figure:: /_images/quadratic_assignment_problem_3x3.png
+            :width: 800 px
+            :name: quadratic-assignment-problem-3x3-example
+            :alt: Image of the model constructed in this example, showing
+                the assignment of sites to locations with the distances and flow
+                annotated on the edges.
+
+            Visualization of the solution. The shortest distance between pairs,
+            of 2 between facilities 1 and 2, has the greatest total flow of
+            :math:`1+4=5`, the longest distance between pairs, of 5 between
+            facilities 0 and 1, has the least total flow of :math:`1+2=3`, while
+            the intermediate distance of 3 has an intermediate total flow of
+            :math:`1+3=4`.
     """
     distance_matrix = _require("distance_matrix", distance_matrix,
                                dtype=float, ndim=2, nonnegative=True, square=True)
