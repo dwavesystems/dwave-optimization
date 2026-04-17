@@ -144,12 +144,16 @@ class BufferIterator {
     reference operator[](difference_type index) const noexcept
         requires(std::same_as<const To, const From>)
     {
-        return *increment_ptr_(index);
+        From* ptr = ptr_;
+        increment_impl_<false>(index, &ptr, loc_.get());
+        return *ptr;
     }
     value_type operator[](difference_type index) const noexcept
         requires(not std::same_as<const To, const From>)
     {
-        return value_(increment_ptr_(index));
+        From* ptr = ptr_;
+        increment_impl_<false>(index, &ptr, loc_.get());
+        return value_(ptr);
     }
 
     /// Preincrement operator.
@@ -174,7 +178,7 @@ class BufferIterator {
 
     /// Increment the iterator by `rhs` steps.
     BufferIterator& operator+=(difference_type rhs) {
-        increment_(rhs);
+        increment_impl_<true>(rhs, &ptr_, loc_.get());
         return *this;
     }
 
@@ -341,12 +345,21 @@ class BufferIterator {
         ptr_ = reinterpret_cast<From*>(reinterpret_cast<ptr_type>(ptr_) + offset);
     }
 
-    // Advance the location of the iterator `n` times. `n` can be negative.
-    void increment_(const ssize_t n = 1) {
-        if (n == 0) return;
+    // This method has a confusing signature! But this way we avoid a lot of code duplication.
+    // Args:
+    //   `n` is the number of steps to increment
+    //   `ptr` is a pointer to the pointer we wish to update to point to the new location.
+    //     it is always modified.
+    //   `loc` the current location in the array as a multi-index. It is only updated if
+    //     `UpdateLoc` is `true`.
+    template <bool UpdateLoc>
+    void increment_impl_(
+            const ssize_t n, From** const ptr,
+            std::conditional<UpdateLoc, ssize_t* const, const ssize_t* const>::type loc) const {
+        if (n == 0) return;      // no increments to apply, exit early
         if (ndim_ == 0) return;  // incrementing a scalar does nothing
 
-        assert(ndim_ > 0);
+        assert(ndim_ > 0);  // negative ndim is not defined
 
         // working from right-to-left, figure out how many steps in each
         // axis. We handle axis 0 as a special case
@@ -364,16 +377,16 @@ class BufferIterator {
             // We can go "beyond" the relevant memory on the 0th axis, but
             // otherwise the location must be nonnegative and strictly less
             // than the size in that dimension.
-            assert(0 <= loc_[axis]);
-            assert(axis == 0 || loc_[axis] < shape_[axis]);
+            assert(0 <= loc[axis]);
+            assert(axis == 0 || loc[axis] < shape_[axis]);
 
             // if we're partway through the axis, we shift to
             // the beginning by adding the number of steps to the total
             // that we want to go, and updating the offset accordingly
             if (loc_[axis]) {
-                qr.quot += loc_[axis];
-                offset -= loc_[axis] * strides_[axis];
-                // loc_[axis] = 0;  // overwritten later, so skip resetting the loc
+                qr.quot += loc[axis];
+                offset -= loc[axis] * strides_[axis];
+                // loc[axis] = 0;  // overwritten later, so skip resetting the loc
             }
 
             // now, the number of steps might be more than our axis
@@ -387,7 +400,7 @@ class BufferIterator {
             }
 
             // finally adjust our location and offset
-            loc_[axis] = qr.rem;
+            if constexpr (UpdateLoc) loc[axis] = qr.rem;
             offset += qr.rem * strides_[axis];
             // qr.rem = 0;  // overwritten later, so skip resetting the .rem
 
@@ -396,71 +409,10 @@ class BufferIterator {
         }
 
         offset += qr.quot * strides_[0];
-        loc_[0] += qr.quot;
+        if constexpr (UpdateLoc) loc[0] += qr.quot;
 
         using ptr_type = std::conditional<std::is_const<From>::value, const char*, char*>::type;
-        ptr_ = reinterpret_cast<From*>(reinterpret_cast<ptr_type>(ptr_) + offset);
-    }
-
-    // todo: deduplicate this function and increment_()
-    From* increment_ptr_(const ssize_t n = 1) const {
-        if (n == 0) return ptr_;
-        if (ndim_ == 0) return ptr_;
-
-        assert(ndim_ > 0);
-
-        // working from right-to-left, figure out how many steps in each
-        // axis. We handle axis 0 as a special case
-
-        std::ptrdiff_t offset = 0;  // the number of bytes we need to move
-
-        // We'll be using std::div() over ssize_t, so we'll store our
-        // current location in the struct returned by it.
-        // Unfortunately std::div() is not templated, but overloaded,
-        // so we use decltype instead.
-        decltype(std::div(ssize_t(), ssize_t())) qr{.quot = n, .rem = 0};
-
-        for (ssize_t axis = ndim_ - 1; axis >= 1; --axis) {
-            // A bit of sanity checking on our location
-            // We can go "beyond" the relevant memory on the 0th axis, but
-            // otherwise the location must be nonnegative and strictly less
-            // than the size in that dimension.
-            assert(0 <= loc_[axis]);
-            assert(axis == 0 || loc_[axis] < shape_[axis]);
-
-            // if we're partway through the axis, we shift to
-            // the beginning by adding the number of steps to the total
-            // that we want to go, and updating the offset accordingly
-            if (loc_[axis]) {
-                qr.quot += loc_[axis];
-                offset -= loc_[axis] * strides_[axis];
-                // loc_[axis] = 0;  // overwritten later, so skip resetting the loc
-            }
-
-            // now, the number of steps might be more than our axis
-            // can support, so we do a div
-            qr = std::div(qr.quot, shape_[axis]);
-
-            // adjust so that the remainder is positive
-            if (qr.rem < 0) {
-                qr.quot -= 1;
-                qr.rem += shape_[axis];
-            }
-
-            // finally adjust our location and offset
-            // loc_[axis] = qr.rem;
-            offset += qr.rem * strides_[axis];
-            // qr.rem = 0;  // overwritten later, so skip resetting the .rem
-
-            // if there's nothing left to do then exit early
-            if (qr.quot == 0) break;
-        }
-
-        offset += qr.quot * strides_[0];
-        // loc_[0] += qr.quot;
-
-        using ptr_type = std::conditional<std::is_const<From>::value, const char*, char*>::type;
-        return reinterpret_cast<From*>(reinterpret_cast<ptr_type>(ptr_) + offset);
+        *ptr = reinterpret_cast<From*>(reinterpret_cast<ptr_type>(*ptr) + offset);
     }
 
     /// Return the current value at the pointer as a copy.
