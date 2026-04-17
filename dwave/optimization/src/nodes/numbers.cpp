@@ -336,20 +336,4 @@ void BinaryNode::flip(State& state, ssize_t i) const {
     ptr->set(i, !ptr->get(i));
 }
 
-void BinaryNode::set(State& state, ssize_t i) const {
-    // We expect the set to obey the index-wise bounds.
-    assert(upper_bound(i) == 1.0);
-    // Assert that i is a valid index occurs in data_ptr->set().
-    // Set occurs IFF `value` != buffer[i] .
-    data_ptr<ArrayNodeStateData>(state)->set(i, 1.0);
-}
-
-void BinaryNode::unset(State& state, ssize_t i) const {
-    // We expect the set to obey the index-wise bounds.
-    assert(lower_bound(i) == 0.0);
-    // Assert that i is a valid index occurs in data_ptr->set().
-    // Set occurs IFF `value` != buffer[i] .
-    data_ptr<ArrayNodeStateData>(state)->set(i, 0.0);
-}
-
 }  // namespace dwave::optimization

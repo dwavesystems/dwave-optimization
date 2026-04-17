@@ -45,6 +45,7 @@ TEMPLATE_TEST_CASE("ReduceNode", "",                                   //
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
             CHECK(r_ptr->size() == 1);
+            CHECK(r_ptr->sizeinfo() == SizeInfo(1));
         }
 
         THEN("The constant is the operand") {
@@ -77,6 +78,7 @@ TEMPLATE_TEST_CASE("ReduceNode", "",                                   //
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
             CHECK(r_ptr->size() == 1);
+            CHECK(r_ptr->sizeinfo() == SizeInfo(1));
         }
 
         THEN("The constant is the operand") {
@@ -110,6 +112,7 @@ TEMPLATE_TEST_CASE("ReduceNode", "",                                   //
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
             CHECK(r_ptr->size() == 1);
+            CHECK(r_ptr->sizeinfo() == SizeInfo(1));
         }
 
         THEN("The constant is the operand") {
@@ -137,6 +140,7 @@ TEMPLATE_TEST_CASE("ReduceNode", "",                                   //
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
             CHECK(r_ptr->size() == 1);
+            CHECK(r_ptr->sizeinfo() == SizeInfo(1));
         }
 
         THEN("The set is the operand") {
@@ -202,7 +206,11 @@ TEMPLATE_TEST_CASE("ReduceNode", "",                                   //
         graph.emplace_node<ArrayValidationNode>(r_ptr);
 
         // this is equivalent to a reduction, so the output is a scalar
-        CHECK(r_ptr->ndim() == 0);
+        THEN("The output shape is scalar") {
+            CHECK(r_ptr->ndim() == 0);
+            CHECK(r_ptr->size() == 1);
+            CHECK(r_ptr->sizeinfo() == SizeInfo(1));
+        }
 
         auto values = std::vector{1, 2, 3, 4, 5};
 
@@ -262,8 +270,10 @@ TEST_CASE("AllNode/AnyNode") {
         THEN("y,z are logical and scalar") {
             CHECK(y_ptr->logical());
             CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
             CHECK(z_ptr->logical());
             CHECK(z_ptr->ndim() == 0);
+            CHECK(z_ptr->sizeinfo() == SizeInfo(1));
         }
 
         WHEN("x == [0, 0, 0, 0, 0]") {
@@ -364,6 +374,15 @@ TEST_CASE("MaxNode/MinNode") {
         CHECK(max_ptr->max() == 4);
         CHECK(min_ptr->min() == 0);
         CHECK(min_ptr->max() == 6);  // beause the list can be empty
+
+        THEN("min and max shape's are scalar") {
+            CHECK(min_ptr->ndim() == 0);
+            CHECK(min_ptr->size() == 1);
+            CHECK(min_ptr->sizeinfo() == SizeInfo(1));
+            CHECK(max_ptr->ndim() == 0);
+            CHECK(max_ptr->size() == 1);
+            CHECK(max_ptr->sizeinfo() == SizeInfo(1));
+        }
 
         AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
             auto state = graph.empty_state();
@@ -488,6 +507,12 @@ TEST_CASE("MaxNode") {
             CHECK(y_ptr->max() == 2);
             CHECK(y_ptr->integral());
         }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
+        }
     }
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.max(init=-.5)") {
@@ -499,11 +524,23 @@ TEST_CASE("MaxNode") {
             CHECK(y_ptr->max() == 2);
             CHECK(!y_ptr->integral());
         }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
+        }
     }
 
     GIVEN("x = IntegerNode(5, 0, 10), y x.max()") {
         auto x_ptr = graph.emplace_node<IntegerNode>(3, 0, 20);
         auto y_ptr = graph.emplace_node<MaxNode>(x_ptr);
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
+        }
 
         auto state = graph.empty_state();
         x_ptr->initialize_state(state, {0, 5, 10});
@@ -557,6 +594,12 @@ TEST_CASE("MinNode") {
             CHECK(y_ptr->max() == 2);
             CHECK(y_ptr->integral());
         }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
+        }
     }
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.min(init=-.5)") {
@@ -567,6 +610,12 @@ TEST_CASE("MinNode") {
             CHECK(y_ptr->min() == -5);
             CHECK(y_ptr->max() == -.5);
             CHECK(!y_ptr->integral());
+        }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
         }
     }
 }
@@ -583,6 +632,12 @@ TEST_CASE("ProdNode") {
             CHECK(y_ptr->max() == -5 * -5 * 2);
             CHECK(y_ptr->integral());
         }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
+        }
     }
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.prod(init=-.5)") {
@@ -594,11 +649,23 @@ TEST_CASE("ProdNode") {
             CHECK(y_ptr->max() == -5 * -5 * -5 * -.5);
             CHECK(!y_ptr->integral());
         }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
+        }
     }
 
     GIVEN("Given a list node with a prod over it") {
         auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
         auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr, std::vector<ssize_t>{}, 1);
+
+        THEN("prod's shape is scalar") {
+            CHECK(prod_ptr->ndim() == 0);
+            CHECK(prod_ptr->size() == 1);
+            CHECK(prod_ptr->sizeinfo() == SizeInfo(1));
+        }
 
         AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
             auto state = graph.empty_state();
@@ -707,6 +774,12 @@ TEST_CASE("ProdNode") {
         auto list_ptr = graph.emplace_node<ListNode>(5, 0, 5);
         auto prod_ptr = graph.emplace_node<ProdNode>(list_ptr, std::vector<ssize_t>{}, 0);
 
+        THEN("prod's shape is scalar") {
+            CHECK(prod_ptr->ndim() == 0);
+            CHECK(prod_ptr->size() == 1);
+            CHECK(prod_ptr->sizeinfo() == SizeInfo(1));
+        }
+
         AND_GIVEN("An initial state of [ 1 2 3 | 0 4 ]") {
             auto state = graph.empty_state();
             list_ptr->initialize_state(state, {1, 2, 3, 0, 4});
@@ -748,10 +821,6 @@ TEST_CASE("ProdNode") {
         graph.emplace_node<ArrayValidationNode>(r_ptr_1);
         graph.emplace_node<ArrayValidationNode>(r_ptr_2);
 
-        CHECK(r_ptr_0->ndim() == 2);
-        CHECK(r_ptr_1->ndim() == 2);
-        CHECK(r_ptr_2->ndim() == 2);
-
         WHEN("We make a state") {
             auto state = graph.initialize_state();
 
@@ -759,14 +828,17 @@ TEST_CASE("ProdNode") {
                 CHECK(r_ptr_0->ndim() == 2);
                 CHECK(r_ptr_0->size(state) == 4);
                 CHECK(r_ptr_0->shape(state).size() == 2);
+                CHECK(r_ptr_0->sizeinfo() == ptr->sizeinfo() / 2);
 
                 CHECK(r_ptr_1->ndim() == 2);
                 CHECK(r_ptr_1->size(state) == 4);
                 CHECK(r_ptr_1->shape(state).size() == 2);
+                CHECK(r_ptr_1->sizeinfo() == ptr->sizeinfo() / 2);
 
                 CHECK(r_ptr_2->ndim() == 2);
                 CHECK(r_ptr_2->size(state) == 4);
                 CHECK(r_ptr_2->shape(state).size() == 2);
+                CHECK(r_ptr_2->sizeinfo() == ptr->sizeinfo() / 2);
 
                 /// Check with
                 /// A = np.arange(8).reshape((2, 2, 2))
@@ -793,6 +865,12 @@ TEST_CASE("SumNode") {
             CHECK(y_ptr->max() == 2 + 2 + 2);
             CHECK(y_ptr->integral());
         }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
+        }
     }
 
     GIVEN("x = IntegerNode(3, -5, 2), y = x.sum(init=-.5)") {
@@ -803,6 +881,12 @@ TEST_CASE("SumNode") {
             CHECK(y_ptr->min() == -5 + -5 + -5 + -.5);
             CHECK(y_ptr->max() == 2 + 2 + 2 + -.5);
             CHECK(!y_ptr->integral());
+        }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
         }
     }
 
@@ -817,6 +901,12 @@ TEST_CASE("SumNode") {
             CHECK(y_ptr->max() == 9);
             CHECK(y_ptr->integral());
         }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
+        }
     }
 
     GIVEN("a = [1, 3, 2], x = SetNode(3), y = a[x].sum()") {
@@ -829,6 +919,12 @@ TEST_CASE("SumNode") {
             CHECK(y_ptr->min() == 0);  // can be 0 because x can be empty
             CHECK(y_ptr->max() == 9);
             CHECK(y_ptr->integral());
+        }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
         }
     }
 
@@ -843,6 +939,12 @@ TEST_CASE("SumNode") {
             CHECK(y_ptr->max() == 9);
             CHECK(y_ptr->integral());
         }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
+        }
     }
 
     GIVEN("a = [1, -3, 2], x = SetNode(3), y = a[x].sum()") {
@@ -855,6 +957,12 @@ TEST_CASE("SumNode") {
             CHECK(y_ptr->min() == -9);  // set has at most 3 elements
             CHECK(y_ptr->max() == 6);
             CHECK(y_ptr->integral());
+        }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
         }
     }
 
@@ -869,6 +977,12 @@ TEST_CASE("SumNode") {
             CHECK(y_ptr->max() == 0);
             CHECK(y_ptr->integral());
         }
+
+        THEN("y's shape is scalar") {
+            CHECK(y_ptr->ndim() == 0);
+            CHECK(y_ptr->size() == 1);
+            CHECK(y_ptr->sizeinfo() == SizeInfo(1));
+        }
     }
 
     GIVEN("A set reduced") {
@@ -878,6 +992,7 @@ TEST_CASE("SumNode") {
         THEN("The output shape is scalar") {
             CHECK(r_ptr->ndim() == 0);
             CHECK(r_ptr->size() == 1);
+            CHECK(r_ptr->sizeinfo() == SizeInfo(1));
         }
 
         WHEN("We make a state - defaulting the set to populated") {
@@ -996,14 +1111,17 @@ TEST_CASE("SumNode") {
                 CHECK(r_ptr_0->ndim() == 2);
                 CHECK(r_ptr_0->size(state) == 4);
                 CHECK(r_ptr_0->shape(state).size() == 2);
+                CHECK(r_ptr_0->sizeinfo() == ptr->sizeinfo() / 2);
 
                 CHECK(r_ptr_1->ndim() == 2);
                 CHECK(r_ptr_1->size(state) == 4);
                 CHECK(r_ptr_1->shape(state).size() == 2);
+                CHECK(r_ptr_1->sizeinfo() == ptr->sizeinfo() / 2);
 
                 CHECK(r_ptr_2->ndim() == 2);
                 CHECK(r_ptr_2->size(state) == 4);
                 CHECK(r_ptr_2->shape(state).size() == 2);
+                CHECK(r_ptr_2->sizeinfo() == ptr->sizeinfo() / 2);
 
                 /// Check with
                 /// A = np.arange(8).reshape((2, 2, 2))
@@ -1043,14 +1161,17 @@ TEST_CASE("SumNode") {
                 CHECK(r_ptr_01->ndim() == 1);
                 CHECK(r_ptr_01->size(state) == 4);
                 CHECK(r_ptr_01->shape(state).size() == 1);
+                CHECK(r_ptr_01->sizeinfo() == array_ptr->sizeinfo() / (2 * 3));
 
                 CHECK(r_ptr_02->ndim() == 1);
                 CHECK(r_ptr_02->size(state) == 3);
                 CHECK(r_ptr_02->shape(state).size() == 1);
+                CHECK(r_ptr_02->sizeinfo() == array_ptr->sizeinfo() / (2 * 4));
 
                 CHECK(r_ptr_12->ndim() == 1);
                 CHECK(r_ptr_12->size(state) == 2);
                 CHECK(r_ptr_12->shape(state).size() == 1);
+                CHECK(r_ptr_12->sizeinfo() == array_ptr->sizeinfo() / (3 * 4));
 
                 /// Check with
                 /// A = np.arange(24).reshape((2, 3, 4))
@@ -1086,14 +1207,17 @@ TEST_CASE("SumNode") {
                 CHECK(r_ptr_0->ndim() == 2);
                 CHECK(r_ptr_0->size(state) == 6);
                 CHECK(r_ptr_0->shape(state).size() == 2);
+                CHECK(r_ptr_0->sizeinfo() == ptr->sizeinfo() / 2);
 
                 CHECK(r_ptr_1->ndim() == 2);
                 CHECK(r_ptr_1->size(state) == 4);
                 CHECK(r_ptr_1->shape(state).size() == 2);
+                CHECK(r_ptr_1->sizeinfo() == ptr->sizeinfo() / 3);
 
                 CHECK(r_ptr_2->ndim() == 2);
                 CHECK(r_ptr_2->size(state) == 6);
                 CHECK(r_ptr_2->shape(state).size() == 2);
+                CHECK(r_ptr_2->sizeinfo() == ptr->sizeinfo() / 2);
 
                 CHECK(std::ranges::equal(r_ptr_0->view(state), std::vector<double>(6, 0)));
                 CHECK(std::ranges::equal(r_ptr_1->view(state), std::vector<double>(4, 0)));
@@ -1171,10 +1295,12 @@ TEST_CASE("SumNode") {
                 CHECK(r_ptr_0->ndim() == 1);
                 CHECK(r_ptr_0->size(state) == 2);
                 CHECK(r_ptr_0->shape(state).size() == 1);
+                CHECK(r_ptr_0->sizeinfo() == ptr->sizeinfo() / 2);
 
                 CHECK(r_ptr_1->ndim() == 1);
                 CHECK(r_ptr_1->size(state) == 2);
                 CHECK(r_ptr_1->shape(state).size() == 1);
+                CHECK(r_ptr_1->sizeinfo() == ptr->sizeinfo() / 2);
 
                 /// Check with
                 /// A = np.arange(8).reshape((2, 2, 2))
@@ -1206,6 +1332,7 @@ TEST_CASE("SumNode") {
 
         AND_GIVEN("x = sum(arr, initial=2)") {
             auto x_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{}, 2);
+            CHECK(x_ptr->sizeinfo() == SizeInfo(1));
             graph.emplace_node<ArrayValidationNode>(x_ptr);
 
             auto state = graph.empty_state();
@@ -1239,6 +1366,7 @@ TEST_CASE("SumNode") {
 
         AND_GIVEN("x = sum(arr, axes=(0,), initial=2)") {
             auto x_ptr = graph.emplace_node<SumNode>(arr_ptr, std::vector<ssize_t>{0}, 2);
+            CHECK(x_ptr->sizeinfo() == SizeInfo(12));
             graph.emplace_node<ArrayValidationNode>(x_ptr);
 
             CHECK_THAT(x_ptr->shape(), RangeEquals({3, 4}));
@@ -1342,6 +1470,7 @@ TEST_CASE("SumNode") {
         // shape is as expected
 
         CHECK(sum_ptr->size() == 1);
+        CHECK(sum_ptr->sizeinfo() == SizeInfo(1));
         CHECK_THAT(sum_ptr->shape(), RangeEquals(std::vector<ssize_t>{}));
 
         // as are the array values
@@ -1381,6 +1510,7 @@ TEST_CASE("SumNode") {
         // shape is as expected
 
         CHECK(sum_ptr->size() == 0);
+        CHECK(sum_ptr->sizeinfo() == SizeInfo(0));
         CHECK_THAT(sum_ptr->shape(), RangeEquals({0}));
 
         // as are the array values
@@ -1410,6 +1540,7 @@ TEST_CASE("SumNode") {
         // shape is as expected
 
         CHECK(sum_ptr->size() == -1);
+        CHECK(sum_ptr->sizeinfo() == SizeInfo(sum_ptr));
         CHECK_THAT(sum_ptr->shape(), RangeEquals({-1}));
 
         // as are the array values
@@ -1432,13 +1563,16 @@ TEST_CASE("SumNode") {
         CHECK_THAT(sum_ptr->view(state), RangeEquals({3, 3, 3, 3}));
     }
 
-    GIVEN("Dynamic array of shape (-1, 2) with min/max of 1/3 on first dim, and a sum across the second dim") {
-        auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 2}, 0.0, 10.0, true, 2, 6);
+    GIVEN("Dynamic array of shape (-1, 2) with min/max of 1/3 on first dim, and a sum across the"
+          "second dim") {
+        auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+                std::initializer_list<ssize_t>{-1, 2}, 0.0, 10.0, true, 2, 6);
         auto sum_ptr = graph.emplace_node<SumNode>(x_ptr, std::vector<ssize_t>{1});
 
         THEN("The shape of the sum is correct") {
             CHECK(sum_ptr->dynamic());
             CHECK_THAT(sum_ptr->shape(), RangeEquals({-1}));
+            CHECK(sum_ptr->sizeinfo() == x_ptr->sizeinfo() / 2);
         }
 
         AND_GIVEN("An initialized state") {
@@ -1453,7 +1587,6 @@ TEST_CASE("SumNode") {
             }
 
             AND_WHEN("We grow the dynamic node") {
-
                 x_ptr->grow(state, {3, 4});
                 graph.propagate(state);
                 REQUIRE_THAT(x_ptr->shape(state), RangeEquals({2, 2}));

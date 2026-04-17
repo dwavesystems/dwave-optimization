@@ -503,6 +503,9 @@ class TransposeNode : public ArrayNode {
     ssize_t size() const override;
     ssize_t size(const State& state) const override;
 
+    /// @copydoc Array::sizeinfo()
+    SizeInfo sizeinfo() const override;
+
     /// @copydoc Array::min()
     double min() const override;
 
@@ -537,8 +540,11 @@ class TransposeNode : public ArrayNode {
     const ssize_t ndim_;
     const std::unique_ptr<ssize_t[]> shape_;
     const std::unique_ptr<ssize_t[]> strides_;
+    /// The number of indices per stride in the predecessor array.
+    const std::vector<ssize_t> array_indices_per_stride_;
     const bool contiguous_;
     const ValuesInfo values_info_;
+    const SizeInfo sizeinfo_;
 
     ArrayNode* predeccesor_check_(ArrayNode* array_ptr) const;
     Update convert_predecessor_update_(Update update) const;

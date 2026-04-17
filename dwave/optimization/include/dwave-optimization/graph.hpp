@@ -96,6 +96,7 @@ class Graph {
     // Get the descendants of the source nodes, that is, all nodes that can be visited starting from
     // the sources.
     static std::vector<const Node*> descendants(State& state, std::vector<const Node*> sources);
+    std::vector<const Node*> descendants(std::vector<const Node*> sources) const;
 
     /// Call propagate on every `Node` in the `Graph`.
     void propagate(State& state) const;

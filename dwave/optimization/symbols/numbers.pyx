@@ -36,8 +36,9 @@ from dwave.optimization.states cimport States
 cdef class BinaryVariable(ArraySymbol):
     """Binary decision-variable symbol.
 
-    See also:
-        :meth:`~dwave.optimization.model.Model.binary`: equivalent method.
+    See Also:
+        :meth:`~dwave.optimization.model.Model.binary`: Instantiation and
+        usage of this symbol.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
@@ -144,7 +145,7 @@ cdef class BinaryVariable(ArraySymbol):
             np.save(f, upper_bound, allow_pickle=False)
 
     def lower_bound(self):
-        """Lower bound(s) of Binary symbol."""
+        """Lower bound(s) of the symbol."""
         try:
             return np.asarray(self.ptr.lower_bound())
         except IndexError:
@@ -152,9 +153,13 @@ cdef class BinaryVariable(ArraySymbol):
         return np.asarray([self.ptr.lower_bound(i) for i in range(self.size())]).reshape(self.shape())
 
     def set_state(self, Py_ssize_t index, state):
-        r"""Set the state of the binary symbol.
+        r"""Set the state of the symbol.
 
-        The given state must be binary array with the same shape as the symbol.
+        Args:
+            index (int): Index of the state to set.
+            state (\ |array-like|_\ ): Assignment of values for the state. The
+                specified state must be binary array with the same shape as the
+                symbol.
 
         Examples:
             This example sets two states for a :math:`2 \times 3`-sized
@@ -193,7 +198,7 @@ cdef class BinaryVariable(ArraySymbol):
         self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
     def upper_bound(self):
-        """Upper bound(s) of Binary symbol."""
+        """Upper bound(s) of the symbol."""
         try:
             return np.asarray(self.ptr.upper_bound())
         except IndexError:
@@ -210,7 +215,8 @@ cdef class IntegerVariable(ArraySymbol):
     """Integer decision-variable symbol.
 
     See Also:
-        :meth:`~dwave.optimization.model.Model.integer`: equivalent method.
+        :meth:`~dwave.optimization.model.Model.integer`: Instantiation and
+        usage of this symbol.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
@@ -303,7 +309,7 @@ cdef class IntegerVariable(ArraySymbol):
         # This is for backward compatiblity and should be ignored
         if lower_bound.size == 1 and upper_bound.size == 1:
             shape_info["lb"] = lower_bound.item()
-            shape_info["ub"] = upper_bound.item() 
+            shape_info["ub"] = upper_bound.item()
 
         encoder = json.JSONEncoder(separators=(',', ':'))
         zf.writestr(directory + "shape.json", encoder.encode(shape_info))
@@ -323,7 +329,7 @@ cdef class IntegerVariable(ArraySymbol):
             np.save(f, upper_bound, allow_pickle=False)
 
     def lower_bound(self):
-        """Lower bound(s) of Integer symbol."""
+        """Lower bound(s) of the symbol."""
         try:
             return np.asarray(self.ptr.lower_bound())
         except IndexError:
@@ -333,8 +339,12 @@ cdef class IntegerVariable(ArraySymbol):
     def set_state(self, Py_ssize_t index, state):
         r"""Set the state of the integer symbol.
 
-        The given state must be an integer array with the same shape as the
-        symbol.
+        Args:
+            index (int):
+                Index of the state to set.
+            state (\ |array-like|_\ ):
+                Assignment of values for the state. The specified state must
+                have the same shape as the symbol.
 
         Examples:
             This example successfully sets one state for a :math:`2 \times
@@ -370,7 +380,7 @@ cdef class IntegerVariable(ArraySymbol):
         self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
     def upper_bound(self):
-        """Upper bound(s) of Integer symbol."""
+        """Upper bound(s) of the symbol."""
         try:
             return np.asarray(self.ptr.upper_bound())
         except IndexError:

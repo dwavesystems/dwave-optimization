@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Fix an issue with advanced indexing when indexing a dynamic array with
+    scalar indexers where the index on the first dimension is an empty slice,
+    such as ``A[:, i, j, :]`` where ``i`` and ``j`` are scalar symbols. Previously,
+    this may have resulted in a exception being raised when initializing a
+    state on the model. This has now been fixed. A specific sub-case of this,
+    when the scalar indexers are separated by an empty slice in at least one axis,
+    (e.g. ``A[:, i, :, j]``) is not supported and is now properly disallowed with
+    an exception being raised at symbol/node construction time.

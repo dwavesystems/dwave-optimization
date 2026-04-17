@@ -138,11 +138,15 @@ class AdvancedIndexingNode : public ArrayNode {
     const std::vector<array_or_slice> indices_;
     const ssize_t indexing_arrays_ndim_;
 
-    // "Bullet 1 mode" refers to NumPy combined indexing where there is any slice between
-    // indexing arrays, e.g. A[:, i, :, j]. It is a reference to the two cases laid out
-    // in bullets in the NumPy docs here:
+    // "Grouped-indexers mode" refers to NumPy combined indexing where all array indexers
+    // are grouped together or contiguous, e.g. `A[:, :, i, j, k, :]`. In this case, the dimensions
+    // from the array indexers are inserted into the resulting array at the same axis as the
+    // first indexer of the group. The alternative, "non-grouped-indexers mode", is triggered
+    // when there is any empty slice between array indexers, e.g. `A[:, i, :, j]`. In this mode,
+    // the dimensions of the array indexers are inserted at the beginning of the resulting array.
+    // For more information on how these different operations work, see the NumPy docs here:
     // https://numpy.org/doc/stable/user/basics.indexing.html#combining-advanced-and-basic-indexing
-    const bool bullet1mode_;
+    const bool grouped_indexers_mode_;
 
     const ssize_t first_array_index_;  // first axis indexed by an array
     const ssize_t subspace_stride_;

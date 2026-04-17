@@ -237,6 +237,14 @@ std::vector<const Node*> Graph::descendants(State& state, std::vector<const Node
     return sources;
 }
 
+std::vector<const Node*> Graph::descendants(std::vector<const Node*> sources) const {
+    State state;
+    for (ssize_t i = 0, stop = num_nodes(); i < stop; ++i) {
+        state.emplace_back(std::make_unique<NodeStateData>());
+    }
+    return descendants(state, sources);
+}
+
 void Graph::propagate(State& state) const {
     std::ranges::for_each(nodes(), [&state](const auto& ptr) { ptr->propagate(state); });
 }

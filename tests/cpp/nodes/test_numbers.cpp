@@ -106,42 +106,42 @@ TEST_CASE("BinaryNode") {
                     vec_d[i] = !vec_d[i];
                 }
 
-                THEN("Elments are flipped properly") {
+                THEN("Elements are flipped properly") {
                     CHECK_THAT(ptr->view(state), RangeEquals(vec_d));
                     CHECK(static_cast<ssize_t>(ptr->diff(state).size()) == ptr->size());
                 }
             }
 
-            WHEN("We set all the elements") {
+            WHEN("We set all the elements to 1") {
                 int set_count_ground = 0;
                 for (int i = 0, stop = ptr->size(); i < stop; ++i) {
                     // Note, index-wise bounds are all [0,1]
-                    ptr->set(state, i);
+                    ptr->set_value(state, i, 1);
                     set_count_ground += !vec_d[i];
                 }
 
-                THEN("Elments are set properly") {
+                THEN("Elements are set properly") {
                     CHECK(std::ranges::all_of(ptr->view(state), [](int i) { return i == 1; }));
                 }
 
-                THEN("The number of elements set equals the number of initially unset elements") {
+                THEN("The number of effective changes is correct") {
                     CHECK(static_cast<int>(ptr->diff(state).size()) == set_count_ground);
                 }
             }
 
-            WHEN("We unset all the elements") {
+            WHEN("We set all the elements to 0") {
                 int unset_count_ground = 0;
                 for (int i = 0, stop = ptr->size(); i < stop; ++i) {
                     // Note, index-wise bounds are all [0,1]
-                    ptr->unset(state, i);
+                    ptr->set_value(state, i, 0);
                     unset_count_ground += vec_d[i];
                 }
 
-                THEN("Elments are unset properly") {
+                THEN("Elements are set properly") {
                     CHECK(std::ranges::all_of(ptr->view(state), [](int i) { return i == 0; }));
                 }
 
-                THEN("The number of elements unset equals the number of initially set elements") {
+                THEN("The number of effective changes is correct") {
                     CHECK(static_cast<int>(ptr->diff(state).size()) == unset_count_ground);
                 }
             }
@@ -231,45 +231,45 @@ TEST_CASE("BinaryNode") {
                     vec_d[i] = !vec_d[i];
                 }
 
-                THEN("Elments are flipped properly") {
+                THEN("Elements are flipped properly") {
                     CHECK(std::ranges::equal(ptr->view(state), vec_d));
                 }
 
-                THEN("The number of elements set equals the number of initially unset elements") {
+                THEN("The number of effective flips is correct") {
                     CHECK(static_cast<ssize_t>(ptr->diff(state).size()) == ptr->size());
                 }
             }
 
-            WHEN("We set all the elements") {
+            WHEN("We set all the elements to 1") {
                 int set_count_ground = 0;
                 for (int i = 0, stop = ptr->size(); i < stop; ++i) {
                     // Note, index-wise bounds are all [0,1]
-                    ptr->set(state, i);
+                    ptr->set_value(state, i, 1);
                     set_count_ground += !vec_d[i];
                 }
 
-                THEN("Elments are set properly") {
+                THEN("Elements are set properly") {
                     CHECK(std::ranges::all_of(ptr->view(state), [](int i) { return i == 1; }));
                 }
 
-                THEN("The number of elements set equals the number of initially unset elements") {
+                THEN("The number of effective changes is correct") {
                     CHECK(static_cast<int>(ptr->diff(state).size()) == set_count_ground);
                 }
             }
 
-            WHEN("We unset all the elements") {
+            WHEN("We set all the elements to 0") {
                 int unset_count_ground = 0;
                 for (int i = 0, stop = ptr->size(); i < stop; ++i) {
                     // Note, index-wise bounds are all [0,1]
-                    ptr->unset(state, i);
+                    ptr->set_value(state, i, 0);
                     unset_count_ground += vec_d[i];
                 }
 
-                THEN("Elments are unset properly") {
+                THEN("Elements are set properly") {
                     CHECK(std::ranges::all_of(ptr->view(state), [](int i) { return i == 0; }));
                 }
 
-                THEN("The number of elements unset equals the number of initially set elements") {
+                THEN("The number of effective changes is correct") {
                     CHECK(static_cast<int>(ptr->diff(state).size()) == unset_count_ground);
                 }
             }
@@ -332,10 +332,10 @@ TEST_CASE("BinaryNode") {
             }
         }
 
-        AND_WHEN("We set the state at the indices using set()") {
+        AND_WHEN("We set the state at the indices using set_value()") {
             auto state = graph.initialize_state();
             // Note, index-wise bounds are [[0,1], [0,1], [1,1]]
-            bnode_ptr->set(state, 1);
+            bnode_ptr->set_value(state, 1, 1);
 
             THEN("The values at index 0 and 1 are correct") {
                 CHECK(bnode_ptr->get_value(state, 0) == 0.0);  // Default value
@@ -352,17 +352,17 @@ TEST_CASE("BinaryNode") {
                     CHECK(bnode_ptr->get_value(state, 1) == 0.0);
                 }
 
-                THEN("We can perform an unset()") {
+                THEN("We set an index to 0") {
                     // Note, index-wise bounds are [[0,1], [0,1], [1,1]]
                     CHECK(bnode_ptr->get_value(state, 1) == 1.0);
-                    bnode_ptr->unset(state, 1);
+                    bnode_ptr->set_value(state, 1, 0);
                     CHECK(bnode_ptr->get_value(state, 1) == 0.0);
                 }
 
-                THEN("We can perform a set()") {
+                THEN("We set an index to 1") {
                     // Note, index-wise bounds are [[0,1], [0,1], [1,1]]
                     CHECK(bnode_ptr->get_value(state, 0) == 0.0);
-                    bnode_ptr->set(state, 0);
+                    bnode_ptr->set_value(state, 0, 1);
                     CHECK(bnode_ptr->get_value(state, 0) == 1.0);
                 }
 

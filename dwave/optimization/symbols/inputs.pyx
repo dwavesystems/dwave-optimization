@@ -33,7 +33,14 @@ from dwave.optimization.states cimport States
 
 
 cdef class Input(ArraySymbol):
-    """An input symbol. Functions as a "placeholder" in a model."""
+    """An input symbol that acts as a placeholder in a model.
+
+    See Also:
+        :func:`~dwave.optimization.model.Model.input`: Instantiation and usage
+        of this symbol.
+
+        :class:`~dwave.optimization.symbols.Constant`
+    """
 
     def __init__(
         self,
@@ -58,17 +65,33 @@ cdef class Input(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     def integral(self):
-        """Whether the input symbol will always output integers."""
+        """Returns True if the symbol always returns integers."""
         return self.ptr.integral()
 
     def lower_bound(self):
-        """Lowest value allowed to the input."""
+        """Lowest value allowed in the state."""
         return self.ptr.min()
 
     def set_state(self, Py_ssize_t index, state):
-        """Set the state of the input symbol.
+        """Set the state of the symbol.
 
-        The given state must be the same shape as the input symbol's shape.
+        Args:
+            index (int):
+                Index of the state to set.
+            state (\ |array-like|_\ ):
+                Assignment of values for the state. The specified state must
+                have the same shape as the symbol.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> y = model.input(shape=(2, 3), upper_bound=10, integral=False)
+            >>> z = y.max()
+            >>> with model.lock():
+            ...     model.states.resize(1)
+            ...     y.set_state(0, [[1.5, 2, 9], [-12, 4, 10]])
+            ...     print(z.state(0))
+            10.0
         """
 
         # can't use ascontiguousarray yet because it will turn scalars into 1d arrays
@@ -88,7 +111,7 @@ cdef class Input(ArraySymbol):
         )
 
     def upper_bound(self):
-        """Largest value allowed to the input."""
+        """Largest value allowed in the state."""
         return self.ptr.max()
 
     @classmethod
