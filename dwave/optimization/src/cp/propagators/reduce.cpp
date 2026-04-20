@@ -226,8 +226,6 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
                                                                CPVarsState& v_state) const {
     auto data = data_ptr<SumPropagatorData>(p_state);
 
-    CPStatus status = CPStatus::OK;
-
     std::deque<ssize_t>& indices_to_process = data->indices_to_process();
 
     while (data->num_indices_to_process() > 0) {
