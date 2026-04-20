@@ -27,9 +27,17 @@ namespace dwave::optimization {
 template <class T>
 concept shape_like = std::ranges::sized_range<T> and std::integral<std::ranges::range_value_t<T>>;
 
-/// An iterator over bytes with a fixed size that can be interpreted as an
-/// array.
-template <DType To, OptionalDType From = void>
+// developer note: In many places it ends up being much faster to use a for-loop over shape/strides
+// than to use more abstract methods such as std::equals().
+// At least when tested with gcc13.
+// Probably because we're doing a very simple, contiguous operations.
+
+/// Multi-dimensional, reinterpreting iterator for iterating over arrays.
+///
+/// `To` specifies the `value_type` of the iterator.
+/// `From` specifies the type of the underlying buffer. `void` means that the type
+/// is specified at run-time.
+template <DType To, OptionalDType From = To>
     requires requires {
         // Cannot create an output iterator when From != To
         requires std::is_const<To>::value or std::is_same<To, From>::value;
@@ -65,9 +73,12 @@ class BufferIterator {
     /// Move constructor
     BufferIterator(BufferIterator&&) = default;
 
-    // todo: untemplated versions
-
+    /// Construct a `BufferIterator` from a pointer, shape, and strides.
+    ///
+    /// Note that the pointer to shape/strides is not owning! The lifespan of those
+    /// pointers must exceed that of the iterator.
     BufferIterator(From* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
+        requires(DType<From>)
             : ptr_(ptr),
               format_(format_of<From>()),
               ndim_(ndim),
@@ -75,14 +86,19 @@ class BufferIterator {
               strides_(strides),
               loc_(ndim_ > 0 ? std::make_unique<ssize_t[]>(ndim_) : nullptr) {
         assert(ndim_ >= 0);
-    }
 
-    /// Construct a non-contiguous iterator from a shape/strides defined as
-    /// observing pointers when `From` is `void`.
+        // there is an edge case where if the shape contains any zeros we want our
+        // loc to point to the end because we're an empty iterator
+        for (ssize_t axis = 0; axis < ndim_; ++axis) {
+            if (shape_[axis] == 0) {
+                loc_[0] = shape_[0];
+                break;
+            }
+        }
+    }
     template <DType T>
-    BufferIterator(
-            T* ptr, ssize_t ndim, const ssize_t* shape,
-            const ssize_t* strides) noexcept  // todo: enforce agreement with From when needed
+    BufferIterator(T* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
+        requires(not DType<From>)
             : ptr_(ptr),
               format_(format_of<T>()),
               ndim_(ndim),
@@ -90,20 +106,25 @@ class BufferIterator {
               strides_(strides),
               loc_(ndim_ > 0 ? std::make_unique<ssize_t[]>(ndim_) : nullptr) {
         assert(ndim_ >= 0);
+
+        // there is an edge case where if the shape contains any zeros we want our
+        // loc to point to the end because we're an empty iterator
+        for (ssize_t axis = 0; axis < ndim_; ++axis) {
+            if (shape_[axis] == 0) {
+                loc_[0] = shape_[0];
+                break;
+            }
+        }
     }
 
-    template <DType T>
+    /// Convenience constructor when using shape/strides specified as ranges.
+    template <OptionalDType T>
     BufferIterator(T* ptr, std::span<const ssize_t> shape, std::span<const ssize_t> strides)
-            : ptr_(ptr),
-              format_(format_of<T>()),
-              ndim_(std::ranges::size(shape)),
-              shape_(shape.data()),
-              strides_(strides.data()),
-              loc_(ndim_ > 0 ? std::make_unique<ssize_t[]>(ndim_) : nullptr) {
-        assert(ndim_ >= 0);
+            : BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
         assert(std::ranges::size(shape) == std::ranges::size(strides));
     }
 
+    /// Copy assigment
     BufferIterator& operator=(const BufferIterator& other) noexcept {
         if (ndim_ == other.ndim_) {
             // we don't need to reallocate our loc_, we'll overwrite it shortly
@@ -123,12 +144,14 @@ class BufferIterator {
         strides_ = other.strides_;
     }
 
+    /// Move assignment
     BufferIterator& operator=(BufferIterator&&) = default;
 
     /// Destructor
     ~BufferIterator() = default;
 
-    /// Dereference the iterator when the iterator is not an output iterator.
+    /// Dereference the iterator. When `To` matches `From` this can return
+    /// a reference, otherwise it returns a value.
     reference operator*() const noexcept
         requires(std::same_as<const To, const From>)
     {
@@ -182,18 +205,21 @@ class BufferIterator {
         return *this;
     }
 
+    /// Increment the iterator in multiple dimensions. Note that this does not
+    /// roll over!
     template <shape_like Shape>
     BufferIterator& operator+=(Shape&& rhs) {
-        increment_(std::forward<Shape>(rhs));
+        increment_multi_(std::forward<Shape>(rhs));
         return *this;
     }
     BufferIterator& operator+=(std::initializer_list<std::ptrdiff_t> rhs) {
-        return (*this) += std::vector(rhs);
+        return (*this) += std::span(rhs);
     }
 
     /// Decrement the iterator by `rhs` steps.
     BufferIterator& operator-=(difference_type rhs) { return *this += -rhs; }
 
+    /// Equality comparison between two buffer iterators.
     friend bool operator==(const BufferIterator& lhs, const BufferIterator& rhs) {
         // Check that lhs and rhs are consistent with each other.
         assert(std::ranges::equal(std::span(lhs.shape_, lhs.ndim_),
@@ -202,17 +228,13 @@ class BufferIterator {
         assert(std::ranges::equal(std::span(lhs.strides_, lhs.ndim_),
                                   std::span(rhs.strides_, rhs.ndim_)) &&
                "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
-
-        // developer note: it ends up being much faster to check equality with a for-loop than
-        // to use std::equals(). At least when tested with gcc13. Probably because we're doing
-        // a very simple, contiguous comparison.
-
         for (ssize_t axis = 0; axis < lhs.ndim_; ++axis) {
             if (lhs.loc_[axis] != rhs.loc_[axis]) return false;
         }
         return true;
     }
 
+    /// Equality comparison between the iterator and the default sentinel
     friend bool operator==(const BufferIterator& lhs, std::default_sentinel_t) {
         if (lhs.ndim_ <= 0) return true;
         assert(lhs.shape_[0] >= 0 && "only defined for non-dynamic shapes");
@@ -241,6 +263,8 @@ class BufferIterator {
     /// Return an iterator pointing to the location `lhs` steps from `rhs`.
     friend BufferIterator operator+(difference_type lhs, BufferIterator rhs) { return rhs += lhs; }
 
+    /// Return an iterator pointing to the location `rhs` steps from `lhs`, where `rhs` is
+    /// a multi-index. Note that this does not roll over!
     friend BufferIterator operator+(BufferIterator lhs, shape_like auto&& rhs) {
         lhs += rhs;
         return lhs;
@@ -270,9 +294,8 @@ class BufferIterator {
         return difference;
     }
 
+    /// Return the number of steps from `rhs` to the end.
     friend difference_type operator-(std::default_sentinel_t, const BufferIterator& rhs) {
-        // how many steps from rhs to the end
-
         if (rhs.ndim_ <= 0) return 0;
 
         difference_type difference = 0;
@@ -285,37 +308,9 @@ class BufferIterator {
 
         return difference;
     }
+    /// Return the number of steps from end to `rhs`.
     friend difference_type operator-(const BufferIterator& lhs, std::default_sentinel_t) {
         return -(std::default_sentinel - lhs);
-    }
-
-    /// The number of bytes used to encode values in the buffer.
-    std::ptrdiff_t itemsize() const noexcept {
-        if constexpr (DType<From>) {
-            // If we know the type of From at compiletime, then this is easy
-            return sizeof(From);
-        } else {
-            // Otherwise we do a runtime check
-            switch (format_) {
-                case FormatCharacter::float_:
-                    return sizeof(float);
-                case FormatCharacter::double_:
-                    return sizeof(double);
-                case FormatCharacter::bool_:
-                    return sizeof(bool);
-                case FormatCharacter::int_:
-                    return sizeof(int);
-                case FormatCharacter::signedchar_:
-                    return sizeof(signed char);
-                case FormatCharacter::signedshort_:
-                    return sizeof(signed short);
-                case FormatCharacter::signedlong_:
-                    return sizeof(signed long);
-                case FormatCharacter::signedlonglong_:
-                    return sizeof(signed long long);
-            }
-        }
-        unreachable();
     }
 
     /// Return the location in the shaped array that the iterator currently
@@ -323,8 +318,7 @@ class BufferIterator {
     std::span<const ssize_t> location() { return std::span<ssize_t>(loc_.get(), ndim_); }
 
  private:
-    // TODO: doc
-    void increment_(shape_like auto&& multi_increment) {
+    void increment_multi_(shape_like auto&& multi_increment) {
         assert(static_cast<ssize_t>(std::ranges::size(multi_increment)) == ndim_);
 
         std::ptrdiff_t offset = 0;  // the number of bytes we need to move
@@ -383,7 +377,7 @@ class BufferIterator {
             // if we're partway through the axis, we shift to
             // the beginning by adding the number of steps to the total
             // that we want to go, and updating the offset accordingly
-            if (loc_[axis]) {
+            if (loc[axis]) {
                 qr.quot += loc[axis];
                 offset -= loc[axis] * strides_[axis];
                 // loc[axis] = 0;  // overwritten later, so skip resetting the loc
@@ -444,7 +438,6 @@ class BufferIterator {
         }
     }
 
-    // If we're const, then hold a const void*, else hold void*
     From* ptr_ = nullptr;
 
     // A format character indicating what type we are. We store this regardless
