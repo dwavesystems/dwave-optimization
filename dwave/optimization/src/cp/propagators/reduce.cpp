@@ -256,16 +256,16 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
                                 lb_present, ub_present);
 
         // Prune out_ min value
-        status = out_->remove_below(v_state,
-                                    *std::min_element(lb_optional.begin(), lb_optional.end()), i);
-
-        if (status == CPStatus::Inconsistency) return status;
+        if (CPStatus status = out_->remove_below(
+                    v_state, *std::min_element(lb_optional.begin(), lb_optional.end()), i);
+            not status)
+            return status;
 
         // Prune out_ max value
-        status = out_->remove_above(v_state,
-                                    *std::max_element(ub_optional.begin(), ub_optional.end()), i);
-
-        if (status == CPStatus::Inconsistency) return status;
+        if (CPStatus status = out_->remove_above(
+                    v_state, *std::max_element(ub_optional.begin(), ub_optional.end()), i);
+            not status)
+            return status;
 
         /// ==== End of forward propagation ====
 
@@ -297,11 +297,9 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
         bool changed_min_size = (min_size_new > in_->min_size(v_state)) ? true : false;
 
         // After this we set the min and max size
-        status = in_->set_min_size(v_state, min_size_new);
-        if (status == CPStatus::Inconsistency) return status;
+        if (CPStatus status = in_->set_min_size(v_state, min_size_new); not status) return status;
 
-        status = in_->set_max_size(v_state, max_size_new);
-        if (status == CPStatus::Inconsistency) return status;
+        if (CPStatus status = in_->set_max_size(v_state, max_size_new); not status) return status;
 
         // Now prune the values for each entry
         // They might have changed, so need to recompute.
@@ -327,13 +325,15 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
             double sum_min = *std::min_element(lb_optional.begin(), lb_optional.end());
             for (ssize_t j = 0; j < in_->min_size(v_state); ++j) {
                 assert(in_->is_active(v_state, j));
-                status = in_->remove_above(
-                        v_state, out_->max(v_state, 0) - (sum_min - in_->min(v_state, j)), j);
-                if (status == CPStatus::Inconsistency) return status;
+                if (CPStatus status = in_->remove_above(
+                            v_state, out_->max(v_state, 0) - (sum_min - in_->min(v_state, j)), j);
+                    not status)
+                    return status;
 
-                status = in_->remove_below(
-                        v_state, out_->min(v_state, 0) - (sum_max - in_->max(v_state, j)), j);
-                if (status == CPStatus::Inconsistency) return status;
+                if (CPStatus status = in_->remove_below(
+                            v_state, out_->min(v_state, 0) - (sum_max - in_->max(v_state, j)), j);
+                    not status)
+                    return status;
             }
         }
 
@@ -351,18 +351,20 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
                 double sum_min = (smin_it != lb_optional.end()) ? *smin_it : lb_optional.back();
                 double sum_max = (smax_it != ub_optional.end()) ? *smax_it : ub_optional.back();
 
-                status = in_->remove_above(
-                        v_state, out_->max(v_state, 0) - (sum_min - in_->min(v_state, j)), j);
-                if (status == CPStatus::Inconsistency) return status;
+                if (CPStatus status = in_->remove_above(
+                            v_state, out_->max(v_state, 0) - (sum_min - in_->min(v_state, j)), j);
+                    not status)
+                    return status;
 
-                status = in_->remove_below(
-                        v_state, out_->min(v_state, 0) - (sum_max - in_->max(v_state, j)), j);
-                if (status == CPStatus::Inconsistency) return status;
+                if (CPStatus status = in_->remove_below(
+                            v_state, out_->min(v_state, 0) - (sum_max - in_->max(v_state, j)), j);
+                    not status)
+                    return status;
             }
         }
     }
 
-    return status;
+    return CPStatus::OK;
 }
 
 template class DynamicReducePropagator<std::plus<double>>;
