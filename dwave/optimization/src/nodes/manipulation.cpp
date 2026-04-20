@@ -607,11 +607,12 @@ class PutNodeState : private ArrayStateData, public NodeStateData {
 
     // Sometimes we can be uncertain about some indices. So we save them as
     // ambiguities and do a big expensive repair at the end.
-    void resolve_ambiguities(const Array::View& indices, const Array::View& values) {
+    void resolve_ambiguities(const std::ranges::view auto& indices,
+                             const std::ranges::view auto& values) {
         if (ambiguities_.empty()) return;  // nothing to do
 
         const auto first = indices.begin();
-        const auto last = indices.end();
+        const auto last = first + indices.size();  // std::find() needs first/last to match type
 
         for (const ssize_t& index : ambiguities_) {
             if (!mask_[index]) continue;  // the ambiguity was eventually resolved

@@ -230,9 +230,10 @@ class ArrayNodeStateData : public ArrayStateData, public NodeStateData {
     explicit ArrayNodeStateData(std::vector<double>&& values) noexcept
             : ArrayStateData(std::move(values)), NodeStateData() {}
 
-    template <std::ranges::range Range>
+    template <std::ranges::random_access_range Range>
     explicit ArrayNodeStateData(Range&& values) noexcept
-            : ArrayNodeStateData(std::vector<double>(values.begin(), values.end())) {}
+            : ArrayNodeStateData(
+                      std::vector<double>(values.begin(), values.begin() + values.size())) {}
 
     std::unique_ptr<NodeStateData> copy() const override {
         return std::make_unique<ArrayNodeStateData>(*this);

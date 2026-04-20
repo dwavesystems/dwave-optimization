@@ -23,36 +23,6 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
-TEST_CASE("Array::View") {
-    static_assert(std::semiregular<Array::View>);
-
-    static_assert(std::is_nothrow_copy_constructible<Array::View>::value);
-    static_assert(std::is_nothrow_move_constructible<Array::View>::value);
-    static_assert(std::is_nothrow_copy_assignable<Array::View>::value);
-    static_assert(std::is_nothrow_move_assignable<Array::View>::value);
-
-    static_assert(!std::ranges::contiguous_range<Array::View>);
-    static_assert(std::ranges::random_access_range<Array::View>);
-    static_assert(std::ranges::range<Array::View>);
-    static_assert(std::ranges::sized_range<Array::View>);
-    static_assert(std::ranges::input_range<Array::View>);
-
-    // What we want is std::ranges::constant_range<...> but that's a c++23 feature,
-    // so we make due. This test actually might fail if say we didn't retern a reference
-    // but it's good enough for now
-    static_assert(std::is_const_v<std::remove_reference_t<decltype(Array::View()[0])>>);
-
-    // Because non-empty Views are so tied to Arrays, we do most of the
-    // testing in the Array tests. But we can test the empty ones here
-    SECTION("Empty View") {
-        auto view = Array::View();
-
-        CHECK(view.size() == 0);
-        CHECK(view.begin() == view.end());
-        CHECK(view.empty());
-    }
-}
-
 TEST_CASE("Test SizeInfo") {
     CHECK(SizeInfo(0) == SizeInfo(0));
     CHECK(SizeInfo(0) == 0);
@@ -210,7 +180,7 @@ TEST_CASE("Scalar") {
 
             CHECK(std::ranges::equal(a.view(state), std::vector{5.5}));
             CHECK(a.view(state).front() == 5.5);
-            CHECK(a.view(state).back() == 5.5);
+            CHECK(*(a.view(state).begin() + a.view(state).size() - 1)  == 5.5);
 
             // for contiguous buff() points to the value
             CHECK(*(a.buff(state)) == 5.5);
@@ -336,7 +306,7 @@ TEST_CASE("Dynamically Sized 1d Array") {
                 CHECK(std::ranges::equal(v.view(state), v.state_));
 
                 CHECK(v.view(state).front() == v.state_.front());
-                CHECK(v.view(state).back() == v.state_.back());
+                CHECK(*(v.view(state).begin() + v.view(state).size() - 1) == v.state_.back());
 
                 // for contiguous view is the same as span(buff(), size())
                 CHECK(std::ranges::equal(std::span(v.buff(state), v.size(state)), v.view(state)));

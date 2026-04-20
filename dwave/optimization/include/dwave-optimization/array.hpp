@@ -374,8 +374,6 @@ class Array {
     template <class T>
     using optional_cache_type = std::optional<std::reference_wrapper<cache_type<T>>>;
 
-    using View = std::ranges::subrange<const_iterator, const_iterator>;
-
     /// Constant used to signal that the size is based on the state.
     static constexpr ssize_t DYNAMIC_SIZE = -1;
 
@@ -445,15 +443,17 @@ class Array {
             static constexpr ssize_t strides = 0;
             return const_iterator(buff(state), 1, &shape, &strides);
         }
-        return const_iterator(buff(state), ndim(), shape().data(), strides().data());
+        return const_iterator(buff(state), shape(state), strides());
     }
 
-    /// Return a sentinel indicating the end of the array's state as a flattened array.
+    /// Return an iterator to the end of the array.
     auto end(const State& state) const { return begin(state) + size(state); }
 
     /// Return a container-like view over the array.
-    const View view(const State& state) const {
-        return std::ranges::subrange(begin(state), end(state));
+    /// Note that this view does not satisfy the requirements of std::commmon_range.
+    /// If you need two iterators of the same type, you should use `begin()` and `end()`.
+    auto view(const State& state) const {
+        return std::ranges::subrange(begin(state), std::default_sentinel);
     }
 
     /// The number of doubles in the flattened array.
@@ -666,7 +666,9 @@ class ScalarOutputMixin<Base, true> : public ScalarOutputMixin<Base, false> {
 };
 
 // Views are printable
-std::ostream& operator<<(std::ostream& os, const Array::View& view);
+std::ostream& operator<<(
+        std::ostream& os,
+        const std::ranges::subrange<Array::const_iterator, std::default_sentinel_t>& view);
 
 // Test whether two arrays are sure to have the same shape.
 bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr);

@@ -151,7 +151,9 @@ std::ostream& operator<<(std::ostream& os, const Update& update) {
     return os << "Update(" << update.index << ": " << update.old << " -> " << update.value << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, const Array::View& view) {
+std::ostream& operator<<(
+        std::ostream& os,
+        const std::ranges::subrange<Array::const_iterator, std::default_sentinel_t>& view) {
     const ssize_t size = view.size();
     os << "View{";
     auto it = view.begin();
