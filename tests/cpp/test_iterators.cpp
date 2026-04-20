@@ -62,7 +62,6 @@ TEMPLATE_PRODUCT_TEST_CASE("BufferIterator", "", BufferIterator,
                             (const std::int32_t, const std::int32_t),  //
                             (const std::int64_t, const std::int64_t))) {
     using To = TestType::value_type;
-    using From = TestType::buffer_type;
 
     static_assert(std::is_nothrow_constructible<TestType>::value);
     static_assert(std::is_nothrow_copy_constructible<TestType>::value);
