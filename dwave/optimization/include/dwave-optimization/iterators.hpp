@@ -142,6 +142,8 @@ class BufferIterator {
         ndim_ = other.ndim_;
         shape_ = other.shape_;
         strides_ = other.strides_;
+
+        return *this;
     }
 
     /// Move assignment
