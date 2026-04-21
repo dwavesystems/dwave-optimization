@@ -435,7 +435,12 @@ class Array {
 
     /// Return an iterator to the beginning of the array.
     auto begin(const State& state) const {
-        if (ndim() == 0) {
+        // We really just want the ndim(), but to avoid calling yet another
+        // virtual method let's just go ahead and get the strides and use that
+        // to determine the ndim
+        auto strides = this->strides();
+
+        if (strides.size() == 0) {
             // A 0d iterator is pretty ill-defined, so we return a 1d one.
             // The iterator doesn't manage the lifespan of the shape/strides
             // so we need them to be static here.
@@ -443,7 +448,7 @@ class Array {
             static constexpr ssize_t strides = 0;
             return const_iterator(buff(state), 1, &shape, &strides);
         }
-        return const_iterator(buff(state), shape(state), strides());
+        return const_iterator(buff(state), shape(state), strides);
     }
 
     /// Return an iterator to the end of the array.
