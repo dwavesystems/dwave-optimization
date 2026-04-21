@@ -33,8 +33,8 @@ NumberNode::SumConstraint::SumConstraint(std::optional<ssize_t> axis,
                                          std::vector<Operator> operators,
                                          std::vector<double> bounds)
         : axis_(axis), operators_(std::move(operators)), bounds_(std::move(bounds)) {
-    const size_t num_operators = operators_.size();
-    const size_t num_bounds = bounds_.size();
+    const ssize_t num_operators = operators_.size();
+    const ssize_t num_bounds = bounds_.size();
 
     if ((num_operators == 0) || (num_bounds == 0)) {
         throw std::invalid_argument("`operators` and `bounds` must have non-zero size.");
@@ -125,19 +125,19 @@ void NumberNodeStateData::revert() {
 
         // Iterate over the updates in reverse order. This is important
         // since a single index may have been updated multiple times.
-        for (ssize_t i = updates.size() - 1; i >= 0; --i) {
+        for (ssize_t i = static_cast<ssize_t>(updates.size()) - 1; i >= 0; --i) {
             const double difference = updates[i].value - updates[i].old;
             const std::vector<ssize_t>& slices = slice_cache_[i];
 
             // Reverse the change applied to each running sum
-            for (size_t j = 0, stop = slices.size(); j < stop; ++j) {
+            for (ssize_t j = static_cast<ssize_t>(slices.size()) - 1; j >= 0; --j) {
                 sum_constraints_lhs[j][slices[j]] -= difference;
             }
         }
+        slice_cache_.clear();  // Empty the slice cache.
     }
 
     ArrayNodeStateData::revert();  // Revert changes to the buffer.
-    slice_cache_.clear();          // Empty the slice cache.
 }
 
 void NumberNodeStateData::update(const NumberNode& node, const ssize_t index,
@@ -154,7 +154,7 @@ void NumberNodeStateData::update(const NumberNode& node, const ssize_t index,
     const std::vector<ssize_t> multi_index = unravel_index(index, node.shape());
     assert(sum_constraints.size() <= multi_index.size());
     // For each sum constraint.
-    for (size_t i = 0, stop = sum_constraints.size(); i < stop; ++i) {
+    for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
         const std::optional<const ssize_t> axis = sum_constraints[i].axis();
         /// Determine the "slice" that index lies on given the sum constraint.
         /// If `axis == std::nullopt`, the array is treated as a flat array with a
@@ -176,7 +176,7 @@ void NumberNodeStateData::update(const NumberNode& node, const ssize_t index,
     assert(sum_constraints.size() == sum_constraints_lhs.size());
     assert(sum_constraints.size() == slices.size());
     // For each sum constraint.
-    for (size_t i = 0, stop = sum_constraints.size(); i < stop; ++i) {
+    for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
         // Sanity check that the user provided slices for `index` are correct.
         assert(([&]() {
             const std::optional<const ssize_t> axis = sum_constraints[i].axis();
@@ -213,8 +213,8 @@ std::vector<std::vector<double>> get_sum_constraints_lhs(const NumberNode& node,
                                                          const std::vector<double>& number_data) {
     std::span<const ssize_t> node_shape = node.shape();
     const auto& sum_constraints = node.sum_constraints();
-    const size_t num_sum_constraints = sum_constraints.size();
-    assert(num_sum_constraints <= node_shape.size());
+    const ssize_t num_sum_constraints = sum_constraints.size();
+    assert(num_sum_constraints <= static_cast<ssize_t>(node_shape.size()));
     assert(std::accumulate(node_shape.begin(), node_shape.end(), 1, std::multiplies<ssize_t>()) ==
            static_cast<ssize_t>(number_data.size()));
 
@@ -237,7 +237,7 @@ std::vector<std::vector<double>> get_sum_constraints_lhs(const NumberNode& node,
     for (BufferIterator<double, double, true> it(number_data.data(), node_shape, node.strides());
          it != std::default_sentinel; ++it) {
         // Increment the sum of the appropriate slice per sum constraint.
-        for (size_t i = 0; i < num_sum_constraints; ++i) {
+        for (ssize_t i = 0; i < num_sum_constraints; ++i) {
             const std::optional<const ssize_t> axis = sum_constraints[i].axis();
             assert(!axis.has_value() || *axis < static_cast<ssize_t>(it.location().size()));
             /// Determine the "slice" that the iterator lies on given the sum constraint.
@@ -1070,14 +1070,14 @@ void BinaryNodeStateData::revert() {
 
         // Iterate over the updates in reverse order. This is important
         // since a single index may have been updated multiple times.
-        for (ssize_t i = updates.size() - 1; i >= 0; --i) {
+        for (ssize_t i = static_cast<ssize_t>(updates.size()) - 1; i >= 0; --i) {
             const Update& update = updates[i];
             const double difference = update.value - update.old;
             assert(difference == 1.0 || difference == -1.0);
             const std::vector<ssize_t>& slices = slice_cache_[i];
 
             // Reverse the change applied to each slice.
-            for (size_t j = 0, stop = slices.size(); j < stop; ++j) {
+            for (ssize_t j = static_cast<ssize_t>(slices.size()) - 1; j >= 0; --j) {
                 sum_constraints_lhs[j][slices[j]] -= difference;
                 if (update.value) {
                     slice_indices[j].update_false(update.index, slices[j]);
@@ -1087,10 +1087,10 @@ void BinaryNodeStateData::revert() {
                 }
             }
         }
+        slice_cache_.clear();  // Empty the slice cache.
     }
 
     ArrayNodeStateData::revert();  // Revert changes to the buffer.
-    slice_cache_.clear();          // Empty the slice cache.
 }
 
 void BinaryNodeStateData::update(const BinaryNode& node, const ssize_t index,
@@ -1106,7 +1106,7 @@ void BinaryNodeStateData::update(const BinaryNode& node, const ssize_t index,
     const std::vector<ssize_t> multi_index = unravel_index(index, node.shape());
     assert(sum_constraints.size() <= multi_index.size());
     // For each sum constraint.
-    for (size_t i = 0, stop = sum_constraints.size(); i < stop; ++i) {
+    for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
         const std::optional<const ssize_t> axis = sum_constraints[i].axis();
         /// Determine the "slice" that index lies on given the sum constraint.
         /// If `axis == std::nullopt`, the array is treated as a flat array with a
@@ -1134,7 +1134,7 @@ void BinaryNodeStateData::update(const BinaryNode& node, const ssize_t index,
     assert(sum_constraints.size() == sum_constraints_lhs.size());
     assert(sum_constraints.size() == slices.size());
     // For each sum constraint.
-    for (size_t i = 0, stop = sum_constraints.size(); i < stop; ++i) {
+    for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
         // Sanity check that the user provided slices for `index` are correct.
         assert(([&]() {
             const std::optional<const ssize_t> axis = sum_constraints[i].axis();
