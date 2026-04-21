@@ -38,46 +38,46 @@ class ReduceNodeData : public NodeStateData {
 
     // A modified `SparseSet` that sorts indices of a `ReduceNode` according
     // to the flags: invalid, updated, and unchanged.
-    struct SparseFlags {
+    struct ReductionFlags {
      public:
         /// All flags are set to "unchanged" by default.
-        SparseFlags(const ssize_t size) {
-            dense_flags.reserve(size);
-            sparse_flags.reserve(size);
+        ReductionFlags(const ssize_t size) {
+            indices_.reserve(size);
+            look_up_table_.reserve(size);
             for (ssize_t i = 0; i < size; ++i) {
-                dense_flags.emplace_back(i);
-                sparse_flags.emplace_back(i);
+                indices_.emplace_back(i);
+                look_up_table_.emplace_back(i);
             }
         }
 
         /// Grow by one. Note, index is set as "unchanged" by default.
         void append_back() {
-            const ssize_t index = sparse_flags.size();
-            sparse_flags.emplace_back(index);
-            dense_flags.emplace_back(index);
-            assert(dense_flags.size() == sparse_flags.size());
+            const ssize_t index = look_up_table_.size();
+            look_up_table_.emplace_back(index);
+            indices_.emplace_back(index);
+            assert(indices_.size() == look_up_table_.size());
         }
 
         /// Pop the flag cached by the last index.
         void pop_back() {
             assert(size() > 0);
-            const ssize_t index = sparse_flags.size() - 1;
+            const ssize_t index = look_up_table_.size() - 1;
             // Currently "invalid", move to "updated" region.
             if (is_invalid(index)) move_invalid_to_updated_(index);
             // Swap into last position of "unchanged" region from "updated" region.
             if (is_updated(index)) {
-                assert(num_updated > 0);
-                --num_updated;
-                swap_positions_(sparse_flags[index], size() - 1);
+                assert(num_updated_ > 0);
+                --num_updated_;
+                swap_positions_(look_up_table_[index], size() - 1);
             } else {
                 // Swap within "unchanged" region to the last position of "unchanged".
                 assert(is_unchanged(index));
-                swap_positions_(sparse_flags[index], size() - 1);
+                swap_positions_(look_up_table_[index], size() - 1);
             }
 
-            sparse_flags.pop_back();
-            dense_flags.pop_back();
-            assert(dense_flags.size() == sparse_flags.size());
+            look_up_table_.pop_back();
+            indices_.pop_back();
+            assert(indices_.size() == look_up_table_.size());
         }
 
         /// Resize to `new_size`.
@@ -98,12 +98,12 @@ class ReduceNodeData : public NodeStateData {
                     --current_size;
                 }
             }
-            assert(dense_flags.size() == sparse_flags.size());
+            assert(indices_.size() == look_up_table_.size());
         }
 
         /// Mark the given `index` as "invalid".
         void mark_invalid(const ssize_t index) {
-            assert(validate(index));
+            assert(validate_(index));
             // Nothing to do.
             if (is_invalid(index)) return;
             // Swap from "unchanged" region to "updated" region (if necessary).
@@ -111,14 +111,14 @@ class ReduceNodeData : public NodeStateData {
             // Should (now) be marked as "updated".
             assert(is_updated(index));
             // Swap into "invalid" region from "updated" region.
-            swap_positions_(sparse_flags[index], num_invalid);
-            ++num_invalid;
-            --num_updated;
+            swap_positions_(look_up_table_[index], num_invalid_);
+            ++num_invalid_;
+            --num_updated_;
         }
 
         /// Mark the given `index` as "updated".
         void mark_updated(const ssize_t index) {
-            assert(validate(index));
+            assert(validate_(index));
             // Nothing to do.
             if (is_updated(index)) return;
             // Swap from "invalid" region to "updated" region.
@@ -133,97 +133,97 @@ class ReduceNodeData : public NodeStateData {
 
         /// Returns whether or not `index` has been marked as "invalid".
         bool is_invalid(const ssize_t index) const {
-            assert(validate(index));
-            return sparse_flags[index] < num_invalid;
+            assert(validate_(index));
+            return look_up_table_[index] < num_invalid_;
         }
 
         /// Returns whether or not `index` has been marked as "updated".
         bool is_updated(const ssize_t index) const {
-            assert(validate(index));
-            const ssize_t pos = sparse_flags[index];  // Position in `dense_flags`.
-            return (num_invalid <= pos && pos < num_invalid + num_updated);
+            assert(validate_(index));
+            const ssize_t pos = look_up_table_[index];  // Position in `indices_`.
+            return (num_invalid_ <= pos && pos < num_invalid_ + num_updated_);
         }
 
         /// Returns whether or not `index` has been marked as "changed".
         bool is_unchanged(const ssize_t index) const {
-            assert(validate(index));
-            return num_invalid + num_updated <= sparse_flags[index];
+            assert(validate_(index));
+            return num_invalid_ + num_updated_ <= look_up_table_[index];
         }
 
         /// Reset all flags to "unchanged".
         void reset() {
-            num_invalid = 0;
-            num_updated = 0;
+            num_invalid_ = 0;
+            num_updated_ = 0;
         }
 
         /// Current size.
-        size_t size() const {
-            assert(dense_flags.size() == sparse_flags.size());
-            return dense_flags.size();
+        ssize_t size() const {
+            assert(indices_.size() == look_up_table_.size());
+            return static_cast<ssize_t>(indices_.size());
         }
 
         /// A span of the indices whose values have been marked as "invalid" or "updated".
         std::span<const ssize_t> changed() const {
-            return std::span<const ssize_t>(dense_flags.data(), num_invalid + num_updated);
+            return std::span<const ssize_t>(indices_).subspan(0, num_invalid_ + num_updated_);
         }
-
-        /// Indices of the `ReduceNode` sorted by "flag". `dense_flags`
-        /// is partitioned such that the index at position
-        /// [0, num_invalid) are considered "invalid", meaning they no longer holds
-        ///                  the correct value and the whole reduction must be recalculated,
-        /// [num_invalid, num_invalid + num_updated) are considered "updated",
-        ///                                          meaning they been updated and
-        ///                                          holds the correct value, and
-        /// [num_invalid + num_updated, end) are considered "unchanged", meaning
-        ///                                  they are unchanged since last propagation.
-        std::vector<ssize_t> dense_flags;
-        /// Look-up table for `dense_flags`. `sparse_flags[i]` = position of
-        /// index `i` in `dense_flags`.
-        std::vector<ssize_t> sparse_flags;
-        /// Number of indices marked "invalid".
-        ssize_t num_invalid = 0;
-        /// Number of indices marked "updated".
-        ssize_t num_updated = 0;
 
      private:
         /// Move the given 'index' from the "invalid" region to the "updated" region.
         void move_invalid_to_updated_(const ssize_t index) {
-            assert(validate(index));
+            assert(validate_(index));
             assert(is_invalid(index));  // Should be marked as "invalid".
             // Swap into "updated" region from "invalid" region.
-            --num_invalid;
-            swap_positions_(sparse_flags[index], num_invalid);
-            ++num_updated;
+            --num_invalid_;
+            swap_positions_(look_up_table_[index], num_invalid_);
+            ++num_updated_;
         }
 
         /// Move the given 'index' from the "unchanged" region to the "updated" region.
         void move_unchanged_to_updated_(const ssize_t index) {
-            assert(validate(index));
+            assert(validate_(index));
             assert(is_unchanged(index));  // Should be marked as "unchanged".
             // Swap into "updated" region from "unchanged" region.
-            swap_positions_(sparse_flags[index], num_invalid + num_updated);
-            ++num_updated;
+            swap_positions_(look_up_table_[index], num_invalid_ + num_updated_);
+            ++num_updated_;
         }
 
         /// Swap the indices at `pos_0` and `pos_1`.
         void swap_positions_(const ssize_t pos_0, const ssize_t pos_1) {
-            assert(0 <= pos_0 && pos_0 < static_cast<ssize_t>(dense_flags.size()));
-            assert(0 <= pos_1 && pos_1 < static_cast<ssize_t>(dense_flags.size()));
-            std::swap(dense_flags[pos_0], dense_flags[pos_1]);
-            assert(dense_flags[pos_0] < static_cast<ssize_t>(sparse_flags.size()));
-            assert(dense_flags[pos_1] < static_cast<ssize_t>(sparse_flags.size()));
-            sparse_flags[dense_flags[pos_0]] = pos_0;
-            sparse_flags[dense_flags[pos_1]] = pos_1;
+            assert(0 <= pos_0 && pos_0 < size());
+            assert(0 <= pos_1 && pos_1 < size());
+            std::swap(indices_[pos_0], indices_[pos_1]);
+            assert(0 <= indices_[pos_0] && indices_[pos_0] < size());
+            assert(0 <= indices_[pos_1] && indices_[pos_1] < size());
+            look_up_table_[indices_[pos_0]] = pos_0;
+            look_up_table_[indices_[pos_1]] = pos_1;
         }
 
         /// Check whether the given 'index' is valid.
-        bool validate(const ssize_t index) const {
-            if (index < 0 || static_cast<ssize_t>(sparse_flags.size()) <= index) return false;
-            ssize_t pos = sparse_flags[index];  // Position in `dense_flags`.
-            if (pos < 0 || static_cast<ssize_t>(dense_flags.size()) <= pos) return false;
-            if (dense_flags[pos] != index) return false;  // Look-up table should be correct.
+        bool validate_(const ssize_t index) const {
+            if (index < 0 || size() <= index) return false;
+            ssize_t pos = look_up_table_[index];  // Position in `indices_`.
+            if (pos < 0 || size() <= pos) return false;
+            if (indices_[pos] != index) return false;  // Look-up table should be correct.
             return true;
         }
+
+        /// Indices of the `ReduceNode` sorted by "flag". `indices_` is
+        /// partitioned such that the index at position
+        /// [0, num_invalid_) are considered "invalid", meaning they no longer holds
+        ///                   the correct value and the whole reduction must be recalculated,
+        /// [num_invalid_, num_invalid_ + num_updated_) are considered "updated",
+        ///                                             meaning they been updated and
+        ///                                             holds the correct value, and
+        /// [num_invalid_ + num_updated_, end) are considered "unchanged", meaning
+        ///                                    they are unchanged since last propagation.
+        std::vector<ssize_t> indices_;
+        /// Look-up table for `indices`. `look_up_table_[i]` = position of
+        /// index `i` in `indices_`.
+        std::vector<ssize_t> look_up_table_;
+        /// Number of indices marked "invalid".
+        ssize_t num_invalid_ = 0;
+        /// Number of indices marked "updated".
+        ssize_t num_updated_ = 0;
     };
 
     // Given a vector of reductions, construct the state of the array.
@@ -265,7 +265,7 @@ class ReduceNodeData : public NodeStateData {
     void append_reduction(reduction_type reduction) {
         reductions_.emplace_back(reduction);
         flags_.append_back();
-        flags_.mark_updated(static_cast<ssize_t>(flags_.size()) - 1);
+        flags_.mark_updated(flags_.size() - 1);
         // in this case there is no old value to save to reductions_diff_
     }
 
@@ -286,9 +286,9 @@ class ReduceNodeData : public NodeStateData {
         if (shape_info_) shape_info_->commit();
 
         // A few final consistency checks
-        assert(flags_.size() == reductions_.size());
+        assert(flags_.size() == static_cast<ssize_t>(reductions_.size()));
         assert(buffer_.size() == reductions_.size());
-        assert(!shape_info_ or shape_info_->previous_size == static_cast<ssize_t>(flags_.size()));
+        assert(!shape_info_ or shape_info_->previous_size == flags_.size());
         assert(std::ranges::equal(buffer_, reductions_,
                                   [](const double& lhs, const reduction_type& rhs) {
                                       return lhs == static_cast<result_type>(rhs);
@@ -303,7 +303,7 @@ class ReduceNodeData : public NodeStateData {
     // Remove a reduction
     void pop_reduction() {
         assert(reductions_.size() > 0);
-        assert(reductions_.size() == flags_.size());
+        assert(flags_.size() == static_cast<ssize_t>(reductions_.size()));
 
         // The index we're popping
         const ssize_t index = reductions_.size() - 1;
@@ -394,9 +394,9 @@ class ReduceNodeData : public NodeStateData {
         flags_.reset();
 
         // A few final consistency checks
-        assert(flags_.size() == reductions_.size());
+        assert(flags_.size() == static_cast<ssize_t>(reductions_.size()));
         assert(buffer_.size() == reductions_.size());
-        assert(!shape_info_ or shape_info_->previous_size == static_cast<ssize_t>(flags_.size()));
+        assert(!shape_info_ or shape_info_->previous_size == flags_.size());
         assert(std::ranges::equal(buffer_, reductions_,
                                   [](const double& lhs, const reduction_type& rhs) {
                                       return lhs == static_cast<result_type>(rhs);
@@ -426,7 +426,7 @@ class ReduceNodeData : public NodeStateData {
         static_assert(decltype(ufunc)::invertible);
 
         // Should always be true if we've implemented things correctly
-        assert(flags_.size() == reductions_.size());
+        assert(flags_.size() == static_cast<ssize_t>(reductions_.size()));
 
         // Some input checking
         assert(not std::isnan(from));  // Not trying to remove a removal
@@ -470,7 +470,7 @@ class ReduceNodeData : public NodeStateData {
 
  private:
     void update_reduction_(ssize_t index, reduction_type reduction) {
-        assert(flags_.size() == reductions_.size());
+        assert(flags_.size() == static_cast<ssize_t>(reductions_.size()));
         assert(0 <= index and static_cast<std::size_t>(index) < reductions_.size());
 
         if (reductions_[index] == reduction) return;  // No change so don't save anything
@@ -498,7 +498,7 @@ class ReduceNodeData : public NodeStateData {
 
     // For each reduction, we also track a flag indicating whether the reduction
     // has changed and/or whether it needs to be recalculated.
-    SparseFlags flags_;
+    ReductionFlags flags_;
 
     // The buffer we expose to the other nodes
     std::vector<double> buffer_;
