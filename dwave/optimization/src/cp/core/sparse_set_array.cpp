@@ -23,7 +23,7 @@ SparseSetArray::SparseSetArray(StateManager* sm, ssize_t min_size, ssize_t max_s
     assert(lb <= lb);
 
     n_.resize(max_size, ub - lb + 1);
-    ofs_.resize(max_size, lb);
+    offsets_.resize(max_size, lb);
     indices_.resize(max_size);
     values_.resize(max_size);
 
@@ -43,12 +43,12 @@ SparseSetArray::SparseSetArray(StateManager* sm, ssize_t min_size, ssize_t max_s
 
 double SparseSetArray::min(int index) const {
     assert(index < static_cast<ssize_t>(num_domains()));
-    return ofs_[index] + min_[index]->get_value();
+    return offsets_[index] + min_[index]->get_value();
 }
 
 double SparseSetArray::max(int index) const {
     assert(index < static_cast<ssize_t>(num_domains()));
-    return ofs_[index] + max_[index]->get_value();
+    return offsets_[index] + max_[index]->get_value();
 }
 
 double SparseSetArray::size(int index) const {
@@ -60,7 +60,7 @@ bool SparseSetArray::is_bound(int index) const { return size(index) == 1; }
 
 bool SparseSetArray::contains(double val, int index) const {
     assert(index < static_cast<ssize_t>(num_domains()));
-    val -= ofs_[index];
+    val -= offsets_[index];
     if (val > max_[index]->get_value()) return false;
     if (val < min_[index]->get_value()) return false;
     if (std::floor(val) != std::ceil(val)) return false;
@@ -104,7 +104,7 @@ CPStatus SparseSetArray::remove(double value, int index, DomainListener* l) {
     ssize_t val = static_cast<ssize_t>(value);
 
     // Now remove the element from the sparse set
-    val -= ofs_[index];
+    val -= offsets_[index];
 
     ssize_t s = size(index);
     exchange_positions(index, val, values_[index][s - 1]);
@@ -202,7 +202,7 @@ CPStatus SparseSetArray::remove_all_but(double value, int index, DomainListener*
         return this->update_max_size(index, l);
 
     ssize_t val = static_cast<ssize_t>(value);
-    val -= ofs_[index];
+    val -= offsets_[index];
 
     if (size(index) != 1) {
         bool max_changed = max_[index]->get_value() == val;

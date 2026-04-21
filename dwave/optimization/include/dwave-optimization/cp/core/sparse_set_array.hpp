@@ -24,10 +24,6 @@ namespace dwave::optimization::cp {
 class SparseSetArray : public DomainArray {
  public:
     SparseSetArray(StateManager* sm, ssize_t min_size, ssize_t max_size, ssize_t lb, ssize_t ub);
-    //  SparseSetArray(StateManager* sm, ssize_t size, ssize_t lb, ssize_t ub);
-    //  SparseSetArray(StateManager* sm, ssize_t min_size, std::vector<ssize_t> lb,
-    //                std::vector<ssize_t> ub);
-    //  SparseSetArray(StateManager* sm, std::vector<ssize_t> lb, std::vector<ssize_t> ub);
 
     size_t num_domains() const override { return min_.size(); }
 
@@ -52,8 +48,11 @@ class SparseSetArray : public DomainArray {
     CPStatus update_max_size(int new_max_size, DomainListener* l) override;
 
  private:
+    // Maximum size of the domain for each index
     std::vector<ssize_t> n_;
-    std::vector<ssize_t> ofs_;
+
+    // Offsets for each variable. The sparse set always stores 0...n-1.
+    std::vector<ssize_t> offsets_;
 
     std::vector<std::vector<ssize_t>> indices_;
     std::vector<std::vector<ssize_t>> values_;
@@ -65,13 +64,20 @@ class SparseSetArray : public DomainArray {
     StateInt* min_size_;
     StateInt* max_size_;
 
-    //  void set_sizes(ssize_t size, ssize_t min_size, ssize_t max_size);
+    // Exchange the positions of two values in the sparse set
     void exchange_positions(int index, ssize_t val1, ssize_t val2);
-    //  bool check_value(int index, ssize_t value) const;
 
+    // Update the bounds after removing a value
     void update_bounds_val_removed(int index, ssize_t val);
+
+    // Update the maximum after removing a value
     void update_max_val_removed(int index, ssize_t val);
+
+    // Update the minimum after removing a value
     void update_min_val_removed(int index, ssize_t val);
+
+    // Check whether the value is inside the domain (between min and max)
+    // Useful because there may be holes in the domain for sparse sets
     bool internal_contains(int index, ssize_t val) const;
 };
 
