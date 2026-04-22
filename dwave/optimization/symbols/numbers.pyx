@@ -51,8 +51,7 @@ cdef NumberNode.SumConstraint.Operator _parse_python_operator(str op) except *:
 # Convert the user-defined sum constraints for NumberNode into the 
 # corresponding C++ objects passed to NumberNode.
 cdef vector[NumberNode.SumConstraint] _convert_python_sum_constraints(
-         subject_to: None | list[tuple[str, float]],
-         axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]]) except *:
+         subject_to=None, axes_subject_to=None) except *:
     cdef vector[NumberNode.SumConstraint] output
     cdef optional[Py_ssize_t] cpp_axis = nullopt
     cdef vector[NumberNode.SumConstraint.Operator] cpp_ops
@@ -133,8 +132,7 @@ cdef class BinaryVariable(ArraySymbol):
         usage of this symbol.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
-                 subject_to: None | list[tuple[str, float]] = None,
-                 axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None):
+                 subject_to=None, axes_subject_to=None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )
@@ -265,27 +263,6 @@ cdef class BinaryVariable(ArraySymbol):
             # Using json here converts the tuples to lists
             zf.writestr(directory + "sum_constraints.json", encoder.encode(sum_constraints))
 
-    def sum_constraints(self):
-        """Sum constraints of Binary symbol as a list of tuples where each tuple
-        is of the form: ([operator], [bound]) or (axis, [operator(s)], [bound(s)])."""
-        cdef vector[NumberNode.SumConstraint] sum_constraints = self.ptr.sum_constraints()
-        cdef optional[Py_ssize_t] axis
-
-        output = []
-        for i in range(sum_constraints.size()):
-            constraint = &sum_constraints[i]
-            axis = constraint.axis()
-            py_ops = [_parse_cpp_operators(constraint.op(j)) for j in
-                      range(constraint.num_operators())]
-            py_bounds = [constraint.bound(j) for j in range(constraint.num_bounds())]
-            # axis may be nullopt
-            if axis.has_value():
-                output.append((axis.value(), py_ops, py_bounds))
-            else:
-                output.append((py_ops, py_bounds))
-
-        return output
-
     def lower_bound(self):
         """Lower bound(s) of the symbol."""
         try:
@@ -339,6 +316,27 @@ cdef class BinaryVariable(ArraySymbol):
         # The validity of the state is checked in C++
         self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
+    def sum_constraints(self):
+        """Sum constraints of Binary symbol as a list of tuples where each tuple
+        is of the form: ([operator], [bound]) or (axis, [operator(s)], [bound(s)])."""
+        cdef vector[NumberNode.SumConstraint] sum_constraints = self.ptr.sum_constraints()
+        cdef optional[Py_ssize_t] axis
+
+        output = []
+        for i in range(sum_constraints.size()):
+            constraint = &sum_constraints[i]
+            axis = constraint.axis()
+            py_ops = [_parse_cpp_operators(constraint.op(j)) for j in
+                      range(constraint.num_operators())]
+            py_bounds = [constraint.bound(j) for j in range(constraint.num_bounds())]
+            # axis may be nullopt
+            if axis.has_value():
+                output.append((axis.value(), py_ops, py_bounds))
+            else:
+                output.append((py_ops, py_bounds))
+
+        return output
+
     def upper_bound(self):
         """Upper bound(s) of the symbol."""
         try:
@@ -361,8 +359,7 @@ cdef class IntegerVariable(ArraySymbol):
         usage of this symbol.
     """
     def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
-                 subject_to: None | list[tuple[str, float]] = None,
-                 axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None):
+                 subject_to=None, axes_subject_to=None):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )
@@ -499,27 +496,6 @@ cdef class IntegerVariable(ArraySymbol):
             # Using json here converts the tuples to lists
             zf.writestr(directory + "sum_constraints.json", encoder.encode(sum_constraints))
 
-    def sum_constraints(self):
-        """Sum constraints of Integer symbol as a list of tuples where each tuple
-        is of the form: ([operator], [bound]) or (axis, [operator(s)], [bound(s)])."""
-        cdef vector[NumberNode.SumConstraint] sum_constraints = self.ptr.sum_constraints()
-        cdef optional[Py_ssize_t] axis
-
-        output = []
-        for i in range(sum_constraints.size()):
-            constraint = &sum_constraints[i]
-            axis = constraint.axis()
-            py_ops = [_parse_cpp_operators(constraint.op(j)) for j in
-                      range(constraint.num_operators())]
-            py_bounds = [constraint.bound(j) for j in range(constraint.num_bounds())]
-            # axis may be nullopt
-            if axis.has_value():
-                output.append((axis.value(), py_ops, py_bounds))
-            else:
-                output.append((py_ops, py_bounds))
-
-        return output
-
     def lower_bound(self):
         """Lower bound(s) of the symbol."""
         try:
@@ -570,6 +546,27 @@ cdef class IntegerVariable(ArraySymbol):
 
         # The validity of the state is checked in C++
         self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
+
+    def sum_constraints(self):
+        """Sum constraints of Integer symbol as a list of tuples where each tuple
+        is of the form: ([operator], [bound]) or (axis, [operator(s)], [bound(s)])."""
+        cdef vector[NumberNode.SumConstraint] sum_constraints = self.ptr.sum_constraints()
+        cdef optional[Py_ssize_t] axis
+
+        output = []
+        for i in range(sum_constraints.size()):
+            constraint = &sum_constraints[i]
+            axis = constraint.axis()
+            py_ops = [_parse_cpp_operators(constraint.op(j)) for j in
+                      range(constraint.num_operators())]
+            py_bounds = [constraint.bound(j) for j in range(constraint.num_bounds())]
+            # axis may be nullopt
+            if axis.has_value():
+                output.append((axis.value(), py_ops, py_bounds))
+            else:
+                output.append((py_ops, py_bounds))
+
+        return output
 
     def upper_bound(self):
         """Upper bound(s) of the symbol."""
