@@ -8,6 +8,7 @@ tests_all = executable(
     'tests-all',
     [
         'cp/test_interval.cpp',
+        'cp/test_sparse_set.cpp',
         'cp/test_copier.cpp',
         'cp/test_cp_var.cpp',
         'cp/test_propagator.cpp',

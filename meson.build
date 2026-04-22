@@ -59,6 +59,7 @@ dwave_optimization_src = [
     'dwave/optimization/src/cp/core/propagator.cpp',
     'dwave/optimization/src/cp/core/engine.cpp',
     'dwave/optimization/src/cp/core/cpvar.cpp',
+    'dwave/optimization/src/cp/core/sparse_set_array.cpp',
 
     'dwave/optimization/src/cp/propagators/binaryop.cpp',
     'dwave/optimization/src/cp/propagators/identity_propagator.cpp',
