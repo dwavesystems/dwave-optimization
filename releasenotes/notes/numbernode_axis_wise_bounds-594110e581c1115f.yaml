@@ -1,5 +1,24 @@
 ---
 features:
   - |
-    Axis-wise bounds added to NumberNode. Available to both IntegerNode and
-    BinaryNode. See #216` <https://github.com/dwavesystems/dwave-optimization/issues/216>`_.
+    Implicit sum constraints added to NumberNode.
+
+      * Users may define a sum constraint over the entire array or along an single axis.
+      * Enabled at the Python level for BinaryVariable and IntegerVariable.
+      * See `#216 <https://github.com/dwavesystems/dwave-optimization/issues/216>`_.
+      * Added `NumberNode::sum_constraints()` (returns sum constraint).
+      * Added `NumberNode::sum_constraints_lhs()` (returns state-dependent sums associated with sum constraint).
+      * Modified `NumberNode::exchange()` to accept optional slice arguments.
+      * Modified `NumberNode::clip_and_set_value()` to accept optional slice argument.
+      * Modified `IntegerNode::set_value()` to accept optional slice argument.
+      * Modified `BinaryNode::flip()` to accept optional slice argument.
+  - |
+    BinaryNode optionally tracks indices with buffer value 1 and 0.
+
+    * Enabled when users define a sum constraint.
+    * Added `BinaryNode::num_true()` (return # of indices with buffer value 1 in slice given sum constraint).
+    * Added `BinaryNode::num_false()` (return # of indices with buffer value 0 in slice given sum constraint).
+    * Added `BinaryNode::ith_true_index()` (returns ith index with buffer value 1 in slice given sum constraint).
+    * Added `BinaryNode::ith_false_index()` (returns ith index with buffer value 0 in slice given sum constraint).
+
+

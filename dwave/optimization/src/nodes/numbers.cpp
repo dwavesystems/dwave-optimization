@@ -1097,6 +1097,7 @@ void BinaryNodeStateData::update(const BinaryNode& node, const ssize_t index,
     assert(sum_constraints.size() != 0);  // Should only call where applicable.
     assert(difference == 1 || difference == -1);
     assert(sum_constraints.size() == sum_constraints_lhs.size());
+    assert(sum_constraints.size() == slice_indices.size());
     std::vector<ssize_t> cache_entry;  // Initialize the slice cache.
     cache_entry.reserve(sum_constraints.size());
     // Get multidimensional indices for `index` so we can identify the slices
@@ -1130,6 +1131,7 @@ void BinaryNodeStateData::update(const BinaryNode& node, const ssize_t index,
     assert(sum_constraints.size() != 0);  // Should only call where applicable.
     assert(difference == 1 || difference == -1);
     assert(sum_constraints.size() == sum_constraints_lhs.size());
+    assert(sum_constraints.size() == slice_indices.size());
     assert(sum_constraints.size() == slices.size());
     // For each sum constraint.
     for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
@@ -1202,7 +1204,7 @@ void BinaryNode::initialize_state(State& state, std::vector<double>&& number_dat
     }
 
     if (sum_constraints_.size() == 0) {  // No sum constraints to consider.
-        emplace_data_ptr<NumberNodeStateData>(state, std::move(number_data));
+        emplace_data_ptr<BinaryNodeStateData>(state, std::move(number_data));
     } else {
         // Given the assignment to NumberNode `number_data`, compute the sum of
         // the values within each slice per sum constraint.
