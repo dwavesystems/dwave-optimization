@@ -47,8 +47,8 @@ void check_indices(const State& state, const BinaryNode* node, const ssize_t sum
     recorded_indices.reserve(num_indices);
     for (ssize_t i = 0; i < num_indices; ++i) {
         recorded_indices.emplace_back(
-                True ? node->get_ith_true_index(state, sum_constraint_id, slice, i)
-                     : node->get_ith_false_index(state, sum_constraint_id, slice, i));
+                True ? node->ith_true_index(state, sum_constraint_id, slice, i)
+                     : node->ith_false_index(state, sum_constraint_id, slice, i));
     }
 
     std::sort(expected_indices.begin(), expected_indices.end());
@@ -99,9 +99,9 @@ TEST_CASE("SumConstraint") {
         THEN("The sum constraint info is correct") {
             CHECK(sum_constraint.axis() == std::nullopt);
             CHECK(sum_constraint.num_bounds() == 1);
-            CHECK(sum_constraint.get_bound(0) == 1.0);
+            CHECK(sum_constraint.bound(0) == 1.0);
             CHECK(sum_constraint.num_operators() == 1);
-            CHECK(sum_constraint.get_operator(0) == Equal);
+            CHECK(sum_constraint.op(0) == Equal);
         }
     }
 
@@ -111,11 +111,11 @@ TEST_CASE("SumConstraint") {
         THEN("The sum constraint info is correct") {
             CHECK(sum_constraint.axis() == 2);
             CHECK(sum_constraint.num_bounds() == 1);
-            CHECK(sum_constraint.get_bound(0) == 1.0);
+            CHECK(sum_constraint.bound(0) == 1.0);
             CHECK(sum_constraint.num_operators() == 3);
-            CHECK(sum_constraint.get_operator(0) == Equal);
-            CHECK(sum_constraint.get_operator(1) == LessEqual);
-            CHECK(sum_constraint.get_operator(2) == GreaterEqual);
+            CHECK(sum_constraint.op(0) == Equal);
+            CHECK(sum_constraint.op(1) == LessEqual);
+            CHECK(sum_constraint.op(2) == GreaterEqual);
         }
     }
 
@@ -125,11 +125,11 @@ TEST_CASE("SumConstraint") {
         THEN("The sum constraint info is correct") {
             CHECK(sum_constraint.axis() == 2);
             CHECK(sum_constraint.num_bounds() == 3);
-            CHECK(sum_constraint.get_bound(0) == 1.0);
-            CHECK(sum_constraint.get_bound(1) == 2.0);
-            CHECK(sum_constraint.get_bound(2) == 3.0);
+            CHECK(sum_constraint.bound(0) == 1.0);
+            CHECK(sum_constraint.bound(1) == 2.0);
+            CHECK(sum_constraint.bound(2) == 3.0);
             CHECK(sum_constraint.num_operators() == 1);
-            CHECK(sum_constraint.get_operator(0) == Equal);
+            CHECK(sum_constraint.op(0) == Equal);
         }
     }
 
@@ -139,13 +139,13 @@ TEST_CASE("SumConstraint") {
         THEN("The sum constraint info is correct") {
             CHECK(sum_constraint.axis() == 2);
             CHECK(sum_constraint.num_bounds() == 3);
-            CHECK(sum_constraint.get_bound(0) == 1.0);
-            CHECK(sum_constraint.get_bound(1) == 2.0);
-            CHECK(sum_constraint.get_bound(2) == 3.0);
+            CHECK(sum_constraint.bound(0) == 1.0);
+            CHECK(sum_constraint.bound(1) == 2.0);
+            CHECK(sum_constraint.bound(2) == 3.0);
             CHECK(sum_constraint.num_operators() == 3);
-            CHECK(sum_constraint.get_operator(0) == Equal);
-            CHECK(sum_constraint.get_operator(1) == LessEqual);
-            CHECK(sum_constraint.get_operator(2) == GreaterEqual);
+            CHECK(sum_constraint.op(0) == Equal);
+            CHECK(sum_constraint.op(1) == LessEqual);
+            CHECK(sum_constraint.op(2) == GreaterEqual);
         }
     }
 }
@@ -747,9 +747,9 @@ TEST_CASE("BinaryNode") {
             SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == std::nullopt);
             CHECK(bnode_sum_constraint.num_bounds() == 1);
-            CHECK(bnode_sum_constraint.get_bound(0) == 3.0);
+            CHECK(bnode_sum_constraint.bound(0) == 3.0);
             CHECK(bnode_sum_constraint.num_operators() == 1);
-            CHECK(bnode_sum_constraint.get_operator(0) == Equal);
+            CHECK(bnode_sum_constraint.op(0) == Equal);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -784,13 +784,13 @@ TEST_CASE("BinaryNode") {
             SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == 0);
             CHECK(bnode_sum_constraint.num_bounds() == 3);
-            CHECK(bnode_sum_constraint.get_bound(0) == 1.0);
-            CHECK(bnode_sum_constraint.get_bound(1) == 2.0);
-            CHECK(bnode_sum_constraint.get_bound(2) == 3.0);
+            CHECK(bnode_sum_constraint.bound(0) == 1.0);
+            CHECK(bnode_sum_constraint.bound(1) == 2.0);
+            CHECK(bnode_sum_constraint.bound(2) == 3.0);
             CHECK(bnode_sum_constraint.num_operators() == 3);
-            CHECK(bnode_sum_constraint.get_operator(0) == Equal);
-            CHECK(bnode_sum_constraint.get_operator(1) == LessEqual);
-            CHECK(bnode_sum_constraint.get_operator(2) == GreaterEqual);
+            CHECK(bnode_sum_constraint.op(0) == Equal);
+            CHECK(bnode_sum_constraint.op(1) == LessEqual);
+            CHECK(bnode_sum_constraint.op(2) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -842,11 +842,11 @@ TEST_CASE("BinaryNode") {
             SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == 1);
             CHECK(bnode_sum_constraint.num_bounds() == 2);
-            CHECK(bnode_sum_constraint.get_bound(0) == 1.0);
-            CHECK(bnode_sum_constraint.get_bound(1) == 5.0);
+            CHECK(bnode_sum_constraint.bound(0) == 1.0);
+            CHECK(bnode_sum_constraint.bound(1) == 5.0);
             CHECK(bnode_sum_constraint.num_operators() == 2);
-            CHECK(bnode_sum_constraint.get_operator(0) == LessEqual);
-            CHECK(bnode_sum_constraint.get_operator(1) == GreaterEqual);
+            CHECK(bnode_sum_constraint.op(0) == LessEqual);
+            CHECK(bnode_sum_constraint.op(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -895,11 +895,11 @@ TEST_CASE("BinaryNode") {
             SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == 2);
             CHECK(bnode_sum_constraint.num_bounds() == 2);
-            CHECK(bnode_sum_constraint.get_bound(0) == 3.0);
-            CHECK(bnode_sum_constraint.get_bound(1) == 6.0);
+            CHECK(bnode_sum_constraint.bound(0) == 3.0);
+            CHECK(bnode_sum_constraint.bound(1) == 6.0);
             CHECK(bnode_sum_constraint.num_operators() == 2);
-            CHECK(bnode_sum_constraint.get_operator(0) == Equal);
-            CHECK(bnode_sum_constraint.get_operator(1) == GreaterEqual);
+            CHECK(bnode_sum_constraint.op(0) == Equal);
+            CHECK(bnode_sum_constraint.op(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -995,9 +995,9 @@ TEST_CASE("BinaryNode") {
             SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == std::nullopt);
             CHECK(bnode_sum_constraint.num_bounds() == 1);
-            CHECK(bnode_sum_constraint.get_bound(0) == 5.0);
+            CHECK(bnode_sum_constraint.bound(0) == 5.0);
             CHECK(bnode_sum_constraint.num_operators() == 1);
-            CHECK(bnode_sum_constraint.get_operator(0) == LessEqual);
+            CHECK(bnode_sum_constraint.op(0) == LessEqual);
         }
 
         WHEN("We create a state using a random number generator") {
@@ -1095,13 +1095,13 @@ TEST_CASE("BinaryNode") {
             SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
             CHECK(bnode_sum_constraint.axis() == 0);
             CHECK(bnode_sum_constraint.num_bounds() == 3);
-            CHECK(bnode_sum_constraint.get_bound(0) == 1.0);
-            CHECK(bnode_sum_constraint.get_bound(1) == 2.0);
-            CHECK(bnode_sum_constraint.get_bound(2) == 3.0);
+            CHECK(bnode_sum_constraint.bound(0) == 1.0);
+            CHECK(bnode_sum_constraint.bound(1) == 2.0);
+            CHECK(bnode_sum_constraint.bound(2) == 3.0);
             CHECK(bnode_sum_constraint.num_operators() == 3);
-            CHECK(bnode_sum_constraint.get_operator(0) == Equal);
-            CHECK(bnode_sum_constraint.get_operator(1) == LessEqual);
-            CHECK(bnode_sum_constraint.get_operator(2) == GreaterEqual);
+            CHECK(bnode_sum_constraint.op(0) == Equal);
+            CHECK(bnode_sum_constraint.op(1) == LessEqual);
+            CHECK(bnode_sum_constraint.op(2) == GreaterEqual);
         }
 
         WHEN("We create a state using a random number generator") {
@@ -2135,9 +2135,9 @@ TEST_CASE("IntegerNode") {
             SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == std::nullopt);
             CHECK(inode_sum_constraint.num_bounds() == 1);
-            CHECK(inode_sum_constraint.get_bound(0) == 40.0);
+            CHECK(inode_sum_constraint.bound(0) == 40.0);
             CHECK(inode_sum_constraint.num_operators() == 1);
-            CHECK(inode_sum_constraint.get_operator(0) == GreaterEqual);
+            CHECK(inode_sum_constraint.op(0) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -2166,11 +2166,11 @@ TEST_CASE("IntegerNode") {
             SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == 0);
             CHECK(inode_sum_constraint.num_bounds() == 2);
-            CHECK(inode_sum_constraint.get_bound(0) == -21.0);
-            CHECK(inode_sum_constraint.get_bound(1) == 9.0);
+            CHECK(inode_sum_constraint.bound(0) == -21.0);
+            CHECK(inode_sum_constraint.bound(1) == 9.0);
             CHECK(inode_sum_constraint.num_operators() == 2);
-            CHECK(inode_sum_constraint.get_operator(0) == Equal);
-            CHECK(inode_sum_constraint.get_operator(1) == GreaterEqual);
+            CHECK(inode_sum_constraint.op(0) == Equal);
+            CHECK(inode_sum_constraint.op(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -2214,13 +2214,13 @@ TEST_CASE("IntegerNode") {
             SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == 1);
             CHECK(inode_sum_constraint.num_bounds() == 3);
-            CHECK(inode_sum_constraint.get_bound(0) == 0.0);
-            CHECK(inode_sum_constraint.get_bound(1) == -2.0);
-            CHECK(inode_sum_constraint.get_bound(2) == 0.0);
+            CHECK(inode_sum_constraint.bound(0) == 0.0);
+            CHECK(inode_sum_constraint.bound(1) == -2.0);
+            CHECK(inode_sum_constraint.bound(2) == 0.0);
             CHECK(inode_sum_constraint.num_operators() == 3);
-            CHECK(inode_sum_constraint.get_operator(0) == Equal);
-            CHECK(inode_sum_constraint.get_operator(1) == GreaterEqual);
-            CHECK(inode_sum_constraint.get_operator(2) == LessEqual);
+            CHECK(inode_sum_constraint.op(0) == Equal);
+            CHECK(inode_sum_constraint.op(1) == GreaterEqual);
+            CHECK(inode_sum_constraint.op(2) == LessEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -2267,11 +2267,11 @@ TEST_CASE("IntegerNode") {
             SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == 2);
             CHECK(inode_sum_constraint.num_bounds() == 2);
-            CHECK(inode_sum_constraint.get_bound(0) == 23.0);
-            CHECK(inode_sum_constraint.get_bound(1) == 14.0);
+            CHECK(inode_sum_constraint.bound(0) == 23.0);
+            CHECK(inode_sum_constraint.bound(1) == 14.0);
             CHECK(inode_sum_constraint.num_operators() == 2);
-            CHECK(inode_sum_constraint.get_operator(0) == Equal);
-            CHECK(inode_sum_constraint.get_operator(1) == GreaterEqual);
+            CHECK(inode_sum_constraint.op(0) == Equal);
+            CHECK(inode_sum_constraint.op(1) == GreaterEqual);
         }
 
         WHEN("We create a state by initialize_state()") {
@@ -2358,9 +2358,9 @@ TEST_CASE("IntegerNode") {
             SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == std::nullopt);
             CHECK(inode_sum_constraint.num_bounds() == 1);
-            CHECK(inode_sum_constraint.get_bound(0) == 5.0);
+            CHECK(inode_sum_constraint.bound(0) == 5.0);
             CHECK(inode_sum_constraint.num_operators() == 1);
-            CHECK(inode_sum_constraint.get_operator(0) == GreaterEqual);
+            CHECK(inode_sum_constraint.op(0) == GreaterEqual);
         }
 
         WHEN("We create a state using a random number generator") {
@@ -2446,13 +2446,13 @@ TEST_CASE("IntegerNode") {
             SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == 1);
             CHECK(inode_sum_constraint.num_bounds() == 3);
-            CHECK(inode_sum_constraint.get_bound(0) == 11.0);
-            CHECK(inode_sum_constraint.get_bound(1) == 2.0);
-            CHECK(inode_sum_constraint.get_bound(2) == 5.0);
+            CHECK(inode_sum_constraint.bound(0) == 11.0);
+            CHECK(inode_sum_constraint.bound(1) == 2.0);
+            CHECK(inode_sum_constraint.bound(2) == 5.0);
             CHECK(inode_sum_constraint.num_operators() == 3);
-            CHECK(inode_sum_constraint.get_operator(0) == Equal);
-            CHECK(inode_sum_constraint.get_operator(1) == LessEqual);
-            CHECK(inode_sum_constraint.get_operator(2) == GreaterEqual);
+            CHECK(inode_sum_constraint.op(0) == Equal);
+            CHECK(inode_sum_constraint.op(1) == LessEqual);
+            CHECK(inode_sum_constraint.op(2) == GreaterEqual);
         }
 
         WHEN("We create a state using a random number generator") {
@@ -2747,9 +2747,9 @@ TEST_CASE("IntegerNode") {
             SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
             CHECK(inode_sum_constraint.axis() == 0);
             CHECK(inode_sum_constraint.num_bounds() == 1);
-            CHECK(inode_sum_constraint.get_bound(0) == 1.0);
+            CHECK(inode_sum_constraint.bound(0) == 1.0);
             CHECK(inode_sum_constraint.num_operators() == 1);
-            CHECK(inode_sum_constraint.get_operator(0) == Equal);
+            CHECK(inode_sum_constraint.op(0) == Equal);
         }
 
         WHEN("We initialize a valid state by construction") {

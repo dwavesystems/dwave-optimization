@@ -34,8 +34,8 @@ cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimi
                           vector[double] bounds)
 
             optional[Py_ssize_t] axis()
-            double get_bound(Py_ssize_t slice)
-            Operator get_operator(Py_ssize_t slice)
+            double bound(Py_ssize_t slice)
+            Operator op(Py_ssize_t slice)
             Py_ssize_t num_bounds()
             Py_ssize_t num_operators()
 

@@ -55,10 +55,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         std::optional<ssize_t> axis() const { return axis_; };
 
         /// Obtain the bound associated with a given slice.
-        double get_bound(const ssize_t slice) const;
+        double bound(const ssize_t slice) const;
 
         /// Obtain the operator associated with a given slice.
-        Operator get_operator(const ssize_t slice) const;
+        Operator op(const ssize_t slice) const;
 
         /// The number of bounds.
         ssize_t num_bounds() const { return bounds_.size(); };
@@ -388,23 +388,21 @@ class BinaryNode : public IntegerNode {
 
     /// Given a state and slice (w.r.t a sum constraint), return the number of
     /// buffer values in the slice equal to 1.
-    ssize_t num_true(const State& state, const ssize_t sum_constraint,
-                     const ssize_t slice) const;
+    ssize_t num_true(const State& state, const ssize_t sum_constraint, const ssize_t slice) const;
 
     /// Given a state and slice (w.r.t a sum constraint), return the number of
     /// buffer values in the slice equal to 0.
-    ssize_t num_false(const State& state, const ssize_t sum_constraint,
-                      const ssize_t slice) const;
+    ssize_t num_false(const State& state, const ssize_t sum_constraint, const ssize_t slice) const;
 
     /// Given a state and slice (w.r.t a sum constraint), return the `i`th
     /// index in in the slice whose buffer value is 1.
-    ssize_t get_ith_true_index(const State& state, const ssize_t sum_constraint,
-                               const ssize_t slice, const ssize_t i) const;
+    ssize_t ith_true_index(const State& state, const ssize_t sum_constraint, const ssize_t slice,
+                           const ssize_t i) const;
 
     /// Given a state and slice (w.r.t a sum constraint), return the `i`th
     /// index in in the slice whose buffer value is 0.
-    ssize_t get_ith_false_index(const State& state, const ssize_t sum_constraint,
-                                const ssize_t slice, const ssize_t i) const;
+    ssize_t ith_false_index(const State& state, const ssize_t sum_constraint, const ssize_t slice,
+                            const ssize_t i) const;
 };
 
 }  // namespace dwave::optimization

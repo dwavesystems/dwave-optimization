@@ -54,15 +54,14 @@ NumberNode::SumConstraint::SumConstraint(std::optional<ssize_t> axis,
     }
 }
 
-double NumberNode::SumConstraint::get_bound(const ssize_t slice) const {
+double NumberNode::SumConstraint::bound(const ssize_t slice) const {
     assert(0 <= slice);
     if (bounds_.size() == 1) return bounds_[0];
     assert(slice < static_cast<ssize_t>(bounds_.size()));
     return bounds_[slice];
 }
 
-NumberNode::SumConstraint::Operator NumberNode::SumConstraint::get_operator(
-        const ssize_t slice) const {
+NumberNode::SumConstraint::Operator NumberNode::SumConstraint::op(const ssize_t slice) const {
     assert(0 <= slice);
     if (operators_.size() == 1) return operators_[0];
     assert(slice < static_cast<ssize_t>(operators_.size()));
@@ -261,15 +260,15 @@ bool satisfies_sum_constraint(const std::vector<NumberNode::SumConstraint>& sum_
         // Return `false` if any slice does not satisfy the constraint.
         for (ssize_t slice = 0, stop_slice = static_cast<ssize_t>(lhs.size()); slice < stop_slice;
              ++slice) {
-            switch (constraint.get_operator(slice)) {
+            switch (constraint.op(slice)) {
                 case NumberNode::SumConstraint::Operator::Equal:
-                    if (lhs[slice] != constraint.get_bound(slice)) return false;
+                    if (lhs[slice] != constraint.bound(slice)) return false;
                     break;
                 case NumberNode::SumConstraint::Operator::LessEqual:
-                    if (lhs[slice] > constraint.get_bound(slice)) return false;
+                    if (lhs[slice] > constraint.bound(slice)) return false;
                     break;
                 case NumberNode::SumConstraint::Operator::GreaterEqual:
-                    if (lhs[slice] < constraint.get_bound(slice)) return false;
+                    if (lhs[slice] < constraint.bound(slice)) return false;
                     break;
                 default:
                     assert(false && "Unexpected operator type.");
@@ -389,8 +388,7 @@ void construct_state_given_exactly_one_sum_constraint(const NumberNode& node,
     if (!axis.has_value()) {
         assert(lhs.size() == 1);
         // Determine the amount needed to adjust the values within the array.
-        double delta = sum_constraint_delta(lhs.front(), constraint.get_operator(0),
-                                            constraint.get_bound(0));
+        double delta = sum_constraint_delta(lhs.front(), constraint.op(0), constraint.bound(0));
         if (delta == 0) return;  // Bound is satisfied for entire array.
 
         for (ssize_t i = 0, stop = node.size(); i < stop; ++i) {
@@ -428,8 +426,8 @@ void construct_state_given_exactly_one_sum_constraint(const NumberNode& node,
     // sum constraint.
     for (ssize_t slice = 0, stop = node_shape[*axis]; slice < stop; ++slice) {
         // Determine the amount needed to adjust the values within the slice.
-        double delta = sum_constraint_delta(lhs[slice], constraint.get_operator(slice),
-                                            constraint.get_bound(slice));
+        double delta =
+                sum_constraint_delta(lhs[slice], constraint.op(slice), constraint.bound(slice));
         if (delta == 0) continue;  // Sum constraint is satisfied for slice.
         assert(delta >= 0);        // Should only increment.
 
@@ -728,7 +726,7 @@ void check_sum_constraint_integrality(
 
     for (const NumberNode::SumConstraint& constraint : sum_constraints) {
         for (ssize_t slice = 0, stop = constraint.num_bounds(); slice < stop; ++slice) {
-            const double bound = constraint.get_bound(slice);
+            const double bound = constraint.bound(slice);
             if (bound != std::floor(bound)) {
                 throw std::invalid_argument(
                         "Sum constraint(s) for integral arrays must be integral.");
@@ -1349,8 +1347,8 @@ ssize_t BinaryNode::num_false(const State& state, const ssize_t sum_constraint,
     return num_indices - num_true(state, sum_constraint, slice);
 }
 
-ssize_t BinaryNode::get_ith_true_index(const State& state, const ssize_t sum_constraint,
-                                       const ssize_t slice, const ssize_t i) const {
+ssize_t BinaryNode::ith_true_index(const State& state, const ssize_t sum_constraint,
+                                   const ssize_t slice, const ssize_t i) const {
     const auto& indices = data_ptr<BinaryNodeStateData>(state)->slice_indices;
     assert(0 <= sum_constraint && sum_constraint < static_cast<ssize_t>(indices.size()));
     assert(0 <= slice && slice < static_cast<ssize_t>(indices[sum_constraint].dense_sets.size()));
@@ -1361,8 +1359,8 @@ ssize_t BinaryNode::get_ith_true_index(const State& state, const ssize_t sum_con
     return indices[sum_constraint].dense_sets[slice][i];
 }
 
-ssize_t BinaryNode::get_ith_false_index(const State& state, const ssize_t sum_constraint,
-                                        const ssize_t slice, const ssize_t i) const {
+ssize_t BinaryNode::ith_false_index(const State& state, const ssize_t sum_constraint,
+                                    const ssize_t slice, const ssize_t i) const {
     const auto& indices = data_ptr<BinaryNodeStateData>(state)->slice_indices;
     assert(0 <= sum_constraint && sum_constraint < static_cast<ssize_t>(indices.size()));
     const ssize_t num_true = this->num_true(state, sum_constraint, slice);

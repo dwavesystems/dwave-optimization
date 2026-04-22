@@ -275,9 +275,9 @@ cdef class BinaryVariable(ArraySymbol):
         for i in range(sum_constraints.size()):
             constraint = &sum_constraints[i]
             axis = constraint.axis()
-            py_ops = [_parse_cpp_operators(constraint.get_operator(j)) for j in
+            py_ops = [_parse_cpp_operators(constraint.op(j)) for j in
                       range(constraint.num_operators())]
-            py_bounds = [constraint.get_bound(j) for j in range(constraint.num_bounds())]
+            py_bounds = [constraint.bound(j) for j in range(constraint.num_bounds())]
             # axis may be nullopt
             if axis.has_value():
                 output.append((axis.value(), py_ops, py_bounds))
@@ -509,9 +509,9 @@ cdef class IntegerVariable(ArraySymbol):
         for i in range(sum_constraints.size()):
             constraint = &sum_constraints[i]
             axis = constraint.axis()
-            py_ops = [_parse_cpp_operators(constraint.get_operator(j)) for j in
+            py_ops = [_parse_cpp_operators(constraint.op(j)) for j in
                       range(constraint.num_operators())]
-            py_bounds = [constraint.get_bound(j) for j in range(constraint.num_bounds())]
+            py_bounds = [constraint.bound(j) for j in range(constraint.num_bounds())]
             # axis may be nullopt
             if axis.has_value():
                 output.append((axis.value(), py_ops, py_bounds))
