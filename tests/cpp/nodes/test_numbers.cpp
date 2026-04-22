@@ -12,18 +12,143 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <algorithm>
 #include <initializer_list>
 #include <optional>
 
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/matchers/catch_matchers.hpp"
 #include "catch2/matchers/catch_matchers_all.hpp"
+#include "catch2/matchers/catch_matchers_range_equals.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 
 using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
+
+using SumConstraint = NumberNode::SumConstraint;
+using Operator = NumberNode::SumConstraint::Operator;
+using NumberNode::SumConstraint::Operator::Equal;
+using NumberNode::SumConstraint::Operator::GreaterEqual;
+using NumberNode::SumConstraint::Operator::LessEqual;
+
+/// Given state, BinaryNode, a particular sum constraint, and a slice w.r.t.
+/// the sum constraint, check whether the indices expected (`expected_indices`)
+/// to have buffer value equal to 1 (True == 1) or 0 (True == 0) are the
+/// indices recorded in BinaryNodeStateData::slice_indices_ to have buffer
+/// value 1 (True == 1) or 0 (True == 0).
+template <bool True>
+void check_indices(const State& state, const BinaryNode* node, const ssize_t sum_constraint_id,
+                   const ssize_t slice, std::vector<ssize_t> expected_indices) {
+    std::vector<ssize_t> recorded_indices;
+    const ssize_t num_indices = True ? node->num_true(state, sum_constraint_id, slice)
+                                     : node->num_false(state, sum_constraint_id, slice);
+    recorded_indices.reserve(num_indices);
+    for (ssize_t i = 0; i < num_indices; ++i) {
+        recorded_indices.emplace_back(
+                True ? node->ith_true_index(state, sum_constraint_id, slice, i)
+                     : node->ith_false_index(state, sum_constraint_id, slice, i));
+    }
+
+    std::sort(expected_indices.begin(), expected_indices.end());
+    std::sort(recorded_indices.begin(), recorded_indices.end());
+    CHECK(recorded_indices == expected_indices);
+}
+
+TEST_CASE("SumConstraint") {
+    GIVEN("SumConstraint(axis = nullopt, operators = {}, bounds = {1.0})") {
+        REQUIRE_THROWS_WITH(SumConstraint(std::nullopt, {}, {1.0}),
+                            "`operators` and `bounds` must have non-zero size.");
+    }
+
+    GIVEN("SumConstraint(axis = nullopt, operators = {<=}, bounds = {})") {
+        REQUIRE_THROWS_WITH(SumConstraint(std::nullopt, {LessEqual}, {}),
+                            "`operators` and `bounds` must have non-zero size.");
+    }
+
+    GIVEN("SumConstraint(axis = nullopt, operators = {<=, ==}, bounds = {1.0})") {
+        REQUIRE_THROWS_WITH(SumConstraint(std::nullopt, {LessEqual, Equal}, {1.0}),
+                            "If `axis` is undefined, `operators` and `bounds` must have size 1.");
+    }
+
+    GIVEN("SumConstraint(axis = nullopt, operators = {<=}, bounds = {1.0, 2.0})") {
+        REQUIRE_THROWS_WITH(SumConstraint(std::nullopt, {LessEqual}, {1.0, 2.0}),
+                            "If `axis` is undefined, `operators` and `bounds` must have size 1.");
+    }
+
+    GIVEN("SumConstraint(axis = 0, operators = {}, bounds = {1.0})") {
+        REQUIRE_THROWS_WITH(SumConstraint(0, {}, {1.0}),
+                            "`operators` and `bounds` must have non-zero size.");
+    }
+
+    GIVEN("SumConstraint(axis = 0, operators = {<=}, bounds = {})") {
+        REQUIRE_THROWS_WITH(SumConstraint(0, {LessEqual}, {}),
+                            "`operators` and `bounds` must have non-zero size.");
+    }
+
+    GIVEN("SumConstraint(axis = 1, operators = {<=, ==, ==}, bounds = {2.0, 1.0})") {
+        REQUIRE_THROWS_WITH(
+                SumConstraint(1, {LessEqual, Equal, Equal}, {2.0, 1.0}),
+                "`operators` and `bounds` should have same size if neither has size 1.");
+    }
+
+    GIVEN("SumConstraint(axis = nullopt, operators = {==}, bounds = {1.0})") {
+        SumConstraint sum_constraint(std::nullopt, {Equal}, {1.0});
+
+        THEN("The sum constraint info is correct") {
+            CHECK(sum_constraint.axis() == std::nullopt);
+            CHECK(sum_constraint.num_bounds() == 1);
+            CHECK(sum_constraint.bound(0) == 1.0);
+            CHECK(sum_constraint.num_operators() == 1);
+            CHECK(sum_constraint.op(0) == Equal);
+        }
+    }
+
+    GIVEN("SumConstraint(axis = 2, operators = {==, <=, >=}, bounds = {1.0})") {
+        SumConstraint sum_constraint(2, {Equal, LessEqual, GreaterEqual}, {1.0});
+
+        THEN("The sum constraint info is correct") {
+            CHECK(sum_constraint.axis() == 2);
+            CHECK(sum_constraint.num_bounds() == 1);
+            CHECK(sum_constraint.bound(0) == 1.0);
+            CHECK(sum_constraint.num_operators() == 3);
+            CHECK(sum_constraint.op(0) == Equal);
+            CHECK(sum_constraint.op(1) == LessEqual);
+            CHECK(sum_constraint.op(2) == GreaterEqual);
+        }
+    }
+
+    GIVEN("SumConstraint(axis = 2, operators = {==}, bounds = {1.0, 2.0, 3.0})") {
+        SumConstraint sum_constraint(2, {Equal}, {1.0, 2.0, 3.0});
+
+        THEN("The sum constraint info is correct") {
+            CHECK(sum_constraint.axis() == 2);
+            CHECK(sum_constraint.num_bounds() == 3);
+            CHECK(sum_constraint.bound(0) == 1.0);
+            CHECK(sum_constraint.bound(1) == 2.0);
+            CHECK(sum_constraint.bound(2) == 3.0);
+            CHECK(sum_constraint.num_operators() == 1);
+            CHECK(sum_constraint.op(0) == Equal);
+        }
+    }
+
+    GIVEN("SumConstraint(axis = 2, operators = {==, <=, >=}, bounds = {1.0, 2.0, 3.0})") {
+        SumConstraint sum_constraint(2, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0});
+
+        THEN("The sum constraint info is correct") {
+            CHECK(sum_constraint.axis() == 2);
+            CHECK(sum_constraint.num_bounds() == 3);
+            CHECK(sum_constraint.bound(0) == 1.0);
+            CHECK(sum_constraint.bound(1) == 2.0);
+            CHECK(sum_constraint.bound(2) == 3.0);
+            CHECK(sum_constraint.num_operators() == 3);
+            CHECK(sum_constraint.op(0) == Equal);
+            CHECK(sum_constraint.op(1) == LessEqual);
+            CHECK(sum_constraint.op(2) == GreaterEqual);
+        }
+    }
+}
 
 TEST_CASE("BinaryNode") {
     auto graph = Graph();
@@ -439,6 +564,1110 @@ TEST_CASE("BinaryNode") {
         REQUIRE_THROWS_WITH(graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{-1, 2}),
                             "Number array cannot have dynamic size.");
     }
+
+    // *********************** Sum Constraint tests *************************
+    GIVEN("(2x3)-BinaryNode with a sum constraint on the invalid axis -1") {
+        std::vector<SumConstraint> sum_constraints{{-1, {Equal}, {1.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid constrained axis given number array shape.");
+    }
+
+    GIVEN("(2x3)-BinaryNode with a sum constraint on the invalid axis 2") {
+        std::vector<SumConstraint> sum_constraints{{2, {Equal}, {1.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid constrained axis given number array shape.");
+    }
+
+    GIVEN("(2x3)-BinaryNode with a sum constraint on axis: 1 with too many operators.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal, Equal, Equal}, {1.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid number of operators given number array shape.");
+    }
+
+    GIVEN("(2x3)-BinaryNode with a sum constraint on axis: 1 with too few operators.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal}, {1.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid number of operators given number array shape.");
+    }
+
+    GIVEN("(2x3)-BinaryNode with a sum constraint on axis: 1 with too many bounds.") {
+        std::vector<SumConstraint> sum_constraints{{1, {Equal}, {1.0, 2.0, 3.0, 4.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid number of bounds given number array shape.");
+    }
+
+    GIVEN("(2x3)-BinaryNode with a sum constraint on axis: 1 with too few bounds.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {1.0, 2.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Invalid number of bounds given number array shape.");
+    }
+
+    GIVEN("(6)-BinaryNode with duplicate sum constraints over the entire array") {
+        SumConstraint sum_constraint{std::nullopt, {Equal}, {1.0}};
+        std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(6, std::nullopt, std::nullopt, sum_constraints),
+                "Cannot define multiple sum constraints for the entire number array.");
+    }
+
+    GIVEN("(2x3)-BinaryNode with duplicate sum constraints on axis: 1") {
+        SumConstraint sum_constraint{1, {Equal}, {1.0}};
+        std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Cannot define multiple sum constraints for a single axis.");
+    }
+
+    GIVEN("(2x3)-BinaryNode with sum constraints on axis: 0 and the entire array.") {
+        SumConstraint sum_constraint{std::nullopt, {LessEqual}, {1.0}};
+        SumConstraint sum_constraint_1{1, {LessEqual}, {1.0}};
+        std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint_1};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Can define at most one sum constraint per number array.");
+    }
+
+    GIVEN("(2x3)-BinaryNode with sum constraints on axes: 0 and 1") {
+        SumConstraint sum_constraint_0{0, {LessEqual}, {1.0}};
+        SumConstraint sum_constraint_1{1, {LessEqual}, {1.0}};
+        std::vector<SumConstraint> sum_constraints{sum_constraint_0, sum_constraint_1};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Can define at most one sum constraint per number array.");
+    }
+
+    GIVEN("(2x3x4)-BinaryNode with a non-integral sum constraint") {
+        std::vector<SumConstraint> sum_constraints{{1, {Equal}, {0.1}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                               std::nullopt, std::nullopt, sum_constraints),
+                "Sum constraint(s) for integral arrays must be integral.");
+    }
+
+    GIVEN("(6)-BinaryNode with an infeasible sum constraint over the entire array.") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {7.0}}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{6}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
+    }
+
+    GIVEN("(3x2)-BinaryNode with an infeasible sum constraint over the entire array.") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {7.0}}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2}, std::nullopt,
+                                               std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
+    }
+
+    GIVEN("(2x2x2)-BinaryNode with an infeasible sum constraint over the entire array.") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {-1.0}}};
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
+    }
+
+    GIVEN("(3x2x2)-BinaryNode with an infeasible sum constraint on axis: 0") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{
+                {0, {Equal, LessEqual, GreaterEqual}, {5.0, 2.0, 3.0}}};
+        // Each slice along axis 0 has size 4. There is no feasible assignment
+        // to the values in slice 0 (along axis 0) that results in a sum equal
+        // to 5.
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
+    }
+
+    GIVEN("(3x2x2)-BinaryNode with an infeasible sum constraint on axis: 1") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{1, {Equal, GreaterEqual}, {5.0, 7.0}}};
+        // Each slice along axis 1 has size 6. There is no feasible assignment
+        // to the values in slice 1 (along axis 1) that results in a sum
+        // greater than or equal to 7.
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
+    }
+
+    GIVEN("(3x2x2)-BinaryNode with an infeasible sum constraint on axis: 2") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{2, {Equal, LessEqual}, {5.0, -1.0}}};
+        // Each slice along axis 2 has size 6. There is no feasible assignment
+        // to the values in slice 1 (along axis 2) that results in a sum less
+        // than or equal to -1.
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints),
+                "Infeasible sum constraint.");
+    }
+
+    GIVEN("(6)-BinaryNode with a feasible sum constraint over the entire array.") {
+        auto graph = Graph();
+        std::vector<double> lower_bounds{0, 0, 1, 0, 0, 1};
+        std::vector<double> upper_bounds{0, 1, 1, 1, 1, 1};
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {3.0}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(6, lower_bounds, upper_bounds, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
+            CHECK(bnode_sum_constraint.axis() == std::nullopt);
+            CHECK(bnode_sum_constraint.num_bounds() == 1);
+            CHECK(bnode_sum_constraint.bound(0) == 3.0);
+            CHECK(bnode_sum_constraint.num_operators() == 1);
+            CHECK(bnode_sum_constraint.op(0) == Equal);
+        }
+
+        WHEN("We create a state by initialize_state()") {
+            auto state = graph.initialize_state();
+            graph.initialize_state(state);
+            std::vector<double> expected_init{0, 1, 1, 0, 0, 1};
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 1);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({3}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {1, 2, 5});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 3, 4});
+                CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
+            }
+        }
+    }
+
+    GIVEN("(3x2x2)-BinaryNode with a feasible sum constraint on axis: 0") {
+        auto graph = Graph();
+        std::vector<double> lower_bounds{0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0};
+        std::vector<double> upper_bounds{0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1};
+        std::vector<SumConstraint> sum_constraints{
+                {0, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               lower_bounds, upper_bounds, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
+            CHECK(bnode_sum_constraint.axis() == 0);
+            CHECK(bnode_sum_constraint.num_bounds() == 3);
+            CHECK(bnode_sum_constraint.bound(0) == 1.0);
+            CHECK(bnode_sum_constraint.bound(1) == 2.0);
+            CHECK(bnode_sum_constraint.bound(2) == 3.0);
+            CHECK(bnode_sum_constraint.num_operators() == 3);
+            CHECK(bnode_sum_constraint.op(0) == Equal);
+            CHECK(bnode_sum_constraint.op(1) == LessEqual);
+            CHECK(bnode_sum_constraint.op(2) == GreaterEqual);
+        }
+
+        WHEN("We create a state by initialize_state()") {
+            auto state = graph.initialize_state();
+            graph.initialize_state(state);
+            // import numpy as np
+            // a = np.asarray([i for i in range(3*2*2)]).reshape(3, 2, 2)
+            // print(a[0, :, :].flatten())
+            // >>> [0 1 2 3]
+            // print(a[1, :, :].flatten())
+            // >>> [4 5 6 7]
+            // print(a[2, :, :].flatten())
+            // >>> [ 8  9 10 11]
+            //
+            // Cannonically least state that satisfies the index-wise bounds
+            // and sum constraints.
+            // slice 0  slice 1 slice 2
+            //  0, 0     0, 0    1, 1
+            //  1, 0     0, 0    0, 1
+            std::vector<double> expected_init{0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1};
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 3);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 0, 3}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {2});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 3});
+                check_indices<true>(state, bnode_ptr, 0, 1, {});
+                check_indices<false>(state, bnode_ptr, 0, 1, {4, 5, 6, 7});
+                check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 11});
+                check_indices<false>(state, bnode_ptr, 0, 2, {10});
+                CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
+            }
+        }
+    }
+
+    GIVEN("(3x2x2)-BinaryNode with a feasible sum constraint on axis: 1") {
+        auto graph = Graph();
+        std::vector<double> lower_bounds{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+        std::vector<double> upper_bounds{0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1};
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual, GreaterEqual}, {1.0, 5.0}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               lower_bounds, upper_bounds, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
+            CHECK(bnode_sum_constraint.axis() == 1);
+            CHECK(bnode_sum_constraint.num_bounds() == 2);
+            CHECK(bnode_sum_constraint.bound(0) == 1.0);
+            CHECK(bnode_sum_constraint.bound(1) == 5.0);
+            CHECK(bnode_sum_constraint.num_operators() == 2);
+            CHECK(bnode_sum_constraint.op(0) == LessEqual);
+            CHECK(bnode_sum_constraint.op(1) == GreaterEqual);
+        }
+
+        WHEN("We create a state by initialize_state()") {
+            auto state = graph.initialize_state();
+            graph.initialize_state(state);
+            // import numpy as np
+            // a = np.asarray([i for i in range(3*2*2)]).reshape(3, 2, 2)
+            // print(a[:, 0, :].flatten())
+            // >>> [0 1 4 5 8 9]
+            // print(a[:, 1, :].flatten())
+            // >>> [ 2  3  6  7 10 11]
+            //
+            // Cannonically least state that satisfies sum constraint
+            // slice 0  slice 1
+            //  0, 0     1, 1
+            //  0, 0     1, 1
+            //  0, 0     0, 1
+            std::vector<double> expected_init{0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1};
+
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({0, 5}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 4, 5, 8, 9});
+                check_indices<true>(state, bnode_ptr, 0, 1, {2, 3, 6, 7, 11});
+                check_indices<false>(state, bnode_ptr, 0, 1, {10});
+                CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
+            }
+        }
+    }
+
+    GIVEN("(3x2x2)-BinaryNode with a feasible sum constraint on axis: 2") {
+        auto graph = Graph();
+        std::vector<double> lower_bounds{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0};
+        std::vector<double> upper_bounds{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+        std::vector<SumConstraint> sum_constraints{{2, {Equal, GreaterEqual}, {3.0, 6.0}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               lower_bounds, upper_bounds, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
+            CHECK(bnode_sum_constraint.axis() == 2);
+            CHECK(bnode_sum_constraint.num_bounds() == 2);
+            CHECK(bnode_sum_constraint.bound(0) == 3.0);
+            CHECK(bnode_sum_constraint.bound(1) == 6.0);
+            CHECK(bnode_sum_constraint.num_operators() == 2);
+            CHECK(bnode_sum_constraint.op(0) == Equal);
+            CHECK(bnode_sum_constraint.op(1) == GreaterEqual);
+        }
+
+        WHEN("We create a state by initialize_state()") {
+            auto state = graph.initialize_state();
+            graph.initialize_state(state);
+            // import numpy as np
+            // a = np.asarray([i for i in range(3*2*2)]).reshape(3, 2, 2)
+            // print(a[:, :, 0].flatten())
+            // >>> [ 0  2  4  6  8 10]
+            // print(a[:, :, 1].flatten())
+            // >>> [ 1  3  5  7  9 11]
+            //
+            // Cannonically least state that satisfies the index-wise bounds
+            // and sum constraint.
+            // slice 0  slice 1
+            //  0, 1     1, 1
+            //  1, 0     1, 1
+            //  0, 1     1, 1
+            std::vector<double> expected_init{0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1};
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({3, 6}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {2, 4, 10});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 6, 8});
+                check_indices<true>(state, bnode_ptr, 0, 1, {1, 3, 5, 7, 9, 11});
+                check_indices<false>(state, bnode_ptr, 0, 1, {});
+                CHECK_THAT(bnode_ptr->view(state), RangeEquals(expected_init));
+            }
+        }
+    }
+
+    GIVEN("(2)-BinaryNode with a sum constraint over the entire array") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {1}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
+
+        WHEN("We initialize an invalid states") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{0, 0};
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+        }
+
+        WHEN("We initialize an invalid states") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{1, 1};
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+        }
+    }
+
+    GIVEN("(2)-BinaryNode with a sum constraint over the entire array") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {1}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
+
+        WHEN("We initialize an invalid states") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{0, 0};
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+        }
+    }
+
+    GIVEN("(2)-BinaryNode with a sum constraint over the entire array") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {1}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
+
+        WHEN("We initialize an invalid states") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{1, 1};
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+        }
+    }
+
+    GIVEN("(2x2x2)-BinaryNode with a sum constraint over the entire array") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {5}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
+            CHECK(bnode_sum_constraint.axis() == std::nullopt);
+            CHECK(bnode_sum_constraint.num_bounds() == 1);
+            CHECK(bnode_sum_constraint.bound(0) == 5.0);
+            CHECK(bnode_sum_constraint.num_operators() == 1);
+            CHECK(bnode_sum_constraint.op(0) == LessEqual);
+        }
+
+        WHEN("We create a state using a random number generator") {
+            auto state = graph.empty_state();
+            auto rng = std::default_random_engine(42);
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, rng),
+                              "Cannot randomly initialize_state with sum constraints.");
+        }
+
+        WHEN("We initialize a valid state") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{0, 0, 0, 1, 1, 0, 0, 0};
+            bnode_ptr->initialize_state(state, init_values);
+            graph.initialize_state(state);
+
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 1);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {3, 4});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 2, 5, 6, 7});
+                CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+            }
+
+            THEN("We exchange() some values") {
+                bnode_ptr->exchange(state, 0, 1);  // Does nothing.
+                bnode_ptr->exchange(state, 2, 3);
+                std::swap(init_values[0], init_values[1]);
+                std::swap(init_values[2], init_values[3]);
+                // state is now: [0, 0, 1, 0, 1, 0, 0, 0]
+
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {2, 4});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 3, 5, 6, 7});
+                    CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums and tracked indices are reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {3, 4});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 2, 5, 6, 7});
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We exchange() some values with slice arguments") {
+                // Sum constraint is over entire array, therefore slice is 0.
+                // Does nothing.
+                bnode_ptr->exchange(state, 0, 1, std::vector<ssize_t>{0}, std::vector<ssize_t>{0});
+                bnode_ptr->exchange(state, 2, 3, std::vector<ssize_t>{0}, std::vector<ssize_t>{0});
+                std::swap(init_values[0], init_values[1]);
+                std::swap(init_values[2], init_values[3]);
+                // state is now: [0, 0, 1, 0, 1, 0, 0, 0]
+
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {2, 4});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 3, 5, 6, 7});
+                    CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums and tracked indices are reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({2.0}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {3, 4});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 2, 5, 6, 7});
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("(3x2x2)-BinaryNode with a sum constraint on axis: 0") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{
+                {0, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0}}};
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{3, 2, 2},
+                                               std::nullopt, std::nullopt, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(bnode_ptr->sum_constraints().size() == 1);
+            SumConstraint bnode_sum_constraint = bnode_ptr->sum_constraints()[0];
+            CHECK(bnode_sum_constraint.axis() == 0);
+            CHECK(bnode_sum_constraint.num_bounds() == 3);
+            CHECK(bnode_sum_constraint.bound(0) == 1.0);
+            CHECK(bnode_sum_constraint.bound(1) == 2.0);
+            CHECK(bnode_sum_constraint.bound(2) == 3.0);
+            CHECK(bnode_sum_constraint.num_operators() == 3);
+            CHECK(bnode_sum_constraint.op(0) == Equal);
+            CHECK(bnode_sum_constraint.op(1) == LessEqual);
+            CHECK(bnode_sum_constraint.op(2) == GreaterEqual);
+        }
+
+        WHEN("We create a state using a random number generator") {
+            auto state = graph.empty_state();
+            auto rng = std::default_random_engine(42);
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, rng),
+                              "Cannot randomly initialize_state with sum constraints.");
+        }
+
+        WHEN("We initialize three invalid states") {
+            auto state = graph.empty_state();
+            // This state violates slice 0 along axis 0
+            std::vector<double> init_values{1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1};
+            // import numpy as np
+            // a = np.asarray([1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+            // a = a.reshape(3, 2, 2)
+            // a.sum(axis=(1, 2))
+            // >>> array([2, 2, 4])
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+
+            state = graph.empty_state();
+            // This state violates the slice 1 along axis 0
+            init_values = {0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1};
+            // import numpy as np
+            // a = np.asarray([0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1])
+            // a = a.reshape(3, 2, 2)
+            // a.sum(axis=(1, 2))
+            // >>> array([1, 3, 4])
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+
+            state = graph.empty_state();
+            // This state violates the slice 2 along axis 0
+            init_values = {0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0};
+            // import numpy as np
+            // a = np.asarray([0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0])
+            // a = a.reshape(3, 2, 2)
+            // a.sum(axis=(1, 2))
+            // >>> array([1, 2, 2])
+            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+        }
+
+        WHEN("We initialize a valid state") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1};
+            bnode_ptr->initialize_state(state, init_values);
+            graph.initialize_state(state);
+
+            auto sum_constraints_lhs = bnode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums, tracked indices, and state are correct") {
+                // **Python Code 1**
+                // import numpy as np
+                // a = np.asarray([0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+                // a = a.reshape(3, 2, 2)
+                // a.sum(axis=(1, 2))
+                // >>> array([1, 2, 4])
+                // b = np.asarray([i for i in range(a.size)]).reshape(a.shape)
+                // for i in range(a.shape[0]):
+                //     print(b[i][a[i] == 1])
+                // >>> [1]
+                // >>> [6 7]
+                // >>> [ 8  9 10 11]
+                // for i in range(a.shape[0]):
+                //     print(b[i][a[i] == 0])
+                // >>> [0 2 3]
+                // >>> [4 5]
+                // >>> []
+                CHECK(bnode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(bnode_ptr->sum_constraints_lhs(state).data()[0].size() == 3);
+                CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4}));
+                check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                check_indices<false>(state, bnode_ptr, 0, 2, {});
+                CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+            }
+
+            THEN("We exchange() some values") {
+                bnode_ptr->exchange(state, 0, 3);  // Does nothing.
+                bnode_ptr->exchange(state, 1, 6);  // Does nothing.
+                bnode_ptr->exchange(state, 1, 3);
+                std::swap(init_values[0], init_values[3]);
+                std::swap(init_values[1], init_values[6]);
+                std::swap(init_values[1], init_values[3]);
+                // state is now: [0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1]
+
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(1, a.shape)] = 0
+                    // a[np.unravel_index(3, a.shape)] = 1
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 2, 4])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [3]
+                    // >>> [6 7]
+                    // >>> [ 8  9 10 11]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 1 2]
+                    // >>> [4 5]
+                    // >>> []
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {3});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 2});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {});
+                    CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We exchange() some values with slice arguments") {
+                // Does nothing. Indices 0 and 3 fall in slice 0 along axis 0.
+                bnode_ptr->exchange(state, 0, 3, std::vector<ssize_t>{0}, std::vector<ssize_t>{0});
+                // Does nothing. Indices 1 and 6 fall in slices 0 and 1, respectively, along axis 0.
+                bnode_ptr->exchange(state, 1, 6, std::vector<ssize_t>{0}, std::vector<ssize_t>{1});
+                // Indices 1 and 3 fall in slice 0 along axis 0.
+                bnode_ptr->exchange(state, 1, 3, std::vector<ssize_t>{0}, std::vector<ssize_t>{0});
+                std::swap(init_values[0], init_values[3]);
+                std::swap(init_values[1], init_values[6]);
+                std::swap(init_values[1], init_values[3]);
+                // state is now: [0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1]
+
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(1, a.shape)] = 0
+                    // a[np.unravel_index(3, a.shape)] = 1
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 2, 4])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [3]
+                    // >>> [6 7]
+                    // >>> [ 8  9 10 11]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 1 2]
+                    // >>> [4 5]
+                    // >>> []
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {3});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 1, 2});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {});
+                    CHECK(bnode_ptr->diff(state).size() == 2);  // 2 updates per exchange
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We clip_and_set_value() some values") {
+                // 0  1  2  3  4  5  6  7  8  9  10  11
+                // a = np.asarray([0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
+                bnode_ptr->clip_and_set_value(state, 5, -1);  // Does nothing.
+                bnode_ptr->clip_and_set_value(state, 7, -1);
+                bnode_ptr->clip_and_set_value(state, 9, 1);  // Does nothing.
+                bnode_ptr->clip_and_set_value(state, 11, 0);
+                bnode_ptr->clip_and_set_value(state, 11, 1);
+                bnode_ptr->clip_and_set_value(state, 10, 0);
+                init_values[5] = 0;
+                init_values[7] = 0;
+                init_values[9] = 1;
+                init_values[11] = 1;
+                init_values[10] = 0;
+                // state is now: [0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1]
+
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(5, a.shape)] = 0
+                    // a[np.unravel_index(7, a.shape)] = 0
+                    // a[np.unravel_index(9, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 1, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [6]
+                    // >>> [ 8  9 11]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [4 5 7]
+                    // >>> [10]
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {6});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {4, 5, 7});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 11});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {10});
+                    CHECK(bnode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We clip_and_set_value() some values with slice arguments") {
+                // Does nothing. Index 5 falls in slice 1 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 5, -1, std::vector<ssize_t>{1});
+                // Index 7 falls in slice 1 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 7, -1, std::vector<ssize_t>{1});
+                // Does nothing. Index 9 falls in slice 2 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 9, 1, std::vector<ssize_t>{2});
+                // Index 11 falls in slice 2 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 11, 0, std::vector<ssize_t>{2});
+                // Index 11 falls in slice 2 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 11, 1, std::vector<ssize_t>{2});
+                // Index 10 falls in slice 2 along axis 0.
+                bnode_ptr->clip_and_set_value(state, 10, 0, std::vector<ssize_t>{2});
+                init_values[5] = 0;
+                init_values[7] = 0;
+                init_values[9] = 1;
+                init_values[11] = 1;
+                init_values[10] = 0;
+                // state is now: [0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1]
+
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(5, a.shape)] = 0
+                    // a[np.unravel_index(7, a.shape)] = 0
+                    // a[np.unravel_index(9, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 1, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [6]
+                    // >>> [ 8  9 11]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [4 5 7]
+                    // >>> [10]
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {6});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {4, 5, 7});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 11});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {10});
+                    CHECK(bnode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We set_value() some values") {
+                bnode_ptr->set_value(state, 0, 0);  // Does nothing.
+                bnode_ptr->set_value(state, 6, 0);
+                bnode_ptr->set_value(state, 7, 0);
+                bnode_ptr->set_value(state, 4, 1);
+                bnode_ptr->set_value(state, 10, 1);  // Does nothing.
+                bnode_ptr->set_value(state, 11, 0);
+                init_values[0] = 0;
+                init_values[6] = 0;
+                init_values[7] = 0;
+                init_values[4] = 1;
+                init_values[10] = 1;
+                init_values[11] = 0;
+                // state is now: [0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0]
+
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(0, a.shape)] = 0
+                    // a[np.unravel_index(6, a.shape)] = 0
+                    // a[np.unravel_index(7, a.shape)] = 0
+                    // a[np.unravel_index(4, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 1, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [4]
+                    // >>> [ 8  9 10]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [5 6 7]
+                    // >>> [11]
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {4});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {5, 6, 7});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {11});
+                    CHECK(bnode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We set_value() some values with slice arguments") {
+                // Index 0 falls in slice 0 along axis 0.
+                bnode_ptr->set_value(state, 0, 0, std::vector<ssize_t>{0});  // Does nothing.
+                // Index 6 falls in slice 1 along axis 0.
+                bnode_ptr->set_value(state, 6, 0, std::vector<ssize_t>{1});
+                // Index 7 falls in slice 1 along axis 0.
+                bnode_ptr->set_value(state, 7, 0, std::vector<ssize_t>{1});
+                // Index 4 falls in slice 1 along axis 0.
+                bnode_ptr->set_value(state, 4, 1, std::vector<ssize_t>{1});
+                // Index 10 falls in slice 2 along axis 0.
+                bnode_ptr->set_value(state, 10, 1, std::vector<ssize_t>{2});  // Does nothing.
+                // Index 11 falls in slice 2 along axis 0.
+                bnode_ptr->set_value(state, 11, 0, std::vector<ssize_t>{2});
+                init_values[0] = 0;
+                init_values[6] = 0;
+                init_values[7] = 0;
+                init_values[4] = 1;
+                init_values[10] = 1;
+                init_values[11] = 0;
+                // state is now: [0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0]
+
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(0, a.shape)] = 0
+                    // a[np.unravel_index(6, a.shape)] = 0
+                    // a[np.unravel_index(7, a.shape)] = 0
+                    // a[np.unravel_index(4, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 1, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [4]
+                    // >>> [ 8  9 10]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [5 6 7]
+                    // >>> [11]
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 1, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {4});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {5, 6, 7});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {11});
+                    CHECK(bnode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We flip() some values") {
+                bnode_ptr->flip(state, 6);   // 1 -> 0
+                bnode_ptr->flip(state, 4);   // 0 -> 1
+                bnode_ptr->flip(state, 11);  // 1 -> 0
+                init_values[6] = !init_values[6];
+                init_values[4] = !init_values[4];
+                init_values[11] = !init_values[11];
+                // state is now: [0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0]
+
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(6, a.shape)] = 0
+                    // a[np.unravel_index(4, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 2, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [4, 7]
+                    // >>> [ 8  9 10]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [5 6]
+                    // >>> [11]
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {4, 7});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {5, 6});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {11});
+                    CHECK(bnode_ptr->diff(state).size() == 3);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We flip() some values with slice arguments") {
+                // Index 6 falls in slice 1 along axis 0.
+                bnode_ptr->flip(state, 6, std::vector<ssize_t>{1});  // 1 -> 0
+                // Index 4 falls in slice 1 along axis 0.
+                bnode_ptr->flip(state, 4, std::vector<ssize_t>{1});  // 0 -> 1
+                // Index 11 falls in slice 2 along axis 0.
+                bnode_ptr->flip(state, 11, std::vector<ssize_t>{2});  // 1 -> 0
+                init_values[6] = !init_values[6];
+                init_values[4] = !init_values[4];
+                init_values[11] = !init_values[11];
+                // state is now: [0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0]
+
+                THEN("Sum constraint sums, tracked indices, and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 1**
+                    // a[np.unravel_index(6, a.shape)] = 0
+                    // a[np.unravel_index(4, a.shape)] = 1
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(1, 2))
+                    // >>> array([1, 2, 3])
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 1])
+                    // >>> [1]
+                    // >>> [4, 7]
+                    // >>> [ 8  9 10]
+                    // for i in range(a.shape[0]):
+                    //     print(b[i][a[i] == 0])
+                    // >>> [0 2 3]
+                    // >>> [5 6]
+                    // >>> [11]
+                    CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 3}));
+                    check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                    check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                    check_indices<true>(state, bnode_ptr, 0, 1, {4, 7});
+                    check_indices<false>(state, bnode_ptr, 0, 1, {5, 6});
+                    check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10});
+                    check_indices<false>(state, bnode_ptr, 0, 2, {11});
+                    CHECK(bnode_ptr->diff(state).size() == 3);
+                    CHECK_THAT(bnode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums and tracked indices reverted correctly") {
+                        CHECK_THAT(bnode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({1, 2, 4}));
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
+                        CHECK(bnode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+        }
+    }
+    // *********************** Sum Constraint tests *************************
 }
 
 TEST_CASE("IntegerNode") {
@@ -459,7 +1688,8 @@ TEST_CASE("IntegerNode") {
         }
     }
 
-    GIVEN("Double precision numbers, which may fall outside integer range or are not integral") {
+    GIVEN("Double precision numbers, which may fall outside integer range or are not "
+          "integral") {
         IntegerNode inode({1});
 
         THEN("The state is not deterministic") { CHECK(!inode.deterministic_state()); }
@@ -736,6 +1966,818 @@ TEST_CASE("IntegerNode") {
         REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{-1, 3}),
                             "Number array cannot have dynamic size.");
     }
+
+    // *********************** Sum Constraint tests *************************
+    GIVEN("(2x3)-IntegerNode with a sum constraint on the invalid axis -2") {
+        std::vector<SumConstraint> sum_constraints{{-2, {Equal}, {20.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3}, std::nullopt,
+                                                std::nullopt, sum_constraints),
+                "Invalid constrained axis given number array shape.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with a sum constraint on the invalid axis 3") {
+        std::vector<SumConstraint> sum_constraints{{3, {Equal}, {10.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Invalid constrained axis given number array shape.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with a sum constraint on axis: 1 with too many operators.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal, Equal, Equal}, {-10.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Invalid number of operators given number array shape.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with a sum constraint on axis: 1 with too few operators.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal}, {-11.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Invalid number of operators given number array shape.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with a sum constraint on axis: 1 with too many bounds.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {-10.0, 20.0, 30.0, 40.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Invalid number of bounds given number array shape.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with a sum constraint on axis: 1 with too few bounds.") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {111.0, -223.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Invalid number of bounds given number array shape.");
+    }
+
+    GIVEN("(6)-IntegerNode with duplicate sum constraints over the entire array") {
+        SumConstraint sum_constraint{std::nullopt, {Equal}, {10.0}};
+        std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{6}, std::nullopt,
+                                                std::nullopt, sum_constraints),
+                "Cannot define multiple sum constraints for the entire number array.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with duplicate sum constraints on axis: 1") {
+        std::vector<SumConstraint> sum_constraints{{1, {Equal}, {100.0}}, {1, {Equal}, {100.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Cannot define multiple sum constraints for a single axis.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with sum constraints on axis: 1 and the entire array.") {
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {100.0}},
+                                                   {1, {Equal}, {100.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Can define at most one sum constraint per number array.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with sum constraints on axes: 0 and 1") {
+        std::vector<SumConstraint> sum_constraints{{0, {Equal}, {100.0}}, {1, {Equal}, {100.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Can define at most one sum constraint per number array.");
+    }
+
+    GIVEN("(2x3x4)-IntegerNode with a non-integral sum constraint") {
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {11.0, 12.0001, 0.0}}};
+
+        REQUIRE_THROWS_WITH(
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 4},
+                                                std::nullopt, std::nullopt, sum_constraints),
+                "Sum constraint(s) for integral arrays must be integral.");
+    }
+
+    GIVEN("(6)-IntegerNode with an infeasible sum constraint over the entire array.") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {-7.0}}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(6, -1, 8, sum_constraints),
+                            "Infeasible sum constraint.");
+    }
+
+    GIVEN("(6)-IntegerNode with an infeasible sum constraint over the entire array.") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {-7.0}}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(6, -1, 8, sum_constraints),
+                            "Infeasible sum constraint.");
+    }
+
+    GIVEN("(6)-IntegerNode with an infeasible sum constraint over the entire array.") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {13}}};
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(6, -1, 2, sum_constraints),
+                            "Infeasible sum constraint.");
+    }
+
+    GIVEN("(2x3x2)-IntegerNode with an infeasible sum constraint on axis: 0") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{0, {Equal, LessEqual}, {5.0, -31.0}}};
+        // Each slice along axis 0 has size 6. There is no feasible assignment
+        // to the values in slice 1 (along axis 0) that results in a sum less
+        // than or equal to -5*6 - 1 = -31.
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                            -5, 8, sum_constraints),
+                            "Infeasible sum constraint.");
+    }
+
+    GIVEN("(2x3x2)-IntegerNode with an infeasible sum constraint on axis: 1") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{
+                {1, {GreaterEqual, Equal, Equal}, {33.0, 0.0, 0.0}}};
+        // Each slice along axis 1 has size 4. There is no feasible assignment
+        // to the values in slice 0 (along axis 1) that results in a sum
+        // greater than or equal to 4*8 + 1 = 33.
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                            -5, 8, sum_constraints),
+                            "Infeasible sum constraint.");
+    }
+
+    GIVEN("(2x3x2)-IntegerNode with an infeasible sum constraint on axis: 2") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{2, {GreaterEqual, Equal}, {-1.0, 49.0}}};
+        // Each slice along axis 2 has size 6. There is no feasible assignment
+        // to the values in slice 1 (along axis 2) that results in a sum or
+        // equal to 6*8 + 1 = 49
+        REQUIRE_THROWS_WITH(graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                            -5, 8, sum_constraints),
+                            "Infeasible sum constraint.");
+    }
+
+    GIVEN("(2x2x2)-IntegerNode with a feasible sum constraint over the entire array ") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {40}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 2, 2},
+                                                         -5, 8, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
+            CHECK(inode_sum_constraint.axis() == std::nullopt);
+            CHECK(inode_sum_constraint.num_bounds() == 1);
+            CHECK(inode_sum_constraint.bound(0) == 40.0);
+            CHECK(inode_sum_constraint.num_operators() == 1);
+            CHECK(inode_sum_constraint.op(0) == GreaterEqual);
+        }
+
+        WHEN("We create a state by initialize_state()") {
+            auto state = graph.initialize_state();
+            graph.initialize_state(state);
+            std::vector<double> expected_init{8, 8, 8, 8, 8, 8, -3, -5};
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 1);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({40}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
+            }
+        }
+    }
+
+    GIVEN("(2x3x2)-IntegerNode with a feasible sum constraint on axis: 0") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{0, {Equal, GreaterEqual}, {-21.0, 9.0}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                         -5, 8, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
+            CHECK(inode_sum_constraint.axis() == 0);
+            CHECK(inode_sum_constraint.num_bounds() == 2);
+            CHECK(inode_sum_constraint.bound(0) == -21.0);
+            CHECK(inode_sum_constraint.bound(1) == 9.0);
+            CHECK(inode_sum_constraint.num_operators() == 2);
+            CHECK(inode_sum_constraint.op(0) == Equal);
+            CHECK(inode_sum_constraint.op(1) == GreaterEqual);
+        }
+
+        WHEN("We create a state by initialize_state()") {
+            auto state = graph.initialize_state();
+            graph.initialize_state(state);
+            // import numpy as np
+            // a = np.asarray([i for i in range(2*3*2)]).reshape(2, 3, 2)
+            // print(a[0, :, :].flatten())
+            // >>> [0 1 2 3 4 5]
+            // print(a[1, :, :].flatten())
+            // >>> [ 6  7  8  9 10 11]
+            //
+            // The method `construct_state_given_exactly_one_sum_constraint()`
+            // will construct a state as follows:
+            // [-5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5]
+            // repair slice 0
+            // [4, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5]
+            // repair slice 1
+            // [4, -5, -5, -5, -5, -5, 8, 8, 8, -5, -5, -5]
+            std::vector<double> expected_init{4, -5, -5, -5, -5, -5, 8, 8, 8, -5, -5, -5};
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({-21.0, 9.0}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
+            }
+        }
+    }
+
+    GIVEN("(2x3x2)-IntegerNode with a feasible sum constraint on axis: 1") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{
+                {1, {Equal, GreaterEqual, LessEqual}, {0.0, -2.0, 0.0}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                         -5, 8, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
+            CHECK(inode_sum_constraint.axis() == 1);
+            CHECK(inode_sum_constraint.num_bounds() == 3);
+            CHECK(inode_sum_constraint.bound(0) == 0.0);
+            CHECK(inode_sum_constraint.bound(1) == -2.0);
+            CHECK(inode_sum_constraint.bound(2) == 0.0);
+            CHECK(inode_sum_constraint.num_operators() == 3);
+            CHECK(inode_sum_constraint.op(0) == Equal);
+            CHECK(inode_sum_constraint.op(1) == GreaterEqual);
+            CHECK(inode_sum_constraint.op(2) == LessEqual);
+        }
+
+        WHEN("We create a state by initialize_state()") {
+            auto state = graph.initialize_state();
+            graph.initialize_state(state);
+            // import numpy as np
+            // a = np.asarray([i for i in range(2*3*2)]).reshape(2, 3, 2)
+            // print(a[:, 0, :].flatten())
+            // >>> [0 1 6 7]
+            // print(a[:, 1, :].flatten())
+            // >>> [2 3 8 9]
+            // print(a[:, 2, :].flatten())
+            // >>> [ 4  5 10 11]
+            //
+            // The method `construct_state_given_exactly_one_sum_constraint()`
+            // will construct a state as follows:
+            // [-5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5]
+            // repair slice 0 w/ [8, 2, -5, -5]
+            // [8, 2, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5]
+            // repair slice 1 w/ [8, 0, -5, -5]
+            // [8, 2, 8, 0, -5, -5, -5, -5, -5, -5, -5, -5]
+            // no need to repair slice 2
+            std::vector<double> expected_init{8, 2, 8, 0, -5, -5, -5, -5, -5, -5, -5, -5};
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 3);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0],
+                           RangeEquals({0.0, -2.0, -20.0}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
+            }
+        }
+    }
+
+    GIVEN("(2x3x2)-IntegerNode with a feasible sum constraint on axis: 2") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{2, {Equal, GreaterEqual}, {23.0, 14.0}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                         -5, 8, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
+            CHECK(inode_sum_constraint.axis() == 2);
+            CHECK(inode_sum_constraint.num_bounds() == 2);
+            CHECK(inode_sum_constraint.bound(0) == 23.0);
+            CHECK(inode_sum_constraint.bound(1) == 14.0);
+            CHECK(inode_sum_constraint.num_operators() == 2);
+            CHECK(inode_sum_constraint.op(0) == Equal);
+            CHECK(inode_sum_constraint.op(1) == GreaterEqual);
+        }
+
+        WHEN("We create a state by initialize_state()") {
+            auto state = graph.initialize_state();
+            graph.initialize_state(state);
+            // import numpy as np
+            // a = np.asarray([i for i in range(2*3*2)]).reshape(2, 3, 2)
+            // print(a[:, :, 0].flatten())
+            // >>> [ 0  2  4  6  8 10]
+            // print(a[:, :, 1].flatten())
+            // >>> [ 1  3  5  7  9 11]
+            //
+            // The method `construct_state_given_exactly_one_sum_constraint()`
+            // will construct a state as follows:
+            // [-5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5, -5]
+            // repair slice 0 w/ [8, 8, 8, 8, -4, -5]
+            // [8, -5, 8, -5, 8, -5, 8, -5, -4, -5, -5, -5]
+            // repair slice 0 w/ [8, 8, 8, 0, -5, -5]
+            // [8, 8, 8, 8, 8, 8, 8, 0, -4, -5, -5, -5]
+            std::vector<double> expected_init{8, 8, 8, 8, 8, 8, 8, 0, -4, -5, -5, -5};
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({23.0, 14.0}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
+            }
+        }
+    }
+
+    GIVEN("(2)-IntegerNode with a sum constraint over the entire array") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {15}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(2, -5, 8, sum_constraints);
+
+        WHEN("We initialize two invalid states") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{0.0, 0.0};
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+
+            state = graph.empty_state();
+            init_values = {8.0, 8.0};
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+        }
+    }
+
+    GIVEN("(2)-IntegerNode with a sum constraint over the entire array") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {10}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(2, -5, 8, sum_constraints);
+
+        WHEN("We initialize an invalid states") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{8.0, 7.0};
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+        }
+    }
+
+    GIVEN("(2)-IntegerNode with a sum constraint over the entire array") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {10}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(2, -5, 8, sum_constraints);
+
+        WHEN("We initialize an invalid states") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{-5.0, -4.0};
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+        }
+    }
+
+    GIVEN("(2x2)-IntegerNode with a sum constraint over the entire array") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {5.0}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 2}, -5,
+                                                         8, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
+            CHECK(inode_sum_constraint.axis() == std::nullopt);
+            CHECK(inode_sum_constraint.num_bounds() == 1);
+            CHECK(inode_sum_constraint.bound(0) == 5.0);
+            CHECK(inode_sum_constraint.num_operators() == 1);
+            CHECK(inode_sum_constraint.op(0) == GreaterEqual);
+        }
+
+        WHEN("We create a state using a random number generator") {
+            auto state = graph.empty_state();
+            auto rng = std::default_random_engine(42);
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, rng),
+                              "Cannot randomly initialize_state with sum constraints.");
+        }
+
+        WHEN("We initialize a valid state") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{1.0, -1.0, 0.0, 5.0};
+            inode_ptr->initialize_state(state, init_values);
+            graph.initialize_state(state);
+
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 1);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({5.0}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+            }
+
+            THEN("We set_value() some values") {
+                inode_ptr->set_value(state, 0, 1);  // Does nothing.
+                inode_ptr->set_value(state, 2, 3);
+                init_values[0] = 1;
+                init_values[2] = 3;
+                // state is now: [1.0, -1.0, 3.0, 5.0]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({8.0}));
+                    CHECK(inode_ptr->diff(state).size() == 1);
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({5.0}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We set_value() some values with slice arguments") {
+                // Sum constraint is over entire array, therefore slice is 0.
+                inode_ptr->set_value(state, 0, 1, std::vector<ssize_t>{0});  // Does nothing.
+                inode_ptr->set_value(state, 2, 3, std::vector<ssize_t>{0});
+                init_values[0] = 1;
+                init_values[2] = 3;
+                // state is now: [1.0, -1.0, 3.0, 5.0]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({8.0}));
+                    CHECK(inode_ptr->diff(state).size() == 1);
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({5.0}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("(2x3x2)-IntegerNode with index-wise bounds and a sum constraint on axis: 1") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{
+                {1, {Equal, LessEqual, GreaterEqual}, {11.0, 2.0, 5.0}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 2},
+                                                         -5, 8, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
+            CHECK(inode_sum_constraint.axis() == 1);
+            CHECK(inode_sum_constraint.num_bounds() == 3);
+            CHECK(inode_sum_constraint.bound(0) == 11.0);
+            CHECK(inode_sum_constraint.bound(1) == 2.0);
+            CHECK(inode_sum_constraint.bound(2) == 5.0);
+            CHECK(inode_sum_constraint.num_operators() == 3);
+            CHECK(inode_sum_constraint.op(0) == Equal);
+            CHECK(inode_sum_constraint.op(1) == LessEqual);
+            CHECK(inode_sum_constraint.op(2) == GreaterEqual);
+        }
+
+        WHEN("We create a state using a random number generator") {
+            auto state = graph.empty_state();
+            auto rng = std::default_random_engine(42);
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, rng),
+                              "Cannot randomly initialize_state with sum constraints.");
+        }
+
+        WHEN("We initialize three invalid states") {
+            auto state = graph.empty_state();
+            // This state violates the slice 0 along axis 1
+            std::vector<double> init_values{5, 6, 0, 0, 3, 1, 4, 0, 2, 0, 0, 3};
+            // import numpy as np
+            // a = np.asarray([5, 6, 0, 0, 3, 1, 4, 0, 2, 0, 0, 3])
+            // a = a.reshape(2, 3, 2)
+            // a.sum(axis=(0, 2))
+            // >>> array([15, 2, 7])
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+
+            state = graph.empty_state();
+            // This state violates the slice 1 along axis 1
+            init_values = {5, 2, 0, 0, 3, 1, 4, 0, 2, 1, 0, 3};
+            // import numpy as np
+            // a = np.asarray([5, 2, 0, 0, 3, 1, 4, 0, 2, 1, 0, 3])
+            // a = a.reshape(2, 3, 2)
+            // a.sum(axis=(0, 2))
+            // >>> array([11, 3, 7])
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+
+            state = graph.empty_state();
+            // This state violates the slice 2 along axis 1
+            init_values = {5, 2, 0, 0, 3, 1, 4, 0, 1, 0, 0, 0};
+            // import numpy as np
+            // a = np.asarray([5, 2, 0, 0, 3, 1, 4, 0, 1, 0, 0, 0])
+            // a = a.reshape(2, 3, 2)
+            // a.sum(axis=(0, 2))
+            // >>> array([11, 1, 4])
+            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, init_values),
+                              "Initialized values do not satisfy sum constraint(s).");
+        }
+
+        WHEN("We initialize a valid state") {
+            auto state = graph.empty_state();
+            std::vector<double> init_values{5, 2, 0, 0, 3, 1, 4, 0, 2, 0, 0, 3};
+            inode_ptr->initialize_state(state, init_values);
+            graph.initialize_state(state);
+
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums and state are correct") {
+                // **Python Code 2**
+                // import numpy as np
+                // a = np.asarray([5, 2, 0, 0, 3, 1, 4, 0, 2, 0, 0, 3])
+                // a = a.reshape(2, 3, 2)
+                // a.sum(axis=(0, 2))
+                // >>> array([11, 2, 7])
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 3);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 2, 7}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+            }
+
+            THEN("We exchange() some values") {
+                inode_ptr->exchange(state, 2, 3);  // Does nothing.
+                inode_ptr->exchange(state, 1, 8);  // Does nothing.
+                inode_ptr->exchange(state, 8, 10);
+                inode_ptr->exchange(state, 0, 1);
+                std::swap(init_values[2], init_values[3]);
+                std::swap(init_values[1], init_values[8]);
+                std::swap(init_values[8], init_values[10]);
+                std::swap(init_values[0], init_values[1]);
+                // state is now: [2, 5, 0, 0, 3, 1, 4, 0, 0, 0, 2, 3]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(8, a.shape)] = 0
+                    // a[np.unravel_index(10, a.shape)] = 2
+                    // a[np.unravel_index(0, a.shape)] = 2
+                    // a[np.unravel_index(1, a.shape)] = 5
+                    // a.sum(axis=(0, 2))
+                    // >>> array([11,  0,  9])
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 0, 9}));
+                    CHECK(inode_ptr->diff(state).size() == 4);  // 2 updates per exchange
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We exchange() some values with slice arguments") {
+                // Does nothing. Indices 2 and 3 fall in slice 1 along axis 1.
+                inode_ptr->exchange(state, 2, 3, std::vector<ssize_t>{1}, std::vector<ssize_t>{1});
+                // Does nothing. Indices 1 and 8 fall in slices 0 and 1, respectively, along axis 1.
+                inode_ptr->exchange(state, 1, 8, std::vector<ssize_t>{0}, std::vector<ssize_t>{1});
+                // Indices 8 and 10 fall in slices 1 and 2, respectively, along axis 1.
+                inode_ptr->exchange(state, 8, 10, std::vector<ssize_t>{1}, std::vector<ssize_t>{2});
+                // Indices 0 and 1 fall in slice 0 along axis 1.
+                inode_ptr->exchange(state, 0, 1, std::vector<ssize_t>{0}, std::vector<ssize_t>{0});
+                std::swap(init_values[2], init_values[3]);
+                std::swap(init_values[1], init_values[8]);
+                std::swap(init_values[8], init_values[10]);
+                std::swap(init_values[0], init_values[1]);
+                // state is now: [2, 5, 0, 0, 3, 1, 4, 0, 0, 0, 2, 3]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(8, a.shape)] = 0
+                    // a[np.unravel_index(10, a.shape)] = 2
+                    // a[np.unravel_index(0, a.shape)] = 2
+                    // a[np.unravel_index(1, a.shape)] = 5
+                    // a.sum(axis=(0, 2))
+                    // >>> array([11,  0,  9])
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 0, 9}));
+                    CHECK(inode_ptr->diff(state).size() == 4);  // 2 updates per exchange
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We clip_and_set_value() some values") {
+                inode_ptr->clip_and_set_value(state, 0, 5);  // Does nothing.
+                inode_ptr->clip_and_set_value(state, 8, -300);
+                inode_ptr->clip_and_set_value(state, 10, 100);
+                init_values[8] = -5;
+                init_values[10] = 8;
+                // state is now: [5,  2,  0,  0,  3,  1,  4,  0, -5,  0,  8,  3]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(8, a.shape)] = -5
+                    // a[np.unravel_index(10, a.shape)] = 8
+                    // a.sum(axis=(0, 2))
+                    // >>> array([11, -5, 15])
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, -5, 15}));
+                    CHECK(inode_ptr->diff(state).size() == 2);
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We clip_and_set_value() some values with slice arguments") {
+                // Does nothing. Index 0 falls in slice 0 along axis 1.
+                inode_ptr->clip_and_set_value(state, 0, 5, std::vector<ssize_t>{0});
+                // Index 8 falls in slice 0 along axis 1.
+                inode_ptr->clip_and_set_value(state, 8, -300, std::vector<ssize_t>{1});
+                // Index 10 falls in slice 2 along axis 1.
+                inode_ptr->clip_and_set_value(state, 10, 100, std::vector<ssize_t>{2});
+                init_values[8] = -5;
+                init_values[10] = 8;
+                // state is now: [5,  2,  0,  0,  3,  1,  4,  0, -5,  0,  8,  3]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(8, a.shape)] = -5
+                    // a[np.unravel_index(10, a.shape)] = 8
+                    // a.sum(axis=(0, 2))
+                    // >>> array([11, -5, 15])
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, -5, 15}));
+                    CHECK(inode_ptr->diff(state).size() == 2);
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0],
+                                   RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We set_value() some values") {
+                inode_ptr->set_value(state, 0, 5);  // Does nothing.
+                inode_ptr->set_value(state, 8, 0);
+                inode_ptr->set_value(state, 9, 1);
+                inode_ptr->set_value(state, 10, 5);
+                inode_ptr->set_value(state, 11, 0);
+                init_values[0] = 5;
+                init_values[8] = 0;
+                init_values[9] = 1;
+                init_values[10] = 5;
+                init_values[11] = 0;
+                // state is now: [5, 2, 0, 0, 3, 1, 4, 0, 0, 1, 5, 0]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(0, a.shape)] = 5
+                    // a[np.unravel_index(8, a.shape)] = 0
+                    // a[np.unravel_index(9, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 5
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(0, 2))
+                    // >>> array([11,  1,  9])
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 1, 9}));
+                    CHECK(inode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+
+            THEN("We set_value() some values with slice arguments") {
+                // Does nothing. Index 0 falls in slice 2 along axis 1.
+                inode_ptr->set_value(state, 0, 5, std::vector<ssize_t>{0});
+                // Index 8 falls in slice 1 along axis 1.
+                inode_ptr->set_value(state, 8, 0, std::vector<ssize_t>{1});
+                // Index 9 falls in slice 1 along axis 1.
+                inode_ptr->set_value(state, 9, 1, std::vector<ssize_t>{1});
+                // Index 10 falls in slice 2 along axis 1.
+                inode_ptr->set_value(state, 10, 5, std::vector<ssize_t>{2});
+                // Index 11 falls in slice 2 along axis 1.
+                inode_ptr->set_value(state, 11, 0, std::vector<ssize_t>{2});
+                init_values[0] = 5;
+                init_values[8] = 0;
+                init_values[9] = 1;
+                init_values[10] = 5;
+                init_values[11] = 0;
+                // state is now: [5, 2, 0, 0, 3, 1, 4, 0, 0, 1, 5, 0]
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    // Cont. w/ Python code at **Python Code 2**
+                    // a[np.unravel_index(0, a.shape)] = 5
+                    // a[np.unravel_index(8, a.shape)] = 0
+                    // a[np.unravel_index(9, a.shape)] = 1
+                    // a[np.unravel_index(10, a.shape)] = 5
+                    // a[np.unravel_index(11, a.shape)] = 0
+                    // a.sum(axis=(0, 2))
+                    // >>> array([11,  1,  9])
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 1, 9}));
+                    CHECK(inode_ptr->diff(state).size() == 4);
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(init_values));
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state);
+
+                    THEN("Sum constraint sums reverted correctly") {
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({11, 2, 7}));
+                        CHECK(inode_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("(2x3)-IntegerNode and a sum constraint on axis: 0 with operator `==`") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{0, {Equal}, {1.0}}};
+        auto inode_ptr = graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints);
+
+        THEN("Sum constraint is correct") {
+            CHECK(inode_ptr->sum_constraints().size() == 1);
+            SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
+            CHECK(inode_sum_constraint.axis() == 0);
+            CHECK(inode_sum_constraint.num_bounds() == 1);
+            CHECK(inode_sum_constraint.bound(0) == 1.0);
+            CHECK(inode_sum_constraint.num_operators() == 1);
+            CHECK(inode_sum_constraint.op(0) == Equal);
+        }
+
+        WHEN("We initialize a valid state by construction") {
+            auto state = graph.empty_state();
+            graph.initialize_state(state);
+
+            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+
+            THEN("Sum constraint sums and state are correct") {
+                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
+                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 2);
+                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1.0, 1.0}));
+                CHECK_THAT(inode_ptr->view(state), RangeEquals({1, 0, 0, 1, 0, 0}));
+            }
+
+            THEN("We exchange() some values") {
+                inode_ptr->exchange(state, 0, 1);
+                inode_ptr->exchange(state, 3, 4);
+
+                THEN("Sum constraint sums and state updated correctly") {
+                    CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1.0, 1.0}));
+                    CHECK(inode_ptr->diff(state).size() == 4);  // 2 updates per exchange
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals({0, 1, 0, 0, 1, 0}));
+                }
+            }
+        }
+    }
+    // *********************** Sum Constraint tests *************************
 }
 
 }  // namespace dwave::optimization
