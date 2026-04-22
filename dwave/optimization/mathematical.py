@@ -1197,7 +1197,7 @@ class LPResult:
 
 @_binaryop(LessEqual)
 def less_equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> LessEqual:
-    """Return element-wise less than or equal between two symbols (or arrays).
+    r"""Return element-wise less than or equal between two symbols (or arrays).
 
     Args:
         x1, x2: Operand array symbol or |array-like|_.
