@@ -319,7 +319,7 @@ Example: Knapsack Problem
 --------------------------
 
 The `knapsack_problem <https://en.wikipedia.org/wiki/Knapsack_problem>`_
-requires that for a given a set of items, each with a weight and a value, you
+requires that for a given set of items, each with a weight and a value, you
 determine which items to include in a collection so that the total weight is
 less than or equal to a given limit (capacity) and the total value is maximized.
 
@@ -352,7 +352,7 @@ less than or equal to a given limit (capacity) and the total value is maximized.
     # --- Constraints ---
     # The sum of weights of selected items must not exceed capacity.
     total_weight_of_selected = WEIGHTS[selected_items].sum()
-    model.add_constraint(total_weight_of_selected <= CAPACITY, label="capacity_constraint")
+    model.add_constraint(total_weight_of_selected <= CAPACITY)
 
     # --- Objective Function ---
     # Maximize the total value of selected items.
@@ -533,7 +533,7 @@ capacity, and to minimize total distance. Each vehicle follows an ordered route.
     for k in range(num_vehicles):
         vehicle_route_k = routes[k] # Symbolic representation of the k-th route
         demand_on_route_k = DEMANDS[vehicle_route_k].sum()
-        model.add_constraint(demand_on_route_k <= CAPACITY, label=f"capacity_vehicle_{k}")
+        model.add_constraint(demand_on_route_k <= CAPACITY)
 
         num_cust_on_route_k = vehicle_route_k.size()
         # Placeholder cost: a real model uses distance matrices
@@ -651,10 +651,10 @@ Overview
     |                          |                                                                   |
     |                          | - Sets are disjoint.                                              |
     +--------------------------+-------------------------------------------------------------------+
-    | ``primary_set_size`` is  | The number of unique items (universe ``range(primary_set_size)``) |
+    | ``primary_set_size``     | The number of unique items (universe ``range(primary_set_size)``) |
     |                          | in the overall pool to be distributed.                            |
     +--------------------------+-------------------------------------------------------------------+
-    | ``num_disjoint_sets`` is | The number of separate, unordered sets (e.g., bins, clusters) to  |
+    | ``num_disjoint_sets``    | The number of separate, unordered sets (e.g., bins, clusters) to  |
     |                          | create.                                                           |
     +--------------------------+-------------------------------------------------------------------+
     | Output in Solution       | ``set_collection`` provides access to individual sets. Each set   |
@@ -679,7 +679,7 @@ Example: Bin Packing Problem
 ----------------------------
 
 The `bin packing problem <https://en.wikipedia.org/wiki/Bin_packing_problem>`_
-is, for a given a set of items with specified weights, to pack them into the
+is, for a given set of items with specified weights, to pack them into the
 minimum number of bins, each with a fixed capacity.
 
 .. code:: python
@@ -716,7 +716,7 @@ minimum number of bins, each with a fixed capacity.
     for i in range(max_possible_bins):
         bin_i_contents = bins_collection[i] # Symbolic representation of items in bin i
         weight_in_bin_i = WEIGHTS[bin_i_contents].sum()
-        model.add_constraint(weight_in_bin_i <= CAPACITY) # Removed label
+        model.add_constraint(weight_in_bin_i <= CAPACITY)
 
     # --- Objective Function (Mirroring generator logic) ---
     # Minimize the number of bins used

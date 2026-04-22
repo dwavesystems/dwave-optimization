@@ -22,7 +22,7 @@ clean:
 
 cpp:
 	# Note that sphinx's conf.py expects the build directory to be build/
-	# and unforuntately there isn't an easy way to read the BUILDDIR from the
+	# and unfortunately there isn't an easy way to read the BUILDDIR from the
 	# conf.py.
 	# We could do additional env variables, but this is mostly for the benefit
 	# of the SDK, so we'll leave it be for now.

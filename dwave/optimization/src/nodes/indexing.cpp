@@ -1329,8 +1329,10 @@ void BasicIndexingNode::commit(State& state) const {
     auto node_data = data_ptr<BasicIndexingNodeData>(state);
     node_data->diff.clear();
     node_data->previous_size = size(state);
-    // reset the cache
-    node_data->full_cache_.assign(begin(state), end(state));
+    if (dynamic() && axis0_slice_.value().start < 0) {
+        // Reset the cache (used in the case of a negative start and dynamic array)
+        node_data->full_cache_.assign(begin(state), end(state));
+    }
 }
 
 std::span<const Update> BasicIndexingNode::diff(const State& state) const {
