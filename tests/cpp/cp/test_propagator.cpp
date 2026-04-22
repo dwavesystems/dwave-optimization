@@ -23,6 +23,7 @@
 #include "dwave-optimization/cp/core/index_transform.hpp"
 #include "dwave-optimization/cp/core/interval_array.hpp"
 #include "dwave-optimization/cp/propagators/identity_propagator.hpp"
+#include "dwave-optimization/cp/propagators/indexing_propagators.hpp"
 #include "dwave-optimization/cp/state/copier.hpp"
 #include "dwave-optimization/nodes.hpp"
 #include "dwave-optimization/state.hpp"
@@ -109,4 +110,159 @@ TEST_CASE("ElementWiseIdentityPropagator") {
         }
     }
 }
+
+TEST_CASE("BasicIndexingPropagator") {
+    using namespace dwave::optimization;
+
+    GIVEN("A dwopt graph with basic indexing") {
+        Graph graph;
+        auto i = graph.emplace_node<IntegerNode>(5, -3, 4);
+        auto b = graph.emplace_node<BasicIndexingNode>(i, Slice(1, 4));
+
+        // Lock the graph
+        graph.topological_sort();
+
+        // Construct the CP corresponding model
+        AND_GIVEN("The CP Model") {
+            CPModel model;
+
+            // Add the variabbles to the model
+            CPVar* i_var = model.emplace_variable<CPVar>(model, i, i->topological_index());
+            CPVar* b_var = model.emplace_variable<CPVar>(model, b, b->topological_index());
+
+            Propagator* p = model.emplace_propagator<BasicIndexingPropagator>(
+                    model.num_propagators(), i_var, b_var);
+
+            // build the advisor for the propagator p aimed to the variable for i
+            Advisor advisor_i(p, 0, std::make_unique<BasicIndexingForwardTransform>(i, b));
+            i_var->propagate_on_domain_change(std::move(advisor_i));
+
+            // build the advisor for the propagator p aimed to the variable for b
+            Advisor advisor_b(p, 1, std::make_unique<ElementWiseTransform>());
+            b_var->propagate_on_domain_change(std::move(advisor_b));
+
+            REQUIRE(i_var->on_domain.size() == 1);
+            REQUIRE(b_var->on_domain.size() == 1);
+
+            WHEN("We initialize a state") {
+                CPState state = model.initialize_state<Copier>();
+                CPVarsState& s_state = state.get_variables_state();
+                CPPropagatorsState& p_state = state.get_propagators_state();
+
+                REQUIRE(s_state.size() == 2);
+                REQUIRE(p_state.size() == 1);
+
+                i_var->initialize_state(state);
+                b_var->initialize_state(state);
+                p->initialize_state(state);
+
+                AND_WHEN("We alter the domain of the integer variable inside the slice") {
+                    CPStatus status = i_var->assign(s_state, -2, 0);
+                    REQUIRE(status == CPStatus::OK);
+                    THEN("We see that the propagator is not triggered") {
+                        CHECK(not p_state[0]->scheduled());
+                        CHECK(p_state[0]->indices_to_process().size() == 0);
+                    }
+                }
+
+                AND_WHEN("We alter the domain of the integer variable inside the slice") {
+                    CPStatus status = i_var->assign(s_state, -2, 3);
+                    REQUIRE(status == CPStatus::OK);
+                    THEN("We see that the propagator is triggered to run on the same index") {
+                        REQUIRE(p_state[0]->scheduled());
+                        REQUIRE(p_state[0]->indices_to_process().size() == 1);
+
+                        CHECK(p_state[0]->scheduled(2));
+                    }
+
+                    AND_WHEN("We call the fix point engine") {
+                        CPEngine engine;
+                        engine.fix_point(state);
+
+                        THEN("The sum output variable 2 is correctly fixed") {
+                            CHECK(b_var->min(s_state, 2) == -2);
+                            CHECK(b_var->max(s_state, 2) == -2);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("A dwopt graph with basic indexing on a 2d array") {
+        Graph graph;
+        auto i = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{4, 7}, -3, 4);
+        auto b = graph.emplace_node<BasicIndexingNode>(i, 2, Slice(1, 4));
+
+        // Lock the graph
+        graph.topological_sort();
+
+        // Construct the CP corresponding model
+        AND_GIVEN("The CP Model") {
+            CPModel model;
+
+            // Add the variabbles to the model
+            CPVar* i_var = model.emplace_variable<CPVar>(model, i, i->topological_index());
+            CPVar* b_var = model.emplace_variable<CPVar>(model, b, b->topological_index());
+
+            Propagator* p = model.emplace_propagator<BasicIndexingPropagator>(
+                    model.num_propagators(), i_var, b_var);
+
+            // build the advisor for the propagator p aimed to the variable for i
+            Advisor advisor_i(p, 0, std::make_unique<BasicIndexingForwardTransform>(i, b));
+            i_var->propagate_on_domain_change(std::move(advisor_i));
+
+            // build the advisor for the propagator p aimed to the variable for b
+            Advisor advisor_b(p, 1, std::make_unique<ElementWiseTransform>());
+            b_var->propagate_on_domain_change(std::move(advisor_b));
+
+            REQUIRE(i_var->on_domain.size() == 1);
+            REQUIRE(b_var->on_domain.size() == 1);
+
+            WHEN("We initialize a state") {
+                CPState state = model.initialize_state<Copier>();
+                CPVarsState& s_state = state.get_variables_state();
+                CPPropagatorsState& p_state = state.get_propagators_state();
+
+                REQUIRE(s_state.size() == 2);
+                REQUIRE(p_state.size() == 1);
+
+                i_var->initialize_state(state);
+                b_var->initialize_state(state);
+                p->initialize_state(state);
+
+                AND_WHEN("We alter the domain of the integer variable inside the slice") {
+                    CPStatus status = i_var->assign(s_state, -2, 0);
+                    REQUIRE(status == CPStatus::OK);
+                    THEN("We see that the propagator is not triggered") {
+                        CHECK(not p_state[0]->scheduled());
+                        CHECK(p_state[0]->indices_to_process().size() == 0);
+                    }
+                }
+
+                AND_WHEN("We alter the domain of the integer variable inside the slice") {
+                    CPStatus status = i_var->assign(s_state, -2, 16);
+                    REQUIRE(status == CPStatus::OK);
+                    THEN("We see that the propagator is triggered to run on the same index") {
+                        REQUIRE(p_state[0]->scheduled());
+                        REQUIRE(p_state[0]->indices_to_process().size() == 1);
+
+                        CHECK(p_state[0]->scheduled(1));
+                    }
+
+                    AND_WHEN("We call the fix point engine") {
+                        CPEngine engine;
+                        engine.fix_point(state);
+
+                        THEN("The sum output variable 2 is correctly fixed") {
+                            CHECK(b_var->min(s_state, 1) == -2);
+                            CHECK(b_var->max(s_state, 1) == -2);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 }  // namespace dwave::optimization::cp

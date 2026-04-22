@@ -154,11 +154,11 @@ class CPVar {
     std::vector<Advisor> on_bounds;
     std::vector<Advisor> on_array_size_change;
 
+    const dwave::optimization::ArrayNode* node_;
+
  protected:
     const CPModel& model_;
 
-    // but should I have this?
-    const dwave::optimization::ArrayNode* node_;
     const ssize_t cp_var_index_;
 
     class Listener : public DomainListener {
