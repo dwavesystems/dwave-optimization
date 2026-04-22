@@ -411,6 +411,47 @@ TEST_CASE("BufferIterator") {
                        RangeEquals({0, 2, 4, 6, 8}));
         }
     }
+
+    GIVEN("An unsorted buffer of doubles") {
+        std::vector<double> buffer{2, 6, 7, 0, 8, 9, 5, 1, 4, 3};
+
+        THEN("We can sort it as a 1d array using BufferIterator and std::sort()") {
+            std::array<ssize_t, 1> shape{10};
+            std::array<ssize_t, 1> strides{sizeof(double)};
+
+            auto begin = BufferIterator<double, double>(buffer.data(), shape, strides);
+            auto end = begin + 10;
+
+            std::sort(begin, end);
+
+            CHECK_THAT(buffer, RangeEquals({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+        }
+
+        THEN("We can reverse sort it as a 1d array using BufferIterator and std::sort()") {
+            std::array<ssize_t, 1> shape{10};
+            std::array<ssize_t, 1> strides{-static_cast<ssize_t>(sizeof(double))};
+
+            auto begin = BufferIterator<double, double>(buffer.data() + 9, shape, strides);
+            auto end = begin + 10;
+
+            std::sort(begin, end);
+
+            CHECK_THAT(buffer, RangeEquals({9, 8, 7, 6, 5, 4, 3, 2, 1, 0}));
+        }
+
+        THEN("We can interpret it as a 2d array and sort") {
+            std::array<ssize_t, 2> shape{2, 5};
+            std::array<ssize_t, 2> strides{-5 * static_cast<ssize_t>(sizeof(double)),
+                                           sizeof(double)};
+
+            auto begin = BufferIterator<double, double>(buffer.data() + 5, shape, strides);
+            auto end = begin + 10;
+
+            std::sort(begin, end);
+
+            CHECK_THAT(buffer, RangeEquals({5, 6, 7, 8, 9, 0, 1, 2, 3, 4}));
+        }
+    }
 }
 
 }  // namespace dwave::optimization

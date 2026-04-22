@@ -50,6 +50,11 @@ class BufferIterator {
     using reference = To&;
     using value_type = To;
 
+    // We satisfy the iterator_concept but not the iterator_category for a
+    // random access iterator. We're not even a forward iterator! Because we
+    // don't always return a reference type when dereferenced.
+    using iterator_concept = std::random_access_iterator_tag;
+
     // The type of the held pointer to the underlying buffer.
     using buffer_type = From;
 
@@ -317,7 +322,7 @@ class BufferIterator {
 
     /// Return the location in the shaped array that the iterator currently
     /// points to.
-    std::span<const ssize_t> location() { return std::span<ssize_t>(loc_.get(), ndim_); }
+    std::span<const ssize_t> location() const { return std::span<ssize_t>(loc_.get(), ndim_); }
 
  private:
     void increment_multi_(shape_like auto&& multi_increment) {
