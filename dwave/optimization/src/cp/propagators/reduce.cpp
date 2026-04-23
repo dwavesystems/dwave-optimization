@@ -170,6 +170,7 @@ void DynamicReducePropagator<BinaryOp>::initialize_state(CPState& state) const {
 }
 
 /// Compute the upper and lower bounds derived from the definitely present variables
+/// Note: this is only used by the dynamic SUM propagator
 std::pair<double, double> compute_present_bounds(const CPVar* in, const CPVar* out,
                                                  const CPVarsState& state, ssize_t start_index,
                                                  double lb_start, double ub_start) {
@@ -186,6 +187,8 @@ std::pair<double, double> compute_present_bounds(const CPVar* in, const CPVar* o
     return {lb_present, ub_present};
 }
 
+/// Compute the upper-lower bounds to help pruning the size of the array
+/// Note: used only by the dynamic SUM propagator
 /// TODO: can make it more C++ :P
 void compute_bounds_for_size(const CPVar* in, const CPVar* out, const CPVarsState& state,
                              std::vector<double>& lb_optional, std::vector<double>& ub_optional,
