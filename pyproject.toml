@@ -15,7 +15,8 @@ authors = [
     {name = "D-Wave Inc.", email = "tools@dwavesys.com"},
 ]
 description = "Enables the formulation of nonlinear models for industrial optimization problems."
-license = {file = "LICENSE"}
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX",
