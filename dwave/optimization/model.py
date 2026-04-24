@@ -239,6 +239,9 @@ class Model(_Graph):
                ) -> BinaryVariable:
         r"""Create a binary symbol as a decision variable.
 
+        A binary symbol is an array of True/False values assigned as a solution
+        to the problem being modeled.
+
         Args:
             shape (optional): Shape of the binary array to create, formatted as
                 an integer or a tuple of integers. If None, creates a
@@ -345,6 +348,8 @@ class Model(_Graph):
     def constant(self, array_like: numpy.typing.ArrayLike) -> Constant:
         r"""Add a constant to the model.
 
+        A constant symbol is an array of floats used in the model's formulation.
+
         To prevent redundancy, constants are cached. Repeated calls to
         :meth:`.constant` with the same ``array_like`` argument, returns the
         first :class:`~dwave.optimization.symbols.Constant` instance.
@@ -393,10 +398,12 @@ class Model(_Graph):
             ) -> tuple[DisjointBitSets, tuple[DisjointBitSet, ...]]:
         """Add a disjoint-sets decision variable to the model.
 
-        Divides a set of the elements of ``range(primary_set_size)`` into
-        ``num_disjoint_sets`` ordered partitions, stored as bit sets (arrays
-        of length ``primary_set_size``, with ones at the indices of elements
-        currently in the set, and zeros elsewhere).
+        A disjoint-sets symbol divides a set of the elements of
+        ``range(primary_set_size)`` into ``num_disjoint_sets`` ordered
+        partitions, stored as bit sets (arrays of length ``primary_set_size``,
+        with ones at the indices of elements currently in the set, and zeros
+        elsewhere), with these values being assigned as a solution to the
+        problem being modeled.
 
         Also creates from the symbol ``num_disjoint_sets`` successors that
         output the disjoint sets as arrays.
@@ -443,7 +450,7 @@ class Model(_Graph):
             :class:`~dwave.optimization.symbols.DisjointBitSet`: Generated
             symbols
 
-            :meth:`.disjoint_lists_symbol`
+            :meth:`.disjoint_lists_symbol`, :meth:`.list`, :meth:`.set`
 
             :meth:`.iter_decisions`, :meth:`.iter_successors`
         """
@@ -466,8 +473,10 @@ class Model(_Graph):
             The return behavior of this method will be changed in
             dwave.optimization 0.8.0. Use :meth:`.disjoint_lists_symbol`.
 
-        Divides a set of the elements of ``range(primary_set_size)`` into
-        ``num_disjoint_lists`` ordered partitions.
+        A disjoint-lists symbol divides a set of the elements of
+        ``range(primary_set_size)`` into ``num_disjoint_lists`` ordered
+        partitions, with the division being assigned as a solution to the
+        problem being modeled.
 
         Also creates from the symbol ``num_disjoint_lists`` successors  that
         output the disjoint lists as arrays.
@@ -495,7 +504,8 @@ class Model(_Graph):
             :class:`~dwave.optimization.symbols.DisjointList`: Generated
             symbols
 
-            :meth:`.disjoint_bit_sets`, :meth:`.disjoint_lists_symbol`
+            :meth:`.disjoint_bit_sets`, :meth:`.disjoint_lists_symbol`,
+            :meth:`.list`, :meth:`.set`
 
             :meth:`.iter_decisions`, :meth:`.iter_successors`
         """
@@ -520,8 +530,10 @@ class Model(_Graph):
             ) -> DisjointLists:
         """Create a disjoint-lists symbol as a decision variable.
 
-        Divides a set of the elements of ``range(primary_set_size)`` into
-        ``num_disjoint_lists`` ordered partitions.
+        A disjoint-lists symbol divides a set of the elements of
+        ``range(primary_set_size)`` into ``num_disjoint_lists`` ordered
+        partitions, with the division being assigned as a solution to the
+        problem being modeled.
 
         Also creates from the symbol ``num_disjoint_lists`` successors  that
         output the disjoint lists as arrays.
@@ -570,7 +582,7 @@ class Model(_Graph):
             :class:`~dwave.optimization.symbols.DisjointList`: Generated
             symbols
 
-            :meth:`.disjoint_bit_sets`
+            :meth:`.disjoint_bit_sets`, :meth:`.list`, :meth:`.set`
 
             :meth:`.iter_decisions`, :meth:`.iter_successors`
         """
@@ -694,6 +706,9 @@ class Model(_Graph):
                ) -> IntegerVariable:
         r"""Create an integer symbol as a decision variable.
 
+        An integer symbol is an array of integer values assigned as a solution
+        to the problem being modeled.
+
         Args:
             shape (optional): Shape of the integer array to create, formatted as
                 an integer or a tuple of integers. If None, creates a
@@ -814,10 +829,12 @@ class Model(_Graph):
             ) -> ListVariable:
         """Add a list decision variable to the model.
 
-        Permutations of the values in ``range(n)`` as a list.
+        A list symbol is a list containing a permutation of the values in
+        :math:`[0, n-1]`, with the permutation assigned as a solution to the
+        problem being modeled.
 
         Args:
-            n: Values in the list are permutations of ``range(n)``.
+            n: Range of values in the permutations list (zero to :math:`n - 1`).
             min_size: Minimum list size. Defaults to ``max_size``.
             max_size: Maximum list size. Defaults to ``n``.
 
@@ -848,7 +865,8 @@ class Model(_Graph):
             :class:`~dwave.optimization.symbols.ListVariable`: Generated
             symbol
 
-            :meth:`.disjoint_bit_sets`, :meth:`.disjoint_lists_symbol`
+            :meth:`.disjoint_bit_sets`, :meth:`.disjoint_lists_symbol`,
+            :meth:`.set`
 
             :meth:`.iter_decisions`
 
@@ -872,11 +890,11 @@ class Model(_Graph):
         allow access to methods such as
         :meth:`~dwave.optimization.model.ArraySymbol.state` and
         :meth:`~dwave.optimization.model.Symbol.topological_index` for
-        intermediate (non-decision) variables.
+        successor (non-decision) variables.
 
         Returns:
             A context manager. If the context is subsequently exited, the
-            :meth:`.unlock` is called.
+            :meth:`.unlock` method is called.
 
         Examples:
             This example checks the status of a model after locking it and
@@ -917,20 +935,26 @@ class Model(_Graph):
     # dev note: the typing is underspecified, but it would be quite complex to fully
     # specify the linear/quadratic so let's leave it alone for now.
     def quadratic_model(self, x: ArraySymbol, quadratic, linear=None) -> QuadraticModel:
-        """Create a quadratic model from an array and a quadratic model.
+        """Add a quadratic model to the model.
+
+        Creates a :term:`quadratic model` from a predecessor
+        :class:`~dwave.optimization.model.ArraySymbol` and a quadratic model,
+        such as a :term:`QUBO`.
 
         Args:
-            x: An array.
+            x: Predecessor array symbol.
 
-            quadratic: Quadratic values for the quadratic model.
+            quadratic: Quadratic values for the quadratic model. Can also
+                include linear values as self loops (e.g., ``(3, 3): 2.5``).
 
             linear: Linear values for the quadratic model.
 
         Returns:
-            A quadratic model.
+            A successor symbol that outputs the values of a quadratic model on
+            its predecessor symbol's state.
 
         Examples:
-            This example creates a quadratic model.
+            This example creates a :term:`binary quadratic model` (BQM).
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
@@ -938,6 +962,24 @@ class Model(_Graph):
             >>> Q = {(0, 0): 0, (0, 1): 1, (0, 2): 2, (1, 1): 1, (1, 2): 3, (2, 2): 2}
             >>> qm = model.quadratic_model(x, Q)
 
+            This example creates a quadratic example and prints a state.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer(3, lower_bound=-5, upper_bound=10)
+            >>> quad = {(0, 1): 1, (0, 2): 2, (1, 2): 3}
+            >>> lin = {0: 0.5, 1: 1.2, 2: 2.0}
+            >>> qm = model.quadratic_model(i, quadratic=quad, linear=lin)
+            ...
+            >>> with model.lock():
+            ...    model.states.resize(1)
+            ...    i.set_state(0, [1, 3, 0])
+            ...    print(qm.state(0).round())
+            7.0
+
+        See Also:
+            :class:`~dwave.optimization.symbols.QuadraticModel`: Generated
+            symbol
         """
         from dwave.optimization.symbols import QuadraticModel
         return QuadraticModel(x, quadratic, linear)
@@ -947,29 +989,71 @@ class Model(_Graph):
             min_size: int = 0,
             max_size: None | int = None,
             ) -> SetVariable:
-        """Create a set symbol as a decision variable.
+        """Add a set decision variable to the model.
+
+        A set symbol is an unordered collection of values in :math:`[0, n-1]`,
+        with the values assigned as a solution to the problem being modeled.
 
         Args:
-            n: Values in the set are subsets of ``range(n)``.
+            n: Range of values (zero to :math:`n-1)` for the set.
             min_size: Minimum set size. Defaults to ``0``.
             max_size: Maximum set size. Defaults to ``n``.
 
         Returns:
-            A set symbol.
+            A set symbol  at the root of the :term:`directed acyclic graph`
+            for the model.
 
         Examples:
-            This example creates a set symbol of up to 4 elements
-            with values between 0 to 99.
+            This example creates a set symbol of up to four elements with values
+            between 0 to 99, and sets a set of three elements as a state of the
+            decision variable.
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> destinations = model.set(100, max_size=4)
+            ...
+            >>> with model.lock():
+            ...    model.states.resize(1)
+            ...    destinations.set_state(0, [0, 22, 58])
+
+        See Also:
+            :class:`~dwave.optimization.symbols.SetVariable`: Generated
+            symbol
+
+            :meth:`.disjoint_bit_sets`, :meth:`.disjoint_lists_symbol`,
+            :meth:`.list`
+
+            :meth:`.iter_decisions`
         """
         from dwave.optimization.symbols import SetVariable  # avoid circular import
         return SetVariable(self, n, min_size, n if max_size is None else max_size)
 
     def to_file(self, **kwargs) -> typing.BinaryIO:
         """Serialize the model to a new file-like object.
+
+        Examples:
+            This example serializes a model to a
+            `buffered I/O <https://docs.python.org/3/library/io.html#binary-i-o>`_
+            object.
+
+            >>> from dwave.optimization.generators import flow_shop_scheduling
+            ...
+            >>> processing_times = [[10, 5, 7], [20, 10, 15]]
+            >>> model = flow_shop_scheduling(processing_times=processing_times)
+            ...
+            >>> my_file = model.to_file()
+
+            The temporary file created above can be saved to disk, for example,
+            using Python's :mod:`shutil` module.
+
+            .. testcode::
+                :skipif: True
+
+                import shutil
+
+                my_file.seek(0)  # Move cursor to start
+                with open("my_file.bin", "wb") as f:
+                    shutil.copyfileobj(my_file, f)
 
         See also:
             :meth:`.into_file`, :meth:`.from_file`
