@@ -85,7 +85,7 @@ TEST_CASE("All different (FWC) propagator") {
                         cp_x->assign(v_state, 3, 1);
                         REQUIRE(cp_x->min(v_state, 1) == 3);
                         REQUIRE(cp_x->max(v_state, 1) == 3);
-                        auto status = engine.fix_point(state);
+                        engine.fix_point(state);
                         THEN("The other variables don't contain 2") {
                             for (ssize_t i = 2; i < 5; ++i) {
                                 REQUIRE_FALSE(cp_x->contains(v_state, 2, i));
