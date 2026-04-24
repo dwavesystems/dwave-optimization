@@ -43,7 +43,9 @@ double CPVarData::max(int index) const { return domains_->max(index); }
 
 double CPVarData::size(int index) const { return domains_->size(index); }
 
-bool CPVarData::is_bound(int index) const { return domains_->is_bound(index); }
+bool CPVarData::is_bound(int index) const {
+    return domains_->is_bound(index) and domains_->is_active(index);
+}
 
 bool CPVarData::contains(double value, int index) const { return domains_->contains(value, index); }
 

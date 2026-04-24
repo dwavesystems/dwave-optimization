@@ -56,7 +56,7 @@ double SparseSetArray::size(int index) const {
     return size_[index]->get_value();
 }
 
-bool SparseSetArray::is_bound(int index) const { return size(index) == 1; }
+bool SparseSetArray::is_bound(int index) const { return size(index) == 1 and is_active(index); }
 
 bool SparseSetArray::contains(double val, int index) const {
     assert(index < static_cast<ssize_t>(num_domains()));
