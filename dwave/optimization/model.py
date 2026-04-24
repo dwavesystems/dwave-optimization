@@ -142,8 +142,8 @@ class Model(_Graph):
     """Nonlinear model.
 
     The nonlinear model represents a general optimization problem with an
-    :term:`objective function` and/or constraints over variables of various
-    types.
+    :term:`objective function` and/or :term:`constraints <constraint>` over
+    variables of various types.
 
     The :class:`.Model` class can contain this model and its methods provide
     convenient utilities for working with representations of a problem.
@@ -351,9 +351,9 @@ class Model(_Graph):
         A constant symbol is an array of floats used in the model's formulation.
 
         To prevent redundancy, constants are cached. Repeated calls to
-        :meth:`.constant` with the same ``array_like`` argument, returns the
-        first :class:`~dwave.optimization.symbols.Constant` instance.
-        The cache can be cleared by calling the
+        :meth:`.constant` with the same ``array_like`` argument return the
+        first :class:`~dwave.optimization.symbols.Constant` instance. You can
+        clear cache by calling the
         :meth:`~dwave.optimization.model.Model.constant.clear_cache` method.
 
         Args:
@@ -398,12 +398,17 @@ class Model(_Graph):
             ) -> tuple[DisjointBitSets, tuple[DisjointBitSet, ...]]:
         """Add a disjoint-sets decision variable to the model.
 
-        A disjoint-sets symbol divides a set of the elements of
-        ``range(primary_set_size)`` into ``num_disjoint_sets`` ordered
-        partitions, stored as bit sets (arrays of length ``primary_set_size``,
-        with ones at the indices of elements currently in the set, and zeros
-        elsewhere), with these values being assigned as a solution to the
-        problem being modeled.
+        A disjoint-sets symbol divides a set of elements into ordered
+        partitions of bit sets, with ones signifying elements in the set, where
+        the placement of these ones is assigned as a solution to the problem
+        being modeled.
+
+        The elements are values of ``range(primary_set_size)``. Each of the
+        ``num_disjoint_sets`` ordered partitions is a bit set (array) of length
+        ``primary_set_size`` with ones at the indices of elements currently in
+        the set, and zeros elsewhere. The set is disjoint in that for every
+        index :math:`i` between zero and ``primary_set_size``, there is a single
+        partition assigned a value of one at that position.
 
         Also creates from the symbol ``num_disjoint_sets`` successors that
         output the disjoint sets as arrays.
@@ -532,8 +537,8 @@ class Model(_Graph):
 
         A disjoint-lists symbol divides a set of the elements of
         ``range(primary_set_size)`` into ``num_disjoint_lists`` ordered
-        partitions, with the division being assigned as a solution to the
-        problem being modeled.
+        partitions, where the division is assigned as a solution to the problem
+        being modeled.
 
         Also creates from the symbol ``num_disjoint_lists`` successors  that
         output the disjoint lists as arrays.
@@ -830,7 +835,7 @@ class Model(_Graph):
         """Add a list decision variable to the model.
 
         A list symbol is a list containing a permutation of the values in
-        :math:`[0, n-1]`, with the permutation assigned as a solution to the
+        :math:`[0, n-1]`, where the permutation is assigned as a solution to the
         problem being modeled.
 
         Args:
