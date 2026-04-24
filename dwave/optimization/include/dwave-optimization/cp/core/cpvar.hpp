@@ -143,7 +143,7 @@ class CPVar {
     void propagate_on_bounds_change(Advisor&& advisor);
     void propagate_on_assignment(Advisor&& advisor);
 
-    void initialize_state(CPState& state) const;
+    void initialize_state(CPState& state, bool use_sparse_set = false) const;
 
     /// Note: these could be state stacks that can be updated through the search. Keeping them as
     /// simple vectors (static in terms of the search for now)

@@ -14,6 +14,7 @@ tests_all = executable(
         'cp/test_propagator.cpp',
         'cp/propagators/test_binaryop.cpp',
         'cp/propagators/test_reduce.cpp',
+        'cp/propagators/test_collections.cpp',
 
         'nodes/indexing/test_advanced.cpp',
         'nodes/indexing/test_basic.cpp',

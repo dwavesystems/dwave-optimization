@@ -17,13 +17,16 @@
 #include <type_traits>
 
 #include "dwave-optimization/cp/core/interval_array.hpp"
+#include "dwave-optimization/cp/core/sparse_set_array.hpp"
 
 namespace dwave::optimization::cp {
 
 CPVarData::CPVarData(StateManager* sm, ssize_t min_size, ssize_t max_size, double lb, double ub,
-                     std::unique_ptr<DomainListener> listener, bool integral) {
+                     std::unique_ptr<DomainListener> listener, bool integral, bool use_sparse_set) {
     // Set a real interval
-    if (integral) {
+    if (integral and use_sparse_set) {
+        domains_ = std::make_unique<SparseSetArray>(sm, min_size, max_size, lb, ub);
+    } else if (integral) {
         domains_ = std::make_unique<IntIntervalArray>(sm, min_size, max_size, lb, ub);
     } else {
         domains_ = std::make_unique<RealIntervalArray>(sm, min_size, max_size, lb, ub);
@@ -40,7 +43,9 @@ double CPVarData::max(int index) const { return domains_->max(index); }
 
 double CPVarData::size(int index) const { return domains_->size(index); }
 
-bool CPVarData::is_bound(int index) const { return domains_->is_bound(index); }
+bool CPVarData::is_bound(int index) const {
+    return domains_->is_bound(index) and domains_->is_active(index);
+}
 
 bool CPVarData::contains(double value, int index) const { return domains_->contains(value, index); }
 

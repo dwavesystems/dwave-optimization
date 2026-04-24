@@ -13,6 +13,7 @@
 //    limitations under the License.
 
 #include "dwave-optimization/cp/core/interval_array.hpp"
+
 #include <cassert>
 #include <cmath>
 #include <numeric>
@@ -203,12 +204,12 @@ double IntervalArray<ssize_t>::size(int index) const {
 
 template <>
 bool IntervalArray<double>::is_bound(int index) const {
-    return (this->size(index) == 0);
+    return (this->size(index) == 0) and this->is_active(index);
 }
 
 template <>
 bool IntervalArray<ssize_t>::is_bound(int index) const {
-    return (this->size(index) == 1);
+    return (this->size(index) == 1) and this->is_active(index);
 }
 
 template <>
@@ -362,7 +363,7 @@ CPStatus IntervalArray<T>::remove_all_but(double value, int index, DomainListene
         return this->update_max_size(index, l);
     }
 
-    if (this->contains(value, index) and this->is_bound(index)){
+    if (this->contains(value, index) and this->is_bound(index)) {
         // nothing to do here, the domain is already fixed to this value
         return CPStatus::OK;
     }

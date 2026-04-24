@@ -24,7 +24,7 @@ namespace dwave::optimization::cp {
 class CPVarData {
  public:
     CPVarData(StateManager* sm, ssize_t min_size, ssize_t max_size, double lb, double ub,
-              std::unique_ptr<DomainListener> listener, bool integral);
+              std::unique_ptr<DomainListener> listener, bool integral, bool use_sparse_set=false);
 
     // actions on the underlying domain
     size_t num_domains() const;
