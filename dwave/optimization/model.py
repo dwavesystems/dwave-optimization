@@ -237,7 +237,7 @@ class Model(_Graph):
                subject_to: None | list[tuple[str, float]] = None,
                axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None
                ) -> BinaryVariable:
-        r"""Create a binary symbol as a decision variable.
+        r"""Add a binary decision variable to the model.
 
         A binary symbol is an array of True/False values assigned as a solution
         to the problem being modeled.
@@ -709,7 +709,7 @@ class Model(_Graph):
             subject_to: None | list[tuple[str, float]] = None,
             axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None
                ) -> IntegerVariable:
-        r"""Create an integer symbol as a decision variable.
+        r"""Add an integer decision variable to the model.
 
         An integer symbol is an array of integer values assigned as a solution
         to the problem being modeled.
