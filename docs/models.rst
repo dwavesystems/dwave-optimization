@@ -24,7 +24,7 @@ Model Class
 .. autoclass:: Model
     :members:
     :inherited-members:
-    :member-order: bysource
+    :member-order: alphabetical
 
 Expressions
 ===========
