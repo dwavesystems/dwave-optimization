@@ -133,7 +133,7 @@ void CPVar::propagate_on_bounds_change(Advisor&& adv) { on_bounds.push_back(std:
 
 void CPVar::propagate_on_domain_change(Advisor&& adv) { on_domain.push_back(std::move(adv)); }
 
-void CPVar::initialize_state(CPState& state) const {
+void CPVar::initialize_state(CPState& state, bool use_sparse_set) const {
     assert(this->cp_var_index_ >= 0);
     assert(static_cast<ssize_t>(state.var_state_.size()) > cp_var_index_);
 
@@ -165,7 +165,7 @@ void CPVar::initialize_state(CPState& state) const {
 
     state.var_state_[cp_var_index_] = std::make_unique<CPVarData>(
             state.get_state_manager(), min_size, max_size, node_->min(), node_->max(),
-            std::make_unique<Listener>(this, state), node_->integral());
+            std::make_unique<Listener>(this, state), node_->integral(), use_sparse_set);
 }
 
 }  // namespace dwave::optimization::cp
