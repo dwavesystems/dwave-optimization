@@ -609,6 +609,15 @@ cdef class _Graph:
 
         No new symbols can be added to a locked model.
 
+        Returns:
+            bool: True if the model is locked.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> model.is_locked()
+            False
+
         See also:
             :meth:`.lock`, :meth:`.unlock`
         """
@@ -616,6 +625,10 @@ cdef class _Graph:
 
     def iter_constraints(self):
         """Iterate over all constraints in the model.
+
+        Yields:
+            Symbols associated with a constraints; for example, a
+            :class:`~dwave.optimization.symbols.LessEqual` symbol.
 
         Examples:
             This example adds a single constraint to a model and iterates over it.
@@ -626,12 +639,20 @@ cdef class _Graph:
             >>> c = model.constant(5)
             >>> _ = model.add_constraint(i <= c)
             >>> constraints = next(model.iter_constraints())
+
+        See Also:
+            :meth:`iter_decisions`, :meth:`.iter_symbols`,
+            :meth:`.num_constraints`
         """
         for ptr in self._graph.constraints():
             yield symbol_from_ptr(self, ptr)
 
     def iter_decisions(self):
         """Iterate over all decision variables in the model.
+
+        Yields:
+            Decision variables; for example, an
+            :class:`~dwave.optimization.symbols.IntegerVariable` symbol.
 
         Examples:
             This example adds a single decision symbol to a model and iterates over it.
@@ -642,12 +663,19 @@ cdef class _Graph:
             >>> c = model.constant(5)
             >>> _ = model.add_constraint(i <= c)
             >>> decisions = next(model.iter_decisions())
+
+        See Also:
+            :meth:`iter_constraints`, :meth:`iter_symbols`,
+            :meth:`.num_decisions`
         """
         for ptr in self._graph.decisions():
             yield symbol_from_ptr(self, ptr)
 
     def iter_inputs(self):
         """Iterate over all inputs in the model.
+
+        Yields:
+            :class:`~dwave.optimization.symbols.Input` symbols.
 
         Examples:
             This example iterates over a model's inputs.
@@ -661,12 +689,18 @@ cdef class _Graph:
             2
 
         .. versionadded:: 0.6.2
+
+        See Also:
+            :meth:`iter_decisions`, :meth:`iter_symbols`, :meth:`.num_inputs`
         """
         for ptr in self._graph.inputs():
             yield symbol_from_ptr(self, ptr)
 
     def iter_symbols(self):
         """Iterate over all symbols in the model.
+
+        Yields:
+            :class:`~dwave.optimization.model.Symbol`: Symbols of the model.
 
         Examples:
             This example iterates over a model's symbols.
@@ -676,6 +710,10 @@ cdef class _Graph:
             >>> i = model.integer(1, lower_bound=10)
             >>> c = model.constant([[2, 3], [5, 6]])
             >>> symbol_1, symbol_2 = model.iter_symbols()
+
+        See Also:
+            :meth:`.iter_constraints`, :meth:`.iter_decisions`,
+            :meth:`.num_symbols`
         """
         # Because nodes() is a span of unique_ptr, we can't just iterate over
         # it cythonically. Cython would try to do a copy/move assignment.
@@ -730,7 +768,10 @@ cdef class _Graph:
         self._graph.set_objective(value.array_ptr)
 
     cpdef Py_ssize_t num_constraints(self) noexcept:
-        """Number of constraints in the model.
+        """Return the number of constraints in the model.
+
+        Returns:
+            int: Number of constraints.
 
         Examples:
             This example checks the number of constraints in the model after
@@ -744,14 +785,21 @@ cdef class _Graph:
             >>> _ = model.add_constraint(c[1] <= i)
             >>> model.num_constraints()
             2
+
+        See Also:
+            :meth:`.feasible`, :meth:`.iter_constraints`,
+            :meth:`.num_decisions`, :meth:`.num_symbols`
         """
         return self._graph.num_constraints()
 
     cpdef Py_ssize_t num_decisions(self) noexcept:
-        """Number of independent decision nodes in the model.
+        """Return the number of decision variables in the model.
 
         An array-of-integers symbol, for example, counts as a single
-        decision node.
+        decision symbol.
+
+        Returns:
+            int: Number of independent decision symbols.
 
         Examples:
             This example checks the number of decisions in a model after
@@ -763,11 +811,18 @@ cdef class _Graph:
             >>> i = model.integer(20, upper_bound=100)
             >>> model.num_decisions()
             1
+
+        See Also:
+            :meth:`iter_decisions`, :meth:`num_constraints`, :meth:`num_symbols`
         """
         return self._graph.num_decisions()
 
     def num_edges(self):
-        """Number of edges in the directed acyclic graph for the model.
+        """Return the number of edges in the model's graph.
+
+        Returns:
+            int: Number of edges in the :term:`directed acyclic graph` for the
+            model.
 
         Examples:
             This example minimizes the sum of a single constant symbol and
@@ -781,6 +836,9 @@ cdef class _Graph:
             >>> model.minimize(c + i)
             >>> model.num_edges()
             2
+
+        See Also:
+            :meth:`.num_nodes`, :meth:`.num_symbols`
         """
         cdef Py_ssize_t num_edges = 0
         for i in range(self._graph.num_nodes()):
@@ -788,11 +846,11 @@ cdef class _Graph:
         return num_edges
 
     cpdef Py_ssize_t num_inputs(self) noexcept:
-        """Number of input nodes on the model.
+        """Return the number of input symbols in the model.
 
-        See also:
-            :meth:`.num_symbols`
-            :class:`~dwave.optimization.symbols.Input`
+        Returns:
+            int: Number of :class:`~dwave.optimization.symbols.Input` symbols in
+            the model.
 
         Examples:
             This example adds two inputs and a constant to a model and
@@ -805,19 +863,25 @@ cdef class _Graph:
             >>> model.num_inputs()
             2
 
+        See also:
+            :class:`~dwave.optimization.symbols.Input`
+
+            :meth:`iter_inputs`, :meth:`.num_symbols`
+
         .. versionadded:: 0.6.2
         """
         return self._graph.num_inputs()
 
     cpdef Py_ssize_t num_nodes(self) noexcept:
-        """Number of nodes in the directed acyclic graph for the model.
+        """Return the number of nodes in the model's graph.
 
-        See also:
-            :meth:`.num_symbols`
+        Returns:
+            int: Number of nodes in the :term:`directed acyclic graph` for the
+            model.
 
         Examples:
-            This example add a single (size 20) decision symbol and
-            a single (size 3) constant symbol checks the number of
+            This example adds a single (size 20) decision symbol and
+            a single (size 3) constant symbol, and checks the number of
             nodes in the model.
 
             >>> from dwave.optimization.model import Model
@@ -826,21 +890,24 @@ cdef class _Graph:
             >>> i = model.integer(20, upper_bound=100)
             >>> model.num_nodes()
             2
+
+        See also:
+            :meth:`num_edges`, :meth:`.num_symbols`
         """
         return self._graph.num_nodes()
 
     cpdef Py_ssize_t num_symbols(self) noexcept:
-        """Number of symbols tracked by the model.
+        """Return the number of symbols in the model.
 
-        Equivalent to the number of nodes in the directed acyclic
-        graph for the model.
+        Equivalent to the number of nodes in the :term:`directed acyclic graph`
+        for the model.
 
-        See also:
-            :meth:`.num_nodes`
+        Returns:
+            int: Number of symbols in the model.
 
         Examples:
-            This example add a single (size 20) decision symbol and
-            a single (size 3) constant symbol checks the number of
+            This example adds a single (size 20) decision symbol and
+            a single (size 3) constant symbol, and checks the number of
             symbols in the model.
 
             >>> from dwave.optimization.model import Model
@@ -849,6 +916,9 @@ cdef class _Graph:
             >>> i = model.integer(20, upper_bound=100)
             >>> model.num_symbols()
             2
+
+        See also:
+            :meth:`.iter_symbols`, :meth:`.num_nodes`
         """
         return self.num_nodes()
 
@@ -857,18 +927,19 @@ cdef class _Graph:
 
         A symbol is considered unused if all of the following are true :
 
-        * It is not a decision.
-        * It is not an ancestor of the objective.
-        * It is not an ancestor of a constraint.
-        * It has no :class:`ArraySymbol` object(s) referring to it. See examples
-          below.
+        *   It is not a decision.
+        *   It is not an ancestor of the objective.
+        *   It is not an ancestor of a constraint.
+        *   It has no :class:`ArraySymbol` object(s) referring to it.
+
+        See examples below.
 
         Returns:
-            The number of symbols removed.
+            int: Number of symbols removed.
 
         Examples:
-            In this example we create a mix of unused and used symbols. Then
-            the unused symbols are removed with ``remove_unused_symbols()``.
+            This example creates a mix of unused and used symbols, and then
+            removes the unused symbols.
 
             >>> from dwave.optimization import Model
             >>> model = Model()
@@ -883,10 +954,9 @@ cdef class _Graph:
             >>> model.num_symbols()
             2
 
-            In this example we create a mix of unused and used symbols.
-            However, unlike the previous example, we assign the unused symbol
-            to a name in the namespace. This prevents the symbol from being
-            removed.
+            This example creates a mix of unused and used symbols; however,
+            unlike in the previous example, the unused symbol is assigned to a
+            name in the namespace, preventing from being removed.
 
             >>> from dwave.optimization import Model
             >>> model = Model()
@@ -900,13 +970,15 @@ cdef class _Graph:
             >>> model.num_symbols()
             3
 
+        See Also:
+            :meth:`iter_symbols`, :meth:`.num_symbols`
         """
         if self.is_locked():
             raise ValueError("cannot remove symbols from a locked model")
         return self._graph.remove_unused_nodes()
 
     def state_size(self):
-        r"""Return an estimate of the size, in bytes, of a model state.
+        r"""Return an estimate of the size, in bytes, of a model's state.
 
         For a model encoding several array operations, the state of each array
         must be held in memory. This method returns an estimate of the total
@@ -915,8 +987,11 @@ cdef class _Graph:
         The number of bytes returned by this method is only an estimate. Some
         symbols hold additional information that is not accounted for.
 
+        Returns:
+            int: Size of the state for the model.
+
         Examples:
-            This example estimates the size of a model state.
+            This example estimates the size of a model's state.
             In this example a single value is added to a :math:`5\times4` array.
             The output of the addition is also a :math:`5\times4` array.
             Each element of each array requires :math:`8` bytes to represent
@@ -933,18 +1008,17 @@ cdef class _Graph:
             328
 
         See also:
-            :meth:`Symbol.state_size()` An estimate of the size of a symbol's
-            state.
+            :meth:`Symbol.state_size()` Estimates the size of a symbol's state
 
-            :meth:`ArraySymbol.state_size()` An estimate of the size of an array
-            symbol's state.
+            :meth:`ArraySymbol.state_size()` Estimates the size of an array
+            symbol's state
 
-            :meth:`Model.decision_state_size()` An estimate of the size of a
-            model's decision states.
+            :meth:`Model.decision_state_size()` Estimates the size of a
+            model's decision states
 
-            :ref:`opt_solver_nl_properties` The properties of the
+            :ref:`opt_solver_nl_properties` Properties of the
             `Leap <https://cloud.dwavesys.com/leap/>`_ service's
-            quantum-classical hybrid nonlinear solver. Including limits on
+            quantum-classical hybrid nonlinear solver, including limits on
             the maximum state size of a model.
         """
         return sum(sym.state_size() for sym in self.iter_symbols())
