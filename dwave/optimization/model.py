@@ -49,7 +49,26 @@ __all__ = ["Model"]
 
 @contextlib.contextmanager
 def locked(model: _Graph):
-    """Context manager that hold a locked model and unlocks it when the context is exited."""
+    """Context manager that holds a locked model and unlocks it upon exiting.
+
+    Instantiated through the :meth:`~dwave.optimization.model.Model.lock`
+    method.
+
+    Examples:
+        This example creates a model, locks it, sets a state for a decision
+        variable, and prints a successor symbol.
+
+        >>> from dwave.optimization import Model
+            ...
+        >>> model = Model()
+        >>> i = model.integer(lower_bound=-5, upper_bound=5)
+        >>> j = i**2
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, 2)
+        ...     print(j.state(0))
+        4.0
+    """
     try:
         yield
     finally:
@@ -88,8 +107,29 @@ class _ConstantCache:
         return constant
 
     def clear_cache(self):
-        """Clear the constant cache. Subsequent calls to .constant() will create
-        new symbols.
+        """Clear the cache for constant symbols.
+
+        To prevent redundancy, constants are cached: Repeated calls to the
+        :meth:`~dwave.optimization.model.Model.constant` method with the same
+        argument, return the first :class:`~dwave.optimization.symbols.Constant`
+        instance. After clearing the cache, subsequent such calls create new
+        symbols.
+
+        Examples:
+            >>> from dwave.optimization import Model
+            ...
+            >>> model = Model()
+            >>> a = model.constant(4)
+            >>> b = model.constant(4)
+            >>> model.constant.clear_cache()
+            >>> c = model.constant(4)
+            >>> b is a
+            True
+            >>> c is a
+            False
+
+        See Also:
+            :meth:`~dwave.optimization.model.Model.constant`
         """
         self.constant_cache.clear()
 
@@ -102,8 +142,8 @@ class Model(_Graph):
     """Nonlinear model.
 
     The nonlinear model represents a general optimization problem with an
-    :term:`objective function` and/or constraints over variables of various
-    types.
+    :term:`objective function` and/or :term:`constraints <constraint>` over
+    variables of various types.
 
     The :class:`.Model` class can contain this model and its methods provide
     convenient utilities for working with representations of a problem.
@@ -125,10 +165,24 @@ class Model(_Graph):
     :ref:`States <opt_model_construction_nl_states>` represent assignments of
     values to a symbol.
 
+    Examples:
+        This example resizes the :class:`~dwave.optimization.states.States`
+        class of a simple model to enable the setting of a binary variable. It
+        then clears the set state and the allocated memory.
+
+        >>> from dwave.optimization.model import Model
+        >>> model = Model()
+        >>> x = model.binary((2, 2))
+        >>> model.states.resize(1)
+        >>> with model.lock():
+        ...     x.set_state(0, [[0, 0], [1, 0]])
+        >>> model.states.clear()
+        >>> model.states.size()
+        0
+
     See also:
-        :ref:`States methods <optimization_models>` such as
-        :meth:`~dwave.optimization.model.States.size` and
-        :meth:`~dwave.optimization.model.States.resize`.
+        :class:`~dwave.optimization.states.States` methods to read, save, and
+        manipulate the states of a model.
     """
 
     def __init__(self):
@@ -139,10 +193,17 @@ class Model(_Graph):
     def objective(self) -> None | ArraySymbol:
         """Objective to be minimized.
 
+        Created when you use the :meth:`.minimize` method and associated with
+        the :class:`~dwave.optimization.model.ArraySymbol` being minimized; as
+        such, supports such methods as
+        :meth:`~dwave.optimization.model.ArraySymbol.state`,
+        :meth:`~dwave.optimization.model.ArraySymbol.reshape`,
+        :meth:`~dwave.optimization.model.ArraySymbol.max`, etc.
+
         Examples:
-            This example prints the value of the objective of a model representing
-            the simple polynomial, :math:`y = i^2 - 4i`, for a state with value
-            :math:`i=2.0`.
+            This example prints the value of the :term:`objective` of a model
+            representing the simple polynomial, :math:`y = i^2 - 4i`, for a
+            state with value :math:`i=2.0`.
 
             >>> from dwave.optimization import Model
             ...
@@ -156,6 +217,13 @@ class Model(_Graph):
             ...     i.set_state(0, 2.0)
             ...     print(f"Objective = {model.objective.state(0)}")
             Objective = -4.0
+
+        See Also:
+            :class:`~dwave.optimization.model.ArraySymbol`: Symbol created by
+            the :meth:`.minimize` method
+
+            :meth:`.minimize`,
+            :meth:`~dwave.optimization.model.ArraySymbol.state`
         """
         return self._objective
 
@@ -169,17 +237,22 @@ class Model(_Graph):
                subject_to: None | list[tuple[str, float]] = None,
                axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None
                ) -> BinaryVariable:
-        r"""Create a binary symbol as a decision variable.
+        r"""Add a binary decision variable to the model.
+
+        A binary symbol is an array of True/False values assigned as a solution
+        to the problem being modeled.
 
         Args:
-            shape (optional): Shape of the binary array to create.
+            shape (optional): Shape of the binary array to create, formatted as
+                an integer or a tuple of integers. If None, creates a
+                zero-dimensional (scalar) binary variable.
             lower_bound (optional): Lower bound(s) for the symbol. Can be
                 scalar (one bound for all variables) or an array (one bound for
-                each variable). Non-boolean values are rounded up to the domain
+                each variable). Non-Boolean values are rounded up to the domain
                 [0,1]. If None, the default value of 0 is used.
             upper_bound (optional): Upper bound(s) for the symbol. Can be
                 scalar (one bound for all variables) or an array (one bound for
-                each variable). Non-boolean values are rounded down to the domain
+                each variable). Non-Boolean values are rounded down to the domain
                 [0,1]. If None, the default value of 1 is used.
             subject_to (optional): Constraint on the sum of the values in the
                 array. Must be an array of tuples where each tuple has the form:
@@ -206,40 +279,28 @@ class Model(_Graph):
                 Note 2: If provided, subject_to must None.
 
         Returns:
-            A binary symbol.
+            A binary symbol at the root of the :term:`directed acyclic graph`
+            for the model.
 
         Examples:
-            This example adds a :math:`20 \time 30`-sized binary variable to a model.
+            This example adds a :math:`20 \times 30`-sized binary variable to a
+            model.
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> x = model.binary((20, 30))
-            >>> type(x)
-            <class 'dwave.optimization.symbols.numbers.BinaryVariable'>
+            >>> x.shape()
+            (20, 30)
 
-            This example adds a :math:`5`-sized binary symbol and index-wise
-            bounds to a model.
-
-            >>> from dwave.optimization.model import Model
-            >>> import numpy as np
-            >>> model = Model()
-            >>> b = model.binary(5, lower_bound=[-1, 0, 1, 0, 1], upper_bound=[1, 0, 1, 1, 1])
-            >>> np.all([0, 0, 1, 0, 1] == b.lower_bound())
-            True
-            >>> np.all([1, 0, 1, 1, 1] == b.upper_bound())
-            True
-
-            This example adds a :math:`2`-sized binary symbol with a scalar lower
-            bound and index-wise upper bounds to a model.
+            This example adds a :math:`2`-sized binary symbol with a scalar
+            lower bound and index-wise upper bounds to a model.
 
             >>> from dwave.optimization.model import Model
             >>> import numpy as np
             >>> model = Model()
             >>> b = model.binary(2, lower_bound=-1.1, upper_bound=[1.1, 0.9])
-            >>> np.all([0, 0] == b.lower_bound())
-            True
-            >>> np.all([1, 0] == b.upper_bound())
-            True
+            >>> b.upper_bound()
+            array([1., 0.])
 
             This example adds a :math:`(2x3)`-sized binary symbol with
             index-wise lower bounds and a sum constraint along axis 1. Let
@@ -266,8 +327,12 @@ class Model(_Graph):
             True
 
         See Also:
-            :class:`~dwave.optimization.symbols.numbers.BinaryVariable`: The
-                created symbol and its methods.
+            :class:`~dwave.optimization.symbols.BinaryVariable`: Generated
+            symbol
+
+            :meth:`.constant`, :meth:`.input`, :meth:`.integer`
+
+            :meth:`.iter_decisions`
 
         .. versionchanged:: 0.6.7
             Beginning in version 0.6.7, user-defined index-wise bounds are
@@ -281,20 +346,24 @@ class Model(_Graph):
         return BinaryVariable(self, shape, lower_bound, upper_bound, subject_to, axes_subject_to)
 
     def constant(self, array_like: numpy.typing.ArrayLike) -> Constant:
-        r"""Create a constant symbol.
+        r"""Add a constant to the model.
 
-        To avoid redundancy, ``Constant``\s are cached. Repeated calls to
-        ``.constant(array)`` with the same array will result in the same
-        ``Constant``.
-        The cache can be cleared by calling ``model.constant.clear_cache()``.
+        A constant symbol is an array of floats used in the model's formulation.
+
+        To prevent redundancy, constants are cached. Repeated calls to
+        :meth:`.constant` with the same ``array_like`` argument return the
+        first :class:`~dwave.optimization.symbols.Constant` instance. You can
+        clear cache by calling the
+        :meth:`~dwave.optimization.model.Model.constant.clear_cache` method.
 
         Args:
             array_like: An |array-like|_ representing a constant. Can be a scalar
-                or a NumPy array. If the array's ``dtype`` is ``np.double``, the
-                array is not copied.
+                or a NumPy array. If the :class:`numpy.dtype` of the array is
+                :class:`numpy.double`, the array is not copied.
 
         Returns:
-            A constant symbol.
+            A constant symbol at the root of the :term:`directed acyclic graph`
+            for the model.
 
         Examples:
             This example creates a :math:`1 \times 4`-sized constant symbol
@@ -305,7 +374,11 @@ class Model(_Graph):
             >>> time_limits = model.constant([10, 15, 5, 8.5])
 
         See Also:
-            :class:`~dwave.optimization.symbols.Constant`: equivalent symbol.
+            :class:`~dwave.optimization.symbols.Constant`: Generated symbol
+
+            :meth:`.binary`, :meth:`.input`, :meth:`.integer`
+
+            :meth:`.iter_symbols`
 
         .. versionchanged:: 0.6.4
             Beginning in version 0.6.4, constants are cached. Also known as
@@ -323,16 +396,22 @@ class Model(_Graph):
             primary_set_size: int,
             num_disjoint_sets: int,
             ) -> tuple[DisjointBitSets, tuple[DisjointBitSet, ...]]:
-        """Create a disjoint-sets symbol as a decision variable.
+        """Add a disjoint-sets decision variable to the model.
 
-        Divides a set of the elements of ``range(primary_set_size)`` into
-        ``num_disjoint_sets`` ordered partitions, stored as bit sets (arrays
-        of length ``primary_set_size``, with ones at the indices of elements
-        currently in the set, and zeros elsewhere). The ordering of a set is
-        not semantically meaningful.
+        A disjoint-sets symbol divides a set of elements into ordered
+        partitions of bit sets, with ones signifying elements in the set, where
+        the placement of these ones is assigned as a solution to the problem
+        being modeled.
 
-        Also creates from the symbol ``num_disjoint_sets`` extra successors
-        that output the disjoint sets as arrays.
+        The elements are values of ``range(primary_set_size)``. Each of the
+        ``num_disjoint_sets`` ordered partitions is a bit set (array) of length
+        ``primary_set_size`` with ones at the indices of elements currently in
+        the set, and zeros elsewhere. The set is disjoint in that for every
+        index :math:`i` between zero and ``primary_set_size``, there is a single
+        partition assigned a value of one at that position.
+
+        Also creates from the symbol ``num_disjoint_sets`` successors that
+        output the disjoint sets as arrays.
 
         Args:
             primary_set_size: Number of elements in the primary set that are
@@ -340,16 +419,45 @@ class Model(_Graph):
             num_disjoint_sets: Number of disjoint sets. Must be positive.
 
         Returns:
-            A tuple where the first element is the disjoint-sets symbol and
-            the second is a set of its newly added successors.
+            A tuple where the first element is a disjoint-sets symbol at the
+            root of the :term:`directed acyclic graph` for the model and the
+            second is a set of ``num_disjoint_sets`` successors.
 
         Examples:
-            This example creates a symbol of 10 elements that is divided
-            into 4 sets.
+            This example creates a symbol of five elements that is divided into
+            two sets, which could be part a
+            :func:`~dwave.optimization.generators.bin_packing` problem of
+            packing five items into two bins with an interest in the number of
+            items packed in the first bin (three in the example solution shown
+            here).
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> parts_set, parts_subsets = model.disjoint_bit_sets(10, 4)
+            >>> bins_set, bins_subsets = model.disjoint_bit_sets(5, 2)
+            >>> in_bin0 = bins_subsets[0].sum()
+            >>> with model.lock():
+            ...     model.states.resize(1)
+            ...     bins_set.set_state(0, [[0, 1, 1, 1, 0], [1, 0, 0, 0, 1]]) # Example solution
+            ...     print(in_bin0.state(0))
+            3.0
+
+            .. figure:: /_images/disjoint_bit_sets.svg
+                :width: 500 px
+                :name: dwave-optimization-disjoint-bit-sets-example
+                :alt: Image of the model constructed in this example
+
+                Visualization of the model as a :term:`directed acyclic graph`.
+                See the :func:`~dwave.optimization.model.Model.to_networkx`
+                function for information on visualizing models.
+
+        See Also:
+            :class:`~dwave.optimization.symbols.DisjointBitSets`,
+            :class:`~dwave.optimization.symbols.DisjointBitSet`: Generated
+            symbols
+
+            :meth:`.disjoint_lists_symbol`, :meth:`.list`, :meth:`.set`
+
+            :meth:`.iter_decisions`, :meth:`.iter_successors`
         """
         # avoid circular import
         from dwave.optimization.symbols import DisjointBitSets, DisjointBitSet
@@ -363,22 +471,30 @@ class Model(_Graph):
             primary_set_size: int,
             num_disjoint_lists: int,
             ) -> tuple[DisjointLists, tuple[DisjointList, ...]]:
-        """Create a disjoint-lists symbol as a decision variable.
+        """Add a disjoint-lists decision variable to the model.
 
-        Divides a set of the elements of ``range(primary_set_size)`` into
-        ``num_disjoint_lists`` ordered partitions.
+        .. deprecated:: 0.6.7
 
-        Also creates ``num_disjoint_lists`` extra successors from the
-        symbol that output the disjoint lists as arrays.
+            The return behavior of this method will be changed in
+            dwave.optimization 0.8.0. Use :meth:`.disjoint_lists_symbol`.
+
+        A disjoint-lists symbol divides a set of the elements of
+        ``range(primary_set_size)`` into ``num_disjoint_lists`` ordered
+        partitions, with the division being assigned as a solution to the
+        problem being modeled.
+
+        Also creates from the symbol ``num_disjoint_lists`` successors  that
+        output the disjoint lists as arrays.
 
         Args:
             primary_set_size: Number of elements in the primary set to
-                be partitioned into disjoint lists.
-            num_disjoint_lists: Number of disjoint lists.
+                be partitioned into disjoint lists. Must be non-negative.
+            num_disjoint_lists: Number of disjoint lists. Must be positive.
 
         Returns:
-            A tuple where the first element is the disjoint-lists symbol
-            and the second is a list of its newly added successor nodes.
+            A tuple where the first element is the disjoint-lists symbol at the
+            root of the :term:`directed acyclic graph` for the model
+            and the second is a list of ``num_disjoint_lists`` successors.
 
         Examples:
             This example creates a symbol of 10 elements that is divided
@@ -388,10 +504,15 @@ class Model(_Graph):
             >>> model = Model()
             >>> destinations, routes = model.disjoint_lists(10, 4)
 
-        .. deprecated:: 0.6.7
+        See Also:
+            :class:`~dwave.optimization.symbols.DisjointLists`,
+            :class:`~dwave.optimization.symbols.DisjointList`: Generated
+            symbols
 
-            The return behavior of this method will be changed in
-            dwave.optimization 0.8.0. Use :meth:`.disjoint_lists_symbol`.
+            :meth:`.disjoint_bit_sets`, :meth:`.disjoint_lists_symbol`,
+            :meth:`.list`, :meth:`.set`
+
+            :meth:`.iter_decisions`, :meth:`.iter_successors`
         """
 
         warnings.warn(
@@ -414,16 +535,22 @@ class Model(_Graph):
             ) -> DisjointLists:
         """Create a disjoint-lists symbol as a decision variable.
 
-        Divides a set of the elements of ``range(primary_set_size)`` into
-        ``num_disjoint_lists`` ordered partitions.
+        A disjoint-lists symbol divides a set of the elements of
+        ``range(primary_set_size)`` into ``num_disjoint_lists`` ordered
+        partitions, where the division is assigned as a solution to the problem
+        being modeled.
+
+        Also creates from the symbol ``num_disjoint_lists`` successors  that
+        output the disjoint lists as arrays.
 
         Args:
             primary_set_size: Number of elements in the primary set to
-                be partitioned into disjoint lists.
-            num_disjoint_lists: Number of disjoint lists.
+                be partitioned into disjoint lists. Must be non-negative.
+            num_disjoint_lists: Number of disjoint lists. Must be positive.
 
         Returns:
-            A disjoint-lists symbol.
+            A disjoint-lists symbol at the root of the
+            :term:`directed acyclic graph` for the model.
 
         Examples:
             This example creates a symbol of 10 elements that is divided
@@ -445,6 +572,24 @@ class Model(_Graph):
             Element 1: [3. 5. 6.]
             Element 2: [4.]
             Element 3: [7. 8. 9.]
+
+            .. figure:: /_images/disjoint_lists_symbol.svg
+                :width: 500 px
+                :name: dwave-optimization-disjoint-lists-symbol-example
+                :alt: Image of the model constructed in this example
+
+                Visualization of the model as a :term:`directed acyclic graph`.
+                See the :func:`~dwave.optimization.model.Model.to_networkx`
+                function for information on visualizing models.
+
+        See Also:
+            :class:`~dwave.optimization.symbols.DisjointLists`,
+            :class:`~dwave.optimization.symbols.DisjointList`: Generated
+            symbols
+
+            :meth:`.disjoint_bit_sets`, :meth:`.list`, :meth:`.set`
+
+            :meth:`.iter_decisions`, :meth:`.iter_successors`
         """
         from dwave.optimization.symbols import DisjointLists, DisjointList  # avoid circular import
         disjoint_lists = DisjointLists(self, primary_set_size, num_disjoint_lists)
@@ -457,10 +602,10 @@ class Model(_Graph):
         return disjoint_lists
 
     def feasible(self, index: int = 0) -> bool:
-        """Check the feasibility of the state at the input index.
+        """Check the feasibility of a state.
 
         Args:
-            index: index of the state to check for feasibility.
+            index: Index of the state to check for feasibility.
 
         Returns:
             Feasibility of the state.
@@ -482,6 +627,10 @@ class Model(_Graph):
             >>> with model.lock():
             ...     model.feasible(1)
             False
+
+        See Also:
+            :meth:`.iter_constraints`, :meth:`.num_constraints`,
+            :meth:`.objective`, :meth:`~dwave.optimization.states.States.size`
         """
         return all(sym.state(index) for sym in self.iter_constraints())
 
@@ -492,37 +641,52 @@ class Model(_Graph):
         upper_bound: None | float = float("inf"),
         integral: None | bool = None,
     ) -> Input:
-        """Create an "input" symbol.
+        """Add an input symbol as a placeholder for a decision variable.
 
         An input symbol functions similarly to a decision variable,
-        in that it takes no predecessors, but its state will always be set manually
-        (not by any solver). Used as a placeholder for input to a model.
+        in that it takes no predecessors, but its state is always set manually
+        (and not updated if the model is submitted for solution to a solver).
+        Used as a placeholder for input to a model.
 
-        The shape of the output array is fixed at initialization and cannot be changed.
+        The shape of the output array is fixed at initialization and cannot be
+        changed.
 
-        Provided bounds and integrality are used to supply information for
-        min/max/integral/logical properties of the resulting node, and will be used to
-        validate the state when set manually.
+        The provided bounds and integrality are used to validate the state when
+        set manually; for example, supplied values cannot violate the lower
+        bound.
 
         Args:
-            shape: the shape of the output array.
-            lower_bound: lower bound on any possible output of the node.
-            upper_bound: upper bound on any possible output of the node.
-            integral: whether the output of the node should always be integral.
+            shape: Shape of the output array, formatted as an integer or a tuple
+                of integers. If None, creates a zero-dimensional (scalar) input.
+            lower_bound: Lower bound on any possible output of the node.
+            upper_bound: Upper bound on any possible output of the node.
+            integral: Whether the output of the node should always be integral.
 
         Returns:
-            An input symbol.
+            An input symbol at the root of the :term:`directed acyclic graph`
+            for the model.
 
         Examples:
-            This example creates two input symbols and an integer decision symbol
-            and then sets the objective to the sum of all of them.
+            This example creates an integer decision symbol and an input symbol
+            it uses to multiply the sums of the integer symbol's rows.
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
-            >>> x = model.input()
-            >>> y = model.input(lower_bound=8, upper_bound=10, integral=True)
-            >>> z = model.integer()
-            >>> model.minimize(x + y + z)
+            >>> i = model.integer(shape=(2, 3), lower_bound=-5, upper_bound=5)
+            >>> x = model.input(shape=(2, 1), lower_bound=-2, upper_bound=2, integral=True)
+            >>> y = x*i.sum(axis=1)
+            >>> with model.lock():
+            ...    model.states.resize(1)
+            ...    i.set_state(0, [[1, 2, 3], [1, 1, 2]])
+            ...    x.set_state(0, [[1], [-1]])
+            ...    print(y.state(0))
+            [[ 6.  4.]
+             [-6. -4.]]
+
+        See Also:
+            :class:`~dwave.optimization.symbols.Input`: Generated symbol
+
+            :meth:`.constant`
 
         .. versionadded:: 0.6.2
         """
@@ -545,14 +709,19 @@ class Model(_Graph):
             subject_to: None | list[tuple[str, float]] = None,
             axes_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None
                ) -> IntegerVariable:
-        r"""Create an integer symbol as a decision variable.
+        r"""Add an integer decision variable to the model.
+
+        An integer symbol is an array of integer values assigned as a solution
+        to the problem being modeled.
 
         Args:
-            shape (optional): Shape of the integer array to create.
+            shape (optional): Shape of the integer array to create, formatted as
+                an integer or a tuple of integers. If None, creates a
+                zero-dimensional (scalar) variable.
             lower_bound (optional): Lower bound(s) for the symbol. Can be
                 scalar (one bound for all variables) or an array (one bound for
                 each variable). Non-integer values are rounded up. If None, the
-                default value is used.
+                default value, zero, is used.
             upper_bound (optional): Upper bound(s) for the symbol. Can be
                 scalar (one bound for all variables) or an array (one bound for
                 each variable). Non-integer values are down up. If None, the
@@ -581,32 +750,29 @@ class Model(_Graph):
                 Note 1: At most one sum constraint may be provided.
                 Note 2: If provided, subject_to must None.
         Returns:
-            An integer symbol.
+            An integer symbol at the root of the :term:`directed acyclic graph`
+            for the model.
 
         Examples:
-            This example adds a :math:`25`-sized integer symbol with a scalar lower
-            bound and index-wise upper bounds to a model.
+            This example adds a :math:`5`-sized integer decision variable with
+            scalar bounds to a model, and takes the logarithm of its elements.
 
             >>> from dwave.optimization.model import Model
+            >>> from dwave.optimization.mathematical import log
+            ...
             >>> model = Model()
-            >>> i = model.integer(25, upper_bound=100)
-            >>> type(i)
-            <class 'dwave.optimization.symbols.numbers.IntegerVariable'>
+            >>> i = model.integer(5, lower_bound=1, upper_bound=10)
+            >>> i.shape()
+            (5,)
+            >>> a = log(i)
+            >>> with model.lock():
+            ...    model.states.resize(1)
+            ...    i.set_state(0, [[1, 2, 3, 1, 2]])
+            ...    print(a.state(0)[0])
+            0.0
 
-            This example adds a :math:`5`-sized integer symbol with index-wise
-            bounds to a model.
-
-            >>> from dwave.optimization.model import Model
-            >>> import numpy as np
-            >>> model = Model()
-            >>> i = model.integer(5, lower_bound=[-1, 0, 3, 0, 2], upper_bound=[1, 2, 3, 4, 5])
-            >>> np.all([-1, 0, 3, 0, 2] == i.lower_bound())
-            True
-            >>> np.all([1, 2, 3, 4, 5] == i.upper_bound())
-            True
-
-            This example adds a :math:`2`-sized integer symbol with a scalar lower
-            bound and index-wise upper bounds to a model.
+            This example adds a :math:`2`-sized integer symbol with a scalar
+            lower bound and index-wise upper bounds to a model.
 
             >>> from dwave.optimization.model import Model
             >>> import numpy as np
@@ -643,7 +809,12 @@ class Model(_Graph):
             True
 
         See Also:
-            :class:`~dwave.optimization.symbols.numbers.IntegerVariable`: equivalent symbol.
+            :class:`~dwave.optimization.symbols.numbers.IntegerVariable`:
+            Generated symbol.
+
+            :meth:`.binary`, :meth:`.constant`, :meth:`.input`
+
+            :meth:`.iter_decisions`
 
         .. versionchanged:: 0.6.7
             Beginning in version 0.6.7, user-defined index-wise bounds are
@@ -661,15 +832,20 @@ class Model(_Graph):
             min_size: None | int = None,
             max_size: None | int = None,
             ) -> ListVariable:
-        """Create a list symbol as a decision variable.
+        """Add a list decision variable to the model.
+
+        A list symbol is a list containing a permutation of the values in
+        :math:`[0, n-1]`, where the permutation is assigned as a solution to the
+        problem being modeled.
 
         Args:
-            n: Values in the list are permutations of ``range(n)``.
+            n: Range of values in the permutations list (zero to :math:`n - 1`).
             min_size: Minimum list size. Defaults to ``max_size``.
             max_size: Maximum list size. Defaults to ``n``.
 
         Returns:
-            A list symbol.
+            A list symbol at the root of the :term:`directed acyclic graph`
+            for the model.
 
         Examples:
             This example creates a list symbol of 200 elements.
@@ -679,11 +855,25 @@ class Model(_Graph):
             >>> routes = model.list(200)
 
             This example creates a list symbol with at least 2 elements and at
-            most 4 elements with values between 0 to 99.
+            most 4 elements with values between 0 to 99. It sets two states of
+            the decision variable with different lengths.
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> routes = model.list(99, min_size=2, max_size=4)
+            >>> with model.lock():
+            ...    model.states.resize(2)
+            ...    routes.set_state(0, [10, 2, 44])
+            ...    routes.set_state(1, [67, 1])
+
+        See Also:
+            :class:`~dwave.optimization.symbols.ListVariable`: Generated
+            symbol
+
+            :meth:`.disjoint_bit_sets`, :meth:`.disjoint_lists_symbol`,
+            :meth:`.set`
+
+            :meth:`.iter_decisions`
 
         .. versionchanged:: 0.6.12
             Beginning in version 0.6.12, sub-lists are supported.
@@ -701,14 +891,15 @@ class Model(_Graph):
     def lock(self) -> contextlib.AbstractContextManager:
         """Lock the model.
 
-        No new symbols can be added to a locked model.
+        No new symbols can be added to a locked model. Unlocked models do not
+        allow access to methods such as
+        :meth:`~dwave.optimization.model.ArraySymbol.state` and
+        :meth:`~dwave.optimization.model.Symbol.topological_index` for
+        successor (non-decision) variables.
 
         Returns:
-            A context manager. If the context is subsequently exited then the
-            :meth:`.unlock` will be called.
-
-        See also:
-            :meth:`.is_locked`, :meth:`.unlock`
+            A context manager. If the context is subsequently exited, the
+            :meth:`.unlock` method is called.
 
         Examples:
             This example checks the status of a model after locking it and
@@ -733,6 +924,10 @@ class Model(_Graph):
             True
             >>> model.is_locked()
             False
+
+        See also:
+            :meth:`.is_locked`, :meth:`.unlock`
+
         """
         super().lock()
         return locked(self)
@@ -745,20 +940,26 @@ class Model(_Graph):
     # dev note: the typing is underspecified, but it would be quite complex to fully
     # specify the linear/quadratic so let's leave it alone for now.
     def quadratic_model(self, x: ArraySymbol, quadratic, linear=None) -> QuadraticModel:
-        """Create a quadratic model from an array and a quadratic model.
+        """Add a quadratic model to the model.
+
+        Creates a :term:`quadratic model` from a predecessor
+        :class:`~dwave.optimization.model.ArraySymbol` and a quadratic model,
+        such as a :term:`QUBO`.
 
         Args:
-            x: An array.
+            x: Predecessor array symbol.
 
-            quadratic: Quadratic values for the quadratic model.
+            quadratic: Quadratic values for the quadratic model. Can also
+                include linear values as self loops (e.g., ``(3, 3): 2.5``).
 
             linear: Linear values for the quadratic model.
 
         Returns:
-            A quadratic model.
+            A successor symbol that outputs the values of a quadratic model on
+            its predecessor symbol's state.
 
         Examples:
-            This example creates a quadratic model.
+            This example creates a :term:`binary quadratic model` (BQM).
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
@@ -766,6 +967,24 @@ class Model(_Graph):
             >>> Q = {(0, 0): 0, (0, 1): 1, (0, 2): 2, (1, 1): 1, (1, 2): 3, (2, 2): 2}
             >>> qm = model.quadratic_model(x, Q)
 
+            This example creates a quadratic example and prints a state.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer(3, lower_bound=-5, upper_bound=10)
+            >>> quad = {(0, 1): 1, (0, 2): 2, (1, 2): 3}
+            >>> lin = {0: 0.5, 1: 1.2, 2: 2.0}
+            >>> qm = model.quadratic_model(i, quadratic=quad, linear=lin)
+            ...
+            >>> with model.lock():
+            ...    model.states.resize(1)
+            ...    i.set_state(0, [1, 3, 0])
+            ...    print(qm.state(0).round())
+            7.0
+
+        See Also:
+            :class:`~dwave.optimization.symbols.QuadraticModel`: Generated
+            symbol
         """
         from dwave.optimization.symbols import QuadraticModel
         return QuadraticModel(x, quadratic, linear)
@@ -775,29 +994,71 @@ class Model(_Graph):
             min_size: int = 0,
             max_size: None | int = None,
             ) -> SetVariable:
-        """Create a set symbol as a decision variable.
+        """Add a set decision variable to the model.
+
+        A set symbol is an unordered collection of values in :math:`[0, n-1]`,
+        with the values assigned as a solution to the problem being modeled.
 
         Args:
-            n: Values in the set are subsets of ``range(n)``.
+            n: Range of values (zero to :math:`n-1)` for the set.
             min_size: Minimum set size. Defaults to ``0``.
             max_size: Maximum set size. Defaults to ``n``.
 
         Returns:
-            A set symbol.
+            A set symbol  at the root of the :term:`directed acyclic graph`
+            for the model.
 
         Examples:
-            This example creates a set symbol of up to 4 elements
-            with values between 0 to 99.
+            This example creates a set symbol of up to four elements with values
+            between 0 to 99, and sets a set of three elements as a state of the
+            decision variable.
 
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> destinations = model.set(100, max_size=4)
+            ...
+            >>> with model.lock():
+            ...    model.states.resize(1)
+            ...    destinations.set_state(0, [0, 22, 58])
+
+        See Also:
+            :class:`~dwave.optimization.symbols.SetVariable`: Generated
+            symbol
+
+            :meth:`.disjoint_bit_sets`, :meth:`.disjoint_lists_symbol`,
+            :meth:`.list`
+
+            :meth:`.iter_decisions`
         """
         from dwave.optimization.symbols import SetVariable  # avoid circular import
         return SetVariable(self, n, min_size, n if max_size is None else max_size)
 
     def to_file(self, **kwargs) -> typing.BinaryIO:
         """Serialize the model to a new file-like object.
+
+        Examples:
+            This example serializes a model to a
+            `buffered I/O <https://docs.python.org/3/library/io.html#binary-i-o>`_
+            object.
+
+            >>> from dwave.optimization.generators import flow_shop_scheduling
+            ...
+            >>> processing_times = [[10, 5, 7], [20, 10, 15]]
+            >>> model = flow_shop_scheduling(processing_times=processing_times)
+            ...
+            >>> my_file = model.to_file()
+
+            The temporary file created above can be saved to disk, for example,
+            using Python's :mod:`shutil` module.
+
+            .. testcode::
+                :skipif: True
+
+                import shutil
+
+                my_file.seek(0)  # Move cursor to start
+                with open("my_file.bin", "wb") as f:
+                    shutil.copyfileobj(my_file, f)
 
         See also:
             :meth:`.into_file`, :meth:`.from_file`
