@@ -129,12 +129,16 @@ cdef class _Graph:
     def add_constraint(self, ArraySymbol value):
         """Add a constraint to the model.
 
+        For a solution to the model to be :term:`feasible <feasible state>`, the
+        :term:`constraint` must be satisfied.
+
         Args:
             value: Value that must evaluate to True for the state
                 of the model to be feasible.
 
         Returns:
-            The constraint symbol.
+            The symbol associated with the constraint; for example, a
+            :class:`~dwave.optimization.symbols.LessEqual` symbol.
 
         Examples:
             This example adds a single constraint to a model.
@@ -145,8 +149,9 @@ cdef class _Graph:
             >>> c = model.constant(5)
             >>> constraint_sym = model.add_constraint(i <= c)
 
-            The returned constraint symbol can be assigned and evaluated
-            for a model state:
+            The returned constraint symbol (a
+            :class:`~dwave.optimization.symbols.LessEqual` for this example) can
+            be assigned, and evaluated for, a model state:
 
             >>> with model.lock():
             ...     model.states.resize(1)
@@ -157,6 +162,10 @@ cdef class _Graph:
             ...     i.set_state(0, 6) # Infeasible state
             ...     print(constraint_sym.state(0))
             0.0
+
+        See Also:
+            :meth:`.feasible`, :meth:`.iter_constraints`,
+            :meth:`.num_constraints`, :meth:`.objective`,
         """
         if value is None:
             raise ValueError("value cannot be None")
@@ -165,13 +174,16 @@ cdef class _Graph:
         return value
 
     def decision_state_size(self):
-        r"""Return an estimate of the size, in bytes, of a model's decision states.
+        r"""Estimate the size, in bytes, of a model's decision states.
 
-        For more details, see :meth:`.state_size()`.
-        This method differs by counting the state of only the decision variables.
+        For more details, see the :meth:`.state_size()` method. This method
+        differs by counting the states of only the decision variables.
+
+        Returns:
+            int: Estimated state size of the model's decision variables.
 
         Examples:
-            This example estimates the size of a model state.
+            This example estimates the size of a model's decision state.
             In this example a single value is added to a :math:`5\times4` array.
             The output of the addition is also a :math:`5\times4` array.
             Each element of each array requires :math:`8` bytes to represent
@@ -190,14 +202,13 @@ cdef class _Graph:
             160
 
         See also:
-            :meth:`Symbol.state_size()` An estimate of the size of a symbol's
-            state.
+            :meth:`Symbol.state_size()` Estimates the size of a symbol’s state
 
-            :meth:`ArraySymbol.state_size()` An estimate of the size of an array
-            symbol's state.
+            :meth:`ArraySymbol.state_size()` Estimates the size of an array
+            symbol's state
 
-            :meth:`Model.state_size()` An estimate of the size of a model's
-            decision states.
+            :meth:`Model.state_size()` Estimates the size of all of a model's
+            states
         """
         return sum(sym.state_size() for sym in self.iter_decisions())
 
@@ -215,7 +226,8 @@ cdef class _Graph:
         Args:
             file:
                 File pointer to a readable, seekable file-like object encoding
-                a model. Strings are interpreted as a file name.
+                a model. Strings are interpreted as a file name. Files are not
+                rewound to the beginning.
             substitute:
                 A mapping of symbol substitutions to make when loading the file.
                 The keys are strings giving the node class name to be substituted.
@@ -228,6 +240,21 @@ cdef class _Graph:
 
         Returns:
             A model.
+
+        Examples:
+
+            This example serializes a model to a
+            `buffered I/O <https://docs.python.org/3/library/io.html#binary-i-o>`_
+            object, then creates a new model from that object.
+
+            >>> from dwave.optimization.generators import flow_shop_scheduling
+            ...
+            >>> processing_times = [[10, 5, 7], [20, 10, 15]]
+            >>> model = flow_shop_scheduling(processing_times=processing_times)
+            >>> my_file = model.to_file()
+            ...
+            >>> from dwave.optimization import Model
+            >>> new_model = Model.from_file(my_file)
 
         See also:
             :meth:`.into_file`, :meth:`.to_file`
@@ -372,8 +399,9 @@ cdef class _Graph:
                 interpreted as a file name.
             max_num_states:
                 Maximum number of states to serialize along with the model.
-                The number of states serialized is
-                ``min(model.states.size(), max_num_states)``.
+                The number of states serialized is the minimum between
+                :meth:`~dwave.optimization.states.States.size` and the specified
+                ``max_num_states`` value.
             only_decision:
                 If ``True``, only decision variables are serialized.
                 If ``False``, all symbols are serialized.
@@ -442,7 +470,6 @@ cdef class _Graph:
         Format Specification (Version 0.1):
 
             Prior to version 1.0, states were saved differently.
-            See :meth:`States.into_file()`.
 
         See also:
             :meth:`.from_file`, :meth:`.to_file`
