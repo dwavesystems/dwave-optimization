@@ -17,6 +17,7 @@
 #include <optional>
 #include <ranges>
 #include <span>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -338,28 +339,140 @@ class BinaryNode : public IntegerNode {
         return initialize_state(state, std::vector<double>(values.begin(), values.end()));
     }
 
-    /// Initialize the state of the node randomly
+    /// Initialize the state of the binary node randomly. Special handling if
+    /// the node is subject to a sum constraint. In this case, for each slice
+    /// (w.r.t the sum constraint) pick a random feasible sum that respects the
+    /// sum constraint and perform a random assignment of buffer values within
+    /// the slice such that the sum said values equals the chosen sum. Note:
+    /// This method does not uniformly sample from the possible assignments
+    /// that satisfy the sum constraint.
     template <std::uniform_random_bit_generator Generator>
     void initialize_state(State& state, Generator& rng) const {
-        // Currently do not support random node initialization with sum constraints.
-        if (sum_constraints_.size() > 0) {
-            throw std::invalid_argument("Cannot randomly initialize_state with sum constraints.");
-        }
-
         std::vector<double> values;
         const ssize_t size = this->size();
-        values.reserve(size);
 
-        if (integral()) {
+        if (sum_constraints_.size() == 0) {
+            values.reserve(size);
             for (ssize_t i = 0; i < size; ++i) {
                 std::uniform_int_distribution<ssize_t> gen(lower_bound(i), upper_bound(i));
                 values.emplace_back(gen(rng));
             }
-        } else {
-            for (ssize_t i = 0; i < size; ++i) {
-                std::uniform_real_distribution<double> gen(lower_bound(i), upper_bound(i));
-                values.emplace_back(gen(rng));
+            return initialize_state(state, std::move(values));
+        }
+
+        if (sum_constraints().size() != 1)
+            throw std::invalid_argument("Multiple sum constraints not yet supported.");
+        // We need to construct a random initial state that adheres to the sum constraint.
+        const std::span<const ssize_t> shape = this->shape();
+        const ssize_t ndim = shape.size();
+        const NumberNode::SumConstraint& constraint = sum_constraints().front();
+        const std::optional<const ssize_t> axis = constraint.axis();
+        // If the sum constraint is over entire array, the array is treated as a flat array with
+        // one slice, otherwise, the # of slices is given by the size of the constrained axis.
+        const ssize_t num_slices = axis.has_value() ? shape[*axis] : 1;
+        const ssize_t slice_size = size / num_slices;
+        values.resize(size);
+
+        /// Reorder values of `span` such that the given `axis` is moved to the 0th index.
+        /// If `axis` is std::nullopt, this method simply copies the span data as-is.
+        auto shift_axis_data = [&ndim, &axis](const std::span<const ssize_t> span) {
+            const ssize_t axis_val = axis.has_value() ? *axis : 0;
+            std::vector<ssize_t> output;
+            output.reserve(ndim);
+            output.emplace_back(span[axis_val]);
+            for (ssize_t i = 0; i < ndim; ++i) {
+                if (i != axis_val) output.emplace_back(span[i]);
             }
+            return output;
+        };
+
+        /// Reverse the operation defined by `shift_axis_data()`.
+        auto undo_shift_axis_data = [&ndim, &axis](const std::span<const ssize_t> span) {
+            const ssize_t axis_val = axis.has_value() ? *axis : 0;
+            std::vector<ssize_t> output;
+            output.reserve(ndim);
+            ssize_t i_span = 1;
+            for (ssize_t i = 0; i < ndim; ++i) {
+                output.emplace_back(i == axis_val ? span[0] : span[i_span++]);
+            }
+            return output;
+        };
+
+        /// Random ssize_t in the interval [start, end].
+        auto rand_ssize_t_in_range = [&rng](const ssize_t start, const ssize_t end) {
+            assert(start <= end);
+            std::uniform_int_distribution<ssize_t> dist(start, end);
+            return dist(rng);
+        };
+
+        /// Given a `slice` w.r.t a sum constraint, the current sum `slice_sum`
+        /// of the buffer values in the slice, and the maximum # of indices that
+        /// can be flipped from 0 -> 1, pick a random number of flips to make
+        /// that obey the constraint.
+        auto rnd_num_flips = [&constraint, &rand_ssize_t_in_range](const ssize_t slice,
+                                                                   const double slice_sum,
+                                                                   const ssize_t max_flip) {
+            // Difference between sum constraint bound and the current slice sum.
+            const ssize_t bound_diff = constraint.bound(slice) - slice_sum;
+            switch (constraint.op(slice)) {
+                case NumberNode::SumConstraint::Operator::Equal:
+                    // Minimum assignment to values in slice is greater than bound.
+                    if (bound_diff < 0) throw std::invalid_argument("Infeasible sum constraint.");
+                    // We must perform exactly `bound_diff` # of flips.
+                    return bound_diff;
+                case NumberNode::SumConstraint::Operator::LessEqual:
+                    // Minimum assignment to values in slice is greater than bound.
+                    if (bound_diff < 0) throw std::invalid_argument("Infeasible sum constraint.");
+                    // We can perform at most min(bound_diff, max_flip) # of flips.
+                    return rand_ssize_t_in_range(0, std::min<ssize_t>(bound_diff, max_flip));
+                case NumberNode::SumConstraint::Operator::GreaterEqual:
+                    // Maximum assignment to values in slice is smaller than bound.
+                    if (max_flip < bound_diff)
+                        throw std::invalid_argument("Infeasible sum constraint.");
+                    // We must perform at least max(0, bound_diff) # of flips.
+                    return rand_ssize_t_in_range(std::max<ssize_t>(0, bound_diff), max_flip);
+                default:
+                    assert(false && "Unexpected operator type.");
+                    unreachable();
+            }
+        };
+        // We need a way to iterate over each slice defined by the sum constraint.
+        // If the sum constraint is along an axis, we adjust the shape and
+        // strides such that the data for the constrained axis is moved to index 0.
+        const std::vector<ssize_t> buff_shape = shift_axis_data(shape);
+        const std::vector<ssize_t> buff_strides = shift_axis_data(strides());
+        const BufferIterator<double, double, false> slice_0(values.data(), ndim, buff_shape.data(),
+                                                            buff_strides.data());
+        std::vector<ssize_t> cached_indices;  // Indices that can be flipped from 0 -> 1 in slice.
+        cached_indices.reserve(slice_size);   // Size is bound by slice size.
+        for (ssize_t slice = 0; slice < num_slices; ++slice) {  // Iterate over slices.
+            ssize_t slice_sum = 0;  // The sum of the buffer values in the slice.
+            // Iterate over all indices in the given slice, assign lower bound
+            // to buffer value, increment `slice_sum` by buffer value, and
+            // cache the index if the index can be flipped from a 0 -> 1.
+            for (auto slice_it = slice_0 + slice * slice_size, slice_end = slice_it + slice_size;
+                 slice_it != slice_end; ++slice_it) {
+                // Determine the "true" index of `slice_it` given the node shape.
+                const ssize_t index =
+                        ravel_multi_index(undo_shift_axis_data(slice_it.location()), shape);
+                *slice_it = lower_bound(index);  // Assign buffer value to lower bound.
+                slice_sum += *slice_it;          // Increment slice sum by buffer value.
+                // If buffer value is assigned 0 and upper bound is 1, cache index.
+                if (*slice_it != upper_bound(index)) cached_indices.push_back(index);
+            }
+
+            const ssize_t cache_size = cached_indices.size();
+            // Randomly flip indices in the slice from 0 to 1.
+            for (ssize_t i = 0, stop = rnd_num_flips(slice, slice_sum, cache_size); i < stop; ++i) {
+                // Pick a random index not yet flipped from cached_indices[i, end)
+                const ssize_t j = rand_ssize_t_in_range(i, cache_size - 1);
+                // Move value at index j to position i to prevent it being sampled again.
+                std::swap(cached_indices[i], cached_indices[j]);
+                const ssize_t index = cached_indices[i];
+                assert(values[index] == 0.0 && upper_bound(index) == 1.0);
+                values[index] = 1.0;
+            }
+            cached_indices.clear();
         }
         return initialize_state(state, std::move(values));
     }

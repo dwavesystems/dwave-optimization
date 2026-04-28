@@ -150,6 +150,42 @@ TEST_CASE("SumConstraint") {
     }
 }
 
+/// A method to probabilistically check (by performing `num_samples` samples)
+/// that all known states (known_states) are obtainable via random sampling.
+void random_sample_binary_initialize_state(Graph& graph, BinaryNode* node_ptr,
+                                           const std::vector<std::vector<double>> known_states,
+                                           const ssize_t num_samples) {
+    const ssize_t num_states = known_states.size();
+    std::vector<bool> state_reached(num_states, false);  // Indicator that state has been found.
+    ssize_t state_counter = 0;                           // Number of unique states found.
+    auto rng = std::default_random_engine(42);
+    for (ssize_t i = 0; i < num_samples; ++i) {
+        auto state = graph.empty_state();
+        node_ptr->initialize_state(state, rng);
+        // Indicator used to assess whether an unexpected state was found.
+        bool state_found = false;
+
+        for (ssize_t j = 0; j < num_states; ++j) {  // Check against known states
+            if (std::ranges::equal(node_ptr->view(state), known_states[j])) {
+                state_found = true;
+                // Special handling for the first time state `j` is reached.
+                if (!state_reached[j]) {
+                    state_counter += 1;
+                    state_reached[j] = true;
+                }
+                break;  // State was found, hence we can stop checking.
+            }
+        }
+        if (!state_found) FAIL("Unexpected state: " << node_ptr->view(state));
+        if (state_counter == num_states) break;  // We found all states and can stop sampling.
+    }
+
+    THEN("Each possible state was reached") {
+        CHECK(state_counter == num_states);
+        CHECK(std::ranges::equal(state_reached, std::vector(num_states, true)));
+    }
+}
+
 TEST_CASE("BinaryNode") {
     auto graph = Graph();
 
@@ -1000,13 +1036,6 @@ TEST_CASE("BinaryNode") {
             CHECK(bnode_sum_constraint.op(0) == LessEqual);
         }
 
-        WHEN("We create a state using a random number generator") {
-            auto state = graph.empty_state();
-            auto rng = std::default_random_engine(42);
-            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, rng),
-                              "Cannot randomly initialize_state with sum constraints.");
-        }
-
         WHEN("We initialize a valid state") {
             auto state = graph.empty_state();
             std::vector<double> init_values{0, 0, 0, 1, 1, 0, 0, 0};
@@ -1082,6 +1111,20 @@ TEST_CASE("BinaryNode") {
         }
     }
 
+    GIVEN("(2x2)-BinaryNode with a sum constraint over the entire array") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {1}}};
+        auto bnode_ptr = graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 2}, std::nullopt, std::nullopt, sum_constraints);
+
+        WHEN("We random sample initialize_state() with a random number generator") {
+            std::vector<std::vector<double>> expected_states = {
+                    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+            // Probabilty a given state is NOT reached is: (4/5)^160 = 3.2 × 10^(-16)
+            random_sample_binary_initialize_state(graph, bnode_ptr, expected_states, 160);
+        }
+    }
+
     GIVEN("(3x2x2)-BinaryNode with a sum constraint on axis: 0") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{
@@ -1102,13 +1145,6 @@ TEST_CASE("BinaryNode") {
             CHECK(bnode_sum_constraint.op(0) == Equal);
             CHECK(bnode_sum_constraint.op(1) == LessEqual);
             CHECK(bnode_sum_constraint.op(2) == GreaterEqual);
-        }
-
-        WHEN("We create a state using a random number generator") {
-            auto state = graph.empty_state();
-            auto rng = std::default_random_engine(42);
-            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, rng),
-                              "Cannot randomly initialize_state with sum constraints.");
         }
 
         WHEN("We initialize three invalid states") {
@@ -1667,6 +1703,51 @@ TEST_CASE("BinaryNode") {
             }
         }
     }
+
+    GIVEN("(2x2)-BinaryNode with a sum constraint on axis: 0") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{0, {LessEqual, GreaterEqual}, {1.0, 1.0}}};
+        // Note that index 0 is fixed!
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 2}, 0.0,
+                                               std::vector{0.0, 1.0, 1.0, 1.0}, sum_constraints);
+
+        WHEN("We random sample initialize_state() with a random number generator") {
+            std::vector<std::vector<double>> expected_states = {
+                    {0, 0, 1, 0},  // slice sum is (0, 1)
+                    {0, 0, 0, 1},  // slice sum is (0, 1)
+                    {0, 0, 1, 1},  // slice sum is (0, 2)
+                    {0, 1, 1, 0},  // slice sums are (1, 1)
+                    {0, 1, 0, 1},  // slice sums are (1, 1)
+                    {0, 1, 1, 1},  // slice sums are (1, 2)
+            };
+            // Probabilty a given state is NOT reached is: (5/6)^200 = 1.4 × 10^(-16)
+            random_sample_binary_initialize_state(graph, bnode_ptr, expected_states, 200);
+        }
+    }
+
+    GIVEN("(2x2)-BinaryNode with a sum constraint on axis: 1") {
+        auto graph = Graph();
+        std::vector<SumConstraint> sum_constraints{{1, {LessEqual, GreaterEqual}, {1.0, 1.0}}};
+        // Note that index 0 is fixed!
+        auto bnode_ptr =
+                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{2, 2}, 0.0,
+                                               std::vector{0.0, 1.0, 1.0, 1.0}, sum_constraints);
+
+        WHEN("We random sample initialize_state() with a random number generator") {
+            std::vector<std::vector<double>> expected_states = {
+                    {0, 1, 0, 0},  // slice sum is (0, 1)
+                    {0, 0, 0, 1},  // slice sum is (0, 1)
+                    {0, 1, 0, 1},  // slice sum is (0, 2)
+                    {0, 1, 1, 0},  // slice sum is (1, 1)
+                    {0, 0, 1, 1},  // slice sum is (1, 1)
+                    {0, 1, 1, 1},  // slice sum is (1, 2)
+            };
+            // Probabilty a given state is NOT reached is: (5/6)^200 = 1.4 × 10^(-16)
+            random_sample_binary_initialize_state(graph, bnode_ptr, expected_states, 200);
+        }
+    }
+
     // *********************** Sum Constraint tests *************************
 }
 

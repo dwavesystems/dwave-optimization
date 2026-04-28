@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    `BinaryNode::initialize_state(rng)` can now be used to randomly initialize
+    the state of a `BinaryNode` with exactly one sum constraint.
