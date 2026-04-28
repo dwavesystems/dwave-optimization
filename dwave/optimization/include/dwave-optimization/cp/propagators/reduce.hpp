@@ -32,4 +32,22 @@ class ReducePropagator : public Propagator {
 };
 
 using SumPropagator = ReducePropagator<std::plus<double>>;
+
+/// Dynamic Reduce Propagator.
+/// Uses the binary op to filter the domains of the input and output variable.
+/// This propagator assumes full reduction of the array, it does not reduce over some axes.
+template <class BinaryOp>
+class DynamicReducePropagator : public Propagator {
+ public:
+    DynamicReducePropagator(ssize_t index, CPVar* in, CPVar* out);
+    void initialize_state(CPState& state) const override;
+    CPStatus propagate(CPPropagatorsState& p_state, CPVarsState& v_state) const override;
+
+ private:
+    // The variables entering the binary op
+    CPVar *in_, *out_;
+};
+
+using DynamicSumPropagator = DynamicReducePropagator<std::plus<double>>;
+
 }  // namespace dwave::optimization::cp
