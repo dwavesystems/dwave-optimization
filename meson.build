@@ -53,6 +53,23 @@ dwave_optimization_src = [
     'dwave/optimization/src/fraction.cpp',
     'dwave/optimization/src/graph.cpp',
     'dwave/optimization/src/simplex.cpp',
+
+    'dwave/optimization/src/cp/core/advisor.cpp',
+    'dwave/optimization/src/cp/core/interval_array.cpp',
+    'dwave/optimization/src/cp/core/propagator.cpp',
+    'dwave/optimization/src/cp/core/engine.cpp',
+    'dwave/optimization/src/cp/core/cpvar.cpp',
+    'dwave/optimization/src/cp/core/sparse_set_array.cpp',
+
+    'dwave/optimization/src/cp/propagators/binaryop.cpp',
+    'dwave/optimization/src/cp/propagators/identity_propagator.cpp',
+    'dwave/optimization/src/cp/propagators/reduce.cpp',
+
+    'dwave/optimization/src/cp/state/copier.cpp',
+    'dwave/optimization/src/cp/state/copy.cpp',
+    'dwave/optimization/src/cp/state/cpvar_state.cpp',
+    'dwave/optimization/src/cp/state/state_stack.cpp',
+
 ]
 
 dwave_optimization_dependencies = []
