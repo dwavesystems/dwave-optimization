@@ -235,6 +235,9 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
         ssize_t i = indices_to_process.front();
         indices_to_process.pop_front();
         data->set_scheduled(false, i);
+
+        /// Since we deal with full reduction (no partial, no axis) we assert that the index is only
+        /// 0
         assert(i == 0);
 
         /// ==== Forward propagation ====
