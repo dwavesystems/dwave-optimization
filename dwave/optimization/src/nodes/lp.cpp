@@ -211,20 +211,20 @@ std::unordered_map<std::string, ssize_t> LinearProgramNode::get_arguments() cons
 template <class LPData>
 void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp) const {
     assert(c_ptr_ && "c should always have been provided");
-    lp.c.assign(c_ptr_->view(state).begin(), c_ptr_->view(state).end());
+    lp.c.assign(c_ptr_->begin(state), c_ptr_->end(state));
 
     if (b_lb_ptr_) {
-        lp.b_lb.assign(b_lb_ptr_->view(state).begin(), b_lb_ptr_->view(state).end());
+        lp.b_lb.assign(b_lb_ptr_->begin(state), b_lb_ptr_->end(state));
     } else if (b_ub_ptr_) {
         lp.b_lb.assign(b_ub_ptr_->size(), -std::numeric_limits<double>::infinity());
     }
 
     if (A_ptr_) {
-        lp.A.assign(A_ptr_->view(state).begin(), A_ptr_->view(state).end());
+        lp.A.assign(A_ptr_->begin(state), A_ptr_->end(state));
     }
 
     if (b_ub_ptr_) {
-        lp.b_ub.assign(b_ub_ptr_->view(state).begin(), b_ub_ptr_->view(state).end());
+        lp.b_ub.assign(b_ub_ptr_->begin(state), b_ub_ptr_->end(state));
     } else if (b_lb_ptr_) {
         lp.b_ub.assign(b_lb_ptr_->size(), std::numeric_limits<double>::infinity());
     }
@@ -233,11 +233,11 @@ void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp)
     assert(lp.A.size() == lp.b_ub.size() * lp.c.size() && "A has wrong size match");
 
     if (A_eq_ptr_) {
-        lp.A_eq.assign(A_eq_ptr_->view(state).begin(), A_eq_ptr_->view(state).end());
+        lp.A_eq.assign(A_eq_ptr_->begin(state), A_eq_ptr_->end(state));
     }
 
     if (b_eq_ptr_) {
-        lp.b_eq.assign(b_eq_ptr_->view(state).begin(), b_eq_ptr_->view(state).end());
+        lp.b_eq.assign(b_eq_ptr_->begin(state), b_eq_ptr_->end(state));
     }
     assert(lp.A_eq.size() == lp.b_eq.size() * lp.c.size() && "A_eq and b_eq sizes don't match");
 
@@ -245,7 +245,7 @@ void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp)
         lp.lb.assign(c_ptr_->size(), lb_ptr_->view(state).front());
     } else if (lb_ptr_) {
         assert(lb_ptr_->ndim() == 1);
-        lp.lb.assign(lb_ptr_->view(state).begin(), lb_ptr_->view(state).end());
+        lp.lb.assign(lb_ptr_->begin(state), lb_ptr_->end(state));
     } else {
         lp.lb.assign(c_ptr_->size(state), LinearProgramNodeBase::default_lower_bound());
     }
@@ -254,7 +254,7 @@ void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp)
         lp.ub.assign(c_ptr_->size(), ub_ptr_->view(state).front());
     } else if (ub_ptr_) {
         assert(ub_ptr_->ndim() == 1);
-        lp.ub.assign(ub_ptr_->view(state).begin(), ub_ptr_->view(state).end());
+        lp.ub.assign(ub_ptr_->begin(state), ub_ptr_->end(state));
     } else {
         lp.ub.assign(c_ptr_->size(state), LinearProgramNodeBase::default_upper_bound());
     }

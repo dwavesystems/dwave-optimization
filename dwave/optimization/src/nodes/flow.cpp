@@ -72,14 +72,14 @@ std::span<const Update> ExtractNode::diff(const State& state) const {
 }
 
 void ExtractNode::initialize_state(State& state) const {
-    const Array::View condition = condition_ptr_->view(state);
-    const Array::View arr = arr_ptr_->view(state);
+    const std::ranges::view auto condition = condition_ptr_->view(state);
+    const std::ranges::view auto arr = arr_ptr_->view(state);
 
     std::vector<double> values;
     values.reserve(condition.size());
 
-    for (auto cit = condition.begin(), arrit = arr.begin(), end = condition.end(); cit != end;
-         ++cit, ++arrit) {
+    const auto end = condition.end();
+    for (auto cit = condition.begin(), arrit = arr.begin(); cit != end; ++cit, ++arrit) {
         if (*cit) {
             values.emplace_back(*arrit);
         }
@@ -118,8 +118,8 @@ void ExtractNode::propagate(State& state) const {
     }
     assert(min_changed_idx != -1 && "one of the arrays should have an update");
 
-    const Array::View condition = condition_ptr_->view(state);
-    const Array::View arr = arr_ptr_->view(state);
+    const std::ranges::view auto condition = condition_ptr_->view(state);
+    const std::ranges::view auto arr = arr_ptr_->view(state);
 
     // Count the trues before this index
     auto add_true = [](ssize_t acc, double val) -> ssize_t { return acc + static_cast<bool>(val); };
@@ -128,13 +128,13 @@ void ExtractNode::propagate(State& state) const {
 
     // Get the new values
     std::vector<double> new_values;
-    for (auto cit = condition.begin() + min_changed_idx, arrit = arr.begin() + min_changed_idx,
-              end = condition.end();
+    const auto end = condition.end();
+    for (auto cit = condition.begin() + min_changed_idx, arrit = arr.begin() + min_changed_idx;
          cit != end; ++cit, ++arrit) {
         if (*cit) new_values.push_back(*arrit);
     }
 
-    node_data->assign(new_values, count);
+    node_data->assign(std::move(new_values), count);
 }
 
 void ExtractNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
@@ -157,16 +157,16 @@ SizeInfo ExtractNode::sizeinfo() const { return this->sizeinfo_; }
 
 struct WhereNodeData : ArrayNodeStateData {
     // Initialize the state with the values given
-    explicit WhereNodeData(const Array::View values) noexcept
-            : ArrayNodeStateData(std::vector<double>(values.begin(), values.end())) {}
+    explicit WhereNodeData(const std::ranges::view auto& values) noexcept
+            : ArrayNodeStateData(std::vector<double>(values.begin(), values.begin() + values.size())) {}
 
     explicit WhereNodeData(std::vector<double>&& values) noexcept
             : ArrayNodeStateData(std::move(values)) {}
 
     // Update the buffer according to the given diffs
-    void apply_diffs(const Array::View condition, std::span<const Update> condition_diff,
-                     const Array::View x, std::span<const Update> x_diff, const Array::View y,
-                     std::span<const Update> y_diff) {
+    void apply_diffs(std::ranges::view auto&& condition, std::span<const Update> condition_diff,
+                     std::ranges::view auto&& x, std::span<const Update> x_diff,
+                     std::ranges::view auto&& y, std::span<const Update> y_diff) {
         // rather than doing a lot of fancy things to track the various changes, let's
         // just get the indices that have been updated in at least one predecessor and
         // recalculate those from scratch
@@ -267,16 +267,16 @@ std::span<const Update> WhereNode::diff(const State& state) const {
 void WhereNode::initialize_state(State& state) const {
     if (condition_ptr_->size() != 1) {
         // `condition` has the same shape as x/y and isn't a single value
-        const Array::View condition = condition_ptr_->view(state);
-        const Array::View x = x_ptr_->view(state);
-        const Array::View y = y_ptr_->view(state);
+        const std::ranges::view auto condition = condition_ptr_->view(state);
+        const std::ranges::view auto x = x_ptr_->view(state);
+        const std::ranges::view auto y = y_ptr_->view(state);
 
         std::vector<double> values;
         values.reserve(condition.size());
 
         // zip would be very nice here...
-        for (auto cit = condition.begin(), xit = x.begin(), yit = y.begin(), end = condition.end();
-             cit != end; ++cit, ++xit, ++yit) {
+        for (auto cit = condition.begin(), xit = x.begin(), yit = y.begin();
+             cit != std::default_sentinel; ++cit, ++xit, ++yit) {
             values.emplace_back((*cit) ? *xit : *yit);
         }
 

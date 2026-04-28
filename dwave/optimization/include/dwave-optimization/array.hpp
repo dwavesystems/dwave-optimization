@@ -363,18 +363,16 @@ struct Update {
 class Array {
  public:
     /// A std::random_access_iterator over the values in the array.
-    using iterator = BufferIterator<double, double, false>;
+    using iterator = BufferIterator<double, double>;
 
     /// A std::random_access_iterator over the values in the array.
-    using const_iterator = BufferIterator<double, double, true>;
+    using const_iterator = BufferIterator<const double, const double>;
 
     template <class T>
     using cache_type = std::unordered_map<const Array*, T>;
 
     template <class T>
     using optional_cache_type = std::optional<std::reference_wrapper<cache_type<T>>>;
-
-    using View = std::ranges::subrange<const_iterator>;
 
     /// Constant used to signal that the size is based on the state.
     static constexpr ssize_t DYNAMIC_SIZE = -1;
@@ -436,16 +434,32 @@ class Array {
     // Interface methods ******************************************************
 
     /// Return an iterator to the beginning of the array.
-    const_iterator begin(const State& state) const {
-        if (contiguous()) return const_iterator(buff(state));
-        return const_iterator(buff(state), ndim(), shape().data(), strides().data());
+    auto begin(const State& state) const {
+        // We really just want the ndim(), but to avoid calling yet another
+        // virtual method let's just go ahead and get the strides and use that
+        // to determine the ndim
+        auto strides = this->strides();
+
+        if (strides.size() == 0) {
+            // A 0d iterator is pretty ill-defined, so we return a 1d one.
+            // The iterator doesn't manage the lifespan of the shape/strides
+            // so we need them to be static here.
+            static constexpr ssize_t shape = 1;
+            static constexpr ssize_t strides = 0;
+            return const_iterator(buff(state), 1, &shape, &strides);
+        }
+        return const_iterator(buff(state), shape(state), strides);
     }
 
     /// Return an iterator to the end of the array.
-    const_iterator end(const State& state) const { return this->begin(state) + this->size(state); }
+    auto end(const State& state) const { return begin(state) + size(state); }
 
     /// Return a container-like view over the array.
-    const View view(const State& state) const { return View(begin(state), end(state)); }
+    /// Note that this view does not satisfy the requirements of std::commmon_range.
+    /// If you need two iterators of the same type, you should use `begin()` and `end()`.
+    auto view(const State& state) const {
+        return std::ranges::subrange(begin(state), std::default_sentinel);
+    }
 
     /// The number of doubles in the flattened array.
     /// If the size is dependent on the state, returns Array::DYNAMIC_SIZE.
@@ -657,7 +671,9 @@ class ScalarOutputMixin<Base, true> : public ScalarOutputMixin<Base, false> {
 };
 
 // Views are printable
-std::ostream& operator<<(std::ostream& os, const Array::View& view);
+std::ostream& operator<<(
+        std::ostream& os,
+        const std::ranges::subrange<Array::const_iterator, std::default_sentinel_t>& view);
 
 // Test whether two arrays are sure to have the same shape.
 bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr);

@@ -204,11 +204,10 @@ TEST_CASE("BinaryNode") {
             auto rng = std::default_random_engine(42);
             ptr->initialize_state(state, rng);
             graph.initialize_state(state);
-            auto state_view = ptr->view(state);
 
             THEN("Then all elements are binary valued") {
-                CHECK(std::find_if(state_view.begin(), state_view.end(),
-                                   [](int i) { return (i != 0 && i != 1); }) == state_view.end());
+                CHECK(std::find_if(ptr->begin(state), ptr->end(state),
+                                   [](int i) { return (i != 0 && i != 1); }) == ptr->end(state));
             }
         }
 
@@ -327,11 +326,10 @@ TEST_CASE("BinaryNode") {
             auto rng = std::default_random_engine(42);
             ptr->initialize_state(state, rng);
             graph.initialize_state(state);
-            auto state_view = ptr->view(state);
 
             THEN("Then all elements are binary valued") {
-                CHECK(std::find_if(state_view.begin(), state_view.end(),
-                                   [](int i) { return (i != 0 && i != 1); }) == state_view.end());
+                CHECK(std::find_if(ptr->begin(state), ptr->end(state),
+                                   [](int i) { return (i != 0 && i != 1); }) == ptr->end(state));
             }
         }
 

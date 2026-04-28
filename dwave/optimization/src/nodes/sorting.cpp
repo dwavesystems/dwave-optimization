@@ -69,9 +69,8 @@ std::span<const Update> ArgSortNode::diff(const State& state) const {
 }
 
 void ArgSortNode::initialize_state(State& state) const {
-    const Array::View arr = arr_ptr_->view(state);
-
-    emplace_data_ptr<ArgSortNodeData>(state, std::vector<double>{arr.begin(), arr.end()});
+    emplace_data_ptr<ArgSortNodeData>(
+            state, std::vector<double>{arr_ptr_->begin(state), arr_ptr_->end(state)});
 }
 
 bool ArgSortNode::integral() const { return true; }

@@ -292,8 +292,8 @@ void QuadraticModelNode::revert(State& state) const {
 }
 
 void QuadraticModelNode::initialize_state(State& state) const {
-    auto state_data = dynamic_cast<Array*>(predecessors()[0])->view(state);
-    std::vector<double> state_copy(state_data.begin(), state_data.end());
+    Array* ptr = dynamic_cast<Array*>(predecessors()[0]);
+    std::vector<double> state_copy(ptr->begin(state), ptr->end(state));
     double value = quadratic_model_.compute_value(state_copy);
     emplace_data_ptr<QuadraticModelNodeData>(state, value, std::move(state_copy),
                                              quadratic_model_.num_variables());
