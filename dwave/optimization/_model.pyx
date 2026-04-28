@@ -137,8 +137,7 @@ cdef class _Graph:
                 of the model to be feasible.
 
         Returns:
-            The symbol associated with the constraint; for example, a
-            :class:`~dwave.optimization.symbols.LessEqual` symbol.
+            The symbol associated with the constraint.
 
         Examples:
             This example adds a single constraint to a model.
@@ -627,8 +626,7 @@ cdef class _Graph:
         """Iterate over all constraints in the model.
 
         Yields:
-            Symbols associated with a constraints; for example, a
-            :class:`~dwave.optimization.symbols.LessEqual` symbol.
+            Symbols associated with the constraints.
 
         Examples:
             This example adds a single constraint to a model and iterates over it.
@@ -638,7 +636,9 @@ cdef class _Graph:
             >>> i = model.integer()
             >>> c = model.constant(5)
             >>> _ = model.add_constraint(i <= c)
-            >>> constraints = next(model.iter_constraints())
+            >>> constraint = next(model.iter_constraints())
+            >>> print(type(constraint))
+            <class 'dwave.optimization.symbols.binaryop.LessEqual'>
 
         See Also:
             :meth:`iter_decisions`, :meth:`.iter_symbols`,
