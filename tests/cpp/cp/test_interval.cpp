@@ -31,7 +31,7 @@ namespace dwave::optimization::cp {
 TEST_CASE("Interval double (fixed size)") {
     GIVEN("A state manager and 10 intervals with default boundary") {
         std::unique_ptr<Copier> sm = std::make_unique<Copier>();
-        IntervalArray<double> interval = IntervalArray<double>(sm.get(), 10);
+        RealIntervalArray interval = RealIntervalArray(sm.get(), 10);
         REQUIRE(interval.num_domains() == 10);
         REQUIRE(interval.max_size() == 10);
         REQUIRE(interval.min_size() == 10);
@@ -93,7 +93,7 @@ TEST_CASE("Interval double (fixed size)") {
             ub[i] = i;
         }
 
-        IntervalArray<double> interval2 = IntervalArray<double>(sm.get(), lb, ub);
+        RealIntervalArray interval2 = RealIntervalArray(sm.get(), lb, ub);
         REQUIRE(sm->store.size() == 22);
         THEN("The fomains are correctly initialized") {
             REQUIRE(interval2.num_domains() == lb.size());
@@ -109,7 +109,7 @@ TEST_CASE("Interval double (fixed size)") {
 
     GIVEN("An array of 15 intervals between 0.1 and 0.5") {
         std::unique_ptr<Copier> sm = std::make_unique<Copier>();
-        IntervalArray<double> interval3 = IntervalArray<double>(sm.get(), 15, 0.1, 0.5);
+        RealIntervalArray interval3 = RealIntervalArray(sm.get(), 15, 0.1, 0.5);
         REQUIRE(sm->store.size() == 32);
         THEN("The domains are correctly set") {
             REQUIRE(interval3.num_domains() == 15);
@@ -127,7 +127,7 @@ TEST_CASE("Interval double (fixed size)") {
 TEST_CASE("Interval double (dynamic size)") {
     GIVEN("A state manager and a dynamic array with minimum size 6 and max size 10") {
         std::unique_ptr<Copier> sm = std::make_unique<Copier>();
-        IntervalArray<double> interval = IntervalArray<double>(sm.get(), 6, 10);
+        RealIntervalArray interval = RealIntervalArray(sm.get(), 6, 10);
         REQUIRE(interval.num_domains() == 10);
         REQUIRE(interval.min_size() == 6);
         REQUIRE(interval.max_size() == 10);
@@ -207,7 +207,7 @@ TEST_CASE("Interval double (dynamic size)") {
             ub[i] = i;
         }
 
-        IntervalArray<double> interval2 = IntervalArray<double>(sm.get(), 6, lb, ub);
+        RealIntervalArray interval2 = RealIntervalArray(sm.get(), 6, lb, ub);
         REQUIRE(sm->store.size() == 22);
         THEN("The domains are correctly initialized") {
             REQUIRE(interval2.num_domains() == lb.size());
@@ -229,7 +229,7 @@ TEST_CASE("Interval double (dynamic size)") {
 
     GIVEN("An array of 15 intervals between 0.1 and 0.5") {
         std::unique_ptr<Copier> sm = std::make_unique<Copier>();
-        IntervalArray<double> interval3 = IntervalArray<double>(sm.get(), 6, 15, 0.1, 0.5);
+        RealIntervalArray interval3 = RealIntervalArray(sm.get(), 6, 15, 0.1, 0.5);
         REQUIRE(sm->store.size() == 32);
         THEN("The domains are correctly set") {
             REQUIRE(interval3.num_domains() == 15);

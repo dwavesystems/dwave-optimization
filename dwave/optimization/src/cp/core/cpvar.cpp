@@ -163,9 +163,17 @@ void CPVar::initialize_state(CPState& state) const {
     std::vector<double> min_node;
     std::vector<double> max_node;
 
-    state.var_state_[cp_var_index_] = std::make_unique<CPVarData>(
-            state.get_state_manager(), min_size, max_size, node_->min(), node_->max(),
-            std::make_unique<Listener>(this, state), node_->integral());
+    if (node_->integral()) {
+        DomainArrayVariant domains = IntIntervalArray(state.get_state_manager(), min_size, max_size,
+                                                      node_->min(), node_->max());
+        state.var_state_[cp_var_index_] = std::make_unique<CPVarData>(
+                std::move(domains), std::make_unique<Listener>(this, state));
+    } else {
+        DomainArrayVariant domains = RealIntervalArray(state.get_state_manager(), min_size,
+                                                       max_size, node_->min(), node_->max());
+        state.var_state_[cp_var_index_] = std::make_unique<CPVarData>(
+                std::move(domains), std::make_unique<Listener>(this, state));
+    }
 }
 
 }  // namespace dwave::optimization::cp
