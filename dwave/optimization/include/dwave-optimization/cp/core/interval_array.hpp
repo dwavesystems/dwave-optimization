@@ -21,50 +21,87 @@
 
 namespace dwave::optimization::cp {
 
-template <typename T>
-class IntervalArray : public DomainArray {
+class IntIntervalArray {
  public:
-    IntervalArray(StateManager* sm, ssize_t size);
-    IntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size);
-    IntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size, double lb, double up);
-    IntervalArray(StateManager* sm, ssize_t size, double lb, double up);
-    IntervalArray(StateManager* sm, ssize_t min_size, std::vector<double> lb,
-                  std::vector<double> ub);
-    IntervalArray(StateManager* sm, std::vector<double> lb, std::vector<double> ub);
+    IntIntervalArray(StateManager* sm, ssize_t size);
+    IntIntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size);
+    IntIntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size, ssize_t lb, ssize_t up);
+    IntIntervalArray(StateManager* sm, ssize_t size, ssize_t lb, ssize_t ub);
+    IntIntervalArray(StateManager* sm, ssize_t min_size, std::vector<ssize_t> lb,
+                     std::vector<ssize_t> ub);
+    IntIntervalArray(StateManager* sm, std::vector<ssize_t> lb, std::vector<ssize_t> ub);
 
-    size_t num_domains() const override { return min_.size(); }
+    size_t num_domains() const { return min_.size(); }
+    ssize_t min_size() const { return min_size_->get_value(); }
+    ssize_t max_size() const { return max_size_->get_value(); }
 
-    ssize_t min_size() const override { return min_size_->get_value(); }
-    ssize_t max_size() const override { return max_size_->get_value(); }
-    double min(int index) const override;
-    double max(int index) const override;
-    double size(int index) const override;
-    bool is_bound(int index) const override;
-    bool contains(double value, int index) const override;
+    double min(int index) const;
+    double max(int index) const;
+    double size(int index) const;
+    bool is_bound(int index) const;
+    bool contains(double value, int index) const;
 
-    bool is_active(int index) const override;
-    bool maybe_active(int index) const override;
+    bool is_active(int index) const;
+    bool maybe_active(int index) const;
 
-    CPStatus remove(double value, int index, DomainListener* l) override;
-    CPStatus remove_above(double value, int index, DomainListener* l) override;
-    CPStatus remove_below(double value, int index, DomainListener* l) override;
-    CPStatus remove_all_but(double value, int index, DomainListener* l) override;
-    CPStatus update_min_size(int new_min_size, DomainListener* l) override;
-    CPStatus update_max_size(int new_max_size, DomainListener* l) override;
+    CPStatus remove(double value, int index, DomainListener* l);
+    CPStatus remove_above(double value, int index, DomainListener* l);
+    CPStatus remove_below(double value, int index, DomainListener* l);
+    CPStatus remove_all_but(double value, int index, DomainListener* l);
+    CPStatus update_min_size(int new_min_size, DomainListener* l);
+    CPStatus update_max_size(int new_max_size, DomainListener* l);
 
  private:
     // Change double do an object that can be backtracked.
     // And maybe get
-    std::vector<State<T>*> min_;
-    std::vector<State<T>*> max_;
+    std::vector<StateInt*> min_;
+    std::vector<StateInt*> max_;
 
     StateInt* min_size_;
     StateInt* max_size_;
-
-    void set_sizes(ssize_t size, ssize_t min_size, ssize_t max_size);
 };
 
-using IntIntervalArray = IntervalArray<ssize_t>;
-using RealIntervalArray = IntervalArray<double>;
+class RealIntervalArray {
+ public:
+    RealIntervalArray(StateManager* sm, ssize_t size);
+    RealIntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size);
+    RealIntervalArray(StateManager* sm, ssize_t min_size, ssize_t max_size, double lb, double up);
+    RealIntervalArray(StateManager* sm, ssize_t size, double lb, double up);
+    RealIntervalArray(StateManager* sm, ssize_t min_size, std::vector<double> lb,
+                      std::vector<double> ub);
+    RealIntervalArray(StateManager* sm, std::vector<double> lb, std::vector<double> ub);
+
+    size_t num_domains() const { return min_.size(); }
+    ssize_t min_size() const { return min_size_->get_value(); }
+    ssize_t max_size() const { return max_size_->get_value(); }
+
+    double min(int index) const;
+    double max(int index) const;
+    double size(int index) const;
+    bool is_bound(int index) const;
+    bool contains(double value, int index) const;
+
+    bool is_active(int index) const;
+    bool maybe_active(int index) const;
+
+    CPStatus remove(double value, int index, DomainListener* l);
+    CPStatus remove_above(double value, int index, DomainListener* l);
+    CPStatus remove_below(double value, int index, DomainListener* l);
+    CPStatus remove_all_but(double value, int index, DomainListener* l);
+    CPStatus update_min_size(int new_min_size, DomainListener* l);
+    CPStatus update_max_size(int new_max_size, DomainListener* l);
+
+ private:
+    // Change double do an object that can be backtracked.
+    // And maybe get
+    std::vector<StateReal*> min_;
+    std::vector<StateReal*> max_;
+
+    StateInt* min_size_;
+    StateInt* max_size_;
+};
+
+static_assert(DomainArray<IntIntervalArray>);
+static_assert(DomainArray<RealIntervalArray>);
 
 }  // namespace dwave::optimization::cp

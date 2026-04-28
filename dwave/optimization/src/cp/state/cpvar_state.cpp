@@ -20,60 +20,57 @@
 
 namespace dwave::optimization::cp {
 
-CPVarData::CPVarData(StateManager* sm, ssize_t min_size, ssize_t max_size, double lb, double ub,
-                     std::unique_ptr<DomainListener> listener, bool integral) {
-    // Set a real interval
-    if (integral) {
-        domains_ = std::make_unique<IntIntervalArray>(sm, min_size, max_size, lb, ub);
-    } else {
-        domains_ = std::make_unique<RealIntervalArray>(sm, min_size, max_size, lb, ub);
-    }
-
+CPVarData::CPVarData(DomainArrayVariant&& domains, std::unique_ptr<DomainListener> listener)
+        : domains_(domains) {
     listen_ = std::move(listener);
 }
 
-size_t CPVarData::num_domains() const { return domains_->num_domains(); }
+size_t CPVarData::num_domains() const { return DomainDispatcher::num_domains(domains_); }
 
-double CPVarData::min(int index) const { return domains_->min(index); }
+double CPVarData::min(int index) const { return DomainDispatcher::min(domains_, index); }
 
-double CPVarData::max(int index) const { return domains_->max(index); }
+double CPVarData::max(int index) const { return DomainDispatcher::max(domains_, index); }
 
-double CPVarData::size(int index) const { return domains_->size(index); }
+double CPVarData::size(int index) const { return DomainDispatcher::size(domains_, index); }
 
-bool CPVarData::is_bound(int index) const { return domains_->is_bound(index); }
+bool CPVarData::is_bound(int index) const { return DomainDispatcher::is_bound(domains_, index); }
 
-bool CPVarData::contains(double value, int index) const { return domains_->contains(value, index); }
+bool CPVarData::contains(double value, int index) const {
+    return DomainDispatcher::contains(domains_, value, index);
+}
 
-bool CPVarData::is_active(int index) const { return domains_->is_active(index); }
+bool CPVarData::is_active(int index) const { return DomainDispatcher::is_active(domains_, index); }
 
-bool CPVarData::maybe_active(int index) const { return domains_->maybe_active(index); }
+bool CPVarData::maybe_active(int index) const {
+    return DomainDispatcher::maybe_active(domains_, index);
+}
 
-ssize_t CPVarData::min_size() const { return domains_->min_size(); }
+ssize_t CPVarData::min_size() const { return DomainDispatcher::min_size(domains_); }
 
-ssize_t CPVarData::max_size() const { return domains_->max_size(); }
+ssize_t CPVarData::max_size() const { return DomainDispatcher::max_size(domains_); }
 
 CPStatus CPVarData::remove(double value, int index) {
-    return domains_->remove(value, index, listen_.get());
+    return DomainDispatcher::remove(domains_, value, index, listen_.get());
 }
 
 CPStatus CPVarData::remove_above(double value, int index) {
-    return domains_->remove_above(value, index, listen_.get());
+    return DomainDispatcher::remove_above(domains_, value, index, listen_.get());
 }
 
 CPStatus CPVarData::remove_below(double value, int index) {
-    return domains_->remove_below(value, index, listen_.get());
+    return DomainDispatcher::remove_below(domains_, value, index, listen_.get());
 }
 
 CPStatus CPVarData::remove_all_but(double value, int index) {
-    return domains_->remove_all_but(value, index, listen_.get());
+    return DomainDispatcher::remove_all_but(domains_, value, index, listen_.get());
 }
 
 CPStatus CPVarData::update_min_size(ssize_t new_min_size) {
-    return domains_->update_min_size(new_min_size, listen_.get());
+    return DomainDispatcher::update_min_size(domains_, new_min_size, listen_.get());
 }
 
 CPStatus CPVarData::update_max_size(ssize_t new_max_size) {
-    return domains_->update_max_size(new_max_size, listen_.get());
+    return DomainDispatcher::update_max_size(domains_, new_max_size, listen_.get());
 }
 
 }  // namespace dwave::optimization::cp

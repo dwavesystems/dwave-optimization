@@ -16,15 +16,14 @@
 #include <memory>
 #include <vector>
 
-#include "dwave-optimization/cp/core/domain_array.hpp"
+#include "dwave-optimization/cp/core/domain_dispatcher.hpp"
 #include "dwave-optimization/cp/state/state_manager.hpp"
 
 namespace dwave::optimization::cp {
 
 class CPVarData {
  public:
-    CPVarData(StateManager* sm, ssize_t min_size, ssize_t max_size, double lb, double ub,
-              std::unique_ptr<DomainListener> listener, bool integral);
+    CPVarData(DomainArrayVariant&& domain, std::unique_ptr<DomainListener> listener);
 
     // actions on the underlying domain
     size_t num_domains() const;
@@ -48,7 +47,7 @@ class CPVarData {
 
  protected:
     // keeping it as a unique pointer in case we wanna have different types of domains..
-    std::unique_ptr<DomainArray> domains_;
+    DomainArrayVariant domains_;
     std::unique_ptr<DomainListener> listen_;
 };
 

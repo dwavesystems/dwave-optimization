@@ -21,31 +21,30 @@
 
 namespace dwave::optimization::cp {
 
-class SparseSetArray : public DomainArray {
+class SparseSetArray {
  public:
     SparseSetArray(StateManager* sm, ssize_t min_size, ssize_t max_size, ssize_t lb, ssize_t ub);
+    size_t num_domains() const { return min_.size(); }
+    ssize_t min_size() const { return min_size_->get_value(); }
+    ssize_t max_size() const { return max_size_->get_value(); }
 
-    size_t num_domains() const override { return min_.size(); }
+    double min(int index) const;
+    double max(int index) const;
+    double size(int index) const;
+    bool is_bound(int index) const;
+    bool contains(double value, int index) const;
 
-    ssize_t min_size() const override { return min_size_->get_value(); }
-    ssize_t max_size() const override { return max_size_->get_value(); }
-    double min(int index) const override;
-    double max(int index) const override;
-    double size(int index) const override;
-    bool is_bound(int index) const override;
-    bool contains(double value, int index) const override;
+    bool is_active(int index) const;
+    bool maybe_active(int index) const;
 
-    bool is_empty(int index) const;
+    CPStatus remove(double value, int index, DomainListener* l);
+    CPStatus remove_above(double value, int index, DomainListener* l);
+    CPStatus remove_below(double value, int index, DomainListener* l);
+    CPStatus remove_all_but(double value, int index, DomainListener* l);
+    CPStatus update_min_size(int new_min_size, DomainListener* l);
+    CPStatus update_max_size(int new_max_size, DomainListener* l);
 
-    bool is_active(int index) const override;
-    bool maybe_active(int index) const override;
-
-    CPStatus remove(double value, int index, DomainListener* l) override;
-    CPStatus remove_above(double value, int index, DomainListener* l) override;
-    CPStatus remove_below(double value, int index, DomainListener* l) override;
-    CPStatus remove_all_but(double value, int index, DomainListener* l) override;
-    CPStatus update_min_size(int new_min_size, DomainListener* l) override;
-    CPStatus update_max_size(int new_max_size, DomainListener* l) override;
+    static_assert(DomainArray<SparseSetArray>);
 
  private:
     // Maximum size of the domain for each index
@@ -63,6 +62,8 @@ class SparseSetArray : public DomainArray {
 
     StateInt* min_size_;
     StateInt* max_size_;
+
+    bool is_empty(int index) const;
 
     // Exchange the positions of two values in the sparse set
     void exchange_positions(int index, ssize_t val1, ssize_t val2);
