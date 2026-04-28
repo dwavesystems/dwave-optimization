@@ -162,8 +162,8 @@ class Model(_Graph):
     states: States
     """States of the model.
 
-    :ref:`States <opt_model_construction_nl_states>` represent assignments of
-    values to a symbol.
+    The :ref:`States <opt_model_construction_nl_states>` class represents
+    assignments of values to a symbol.
 
     Examples:
         This example resizes the :class:`~dwave.optimization.states.States`
