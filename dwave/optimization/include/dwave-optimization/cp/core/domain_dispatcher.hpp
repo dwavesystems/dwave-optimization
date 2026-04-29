@@ -23,10 +23,9 @@ namespace dwave::optimization::cp {
 
 using DomainArrayVariant = std::variant<IntIntervalArray, RealIntervalArray, SparseSetArray>;
 
-
-/// The domain dispatcher is responsible to implement the visitor pattern for the different types of domain. 
-/// It is just a struct to keep code clean and avoid duplicating the std::visit calls.
-/// Each domain implementation will call `DomainDistpatcher::method` in the `method` implementation.
+/// The domain dispatcher is responsible to implement the visitor pattern for the different types of
+/// domain. It is just a struct to keep code clean and avoid duplicating the std::visit calls. Each
+/// domain implementation will call `DomainDistpatcher::method` in the `method` implementation.
 struct DomainDispatcher {
     static size_t num_domains(const DomainArrayVariant& d) {
         return std::visit([&](const auto& dom) { return dom.num_domains(); }, d);
