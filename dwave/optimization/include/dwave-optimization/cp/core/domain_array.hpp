@@ -22,9 +22,9 @@
 
 namespace dwave::optimization::cp {
 
-/// Interface for the domains of a contiguous array of variables. It is assumed that the variables
-/// are flattened and they can be optional (maybe active). This is to mimic the dynamic arrays in
-/// dwave-optimization.
+/// Concept defining the requirements for the read methods of the domains of a contiguous array of
+/// variables. It is assumed that the variables are flattened and they can be optional (maybe
+/// active). This is to mimic the dynamic arrays in dwave-optimization.
 template <typename D>
 concept ReadableDomainArray = requires(const D& d, double value, int index) {
     /// Return the total number of domains
@@ -58,6 +58,7 @@ concept ReadableDomainArray = requires(const D& d, double value, int index) {
     { d.maybe_active(index) } -> std::convertible_to<bool>;
 };
 
+/// Concept defining the requirements for the mutate methods of a contiguous array of variables.
 template <typename D>
 concept MutableDomainArray = requires(D& d, double value, int index, DomainListener* l) {
     /// Remove a value from the domain of the index-th variable
@@ -79,6 +80,9 @@ concept MutableDomainArray = requires(D& d, double value, int index, DomainListe
     { d.update_max_size(index, l) } -> std::same_as<CPStatus>;
 };
 
+/// We define a domain array as the domains of a contiguous array of variables. The domain must be
+/// readable - that is we can query their properties - and mutable - that is propagators can modify
+/// them when running.
 template <typename D>
 concept DomainArray = ReadableDomainArray<D> and MutableDomainArray<D>;
 

@@ -21,6 +21,8 @@
 
 namespace dwave::optimization::cp {
 
+/// Implementation of an array of sparse sets. It implements the concept of `DomainArray`, and all
+/// the required methods.
 class SparseSetArray {
  public:
     SparseSetArray(StateManager* sm, ssize_t min_size, ssize_t max_size, ssize_t lb, ssize_t ub);
@@ -43,8 +45,6 @@ class SparseSetArray {
     CPStatus remove_all_but(double value, int index, DomainListener* l);
     CPStatus update_min_size(int new_min_size, DomainListener* l);
     CPStatus update_max_size(int new_max_size, DomainListener* l);
-
-    static_assert(DomainArray<SparseSetArray>);
 
  private:
     // Maximum size of the domain for each index
@@ -81,5 +81,7 @@ class SparseSetArray {
     // Useful because there may be holes in the domain for sparse sets
     bool internal_contains(int index, ssize_t val) const;
 };
+
+static_assert(DomainArray<SparseSetArray>);
 
 }  // namespace dwave::optimization::cp
