@@ -243,8 +243,8 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
         /// ==== Forward propagation ====
 
         /// Compute the output interval induced by the present variables
-        double lb_present, ub_present;
-        std::tie(lb_present, ub_present) = compute_present_bounds(in_, out_, v_state, 0, 0, 0);
+        // double lb_present, ub_present;
+        auto [lb_present, ub_present] = compute_present_bounds(in_, out_, v_state, 0, 0, 0);
 
         // The following vectors store the lower and upper bounds calculations for each size of the
         // vector.
@@ -298,7 +298,7 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
         }
 
         assert(min_size_new >= in_->min_size(v_state));
-        bool changed_min_size = (min_size_new > in_->min_size(v_state)) ? true : false;
+        bool changed_min_size = min_size_new > in_->min_size(v_state);
 
         // After this we set the min and max size
         if (CPStatus status = in_->set_min_size(v_state, min_size_new); not status) return status;
@@ -312,7 +312,7 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
             std::tie(lb_present, ub_present) = compute_present_bounds(
                     in_, out_, v_state, initial_min_size, lb_present, ub_present);
 
-            // also update the bounds from optional variables, used to prune the
+            // also update the bounds from optional variables, used to prune the size
             lb_optional.clear();
             ub_optional.clear();
             lb_acc.clear();
@@ -322,7 +322,7 @@ CPStatus DynamicReducePropagator<std::plus<double>>::propagate(CPPropagatorsStat
         }
 
         // Prune the present variables
-        // first compute the widest possible sum that there can be gven present and optional
+        // first compute the widest possible sum that there can be given present and optional
         // variables
         {
             double sum_max = *std::max_element(ub_optional.begin(), ub_optional.end());
