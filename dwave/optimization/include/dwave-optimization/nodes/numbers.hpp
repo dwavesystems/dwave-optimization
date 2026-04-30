@@ -114,32 +114,6 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         return initialize_state(state, std::vector<double>(values.begin(), values.end()));
     }
 
-    // Initialize the state of the node randomly
-    template <std::uniform_random_bit_generator Generator>
-    void initialize_state(State& state, Generator& rng) const {
-        // Currently do not support random node initialization with sum constraints.
-        if (sum_constraints_.size() > 0) {
-            throw std::invalid_argument("Cannot randomly initialize_state with sum constraints.");
-        }
-
-        std::vector<double> values;
-        const ssize_t size = this->size();
-        values.reserve(size);
-
-        if (integral()) {
-            for (ssize_t i = 0; i < size; ++i) {
-                std::uniform_int_distribution<ssize_t> gen(lower_bound(i), upper_bound(i));
-                values.emplace_back(gen(rng));
-            }
-        } else {
-            for (ssize_t i = 0; i < size; ++i) {
-                std::uniform_real_distribution<double> gen(lower_bound(i), upper_bound(i));
-                values.emplace_back(gen(rng));
-            }
-        }
-        return initialize_state(state, std::move(values));
-    }
-
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
 
@@ -336,32 +310,6 @@ class BinaryNode : public IntegerNode {
     template <std::ranges::range R>
     void initialize_state(State& state, const R& values) const {
         return initialize_state(state, std::vector<double>(values.begin(), values.end()));
-    }
-
-    /// Initialize the state of the node randomly
-    template <std::uniform_random_bit_generator Generator>
-    void initialize_state(State& state, Generator& rng) const {
-        // Currently do not support random node initialization with sum constraints.
-        if (sum_constraints_.size() > 0) {
-            throw std::invalid_argument("Cannot randomly initialize_state with sum constraints.");
-        }
-
-        std::vector<double> values;
-        const ssize_t size = this->size();
-        values.reserve(size);
-
-        if (integral()) {
-            for (ssize_t i = 0; i < size; ++i) {
-                std::uniform_int_distribution<ssize_t> gen(lower_bound(i), upper_bound(i));
-                values.emplace_back(gen(rng));
-            }
-        } else {
-            for (ssize_t i = 0; i < size; ++i) {
-                std::uniform_real_distribution<double> gen(lower_bound(i), upper_bound(i));
-                values.emplace_back(gen(rng));
-            }
-        }
-        return initialize_state(state, std::move(values));
     }
 
     /// @copydoc NumberNode::exchange()

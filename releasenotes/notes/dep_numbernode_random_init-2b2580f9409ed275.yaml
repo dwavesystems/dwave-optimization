@@ -1,0 +1,4 @@
+---
+deprecations:
+  - |
+    `NumberNode` and `BinaryNode` random initialize state.
