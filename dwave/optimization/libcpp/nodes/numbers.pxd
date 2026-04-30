@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from libcpp.optional cimport optional
 from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.graph cimport ArrayNode
@@ -19,16 +20,34 @@ from dwave.optimization.libcpp.state cimport State
 
 
 cdef extern from "dwave-optimization/nodes/numbers.hpp" namespace "dwave::optimization" nogil:
-    cdef cppclass IntegerNode(ArrayNode):
-        void initialize_state(State&, vector[double]) except+
-        double lower_bound(Py_ssize_t index)
-        double upper_bound(Py_ssize_t index)
-        double lower_bound() except+
-        double upper_bound() except+
 
-    cdef cppclass BinaryNode(ArrayNode):
+    cdef cppclass NumberNode(ArrayNode):
+        struct SumConstraint:
+            # It appears Cython automatically assumes all (standard) enums are "public".
+            # Because of this, we use this very explict override.
+            enum class Operator "dwave::optimization::NumberNode::SumConstraint::Operator":
+                Equal
+                LessEqual
+                GreaterEqual
+
+            SumConstraint(optional[Py_ssize_t] axis, vector[Operator] operators,
+                          vector[double] bounds)
+
+            optional[Py_ssize_t] axis()
+            double bound(Py_ssize_t slice)
+            Operator op(Py_ssize_t slice)
+            Py_ssize_t num_bounds()
+            Py_ssize_t num_operators()
+
         void initialize_state(State&, vector[double]) except+
         double lower_bound(Py_ssize_t index)
         double upper_bound(Py_ssize_t index)
         double lower_bound() except+
         double upper_bound() except+
+        const vector[SumConstraint] sum_constraints()
+
+    cdef cppclass IntegerNode(NumberNode):
+        pass
+
+    cdef cppclass BinaryNode(IntegerNode):
+        pass

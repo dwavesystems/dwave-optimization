@@ -54,7 +54,7 @@ While many optimization problems can be expressed using only scalar variable
 types (continuous, integer, and binary), it is often beneficial to use
 combinatorial structures.
 
-The following example contrasts a classic mixed integer linear programming (MILP)
+The following example contrasts a classic mixed integer quadratic programming (MIQP)
 formulation using scalar variables with one that uses a list variable.
 
 Example: Traveling Salesperson
@@ -62,15 +62,15 @@ Example: Traveling Salesperson
 
 The goal of the
 `traveling salesperson problem <https://en.wikipedia.org/wiki/Travelling_salesman_problem>`_
-(TSP) is, for a given a list of cities and distances between each pair of cities, to
+(TSP) is, for a given list of cities and distances between each pair of cities, to
 find the shortest possible route that visits each city exactly once and returns
 to the city of origin.
 
 When restricted to scalar variables,
-a common mixed-integer linear programming formulation for solving a TSP with
+a common mixed-integer quadratic programming formulation for solving a TSP with
 :math:`N` cities uses :math:`N^2` binary variables and :math:`2N` constraints.
 
-.. dropdown:: MILP formulation details
+.. dropdown:: MIQP formulation details
 
     Let
 
@@ -123,13 +123,13 @@ unconstrained!
     .. seealso:: :func:`~dwave.optimization.generators.traveling_salesperson`
         A generator encoding this formulation.
 
-Compare the MILP and the list formulations by the number of constraints
+Compare the MIQP and the list formulations by the number of constraints
 and the size of their search space.
 
 .. csv-table::
    :header-rows: 2
 
-   , MILP, , Nonlinear
+   , MIQP, , Nonlinear
    # of Cities, Variable Domain Size, # of Constraints, Variable Domain Size, # of Constraints
    N, :math:`2^{N^2}`, :math:`2N`, :math:`N!`, 0
    5, 33554432, 10, 120, 0
@@ -137,6 +137,9 @@ and the size of their search space.
 
 By using the list formulation, the search space is much smaller and
 the solver is more likely to find an optimal solution.
+
+Similar comparisons can be made for mixed integer linear programming (MILP) formulations,
+where even more constraints are needed to describe the valid solutions.
 
 .. _optimization_philosophy_tensor_programming:
 

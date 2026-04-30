@@ -30,55 +30,61 @@ __all__ = ["States"]
 
 
 cdef class States:
-    r"""States of a symbol in a model.
+    r"""States of a model.
 
-    States represent assignments of values to a symbol's elements. For
-    example, an :meth:`~Model.integer` symbol of size :math:`1 \times 5`
-    might have state ``[3, 8, 0, 12, 8]``, representing one assignment
-    of values to the symbol.
+    :ref:`States <opt_model_construction_nl_states>` represent assignments of
+    values to the symbols of a model. For example, an
+    :class:`~dwave.optimization.symbols.IntegerVariable` symbol of size
+    :math:`1 \times 5` might have state ``[3, 8, 0, 12, 8]``, representing one
+    assignment of values to the symbol. When the symbol is a decision variable
+    in the model, the state might be (part of) a solution to the modeled
+    problem.
+
+    You can set the states of a model's symbols for the purpose of testing your
+    model or providing an initial state for a :term:`solver`; a model submitted
+    to a solver can have its states updated by returned solutions.
 
     Examples:
-        This example creates a :class:`~dwave.optimization.generators.knapsack`
-        model and manipulates its states to test that it behaves as expected.
-
-        First, create a model.
+        This example creates a model that includes the polynomial
+        :math:`k = i^2 + j^2 + 1` on integer variables and manipulates its
+        states to test that it behaves as expected.
 
         >>> from dwave.optimization import Model
         ...
         >>> model = Model()
-        >>> # Add constants
-        >>> weights = model.constant([10, 20, 5, 15])
-        >>> values = model.constant([-5, -7, -2, -9])
-        >>> capacity = model.constant(30)
-        >>> # Add the decision variable
-        >>> items = model.set(4)
-        >>> # add the capacity constraint
-        >>> _ = model.add_constraint(weights[items].sum() <= capacity)
-        >>> # Set the objective
-        >>> model.minimize(values[items].sum())
+        >>> i = model.integer(5, lower_bound=-10, upper_bound=10) # Array of 5 int elements
+        >>> j = model.integer(lower_bound=-4, upper_bound=6)      # scalar integer
+        >>> k = i**2 + j**2 + 1
 
-        Lock the model to prevent changes to directed acyclic graph. At any
-        time, you can verify the locked state, which is demonstrated here.
+        At this point the size of the size of the newly created model's state is
+        zero: to set states on its symbols, resize it to the number of wanted
+        states using the :meth:`.resize` method.
 
-        >>> with model.lock():
-        ...     model.is_locked()
-        True
-
-        Set a couple of states on the decision variable and verify that the
-        model generates the expected values for the objective.
-
+        >>> model.states.size()
+        0
         >>> model.states.resize(2)
-        >>> items.set_state(0, [0, 1])
-        >>> items.set_state(1, [0, 2, 3])
+
+        Lock the model to enable access to the states of successor symbols
+        (non-decision variables) such as :math:`k`.
+
         >>> with model.lock():
-        ...     print(model.objective.state(0) > model.objective.state(1))
-        True
+        ...     i.set_state(0, [-10, -5, 0, 5, 10])
+        ...     j.set_state(0, 0)
+        ...     print(k.state(0))
+        ...     i.set_state(1, [-10, -5, 0, 5, 10])
+        ...     j.set_state(1, 2)
+        ...     print(k.state(1))
+        [101.  26.   1.  26. 101.]
+        [105.  30.   5.  30. 105.]
 
         You can clear the states you set.
 
         >>> model.states.clear()
         >>> model.states.size()
         0
+
+    See Also:
+        :attr:`~dwave.optimization.model.Model.states`
     """
     def __init__(self, model):
         if not isinstance(model, Model):
@@ -121,6 +127,11 @@ cdef class States:
             >>> print(i.state(0))
             [3. 5.]
             >>> model.states.clear()
+            >>> model.states.size()
+            0
+
+        See Also:
+            :meth:`.resize`, :meth:`.size`
         """
         self.detach_states()
 
@@ -154,12 +165,47 @@ cdef class States:
             file:
                 File pointer to a readable, seekable file-like object encoding
                 the states. Strings are interpreted as a file name.
+            replace (bool):
+                Currently only the default is supported.
+            check_header (bool):
+                Currently unsupported.
 
         Returns:
-            A model.
+            States as assigned in the file.
+
+        Examples:
+
+            This example creates a simple model, sets two states, and then saves
+            those states to a
+            `buffered I/O <https://docs.python.org/3/library/io.html#binary-i-o>`_
+            object. It clears and then restores the states from file.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(5, lower_bound=-10, upper_bound=10)
+            >>> j = i**2 + 1
+            ...
+            >>> with model.lock():
+            ...     model.states.resize(2)
+            ...     i.set_state(0, [-10, -5, 0, 5, 10])
+            ...     i.set_state(1, [-8, -3, 1, 4, 9])
+            ...     my_file = model.states.to_file()        # Save the states
+            ...
+            >>> model.states.clear()                        # Clear the states
+            >>> model.states.size()
+            0
+            >>> model.states.from_file(my_file)             # Restore the states
+            >>> with model.lock():
+            ...     print(j.state(0))
+            ...     print(j.state(1))
+            [101.  26.   1.  26. 101.]
+            [65. 10.  2. 17. 82.]
 
         See Also:
-            :meth:`States.from_file()`.
+            :meth:`.into_file`, :meth:`.to_file`
+
+            :meth:`~dwave.optimization.model.Model.from_file` Restores a model
+            from a file
         """
         if not replace:
             raise NotImplementedError("appending states is not (yet) implemented")
@@ -217,14 +263,23 @@ cdef class States:
     def from_future(self, future, result_hook):
         """Populate the states from the result of a future computation.
 
-        A :ref:`Future <cloud_computation>` object is
-        returned by the solver to which your problem model is submitted. This
-        enables asynchronous problem submission.
+        A :class:`~dwave.cloud.computation.Future` object is returned by the
+        :term:`solver` to which you submit your problem model. This enables
+        asynchronous problem submission.
+
+        This method is intended for use by developers of the Ocean SDK.
 
         Args:
-            future: ``Future`` object.
+            future: A :ref:`future <asyncio-futures>` object such as a
+                :class:`~dwave.cloud.computation.Future` object.
 
             result_hook: Method executed to retrieve the Future.
+
+        See Also:
+            :meth:`.from_file`, :meth:`.resolve`
+
+            :meth:`~dwave.optimization.model.Model.from_file` Restores a model
+            from a file
         """
         self.resize(0)  # always clears self first
 
@@ -232,7 +287,13 @@ cdef class States:
         self._result_hook = result_hook
 
     def initialize(self):
-        """Initialize any uninitialized states."""
+        """Initialize any uninitialized states.
+
+        This method is intended for use by developers of the Ocean SDK.
+
+        See Also:
+            :meth:`.clear`, :meth:`.resize`
+        """
         self.resolve()
 
         cdef _Graph model = self._model()
@@ -255,7 +316,40 @@ cdef class States:
                 object encoding a model. Strings are interpreted as a file
                 name.
             version:
-                A 2-tuple indicating which serialization version to use.
+                A 2-tuple indicating which serialization version to use; for
+                example, ``(1, 0)`` represents version 1.0. By default, uses the
+                latest version.
+
+        Examples:
+            This example creates a simple model, sets two states, and then saves
+            those states to a
+            `buffered I/O <https://docs.python.org/3/library/io.html#binary-i-o>`_
+            object. It then changes a state and saves into the previously
+            created file.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(5, lower_bound=-10, upper_bound=10)
+            >>> j = i**2 + 1
+            ...
+            >>> with model.lock():
+            ...     model.states.resize(2)
+            ...     i.set_state(0, [-10, -5, 0, 5, 10])
+            ...     i.set_state(1, [-8, -3, 1, 4, 9])
+            ...     my_file = model.states.to_file()        # Save the states
+            >>> my_file.seek(0)
+            0
+            >>> with model.lock():                          # Change a state
+            ...     model.states.resize(2)
+            ...     i.set_state(0, [-10, -5, 0, 5, 10])
+            ...     i.set_state(1, [-10, -4, 2, 6, 10])
+            ...     model.states.into_file(my_file)         # Save into file
+
+        See Also:
+            :meth:`.from_file`, :meth:`.to_file`
+
+            :meth:`~dwave.optimization.model.Model.into_file` Saves a model
+            into an existing file
 
         Format Specification (Version 1.0):
 
@@ -306,9 +400,6 @@ cdef class States:
         Format Specification (Version 0.1):
 
             Saved as a :class:`Model` encoding only the decision symbols.
-
-        See Also:
-            :meth:`States.from_file()`.
 
         .. versionchanged:: 0.5.2
             Added the ``version`` keyword-only argument.
@@ -384,17 +475,20 @@ cdef class States:
     def resize(self, Py_ssize_t n):
         """Resize the number of states.
 
-        If ``n`` is smaller than the current :meth:`.size()`,
-        states are reduced to the first ``n`` states by removing
-        those beyond. If ``n`` is greater than the current
-        :meth:`.size()`, new uninitialized states are added
-        as needed to reach a size of ``n``.
+        To set the states of a model's symbols, for the purpose of testing your
+        model or providing an initial state for a :term:`solver`, you must first
+        set the size of the model's states. A newly created model has a state
+        size of zero.
 
         Resizing to 0 is not  guaranteed to clear the memory allocated to
         states.
 
         Args:
-            n: Required number of states.
+            n (int): Required number of states. If smaller than the current
+                :meth:`.size()`, states are reduced to the first ``n`` states by
+                removing those beyond. If greater than the current
+                :meth:`.size()`, new uninitialized states are added as needed to
+                reach a size of ``n``.
 
         Examples:
             This example adds three uninitialized states to a model.
@@ -403,6 +497,9 @@ cdef class States:
             >>> model = Model()
             >>> i = model.integer(2)
             >>> model.states.resize(3)
+
+        See Also:
+            :meth:`.clear`, :meth:`.size`
         """
         self.resolve()
 
@@ -414,9 +511,14 @@ cdef class States:
     cpdef resolve(self):
         """Block until states are retrieved from any pending future computations.
 
-        A :ref:`Future <cloud_computation>` object is
-        returned by the solver to which your problem model is submitted. This
-        enables asynchronous problem submission.
+        A :class:`~dwave.cloud.computation.Future` object is returned by the
+        :term:`solver` to which you submit your problem model. This enables
+        asynchronous problem submission.
+
+        This method is intended for use by developers of the Ocean SDK.
+
+        See Also:
+            :meth:`.from_future`
         """
         if self._future is not None:
             # The existance of _future means that anything we do to the
@@ -440,12 +542,52 @@ cdef class States:
             >>> model.states.resize(3)
             >>> model.states.size()
             3
+
+        See Also:
+            :meth:`.resize`
         """
         self.resolve()
         return self._states.size()
 
     def to_file(self, **kwargs):
-        """Serialize the states to a new file-like object."""
+        """Serialize the states to a new file-like object.
+
+        Examples:
+
+            This example creates a simple model, sets two states, and then saves
+            those states to a
+            `buffered I/O <https://docs.python.org/3/library/io.html#binary-i-o>`_
+            object.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(5, lower_bound=-10, upper_bound=10)
+            >>> j = i**2 + 1
+            ...
+            >>> with model.lock():
+            ...     model.states.resize(2)
+            ...     i.set_state(0, [-10, -5, 0, 5, 10])
+            ...     i.set_state(1, [-8, -3, 1, 4, 9])
+            ...     my_file = model.states.to_file()        # Save the states
+
+            The temporary file created above can be saved to disk, for example,
+            using Python's :mod:`shutil` module.
+
+            .. testcode::
+                :skipif: True
+
+                import shutil
+
+                my_file.seek(0)  # Move cursor to start
+                with open("my_file.bin", "wb") as f:
+                    shutil.copyfileobj(my_file, f)
+
+        See Also:
+            :meth:`.from_file`, :meth:`.into_file`
+
+            :meth:`~dwave.optimization.model.Model.to_file` Saves a model
+            into a file
+        """
         file = tempfile.TemporaryFile(mode="w+b")
 
         # into_file can raise an exception, in which case we close off the
