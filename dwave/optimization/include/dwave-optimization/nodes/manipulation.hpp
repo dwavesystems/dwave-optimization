@@ -434,8 +434,9 @@ class RollNode : public ArrayOutputMixin<ArrayNode> {
 
     // Rotate the given array with the given shift by the shift given for each
     // axis. Acts in-place.
-    static void rotate_(std::span<double> array, std::span<const ssize_t> shape,
-                        std::span<const ssize_t> shifts);
+    static void rotate_(
+            std::span<double> array, std::span<const ssize_t> shape, std::span<const ssize_t> shifts
+    );
 
     // Return the current shift, and whether is changed since the last propagation.
     std::tuple<ssize_t, bool> shift_diff_(const State& state) const;

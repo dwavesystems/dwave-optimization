@@ -29,11 +29,16 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
-TEMPLATE_TEST_CASE("ReduceNode", "",                                   //
-                   functional::max<double>, functional::min<double>,   //
-                   std::logical_and<double>, std::logical_or<double>,  //
-                   std::multiplies<double>,                            //
-                   std::plus<double>) {
+TEMPLATE_TEST_CASE(
+        "ReduceNode",
+        "",  //
+        functional::max<double>,
+        functional::min<double>,  //
+        std::logical_and<double>,
+        std::logical_or<double>,  //
+        std::multiplies<double>,  //
+        std::plus<double>
+) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -1258,12 +1263,15 @@ TEST_CASE("SumNode") {
                         r_ptr_2->revert(state);
 
                         THEN("The values are reverted") {
-                            CHECK(std::ranges::equal(r_ptr_0->view(state),
-                                                     std::vector<double>(6, 0)));
-                            CHECK(std::ranges::equal(r_ptr_1->view(state),
-                                                     std::vector<double>(4, 0)));
-                            CHECK(std::ranges::equal(r_ptr_2->view(state),
-                                                     std::vector<double>(6, 0)));
+                            CHECK(std::ranges::equal(
+                                    r_ptr_0->view(state), std::vector<double>(6, 0)
+                            ));
+                            CHECK(std::ranges::equal(
+                                    r_ptr_1->view(state), std::vector<double>(4, 0)
+                            ));
+                            CHECK(std::ranges::equal(
+                                    r_ptr_2->view(state), std::vector<double>(6, 0)
+                            ));
                         }
                     }
                 }
@@ -1380,8 +1388,10 @@ TEST_CASE("SumNode") {
             WHEN("We change the state of the set") {
                 set_ptr->assign(state, {1, 2, 4, 3});
                 graph.propagate(state);
-                CHECK_THAT(x_ptr->view(state),
-                           RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
+                CHECK_THAT(
+                        x_ptr->view(state),
+                        RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12})
+                );
                 graph.commit(state);
 
                 set_ptr->assign(state, {3, 2});
@@ -1389,8 +1399,10 @@ TEST_CASE("SumNode") {
                 CHECK_THAT(x_ptr->view(state), RangeEquals({7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7}));
 
                 graph.revert(state);
-                CHECK_THAT(x_ptr->view(state),
-                           RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
+                CHECK_THAT(
+                        x_ptr->view(state),
+                        RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12})
+                );
 
                 set_ptr->assign(state, {1, 2, 3, 4, 5, 6});
                 set_ptr->assign(state, {3});
@@ -1398,8 +1410,10 @@ TEST_CASE("SumNode") {
                 CHECK_THAT(x_ptr->view(state), RangeEquals({5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5}));
 
                 graph.revert(state);
-                CHECK_THAT(x_ptr->view(state),
-                           RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}));
+                CHECK_THAT(
+                        x_ptr->view(state),
+                        RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12})
+                );
             }
         }
 
@@ -1421,8 +1435,10 @@ TEST_CASE("SumNode") {
             WHEN("We change the state of the set") {
                 set_ptr->assign(state, {1, 2, 4, 3});
                 graph.propagate(state);
-                CHECK_THAT(x_ptr->view(state),
-                           RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11}));
+                CHECK_THAT(
+                        x_ptr->view(state),
+                        RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11})
+                );
                 graph.commit(state);
 
                 set_ptr->assign(state, {3, 2});
@@ -1430,8 +1446,10 @@ TEST_CASE("SumNode") {
                 CHECK_THAT(x_ptr->view(state), RangeEquals({11, 11, 11, 11, 8, 8, 8, 8}));
 
                 graph.revert(state);
-                CHECK_THAT(x_ptr->view(state),
-                           RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11}));
+                CHECK_THAT(
+                        x_ptr->view(state),
+                        RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11})
+                );
 
                 set_ptr->assign(state, {1, 2, 3, 4, 5, 6});
                 set_ptr->assign(state, {3});
@@ -1566,7 +1584,8 @@ TEST_CASE("SumNode") {
     GIVEN("Dynamic array of shape (-1, 2) with min/max of 1/3 on first dim, and a sum across the"
           "second dim") {
         auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 2}, 0.0, 10.0, true, 2, 6);
+                std::initializer_list<ssize_t>{-1, 2}, 0.0, 10.0, true, 2, 6
+        );
         auto sum_ptr = graph.emplace_node<SumNode>(x_ptr, std::vector<ssize_t>{1});
 
         THEN("The shape of the sum is correct") {

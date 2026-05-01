@@ -132,8 +132,9 @@ class DisjointBitSetsNode : public DecisionNode {
 
     // Disjoint-Bitset-specific methods ********************************************
 
-    void swap_between_sets(State& state, ssize_t from_disjoint_set, ssize_t to_disjoint_set,
-                           ssize_t element_i) const;
+    void swap_between_sets(
+            State& state, ssize_t from_disjoint_set, ssize_t to_disjoint_set, ssize_t element_i
+    ) const;
 
     ssize_t get_containing_set_index(State& state, ssize_t element_i) const;
 
@@ -217,14 +218,21 @@ class DisjointListsNode : public DecisionNode {
 
     void rotate_in_list(State& state, ssize_t list_index, ssize_t dest_idx, ssize_t src_idx) const;
 
-    void swap_in_list(State& state, ssize_t disjoint_list, ssize_t element_i,
-                      ssize_t element_j) const;
+    void swap_in_list(
+            State& state, ssize_t disjoint_list, ssize_t element_i, ssize_t element_j
+    ) const;
 
-    void pop_to_list(State& state, ssize_t from_disjoint_list, ssize_t element_i,
-                     ssize_t to_disjoint_list, ssize_t element_j) const;
+    void pop_to_list(
+            State& state,
+            ssize_t from_disjoint_list,
+            ssize_t element_i,
+            ssize_t to_disjoint_list,
+            ssize_t element_j
+    ) const;
 
-    void set_state(State& state, ssize_t list_index,
-                   const std::span<const double>& new_values) const;
+    void set_state(
+            State& state, ssize_t list_index, const std::span<const double>& new_values
+    ) const;
 
     ssize_t num_disjoint_lists() const { return num_disjoint_lists_; }
     ssize_t primary_set_size() const { return primary_set_size_; }

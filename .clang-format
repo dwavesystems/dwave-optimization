@@ -10,4 +10,15 @@ AccessModifierOffset: -3
 IndentWidth: 4
 ContinuationIndentWidth: 8
 ConstructorInitializerIndentWidth: 8
+
+# Do a more python black style for lists of arguments etc
+BinPackArguments: false
+BinPackParameters: false
+AlignAfterOpenBracket: true
+BreakAfterOpenBracketBracedList: true
+BreakAfterOpenBracketFunction: true
+BreakAfterOpenBracketIf: true
+BreakBeforeCloseBracketBracedList: true
+BreakBeforeCloseBracketFunction: true
+BreakBeforeCloseBracketIf: true
 ...

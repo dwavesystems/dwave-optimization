@@ -992,8 +992,9 @@ TEST_CASE("BasicIndexingNode") {
             auto x_ptr = graph.emplace_node<SetNode>(10);
 
             if (should_throw) {
-                REQUIRE_THROWS_AS(graph.emplace_node<BasicIndexingNode>(x_ptr, slice),
-                                  std::invalid_argument);
+                REQUIRE_THROWS_AS(
+                        graph.emplace_node<BasicIndexingNode>(x_ptr, slice), std::invalid_argument
+                );
                 continue;
             }
 
@@ -1045,11 +1046,13 @@ TEST_CASE("BasicIndexingNode") {
 
     GIVEN("Dynamic(n, 5, 2)[5:7, 1:, :]") {
         auto dynamic_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 5, 2});
+                std::initializer_list<ssize_t>{-1, 5, 2}
+        );
 
         // the resuling array will either be (0, 4, 2), (1, 4, 2), or (2, 4, 2) array.
-        auto y_ptr = graph.emplace_node<BasicIndexingNode>(dynamic_ptr, Slice(5, 7),
-                                                           Slice(1, std::nullopt), Slice());
+        auto y_ptr = graph.emplace_node<BasicIndexingNode>(
+                dynamic_ptr, Slice(5, 7), Slice(1, std::nullopt), Slice()
+        );
 
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
@@ -1083,8 +1086,12 @@ TEST_CASE("BasicIndexingNode") {
 
                 THEN("The slice is correct") {
                     CHECK(y_ptr->size(state) == 16);
-                    CHECK_THAT(y_ptr->view(state), RangeEquals({52, 53, 54, 55, 56, 57, 58, 59, 62,
-                                                                63, 64, 65, 66, 67, 68, 69}));
+                    CHECK_THAT(
+                            y_ptr->view(state),
+                            RangeEquals(
+                                    {52, 53, 54, 55, 56, 57, 58, 59, 62, 63, 64, 65, 66, 67, 68, 69}
+                            )
+                    );
                 }
 
                 AND_WHEN("We shrink the dynamic node to size [6, 5, 2]") {
@@ -1096,8 +1103,9 @@ TEST_CASE("BasicIndexingNode") {
 
                     THEN("The slice is correct") {
                         CHECK(y_ptr->size(state) == 8);
-                        CHECK_THAT(y_ptr->view(state),
-                                   RangeEquals({52, 53, 54, 55, 56, 57, 58, 59}));
+                        CHECK_THAT(
+                                y_ptr->view(state), RangeEquals({52, 53, 54, 55, 56, 57, 58, 59})
+                        );
                     }
                 }
             }
@@ -1106,11 +1114,13 @@ TEST_CASE("BasicIndexingNode") {
 
     GIVEN("Dynamic(n, 5, 2)[5:8:2, 1:, :]") {
         auto dynamic_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 5, 2});
+                std::initializer_list<ssize_t>{-1, 5, 2}
+        );
 
         // the resuling array will either be (0, 4, 2), or (1, 4, 2) array.
-        auto y_ptr = graph.emplace_node<BasicIndexingNode>(dynamic_ptr, Slice(5, 8, 2),
-                                                           Slice(1, std::nullopt), Slice());
+        auto y_ptr = graph.emplace_node<BasicIndexingNode>(
+                dynamic_ptr, Slice(5, 8, 2), Slice(1, std::nullopt), Slice()
+        );
 
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
@@ -1144,8 +1154,12 @@ TEST_CASE("BasicIndexingNode") {
 
                 THEN("The slice is correct") {
                     CHECK(y_ptr->size(state) == 16);
-                    CHECK_THAT(y_ptr->view(state), RangeEquals({52, 53, 54, 55, 56, 57, 58, 59, 72,
-                                                                73, 74, 75, 76, 77, 78, 79}));
+                    CHECK_THAT(
+                            y_ptr->view(state),
+                            RangeEquals(
+                                    {52, 53, 54, 55, 56, 57, 58, 59, 72, 73, 74, 75, 76, 77, 78, 79}
+                            )
+                    );
                 }
 
                 AND_WHEN("We shrink the dynamic node to size [7, 5, 2]") {
@@ -1157,8 +1171,9 @@ TEST_CASE("BasicIndexingNode") {
 
                     THEN("The slice is correct") {
                         CHECK(y_ptr->size(state) == 8);
-                        CHECK_THAT(y_ptr->view(state),
-                                   RangeEquals({52, 53, 54, 55, 56, 57, 58, 59}));
+                        CHECK_THAT(
+                                y_ptr->view(state), RangeEquals({52, 53, 54, 55, 56, 57, 58, 59})
+                        );
                     }
                 }
             }
@@ -1539,11 +1554,14 @@ TEST_CASE("BasicIndexingNode") {
         for (const auto& [slice, expected_outputs, should_throw] : tests) {
             auto graph = Graph();
             auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                    std::initializer_list<ssize_t>{-1, dim1});
+                    std::initializer_list<ssize_t>{-1, dim1}
+            );
 
             if (should_throw) {
-                REQUIRE_THROWS_AS(graph.emplace_node<BasicIndexingNode>(x_ptr, slice, Slice()),
-                                  std::invalid_argument);
+                REQUIRE_THROWS_AS(
+                        graph.emplace_node<BasicIndexingNode>(x_ptr, slice, Slice()),
+                        std::invalid_argument
+                );
                 continue;
             }
 
@@ -1885,12 +1903,14 @@ TEST_CASE("BasicIndexingNode") {
         for (const auto& [slice, expected_outputs, should_throw] : tests) {
             auto graph = Graph();
             auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                    std::initializer_list<ssize_t>{-1, dim1});
+                    std::initializer_list<ssize_t>{-1, dim1}
+            );
 
             if (should_throw) {
                 REQUIRE_THROWS_AS(
                         graph.emplace_node<BasicIndexingNode>(x_ptr, slice, Slice(1, std::nullopt)),
-                        std::invalid_argument);
+                        std::invalid_argument
+                );
                 continue;
             }
 
@@ -1949,7 +1969,8 @@ TEST_CASE("BasicIndexingNode") {
     GIVEN("x = Binary((3, 3)); y = x[::2, 1:]") {
         auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{3, 3});
         auto y_ptr = graph.emplace_node<BasicIndexingNode>(
-                x_ptr, Slice(std::nullopt, std::nullopt, 2), Slice(1, std::nullopt));
+                x_ptr, Slice(std::nullopt, std::nullopt, 2), Slice(1, std::nullopt)
+        );
 
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
@@ -2011,8 +2032,9 @@ TEST_CASE("BasicIndexingNode") {
 
     GIVEN("x = Binary((3, 10, 5)); y = x[1, 5:8, ::2]") {
         auto x_ptr = graph.emplace_node<BinaryNode>(std::vector<ssize_t>{3, 10, 5});
-        auto y_ptr = graph.emplace_node<BasicIndexingNode>(x_ptr, 1, Slice(5, 8),
-                                                           Slice(std::nullopt, std::nullopt, 2));
+        auto y_ptr = graph.emplace_node<BasicIndexingNode>(
+                x_ptr, 1, Slice(5, 8), Slice(std::nullopt, std::nullopt, 2)
+        );
 
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
@@ -2035,17 +2057,20 @@ TEST_CASE("BasicIndexingNode") {
             graph.propagate(state, graph.descendants(state, {x_ptr}));
 
             THEN("The states are as expected") {
-                CHECK_THAT(y_ptr->view(state), RangeEquals({
-                                                       0,
-                                                       0,
-                                                       0,  //
-                                                       0,
-                                                       0,
-                                                       0,  //
-                                                       0,
-                                                       1,
-                                                       0,  //
-                                               }));
+                CHECK_THAT(
+                        y_ptr->view(state),
+                        RangeEquals({
+                                0,
+                                0,
+                                0,  //
+                                0,
+                                0,
+                                0,  //
+                                0,
+                                1,
+                                0,  //
+                        })
+                );
             }
         }
     }
@@ -2205,7 +2230,8 @@ TEST_CASE("BasicIndexingNode") {
 
             AND_WHEN(
                     "We shrink the dynamic array below the range, and then update a value above "
-                    "that range") {
+                    "that range"
+            ) {
                 for (int i = 0; i < 4; i++) x_ptr->grow(state);
 
                 graph.propagate(state, graph.descendants(state, {x_ptr}));
@@ -2398,13 +2424,25 @@ TEST_CASE("BasicIndexingNode") {
 
     WHEN("We use the DynamicArrayTestingNode to do some fuzzing with BasicIndexingNode on 1D "
          "dynamic arrays") {
-        auto slice = GENERATE(Slice(0, std::nullopt), Slice(0, 1), Slice(0, 2), Slice(0, 10),
-                              Slice(1, std::nullopt), Slice(5, std::nullopt), Slice(0, -1),
-                              Slice(0, -5), Slice(1, -5), Slice(3, -5), Slice(-1, std::nullopt),
-                              Slice(-5, std::nullopt), Slice(-5, -2));
+        auto slice = GENERATE(
+                Slice(0, std::nullopt),
+                Slice(0, 1),
+                Slice(0, 2),
+                Slice(0, 10),
+                Slice(1, std::nullopt),
+                Slice(5, std::nullopt),
+                Slice(0, -1),
+                Slice(0, -5),
+                Slice(1, -5),
+                Slice(3, -5),
+                Slice(-1, std::nullopt),
+                Slice(-5, std::nullopt),
+                Slice(-5, -2)
+        );
 
-        auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1},
-                                                                 -10, 10, false);
+        auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+                std::initializer_list<ssize_t>{-1}, -10, 10, false
+        );
         auto y_ptr = graph.emplace_node<BasicIndexingNode>(x_ptr, slice);
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 

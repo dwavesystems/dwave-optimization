@@ -88,10 +88,12 @@ class Graph {
     // Given the source (changing) nodes, update the model incrementally and accept the changes
     // according to the accept function.
     void propose(
-            State& state, std::vector<const Node*> sources,
+            State& state,
+            std::vector<const Node*> sources,
             std::function<bool(const Graph&, State&)> accept = [](const Graph&, State&) {
                 return true;
-            }) const;
+            }
+    ) const;
 
     // Get the descendants of the source nodes, that is, all nodes that can be visited starting from
     // the sources.

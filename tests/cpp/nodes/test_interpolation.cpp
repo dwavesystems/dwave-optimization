@@ -66,8 +66,9 @@ TEST_CASE("BSpline") {
         graph.initialize_state(state);
 
         THEN("The state of the BSplineNode is as expected") {
-            std::vector<double> expected = {0.5,     1.09375, 1.375,    1.34375, 1.0,
-                                            0.53125, 0.125,   -0.21875, -0.5};
+            std::vector<double> expected = {
+                    0.5, 1.09375, 1.375, 1.34375, 1.0, 0.53125, 0.125, -0.21875, -0.5
+            };
             CHECK(std::ranges::equal(bspline_ptr->view(state), expected));
         }
     }

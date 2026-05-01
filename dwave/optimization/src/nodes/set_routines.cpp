@@ -89,8 +89,11 @@ void IsInNode::initialize_state(State& state) const {
     const Array::View element = element_ptr_->view(state);
     const Array::View test_elements = test_elements_ptr_->view(state);
 
-    emplace_data_ptr<IsInNodeData>(state, std::vector<double>{element.begin(), element.end()},
-                                   std::vector<double>{test_elements.begin(), test_elements.end()});
+    emplace_data_ptr<IsInNodeData>(
+            state,
+            std::vector<double>{element.begin(), element.end()},
+            std::vector<double>{test_elements.begin(), test_elements.end()}
+    );
 }
 
 bool IsInNode::integral() const { return true; }  // All values are true/false

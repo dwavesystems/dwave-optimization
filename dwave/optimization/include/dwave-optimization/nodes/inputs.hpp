@@ -29,11 +29,19 @@ namespace dwave::optimization {
 // explicitly with some data.
 class InputNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    explicit InputNode(std::span<const ssize_t> shape, std::optional<double> min,
-                       std::optional<double> max, std::optional<bool> integral);
+    explicit InputNode(
+            std::span<const ssize_t> shape,
+            std::optional<double> min,
+            std::optional<double> max,
+            std::optional<bool> integral
+    );
 
-    explicit InputNode(std::initializer_list<ssize_t> shape, std::optional<double> min,
-                       std::optional<double> max, std::optional<bool> integral)
+    explicit InputNode(
+            std::initializer_list<ssize_t> shape,
+            std::optional<double> min,
+            std::optional<double> max,
+            std::optional<bool> integral
+    )
             : InputNode(std::span<const ssize_t>(shape), min, max, integral) {}
 
     explicit InputNode() : InputNode({}, std::nullopt, std::nullopt, std::nullopt) {}
@@ -45,8 +53,12 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
 
     struct unbounded_scalar {};
     explicit InputNode(unbounded_scalar)
-            : InputNode({}, -std::numeric_limits<double>::infinity(),
-                        std::numeric_limits<double>::infinity(), std::nullopt) {}
+            : InputNode(
+                      {},
+                      -std::numeric_limits<double>::infinity(),
+                      std::numeric_limits<double>::infinity(),
+                      std::nullopt
+              ) {}
 
     /// Assign new values to the input node (must be the same size)
     void assign(State& state, std::initializer_list<double> new_values) const;
@@ -70,7 +82,8 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     [[noreturn]] void initialize_state(State& state) const override {
         throw std::logic_error(
                 "InputNode must have state explicitly initialized (with `initialize_state(state, "
-                "data)`)");
+                "data)`)"
+        );
     }
 
     /// Initialize a state with the given data as the values for the input node

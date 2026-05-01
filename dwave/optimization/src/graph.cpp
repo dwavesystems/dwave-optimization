@@ -71,10 +71,13 @@ void Graph::topological_sort() {
 
     // for later convenience, we sort the nodes_ by index
     // This moves all of the decisions to the front
-    std::sort(nodes_.begin(), nodes_.end(),
-              [](const std::unique_ptr<Node>& n_ptr, const std::unique_ptr<Node>& m_ptr) {
-                  return n_ptr->topological_index_ < m_ptr->topological_index_;
-              });
+    std::sort(
+            nodes_.begin(),
+            nodes_.end(),
+            [](const std::unique_ptr<Node>& n_ptr, const std::unique_ptr<Node>& m_ptr) {
+                return n_ptr->topological_index_ < m_ptr->topological_index_;
+            }
+    );
 
     topologically_sorted_ = true;
 }
@@ -85,10 +88,13 @@ void Graph::reset_topological_sort() {
     // The decisions must have a consistent topological index, so we don't reset them
     std::for_each(
             // std::execution::par_unseq,  // todo: performance testing. Probably won't help
-            nodes_.begin() + num_decisions(), nodes_.end(), [](const std::unique_ptr<Node>& n_ptr) {
+            nodes_.begin() + num_decisions(),
+            nodes_.end(),
+            [](const std::unique_ptr<Node>& n_ptr) {
                 assert(dynamic_cast<Decision*>(n_ptr.get()) == nullptr);  // not a decision
                 n_ptr->topological_index_ = -1;
-            });
+            }
+    );
 
     topologically_sorted_ = false;
 }
@@ -188,7 +194,8 @@ void Graph::add_constraint(ArrayNode* constraint_ptr) {
     // multidimensional constraints as a way of supporting many constraints at once
     if (constraint_ptr->size() != 1) {
         throw std::invalid_argument(
-                "The truth value of an array with more than one element is ambiguous");
+                "The truth value of an array with more than one element is ambiguous"
+        );
     }
 
     constraints_.emplace_back(constraint_ptr);
@@ -269,7 +276,10 @@ void Graph::commit(State& state) const {
 void Graph::commit(State& state, std::span<const Node*> changed) const {
     std::for_each(
             // std::execution::par_unseq,  // todo: test performance. Might help!
-            changed.begin(), changed.end(), [&state](const Node* n_ptr) { n_ptr->commit(state); });
+            changed.begin(),
+            changed.end(),
+            [&state](const Node* n_ptr) { n_ptr->commit(state); }
+    );
 
     assert(([&state, &changed]() -> bool {
         for (const Node* n_ptr : changed) {
@@ -291,7 +301,10 @@ void Graph::revert(State& state) const {
 void Graph::revert(State& state, std::span<const Node*> changed) const {
     std::for_each(
             // std::execution::par_unseq,  // todo: test performance. Might help!
-            changed.begin(), changed.end(), [&state](const Node* n_ptr) { n_ptr->revert(state); });
+            changed.begin(),
+            changed.end(),
+            [&state](const Node* n_ptr) { n_ptr->revert(state); }
+    );
 
     assert(([&state, &changed]() -> bool {
         for (const Node* n_ptr : changed) {
@@ -308,8 +321,11 @@ void Graph::revert(State& state, std::vector<const Node*>&& changed) const {
 
 // Note: we pass the vector of changed nodes by value as we expect it to be rather small. Revisit if
 // it becomes too expensive.
-void Graph::propose(State& state, std::vector<const Node*> sources,
-                    std::function<bool(const Graph&, State&)> accept) const {
+void Graph::propose(
+        State& state,
+        std::vector<const Node*> sources,
+        std::function<bool(const Graph&, State&)> accept
+) const {
     // Perform BFS to mark the nodes to update
     auto changed = descendants(state, std::move(sources));
 
@@ -372,8 +388,9 @@ ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
         // This very temporarily leaves the node in an invalid state, which is
         // why we do it here rather than via a method.
         for (auto pred_ptr : ptr->predecessors_) {
-            std::erase_if(pred_ptr->successors_,
-                          [&ptr](const Node::SuccessorView& sv) { return sv.ptr == ptr.get(); });
+            std::erase_if(pred_ptr->successors_, [&ptr](const Node::SuccessorView& sv) {
+                return sv.ptr == ptr.get();
+            });
         }
 
         // now delete the node by clearing the unique_ptr

@@ -100,22 +100,40 @@ class AdvancedIndexingNode : public ArrayNode {
         return output;
     }
 
-    void fill_subspace(State& state, ssize_t array_offset, std::vector<double>& data,
-                       ssize_t index_in_arrays) const;
+    void fill_subspace(
+            State& state, ssize_t array_offset, std::vector<double>& data, ssize_t index_in_arrays
+    ) const;
 
     template <bool placement, bool removal>
-    void fill_subspace(State& state, ssize_t array_offset, std::vector<double>& data,
-                       ssize_t index_in_arrays, std::vector<Update>& diff) const;
+    void fill_subspace(
+            State& state,
+            ssize_t array_offset,
+            std::vector<double>& data,
+            ssize_t index_in_arrays,
+            std::vector<Update>& diff
+    ) const;
 
     template <bool placement, bool removal>
-    void fill_axis0_subspace(State& state, ssize_t axis0_index, ssize_t array_item_offset,
-                             std::vector<double>& data, ssize_t index_in_arrays,
-                             std::vector<Update>& diff) const;
+    void fill_axis0_subspace(
+            State& state,
+            ssize_t axis0_index,
+            ssize_t array_item_offset,
+            std::vector<double>& data,
+            ssize_t index_in_arrays,
+            std::vector<Update>& diff
+    ) const;
 
     template <bool fill_diff, bool placement, bool removal>
-    void fill_subspace_recurse(const std::span<const ssize_t>& shape, const double* array_buffer,
-                               ssize_t array_offset, ssize_t array_dim, std::vector<double>& data,
-                               ssize_t data_offset, size_t output_dim, std::vector<Update>*) const;
+    void fill_subspace_recurse(
+            const std::span<const ssize_t>& shape,
+            const double* array_buffer,
+            ssize_t array_offset,
+            ssize_t array_dim,
+            std::vector<double>& data,
+            ssize_t data_offset,
+            size_t output_dim,
+            std::vector<Update>*
+    ) const;
 
     std::span<const ssize_t> array_item_strides() const {
         return std::span(array_item_strides_.get(), array_ptr_->ndim());

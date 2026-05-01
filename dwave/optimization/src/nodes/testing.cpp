@@ -27,8 +27,11 @@ class ArrayValidationNodeData : public dwave::optimization::NodeStateData {
     std::vector<double> current_data;
 };
 
-void check_shape(const std::span<const ssize_t>& dynamic_shape,
-                 const std::span<const ssize_t> shape, ssize_t expected_size) {
+void check_shape(
+        const std::span<const ssize_t>& dynamic_shape,
+        const std::span<const ssize_t> shape,
+        ssize_t expected_size
+) {
     assert(shape.size() == dynamic_shape.size());
     assert(([&dynamic_shape, &shape, &expected_size]() -> bool {
         ssize_t size = 1;
@@ -53,8 +56,10 @@ ArrayValidationNode::ArrayValidationNode(ArrayNode* node_ptr) : array_ptr(node_p
     assert(!array_ptr->dynamic() || array_ptr->size() <= 0);
 
     // Check that the node reports contiguity correctly
-    assert(array_ptr->contiguous() == is_contiguous(array_ptr->ndim(), array_ptr->shape().data(),
-                                                    array_ptr->strides().data()));
+    assert(
+            array_ptr->contiguous() ==
+            is_contiguous(array_ptr->ndim(), array_ptr->shape().data(), array_ptr->strides().data())
+    );
 
     assert([&]() {
         node_ptr->sizeinfo().substitute(5);
@@ -89,9 +94,12 @@ void ArrayValidationNode::initialize_state(State& state) const {
     assert(static_cast<ssize_t>(array_ptr->view(state).size()) == array_ptr->size(state));
 
     // check that the size/shape are consistent
-    assert(array_ptr->size(state) == std::reduce(array_ptr->shape(state).begin(),
-                                                 array_ptr->shape(state).end(), 1,
-                                                 std::multiplies<ssize_t>()));
+    assert(array_ptr->size(state) == std::reduce(
+                                             array_ptr->shape(state).begin(),
+                                             array_ptr->shape(state).end(),
+                                             1,
+                                             std::multiplies<ssize_t>()
+                                     ));
 
     // check that all values are within min/max
     if (array_ptr->size(state)) {
@@ -255,8 +263,9 @@ class DynamicArrayTestingNodeData : public dwave::optimization::NodeStateData {
         assert(shape.size() > 0);
     }
 
-    DynamicArrayTestingNodeData(const std::span<const ssize_t> shape,
-                                const std::span<const double> values)
+    DynamicArrayTestingNodeData(
+            const std::span<const ssize_t> shape, const std::span<const double> values
+    )
             : DynamicArrayTestingNodeData(shape) {
         current_data.insert(current_data.begin(), values.begin(), values.end());
         old_data = current_data;
@@ -312,16 +321,22 @@ class DynamicArrayTestingNodeData : public dwave::optimization::NodeStateData {
 DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape)
         : DynamicArrayTestingNode(shape, std::nullopt, std::nullopt, false) {}
 
-DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape,
-                                                 std::optional<double> min,
-                                                 std::optional<double> max, bool integral)
+DynamicArrayTestingNode::DynamicArrayTestingNode(
+        std::initializer_list<ssize_t> shape,
+        std::optional<double> min,
+        std::optional<double> max,
+        bool integral
+)
         : DynamicArrayTestingNode(shape, min, max, integral, std::nullopt, std::nullopt) {}
 
-DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape,
-                                                 std::optional<double> min,
-                                                 std::optional<double> max, bool integral,
-                                                 std::optional<ssize_t> min_size,
-                                                 std::optional<ssize_t> max_size)
+DynamicArrayTestingNode::DynamicArrayTestingNode(
+        std::initializer_list<ssize_t> shape,
+        std::optional<double> min,
+        std::optional<double> max,
+        bool integral,
+        std::optional<ssize_t> min_size,
+        std::optional<ssize_t> max_size
+)
         : ArrayOutputMixin(shape),
           shape_(shape),
           min_(min),
@@ -330,14 +345,16 @@ DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> 
           sizeinfo_(SizeInfo(this, min_size, max_size)) {
     if (shape.size() == 0 || *shape.begin() != -1) {
         throw std::invalid_argument(
-                "DynamicArrayTestingNode is meant to be used as a dynamic array");
+                "DynamicArrayTestingNode is meant to be used as a dynamic array"
+        );
     }
 }
 
 void DynamicArrayTestingNode::initialize_state(State& state) const { initialize_state(state, {}); }
 
-void DynamicArrayTestingNode::initialize_state(State& state,
-                                               std::initializer_list<double> values) const {
+void DynamicArrayTestingNode::initialize_state(
+        State& state, std::initializer_list<double> values
+) const {
     initialize_state(state, std::span(values));
 }
 

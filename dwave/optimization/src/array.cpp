@@ -32,12 +32,15 @@ ValuesInfo::ValuesInfo(std::initializer_list<const Array*> array_ptrs)
         : ValuesInfo(std::vector<const Array*>(array_ptrs)) {}
 
 ValuesInfo::ValuesInfo(std::span<const Array* const> array_ptrs)
-        : min(std::ranges::min(array_ptrs |
-                               std::views::transform([](const Array* ptr) { return ptr->min(); }))),
-          max(std::ranges::max(array_ptrs |
-                               std::views::transform([](const Array* ptr) { return ptr->max(); }))),
-          integral(std::ranges::all_of(array_ptrs,
-                                       [](const Array* ptr) { return ptr->integral(); })) {}
+        : min(std::ranges::min(array_ptrs | std::views::transform([](const Array* ptr) {
+                                   return ptr->min();
+                               }))),
+          max(std::ranges::max(array_ptrs | std::views::transform([](const Array* ptr) {
+                                   return ptr->max();
+                               }))),
+          integral(std::ranges::all_of(array_ptrs, [](const Array* ptr) {
+              return ptr->integral();
+          })) {}
 
 bool SizeInfo::operator==(const SizeInfo& other) const {
     // if one or the other is a fixed number, then this is straightforward
@@ -225,8 +228,9 @@ bool array_shape_equal(const Array& lhs, const Array& rhs) { return array_shape_
 
 // We follow NumPy's broadcasting rules
 // See https://numpy.org/doc/stable/user/basics.broadcasting.html
-std::vector<ssize_t> broadcast_shapes(const std::span<const ssize_t> lhs,
-                                      const std::span<const ssize_t> rhs) {
+std::vector<ssize_t> broadcast_shapes(
+        const std::span<const ssize_t> lhs, const std::span<const ssize_t> rhs
+) {
     // The resulting number of dimensions is the larger of the two broadcast arrays.
     std::vector<ssize_t> shape(std::max(lhs.size(), rhs.size()));
 
@@ -250,8 +254,10 @@ std::vector<ssize_t> broadcast_shapes(const std::span<const ssize_t> lhs,
             // one of them is 1, in which case the other determines the shape
             *sit = *lit;
         } else {
-            throw std::invalid_argument("operands could not be broadcast together with shapes " +
-                                        shape_to_string(lhs) + " " + shape_to_string(rhs));
+            throw std::invalid_argument(
+                    "operands could not be broadcast together with shapes " + shape_to_string(lhs) +
+                    " " + shape_to_string(rhs)
+            );
         }
     }
 
@@ -268,14 +274,17 @@ std::vector<ssize_t> broadcast_shapes(const std::span<const ssize_t> lhs,
 
     // Check that we haven't put a dynamic axis anywhere except axis 0
     if (std::ranges::any_of(shape | std::views::drop(1), [](const auto& val) { return val < 0; })) {
-        throw std::invalid_argument("operands could not be broadcast together with shapes " +
-                                    shape_to_string(lhs) + " " + shape_to_string(rhs));
+        throw std::invalid_argument(
+                "operands could not be broadcast together with shapes " + shape_to_string(lhs) +
+                " " + shape_to_string(rhs)
+        );
     }
 
     return shape;
 }
-std::vector<ssize_t> broadcast_shapes(std::initializer_list<ssize_t> lhs,
-                                      std::initializer_list<ssize_t> rhs) {
+std::vector<ssize_t> broadcast_shapes(
+        std::initializer_list<ssize_t> lhs, std::initializer_list<ssize_t> rhs
+) {
     return broadcast_shapes(std::span(lhs), std::span(rhs));
 }
 
@@ -398,13 +407,15 @@ std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape
     return indices;
 }
 
-ssize_t ravel_multi_index(std::initializer_list<ssize_t> multi_index,
-                          std::initializer_list<ssize_t> shape) {
+ssize_t ravel_multi_index(
+        std::initializer_list<ssize_t> multi_index, std::initializer_list<ssize_t> shape
+) {
     return ravel_multi_index(std::span(multi_index), std::span(shape));
 }
 
-ssize_t ravel_multi_index(const std::span<const ssize_t> multi_index,
-                          const std::span<const ssize_t> shape) {
+ssize_t ravel_multi_index(
+        const std::span<const ssize_t> multi_index, const std::span<const ssize_t> shape
+) {
     assert(multi_index.size() == shape.size() && "mismatched number of dimensions");
 
     // Handle the empty case

@@ -28,8 +28,9 @@ namespace dwave::optimization {
 // NOTE: this does not check that dynamic arrays have the same (dynamic) size
 // (i.e. does not use sizeinfo()), only that their remaining static dimensions
 // are equivalent.
-std::span<const ssize_t> same_shape(const Array* node_ptr,
-                                    std::convertible_to<const Array*> auto... node_ptrs) {
+std::span<const ssize_t> same_shape(
+        const Array* node_ptr, std::convertible_to<const Array*> auto... node_ptrs
+) {
     if (!node_ptr) throw std::invalid_argument("node pointer cannot be nullptr");
 
     // successively check that any remaining args have the same shape
@@ -128,9 +129,11 @@ void ExtractNode::propagate(State& state) const {
 
     // Get the new values
     std::vector<double> new_values;
-    for (auto cit = condition.begin() + min_changed_idx, arrit = arr.begin() + min_changed_idx,
+    for (auto cit = condition.begin() + min_changed_idx,
+              arrit = arr.begin() + min_changed_idx,
               end = condition.end();
-         cit != end; ++cit, ++arrit) {
+         cit != end;
+         ++cit, ++arrit) {
         if (*cit) new_values.push_back(*arrit);
     }
 
@@ -164,9 +167,14 @@ struct WhereNodeData : ArrayNodeStateData {
             : ArrayNodeStateData(std::move(values)) {}
 
     // Update the buffer according to the given diffs
-    void apply_diffs(const Array::View condition, std::span<const Update> condition_diff,
-                     const Array::View x, std::span<const Update> x_diff, const Array::View y,
-                     std::span<const Update> y_diff) {
+    void apply_diffs(
+            const Array::View condition,
+            std::span<const Update> condition_diff,
+            const Array::View x,
+            std::span<const Update> x_diff,
+            const Array::View y,
+            std::span<const Update> y_diff
+    ) {
         // rather than doing a lot of fancy things to track the various changes, let's
         // just get the indices that have been updated in at least one predecessor and
         // recalculate those from scratch
@@ -245,7 +253,8 @@ WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_pt
         if (cond_size != x_ptr_->sizeinfo().substitute(100) ||
             cond_size != y_ptr->sizeinfo().substitute(100)) {
             throw std::invalid_argument(
-                    "If condition is not of size 1, condition, x and y must all be the same size");
+                    "If condition is not of size 1, condition, x and y must all be the same size"
+            );
         }
     }
 
@@ -276,7 +285,8 @@ void WhereNode::initialize_state(State& state) const {
 
         // zip would be very nice here...
         for (auto cit = condition.begin(), xit = x.begin(), yit = y.begin(), end = condition.end();
-             cit != end; ++cit, ++xit, ++yit) {
+             cit != end;
+             ++cit, ++xit, ++yit) {
             values.emplace_back((*cit) ? *xit : *yit);
         }
 
@@ -314,9 +324,14 @@ void WhereNode::propagate(State& state) const {
     if (condition_ptr_->size() != 1) {
         // `condition` is an array
 
-        node_data->apply_diffs(condition_ptr_->view(state), condition_ptr_->diff(state),
-                               x_ptr_->view(state), x_ptr_->diff(state), y_ptr_->view(state),
-                               y_ptr_->diff(state));
+        node_data->apply_diffs(
+                condition_ptr_->view(state),
+                condition_ptr_->diff(state),
+                x_ptr_->view(state),
+                x_ptr_->diff(state),
+                y_ptr_->view(state),
+                y_ptr_->diff(state)
+        );
 
     } else if (_flipped(condition_ptr_->diff(state))) {
         // `condition` is a single value and it changed

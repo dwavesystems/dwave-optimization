@@ -187,8 +187,11 @@ struct Slice {
     constexpr Slice() noexcept : Slice(std::nullopt, std::nullopt, std::nullopt) {}
     explicit constexpr Slice(std::optional<ssize_t> stop) noexcept
             : Slice(std::nullopt, stop, std::nullopt) {}
-    constexpr Slice(std::optional<ssize_t> start, std::optional<ssize_t> stop,
-                    std::optional<ssize_t> step = std::nullopt) {
+    constexpr Slice(
+            std::optional<ssize_t> start,
+            std::optional<ssize_t> stop,
+            std::optional<ssize_t> step = std::nullopt
+    ) {
         constexpr ssize_t MAX = std::numeric_limits<ssize_t>::max();
         constexpr ssize_t MIN = std::numeric_limits<ssize_t>::lowest();
 
@@ -514,8 +517,9 @@ class Array {
     // Assumes itemsize = sizeof(double).
     // Expects the shape to be stored in a C-style array of length ndim.
     // Returns the strides as a C-style array of length ndim managed by a unique_ptr.
-    static std::unique_ptr<ssize_t[]> shape_to_strides(const ssize_t ndim,
-                                                       const ssize_t* shape) noexcept {
+    static std::unique_ptr<ssize_t[]> shape_to_strides(
+            const ssize_t ndim, const ssize_t* shape
+    ) noexcept {
         if (ndim <= 0) return nullptr;
         auto strides = std::make_unique<ssize_t[]>(ndim);
         // otherwise strides are a function of the shape
@@ -670,10 +674,12 @@ bool array_shape_equal(const std::span<const Array* const> array_ptrs);
 /// Get the shape induced by broadcasting two arrays together.
 /// See https://numpy.org/doc/stable/user/basics.broadcasting.html.
 /// Raises an exception if the two arrays cannot be broadcast together
-std::vector<ssize_t> broadcast_shapes(const std::span<const ssize_t> lhs,
-                                      const std::span<const ssize_t> rhs);
-std::vector<ssize_t> broadcast_shapes(std::initializer_list<ssize_t> lhs,
-                                      std::initializer_list<ssize_t> rhs);
+std::vector<ssize_t> broadcast_shapes(
+        const std::span<const ssize_t> lhs, const std::span<const ssize_t> rhs
+);
+std::vector<ssize_t> broadcast_shapes(
+        std::initializer_list<ssize_t> lhs, std::initializer_list<ssize_t> rhs
+);
 
 void deduplicate_diff(std::vector<Update>& diff);
 
@@ -702,8 +708,9 @@ bool is_integer(const double& value);
 
 /// Convert a multi index to a flat index
 /// The behavior of out-of-bounds indices is undefined. Bounds are enforced via asserts.
-ssize_t ravel_multi_index(std::initializer_list<ssize_t> multi_index,
-                          std::initializer_list<ssize_t> shape);
+ssize_t ravel_multi_index(
+        std::initializer_list<ssize_t> multi_index, std::initializer_list<ssize_t> shape
+);
 ssize_t ravel_multi_index(std::span<const ssize_t> multi_index, std::span<const ssize_t> shape);
 
 /// Convert a flat index to multi-index
@@ -715,11 +722,14 @@ std::string shape_to_string(const std::span<const ssize_t> shape);
 
 template <std::ranges::viewable_range R>
 ValuesInfo::ValuesInfo(R&& array_ptrs)
-        : min(std::ranges::min(array_ptrs |
-                               std::views::transform([](const Array* ptr) { return ptr->min(); }))),
-          max(std::ranges::max(array_ptrs |
-                               std::views::transform([](const Array* ptr) { return ptr->max(); }))),
-          integral(std::ranges::all_of(array_ptrs,
-                                       [](const Array* ptr) { return ptr->integral(); })) {}
+        : min(std::ranges::min(array_ptrs | std::views::transform([](const Array* ptr) {
+                                   return ptr->min();
+                               }))),
+          max(std::ranges::max(array_ptrs | std::views::transform([](const Array* ptr) {
+                                   return ptr->max();
+                               }))),
+          integral(std::ranges::all_of(array_ptrs, [](const Array* ptr) {
+              return ptr->integral();
+          })) {}
 
 }  // namespace dwave::optimization

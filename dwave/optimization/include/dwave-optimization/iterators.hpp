@@ -84,10 +84,12 @@ class BufferIterator {
     /// Construct a non-contiguous iterator from a shape/strides defined as
     /// observing pointers when `From` is `void`.
     template <DType T>
-    BufferIterator(const T* ptr,
-                   ssize_t ndim,            // number of dimensions in the array
-                   const ssize_t* shape,    // shape of the array
-                   const ssize_t* strides)  // strides for each dimension of the array
+    BufferIterator(
+            const T* ptr,
+            ssize_t ndim,          // number of dimensions in the array
+            const ssize_t* shape,  // shape of the array
+            const ssize_t* strides
+    )  // strides for each dimension of the array
             noexcept
         requires(!DType<From>)
             : ptr_(ptr),
@@ -97,9 +99,11 @@ class BufferIterator {
     /// Construct a non-contiguous iterator from a shape/strides defined as
     /// ranges when `From` is `void`.
     template <DType T>
-    BufferIterator(const T* ptr,
-                   const std::span<const ssize_t> shape,    // shape of the array
-                   const std::span<const ssize_t> strides)  // strides of the array
+    BufferIterator(
+            const T* ptr,
+            const std::span<const ssize_t> shape,  // shape of the array
+            const std::span<const ssize_t> strides
+    )  // strides of the array
         requires(!DType<From>)
             : BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
         assert(shape.size() == strides.size());
@@ -107,19 +111,23 @@ class BufferIterator {
 
     /// Construct a non-contiguous iterator from a shape/strides defined as
     /// observing pointers when `From` satisfies `DType<From>`.
-    BufferIterator(pointer ptr,
-                   ssize_t ndim,            // number of dimensions in the array
-                   const ssize_t* shape,    // shape of the array
-                   const ssize_t* strides)  // strides for each dimension of the array
+    BufferIterator(
+            pointer ptr,
+            ssize_t ndim,          // number of dimensions in the array
+            const ssize_t* shape,  // shape of the array
+            const ssize_t* strides
+    )  // strides for each dimension of the array
             noexcept
         requires(DType<From>)
             : ptr_(ptr), format_(), shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
 
     /// Construct a non-contiguous iterator from a shape/strides defined as
     /// ranges when `From` satisfies `DType<From>`.
-    BufferIterator(pointer ptr,
-                   const std::span<const ssize_t> shape,    // shape of the array
-                   const std::span<const ssize_t> strides)  // strides of the array
+    BufferIterator(
+            pointer ptr,
+            const std::span<const ssize_t> shape,  // shape of the array
+            const std::span<const ssize_t> strides
+    )  // strides of the array
         requires(DType<From>)
             : BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
         assert(shape.size() == strides.size());
@@ -391,22 +399,26 @@ class BufferIterator {
         // only check the location when debug symbols are off.
         friend bool operator==(const ShapeInfo& lhs, const ShapeInfo& rhs) {
             // Check that lhs and rhs are consistent with each other.
-            assert(std::ranges::equal(std::span(lhs.shape, lhs.ndim),
-                                      std::span(rhs.shape, rhs.ndim)) &&
+            assert(std::ranges::equal(
+                           std::span(lhs.shape, lhs.ndim), std::span(rhs.shape, rhs.ndim)
+                   ) &&
                    "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
-            assert(std::ranges::equal(std::span(lhs.strides, lhs.ndim),
-                                      std::span(rhs.strides, rhs.ndim)) &&
+            assert(std::ranges::equal(
+                           std::span(lhs.strides, lhs.ndim), std::span(rhs.strides, rhs.ndim)
+                   ) &&
                    "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
 
             return std::equal(lhs.loc.get(), lhs.loc.get() + lhs.ndim, rhs.loc.get());
         }
         friend std::strong_ordering operator<=>(const ShapeInfo& lhs, const ShapeInfo& rhs) {
             // Check that lhs and rhs are consistent with each other.
-            assert(std::ranges::equal(std::span(lhs.shape, lhs.ndim),
-                                      std::span(rhs.shape, rhs.ndim)) &&
+            assert(std::ranges::equal(
+                           std::span(lhs.shape, lhs.ndim), std::span(rhs.shape, rhs.ndim)
+                   ) &&
                    "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
-            assert(std::ranges::equal(std::span(lhs.strides, lhs.ndim),
-                                      std::span(rhs.strides, rhs.ndim)) &&
+            assert(std::ranges::equal(
+                           std::span(lhs.strides, lhs.ndim), std::span(rhs.strides, rhs.ndim)
+                   ) &&
                    "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
 
             for (ssize_t axis = 0; axis < lhs.ndim; ++axis) {
@@ -417,11 +429,13 @@ class BufferIterator {
 
         friend difference_type operator-(const ShapeInfo& lhs, const ShapeInfo& rhs) {
             // Check that lhs and rhs are consistent with each other.
-            assert(std::ranges::equal(std::span(lhs.shape, lhs.ndim),
-                                      std::span(rhs.shape, rhs.ndim)) &&
+            assert(std::ranges::equal(
+                           std::span(lhs.shape, lhs.ndim), std::span(rhs.shape, rhs.ndim)
+                   ) &&
                    "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
-            assert(std::ranges::equal(std::span(lhs.strides, lhs.ndim),
-                                      std::span(rhs.strides, rhs.ndim)) &&
+            assert(std::ranges::equal(
+                           std::span(lhs.strides, lhs.ndim), std::span(rhs.strides, rhs.ndim)
+                   ) &&
                    "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
 
             // calculate the difference in steps based on the respective locs

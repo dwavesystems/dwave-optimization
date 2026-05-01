@@ -51,9 +51,10 @@ struct ArgSortNodeData : public ArrayNodeStateData {
 ArgSortNode::ArgSortNode(ArrayNode* arr_ptr)
         : ArrayOutputMixin(arr_ptr->shape()),
           arr_ptr_(arr_ptr),
-          minmax_(0, static_cast<double>(arr_ptr_->sizeinfo().max.value_or(
-                                                 std::numeric_limits<ssize_t>::max()) -
-                                         1)),
+          minmax_(0,
+                  static_cast<double>(
+                          arr_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max()) - 1
+                  )),
           sizeinfo_(arr_ptr_->sizeinfo()) {
     add_predecessor(arr_ptr);
 }
@@ -105,7 +106,8 @@ void ArgSortNode::propagate(State& state) const {
     // the end region of the final ordering.
     node_data->assign(
             node_data->order |
-            std::views::transform([](const std::pair<double, ssize_t>& p) { return p.second; }));
+            std::views::transform([](const std::pair<double, ssize_t>& p) { return p.second; })
+    );
 }
 
 void ArgSortNode::revert(State& state) const {

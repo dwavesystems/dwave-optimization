@@ -118,12 +118,15 @@ TEST_CASE("DisjointBitSetsNode") {
                         graph.commit(state, graph.descendants(state, {ptr}));
 
                         THEN("The changes persist") {
-                            CHECK(std::ranges::equal(sets[0]->view(state),
-                                                     std::vector{0, 1, 0, 1, 0}));
-                            CHECK(std::ranges::equal(sets[1]->view(state),
-                                                     std::vector{1, 0, 0, 0, 0}));
-                            CHECK(std::ranges::equal(sets[2]->view(state),
-                                                     std::vector{0, 0, 1, 0, 1}));
+                            CHECK(std::ranges::equal(
+                                    sets[0]->view(state), std::vector{0, 1, 0, 1, 0}
+                            ));
+                            CHECK(std::ranges::equal(
+                                    sets[1]->view(state), std::vector{1, 0, 0, 0, 0}
+                            ));
+                            CHECK(std::ranges::equal(
+                                    sets[2]->view(state), std::vector{0, 0, 1, 0, 1}
+                            ));
                         }
                     }
 
@@ -131,14 +134,17 @@ TEST_CASE("DisjointBitSetsNode") {
                         graph.revert(state, graph.descendants(state, {ptr}));
 
                         THEN("The changes are undone") {
-                            CHECK(std::ranges::equal(sets[0]->view(state),
-                                                     std::vector{1, 1, 1, 1, 1}));
+                            CHECK(std::ranges::equal(
+                                    sets[0]->view(state), std::vector{1, 1, 1, 1, 1}
+                            ));
                             CHECK(sets[0]->diff(state).size() == 0);
-                            CHECK(std::ranges::equal(sets[1]->view(state),
-                                                     std::vector{0, 0, 0, 0, 0}));
+                            CHECK(std::ranges::equal(
+                                    sets[1]->view(state), std::vector{0, 0, 0, 0, 0}
+                            ));
                             CHECK(sets[1]->diff(state).size() == 0);
-                            CHECK(std::ranges::equal(sets[2]->view(state),
-                                                     std::vector{0, 0, 0, 0, 0}));
+                            CHECK(std::ranges::equal(
+                                    sets[2]->view(state), std::vector{0, 0, 0, 0, 0}
+                            ));
                             CHECK(sets[2]->diff(state).size() == 0);
                         }
                     }
@@ -162,11 +168,14 @@ TEST_CASE("DisjointBitSetsNode") {
 
                 THEN("We get an error when trying to initialize invalid partitions") {
                     CHECK_THROWS(ptr->initialize_state(
-                            state, {{0, 0, 0, 0, 2}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}));
+                            state, {{0, 0, 0, 0, 2}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}
+                    ));
                     CHECK_THROWS(ptr->initialize_state(
-                            state, {{0, 0, 0, 0, 0}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}));
+                            state, {{0, 0, 0, 0, 0}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}
+                    ));
                     CHECK_THROWS(ptr->initialize_state(
-                            state, {{0, 0, 0, 1, 1}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}));
+                            state, {{0, 0, 0, 1, 1}, {1, 0, 1, 0, 0}, {0, 1, 0, 1, 0}}
+                    ));
                 }
             }
         }
@@ -276,8 +285,9 @@ TEST_CASE("DisjointListsNode") {
                         graph.revert(state, graph.descendants(state, {ptr}));
 
                         THEN("The changes are undone") {
-                            CHECK(std::ranges::equal(lists[0]->view(state),
-                                                     std::vector{0, 1, 2, 3, 4}));
+                            CHECK(std::ranges::equal(
+                                    lists[0]->view(state), std::vector{0, 1, 2, 3, 4}
+                            ));
                             CHECK(lists[0]->diff(state).size() == 0);
                             CHECK(lists[1]->shape(state)[0] == 0);
                             CHECK(lists[2]->shape(state)[0] == 0);

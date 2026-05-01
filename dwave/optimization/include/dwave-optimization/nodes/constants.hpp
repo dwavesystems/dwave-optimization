@@ -53,8 +53,11 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
 
     // For use from Python, where we will pass in a PyDataSource which manages the python reference
     // to the original object (a numpy array) that holds the data.
-    ConstantNode(std::unique_ptr<DataSource> data_source, const double* data_ptr,
-                 const std::span<const ssize_t> shape);
+    ConstantNode(
+            std::unique_ptr<DataSource> data_source,
+            const double* data_ptr,
+            const std::span<const ssize_t> shape
+    );
 
     /// Create a ConstantNode by copying the contents of a range
     template <std::ranges::sized_range Range>

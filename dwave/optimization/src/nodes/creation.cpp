@@ -114,8 +114,9 @@ std::vector<double> arange(const ssize_t start, const ssize_t stop, const ssize_
 
     return arange;
 }
-std::vector<double> arange(const State& state, array_or_int start_, array_or_int stop_,
-                           array_or_int step_) {
+std::vector<double> arange(
+        const State& state, array_or_int start_, array_or_int stop_, array_or_int step_
+) {
     auto visitor = get_value(state);
     const ssize_t start = std::visit(visitor, start_);
     const ssize_t stop = std::visit(visitor, stop_);
@@ -124,8 +125,9 @@ std::vector<double> arange(const State& state, array_or_int start_, array_or_int
     return arange(start, stop, step);
 }
 
-std::pair<double, double> calculate_values_minmax(array_or_int start_, array_or_int stop_,
-                                                  array_or_int step_) {
+std::pair<double, double> calculate_values_minmax(
+        array_or_int start_, array_or_int stop_, array_or_int step_
+) {
     auto visitor = get_minmax();
     const auto [start_low, start_high] = std::visit(visitor, start_);
     const auto [stop_low, stop_high] = std::visit(visitor, stop_);
@@ -174,8 +176,12 @@ std::pair<double, double> calculate_values_minmax(array_or_int start_, array_or_
     unreachable();
 }
 
-const SizeInfo calculate_arange_sizeinfo(const ArrayNode* node_ptr, const array_or_int start,
-                                         const array_or_int stop, const array_or_int step) {
+const SizeInfo calculate_arange_sizeinfo(
+        const ArrayNode* node_ptr,
+        const array_or_int start,
+        const array_or_int stop,
+        const array_or_int step
+) {
     if (!node_ptr->dynamic()) return SizeInfo(node_ptr->size());
 
     auto visitor = get_minmax();
@@ -202,15 +208,19 @@ const SizeInfo calculate_arange_sizeinfo(const ArrayNode* node_ptr, const array_
     ssize_t min;
     ssize_t max;
     if (step_low > 0) {
-        min = std::max<ssize_t>(std::ceil(static_cast<double>(stop_low - start_high) / step_high),
-                                0);
-        max = std::max<ssize_t>(std::ceil(static_cast<double>(stop_high - start_low) / step_low),
-                                min);
+        min = std::max<ssize_t>(
+                std::ceil(static_cast<double>(stop_low - start_high) / step_high), 0
+        );
+        max = std::max<ssize_t>(
+                std::ceil(static_cast<double>(stop_high - start_low) / step_low), min
+        );
     } else if (step_high < 0) {
-        min = std::max<ssize_t>(std::ceil(static_cast<double>(stop_high - start_low) / step_high),
-                                0);
-        max = std::max<ssize_t>(std::ceil(static_cast<double>(stop_low - start_high) / step_low),
-                                min);
+        min = std::max<ssize_t>(
+                std::ceil(static_cast<double>(stop_high - start_low) / step_high), 0
+        );
+        max = std::max<ssize_t>(
+                std::ceil(static_cast<double>(stop_low - start_high) / step_low), min
+        );
     } else {
         assert(false && "unreachable");
         unreachable();
@@ -229,7 +239,8 @@ const SizeInfo calculate_arange_sizeinfo(const ArrayNode* node_ptr, const array_
     // The size of this node is a linear function of the size of the node its
     // predecessor (the SizeNode defining `stop`) is listening to.
     auto sizenode_pred_ptr = dynamic_cast<const ArrayNode*>(
-            static_cast<const ArrayNode*>(std::get<const Array*>(stop))->predecessors()[0]);
+            static_cast<const ArrayNode*>(std::get<const Array*>(stop))->predecessors()[0]
+    );
 
     // SizeInfo is computed as follows (see SizeInfo docs):
     // clamp(ceil(multiplier * array_ptr->size() + offset), min, max)

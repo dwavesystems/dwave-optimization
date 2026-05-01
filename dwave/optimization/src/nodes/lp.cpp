@@ -60,12 +60,16 @@ void LinearProgramFeasibleNode::propagate(State& state) const {
     set_state(state, lp_ptr_->feasible(state));
 }
 
-void LinearProgramNodeBase::check_input_arguments(const ArrayNode* c_ptr, const ArrayNode* b_lb_ptr,
-                                                  const ArrayNode* A_ptr, const ArrayNode* b_ub_ptr,
-                                                  const ArrayNode* A_eq_ptr,
-                                                  const ArrayNode* b_eq_ptr,
-                                                  const ArrayNode* lb_ptr,
-                                                  const ArrayNode* ub_ptr) {
+void LinearProgramNodeBase::check_input_arguments(
+        const ArrayNode* c_ptr,
+        const ArrayNode* b_lb_ptr,
+        const ArrayNode* A_ptr,
+        const ArrayNode* b_ub_ptr,
+        const ArrayNode* A_eq_ptr,
+        const ArrayNode* b_eq_ptr,
+        const ArrayNode* lb_ptr,
+        const ArrayNode* ub_ptr
+) {
     // c must exist and be a fixed-length 1D array
     if (c_ptr == nullptr || c_ptr->ndim() != 1 || c_ptr->dynamic() || c_ptr->size() < 1) {
         throw std::invalid_argument("c must be a nonempty 1D array with a fixed size");
@@ -78,8 +82,10 @@ void LinearProgramNodeBase::check_input_arguments(const ArrayNode* c_ptr, const 
     // * Invalid input for linprog: b_ub must be a 1-D array; b_ub must not have
     //   more than one non-singleton dimension and the number of rows in A_ub
     //   must equal the number of values in b_ub
-    auto check_Ab = [&num_columns](const Array* A_ptr, const Array* b_ptr, const std::string A,
-                                   const std::string b) -> void {
+    auto check_Ab =
+            [&num_columns](
+                    const Array* A_ptr, const Array* b_ptr, const std::string A, const std::string b
+            ) -> void {
         if (A_ptr->dynamic() || b_ptr->dynamic()) {
             throw std::invalid_argument(A + " and " + b + " must not be dynamic");
         }
@@ -94,16 +100,18 @@ void LinearProgramNodeBase::check_input_arguments(const ArrayNode* c_ptr, const 
             throw std::invalid_argument(
                     A + " must have exactly two dimensions, and the number of columns in " + A +
                     " (" + std::to_string(A_shape[1]) + ") must be equal to the size of c (" +
-                    std::to_string(num_columns) + ")");
+                    std::to_string(num_columns) + ")"
+            );
         }
         if (b_shape.size() != 1) {
             throw std::invalid_argument(b + " must be a 1D array");
         }
         if (A_shape[0] != b_shape[0]) {
-            throw std::invalid_argument(b + " must be a 1D array and the number of rows in " + A +
-                                        " (" + std::to_string(A_shape[0]) +
-                                        ") must equal the size of " + b + " (" +
-                                        std::to_string(b_shape[0]) + ")");
+            throw std::invalid_argument(
+                    b + " must be a 1D array and the number of rows in " + A + " (" +
+                    std::to_string(A_shape[0]) + ") must equal the size of " + b + " (" +
+                    std::to_string(b_shape[0]) + ")"
+            );
         }
     };
 
@@ -120,7 +128,8 @@ void LinearProgramNodeBase::check_input_arguments(const ArrayNode* c_ptr, const 
     } else {
         throw std::invalid_argument(
                 "if A is given then b_lb and/or b_ub must also be given "
-                "and vice versa");
+                "and vice versa"
+        );
     }
 
     // A_eq, b_eq
@@ -138,14 +147,16 @@ void LinearProgramNodeBase::check_input_arguments(const ArrayNode* c_ptr, const 
     } else if (lb_ptr->ndim() == 1 && lb_ptr->size() == num_columns) {
     } else {
         throw std::invalid_argument(
-                "lb must be a scalar or a 1D array with a number of values equal to the size of c");
+                "lb must be a scalar or a 1D array with a number of values equal to the size of c"
+        );
     }
     if (ub_ptr == nullptr) {
     } else if (ub_ptr->ndim() == 0) {
     } else if (ub_ptr->ndim() == 1 && ub_ptr->size() == num_columns) {
     } else {
         throw std::invalid_argument(
-                "ub must be a scalar or a 1D array with a number of values equal to the size of c");
+                "ub must be a scalar or a 1D array with a number of values equal to the size of c"
+        );
     }
 }
 
@@ -155,9 +166,16 @@ const double LinearProgramNodeBase::default_upper_bound() { return LP_INFINITY; 
 
 const double LinearProgramNodeBase::infinity() { return LP_INFINITY; }
 
-LinearProgramNode::LinearProgramNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr,
-                                     ArrayNode* b_ub_ptr, ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr,
-                                     ArrayNode* lb_ptr, ArrayNode* ub_ptr)
+LinearProgramNode::LinearProgramNode(
+        ArrayNode* c_ptr,
+        ArrayNode* b_lb_ptr,
+        ArrayNode* A_ptr,
+        ArrayNode* b_ub_ptr,
+        ArrayNode* A_eq_ptr,
+        ArrayNode* b_eq_ptr,
+        ArrayNode* lb_ptr,
+        ArrayNode* ub_ptr
+)
         : c_ptr_(c_ptr),
           b_lb_ptr_(b_lb_ptr),
           A_ptr_(A_ptr),
@@ -166,8 +184,10 @@ LinearProgramNode::LinearProgramNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, Arra
           b_eq_ptr_(b_eq_ptr),
           lb_ptr_(lb_ptr),
           ub_ptr_(ub_ptr),
-          variables_minmax_(lb_ptr_ ? lb_ptr_->min() : LinearProgramNode::default_lower_bound(),
-                            ub_ptr_ ? ub_ptr_->max() : LinearProgramNode::default_upper_bound()) {
+          variables_minmax_(
+                  lb_ptr_ ? lb_ptr_->min() : LinearProgramNode::default_lower_bound(),
+                  ub_ptr_ ? ub_ptr_->max() : LinearProgramNode::default_upper_bound()
+          ) {
     check_input_arguments(c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, A_eq_ptr, b_eq_ptr, lb_ptr, ub_ptr);
 
     // Finally, add the nodes (if they were passed in) as predecessors. This does
@@ -266,20 +286,32 @@ void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp)
 void LinearProgramNode::initialize_state(State& state) const {
     LPData lp;
     readout_predecessor_data(state, lp);
-    SolveResult result = linprog(lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub,
-                                 FEASIBILITY_TOLERANCE);
+    SolveResult result = linprog(
+            lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub, FEASIBILITY_TOLERANCE
+    );
 
     emplace_data_ptr<LinearProgramNodeData>(state, std::move(result));
 }
 
-void LinearProgramNode::initialize_state(State& state,
-                                         const std::span<const double> solution) const {
+void LinearProgramNode::initialize_state(
+        State& state, const std::span<const double> solution
+) const {
     LPData lp;
     readout_predecessor_data(state, lp);
 
     SolveResult result;
-    result.set_solution(std::vector(solution.begin(), solution.end()), lp.c, lp.b_lb, lp.A, lp.b_ub,
-                        lp.A_eq, lp.b_eq, lp.lb, lp.ub, FEASIBILITY_TOLERANCE);
+    result.set_solution(
+            std::vector(solution.begin(), solution.end()),
+            lp.c,
+            lp.b_lb,
+            lp.A,
+            lp.b_ub,
+            lp.A_eq,
+            lp.b_eq,
+            lp.lb,
+            lp.ub,
+            FEASIBILITY_TOLERANCE
+    );
 
     emplace_data_ptr<LinearProgramNodeData>(state, std::move(result));
 }
@@ -292,8 +324,16 @@ void LinearProgramNode::propagate(State& state) const {
     auto data = data_ptr<LinearProgramNodeData>(state);
 
     readout_predecessor_data(state, data->lp);
-    data->result = linprog(data->lp.c, data->lp.b_lb, data->lp.A, data->lp.b_ub, data->lp.A_eq,
-                           data->lp.b_eq, data->lp.lb, data->lp.ub, FEASIBILITY_TOLERANCE);
+    data->result =
+            linprog(data->lp.c,
+                    data->lp.b_lb,
+                    data->lp.A,
+                    data->lp.b_ub,
+                    data->lp.A_eq,
+                    data->lp.b_eq,
+                    data->lp.lb,
+                    data->lp.ub,
+                    FEASIBILITY_TOLERANCE);
 
     Node::propagate(state);
 }
@@ -357,15 +397,17 @@ void LinearProgramSolutionNode::initialize_state(State& state) const {
     std::span<const double> sol = lp_ptr_->solution(state);
     if (!sol.size()) {
         state[index] = std::make_unique<ArrayNodeStateData>(
-                std::vector<double>(this->size(), this->min()));
+                std::vector<double>(this->size(), this->min())
+        );
     } else {
         assert(sol.data() != nullptr);
         assert(static_cast<ssize_t>(sol.size()) == this->size());
 
         double min_lb = this->min();
         double max_ub = this->max();
-        auto clipped_view = std::views::transform(
-                sol, [&min_lb, &max_ub](double v) { return std::clamp(v, min_lb, max_ub); });
+        auto clipped_view = std::views::transform(sol, [&min_lb, &max_ub](double v) {
+            return std::clamp(v, min_lb, max_ub);
+        });
         state[index] = std::make_unique<ArrayNodeStateData>(clipped_view);
     }
 }
@@ -387,8 +429,9 @@ void LinearProgramSolutionNode::propagate(State& state) const {
 
         double min_lb = this->min();
         double max_ub = this->max();
-        auto clipped_view = std::views::transform(
-                sol, [&min_lb, &max_ub](double v) { return std::clamp(v, min_lb, max_ub); });
+        auto clipped_view = std::views::transform(sol, [&min_lb, &max_ub](double v) {
+            return std::clamp(v, min_lb, max_ub);
+        });
         data_ptr<ArrayNodeStateData>(state)->assign(clipped_view);
 
         Node::propagate(state);

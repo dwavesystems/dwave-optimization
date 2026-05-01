@@ -289,10 +289,11 @@ class ReduceNodeData : public NodeStateData {
         assert(flags_.size() == static_cast<ssize_t>(reductions_.size()));
         assert(buffer_.size() == reductions_.size());
         assert(!shape_info_ or shape_info_->previous_size == flags_.size());
-        assert(std::ranges::equal(buffer_, reductions_,
-                                  [](const double& lhs, const reduction_type& rhs) {
-                                      return lhs == static_cast<result_type>(rhs);
-                                  }));
+        assert(std::ranges::equal(
+                buffer_, reductions_, [](const double& lhs, const reduction_type& rhs) {
+                    return lhs == static_cast<result_type>(rhs);
+                }
+        ));
         assert(flags_.changed().size() == 0);
     }
 
@@ -397,10 +398,11 @@ class ReduceNodeData : public NodeStateData {
         assert(flags_.size() == static_cast<ssize_t>(reductions_.size()));
         assert(buffer_.size() == reductions_.size());
         assert(!shape_info_ or shape_info_->previous_size == flags_.size());
-        assert(std::ranges::equal(buffer_, reductions_,
-                                  [](const double& lhs, const reduction_type& rhs) {
-                                      return lhs == static_cast<result_type>(rhs);
-                                  }));
+        assert(std::ranges::equal(
+                buffer_, reductions_, [](const double& lhs, const reduction_type& rhs) {
+                    return lhs == static_cast<result_type>(rhs);
+                }
+        ));
         assert(flags_.changed().size() == 0);
     }
 
@@ -516,8 +518,9 @@ class ReduceNodeData : public NodeStateData {
 
         shape_info_type(ssize_t size, std::span<const ssize_t> shape)
                 : shape(shape.begin(), shape.end()),
-                  size_divisor(std::reduce(shape.begin() + 1, shape.end(), 1,
-                                           std::multiplies<ssize_t>())),
+                  size_divisor(
+                          std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>())
+                  ),
                   previous_size(size) {
             this->shape[0] = size / size_divisor;
         }
@@ -553,8 +556,9 @@ class ReduceNodeData : public NodeStateData {
 };
 
 // Drop the given axes from the range. Assumes axes is sorted and unique
-std::vector<ssize_t> drop_axes(std::ranges::sized_range auto&& range,
-                               std::span<const ssize_t> axes) {
+std::vector<ssize_t> drop_axes(
+        std::ranges::sized_range auto&& range, std::span<const ssize_t> axes
+) {
     assert(std::ranges::is_sorted(axes) && "axes must be sorted");
     assert(std::ranges::adjacent_find(axes) == axes.end() && "axes must be unique");
 
@@ -576,8 +580,9 @@ std::vector<ssize_t> drop_axes(std::ranges::sized_range auto&& range,
     return out;
 }
 
-std::vector<ssize_t> keep_axes(std::ranges::random_access_range auto&& range,
-                               std::span<const ssize_t> axes) {
+std::vector<ssize_t> keep_axes(
+        std::ranges::random_access_range auto&& range, std::span<const ssize_t> axes
+) {
     std::vector<ssize_t> out;
     const auto begin = std::ranges::cbegin(range);
     for (const ssize_t& dim : axes) {
@@ -597,9 +602,10 @@ std::vector<ssize_t> normalize_axes(const ArrayNode* array_ptr, std::span<const 
     for (ssize_t& dim : normalized) {
         // NumPy raises `AxisError: axis -5 is out of bounds for array of dimension 2`
         if (dim < -ndim or ndim <= dim) {
-            throw std::invalid_argument("axis " + std::to_string(dim) +
-                                        " is out of bounds for array of dimension " +
-                                        std::to_string(ndim));
+            throw std::invalid_argument(
+                    "axis " + std::to_string(dim) + " is out of bounds for array of dimension " +
+                    std::to_string(ndim)
+            );
         }
 
         if (dim < 0) dim += ndim;  // handle negative indices
@@ -620,8 +626,9 @@ std::vector<ssize_t> normalize_axes(const ArrayNode* array_ptr, std::span<const 
 
 // Return the product of all elements in the range
 auto product(std::ranges::range auto&& range) {
-    return std::reduce(std::ranges::begin(range), std::ranges::end(range), 1,
-                       std::multiplies<void>());
+    return std::reduce(
+            std::ranges::begin(range), std::ranges::end(range), 1, std::multiplies<void>()
+    );
 }
 
 // The resulting shape when reducing the given array over the given axes
@@ -637,8 +644,9 @@ std::vector<ssize_t> reduce_shape(const ArrayNode* array_ptr, std::span<const ss
 
 // The min/max/integrality when reducing the given array over the given `axes`.
 template <class BinaryOp>
-ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
-                       std::optional<double> initial) {
+ValuesInfo values_info(
+        const Array* array_ptr, std::span<const ssize_t> axes, std::optional<double> initial
+) {
     // This function assumes axes is sorted and unique
     assert(std::ranges::is_sorted(axes));
     assert(std::ranges::adjacent_find(axes) == axes.end());  // it's unique
@@ -656,7 +664,8 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
         }
         throw std::invalid_argument(
                 "cannot perform a reduction operation with no "
-                "identity on an array that is always empty");
+                "identity on an array that is always empty"
+        );
     }
 
     // Get the bounds for our predecessor
@@ -686,7 +695,8 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
         } else {
             throw std::invalid_argument(
                     "cannot perform a reduction operation with no "
-                    "identity on an array that might be empty");
+                    "identity on an array that might be empty"
+            );
         }
     }
 
@@ -717,7 +727,8 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
         // no identity
         throw std::invalid_argument(
                 "cannot perform a reduction operation with no identity on an array that might be "
-                "empty");
+                "empty"
+        );
     }
 
     //
@@ -755,8 +766,9 @@ ValuesInfo values_info(const Array* array_ptr, std::span<const ssize_t> axes,
     return bounds;
 }
 
-SizeInfo reducenode_calculate_sizeinfo(const Array* node_ptr, const Array* array_ptr,
-                                       std::span<const ssize_t> axes) {
+SizeInfo reducenode_calculate_sizeinfo(
+        const Array* node_ptr, const Array* array_ptr, std::span<const ssize_t> axes
+) {
     // Node is statically sized. Note: If node_shape = {}, product(node_shape) = 1.
     if (!node_ptr->dynamic()) return SizeInfo(product(node_ptr->shape()));
     assert(node_ptr->shape().size() and node_ptr->shape().front() == -1);
@@ -774,8 +786,9 @@ template <class BinaryOp>
 ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, {}) {}
 
 template <class BinaryOp>
-ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes,
-                                 std::optional<double> initial)
+ReduceNode<BinaryOp>::ReduceNode(
+        ArrayNode* array_ptr, std::span<const ssize_t> axes, std::optional<double> initial
+)
         : ArrayOutputMixin(reduce_shape(array_ptr, axes)),
           initial(initial),
           array_ptr_(array_ptr),
@@ -786,8 +799,9 @@ ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> 
 }
 
 template <class BinaryOp>
-ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> axes,
-                                 std::optional<double> initial)
+ReduceNode<BinaryOp>::ReduceNode(
+        ArrayNode* array_ptr, std::initializer_list<ssize_t> axes, std::optional<double> initial
+)
         : ReduceNode(array_ptr, std::span(axes), initial) {}
 
 template <class BinaryOp>
@@ -954,8 +968,9 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
         const ssize_t size_diff = array_ptr_->size_diff(state);
 
         const auto subspace_shape = keep_axes(array_ptr_->shape(state), axes_);
-        const ssize_t subspace_size = std::reduce(subspace_shape.begin(), subspace_shape.end(), 1,
-                                                  std::multiplies<ssize_t>());
+        const ssize_t subspace_size = std::reduce(
+                subspace_shape.begin(), subspace_shape.end(), 1, std::multiplies<ssize_t>()
+        );
         for (ssize_t i = 0, stop = size_diff / subspace_size; i < stop; ++i) {
             state_ptr->append_reduction(*initial);
         }
@@ -963,8 +978,10 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
 
     for (const Update& update : array_ptr_->diff(state)) {
         ssize_t reduction_index = convert_predecessor_index_(update.index);
-        assert(ravel_multi_index(drop_axes(unravel_index(update.index, array_ptr_->shape()), axes_),
-                                 this->shape()) == reduction_index &&
+        assert(ravel_multi_index(
+                       drop_axes(unravel_index(update.index, array_ptr_->shape()), axes_),
+                       this->shape()
+               ) == reduction_index &&
                "Incorrect predecessor index conversion in ReduceNode");
 
         if (update.placed()) {
@@ -980,8 +997,9 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
         const ssize_t size_diff = array_ptr_->size_diff(state);
 
         const auto subspace_shape = keep_axes(array_ptr_->shape(state), axes_);
-        const ssize_t subspace_size = std::reduce(subspace_shape.begin(), subspace_shape.end(), 1,
-                                                  std::multiplies<ssize_t>());
+        const ssize_t subspace_size = std::reduce(
+                subspace_shape.begin(), subspace_shape.end(), 1, std::multiplies<ssize_t>()
+        );
 
         for (ssize_t i = size_diff / subspace_size; i < 0; ++i) {
             state_ptr->pop_reduction();

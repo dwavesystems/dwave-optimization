@@ -95,8 +95,10 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
 
         WHEN("We explicitly set the solution to something with the wrong shape") {
             SolveResult result;
-            CHECK_THROWS_AS(result.set_solution({-1, 0}, c, b_lb, A, b_ub, A_eq, b_eq, lb, ub),
-                            std::invalid_argument);
+            CHECK_THROWS_AS(
+                    result.set_solution({-1, 0}, c, b_lb, A, b_ub, A_eq, b_eq, lb, ub),
+                    std::invalid_argument
+            );
         }
     }
 
@@ -104,7 +106,18 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
         std::vector<double> c{-5, -10, -3, -4};
 
         std::vector<double> A{
-                1, 1, 1, 1, 0, 5, -3, 0, 1, 2, 3, 4,
+                1,
+                1,
+                1,
+                1,
+                0,
+                5,
+                -3,
+                0,
+                1,
+                2,
+                3,
+                4,
         };
         std::vector<double> b_lb{-LP_INFINITY, -LP_INFINITY, -LP_INFINITY};
         std::vector<double> b_ub{100, 50, 20};

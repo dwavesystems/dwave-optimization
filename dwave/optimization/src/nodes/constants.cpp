@@ -28,8 +28,11 @@ ValuesInfo calculate_values_info(std::span<const double> buffer) {
         return ValuesInfo(0.0, 0.0, true);
     }
 
-    return ValuesInfo(std::ranges::min(buffer), std::ranges::max(buffer),
-                      std::ranges::all_of(buffer, is_integer));
+    return ValuesInfo(
+            std::ranges::min(buffer),
+            std::ranges::max(buffer),
+            std::ranges::all_of(buffer, is_integer)
+    );
 }
 
 ConstantNode::ConstantNode(const double* data_ptr, std::initializer_list<ssize_t> shape)
@@ -42,8 +45,11 @@ ConstantNode::ConstantNode(const double* data_ptr, const std::span<const ssize_t
           buffer_ptr_(data_ptr),
           values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))) {}
 
-ConstantNode::ConstantNode(std::unique_ptr<DataSource> data_source, const double* data_ptr,
-                           const std::span<const ssize_t> shape)
+ConstantNode::ConstantNode(
+        std::unique_ptr<DataSource> data_source,
+        const double* data_ptr,
+        const std::span<const ssize_t> shape
+)
         : ArrayOutputMixin(disallow_dynamic(shape)),
           buffer_ptr_(data_ptr),
           values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),

@@ -67,7 +67,8 @@ class ArrayStateData {
         {
             buffer.reserve(std::ranges::size(values));
             for (ssize_t index = buffer.size(), stop = std::ranges::size(values) + offset;
-                 index < stop; ++index, ++vit) {
+                 index < stop;
+                 ++index, ++vit) {
                 updates.emplace_back(Update::placement(index, *vit));
                 buffer.emplace_back(*vit);
             }
