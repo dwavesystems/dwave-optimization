@@ -1,4 +1,4 @@
 ---
 deprecations:
   - |
-    `NumberNode` and `BinaryNode` random initialize state.
+    Remove `NumberNode` and `BinaryNode` random state initialization.
