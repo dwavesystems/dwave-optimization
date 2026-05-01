@@ -71,12 +71,16 @@ blas-build = [
 changelog = [
     "reno==4.1.0",
 ]
+clang-format = [
+    "clang-format~=22.0",  # latest as of April 2026, we require >=22
+]
 dev = [
     # Install requirements
     "numpy==2.2.6; python_version < '3.11'",  # last that supports 3.10
     "numpy==2.3.3; python_version >= '3.11'",
     {include-group = "build"},
     {include-group = "changelog"},
+    {include-group = "clang-format"},
 ]
 docs = [
     # Matches dwave-ocean-sdk as of Dec 2025
