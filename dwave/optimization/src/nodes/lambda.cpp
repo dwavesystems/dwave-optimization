@@ -42,7 +42,7 @@ AccumulateZipNode::AccumulateZipNode(std::shared_ptr<Graph> expression_ptr,
           initial(initial),
           expression_ptr_(std::move(expression_ptr)),
           operands_(operands),
-          sizeinfo_(operands.empty()? SizeInfo(0) : operands_[0]->sizeinfo()) {
+          sizeinfo_(operands.empty() ? SizeInfo(0) : operands_[0]->sizeinfo()) {
     check(*expression_ptr_, operands, initial);
 
     if (std::holds_alternative<ArrayNode*>(initial)) {

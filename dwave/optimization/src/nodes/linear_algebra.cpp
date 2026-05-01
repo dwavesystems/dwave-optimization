@@ -89,10 +89,10 @@ std::vector<double> make_contiguous(const double* const start,  // beginning of 
 // An overload of gemm() that uses BLAS for matmul with doubles. We could also extend this to
 // float in the future without a lot of fuss.
 template <>
-void gemm<double>(const ssize_t m, const ssize_t n, const ssize_t k,        // size of the arrays
-          const double* const A, std::span<const ssize_t, 2> A_strides,  // lhs matrix
-          const double* const B, std::span<const ssize_t, 2> B_strides,  // rhs matrix
-          double* const C, std::span<const ssize_t, 2> C_strides) {      // output matrix
+void gemm<double>(const ssize_t m, const ssize_t n, const ssize_t k,  // size of the arrays
+                  const double* const A, std::span<const ssize_t, 2> A_strides,  // lhs matrix
+                  const double* const B, std::span<const ssize_t, 2> B_strides,  // rhs matrix
+                  double* const C, std::span<const ssize_t, 2> C_strides) {      // output matrix
     // OpenBLAS has some requirements for A,B,C.
     // Specifically, they must be contiguous within each "row" and they must
     // have positive strides in the first dimension.

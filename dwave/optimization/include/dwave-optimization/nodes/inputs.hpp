@@ -84,7 +84,7 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     double min() const override { return values_info_.min; }
 
     /// @copydoc Node::propagate()
-    void propagate(State& state) const noexcept override{};
+    void propagate(State& state) const noexcept override {};
 
     /// @copydoc Node::revert()
     void revert(State& state) const noexcept override;

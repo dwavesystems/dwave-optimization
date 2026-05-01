@@ -45,8 +45,7 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
     using supported_node_types =
             type_list<AddNode, AndNode, ConstantNode, DivideNode, EqualNode, InputNode,
                       LessEqualNode, MaximumNode, MinimumNode, ModulusNode, MultiplyNode,
-                      NegativeNode, OrNode,
-                      SubtractNode, XorNode>;
+                      NegativeNode, OrNode, SubtractNode, XorNode>;
 
     AccumulateZipNode(std::shared_ptr<Graph> expression_ptr,
                       const std::vector<ArrayNode*>& operands, array_or_double initial);

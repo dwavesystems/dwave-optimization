@@ -21,8 +21,7 @@
 #include <stdexcept>
 #include <utility>
 
-
-#if defined( __has_include ) && __has_include(<cxxabi.h>)
+#if defined(__has_include) && __has_include(<cxxabi.h>)
 #define _HAS_CXXABI
 #include <cxxabi.h>
 #endif

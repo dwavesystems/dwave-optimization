@@ -63,13 +63,15 @@ TEST_CASE("AccumulateZipNode") {
         expression.topological_sort();
 
         THEN("We can create a accumulate node") {
-            auto accumulate_ptr = graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 5.0);
+            auto accumulate_ptr =
+                    graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 5.0);
 
             AND_WHEN("We initialize a state") {
                 auto state = graph.initialize_state();
 
                 THEN("The state is correct") {
-                    CHECK(std::ranges::equal(accumulate_ptr->view(state), std::vector{5, 7, 15, 21}));
+                    CHECK(std::ranges::equal(accumulate_ptr->view(state),
+                                             std::vector{5, 7, 15, 21}));
                 }
             }
         }
@@ -130,7 +132,8 @@ TEST_CASE("AccumulateZipNode") {
         THEN("We can create a lambda node") {
             std::vector<ArrayNode*> args({i_ptr, j_ptr});
 
-            auto accumulate_ptr = graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 6.0);
+            auto accumulate_ptr =
+                    graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 6.0);
 
             auto validation_ptr = graph.emplace_node<ArrayValidationNode>(accumulate_ptr);
 
@@ -221,7 +224,8 @@ TEST_CASE("AccumulateZipNode") {
         THEN("We can create a lambda node with basic functions and logic control") {
             std::vector<ArrayNode*> args({i_ptr, j_ptr});
 
-            auto accumulate_ptr = graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0);
+            auto accumulate_ptr =
+                    graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0);
 
             auto validation_ptr = graph.emplace_node<ArrayValidationNode>(accumulate_ptr);
 
@@ -288,7 +292,8 @@ TEST_CASE("AccumulateZipNode") {
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
 
-        THEN("We can't create a AccumulateZipNode with an expression that has inputs with a smaller "
+        THEN("We can't create a AccumulateZipNode with an expression that has inputs with a "
+             "smaller "
              "domain") {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
@@ -300,7 +305,8 @@ TEST_CASE("AccumulateZipNode") {
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
 
-        THEN("We can't create a AccumulateZipNode with an expression that has inputs with an integral "
+        THEN("We can't create a AccumulateZipNode with an expression that has inputs with an "
+             "integral "
              "domain") {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
@@ -338,7 +344,8 @@ TEST_CASE("AccumulateZipNode") {
 
         auto args = std::vector<ArrayNode*>{graph.emplace_node<ConstantNode>(i)};
 
-        THEN("We can't create a AccumulateZipNode with an expression that has inputs with an integral "
+        THEN("We can't create a AccumulateZipNode with an expression that has inputs with an "
+             "integral "
              "domain, and output that is non-integral") {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {

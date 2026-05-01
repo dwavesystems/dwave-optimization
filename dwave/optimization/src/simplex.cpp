@@ -291,7 +291,7 @@ SolveResult _linprog_simplex(std::span<const double> c, double c0, const Matrix&
 
 struct LP {
     LP(std::vector<double>&& c, double c0, Matrix&& A, std::vector<double>&& b)
-            : c(c), c0(c0), A(A), b(b){};
+            : c(c), c0(c0), A(A), b(b) {};
 
     std::vector<double> c;
     double c0;

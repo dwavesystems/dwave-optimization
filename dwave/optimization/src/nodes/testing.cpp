@@ -53,7 +53,8 @@ ArrayValidationNode::ArrayValidationNode(ArrayNode* node_ptr) : array_ptr(node_p
     assert(!array_ptr->dynamic() || array_ptr->size() <= 0);
 
     // Check that the node reports contiguity correctly
-    assert(array_ptr->contiguous() == is_contiguous(array_ptr->ndim(), array_ptr->shape().data(), array_ptr->strides().data()));
+    assert(array_ptr->contiguous() == is_contiguous(array_ptr->ndim(), array_ptr->shape().data(),
+                                                    array_ptr->strides().data()));
 
     assert([&]() {
         node_ptr->sizeinfo().substitute(5);

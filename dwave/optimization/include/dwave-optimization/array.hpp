@@ -477,7 +477,7 @@ class Array {
     /// Whether the shape of the array is state-dependent or not.
     /// Note that it's possible for the array to have a state-dependent shape
     /// but a fixed size e.g., ``(-1, 0, 2)``.
-    bool dynamic() const { 
+    bool dynamic() const {
         const auto shape = this->shape();
         return shape.size() && shape[0] < 0;
     }
@@ -506,6 +506,7 @@ class Array {
     static ssize_t shape_to_size(const std::span<const ssize_t> shape) noexcept {
         return shape_to_size(shape.size(), shape.data());
     }
+
  protected:
     // Some utility methods that might be useful to subclasses
 

@@ -176,9 +176,9 @@ class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
 
     // Overloads required by the Node ABC *************************************
 
-    void commit(State&) const override{};
-    void revert(State&) const override{};
-    void update(State&, int) const override{};
+    void commit(State&) const override {};
+    void revert(State&) const override {};
+    void update(State&, int) const override {};
 
     ssize_t set_index() const noexcept { return set_index_; };
 
@@ -266,9 +266,9 @@ class DisjointListNode : public ArrayOutputMixin<ArrayNode> {
 
     // Overloads required by the Node ABC *************************************
 
-    void commit(State&) const override{};
-    void revert(State&) const override{};
-    void update(State&, int) const override{};
+    void commit(State&) const override {};
+    void revert(State&) const override {};
+    void update(State&, int) const override {};
 
     ssize_t list_index() const noexcept { return list_index_; };
 
