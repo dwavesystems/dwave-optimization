@@ -1,0 +1,3 @@
+---
+fixes:
+  - Add missing includes to ``dwave-optimization/functional.hpp``

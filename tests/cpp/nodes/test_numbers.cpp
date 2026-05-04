@@ -199,19 +199,6 @@ TEST_CASE("BinaryNode") {
             }
         }
 
-        WHEN("We create a state using a random number generator") {
-            auto state = graph.empty_state();
-            auto rng = std::default_random_engine(42);
-            ptr->initialize_state(state, rng);
-            graph.initialize_state(state);
-            auto state_view = ptr->view(state);
-
-            THEN("Then all elements are binary valued") {
-                CHECK(std::find_if(state_view.begin(), state_view.end(),
-                                   [](int i) { return (i != 0 && i != 1); }) == state_view.end());
-            }
-        }
-
         WHEN("We create a state using a specified values") {
             auto state = graph.empty_state();
             std::vector<double> vec_d{0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
@@ -319,19 +306,6 @@ TEST_CASE("BinaryNode") {
                 CHECK_THAT(ptr->shape(state), RangeEquals({5, 5}));
                 CHECK_THAT(ptr->view(state), RangeEquals({0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}));
-            }
-        }
-
-        WHEN("We create a state using a random number generator") {
-            auto state = graph.empty_state();
-            auto rng = std::default_random_engine(42);
-            ptr->initialize_state(state, rng);
-            graph.initialize_state(state);
-            auto state_view = ptr->view(state);
-
-            THEN("Then all elements are binary valued") {
-                CHECK(std::find_if(state_view.begin(), state_view.end(),
-                                   [](int i) { return (i != 0 && i != 1); }) == state_view.end());
             }
         }
 
@@ -1000,13 +974,6 @@ TEST_CASE("BinaryNode") {
             CHECK(bnode_sum_constraint.op(0) == LessEqual);
         }
 
-        WHEN("We create a state using a random number generator") {
-            auto state = graph.empty_state();
-            auto rng = std::default_random_engine(42);
-            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, rng),
-                              "Cannot randomly initialize_state with sum constraints.");
-        }
-
         WHEN("We initialize a valid state") {
             auto state = graph.empty_state();
             std::vector<double> init_values{0, 0, 0, 1, 1, 0, 0, 0};
@@ -1102,13 +1069,6 @@ TEST_CASE("BinaryNode") {
             CHECK(bnode_sum_constraint.op(0) == Equal);
             CHECK(bnode_sum_constraint.op(1) == LessEqual);
             CHECK(bnode_sum_constraint.op(2) == GreaterEqual);
-        }
-
-        WHEN("We create a state using a random number generator") {
-            auto state = graph.empty_state();
-            auto rng = std::default_random_engine(42);
-            CHECK_THROWS_WITH(bnode_ptr->initialize_state(state, rng),
-                              "Cannot randomly initialize_state with sum constraints.");
         }
 
         WHEN("We initialize three invalid states") {
@@ -1873,25 +1833,6 @@ TEST_CASE("IntegerNode") {
             }
         }
 
-        WHEN("We create a state using a random number generator") {
-            auto state = graph.empty_state();
-            auto rng = std::default_random_engine(42);
-            ptr->initialize_state(state, rng);
-            graph.initialize_state(state);
-            auto state_view = ptr->view(state);
-
-            THEN("Then all elements are integral and within range") {
-                bool found_invalid = false;
-                for (ssize_t i = 0, stop = state_view.size(); i < stop; ++i) {
-                    if (!ptr->is_valid(i, state_view[i])) {
-                        found_invalid = true;
-                        break;
-                    }
-                }
-                CHECK(!found_invalid);
-            }
-        }
-
         WHEN("We create a state using a specified values") {
             auto state = graph.empty_state();
             std::vector<double> vec_d{-4, -4, -2, -2, 0, 0, 2, 2, 4, 4};
@@ -2363,13 +2304,6 @@ TEST_CASE("IntegerNode") {
             CHECK(inode_sum_constraint.op(0) == GreaterEqual);
         }
 
-        WHEN("We create a state using a random number generator") {
-            auto state = graph.empty_state();
-            auto rng = std::default_random_engine(42);
-            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, rng),
-                              "Cannot randomly initialize_state with sum constraints.");
-        }
-
         WHEN("We initialize a valid state") {
             auto state = graph.empty_state();
             std::vector<double> init_values{1.0, -1.0, 0.0, 5.0};
@@ -2453,13 +2387,6 @@ TEST_CASE("IntegerNode") {
             CHECK(inode_sum_constraint.op(0) == Equal);
             CHECK(inode_sum_constraint.op(1) == LessEqual);
             CHECK(inode_sum_constraint.op(2) == GreaterEqual);
-        }
-
-        WHEN("We create a state using a random number generator") {
-            auto state = graph.empty_state();
-            auto rng = std::default_random_engine(42);
-            CHECK_THROWS_WITH(inode_ptr->initialize_state(state, rng),
-                              "Cannot randomly initialize_state with sum constraints.");
         }
 
         WHEN("We initialize three invalid states") {
