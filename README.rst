@@ -1,60 +1,73 @@
-.. image:: https://img.shields.io/pypi/v/dwave-optimization.svg
+.. image:: https://img.shields.io/pypi/v/dwave-optimization.svg?style=svg
     :target: https://pypi.org/project/dwave-optimization
 
-.. image:: https://img.shields.io/pypi/pyversions/dwave-optimization.svg
+.. image:: https://img.shields.io/pypi/pyversions/dwave-optimization.svg?style=svg
     :target: https://pypi.python.org/pypi/dwave-optimization
 
 .. image:: https://circleci.com/gh/dwavesystems/dwave-optimization.svg?style=svg
     :target: https://circleci.com/gh/dwavesystems/dwave-optimization
 
-==================
-dwave-optimization
-==================
+.. image:: https://raw.githubusercontent.com/dwavesystems/dwave-optimization/main/docs/_images/optimization_stride_logo_blue_light_dark.svg
+    :class: only-light
+    :target: https://docs.dwavequantum.com/en/latest/industrial_optimization/index.html
+    :width: 225
+    :align: left
 
 .. start_optimization_about
 
-`dwave-optimization` enables the formulation of nonlinear models for industrial
-optimization problems. The package includes:
+**dwave-optimization** is an open-source library for formulating nonlinear optimization
+models for use with D-Wave's Stride™ hybrid solver.
+Models are constructed symbolically using an array-based syntax inspired by NumPy.
 
-*   A class for nonlinear models used by the
-    `Leap <https://cloud.dwavesys.com/leap>`_ service's quantum-classical
-    hybrid nonlinear-program solver.
+The package includes:
+
+*   A class for nonlinear models used by the Stride quantum-classical
+    hybrid nonlinear solver.
 *   Model generators for common optimization problems.
 
 .. end_optimization_about
 
 Example Usage
--------------
+=============
 
 .. start_optimization_examples
 
-The
-`flow-shop scheduling <https://en.wikipedia.org/wiki/Flow-shop_scheduling>`_
-problem is a variant of the renowned
-`job-shop scheduling <https://en.wikipedia.org/wiki/Optimal_job_scheduling>`_
-optimization problem. Given ``n`` jobs to schedule on ``m`` machines, with
-specified processing times for each job per machine, minimize the makespan
-(the total length of the schedule for processing all the jobs). For every
-job, the ``i``-th operation is executed on the ``i``-th machine. No machine
-can perform more than one operation simultaneously.
+The `quadratic assignment problem <https://w.wiki/HhHL>`_ problem is a combinatorial
+optimization problem.
+There are ``n`` facilities and ``n`` potential locations, a flow between each pair
+of facilities, and a distance between each pair of locations.
+The problem is to assign each facility to a location in order to minimize the
+sum of each distance multiplied by each matching flow.
 
-This small example builds a model for optimizing the schedule for processing
-two jobs on three machines.
+This small example builds a quadratic assignment using *dwave-optimization*
+symbols. There is also a
+`generator <https://docs.dwavequantum.com/en/latest/ocean/api_ref_optimization/generators.html>`_
+for this problem.
 
 .. code-block:: python
 
-    from dwave.optimization.generators import flow_shop_scheduling
+    from dwave.optimization import Model
 
-    processing_times = [[10, 5, 7], [20, 10, 15]]
-    model = flow_shop_scheduling(processing_times=processing_times)
+    model = Model()
+
+    flows = model.constant([[0, 4, 2],
+                            [3, 0, 7],
+                            [1, 8, 0]])
+    distances = model.constant([[0, 1, 2],
+                                [1, 0, 3],
+                                [2, 3, 0]])
+
+    assignment = model.list(3)
+
+    model.minimize((flows * distances[assignment, :][:, assignment]).sum())
 
 .. end_optimization_examples
 
 For explanations of the terminology, see the
 `Ocean glossary <https://docs.dwavequantum.com/en/latest/concepts/index.html>`_.
 
-See the `documentation <https://docs.dwavequantum.com/en/latest/index.html>`_
-for more examples.
+For a discussion about performance, see
+`Performance Benchmarks <https://docs.dwavequantum.com/en/latest/industrial_optimization/index_vignettes.html>`_.
 
 Installation
 ============
@@ -118,8 +131,3 @@ You can then run them using the `docs/Makefile`.
 .. code-block:: bash
 
     make -C docs doctest
-
-License
-=======
-
-Released under the Apache License 2.0. See LICENSE file.
