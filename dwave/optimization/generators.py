@@ -1059,7 +1059,7 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
         :class:`~dwave.optimization.symbols.ListVariable` decision variable of size
         :math:`n \times m` (total number of tasks), and consists of two main parts:
         One to derive a global task ordering that respects the task-ordering
-        requirement of each job, and another to build a greedy schedule based on
+        requirement of each job, and another to build a feasible schedule based on
         that global ordering.
 
         The first part is achieved by taking the list decision variable output, and
@@ -1067,9 +1067,9 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
         nodes nodes to select and then reorder the tasks of each job.
 
         The second part is achieved by iterating through the tasks in the global
-        ordering and placing it at the earliest possible time it can run. Finish
-        times for each task, as well as the finish time for the last task on each
-        machine, are maintained in lists and updated with
+        ordering and placing each task at the earliest possible time it can run.
+        Finish times for each task, as well as the finish time for the last task
+        on each machine, are maintained in lists and updated with
         :class:`~dwave.optimization.symbols.Put` nodes at each iteration.
 
         Finally, the makespan is equal to the maximum value of the finish-times
@@ -1101,9 +1101,11 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
 
         meaning that the first task is the first job on the first machine, the
         next task is the second job on the third machine, the next task is the
-        second job on the first machine, etc. The schedule is built greedily
-        based on when the next task is available to run. The makespan (objective
-        value) is 7, as shown in the following code.
+        second job on the first machine, etc. The model constructs a schedule
+        based on when the next task is available to run. The goal of the solver
+        is to determine a global ordering of tasks whose corresponding schedule
+        minimizes the makespan. The makespan (objective value) is 7, as shown in
+        the following code.
 
         The :meth:`~dwave.optimization.model.Model.iter_decisions` method
         obtains the decision variables of the generated model.
@@ -1198,7 +1200,7 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     # Alright, model construction time
     model = Model()
 
-    num_tasks = num_jobs*num_machines
+    num_tasks = num_jobs * num_machines
     NO_TASK = num_tasks
 
     # Index task durations by (job, task_index)
