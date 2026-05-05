@@ -1011,7 +1011,7 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     `E. Taillard <http://mistic.heig-vd.ch/taillard/problemes.dir/problemes.html>`_
     provides benchmark instances compatible with this generator.
 
-    .. versionchanged: 0.6.13
+    .. versionchanged:: 0.6.13
         From version `0.4.1` to `0.6.12`, the model generated used integer
         variables for the start times and included explicit non-overlap
         constraints between each pair of jobs on the machines.
@@ -1040,39 +1040,39 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
             model may be infeasible.
 
     Returns:
-        A model encoding the job-shop scheduling problem. The model will have
+        A model encoding the job-shop scheduling problem. The model includes
         three additional methods added to it:
 
-            - ``model.get_global_task_ordering(state_index: int)``: given an
+        -     ``model.get_global_task_ordering(state_index: int)``: Given an
               index of a state on the model, returns an array corresponding to
               the global ordering of all tasks where the global task index for
-              the ``j`` th task of the ``i`` th job is given by ``n * i + j``.
-
-            - ``model.get_start_times(state_index: int)``: given an
-              index of a state on the model, returns an ``n`` by ``m`` array of
+              the :math:`j` th task of the :math:`i` th job is given by :math:`n * i + j`.
+        -     ``model.get_start_times(state_index: int)``: Given an
+              index of a state on the model, returns an :math:`n` by :math:`m` array of
               start times of each task of each job.
-
-            - ``model.get_end_times(state_index: int)``: given an
-              index of a state on the model, returns an ``n`` by ``m`` array of
+        -     ``model.get_end_times(state_index: int)``: Given an
+              index of a state on the model, returns an :math:`n` by :math:`m` array of
               end times of each task of each job.
 
     Notes:
-        The model formulation has a single list decision variable of size ``n * m``
-        (total number of tasks), and consists of two main parts: one to derive a
-        global task ordering that respects the task ordering requirement of each
-        job, and another to build a greedy schedule based on that global ordering.
+        The model formulation has a single
+        :class:`~dwave.optimization.symbols.ListVariable` decision variable of size
+        :math:`n \times m` (total number of tasks), and consists of two main parts:
+        One to derive a global task ordering that respects the task-ordering
+        requirement of each job, and another to build a greedy schedule based on
+        that global ordering.
 
         The first part is achieved by taking the list decision variable output, and
-        using ``m`` ``AccumulateZip`` nodes to select and then reorder the tasks of
-        each job.
+        using :math:`m` :class:`~dwave.optimization.symbols.AccumulateZip`
+        nodes nodes to select and then reorder the tasks of each job.
 
         The second part is achieved by iterating through the tasks in the global
         ordering and placing it at the earliest possible time it can run. Finish
         times for each task, as well as the finish time for the last task on each
-        machine, are maintained in lists and updated with ``Put`` nodes at each
-        iteration.
+        machine, are maintained in lists and updated with
+        :class:`~dwave.optimization.symbols.Put` nodes at each iteration.
 
-        Finally, the makespan is equal to the maximum value of the finish times
+        Finally, the makespan is equal to the maximum value of the finish-times
         array.
 
     Examples:
@@ -1092,8 +1092,8 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
         ...             [2, 1, 0]]
         >>> model = job_shop_scheduling(times, machines)
 
-        In the global task ordering, the index for the ``j`` th task for the
-        ``i`` th job is equal to ``n*i + j``. An example solution for the final
+        In the global task ordering, the index for the :math:`j` th task for the
+        :math:`i` th job is equal to :math:`n*i + j`. An example solution for the final
         global task ordering might be:
 
         .. math::
