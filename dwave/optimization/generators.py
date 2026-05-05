@@ -1148,7 +1148,7 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
 
         This solution is shown in the figure below.
 
-        .. figure:: /_images/job_shop_scheduling_3x3.png
+        .. figure:: /_images/job_shop_scheduling_3x3.svg
             :width: 800 px
             :name: job-shop-scheduling-3x3-example
             :alt: Image of the model constructed in this example, showing
