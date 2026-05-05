@@ -1,7 +1,8 @@
 ---
 features:
   - |
-    Add three methods to the job-shop scheduling model generator:
+    Add three methods to the model returned by the job-shop scheduling model
+    generator:
     ``model.get_global_task_ordering()``,
     ``model.get_start_times()``, and
     ``model.get_end_times()``.
