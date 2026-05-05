@@ -14,7 +14,6 @@
 
 #include <array>
 #include <cstdint>
-#include <iostream>
 #include <numeric>
 #include <random>
 #include <vector>
@@ -70,8 +69,6 @@ TEMPLATE_PRODUCT_TEST_CASE("BufferIterator", "", BufferIterator,
     static_assert(std::is_nothrow_move_assignable<TestType>::value);
 
     static_assert(std::random_access_iterator<TestType>);
-    static_assert(std::random_access_iterator<TestType>);
-    static_assert(not std::contiguous_iterator<TestType>);
     static_assert(not std::contiguous_iterator<TestType>);
 
     // BufferIterator is always an input iterator

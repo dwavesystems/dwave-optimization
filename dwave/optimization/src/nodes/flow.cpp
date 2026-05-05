@@ -78,8 +78,8 @@ void ExtractNode::initialize_state(State& state) const {
     std::vector<double> values;
     values.reserve(condition.size());
 
-    const auto end = condition.end();
-    for (auto cit = condition.begin(), arrit = arr.begin(); cit != end; ++cit, ++arrit) {
+    for (auto cit = condition.begin(), arrit = arr.begin(); cit != std::default_sentinel;
+         ++cit, ++arrit) {
         if (*cit) {
             values.emplace_back(*arrit);
         }
@@ -128,9 +128,8 @@ void ExtractNode::propagate(State& state) const {
 
     // Get the new values
     std::vector<double> new_values;
-    const auto end = condition.end();
     for (auto cit = condition.begin() + min_changed_idx, arrit = arr.begin() + min_changed_idx;
-         cit != end; ++cit, ++arrit) {
+         cit != std::default_sentinel; ++cit, ++arrit) {
         if (*cit) new_values.push_back(*arrit);
     }
 
