@@ -57,9 +57,10 @@ struct InverseOp<std::multiplies<double>> {
 
 struct NaryOpNodeData : public ArrayNodeStateData {
     explicit NaryOpNodeData(
-            std::vector<double> values, std::vector<Array::const_iterator> iterators
+        std::vector<double> values,
+        std::vector<Array::const_iterator> iterators
     )
-            : ArrayNodeStateData(std::move(values)), iterators(std::move(iterators)) {}
+        : ArrayNodeStateData(std::move(values)), iterators(std::move(iterators)) {}
 
     // used to avoid reallocating memory for predecessor iterators every propagation
     std::vector<Array::const_iterator> iterators;
@@ -73,10 +74,10 @@ bool calculate_integral(const std::vector<Array*>& operands) {
         return true;
     }
     if constexpr (
-            std::is_same<BinaryOp, functional::max<double>>::value ||
-            std::is_same<BinaryOp, functional::min<double>>::value ||
-            std::is_same<BinaryOp, std::multiplies<double>>::value ||
-            std::is_same<BinaryOp, std::plus<double>>::value
+        std::is_same<BinaryOp, functional::max<double>>::value ||
+        std::is_same<BinaryOp, functional::min<double>>::value ||
+        std::is_same<BinaryOp, std::multiplies<double>>::value ||
+        std::is_same<BinaryOp, std::plus<double>>::value
     ) {
         return std::ranges::all_of(operands, [](const Array* ptr) { return ptr->integral(); });
     }
@@ -102,9 +103,8 @@ ValuesInfo calculate_values_info(const std::vector<Array*>& operands) {
     // these can result in inf. If we update propagation/initialization to handle
     // that case we should update these as well.
     if constexpr (
-            std::same_as<BinaryOp, functional::max<double>> ||
-            std::same_as<BinaryOp, functional::min<double>> ||
-            std::same_as<BinaryOp, std::plus<double>>
+        std::same_as<BinaryOp, functional::max<double>> ||
+        std::same_as<BinaryOp, functional::min<double>> || std::same_as<BinaryOp, std::plus<double>>
     ) {
         assert(operands.size() >= 1);  // checked by constructor
 
@@ -130,7 +130,7 @@ ValuesInfo calculate_values_info(const std::vector<Array*>& operands) {
             const auto rhs_high = rhs_ptr->max();
 
             std::array<double, 4> combos{
-                    op(low, rhs_low), op(low, rhs_high), op(high, rhs_low), op(high, rhs_high)
+                op(low, rhs_low), op(low, rhs_high), op(high, rhs_low), op(high, rhs_high)
             };
 
             low = std::ranges::min(combos);
@@ -160,7 +160,7 @@ ArrayNode* nonempty(std::span<ArrayNode*> node_ptrs) {
 
 template <class BinaryOp>
 NaryOpNode<BinaryOp>::NaryOpNode(std::span<ArrayNode*> node_ptrs)
-        : ArrayOutputMixin(nonempty(node_ptrs)->shape()) {
+    : ArrayOutputMixin(nonempty(node_ptrs)->shape()) {
     for (ArrayNode* ptr : node_ptrs) {
         add_node(ptr, false);
     }

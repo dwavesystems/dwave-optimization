@@ -92,8 +92,8 @@ TEST_CASE("SoftMaxNode") {
                 CHECK(softmax_ptr->size() == 2);
             }
             AND_WHEN(
-                    "We commit, make changes to integer node that result in the same "
-                    "denominator and propagate"
+                "We commit, make changes to integer node that result in the same "
+                "denominator and propagate"
             ) {
                 graph.commit(state);
                 i_ptr->set_value(state, 0, 5.0);
@@ -110,7 +110,7 @@ TEST_CASE("SoftMaxNode") {
     }
     GIVEN("A dynamic array node and a softmax node") {
         auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1}, -10.0, 10.0, false
+            std::initializer_list<ssize_t>{-1}, -10.0, 10.0, false
         );
         auto softmax_ptr = graph.emplace_node<SoftMaxNode>(dyn_ptr);
 
@@ -161,13 +161,13 @@ TEST_CASE("SoftMaxNode") {
 
                         THEN("The softmax state is correct") {
                             CHECK_THAT(
-                                    softmax_ptr->view(state)[0], WithinRel(0.37291059609381, 1e-9)
+                                softmax_ptr->view(state)[0], WithinRel(0.37291059609381, 1e-9)
                             );
                             CHECK_THAT(
-                                    softmax_ptr->view(state)[1], WithinRel(0.01838138930903, 1e-9)
+                                softmax_ptr->view(state)[1], WithinRel(0.01838138930903, 1e-9)
                             );
                             CHECK_THAT(
-                                    softmax_ptr->view(state)[2], WithinRel(0.60870801459716, 1e-9)
+                                softmax_ptr->view(state)[2], WithinRel(0.60870801459716, 1e-9)
                             );
                         }
                     }
@@ -203,8 +203,8 @@ TEST_CASE("SoftMaxNode") {
                         CHECK(softmax_ptr->size(state) == 4);
                     }
                     AND_WHEN(
-                            "We commit state, repeatedly change the same index in array, and then "
-                            "propagate"
+                        "We commit state, repeatedly change the same index in array, and then "
+                        "propagate"
                     ) {
                         graph.commit(state);
                         dyn_ptr->set(state, 0, 1.1);
@@ -217,16 +217,16 @@ TEST_CASE("SoftMaxNode") {
 
                         THEN("The softmax state and size are correct") {
                             CHECK_THAT(
-                                    softmax_ptr->view(state)[0], WithinRel(0.35994516970087, 1e-9)
+                                softmax_ptr->view(state)[0], WithinRel(0.35994516970087, 1e-9)
                             );
                             CHECK_THAT(
-                                    softmax_ptr->view(state)[1], WithinRel(0.19754209748767, 1e-9)
+                                softmax_ptr->view(state)[1], WithinRel(0.19754209748767, 1e-9)
                             );
                             CHECK_THAT(
-                                    softmax_ptr->view(state)[2], WithinRel(0.43963802305907, 1e-9)
+                                softmax_ptr->view(state)[2], WithinRel(0.43963802305907, 1e-9)
                             );
                             CHECK_THAT(
-                                    softmax_ptr->view(state)[3], WithinRel(0.00287470975239, 1e-9)
+                                softmax_ptr->view(state)[3], WithinRel(0.00287470975239, 1e-9)
                             );
                             CHECK(softmax_ptr->size(state) == 4);
                         }

@@ -26,12 +26,12 @@
 namespace dwave::optimization {
 
 TEMPLATE_TEST_CASE(
-        "NaryOpNode",
-        "",
-        functional::max<double>,
-        functional::min<double>,
-        std::plus<double>,
-        std::multiplies<double>
+    "NaryOpNode",
+    "",
+    functional::max<double>,
+    functional::min<double>,
+    std::plus<double>,
+    std::multiplies<double>
 ) {
     auto graph = Graph();
 
@@ -62,9 +62,11 @@ TEMPLATE_TEST_CASE(
         }
 
         THEN("The operands are all available via operands()") {
-            REQUIRE(std::ranges::equal(
+            REQUIRE(
+                std::ranges::equal(
                     p_ptr->operands(), std::vector<Array*>{a_ptr, b_ptr, c_ptr, d_ptr}
-            ));
+                )
+            );
 
             // we can cast to a non-const ptr if we're not const
             CHECK(static_cast<Array*>(p_ptr->operands()[0]) == static_cast<Array*>(a_ptr));
@@ -152,9 +154,13 @@ TEMPLATE_TEST_CASE(
                 CHECK(p_ptr->shape(state).size() == 1);
 
                 for (int i = 0; i < p_ptr->size(state); ++i) {
-                    CHECK(p_ptr->view(state)[i] ==
-                          func(a_ptr->view(state)[i],
-                               func(b_ptr->view(state)[i], c_ptr->view(state)[i])));
+                    CHECK(
+                        p_ptr->view(state)[i] ==
+                        func(
+                            a_ptr->view(state)[i],
+                            func(b_ptr->view(state)[i], c_ptr->view(state)[i])
+                        )
+                    );
                 }
             }
 
@@ -168,9 +174,13 @@ TEMPLATE_TEST_CASE(
 
                 THEN("The product has the values we expect") {
                     for (int i = 0; i < p_ptr->size(state); ++i) {
-                        CHECK(p_ptr->view(state)[i] ==
-                              func(a_ptr->view(state)[i],
-                                   func(b_ptr->view(state)[i], c_ptr->view(state)[i])));
+                        CHECK(
+                            p_ptr->view(state)[i] ==
+                            func(
+                                a_ptr->view(state)[i],
+                                func(b_ptr->view(state)[i], c_ptr->view(state)[i])
+                            )
+                        );
                     }
                 }
             }
@@ -179,10 +189,10 @@ TEMPLATE_TEST_CASE(
 
     GIVEN("A vector<Node*> of constants") {
         auto nodes = std::vector<ArrayNode*>{
-                graph.emplace_node<ConstantNode>(5),
-                graph.emplace_node<ConstantNode>(6),
-                graph.emplace_node<ConstantNode>(7),
-                graph.emplace_node<ConstantNode>(8)
+            graph.emplace_node<ConstantNode>(5),
+            graph.emplace_node<ConstantNode>(6),
+            graph.emplace_node<ConstantNode>(7),
+            graph.emplace_node<ConstantNode>(8)
         };
 
         WHEN("We construct a NaryOpNode from it") {

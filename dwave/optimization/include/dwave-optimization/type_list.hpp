@@ -65,10 +65,10 @@ struct type_list {
 
         // Next check if we could do a dynamic down cast. Do as much at compile-time as possible
         if constexpr (
-                std::is_pointer_v<Type>                               //
-                && std::is_polymorphic_v<T>                           //
-                && std::derived_from<std::remove_pointer_t<Type>, T>  //
-                && (std::is_const_v<std::remove_pointer_t<Type>> || !std::is_const_v<T>)
+            std::is_pointer_v<Type>                               //
+            && std::is_polymorphic_v<T>                           //
+            && std::derived_from<std::remove_pointer_t<Type>, T>  //
+            && (std::is_const_v<std::remove_pointer_t<Type>> || !std::is_const_v<T>)
         ) {
             if (typeid(std::remove_pointer_t<Type>) == typeid(*ptr)) return true;
         }
@@ -121,10 +121,10 @@ struct type_list {
 
         // Next check if we could do a dynamic down cast. Do as much at compile-time as possible
         if constexpr (
-                std::is_pointer_v<Type>                               //
-                && std::is_polymorphic_v<T>                           //
-                && std::derived_from<std::remove_pointer_t<Type>, T>  //
-                && (std::is_const_v<std::remove_pointer_t<Type>> || !std::is_const_v<T>)
+            std::is_pointer_v<Type>                               //
+            && std::is_polymorphic_v<T>                           //
+            && std::derived_from<std::remove_pointer_t<Type>, T>  //
+            && (std::is_const_v<std::remove_pointer_t<Type>> || !std::is_const_v<T>)
         ) {
             if (auto dyn_ptr = dynamic_cast<Type>(ptr); dyn_ptr) return dyn_ptr;
         }
@@ -134,10 +134,10 @@ struct type_list {
         // so we need to add supported types to the variant on the way back out.
         if constexpr (sizeof...(Types)) {
             return std::visit(
-                    [](auto&& obj) -> std::variant<std::monostate, Type, Types...> {
-                        return std::forward<decltype(obj)>(obj);
-                    },
-                    type_list<Types...>::template make_variant<T>(ptr)
+                [](auto&& obj) -> std::variant<std::monostate, Type, Types...> {
+                    return std::forward<decltype(obj)>(obj);
+                },
+                type_list<Types...>::template make_variant<T>(ptr)
             );
         }
 

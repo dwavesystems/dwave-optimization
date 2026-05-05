@@ -29,43 +29,41 @@ ValuesInfo calculate_values_info(std::span<const double> buffer) {
     }
 
     return ValuesInfo(
-            std::ranges::min(buffer),
-            std::ranges::max(buffer),
-            std::ranges::all_of(buffer, is_integer)
+        std::ranges::min(buffer), std::ranges::max(buffer), std::ranges::all_of(buffer, is_integer)
     );
 }
 
 ConstantNode::ConstantNode(const double* data_ptr, std::initializer_list<ssize_t> shape)
-        : ArrayOutputMixin(disallow_dynamic(shape)),
-          buffer_ptr_(data_ptr),
-          values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))) {}
+    : ArrayOutputMixin(disallow_dynamic(shape)),
+      buffer_ptr_(data_ptr),
+      values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))) {}
 
 ConstantNode::ConstantNode(const double* data_ptr, const std::span<const ssize_t> shape)
-        : ArrayOutputMixin(disallow_dynamic(shape)),
-          buffer_ptr_(data_ptr),
-          values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))) {}
+    : ArrayOutputMixin(disallow_dynamic(shape)),
+      buffer_ptr_(data_ptr),
+      values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))) {}
 
 ConstantNode::ConstantNode(
-        std::unique_ptr<DataSource> data_source,
-        const double* data_ptr,
-        const std::span<const ssize_t> shape
+    std::unique_ptr<DataSource> data_source,
+    const double* data_ptr,
+    const std::span<const ssize_t> shape
 )
-        : ArrayOutputMixin(disallow_dynamic(shape)),
-          buffer_ptr_(data_ptr),
-          values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),
-          data_source_(std::move(data_source)) {}
+    : ArrayOutputMixin(disallow_dynamic(shape)),
+      buffer_ptr_(data_ptr),
+      values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),
+      data_source_(std::move(data_source)) {}
 
 ConstantNode::ConstantNode(OwningDataSource&& data_source, std::initializer_list<ssize_t> shape)
-        : ArrayOutputMixin(disallow_dynamic(shape)),
-          buffer_ptr_(data_source.get()),
-          values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),
-          data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
+    : ArrayOutputMixin(disallow_dynamic(shape)),
+      buffer_ptr_(data_source.get()),
+      values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),
+      data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
 
 ConstantNode::ConstantNode(OwningDataSource&& data_source, const std::span<const ssize_t> shape)
-        : ArrayOutputMixin(disallow_dynamic(shape)),
-          buffer_ptr_(data_source.get()),
-          values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),
-          data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
+    : ArrayOutputMixin(disallow_dynamic(shape)),
+      buffer_ptr_(data_source.get()),
+      values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),
+      data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
 
 bool ConstantNode::integral() const { return this->values_info_.integral; }
 

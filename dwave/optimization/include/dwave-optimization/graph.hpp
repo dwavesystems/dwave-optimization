@@ -88,11 +88,9 @@ class Graph {
     // Given the source (changing) nodes, update the model incrementally and accept the changes
     // according to the accept function.
     void propose(
-            State& state,
-            std::vector<const Node*> sources,
-            std::function<bool(const Graph&, State&)> accept = [](const Graph&, State&) {
-                return true;
-            }
+        State& state,
+        std::vector<const Node*> sources,
+        std::function<bool(const Graph&, State&)> accept = [](const Graph&, State&) { return true; }
     ) const;
 
     // Get the descendants of the source nodes, that is, all nodes that can be visited starting from
@@ -267,7 +265,7 @@ class Node {
  protected:
     // For use by non-dynamic node constructors.
     Node(std::initializer_list<Node*> nodes) noexcept
-            : predecessors_(nodes), expired_ptr_(new bool(false)) {
+        : predecessors_(nodes), expired_ptr_(new bool(false)) {
         int idx = 0;
         for (Node* ptr : predecessors_) {
             ptr->successors_.emplace_back(this, idx);
@@ -277,8 +275,10 @@ class Node {
 
     /// Add a predecessor node. Adds itself to the predecessor as a successor.
     void add_predecessor(Node* predecessor) {
-        assert(this->topological_index_ <= 0 &&
-               "cannot add a predecessor to a topologically sorted node");
+        assert(
+            this->topological_index_ <= 0 &&
+            "cannot add a predecessor to a topologically sorted node"
+        );
         predecessor->successors_.emplace_back(this, this->predecessors_.size());
         this->predecessors_.emplace_back(predecessor);
     }

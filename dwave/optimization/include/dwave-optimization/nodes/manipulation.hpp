@@ -98,7 +98,7 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
  public:
     explicit ConcatenateNode(std::span<ArrayNode*> array_ptrs, ssize_t axis);
     explicit ConcatenateNode(std::ranges::contiguous_range auto&& array_ptrs, ssize_t axis)
-            : ConcatenateNode(std::span<ArrayNode*>(array_ptrs), axis) {}
+        : ConcatenateNode(std::span<ArrayNode*>(array_ptrs), axis) {}
 
     double const* buff(const State& statfe) const override;
     void commit(State& state) const override;
@@ -253,7 +253,7 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     /// @param shape The new shape. Must have the same size as the original shape.
     template <std::ranges::range Range>
     ReshapeNode(ArrayNode* node_ptr, Range&& shape)
-            : ReshapeNode(node_ptr, std::vector<ssize_t>(shape.begin(), shape.end())) {}
+        : ReshapeNode(node_ptr, std::vector<ssize_t>(shape.begin(), shape.end())) {}
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -325,7 +325,7 @@ class ResizeNode : public ArrayOutputMixin<ArrayNode> {
     /// @param fill_value The value to use for missing values.
     template <std::ranges::range Range>
     ResizeNode(ArrayNode* node_ptr, Range&& shape, double fill_value = 0)
-            : ResizeNode(node_ptr, std::vector<ssize_t>(shape.begin(), shape.end()), fill_value) {}
+        : ResizeNode(node_ptr, std::vector<ssize_t>(shape.begin(), shape.end()), fill_value) {}
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -435,7 +435,9 @@ class RollNode : public ArrayOutputMixin<ArrayNode> {
     // Rotate the given array with the given shift by the shift given for each
     // axis. Acts in-place.
     static void rotate_(
-            std::span<double> array, std::span<const ssize_t> shape, std::span<const ssize_t> shifts
+        std::span<double> array,
+        std::span<const ssize_t> shape,
+        std::span<const ssize_t> shifts
     );
 
     // Return the current shift, and whether is changed since the last propagation.

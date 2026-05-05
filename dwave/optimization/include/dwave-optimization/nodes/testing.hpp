@@ -46,18 +46,18 @@ class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decis
  public:
     DynamicArrayTestingNode(std::initializer_list<ssize_t> shape);
     DynamicArrayTestingNode(
-            std::initializer_list<ssize_t> shape,
-            std::optional<double> min,
-            std::optional<double> max,
-            bool integral
+        std::initializer_list<ssize_t> shape,
+        std::optional<double> min,
+        std::optional<double> max,
+        bool integral
     );
     DynamicArrayTestingNode(
-            std::initializer_list<ssize_t> shape,
-            std::optional<double> min,
-            std::optional<double> max,
-            bool integral,
-            std::optional<ssize_t> min_size,
-            std::optional<ssize_t> max_size
+        std::initializer_list<ssize_t> shape,
+        std::optional<double> min,
+        std::optional<double> max,
+        bool integral,
+        std::optional<ssize_t> min_size,
+        std::optional<ssize_t> max_size
     );
 
     // Overloads needed by the Array ABC **************************************

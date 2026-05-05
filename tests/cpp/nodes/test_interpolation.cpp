@@ -38,8 +38,10 @@ TEST_CASE("BSpline") {
                 CHECK(!bspline.dynamic());
             }
 
-            THEN("The output is not a integer, we know the min/max and can get the bspline "
-                 "constants") {
+            THEN(
+                "The output is not a integer, we know the min/max and can get the bspline "
+                "constants"
+            ) {
                 CHECK(!bspline.integral());
                 CHECK(bspline.min() == -1);
                 CHECK(bspline.max() == 2);
@@ -67,7 +69,7 @@ TEST_CASE("BSpline") {
 
         THEN("The state of the BSplineNode is as expected") {
             std::vector<double> expected = {
-                    0.5, 1.09375, 1.375, 1.34375, 1.0, 0.53125, 0.125, -0.21875, -0.5
+                0.5, 1.09375, 1.375, 1.34375, 1.0, 0.53125, 0.125, -0.21875, -0.5
             };
             CHECK(std::ranges::equal(bspline_ptr->view(state), expected));
         }

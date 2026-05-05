@@ -51,10 +51,10 @@ struct IsInNodeDataHelper_ {
 
 struct IsInNodeData : public ArrayNodeStateData {
     IsInNodeData(std::vector<double> element, std::vector<double> test_elements)
-            : IsInNodeData(IsInNodeDataHelper_(std::move(element), std::move(test_elements))) {}
+        : IsInNodeData(IsInNodeDataHelper_(std::move(element), std::move(test_elements))) {}
     IsInNodeData(IsInNodeDataHelper_&& helper)
-            : ArrayNodeStateData(std::move(helper.element_isin)),
-              set_data(std::move(helper.set_data)) {}
+        : ArrayNodeStateData(std::move(helper.element_isin)),
+          set_data(std::move(helper.set_data)) {}
 
     // Used to track if elements are added/removed from `test_elements`
     // during IsInNode::propagate()
@@ -68,9 +68,9 @@ struct IsInNodeData : public ArrayNodeStateData {
 };
 
 IsInNode::IsInNode(ArrayNode* element_ptr, ArrayNode* test_elements_ptr)
-        : ArrayOutputMixin(element_ptr->shape()),
-          element_ptr_(element_ptr),
-          test_elements_ptr_(test_elements_ptr) {
+    : ArrayOutputMixin(element_ptr->shape()),
+      element_ptr_(element_ptr),
+      test_elements_ptr_(test_elements_ptr) {
     add_predecessor(element_ptr);
     add_predecessor(test_elements_ptr);
 }
@@ -90,9 +90,9 @@ void IsInNode::initialize_state(State& state) const {
     const Array::View test_elements = test_elements_ptr_->view(state);
 
     emplace_data_ptr<IsInNodeData>(
-            state,
-            std::vector<double>{element.begin(), element.end()},
-            std::vector<double>{test_elements.begin(), test_elements.end()}
+        state,
+        std::vector<double>{element.begin(), element.end()},
+        std::vector<double>{test_elements.begin(), test_elements.end()}
     );
 }
 

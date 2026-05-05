@@ -234,8 +234,10 @@ TEST_CASE("Scalar") {
         Update update_;
     };
 
-    WHEN("We instantiate a class representing a scalar inheriting from "
-         "ScalarOutputMixin<ArrayBase, double>") {
+    WHEN(
+        "We instantiate a class representing a scalar inheriting from "
+        "ScalarOutputMixin<ArrayBase, double>"
+    ) {
         auto a = FloatScalar(7.5);
 
         THEN("It has all of the buffer protocol values we expect") {
@@ -381,9 +383,9 @@ TEST_CASE("Dynamically Sized 2d Array") {
             CHECK(arr.ndim() == 2);
             CHECK(std::ranges::equal(arr.shape(), std::vector{-1, 3}));
             CHECK(std::ranges::equal(arr.shape(state), std::vector{0, 3}));
-            CHECK(std::ranges::equal(
-                    arr.strides(), std::vector{3 * sizeof(double), sizeof(double)}
-            ));
+            CHECK(
+                std::ranges::equal(arr.strides(), std::vector{3 * sizeof(double), sizeof(double)})
+            );
 
             CHECK(arr.size() == -1);
             CHECK(arr.size(state) == 0);
@@ -411,9 +413,11 @@ TEST_CASE("Dynamically Sized 2d Array") {
                 CHECK(arr.ndim() == 2);
                 CHECK(std::ranges::equal(arr.shape(), std::vector{-1, 3}));
                 CHECK(std::ranges::equal(arr.shape(state), std::vector{1, 3}));
-                CHECK(std::ranges::equal(
+                CHECK(
+                    std::ranges::equal(
                         arr.strides(), std::vector{3 * sizeof(double), sizeof(double)}
-                ));
+                    )
+                );
 
                 CHECK(arr.size() == -1);
                 CHECK(arr.size(state) == 3);
@@ -422,9 +426,9 @@ TEST_CASE("Dynamically Sized 2d Array") {
                 CHECK(std::ranges::equal(arr.view(state), arr.state_));
 
                 // for contiguous view is the same as span(buff(), size())
-                CHECK(std::ranges::equal(
-                        std::span(arr.buff(state), arr.size(state)), arr.view(state)
-                ));
+                CHECK(
+                    std::ranges::equal(std::span(arr.buff(state), arr.size(state)), arr.view(state))
+                );
             }
         }
     }
@@ -447,12 +451,12 @@ TEST_CASE("Update") {
     }
     GIVEN("A vector of updated, sometimes over the same index") {
         std::vector<Update> updates{
-                {3, 1.0, 2.0},
-                {0, 0.0, 1.0},
-                {3, 0.0, 1.0},
-                {105, 5.0, 6.0},
-                Update::placement(2, 5.0),
-                Update::removal(3, 6.0)
+            {3, 1.0, 2.0},
+            {0, 0.0, 1.0},
+            {3, 0.0, 1.0},
+            {105, 5.0, 6.0},
+            Update::placement(2, 5.0),
+            Update::removal(3, 6.0)
         };
 
         WHEN("We do a stable sort") {
@@ -531,26 +535,26 @@ TEST_CASE("Test broadcast_shapes()") {
     }
     SECTION("(1,1) x (-1,) -> invalid") {
         CHECK_THROWS_WITH(
-                broadcast_shapes({1, 1}, {-1}),
-                "operands could not be broadcast together with shapes (1, 1) (-1,)"
+            broadcast_shapes({1, 1}, {-1}),
+            "operands could not be broadcast together with shapes (1, 1) (-1,)"
         );
     }
     SECTION("(3,) x (4,)") {
         CHECK_THROWS_WITH(
-                broadcast_shapes({3}, {4}),
-                "operands could not be broadcast together with shapes (3,) (4,)"
+            broadcast_shapes({3}, {4}),
+            "operands could not be broadcast together with shapes (3,) (4,)"
         );
     }
     SECTION("(2,1) x (8,4,3)") {
         CHECK_THROWS_WITH(
-                broadcast_shapes({2, 1}, {8, 4, 3}),
-                "operands could not be broadcast together with shapes (2, 1) (8, 4, 3)"
+            broadcast_shapes({2, 1}, {8, 4, 3}),
+            "operands could not be broadcast together with shapes (2, 1) (8, 4, 3)"
         );
     }
     SECTION("(-1,3) x (8,4,3)") {
         CHECK_THROWS_WITH(
-                broadcast_shapes({-1, 3}, {8, 4, 3}),
-                "operands could not be broadcast together with shapes (-1, 3) (8, 4, 3)"
+            broadcast_shapes({-1, 3}, {8, 4, 3}),
+            "operands could not be broadcast together with shapes (-1, 3) (8, 4, 3)"
         );
     }
 }
@@ -607,8 +611,8 @@ TEST_CASE("Test deduplicate_diff") {
                 deduped_and_shifted.emplace_back(u);
             }
             CHECK_THAT(
-                    deduped_and_shifted,
-                    RangeEquals({Update(3, 1, 0), Update(4, 0, 1), Update(6, 0, -1)})
+                deduped_and_shifted,
+                RangeEquals({Update(3, 1, 0), Update(4, 0, 1), Update(6, 0, -1)})
             );
         }
     }
@@ -635,7 +639,7 @@ TEST_CASE("Test deduplicate_diff") {
 
     GIVEN("A list of update of many noop Updates") {
         std::vector<Update> updates = {
-                Update(3, 1, 1), Update(3, 1, 1), Update(4, -1, -1), Update(0, 57, 57)
+            Update(3, 1, 1), Update(3, 1, 1), Update(4, -1, -1), Update(0, 57, 57)
         };
 
         WHEN("We call deduplicate_diff") {
@@ -646,72 +650,80 @@ TEST_CASE("Test deduplicate_diff") {
 
     GIVEN("A list of updates with no duplicates and one noop at the beginning") {
         std::vector<Update> updates = {
-                Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2), Update(0, 57, 57)
+            Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2), Update(0, 57, 57)
         };
 
         WHEN("We call deduplicate_diff") {
             deduplicate_diff(updates);
             THEN("deduplicate_diff() removes the noop") {
-                CHECK(std::ranges::equal(
+                CHECK(
+                    std::ranges::equal(
                         updates,
                         std::vector<Update>{Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2)}
-                ));
+                    )
+                );
             }
         }
     }
 
     GIVEN("A list of updates with no duplicates and one noop at the end") {
         std::vector<Update> updates = {
-                Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2), Update(8, 57, 57)
+            Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2), Update(8, 57, 57)
         };
 
         WHEN("We call deduplicate_diff") {
             deduplicate_diff(updates);
             THEN("deduplicate_diff() removes the noop") {
-                CHECK(std::ranges::equal(
+                CHECK(
+                    std::ranges::equal(
                         updates,
                         std::vector<Update>{Update(3, 1, 5), Update(4, 1, 5), Update(6, -1, -2)}
-                ));
+                    )
+                );
             }
         }
     }
 
     GIVEN("A list of updates with duplicates") {
         std::vector<Update> updates = {
-                Update(3, 1, 5),
-                Update(3, 5, -3),
-                Update(6, -1, -2),
-                Update(6, -2, 57),
-                Update(3, -3, -4),
-                Update(2, 0, 1)
+            Update(3, 1, 5),
+            Update(3, 5, -3),
+            Update(6, -1, -2),
+            Update(6, -2, 57),
+            Update(3, -3, -4),
+            Update(2, 0, 1)
         };
 
         WHEN("We call deduplicate_diff") {
             deduplicate_diff(updates);
             THEN("deduplicate_diff() removes the noop") {
-                CHECK(std::ranges::equal(
+                CHECK(
+                    std::ranges::equal(
                         updates,
                         std::vector<Update>{Update(2, 0, 1), Update(3, 1, -4), Update(6, -1, 57)}
-                ));
+                    )
+                );
             }
         }
     }
 
     GIVEN("A list of updates that grows and shrinks") {
         std::vector<Update> updates = {
-                Update(3, 1, 5),
-                Update::placement(5, 7),
-                Update::placement(6, 7),
-                Update(5, 7, 4),
-                Update::removal(6, 7)
+            Update(3, 1, 5),
+            Update::placement(5, 7),
+            Update::placement(6, 7),
+            Update(5, 7, 4),
+            Update::removal(6, 7)
         };
 
         WHEN("We call deduplicate_diff") {
             deduplicate_diff(updates);
             THEN("deduplicate_diff() trims the diff properly") {
-                CHECK(std::ranges::equal(
+                CHECK(
+                    std::ranges::equal(
                         updates, std::vector<Update>{Update(3, 1, 5), Update::placement(5, 4)}
-                ));
+                    )
+                );
             }
         }
     }

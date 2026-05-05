@@ -126,9 +126,11 @@ TEST_CASE("ExtractNode") {
                 graph.initialize_state(state);
 
                 THEN("The `extract` output is correct") {
-                    CHECK(std::ranges::equal(
+                    CHECK(
+                        std::ranges::equal(
                             extract_ptr->view(state), std::vector<double>{2, 3, 6, 7}
-                    ));
+                        )
+                    );
                 }
             }
         }
@@ -136,7 +138,7 @@ TEST_CASE("ExtractNode") {
 
     GIVEN("Two same-sized dynamic nodes") {
         auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 2}, -1, 5, false
+            std::initializer_list<ssize_t>{-1, 2}, -1, 5, false
         );
         auto condition_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
         auto arr_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 1);
@@ -175,9 +177,9 @@ TEST_CASE("ExtractNode") {
                 graph.propose(state, {dyn_ptr});
 
                 THEN("The `extract` output is correct") {
-                    CHECK(std::ranges::equal(
-                            extract_ptr->view(state), std::vector<double>{1, -0.6}
-                    ));
+                    CHECK(
+                        std::ranges::equal(extract_ptr->view(state), std::vector<double>{1, -0.6})
+                    );
                 }
             }
 
@@ -192,9 +194,9 @@ TEST_CASE("ExtractNode") {
                 graph.propose(state, {dyn_ptr});
 
                 THEN("The `extract` output is correct") {
-                    CHECK(std::ranges::equal(
-                            extract_ptr->view(state), std::vector<double>{3, 3.5}
-                    ));
+                    CHECK(
+                        std::ranges::equal(extract_ptr->view(state), std::vector<double>{3, 3.5})
+                    );
                 }
             }
         }
@@ -427,7 +429,7 @@ TEST_CASE("WhereNode") {
 
     GIVEN("Three dynamic nodes and a where node") {
         auto dyn_ptr =
-                graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 3});
+            graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 3});
 
         auto condition_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
         auto x_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 1);
@@ -441,22 +443,22 @@ TEST_CASE("WhereNode") {
         // initialize the state to an interesting starting point
         auto state = graph.empty_state();
         dyn_ptr->initialize_state(
-                state,
-                {
-                        // condition, x, y
-                        0,
-                        1,
-                        1,
-                        1,
-                        2,
-                        1,
-                        0,
-                        3,
-                        1,
-                        2,
-                        4,
-                        1,
-                }
+            state,
+            {
+                // condition, x, y
+                0,
+                1,
+                1,
+                1,
+                2,
+                1,
+                0,
+                3,
+                1,
+                2,
+                4,
+                1,
+            }
         );
         graph.initialize_state(state);
 

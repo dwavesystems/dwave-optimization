@@ -30,14 +30,14 @@ using Catch::Matchers::RangeEquals;
 namespace dwave::optimization {
 
 TEMPLATE_TEST_CASE(
-        "ReduceNode",
-        "",  //
-        functional::max<double>,
-        functional::min<double>,  //
-        std::logical_and<double>,
-        std::logical_or<double>,  //
-        std::multiplies<double>,  //
-        std::plus<double>
+    "ReduceNode",
+    "",  //
+    functional::max<double>,
+    functional::min<double>,  //
+    std::logical_and<double>,
+    std::logical_or<double>,  //
+    std::multiplies<double>,  //
+    std::plus<double>
 ) {
     auto graph = Graph();
 
@@ -131,8 +131,9 @@ TEMPLATE_TEST_CASE(
             THEN("The reduction has the value and shape we expect") {
                 CHECK(r_ptr->ndim() == 0);
                 CHECK(r_ptr->size(state) == 1);
-                CHECK(r_ptr->view(state)[0] ==
-                      std::reduce(values.begin(), values.end(), init, func));
+                CHECK(
+                    r_ptr->view(state)[0] == std::reduce(values.begin(), values.end(), init, func)
+                );
             }
         }
     }
@@ -1263,15 +1264,15 @@ TEST_CASE("SumNode") {
                         r_ptr_2->revert(state);
 
                         THEN("The values are reverted") {
-                            CHECK(std::ranges::equal(
-                                    r_ptr_0->view(state), std::vector<double>(6, 0)
-                            ));
-                            CHECK(std::ranges::equal(
-                                    r_ptr_1->view(state), std::vector<double>(4, 0)
-                            ));
-                            CHECK(std::ranges::equal(
-                                    r_ptr_2->view(state), std::vector<double>(6, 0)
-                            ));
+                            CHECK(
+                                std::ranges::equal(r_ptr_0->view(state), std::vector<double>(6, 0))
+                            );
+                            CHECK(
+                                std::ranges::equal(r_ptr_1->view(state), std::vector<double>(4, 0))
+                            );
+                            CHECK(
+                                std::ranges::equal(r_ptr_2->view(state), std::vector<double>(6, 0))
+                            );
                         }
                     }
                 }
@@ -1325,9 +1326,9 @@ TEST_CASE("SumNode") {
         auto graph = Graph();
         auto set_ptr = graph.emplace_node<SetNode>(10);
         auto reshape_ptr =
-                graph.emplace_node<ReshapeNode>(set_ptr, std::array<ssize_t, 3>{-1, 1, 1});
+            graph.emplace_node<ReshapeNode>(set_ptr, std::array<ssize_t, 3>{-1, 1, 1});
         auto arr_ptr =
-                graph.emplace_node<BroadcastToNode>(reshape_ptr, std::array<ssize_t, 3>{-1, 3, 4});
+            graph.emplace_node<BroadcastToNode>(reshape_ptr, std::array<ssize_t, 3>{-1, 3, 4});
 
         WHEN("We try to do a reduction with invalid axes") {
             CHECK_THROWS(SumNode(arr_ptr, {0, 0}));   // duplicate
@@ -1389,8 +1390,8 @@ TEST_CASE("SumNode") {
                 set_ptr->assign(state, {1, 2, 4, 3});
                 graph.propagate(state);
                 CHECK_THAT(
-                        x_ptr->view(state),
-                        RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12})
+                    x_ptr->view(state),
+                    RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12})
                 );
                 graph.commit(state);
 
@@ -1400,8 +1401,8 @@ TEST_CASE("SumNode") {
 
                 graph.revert(state);
                 CHECK_THAT(
-                        x_ptr->view(state),
-                        RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12})
+                    x_ptr->view(state),
+                    RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12})
                 );
 
                 set_ptr->assign(state, {1, 2, 3, 4, 5, 6});
@@ -1411,8 +1412,8 @@ TEST_CASE("SumNode") {
 
                 graph.revert(state);
                 CHECK_THAT(
-                        x_ptr->view(state),
-                        RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12})
+                    x_ptr->view(state),
+                    RangeEquals({12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12})
                 );
             }
         }
@@ -1436,8 +1437,8 @@ TEST_CASE("SumNode") {
                 set_ptr->assign(state, {1, 2, 4, 3});
                 graph.propagate(state);
                 CHECK_THAT(
-                        x_ptr->view(state),
-                        RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11})
+                    x_ptr->view(state),
+                    RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11})
                 );
                 graph.commit(state);
 
@@ -1447,8 +1448,8 @@ TEST_CASE("SumNode") {
 
                 graph.revert(state);
                 CHECK_THAT(
-                        x_ptr->view(state),
-                        RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11})
+                    x_ptr->view(state),
+                    RangeEquals({5, 5, 5, 5, 8, 8, 8, 8, 14, 14, 14, 14, 11, 11, 11, 11})
                 );
 
                 set_ptr->assign(state, {1, 2, 3, 4, 5, 6});
@@ -1581,10 +1582,12 @@ TEST_CASE("SumNode") {
         CHECK_THAT(sum_ptr->view(state), RangeEquals({3, 3, 3, 3}));
     }
 
-    GIVEN("Dynamic array of shape (-1, 2) with min/max of 1/3 on first dim, and a sum across the"
-          "second dim") {
+    GIVEN(
+        "Dynamic array of shape (-1, 2) with min/max of 1/3 on first dim, and a sum across the"
+        "second dim"
+    ) {
         auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 2}, 0.0, 10.0, true, 2, 6
+            std::initializer_list<ssize_t>{-1, 2}, 0.0, 10.0, true, 2, 6
         );
         auto sum_ptr = graph.emplace_node<SumNode>(x_ptr, std::vector<ssize_t>{1});
 

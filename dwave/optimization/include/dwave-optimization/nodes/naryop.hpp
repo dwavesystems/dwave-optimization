@@ -36,7 +36,7 @@ class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
     explicit NaryOpNode(ArrayNode* node_ptr);
     explicit NaryOpNode(std::span<ArrayNode*> node_ptrs);
     explicit NaryOpNode(ArrayNode* node_ptr, std::convertible_to<ArrayNode*> auto... node_ptrs)
-            : NaryOpNode(node_ptr) {
+        : NaryOpNode(node_ptr) {
         (add_node(node_ptrs), ...);
     }
 

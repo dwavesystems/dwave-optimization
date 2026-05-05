@@ -43,39 +43,42 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
 
     /// The node types that are allowed to be used in the expression.
     using supported_node_types = type_list<
-            AddNode,
-            AndNode,
-            ConstantNode,
-            DivideNode,
-            EqualNode,
-            InputNode,
-            LessEqualNode,
-            MaximumNode,
-            MinimumNode,
-            ModulusNode,
-            MultiplyNode,
-            NegativeNode,
-            OrNode,
-            SubtractNode,
-            XorNode>;
+        AddNode,
+        AndNode,
+        ConstantNode,
+        DivideNode,
+        EqualNode,
+        InputNode,
+        LessEqualNode,
+        MaximumNode,
+        MinimumNode,
+        ModulusNode,
+        MultiplyNode,
+        NegativeNode,
+        OrNode,
+        SubtractNode,
+        XorNode>;
 
     AccumulateZipNode(
-            std::shared_ptr<Graph> expression_ptr,
-            const std::vector<ArrayNode*>& operands,
-            array_or_double initial
+        std::shared_ptr<Graph> expression_ptr,
+        const std::vector<ArrayNode*>& operands,
+        array_or_double initial
     );
 
     AccumulateZipNode(
-            Graph&& expression, const std::vector<ArrayNode*>& operands, array_or_double initial
+        Graph&& expression,
+        const std::vector<ArrayNode*>& operands,
+        array_or_double initial
     )
-            : AccumulateZipNode(std::make_shared<Graph>(std::move(expression)), operands, initial) {
-    }
+        : AccumulateZipNode(std::make_shared<Graph>(std::move(expression)), operands, initial) {}
     AccumulateZipNode(Graph&& expression, const std::vector<ArrayNode*>& operands, double initial)
-            : AccumulateZipNode(std::move(expression), operands, array_or_double(initial)) {}
+        : AccumulateZipNode(std::move(expression), operands, array_or_double(initial)) {}
     AccumulateZipNode(
-            Graph&& expression, const std::vector<ArrayNode*>& operands, ArrayNode* initial
+        Graph&& expression,
+        const std::vector<ArrayNode*>& operands,
+        ArrayNode* initial
     )
-            : AccumulateZipNode(std::move(expression), operands, array_or_double(initial)) {}
+        : AccumulateZipNode(std::move(expression), operands, array_or_double(initial)) {}
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -83,9 +86,9 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
     /// Do a "dry run" of the constructor and raise any errors that constructor would
     /// raise.
     static void check(
-            const Graph& expression,
-            std::span<const ArrayNode* const> operands,
-            array_or_double initial
+        const Graph& expression,
+        std::span<const ArrayNode* const> operands,
+        array_or_double initial
     );
 
     /// @copydoc Node::commit()

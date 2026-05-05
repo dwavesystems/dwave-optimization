@@ -40,11 +40,11 @@ using NumberNode::SumConstraint::Operator::LessEqual;
 /// value 1 (True == 1) or 0 (True == 0).
 template <bool True>
 void check_indices(
-        const State& state,
-        const BinaryNode* node,
-        const ssize_t sum_constraint_id,
-        const ssize_t slice,
-        std::vector<ssize_t> expected_indices
+    const State& state,
+    const BinaryNode* node,
+    const ssize_t sum_constraint_id,
+    const ssize_t slice,
+    std::vector<ssize_t> expected_indices
 ) {
     std::vector<ssize_t> recorded_indices;
     const ssize_t num_indices = True ? node->num_true(state, sum_constraint_id, slice)
@@ -52,8 +52,8 @@ void check_indices(
     recorded_indices.reserve(num_indices);
     for (ssize_t i = 0; i < num_indices; ++i) {
         recorded_indices.emplace_back(
-                True ? node->ith_true_index(state, sum_constraint_id, slice, i)
-                     : node->ith_false_index(state, sum_constraint_id, slice, i)
+            True ? node->ith_true_index(state, sum_constraint_id, slice, i)
+                 : node->ith_false_index(state, sum_constraint_id, slice, i)
         );
     }
 
@@ -65,49 +65,48 @@ void check_indices(
 TEST_CASE("SumConstraint") {
     GIVEN("SumConstraint(axis = nullopt, operators = {}, bounds = {1.0})") {
         REQUIRE_THROWS_WITH(
-                SumConstraint(std::nullopt, {}, {1.0}),
-                "`operators` and `bounds` must have non-zero size."
+            SumConstraint(std::nullopt, {}, {1.0}),
+            "`operators` and `bounds` must have non-zero size."
         );
     }
 
     GIVEN("SumConstraint(axis = nullopt, operators = {<=}, bounds = {})") {
         REQUIRE_THROWS_WITH(
-                SumConstraint(std::nullopt, {LessEqual}, {}),
-                "`operators` and `bounds` must have non-zero size."
+            SumConstraint(std::nullopt, {LessEqual}, {}),
+            "`operators` and `bounds` must have non-zero size."
         );
     }
 
     GIVEN("SumConstraint(axis = nullopt, operators = {<=, ==}, bounds = {1.0})") {
         REQUIRE_THROWS_WITH(
-                SumConstraint(std::nullopt, {LessEqual, Equal}, {1.0}),
-                "If `axis` is undefined, `operators` and `bounds` must have size 1."
+            SumConstraint(std::nullopt, {LessEqual, Equal}, {1.0}),
+            "If `axis` is undefined, `operators` and `bounds` must have size 1."
         );
     }
 
     GIVEN("SumConstraint(axis = nullopt, operators = {<=}, bounds = {1.0, 2.0})") {
         REQUIRE_THROWS_WITH(
-                SumConstraint(std::nullopt, {LessEqual}, {1.0, 2.0}),
-                "If `axis` is undefined, `operators` and `bounds` must have size 1."
+            SumConstraint(std::nullopt, {LessEqual}, {1.0, 2.0}),
+            "If `axis` is undefined, `operators` and `bounds` must have size 1."
         );
     }
 
     GIVEN("SumConstraint(axis = 0, operators = {}, bounds = {1.0})") {
         REQUIRE_THROWS_WITH(
-                SumConstraint(0, {}, {1.0}), "`operators` and `bounds` must have non-zero size."
+            SumConstraint(0, {}, {1.0}), "`operators` and `bounds` must have non-zero size."
         );
     }
 
     GIVEN("SumConstraint(axis = 0, operators = {<=}, bounds = {})") {
         REQUIRE_THROWS_WITH(
-                SumConstraint(0, {LessEqual}, {}),
-                "`operators` and `bounds` must have non-zero size."
+            SumConstraint(0, {LessEqual}, {}), "`operators` and `bounds` must have non-zero size."
         );
     }
 
     GIVEN("SumConstraint(axis = 1, operators = {<=, ==, ==}, bounds = {2.0, 1.0})") {
         REQUIRE_THROWS_WITH(
-                SumConstraint(1, {LessEqual, Equal, Equal}, {2.0, 1.0}),
-                "`operators` and `bounds` should have same size if neither has size 1."
+            SumConstraint(1, {LessEqual, Equal, Equal}, {2.0, 1.0}),
+            "`operators` and `bounds` should have same size if neither has size 1."
         );
     }
 
@@ -442,7 +441,7 @@ TEST_CASE("BinaryNode") {
 
     GIVEN("Binary node with index-wise bounds") {
         auto bnode_ptr = graph.emplace_node<BinaryNode>(
-                3, std::vector<double>{-1, 0, 1}, std::vector<double>{2, 1, 1}
+            3, std::vector<double>{-1, 0, 1}, std::vector<double>{2, 1, 1}
         );
 
         THEN("The shape, max, min, and bounds are correct") {
@@ -572,21 +571,21 @@ TEST_CASE("BinaryNode") {
     }
 
     GIVEN("Binary node with invalid index-wise lower bounds at index 0") {
-        REQUIRE_THROWS(graph.emplace_node<BinaryNode>(
-                2, std::vector<double>{2, 0}, std::vector<double>{1, 1}
-        ));
+        REQUIRE_THROWS(
+            graph.emplace_node<BinaryNode>(2, std::vector<double>{2, 0}, std::vector<double>{1, 1})
+        );
     }
 
     GIVEN("Binary node with invalid index-wise upper bounds at index 1") {
-        REQUIRE_THROWS(graph.emplace_node<BinaryNode>(
-                2, std::vector<double>{0, 0}, std::vector<double>{1, -1}
-        ));
+        REQUIRE_THROWS(
+            graph.emplace_node<BinaryNode>(2, std::vector<double>{0, 0}, std::vector<double>{1, -1})
+        );
     }
 
     GIVEN("Invalid dynamically sized BinaryNode") {
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{-1, 2}),
-                "Number array cannot have dynamic size."
+            graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{-1, 2}),
+            "Number array cannot have dynamic size."
         );
     }
 
@@ -595,13 +594,10 @@ TEST_CASE("BinaryNode") {
         std::vector<SumConstraint> sum_constraints{{-1, {Equal}, {1.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid constrained axis given number array shape."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid constrained axis given number array shape."
         );
     }
 
@@ -609,13 +605,10 @@ TEST_CASE("BinaryNode") {
         std::vector<SumConstraint> sum_constraints{{2, {Equal}, {1.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid constrained axis given number array shape."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid constrained axis given number array shape."
         );
     }
 
@@ -623,13 +616,10 @@ TEST_CASE("BinaryNode") {
         std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal, Equal, Equal}, {1.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid number of operators given number array shape."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid number of operators given number array shape."
         );
     }
 
@@ -637,13 +627,10 @@ TEST_CASE("BinaryNode") {
         std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal}, {1.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid number of operators given number array shape."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid number of operators given number array shape."
         );
     }
 
@@ -651,13 +638,10 @@ TEST_CASE("BinaryNode") {
         std::vector<SumConstraint> sum_constraints{{1, {Equal}, {1.0, 2.0, 3.0, 4.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid number of bounds given number array shape."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid number of bounds given number array shape."
         );
     }
 
@@ -665,13 +649,10 @@ TEST_CASE("BinaryNode") {
         std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {1.0, 2.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid number of bounds given number array shape."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid number of bounds given number array shape."
         );
     }
 
@@ -680,8 +661,8 @@ TEST_CASE("BinaryNode") {
         std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(6, std::nullopt, std::nullopt, sum_constraints),
-                "Cannot define multiple sum constraints for the entire number array."
+            graph.emplace_node<BinaryNode>(6, std::nullopt, std::nullopt, sum_constraints),
+            "Cannot define multiple sum constraints for the entire number array."
         );
     }
 
@@ -690,13 +671,10 @@ TEST_CASE("BinaryNode") {
         std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Cannot define multiple sum constraints for a single axis."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Cannot define multiple sum constraints for a single axis."
         );
     }
 
@@ -706,13 +684,10 @@ TEST_CASE("BinaryNode") {
         std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint_1};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Can define at most one sum constraint per number array."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Can define at most one sum constraint per number array."
         );
     }
 
@@ -722,13 +697,10 @@ TEST_CASE("BinaryNode") {
         std::vector<SumConstraint> sum_constraints{sum_constraint_0, sum_constraint_1};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Can define at most one sum constraint per number array."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Can define at most one sum constraint per number array."
         );
     }
 
@@ -736,13 +708,10 @@ TEST_CASE("BinaryNode") {
         std::vector<SumConstraint> sum_constraints{{1, {Equal}, {0.1}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Sum constraint(s) for integral arrays must be integral."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Sum constraint(s) for integral arrays must be integral."
         );
     }
 
@@ -750,13 +719,10 @@ TEST_CASE("BinaryNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {7.0}}};
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{6},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Infeasible sum constraint."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{6}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Infeasible sum constraint."
         );
     }
 
@@ -764,13 +730,10 @@ TEST_CASE("BinaryNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {7.0}}};
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{3, 2},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Infeasible sum constraint."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{3, 2}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Infeasible sum constraint."
         );
     }
 
@@ -778,32 +741,26 @@ TEST_CASE("BinaryNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {-1.0}}};
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{2, 2, 2},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Infeasible sum constraint."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{2, 2, 2}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Infeasible sum constraint."
         );
     }
 
     GIVEN("(3x2x2)-BinaryNode with an infeasible sum constraint on axis: 0") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{
-                {0, {Equal, LessEqual, GreaterEqual}, {5.0, 2.0, 3.0}}
+            {0, {Equal, LessEqual, GreaterEqual}, {5.0, 2.0, 3.0}}
         };
         // Each slice along axis 0 has size 4. There is no feasible assignment
         // to the values in slice 0 (along axis 0) that results in a sum equal
         // to 5.
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{3, 2, 2},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Infeasible sum constraint."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Infeasible sum constraint."
         );
     }
 
@@ -814,13 +771,10 @@ TEST_CASE("BinaryNode") {
         // to the values in slice 1 (along axis 1) that results in a sum
         // greater than or equal to 7.
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{3, 2, 2},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Infeasible sum constraint."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Infeasible sum constraint."
         );
     }
 
@@ -831,13 +785,10 @@ TEST_CASE("BinaryNode") {
         // to the values in slice 1 (along axis 2) that results in a sum less
         // than or equal to -1.
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<BinaryNode>(
-                        std::initializer_list<ssize_t>{3, 2, 2},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Infeasible sum constraint."
+            graph.emplace_node<BinaryNode>(
+                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Infeasible sum constraint."
         );
     }
 
@@ -847,7 +798,7 @@ TEST_CASE("BinaryNode") {
         std::vector<double> upper_bounds{0, 1, 1, 1, 1, 1};
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {3.0}}};
         auto bnode_ptr =
-                graph.emplace_node<BinaryNode>(6, lower_bounds, upper_bounds, sum_constraints);
+            graph.emplace_node<BinaryNode>(6, lower_bounds, upper_bounds, sum_constraints);
 
         THEN("Sum constraint is correct") {
             CHECK(bnode_ptr->sum_constraints().size() == 1);
@@ -881,10 +832,10 @@ TEST_CASE("BinaryNode") {
         std::vector<double> lower_bounds{0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0};
         std::vector<double> upper_bounds{0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1};
         std::vector<SumConstraint> sum_constraints{
-                {0, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0}}
+            {0, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0}}
         };
         auto bnode_ptr = graph.emplace_node<BinaryNode>(
-                std::initializer_list<ssize_t>{3, 2, 2}, lower_bounds, upper_bounds, sum_constraints
+            std::initializer_list<ssize_t>{3, 2, 2}, lower_bounds, upper_bounds, sum_constraints
         );
 
         THEN("Sum constraint is correct") {
@@ -942,7 +893,7 @@ TEST_CASE("BinaryNode") {
         std::vector<double> upper_bounds{0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1};
         std::vector<SumConstraint> sum_constraints{{1, {LessEqual, GreaterEqual}, {1.0, 5.0}}};
         auto bnode_ptr = graph.emplace_node<BinaryNode>(
-                std::initializer_list<ssize_t>{3, 2, 2}, lower_bounds, upper_bounds, sum_constraints
+            std::initializer_list<ssize_t>{3, 2, 2}, lower_bounds, upper_bounds, sum_constraints
         );
 
         THEN("Sum constraint is correct") {
@@ -995,7 +946,7 @@ TEST_CASE("BinaryNode") {
         std::vector<double> upper_bounds{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
         std::vector<SumConstraint> sum_constraints{{2, {Equal, GreaterEqual}, {3.0, 6.0}}};
         auto bnode_ptr = graph.emplace_node<BinaryNode>(
-                std::initializer_list<ssize_t>{3, 2, 2}, lower_bounds, upper_bounds, sum_constraints
+            std::initializer_list<ssize_t>{3, 2, 2}, lower_bounds, upper_bounds, sum_constraints
         );
 
         THEN("Sum constraint is correct") {
@@ -1046,14 +997,14 @@ TEST_CASE("BinaryNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {1}}};
         auto bnode_ptr =
-                graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
+            graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
 
         WHEN("We initialize an invalid states") {
             auto state = graph.empty_state();
             std::vector<double> init_values{0, 0};
             CHECK_THROWS_WITH(
-                    bnode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                bnode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
         }
 
@@ -1061,8 +1012,8 @@ TEST_CASE("BinaryNode") {
             auto state = graph.empty_state();
             std::vector<double> init_values{1, 1};
             CHECK_THROWS_WITH(
-                    bnode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                bnode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
         }
     }
@@ -1071,14 +1022,14 @@ TEST_CASE("BinaryNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {1}}};
         auto bnode_ptr =
-                graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
+            graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
 
         WHEN("We initialize an invalid states") {
             auto state = graph.empty_state();
             std::vector<double> init_values{0, 0};
             CHECK_THROWS_WITH(
-                    bnode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                bnode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
         }
     }
@@ -1087,14 +1038,14 @@ TEST_CASE("BinaryNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {1}}};
         auto bnode_ptr =
-                graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
+            graph.emplace_node<BinaryNode>(2, std::nullopt, std::nullopt, sum_constraints);
 
         WHEN("We initialize an invalid states") {
             auto state = graph.empty_state();
             std::vector<double> init_values{1, 1};
             CHECK_THROWS_WITH(
-                    bnode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                bnode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
         }
     }
@@ -1103,7 +1054,7 @@ TEST_CASE("BinaryNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {5}}};
         auto bnode_ptr = graph.emplace_node<BinaryNode>(
-                std::initializer_list<ssize_t>{2, 2, 2}, std::nullopt, std::nullopt, sum_constraints
+            std::initializer_list<ssize_t>{2, 2, 2}, std::nullopt, std::nullopt, sum_constraints
         );
 
         THEN("Sum constraint is correct") {
@@ -1120,8 +1071,8 @@ TEST_CASE("BinaryNode") {
             auto state = graph.empty_state();
             auto rng = std::default_random_engine(42);
             CHECK_THROWS_WITH(
-                    bnode_ptr->initialize_state(state, rng),
-                    "Cannot randomly initialize_state with sum constraints."
+                bnode_ptr->initialize_state(state, rng),
+                "Cannot randomly initialize_state with sum constraints."
             );
         }
 
@@ -1203,10 +1154,10 @@ TEST_CASE("BinaryNode") {
     GIVEN("(3x2x2)-BinaryNode with a sum constraint on axis: 0") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{
-                {0, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0}}
+            {0, {Equal, LessEqual, GreaterEqual}, {1.0, 2.0, 3.0}}
         };
         auto bnode_ptr = graph.emplace_node<BinaryNode>(
-                std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt, sum_constraints
+            std::initializer_list<ssize_t>{3, 2, 2}, std::nullopt, std::nullopt, sum_constraints
         );
 
         THEN("Sum constraint is correct") {
@@ -1227,8 +1178,8 @@ TEST_CASE("BinaryNode") {
             auto state = graph.empty_state();
             auto rng = std::default_random_engine(42);
             CHECK_THROWS_WITH(
-                    bnode_ptr->initialize_state(state, rng),
-                    "Cannot randomly initialize_state with sum constraints."
+                bnode_ptr->initialize_state(state, rng),
+                "Cannot randomly initialize_state with sum constraints."
             );
         }
 
@@ -1242,8 +1193,8 @@ TEST_CASE("BinaryNode") {
             // a.sum(axis=(1, 2))
             // >>> array([2, 2, 4])
             CHECK_THROWS_WITH(
-                    bnode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                bnode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
 
             state = graph.empty_state();
@@ -1255,8 +1206,8 @@ TEST_CASE("BinaryNode") {
             // a.sum(axis=(1, 2))
             // >>> array([1, 3, 4])
             CHECK_THROWS_WITH(
-                    bnode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                bnode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
 
             state = graph.empty_state();
@@ -1268,8 +1219,8 @@ TEST_CASE("BinaryNode") {
             // a.sum(axis=(1, 2))
             // >>> array([1, 2, 2])
             CHECK_THROWS_WITH(
-                    bnode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                bnode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
         }
 
@@ -1352,7 +1303,7 @@ TEST_CASE("BinaryNode") {
 
                     THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(
-                                bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
+                            bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
                         );
                         check_indices<true>(state, bnode_ptr, 0, 0, {1});
                         check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
@@ -1409,7 +1360,7 @@ TEST_CASE("BinaryNode") {
 
                     THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(
-                                bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
+                            bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
                         );
                         check_indices<true>(state, bnode_ptr, 0, 0, {1});
                         check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
@@ -1473,7 +1424,7 @@ TEST_CASE("BinaryNode") {
 
                     THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(
-                                bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
+                            bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
                         );
                         check_indices<true>(state, bnode_ptr, 0, 0, {1});
                         check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
@@ -1541,7 +1492,7 @@ TEST_CASE("BinaryNode") {
 
                     THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(
-                                bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
+                            bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
                         );
                         check_indices<true>(state, bnode_ptr, 0, 0, {1});
                         check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
@@ -1605,7 +1556,7 @@ TEST_CASE("BinaryNode") {
 
                     THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(
-                                bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
+                            bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
                         );
                         check_indices<true>(state, bnode_ptr, 0, 0, {1});
                         check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
@@ -1675,7 +1626,7 @@ TEST_CASE("BinaryNode") {
 
                     THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(
-                                bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
+                            bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
                         );
                         check_indices<true>(state, bnode_ptr, 0, 0, {1});
                         check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
@@ -1730,7 +1681,7 @@ TEST_CASE("BinaryNode") {
 
                     THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(
-                                bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
+                            bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
                         );
                         check_indices<true>(state, bnode_ptr, 0, 0, {1});
                         check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
@@ -1788,7 +1739,7 @@ TEST_CASE("BinaryNode") {
 
                     THEN("Sum constraint sums and tracked indices reverted correctly") {
                         CHECK_THAT(
-                                bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
+                            bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
                         );
                         check_indices<true>(state, bnode_ptr, 0, 0, {1});
                         check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
@@ -1823,8 +1774,10 @@ TEST_CASE("IntegerNode") {
         }
     }
 
-    GIVEN("Double precision numbers, which may fall outside integer range or are not "
-          "integral") {
+    GIVEN(
+        "Double precision numbers, which may fall outside integer range or are not "
+        "integral"
+    ) {
         IntegerNode inode({1});
 
         THEN("The state is not deterministic") { CHECK(!inode.deterministic_state()); }
@@ -1898,7 +1851,7 @@ TEST_CASE("IntegerNode") {
 
     GIVEN("Integer node with index-wise bounds") {
         auto inode_ptr = graph.emplace_node<IntegerNode>(
-                3, std::vector<double>{-1, 3, 5}, std::vector<double>{1, 7, 7}
+            3, std::vector<double>{-1, 3, 5}, std::vector<double>{1, 7, 7}
         );
 
         THEN("The shape, max, min, and bounds are correct") {
@@ -1977,7 +1930,7 @@ TEST_CASE("IntegerNode") {
 
     GIVEN("Integer node with invalid index-wise bounds at index 0") {
         REQUIRE_THROWS(graph.emplace_node<IntegerNode>(
-                2, std::vector<double>{19, 12}, std::vector<double>{20, 11}
+            2, std::vector<double>{19, 12}, std::vector<double>{20, 11}
         ));
     }
 
@@ -2101,8 +2054,8 @@ TEST_CASE("IntegerNode") {
 
     GIVEN("Invalid dynamically sized IntegerNode") {
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{-1, 3}),
-                "Number array cannot have dynamic size."
+            graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{-1, 3}),
+            "Number array cannot have dynamic size."
         );
     }
 
@@ -2111,13 +2064,10 @@ TEST_CASE("IntegerNode") {
         std::vector<SumConstraint> sum_constraints{{-2, {Equal}, {20.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid constrained axis given number array shape."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid constrained axis given number array shape."
         );
     }
 
@@ -2125,13 +2075,10 @@ TEST_CASE("IntegerNode") {
         std::vector<SumConstraint> sum_constraints{{3, {Equal}, {10.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid constrained axis given number array shape."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid constrained axis given number array shape."
         );
     }
 
@@ -2139,13 +2086,10 @@ TEST_CASE("IntegerNode") {
         std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal, Equal, Equal}, {-10.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid number of operators given number array shape."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid number of operators given number array shape."
         );
     }
 
@@ -2153,13 +2097,10 @@ TEST_CASE("IntegerNode") {
         std::vector<SumConstraint> sum_constraints{{1, {LessEqual, Equal}, {-11.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid number of operators given number array shape."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid number of operators given number array shape."
         );
     }
 
@@ -2167,13 +2108,10 @@ TEST_CASE("IntegerNode") {
         std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {-10.0, 20.0, 30.0, 40.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid number of bounds given number array shape."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid number of bounds given number array shape."
         );
     }
 
@@ -2181,13 +2119,10 @@ TEST_CASE("IntegerNode") {
         std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {111.0, -223.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Invalid number of bounds given number array shape."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Invalid number of bounds given number array shape."
         );
     }
 
@@ -2196,13 +2131,10 @@ TEST_CASE("IntegerNode") {
         std::vector<SumConstraint> sum_constraints{sum_constraint, sum_constraint};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{6},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Cannot define multiple sum constraints for the entire number array."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{6}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Cannot define multiple sum constraints for the entire number array."
         );
     }
 
@@ -2210,29 +2142,23 @@ TEST_CASE("IntegerNode") {
         std::vector<SumConstraint> sum_constraints{{1, {Equal}, {100.0}}, {1, {Equal}, {100.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Cannot define multiple sum constraints for a single axis."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Cannot define multiple sum constraints for a single axis."
         );
     }
 
     GIVEN("(2x3x4)-IntegerNode with sum constraints on axis: 1 and the entire array.") {
         std::vector<SumConstraint> sum_constraints{
-                {std::nullopt, {Equal}, {100.0}}, {1, {Equal}, {100.0}}
+            {std::nullopt, {Equal}, {100.0}}, {1, {Equal}, {100.0}}
         };
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Can define at most one sum constraint per number array."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Can define at most one sum constraint per number array."
         );
     }
 
@@ -2240,13 +2166,10 @@ TEST_CASE("IntegerNode") {
         std::vector<SumConstraint> sum_constraints{{0, {Equal}, {100.0}}, {1, {Equal}, {100.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Can define at most one sum constraint per number array."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Can define at most one sum constraint per number array."
         );
     }
 
@@ -2254,13 +2177,10 @@ TEST_CASE("IntegerNode") {
         std::vector<SumConstraint> sum_constraints{{1, {LessEqual}, {11.0, 12.0001, 0.0}}};
 
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 4},
-                        std::nullopt,
-                        std::nullopt,
-                        sum_constraints
-                ),
-                "Sum constraint(s) for integral arrays must be integral."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 4}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Sum constraint(s) for integral arrays must be integral."
         );
     }
 
@@ -2268,8 +2188,7 @@ TEST_CASE("IntegerNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {Equal}, {-7.0}}};
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(6, -1, 8, sum_constraints),
-                "Infeasible sum constraint."
+            graph.emplace_node<IntegerNode>(6, -1, 8, sum_constraints), "Infeasible sum constraint."
         );
     }
 
@@ -2277,8 +2196,7 @@ TEST_CASE("IntegerNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {LessEqual}, {-7.0}}};
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(6, -1, 8, sum_constraints),
-                "Infeasible sum constraint."
+            graph.emplace_node<IntegerNode>(6, -1, 8, sum_constraints), "Infeasible sum constraint."
         );
     }
 
@@ -2286,8 +2204,7 @@ TEST_CASE("IntegerNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {13}}};
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(6, -1, 2, sum_constraints),
-                "Infeasible sum constraint."
+            graph.emplace_node<IntegerNode>(6, -1, 2, sum_constraints), "Infeasible sum constraint."
         );
     }
 
@@ -2298,26 +2215,26 @@ TEST_CASE("IntegerNode") {
         // to the values in slice 1 (along axis 0) that results in a sum less
         // than or equal to -5*6 - 1 = -31.
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
-                ),
-                "Infeasible sum constraint."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
+            ),
+            "Infeasible sum constraint."
         );
     }
 
     GIVEN("(2x3x2)-IntegerNode with an infeasible sum constraint on axis: 1") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{
-                {1, {GreaterEqual, Equal, Equal}, {33.0, 0.0, 0.0}}
+            {1, {GreaterEqual, Equal, Equal}, {33.0, 0.0, 0.0}}
         };
         // Each slice along axis 1 has size 4. There is no feasible assignment
         // to the values in slice 0 (along axis 1) that results in a sum
         // greater than or equal to 4*8 + 1 = 33.
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
-                ),
-                "Infeasible sum constraint."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
+            ),
+            "Infeasible sum constraint."
         );
     }
 
@@ -2328,10 +2245,10 @@ TEST_CASE("IntegerNode") {
         // to the values in slice 1 (along axis 2) that results in a sum or
         // equal to 6*8 + 1 = 49
         REQUIRE_THROWS_WITH(
-                graph.emplace_node<IntegerNode>(
-                        std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
-                ),
-                "Infeasible sum constraint."
+            graph.emplace_node<IntegerNode>(
+                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
+            ),
+            "Infeasible sum constraint."
         );
     }
 
@@ -2339,7 +2256,7 @@ TEST_CASE("IntegerNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {40}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(
-                std::initializer_list<ssize_t>{2, 2, 2}, -5, 8, sum_constraints
+            std::initializer_list<ssize_t>{2, 2, 2}, -5, 8, sum_constraints
         );
 
         THEN("Sum constraint is correct") {
@@ -2371,7 +2288,7 @@ TEST_CASE("IntegerNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{0, {Equal, GreaterEqual}, {-21.0, 9.0}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
+            std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
         );
 
         THEN("Sum constraint is correct") {
@@ -2418,10 +2335,10 @@ TEST_CASE("IntegerNode") {
     GIVEN("(2x3x2)-IntegerNode with a feasible sum constraint on axis: 1") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{
-                {1, {Equal, GreaterEqual, LessEqual}, {0.0, -2.0, 0.0}}
+            {1, {Equal, GreaterEqual, LessEqual}, {0.0, -2.0, 0.0}}
         };
         auto inode_ptr = graph.emplace_node<IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
+            std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
         );
 
         THEN("Sum constraint is correct") {
@@ -2465,7 +2382,7 @@ TEST_CASE("IntegerNode") {
                 CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
                 CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 3);
                 CHECK_THAT(
-                        inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({0.0, -2.0, -20.0})
+                    inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({0.0, -2.0, -20.0})
                 );
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
             }
@@ -2476,7 +2393,7 @@ TEST_CASE("IntegerNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{2, {Equal, GreaterEqual}, {23.0, 14.0}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
+            std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
         );
 
         THEN("Sum constraint is correct") {
@@ -2529,15 +2446,15 @@ TEST_CASE("IntegerNode") {
             auto state = graph.empty_state();
             std::vector<double> init_values{0.0, 0.0};
             CHECK_THROWS_WITH(
-                    inode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                inode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
 
             state = graph.empty_state();
             init_values = {8.0, 8.0};
             CHECK_THROWS_WITH(
-                    inode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                inode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
         }
     }
@@ -2551,8 +2468,8 @@ TEST_CASE("IntegerNode") {
             auto state = graph.empty_state();
             std::vector<double> init_values{8.0, 7.0};
             CHECK_THROWS_WITH(
-                    inode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                inode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
         }
     }
@@ -2566,8 +2483,8 @@ TEST_CASE("IntegerNode") {
             auto state = graph.empty_state();
             std::vector<double> init_values{-5.0, -4.0};
             CHECK_THROWS_WITH(
-                    inode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                inode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
         }
     }
@@ -2576,7 +2493,7 @@ TEST_CASE("IntegerNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {5.0}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(
-                std::initializer_list<ssize_t>{2, 2}, -5, 8, sum_constraints
+            std::initializer_list<ssize_t>{2, 2}, -5, 8, sum_constraints
         );
 
         THEN("Sum constraint is correct") {
@@ -2593,8 +2510,8 @@ TEST_CASE("IntegerNode") {
             auto state = graph.empty_state();
             auto rng = std::default_random_engine(42);
             CHECK_THROWS_WITH(
-                    inode_ptr->initialize_state(state, rng),
-                    "Cannot randomly initialize_state with sum constraints."
+                inode_ptr->initialize_state(state, rng),
+                "Cannot randomly initialize_state with sum constraints."
             );
         }
 
@@ -2665,10 +2582,10 @@ TEST_CASE("IntegerNode") {
     GIVEN("(2x3x2)-IntegerNode with index-wise bounds and a sum constraint on axis: 1") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{
-                {1, {Equal, LessEqual, GreaterEqual}, {11.0, 2.0, 5.0}}
+            {1, {Equal, LessEqual, GreaterEqual}, {11.0, 2.0, 5.0}}
         };
         auto inode_ptr = graph.emplace_node<IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
+            std::initializer_list<ssize_t>{2, 3, 2}, -5, 8, sum_constraints
         );
 
         THEN("Sum constraint is correct") {
@@ -2689,8 +2606,8 @@ TEST_CASE("IntegerNode") {
             auto state = graph.empty_state();
             auto rng = std::default_random_engine(42);
             CHECK_THROWS_WITH(
-                    inode_ptr->initialize_state(state, rng),
-                    "Cannot randomly initialize_state with sum constraints."
+                inode_ptr->initialize_state(state, rng),
+                "Cannot randomly initialize_state with sum constraints."
             );
         }
 
@@ -2704,8 +2621,8 @@ TEST_CASE("IntegerNode") {
             // a.sum(axis=(0, 2))
             // >>> array([15, 2, 7])
             CHECK_THROWS_WITH(
-                    inode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                inode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
 
             state = graph.empty_state();
@@ -2717,8 +2634,8 @@ TEST_CASE("IntegerNode") {
             // a.sum(axis=(0, 2))
             // >>> array([11, 3, 7])
             CHECK_THROWS_WITH(
-                    inode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                inode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
 
             state = graph.empty_state();
@@ -2730,8 +2647,8 @@ TEST_CASE("IntegerNode") {
             // a.sum(axis=(0, 2))
             // >>> array([11, 1, 4])
             CHECK_THROWS_WITH(
-                    inode_ptr->initialize_state(state, init_values),
-                    "Initialized values do not satisfy sum constraint(s)."
+                inode_ptr->initialize_state(state, init_values),
+                "Initialized values do not satisfy sum constraint(s)."
             );
         }
 
@@ -2785,7 +2702,7 @@ TEST_CASE("IntegerNode") {
 
                     THEN("Sum constraint sums reverted correctly") {
                         CHECK_THAT(
-                                inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 2, 7})
+                            inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 2, 7})
                         );
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
@@ -2825,7 +2742,7 @@ TEST_CASE("IntegerNode") {
 
                     THEN("Sum constraint sums reverted correctly") {
                         CHECK_THAT(
-                                inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 2, 7})
+                            inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 2, 7})
                         );
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
@@ -2856,7 +2773,7 @@ TEST_CASE("IntegerNode") {
 
                     THEN("Sum constraint sums reverted correctly") {
                         CHECK_THAT(
-                                inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 2, 7})
+                            inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 2, 7})
                         );
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
@@ -2890,7 +2807,7 @@ TEST_CASE("IntegerNode") {
 
                     THEN("Sum constraint sums reverted correctly") {
                         CHECK_THAT(
-                                inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 2, 7})
+                            inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({11, 2, 7})
                         );
                         CHECK(inode_ptr->diff(state).size() == 0);
                     }
@@ -2982,7 +2899,7 @@ TEST_CASE("IntegerNode") {
         auto graph = Graph();
         std::vector<SumConstraint> sum_constraints{{0, {Equal}, {1.0}}};
         auto inode_ptr = graph.emplace_node<IntegerNode>(
-                std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
+            std::initializer_list<ssize_t>{2, 3}, std::nullopt, std::nullopt, sum_constraints
         );
 
         THEN("Sum constraint is correct") {

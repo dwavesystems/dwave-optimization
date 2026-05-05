@@ -80,14 +80,14 @@ class LinearProgramNodeBase : public Node {
  protected:
     /// Enforce the rules on the input node(s).
     static void check_input_arguments(
-            const ArrayNode* c_ptr,
-            const ArrayNode* b_lb_ptr,
-            const ArrayNode* A_ptr,
-            const ArrayNode* b_ub_ptr,
-            const ArrayNode* A_eq_ptr,
-            const ArrayNode* b_eq_ptr,
-            const ArrayNode* lb_ptr,
-            const ArrayNode* ub_ptr
+        const ArrayNode* c_ptr,
+        const ArrayNode* b_lb_ptr,
+        const ArrayNode* A_ptr,
+        const ArrayNode* b_ub_ptr,
+        const ArrayNode* A_eq_ptr,
+        const ArrayNode* b_eq_ptr,
+        const ArrayNode* lb_ptr,
+        const ArrayNode* ub_ptr
     );
 };
 
@@ -103,14 +103,14 @@ class LinearProgramNode : public LinearProgramNodeBase {
     ///
     /// Note: parameter names are chosen to match scipy.optimize.lingprog()
     LinearProgramNode(
-            ArrayNode* c_ptr,
-            ArrayNode* b_lb_ptr,
-            ArrayNode* A_ptr,
-            ArrayNode* b_ub_ptr,
-            ArrayNode* A_eq_ptr,
-            ArrayNode* b_eq_ptr,
-            ArrayNode* lb_ptr,
-            ArrayNode* ub_ptr
+        ArrayNode* c_ptr,
+        ArrayNode* b_lb_ptr,
+        ArrayNode* A_ptr,
+        ArrayNode* b_ub_ptr,
+        ArrayNode* A_eq_ptr,
+        ArrayNode* b_eq_ptr,
+        ArrayNode* lb_ptr,
+        ArrayNode* ub_ptr
     );
 
     /// @copydoc Node::commit()

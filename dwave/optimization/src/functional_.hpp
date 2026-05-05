@@ -129,7 +129,8 @@ struct Add : BinaryFunctionMixin<Add<double>> {
     /// will not contain any elements. This is useful for handling annihilators
     /// for instance.
     static std::optional<result_type> inverse(
-            const DType auto& lhs, const DType auto& rhs
+        const DType auto& lhs,
+        const DType auto& rhs
     ) noexcept {
         // dev note: we could check whether the operation results in `inf` or
         // `nan` and in that case return std::nullopt. Needs more thought.
@@ -209,13 +210,15 @@ struct LogicalAnd : BinaryFunctionMixin<LogicalAnd> {
     /// @brief Revert a logical and.
     /// @copydetails Add::inverse()
     static std::optional<result_type> inverse(
-            const DType auto& lhs, const DType auto& rhs
+        const DType auto& lhs,
+        const DType auto& rhs
     ) noexcept {
         if (rhs) return static_cast<result_type>(lhs);
         return {};  // ambiguous or undefined
     }
     static std::optional<reduction_type> inverse(
-            reduction_type lhs, const DType auto& rhs
+        reduction_type lhs,
+        const DType auto& rhs
     ) noexcept {
         if (rhs == 0) lhs.num_falsy_ -= 1;
         return lhs;
@@ -275,7 +278,8 @@ struct LogicalOr : BinaryFunctionMixin<LogicalOr> {
         return {};  // ambiguous or undefined
     }
     static std::optional<reduction_type> inverse(
-            reduction_type lhs, const DType auto& rhs
+        reduction_type lhs,
+        const DType auto& rhs
     ) noexcept {
         lhs.num_truthy_ -= (rhs != 0);
         return lhs;
@@ -318,7 +322,8 @@ struct Maximum : BinaryFunctionMixin<Maximum<T>> {
     /// @brief Revert a maximum.
     /// @copydetails Add::inverse()
     static std::optional<result_type> inverse(
-            const DType auto& lhs, const DType auto& rhs
+        const DType auto& lhs,
+        const DType auto& rhs
     ) noexcept {
         if (lhs > rhs) return lhs;  // We're removing a value smaller than our current max
         return {};                  // Otherwise its ambiguous or undefined
@@ -330,9 +335,9 @@ struct Maximum : BinaryFunctionMixin<Maximum<T>> {
         if (lhs.max <= rhs.min) return rhs;  // it'll always be rhs
 
         return ValuesInfo(
-                std::max(lhs.min, rhs.min),  //
-                std::max(lhs.max, rhs.max),  //
-                lhs.integral and rhs.integral
+            std::max(lhs.min, rhs.min),  //
+            std::max(lhs.max, rhs.max),  //
+            lhs.integral and rhs.integral
         );
     }
     static ValuesInfo result_bounds(ValuesInfo bounds, ssize_t) noexcept { return bounds; }
@@ -361,7 +366,8 @@ struct Minimum : BinaryFunctionMixin<Minimum<T>> {
     /// @brief Revert a minimum.
     /// @copydetails Add::inverse()
     static std::optional<result_type> inverse(
-            const DType auto& lhs, const DType auto& rhs
+        const DType auto& lhs,
+        const DType auto& rhs
     ) noexcept {
         if (lhs < rhs) return lhs;  // We're removing a value greater than our current min
         return {};                  // Otherwise its ambiguous or undefined
@@ -373,9 +379,9 @@ struct Minimum : BinaryFunctionMixin<Minimum<T>> {
         if (lhs.max <= rhs.min) return lhs;  // it'll always be lhs
 
         return ValuesInfo(
-                std::min(lhs.min, rhs.min),  //
-                std::min(lhs.max, rhs.max),  //
-                lhs.integral and rhs.integral
+            std::min(lhs.min, rhs.min),  //
+            std::min(lhs.max, rhs.max),  //
+            lhs.integral and rhs.integral
         );
     }
     static ValuesInfo result_bounds(ValuesInfo bounds, ssize_t) { return bounds; }
@@ -397,7 +403,7 @@ struct Multiply : BinaryFunctionMixin<Multiply<T>> {
      public:
         reduction_type() = delete;
         reduction_type(result_type value) noexcept
-                : nonzero_(value ? value : 1), num_zero_(value == 0) {}
+            : nonzero_(value ? value : 1), num_zero_(value == 0) {}
         bool operator==(const reduction_type& rhs) const {
             return nonzero_ == rhs.nonzero_ and num_zero_ == rhs.num_zero_;
         }
@@ -428,13 +434,15 @@ struct Multiply : BinaryFunctionMixin<Multiply<T>> {
     /// @brief Revert a multiply.
     /// @copydetails Add::inverse()
     static std::optional<result_type> inverse(
-            const DType auto& lhs, const DType auto& rhs
+        const DType auto& lhs,
+        const DType auto& rhs
     ) noexcept {
         if (not rhs) return {};  // cannot divide by zero
         return lhs / rhs;
     }
     static std::optional<reduction_type> inverse(
-            reduction_type lhs, const DType auto& rhs
+        reduction_type lhs,
+        const DType auto& rhs
     ) noexcept {
         if (rhs == 0) {
             lhs.num_zero_ -= 1;
@@ -447,10 +455,10 @@ struct Multiply : BinaryFunctionMixin<Multiply<T>> {
     /// @copydoc Add::result_bounds
     static ValuesInfo result_bounds(ValuesInfo lhs, ValuesInfo rhs) {
         const auto [min, max] = std::minmax({
-                lhs.min * rhs.min,
-                lhs.min * rhs.max,
-                lhs.max * rhs.min,
-                lhs.max * rhs.max,
+            lhs.min * rhs.min,
+            lhs.min * rhs.max,
+            lhs.max * rhs.min,
+            lhs.max * rhs.max,
         });
 
         return ValuesInfo(min, max, lhs.integral and rhs.integral);
@@ -469,7 +477,7 @@ struct Multiply : BinaryFunctionMixin<Multiply<T>> {
         }
 
         return ValuesInfo(
-                std::ranges::min(candidates), std::ranges::max(candidates), bounds.integral
+            std::ranges::min(candidates), std::ranges::max(candidates), bounds.integral
         );
     }
     static ValuesInfo result_bounds(ValuesInfo bounds, limit_type) {

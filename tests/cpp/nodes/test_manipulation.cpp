@@ -257,7 +257,7 @@ TEST_CASE("BroadcastToNode") {
 
     SECTION("broadcast [[0, 1], [2, 3], [4, 5]] to a (2,3,2) array") {
         auto c = graph.emplace_node<ConstantNode>(
-                std::vector{0, 1, 2, 3, 4, 5}, std::vector<ssize_t>{3, 2}
+            std::vector{0, 1, 2, 3, 4, 5}, std::vector<ssize_t>{3, 2}
         );
         auto b = graph.emplace_node<BroadcastToNode>(c, std::vector<ssize_t>{2, 3, 2});
         graph.emplace_node<ArrayValidationNode>(b);
@@ -312,9 +312,9 @@ TEST_CASE("BroadcastToNode") {
         auto graph = Graph();
         auto set_ptr = graph.emplace_node<SetNode>(10);
         auto reshape_ptr =
-                graph.emplace_node<ReshapeNode>(set_ptr, std::array<ssize_t, 3>{-1, 1, 1});
+            graph.emplace_node<ReshapeNode>(set_ptr, std::array<ssize_t, 3>{-1, 1, 1});
         auto arr_ptr =
-                graph.emplace_node<BroadcastToNode>(reshape_ptr, std::array<ssize_t, 3>{-1, 2, 3});
+            graph.emplace_node<BroadcastToNode>(reshape_ptr, std::array<ssize_t, 3>{-1, 2, 3});
         graph.emplace_node<ArrayValidationNode>(arr_ptr);
 
         AND_GIVEN("set = {1, 2, 3]") {
@@ -323,8 +323,8 @@ TEST_CASE("BroadcastToNode") {
             graph.initialize_state(state);
 
             CHECK_THAT(
-                    arr_ptr->view(state),
-                    RangeEquals({1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3})
+                arr_ptr->view(state),
+                RangeEquals({1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3})
             );
 
             WHEN("We change the set to equal {1, 2, 4, 3}") {
@@ -360,9 +360,8 @@ TEST_CASE("ConcatenateNode") {
         auto graph = Graph();
 
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{1, 2, 3, 4, 5, 6, 7, 8});
-        auto b_ptr = graph.emplace_node<ConstantNode>(
-                std::vector<double>{9, 10, 11, 12, 13, 14, 15, 16}
-        );
+        auto b_ptr =
+            graph.emplace_node<ConstantNode>(std::vector<double>{9, 10, 11, 12, 13, 14, 15, 16});
 
         auto ra_ptr = graph.emplace_node<ReshapeNode>(a_ptr, std::vector<ssize_t>{2, 2, 2, 1});
         auto rb_ptr = graph.emplace_node<ReshapeNode>(b_ptr, std::vector<ssize_t>{2, 2, 2, 1});
@@ -379,7 +378,7 @@ TEST_CASE("ConcatenateNode") {
             AND_WHEN("The graph is initialized") {
                 auto state = graph.initialize_state();
                 auto expected =
-                        std::vector<ssize_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+                    std::vector<ssize_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
                 THEN("Buffer is initialized correctly") {
                     CHECK(std::ranges::equal(c_ptr->view(state), expected));
                 }
@@ -396,7 +395,7 @@ TEST_CASE("ConcatenateNode") {
             AND_WHEN("The graph is initialized") {
                 auto state = graph.initialize_state();
                 auto expected =
-                        std::vector<ssize_t>{1, 2, 3, 4, 9, 10, 11, 12, 5, 6, 7, 8, 13, 14, 15, 16};
+                    std::vector<ssize_t>{1, 2, 3, 4, 9, 10, 11, 12, 5, 6, 7, 8, 13, 14, 15, 16};
                 THEN("Buffer is initialized correctly") {
                     CHECK(std::ranges::equal(c_ptr->view(state), expected));
                 }
@@ -413,7 +412,7 @@ TEST_CASE("ConcatenateNode") {
             AND_WHEN("The graph is initialized") {
                 auto state = graph.initialize_state();
                 auto expected =
-                        std::vector<ssize_t>{1, 2, 9, 10, 3, 4, 11, 12, 5, 6, 13, 14, 7, 8, 15, 16};
+                    std::vector<ssize_t>{1, 2, 9, 10, 3, 4, 11, 12, 5, 6, 13, 14, 7, 8, 15, 16};
                 THEN("Buffer is initialized correctly") {
                     CHECK(std::ranges::equal(c_ptr->view(state), expected));
                 }
@@ -451,7 +450,7 @@ TEST_CASE("ConcatenateNode") {
         auto b_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -10, 100);
         auto a_copy_ptr = graph.emplace_node<CopyNode>(a_ptr);
         auto c_ptr =
-                graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_copy_ptr, b_ptr}, 0);
+            graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_copy_ptr, b_ptr}, 0);
 
         THEN("We can get the min(), max() and integral() as expected") {
             CHECK(c_ptr->integral());
@@ -536,7 +535,7 @@ TEST_CASE("ConcatenateNode") {
             auto b_r = graph.emplace_node<ReshapeNode>(b, std::vector<ssize_t>{3, 3, 2, 1});
             auto c_r = graph.emplace_node<ReshapeNode>(c, std::vector<ssize_t>{4, 3, 2, 1});
             auto abc_ptr =
-                    graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r, b_r, c_r}, 0);
+                graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r, b_r, c_r}, 0);
 
             auto state = graph.initialize_state();
 
@@ -558,7 +557,7 @@ TEST_CASE("ConcatenateNode") {
             auto b_r = graph.emplace_node<ReshapeNode>(b, std::vector<ssize_t>{3, 3, 2, 1});
             auto c_r = graph.emplace_node<ReshapeNode>(c, std::vector<ssize_t>{3, 4, 2, 1});
             auto abc_ptr =
-                    graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r, b_r, c_r}, 1);
+                graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r, b_r, c_r}, 1);
 
             auto state = graph.initialize_state();
 
@@ -583,7 +582,7 @@ TEST_CASE("ConcatenateNode") {
             auto b_r = graph.emplace_node<ReshapeNode>(b, std::vector<ssize_t>{3, 2, 3, 1});
             auto c_r = graph.emplace_node<ReshapeNode>(c, std::vector<ssize_t>{3, 2, 4, 1});
             auto abc_ptr =
-                    graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r, b_r, c_r}, 2);
+                graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r, b_r, c_r}, 2);
 
             auto state = graph.initialize_state();
 
@@ -608,7 +607,7 @@ TEST_CASE("ConcatenateNode") {
             auto b_r = graph.emplace_node<ReshapeNode>(b, std::vector<ssize_t>{3, 2, 1, 3});
             auto c_r = graph.emplace_node<ReshapeNode>(c, std::vector<ssize_t>{3, 2, 1, 4});
             auto abc_ptr =
-                    graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r, b_r, c_r}, 3);
+                graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{a_r, b_r, c_r}, 3);
 
             auto state = graph.initialize_state();
 
@@ -794,7 +793,7 @@ TEST_CASE("PutNode") {
         auto ind_ptr = graph.emplace_node<SetNode>(9);
 
         auto c_ptr =
-                graph.emplace_node<ConstantNode>(std::vector{-10, -1, -2, -3, -4, -5, -6, -7, -8});
+            graph.emplace_node<ConstantNode>(std::vector{-10, -1, -2, -3, -4, -5, -6, -7, -8});
         auto v_ptr = graph.emplace_node<AdvancedIndexingNode>(c_ptr, ind_ptr);
 
         auto put_ptr = graph.emplace_node<PutNode>(a_ptr, ind_ptr, v_ptr);
@@ -962,13 +961,13 @@ TEST_CASE("PutNode") {
         auto ind_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2}, 0, 5);
         auto val_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2});
         auto mask_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1}, 0, 1, true
+            std::initializer_list<ssize_t>{-1}, 0, 1, true
         );
 
         auto put_ptr = graph.emplace_node<PutNode>(
-                a_ptr,
-                graph.emplace_node<AdvancedIndexingNode>(ind_ptr, mask_ptr),
-                graph.emplace_node<AdvancedIndexingNode>(val_ptr, mask_ptr)
+            a_ptr,
+            graph.emplace_node<AdvancedIndexingNode>(ind_ptr, mask_ptr),
+            graph.emplace_node<AdvancedIndexingNode>(val_ptr, mask_ptr)
         );
 
         graph.emplace_node<ArrayValidationNode>(put_ptr);
@@ -1133,8 +1132,8 @@ TEST_CASE("ReshapeNode") {
 
         // rhs path, (x.reshape(3, 3) * A.reshape(3, 3)).sum()
         auto rhs_ptr = graph.emplace_node<SumNode>(graph.emplace_node<MultiplyNode>(
-                graph.emplace_node<ReshapeNode>(x_ptr, std::vector<ssize_t>{3, 3}),
-                graph.emplace_node<ReshapeNode>(A_ptr, std::vector<ssize_t>{3, 3})
+            graph.emplace_node<ReshapeNode>(x_ptr, std::vector<ssize_t>{3, 3}),
+            graph.emplace_node<ReshapeNode>(A_ptr, std::vector<ssize_t>{3, 3})
         ));
 
         graph.emplace_node<ArrayValidationNode>(lhs_ptr);
@@ -1198,12 +1197,12 @@ TEST_CASE("ReshapeNode") {
         auto set_ptr = graph.emplace_node<SetNode>(10);
 
         CHECK_THROWS_AS(
-                graph.emplace_node<ReshapeNode>(set_ptr, std::array{-1, 2}), std::invalid_argument
+            graph.emplace_node<ReshapeNode>(set_ptr, std::array{-1, 2}), std::invalid_argument
         );
 
         CHECK_THROWS_AS(
-                graph.emplace_node<ReshapeNode>(set_ptr, std::array{-1, 1, -1, 1}),
-                std::invalid_argument
+            graph.emplace_node<ReshapeNode>(set_ptr, std::array{-1, 1, -1, 1}),
+            std::invalid_argument
         );
 
         CHECK(graph.num_nodes() == 1);  // no side effects
@@ -1382,8 +1381,8 @@ TEST_CASE("RollNode") {
                 s_ptr->assign(state, {0, 1, 2});
                 graph.propagate(state);
                 CHECK_THAT(
-                        r_ptr->view(state),
-                        RangeEquals({14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13})
+                    r_ptr->view(state),
+                    RangeEquals({14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13})
                 );
             }
         }
@@ -1411,8 +1410,8 @@ TEST_CASE("RollNode") {
                 s_ptr->assign(state, {0, 1, 2});
                 graph.propagate(state);
                 CHECK_THAT(
-                        r_ptr->view(state),
-                        RangeEquals({10, 11, 12, 13, 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+                    r_ptr->view(state),
+                    RangeEquals({10, 11, 12, 13, 14, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
                 );
             }
 
@@ -1446,8 +1445,8 @@ TEST_CASE("RollNode") {
                 s_ptr->assign(state, {0, 1, 2});
                 graph.propagate(state);
                 CHECK_THAT(
-                        r_ptr->view(state),
-                        RangeEquals({4, 0, 1, 2, 3, 9, 5, 6, 7, 8, 14, 10, 11, 12, 13})
+                    r_ptr->view(state),
+                    RangeEquals({4, 0, 1, 2, 3, 9, 5, 6, 7, 8, 14, 10, 11, 12, 13})
                 );
             }
 
@@ -1471,7 +1470,7 @@ TEST_CASE("RollNode") {
 
         AND_GIVEN("r = roll(x, shift=(2, 1), axis=(1, 0))") {
             auto r_ptr = graph.emplace_node<RollNode>(
-                    x_ptr, std::vector<ssize_t>{2, 1}, std::vector<ssize_t>{1, 0}
+                x_ptr, std::vector<ssize_t>{2, 1}, std::vector<ssize_t>{1, 0}
             );
             graph.emplace_node<ArrayValidationNode>(r_ptr);
 
@@ -1630,7 +1629,7 @@ TEST_CASE("TransposeNode") {
 
     GIVEN("A dynamic vector and a transpose node") {
         auto vec_ptr =
-                graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1});
+            graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1});
         auto transpose_ptr = graph.emplace_node<TransposeNode>(vec_ptr);
 
         THEN("The basic attributes of the transpose node are correct") {
@@ -1683,8 +1682,8 @@ TEST_CASE("TransposeNode") {
                     THEN("The transpose is correct") {
                         CHECK_THAT(transpose_ptr->view(state), RangeEquals({0}));
                         CHECK_THAT(
-                                transpose_ptr->diff(state),
-                                RangeEquals({Update(2, 3, NAN), Update(1, 1, NAN)})
+                            transpose_ptr->diff(state),
+                            RangeEquals({Update(2, 3, NAN), Update(1, 1, NAN)})
                         );
                         CHECK(transpose_ptr->size_diff(state) == -2);
                     }
@@ -1703,7 +1702,7 @@ TEST_CASE("TransposeNode") {
 
     GIVEN("A dynamic (>=2)-D array and a transpose node") {
         auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 3, 5, 4}
+            std::initializer_list<ssize_t>{-1, 3, 5, 4}
         );
         REQUIRE_THROWS(graph.emplace_node<TransposeNode>(arr_ptr));
     }
@@ -1741,8 +1740,7 @@ TEST_CASE("TransposeNode") {
                 THEN("The transpose is correct") {
                     CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 6, 2, 3, 7}));
                     CHECK_THAT(
-                            transpose_ptr->diff(state),
-                            RangeEquals({Update(1, 1, 6), Update(4, 4, 7)})
+                        transpose_ptr->diff(state), RangeEquals({Update(1, 1, 6), Update(4, 4, 7)})
                     );
                 }
 
@@ -1808,8 +1806,8 @@ TEST_CASE("TransposeNode") {
                 THEN("The transpose state is correct") {
                     CHECK_THAT(transpose_ptr->view(state), RangeEquals({0, 3, 6, 7, 2, 8}));
                     CHECK_THAT(
-                            transpose_ptr->diff(state),
-                            RangeEquals({Update(2, 1, 6), Update(3, 4, 7), Update(5, 5, 8)})
+                        transpose_ptr->diff(state),
+                        RangeEquals({Update(2, 1, 6), Update(3, 4, 7), Update(5, 5, 8)})
                     );
                 }
 
@@ -1826,8 +1824,8 @@ TEST_CASE("TransposeNode") {
                     THEN("The transpose is correct") {
                         CHECK_THAT(transpose_ptr->view(state), RangeEquals({9, 3, 6, 7, 10, 8}));
                         CHECK_THAT(
-                                transpose_ptr->diff(state),
-                                RangeEquals({Update(0, 0, 9), Update(4, 2, 10)})
+                            transpose_ptr->diff(state),
+                            RangeEquals({Update(0, 0, 9), Update(4, 2, 10)})
                         );
                     }
 
@@ -1878,8 +1876,8 @@ TEST_CASE("TransposeNode") {
                 THEN("The second transpose state is correct") {
                     CHECK_THAT(transpose_ptr_2->view(state), RangeEquals({0, 6, 2, 3, 7, 8}));
                     CHECK_THAT(
-                            transpose_ptr_2->diff(state),
-                            RangeEquals({Update(1, 1, 6), Update(4, 4, 7), Update(5, 5, 8)})
+                        transpose_ptr_2->diff(state),
+                        RangeEquals({Update(1, 1, 6), Update(4, 4, 7), Update(5, 5, 8)})
                     );
                 }
 
@@ -1895,8 +1893,8 @@ TEST_CASE("TransposeNode") {
                     THEN("The second transpose is correct") {
                         CHECK_THAT(transpose_ptr_2->view(state), RangeEquals({9, 6, 10, 3, 7, 8}));
                         CHECK_THAT(
-                                transpose_ptr_2->diff(state),
-                                RangeEquals({Update(0, 0, 9), Update(2, 2, 10)})
+                            transpose_ptr_2->diff(state),
+                            RangeEquals({Update(0, 0, 9), Update(2, 2, 10)})
                         );
                     }
 
@@ -1905,7 +1903,7 @@ TEST_CASE("TransposeNode") {
 
                         THEN("The second transpose is correct") {
                             CHECK_THAT(
-                                    transpose_ptr_2->view(state), RangeEquals({0, 6, 2, 3, 7, 8})
+                                transpose_ptr_2->view(state), RangeEquals({0, 6, 2, 3, 7, 8})
                             );
                         }
                     }
@@ -1966,9 +1964,9 @@ TEST_CASE("TransposeNode") {
                     // array([ 0, 12,  6, 18,  3, 15,  9, 21, 24, 13, 25, 19,  4, 27, 26, 28,  2,
                     // 14,  8, 20,  5, 17, 11, 23])
                     CHECK_THAT(
-                            transpose_ptr->view(state),
-                            RangeEquals({0, 12, 6,  18, 3, 15, 9, 21, 24, 13, 25, 19,
-                                         4, 27, 26, 28, 2, 14, 8, 20, 5,  17, 11, 23})
+                        transpose_ptr->view(state),
+                        RangeEquals({0, 12, 6,  18, 3, 15, 9, 21, 24, 13, 25, 19,
+                                     4, 27, 26, 28, 2, 14, 8, 20, 5,  17, 11, 23})
                     );
                     // >>> np.where(a.transpose().flatten() == 24)
                     // (array([8]),)
@@ -1981,14 +1979,14 @@ TEST_CASE("TransposeNode") {
                     // >>> np.where(a.transpose().flatten() == 28)
                     // (array([15]),)
                     CHECK_THAT(
-                            transpose_ptr->diff(state),
-                            RangeEquals(
-                                    {Update(8, 1, 24),
-                                     Update(10, 7, 25),
-                                     Update(14, 10, 26),
-                                     Update(13, 16, 27),
-                                     Update(15, 22, 28)}
-                            )
+                        transpose_ptr->diff(state),
+                        RangeEquals(
+                            {Update(8, 1, 24),
+                             Update(10, 7, 25),
+                             Update(14, 10, 26),
+                             Update(13, 16, 27),
+                             Update(15, 22, 28)}
+                        )
                     );
                 }
             }

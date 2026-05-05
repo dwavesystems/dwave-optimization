@@ -39,9 +39,9 @@ struct ArgSortNodeDataHelper_ {
 
 struct ArgSortNodeData : public ArrayNodeStateData {
     ArgSortNodeData(std::vector<double> values)
-            : ArgSortNodeData(ArgSortNodeDataHelper_(std::move(values))) {}
+        : ArgSortNodeData(ArgSortNodeDataHelper_(std::move(values))) {}
     ArgSortNodeData(ArgSortNodeDataHelper_&& helper)
-            : ArrayNodeStateData(std::move(helper.indices)), order(std::move(helper.order)) {}
+        : ArrayNodeStateData(std::move(helper.indices)), order(std::move(helper.order)) {}
 
     /// Pairs are <value in the original array, index of the value>
     std::set<std::pair<double, ssize_t>> order;
@@ -49,13 +49,15 @@ struct ArgSortNodeData : public ArrayNodeStateData {
 };
 
 ArgSortNode::ArgSortNode(ArrayNode* arr_ptr)
-        : ArrayOutputMixin(arr_ptr->shape()),
-          arr_ptr_(arr_ptr),
-          minmax_(0,
-                  static_cast<double>(
-                          arr_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max()) - 1
-                  )),
-          sizeinfo_(arr_ptr_->sizeinfo()) {
+    : ArrayOutputMixin(arr_ptr->shape()),
+      arr_ptr_(arr_ptr),
+      minmax_(
+          0,
+          static_cast<double>(
+              arr_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max()) - 1
+          )
+      ),
+      sizeinfo_(arr_ptr_->sizeinfo()) {
     add_predecessor(arr_ptr);
 }
 
@@ -105,8 +107,8 @@ void ArgSortNode::propagate(State& state) const {
     // and only assign from there which might help when all the updates only affect
     // the end region of the final ordering.
     node_data->assign(
-            node_data->order |
-            std::views::transform([](const std::pair<double, ssize_t>& p) { return p.second; })
+        node_data->order |
+        std::views::transform([](const std::pair<double, ssize_t>& p) { return p.second; })
     );
 }
 

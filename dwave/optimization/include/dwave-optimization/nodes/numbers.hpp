@@ -48,9 +48,9 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
         /// To reduce the # of `IntegerNode` and `BinaryNode` constructors, we
         /// allow only one constructor.
         SumConstraint(
-                std::optional<ssize_t> axis,
-                std::vector<Operator> operators,
-                std::vector<double> bounds
+            std::optional<ssize_t> axis,
+            std::vector<Operator> operators,
+            std::vector<double> bounds
         );
 
         /// Return the axis along which slices are defined.
@@ -151,11 +151,11 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // In the given state, swap the value of index i with the value of index j.
     // Users may pass the slices (per sum constraint) that each index lies on.
     void exchange(
-            State& state,
-            ssize_t i,
-            ssize_t j,
-            std::optional<std::vector<ssize_t>> i_slices = std::nullopt,
-            std::optional<std::vector<ssize_t>> j_slices = std::nullopt
+        State& state,
+        ssize_t i,
+        ssize_t j,
+        std::optional<std::vector<ssize_t>> i_slices = std::nullopt,
+        std::optional<std::vector<ssize_t>> j_slices = std::nullopt
     ) const;
 
     // Return the value of index i in a given state.
@@ -173,10 +173,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // in a given index. Users may pass the slices (per sum constraint) that
     // each index lies on.
     void clip_and_set_value(
-            State& state,
-            ssize_t index,
-            double value,
-            std::optional<std::vector<ssize_t>> slices = std::nullopt
+        State& state,
+        ssize_t index,
+        double value,
+        std::optional<std::vector<ssize_t>> slices = std::nullopt
     ) const;
 
     /// Return the stateless sum constraints.
@@ -190,10 +190,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
  protected:
     explicit NumberNode(
-            std::span<const ssize_t> shape,
-            std::vector<double> lower_bound,
-            std::vector<double> upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::span<const ssize_t> shape,
+        std::vector<double> lower_bound,
+        std::vector<double> upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
     );
 
     // Return truth statement: 'value is valid in a given index'.
@@ -229,79 +229,79 @@ class IntegerNode : public NumberNode {
     // constraints. Index-wise bounds default to the specified default bounds.
     // By default, there are no sum constraints.
     IntegerNode(
-            std::span<const ssize_t> shape,
-            std::optional<std::vector<double>> lower_bound = std::nullopt,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::span<const ssize_t> shape,
+        std::optional<std::vector<double>> lower_bound = std::nullopt,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     IntegerNode(
-            std::initializer_list<ssize_t> shape,
-            std::optional<std::vector<double>> lower_bound = std::nullopt,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::initializer_list<ssize_t> shape,
+        std::optional<std::vector<double>> lower_bound = std::nullopt,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     IntegerNode(
-            ssize_t size,
-            std::optional<std::vector<double>> lower_bound = std::nullopt,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
-    );
-
-    IntegerNode(
-            std::span<const ssize_t> shape,
-            double lower_bound,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
-    );
-    IntegerNode(
-            std::initializer_list<ssize_t> shape,
-            double lower_bound,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
-    );
-    IntegerNode(
-            ssize_t size,
-            double lower_bound,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
+        ssize_t size,
+        std::optional<std::vector<double>> lower_bound = std::nullopt,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
 
     IntegerNode(
-            std::span<const ssize_t> shape,
-            std::optional<std::vector<double>> lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::span<const ssize_t> shape,
+        double lower_bound,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     IntegerNode(
-            std::initializer_list<ssize_t> shape,
-            std::optional<std::vector<double>> lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::initializer_list<ssize_t> shape,
+        double lower_bound,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     IntegerNode(
-            ssize_t size,
-            std::optional<std::vector<double>> lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        ssize_t size,
+        double lower_bound,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
 
     IntegerNode(
-            std::span<const ssize_t> shape,
-            double lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::span<const ssize_t> shape,
+        std::optional<std::vector<double>> lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     IntegerNode(
-            std::initializer_list<ssize_t> shape,
-            double lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::initializer_list<ssize_t> shape,
+        std::optional<std::vector<double>> lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     IntegerNode(
-            ssize_t size,
-            double lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        ssize_t size,
+        std::optional<std::vector<double>> lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
+    );
+
+    IntegerNode(
+        std::span<const ssize_t> shape,
+        double lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
+    );
+    IntegerNode(
+        std::initializer_list<ssize_t> shape,
+        double lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
+    );
+    IntegerNode(
+        ssize_t size,
+        double lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
     );
 
     // Overloads needed by the Node ABC ***************************************
@@ -319,10 +319,10 @@ class IntegerNode : public NumberNode {
     // Set the value at the given index in the given state.
     // Users may pass the slices (per sum constraint) that each index lies on.
     void set_value(
-            State& state,
-            ssize_t index,
-            double value,
-            std::optional<std::vector<ssize_t>> slices = std::nullopt
+        State& state,
+        ssize_t index,
+        double value,
+        std::optional<std::vector<ssize_t>> slices = std::nullopt
     ) const;
 
  protected:
@@ -342,79 +342,79 @@ class BinaryNode : public IntegerNode {
     // constraints. Index-wise bounds default to lower_bound = 0.0 and
     // upper_bound = 1.0. By default, there are no sum constraints.
     BinaryNode(
-            std::span<const ssize_t> shape,
-            std::optional<std::vector<double>> lower_bound = std::nullopt,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::span<const ssize_t> shape,
+        std::optional<std::vector<double>> lower_bound = std::nullopt,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     BinaryNode(
-            std::initializer_list<ssize_t> shape,
-            std::optional<std::vector<double>> lower_bound = std::nullopt,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::initializer_list<ssize_t> shape,
+        std::optional<std::vector<double>> lower_bound = std::nullopt,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     BinaryNode(
-            ssize_t size,
-            std::optional<std::vector<double>> lower_bound = std::nullopt,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
-    );
-
-    BinaryNode(
-            std::span<const ssize_t> shape,
-            double lower_bound,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
-    );
-    BinaryNode(
-            std::initializer_list<ssize_t> shape,
-            double lower_bound,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
-    );
-    BinaryNode(
-            ssize_t size,
-            double lower_bound,
-            std::optional<std::vector<double>> upper_bound = std::nullopt,
-            std::vector<SumConstraint> sum_constraints = {}
+        ssize_t size,
+        std::optional<std::vector<double>> lower_bound = std::nullopt,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
 
     BinaryNode(
-            std::span<const ssize_t> shape,
-            std::optional<std::vector<double>> lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::span<const ssize_t> shape,
+        double lower_bound,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     BinaryNode(
-            std::initializer_list<ssize_t> shape,
-            std::optional<std::vector<double>> lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::initializer_list<ssize_t> shape,
+        double lower_bound,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     BinaryNode(
-            ssize_t size,
-            std::optional<std::vector<double>> lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        ssize_t size,
+        double lower_bound,
+        std::optional<std::vector<double>> upper_bound = std::nullopt,
+        std::vector<SumConstraint> sum_constraints = {}
     );
 
     BinaryNode(
-            std::span<const ssize_t> shape,
-            double lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::span<const ssize_t> shape,
+        std::optional<std::vector<double>> lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     BinaryNode(
-            std::initializer_list<ssize_t> shape,
-            double lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        std::initializer_list<ssize_t> shape,
+        std::optional<std::vector<double>> lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
     );
     BinaryNode(
-            ssize_t size,
-            double lower_bound,
-            double upper_bound,
-            std::vector<SumConstraint> sum_constraints = {}
+        ssize_t size,
+        std::optional<std::vector<double>> lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
+    );
+
+    BinaryNode(
+        std::span<const ssize_t> shape,
+        double lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
+    );
+    BinaryNode(
+        std::initializer_list<ssize_t> shape,
+        double lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
+    );
+    BinaryNode(
+        ssize_t size,
+        double lower_bound,
+        double upper_bound,
+        std::vector<SumConstraint> sum_constraints = {}
     );
 
     /// ** Redefined NumberNode methods since BinaryNode has custom StateData **
@@ -463,29 +463,29 @@ class BinaryNode : public IntegerNode {
 
     /// @copydoc NumberNode::exchange()
     void exchange(
-            State& state,
-            ssize_t i,
-            ssize_t j,
-            std::optional<std::vector<ssize_t>> i_slices = std::nullopt,
-            std::optional<std::vector<ssize_t>> j_slices = std::nullopt
+        State& state,
+        ssize_t i,
+        ssize_t j,
+        std::optional<std::vector<ssize_t>> i_slices = std::nullopt,
+        std::optional<std::vector<ssize_t>> j_slices = std::nullopt
     ) const;
 
     /// @copydoc NumberNode::clip_and_set_value()
     void clip_and_set_value(
-            State& state,
-            ssize_t index,
-            double value,
-            std::optional<std::vector<ssize_t>> slices = std::nullopt
+        State& state,
+        ssize_t index,
+        double value,
+        std::optional<std::vector<ssize_t>> slices = std::nullopt
     ) const;
 
     /// ** Redefined IntegerNode method since BinaryNode has custom StateData **
 
     /// @copydoc IntegerNode::set_value()
     void set_value(
-            State& state,
-            ssize_t index,
-            double value,
-            std::optional<std::vector<ssize_t>> slices = std::nullopt
+        State& state,
+        ssize_t index,
+        double value,
+        std::optional<std::vector<ssize_t>> slices = std::nullopt
     ) const;
 
     /// ************************** BinaryNode methods **************************
@@ -493,7 +493,9 @@ class BinaryNode : public IntegerNode {
     // Flip the value (0 -> 1 or 1 -> 0) at `index` in the given state.
     // Users may pass the slices (per sum constraint) that `index` lies on.
     void flip(
-            State& state, ssize_t index, std::optional<std::vector<ssize_t>> slices = std::nullopt
+        State& state,
+        ssize_t index,
+        std::optional<std::vector<ssize_t>> slices = std::nullopt
     ) const;
 
     /// Given a state and slice (w.r.t a sum constraint), return the number of
@@ -507,13 +509,19 @@ class BinaryNode : public IntegerNode {
     /// Given a state and slice (w.r.t a sum constraint), return the `i`th
     /// index in in the slice whose buffer value is 1.
     ssize_t ith_true_index(
-            const State& state, const ssize_t sum_constraint, const ssize_t slice, const ssize_t i
+        const State& state,
+        const ssize_t sum_constraint,
+        const ssize_t slice,
+        const ssize_t i
     ) const;
 
     /// Given a state and slice (w.r.t a sum constraint), return the `i`th
     /// index in in the slice whose buffer value is 0.
     ssize_t ith_false_index(
-            const State& state, const ssize_t sum_constraint, const ssize_t slice, const ssize_t i
+        const State& state,
+        const ssize_t sum_constraint,
+        const ssize_t slice,
+        const ssize_t i
     ) const;
 };
 

@@ -93,8 +93,8 @@ TEST_CASE("IsInNode") {
                         CHECK_THAT(isin_ptr->view(state), RangeEquals({0.0, 0.0, 1.0}));
                     }
                     AND_WHEN(
-                            "We commit, make changes to test_elements integer node, and "
-                            "propagate"
+                        "We commit, make changes to test_elements integer node, and "
+                        "propagate"
                     ) {
                         graph.commit(state);
                         i1_ptr->set_value(state, 5, 3);
@@ -176,7 +176,7 @@ TEST_CASE("IsInNode") {
                     THEN("The isin's state is correct") {
                         CHECK(isin_ptr->size(state) == 6);
                         CHECK_THAT(
-                                isin_ptr->view(state), RangeEquals({0.0, 0.0, 0.0, 0.0, 0.0, 1.0})
+                            isin_ptr->view(state), RangeEquals({0.0, 0.0, 0.0, 0.0, 0.0, 1.0})
                         );
                     }
                 }

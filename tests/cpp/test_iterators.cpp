@@ -29,22 +29,24 @@ namespace dwave::optimization {
 
 // note: we don't test bool here because it's a bit of an edge case
 TEMPLATE_TEST_CASE(
-        "BufferIterator - templated",
-        "",  //
-        float,
-        double,
-        std::int8_t,
-        std::int16_t,
-        std::int32_t,
-        std::int64_t
+    "BufferIterator - templated",
+    "",  //
+    float,
+    double,
+    std::int8_t,
+    std::int16_t,
+    std::int32_t,
+    std::int64_t
 ) {
     // Check that we can interpret buffers of each type as a double
     GIVEN("A buffer of the given type") {
         std::vector<TestType> buffer(10);
         std::iota(buffer.begin(), buffer.end(), 0);
 
-        THEN("We can construct an iterator reading it as if it was doubles without specifying the "
-             "buffer type at compile-time") {
+        THEN(
+            "We can construct an iterator reading it as if it was doubles without specifying the "
+            "buffer type at compile-time"
+        ) {
             auto it = BufferIterator<double>(buffer.data());
 
             // the output of the iterator is double as requested
@@ -53,8 +55,10 @@ TEMPLATE_TEST_CASE(
             CHECK_THAT(std::ranges::subrange(it, it + buffer.size()), RangeEquals(buffer));
         }
 
-        THEN("We can construct an iterator reading it as if it was doubles specifying the buffer "
-             "type at compile-time") {
+        THEN(
+            "We can construct an iterator reading it as if it was doubles specifying the buffer "
+            "type at compile-time"
+        ) {
             auto it = BufferIterator<double, TestType>(buffer.data());
 
             // the output of the iterator is double as requested
@@ -119,8 +123,8 @@ TEST_CASE("BufferIterator - bool") {
         auto it = BufferIterator<bool, double>(buffer.data());
 
         CHECK_THAT(
-                std::ranges::subrange(it, it + 10),
-                RangeEquals({false, true, true, true, false, true, true, true, false, true})
+            std::ranges::subrange(it, it + 10),
+            RangeEquals({false, true, true, true, false, true, true, true, false, true})
         );
     }
 }
@@ -158,8 +162,8 @@ TEST_CASE("BufferIterator") {
         auto values = std::array<double, 6>{0, 1, 2, 3, 4, 5};
         auto shape = std::array<ssize_t, 2>{2, 3};
         auto [strides, start] = GENERATE(
-                std::pair(std::array<ssize_t, 2>{24, 8}, 0),
-                std::pair(std::array<ssize_t, 2>{-24, 8}, 3)
+            std::pair(std::array<ssize_t, 2>{24, 8}, 0),
+            std::pair(std::array<ssize_t, 2>{-24, 8}, 3)
         );
 
         auto n = GENERATE(0, 3, 4, 5);
@@ -344,8 +348,8 @@ TEST_CASE("BufferIterator") {
         THEN("We can construct another vector using reverse iterators") {
             auto copy = std::vector<double>();
             copy.assign(
-                    std::reverse_iterator(ConstArrayIterator(values.data()) + 6),
-                    std::reverse_iterator(ConstArrayIterator(values.data()))
+                std::reverse_iterator(ConstArrayIterator(values.data()) + 6),
+                std::reverse_iterator(ConstArrayIterator(values.data()))
             );
             CHECK_THAT(copy, RangeEquals({5, 4, 3, 2, 1, 0}));
         }
