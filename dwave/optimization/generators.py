@@ -29,7 +29,6 @@ import typing
 import numpy as np
 import numpy.typing
 
-import dwave.optimization
 from dwave.optimization.mathematical import (
     add,
     concatenate,
@@ -45,6 +44,7 @@ from dwave.optimization.mathematical import (
 )
 from dwave.optimization.model import ArraySymbol, Model
 from dwave.optimization.symbols import AccumulateZip
+from dwave.optimization.expression import expression
 
 __all__ = [
     "bin_packing",
@@ -1020,6 +1020,17 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
         and greedily constructs a feasible ordering from which the start times
         are determined.
 
+    .. versionchanged:: 0.4.1
+        Prior to version `0.4.1`, the model generated was based on one proposed by
+
+        L. Blaise, "Modélisation et résolution de problèmes d’ordonnancement au
+        sein du solveur d’optimisation mathématique LocalSolver", Université de
+        Toulouse, https://hal-lirmm.ccsd.cnrs.fr/LAAS-ROC/tel-03923149v2.
+
+        Now the model uses the more natural formulation where the only decision
+        variables are the task start times, but with disjunctive non-overlapping
+        constraints between each pair of jobs on the machines.
+
     .. Note::
         There are many ways to model job-shop scheduling. The model returned
         by this function may or may not give the best performance for your
@@ -1234,7 +1245,7 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     for job_idx in range(num_jobs):
         base_task = job_idx * num_machines
 
-        @dwave.optimization.expression(task_index=dict(integral=True), next_base_task=dict(integral=True))
+        @expression(task_index=dict(integral=True), next_base_task=dict(integral=True))
         def increase_task_index(task_index, next_base_task):
             return task_index + (next_base_task == base_task)
 
