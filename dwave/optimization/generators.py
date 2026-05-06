@@ -44,7 +44,6 @@ from dwave.optimization.mathematical import (
 )
 from dwave.optimization.model import ArraySymbol, Model
 from dwave.optimization.symbols import AccumulateZip
-from dwave.optimization.expression import expression
 
 __all__ = [
     "bin_packing",
@@ -1241,6 +1240,8 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     mo = mask[order]
 
     # Determine a feasible ordering of tasks based on the global ordering
+    from dwave.optimization.expression import expression
+    
     offsets = []
     for job_idx in range(num_jobs):
         base_task = job_idx * num_machines
