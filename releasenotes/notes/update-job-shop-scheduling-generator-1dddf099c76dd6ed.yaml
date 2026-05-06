@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Add three methods to the model returned by the job-shop scheduling model
+    generator:
+    ``model.get_global_task_ordering()``,
+    ``model.get_start_times()``, and
+    ``model.get_end_times()``.
+upgrade:
+  - |
+    Update job-shop scheduling generator to use a list variable for the global
+    ordering of all tasks from which the model constructs a feasible schedule.

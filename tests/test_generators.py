@@ -668,199 +668,94 @@ class TestFlowShopScheduling(unittest.TestCase):
 
 
 class TestJobShopScheduling(unittest.TestCase):
-    def test_1indexed(self):
-        times = [[2, 1, 3],
-                 [4, 1, 2],
-                 [1, 1, 2]]
-        machines = [[1, 2, 3],
-                    [3, 1, 2],
-                    [3, 2, 1]]
+    def test_single_job(self):
+        times = np.ones((1, 10))
+        machines = np.array([[5, 9, 3, 7, 2, 1, 6, 8, 0, 4]])
 
         model = dwave.optimization.generators.job_shop_scheduling(times, machines)
 
-        # check that we have the decisions we expect
-        times, = model.iter_decisions()
-
         model.states.resize(1)
 
-        times.set_state(0, [[0, 2, 4], [2, 6, 0], [6, 4, 2]])
+        order = next(model.iter_decisions())
 
-        # objective is exactly the makespan and the model is feasible
-        self.assertEqual(model.objective.state(0), 7)
-        for constraint in model.iter_constraints():
-            self.assertTrue(constraint.state(0))
+        for order_state in [
+            [4, 5, 0, 7, 3, 9, 6, 8, 2, 1],
+            [6, 5, 3, 2, 4, 8, 7, 0, 1, 9],
+            [0, 8, 5, 2, 9, 1, 7, 3, 4, 6],
+            [7, 6, 0, 3, 1, 4, 9, 2, 8, 5],
+        ]:
+            order.set_state(0, order_state)
+            self.assertTrue(np.all(model.get_global_task_ordering(0) == np.arange(10)))
+            self.assertEqual(model.objective.state(0), 10)
 
-    def test_1x4(self):
-        times = [1, 2, 1, 1]
-        machines = [1, 2, 3, 4]  # 1-indexed
+    def test_single_machine(self):
+        times = np.ones((3,1))
+        machines = np.array([[0],[0],[0]])
 
         model = dwave.optimization.generators.job_shop_scheduling(times, machines)
 
-        # check that we have the decisions we expect
-        times, = model.iter_decisions()
-
         model.states.resize(1)
 
-        with self.subTest("feasible and optimal"):
-            # a
-            #  aa
-            #    a
-            #     a
+        order = next(model.iter_decisions())
 
-            times.set_state(0, [[0, 1, 3, 4]])
+        for order_state in [
+            [2,1,0],
+            [2,0,1],
+            [1,2,0],
+            [1,0,2],
+            [0,2,1],
+            [0,1,2]
+        ]:
+            order.set_state(0, order_state)
+            self.assertTrue(np.all(model.get_global_task_ordering(0) == order_state))
+            self.assertEqual(model.objective.state(0),3)
 
-            # objective is exactly the makespan and the model is feasible
-            self.assertEqual(model.objective.state(0), 5)
-            for constraint in model.iter_constraints():
-                self.assertTrue(constraint.state(0))
 
-        with self.subTest("feasible and not optimal"):
-            # a
-            #  aa
-            #     a
-            #      a
-
-            times.set_state(0, [[0, 1, 4, 5]])
-
-            self.assertEqual(model.objective.state(0), 6)
-            for constraint in model.iter_constraints():
-                self.assertTrue(constraint.state(0))
-
-        with self.subTest("feasible and not optimal"):
-            # a
-            #  aa
-            #   a
-            #    a
-
-            times.set_state(0, [[0, 1, 2, 3]])
-
-            self.assertEqual(model.objective.state(0), 4)
-            self.assertFalse(all(c.state(0) for c in model.iter_constraints()))
-
-    def test_3x1(self):
-        times = [[2, 1],
-                 [1, 2],
-                 [1, 1]]
-        machines = [[0, 1],
-                    [1, 0],
-                    [0, 1]]
-
+    def test_3x10(self):
+        times = np.arange(30).reshape((3, 10))
+        machines = np.array(
+            [
+                [4, 5, 0, 7, 3, 9, 6, 8, 2, 1],
+                [6, 5, 3, 2, 4, 8, 7, 0, 1, 9],
+                [0, 8, 5, 2, 9, 1, 7, 3, 4, 6],
+            ]
+        )
         model = dwave.optimization.generators.job_shop_scheduling(times, machines)
 
-        # check that we have the decisions we expect
-        times, = model.iter_decisions()
-
         model.states.resize(1)
 
-        # for the following tests, we'll call the jobs a,b,c
+        order = next(model.iter_decisions())
 
-        with self.subTest("feasible and optimal"):
-            # aacb
-            # bbac
+        order.set_state(
+            0,
+            [0, 15, 8, 25, 19, 12, 6, 4, 24, 3, 2, 13, 5, 11, 14, 7, 16, 29, 17,
+            23, 22, 18, 26, 20, 28, 9, 27, 21, 1, 10],
+        )
 
-            times.set_state(0, [[0, 2], [3, 0], [2, 3]])
+        self.assertTrue(np.all(
+            model.get_global_task_ordering(0)
+            == np.array(
+                [0, 10, 1, 20, 11, 12, 2, 3, 21, 4, 5, 13, 6, 14, 15, 7, 16, 22,
+                17, 23, 24, 18, 25, 26, 27, 8, 28, 29, 9, 19]
+                )
+            )
+        )
+        self.assertEqual(model.objective.state(0), 247)
 
-            # objective is exactly the makespan and the model is feasible
-            self.assertEqual(model.objective.state(0), 4)
-            for constraint in model.iter_constraints():
-                self.assertTrue(constraint.state(0))
-
-        with self.subTest("feasible and not optimal"):
-            # aabc
-            # bba c
-
-            times.set_state(0, [[0, 2], [2, 0], [3, 4]])
-
-            self.assertEqual(model.objective.state(0), 5)
-            for constraint in model.iter_constraints():
-                self.assertTrue(constraint.state(0))
-
-    def test_3x3(self):
-        times = [[2, 1, 3],
-                 [4, 1, 2],
-                 [1, 1, 2]]
-        machines = [[0, 1, 2],
-                    [2, 0, 1],
-                    [2, 1, 0]]
-
-        model = dwave.optimization.generators.job_shop_scheduling(times, machines)
-
-        # check that we have the decisions we expect
-        times, = model.iter_decisions()
-
-        model.states.resize(1)
-
-        # for the following tests, we'll call the jobs a,b,c
-
-        with self.subTest("feasible and optimal"):
-            # aabbbbc
-            #   a c b
-            # bbccaaa
-
-            times.set_state(0, [[0, 2, 4], [2, 6, 0], [6, 4, 2]])
-
-            # objective is exactly the makespan and the model is feasible
-            self.assertEqual(model.objective.state(0), 7)
-            for constraint in model.iter_constraints():
-                self.assertTrue(constraint.state(0))
-
-        with self.subTest("feasible and not optimal"):
-            # aabbbbc
-            #   a c  b
-            # bbccaaa
-
-            times.set_state(0, [[0, 2, 4], [2, 7, 0], [6, 4, 2]])
-
-            # objective is exactly the makespan and the model is feasible
-            self.assertEqual(model.objective.state(0), 8)
-            for constraint in model.iter_constraints():
-                self.assertTrue(constraint.state(0))
-
-        with self.subTest("infeasible - overlapping job"):
-            # aabbbbc
-            #  a  c b
-            # bbccaaa
-
-            times.set_state(0, [[0, 1, 4], [2, 6, 0], [6, 4, 2]])
-
-            # objective is exactly the makespan and the model is infeasible
-            self.assertEqual(model.objective.state(0), 7)
-            self.assertFalse(all(c.state(0) for c in model.iter_constraints()))
-
-        with self.subTest("infeasible - overlapping machine"):
-            # aabbbbc
-            #   a c b
-            # b.c aaa
-
-            times.set_state(0, [[0, 2, 4], [2, 6, 0], [6, 4, 1]])
-
-            # objective is exactly the makespan and the model is infeasible
-            self.assertEqual(model.objective.state(0), 7)
-            self.assertFalse(all(c.state(0) for c in model.iter_constraints()))
-
-    def test_4x1(self):
-        times = np.asarray([[1, 2, 1, 1]]).T
-        machines = np.asarray([[1, 1, 1, 1]]).T
-
-        model = dwave.optimization.generators.job_shop_scheduling(times, machines)
-
-        # check that we have the decisions we expect
-        times, = model.iter_decisions()
-
-        model.states.resize(1)
-
-        with self.subTest("feasible and optimal"):
-            # a
-            #  bb
-            #    c
-            #     d
-
-            times.set_state(0, [[0], [1], [3], [4]])
-
-            # objective is exactly the makespan and the model is feasible
-            self.assertEqual(model.objective.state(0), 5)
-            for constraint in model.iter_constraints():
-                self.assertTrue(constraint.state(0))
+        order.set_state(
+            0,
+            [4, 29, 8, 2, 16, 23, 18, 27, 22, 7, 6, 3, 25, 20, 13, 5, 17, 12, 1,
+            10, 21, 26, 9, 14, 15, 28, 19, 24, 0, 11],
+        )
+        self.assertTrue(np.all(
+            model.get_global_task_ordering(0)
+            == np.array(
+                [0, 20, 1, 2, 10, 21, 11, 22, 23, 3, 4, 5, 24, 25, 12, 6, 13, 14,
+                7, 15, 26, 27, 8, 16, 17, 28, 18, 29, 9, 19]
+                )
+            )
+        )
+        self.assertEqual(model.objective.state(0), 245)
 
     def test_input_checking(self):
         # empty
