@@ -159,14 +159,14 @@ bool calculate_integral<functional::tanh<double>>(const Array*) {
 }
 
 template <class UnaryOp>
-UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr)
-    : ArrayOutputMixin(node_ptr->shape()),
-      array_ptr_(node_ptr),
-      values_info_(
-          calculate_values_minmax<UnaryOp>(array_ptr_),
-          calculate_integral<UnaryOp>(array_ptr_)
-      ),
-      sizeinfo_(array_ptr_->sizeinfo()) {
+UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr) :
+    ArrayOutputMixin(node_ptr->shape()),
+    array_ptr_(node_ptr),
+    values_info_(
+        calculate_values_minmax<UnaryOp>(array_ptr_),
+        calculate_integral<UnaryOp>(array_ptr_)
+    ),
+    sizeinfo_(array_ptr_->sizeinfo()) {
     add_predecessor(node_ptr);
 }
 

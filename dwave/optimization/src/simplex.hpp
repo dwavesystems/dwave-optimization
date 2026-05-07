@@ -47,8 +47,8 @@ class SolveResult {
     };
 
     SolveResult() : solve_status(SolveStatus::UNSET), num_iterations(0) {}
-    SolveResult(SolveStatus solve_status, ssize_t num_iterations)
-        : solve_status(solve_status), num_iterations(num_iterations) {}
+    SolveResult(SolveStatus solve_status, ssize_t num_iterations) :
+        solve_status(solve_status), num_iterations(num_iterations) {}
 
     void set_partial_solution(std::vector<double>&& partial_solution) {
         solution_ = std::move(partial_solution);

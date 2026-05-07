@@ -32,12 +32,12 @@ namespace dwave::optimization {
 // difference should be quite minimal.
 class ArrayStateData {
  public:
-    explicit ArrayStateData(std::vector<double>&& values) noexcept
-        : buffer(std::move(values)), size_(buffer.size()), previous_size_(buffer.size()) {}
+    explicit ArrayStateData(std::vector<double>&& values) noexcept :
+        buffer(std::move(values)), size_(buffer.size()), previous_size_(buffer.size()) {}
 
     template <std::ranges::range Range>
-    explicit ArrayStateData(Range&& values) noexcept
-        : ArrayStateData(std::vector<double>(values.begin(), values.end())) {}
+    explicit ArrayStateData(Range&& values) noexcept :
+        ArrayStateData(std::vector<double>(values.begin(), values.end())) {}
 
     // Assign new values to the state starting from an offset, tracking the changes from the
     // previous state to the new. If the original buffer extends past the new range of values,
@@ -230,12 +230,12 @@ class ArrayStateData {
 
 class ArrayNodeStateData : public ArrayStateData, public NodeStateData {
  public:
-    explicit ArrayNodeStateData(std::vector<double>&& values) noexcept
-        : ArrayStateData(std::move(values)), NodeStateData() {}
+    explicit ArrayNodeStateData(std::vector<double>&& values) noexcept :
+        ArrayStateData(std::move(values)), NodeStateData() {}
 
     template <std::ranges::range Range>
-    explicit ArrayNodeStateData(Range&& values) noexcept
-        : ArrayNodeStateData(std::vector<double>(values.begin(), values.end())) {}
+    explicit ArrayNodeStateData(Range&& values) noexcept :
+        ArrayNodeStateData(std::vector<double>(values.begin(), values.end())) {}
 
     std::unique_ptr<NodeStateData> copy() const override {
         return std::make_unique<ArrayNodeStateData>(*this);
