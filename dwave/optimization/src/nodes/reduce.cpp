@@ -227,15 +227,15 @@ class ReduceNodeData : public NodeStateData {
     };
 
     // Given a vector of reductions, construct the state of the array.
-    ReduceNodeData(std::vector<reduction_type>&& reductions) :
-        reductions_(std::move(reductions)), flags_(reductions_.size()) {
+    ReduceNodeData(std::vector<reduction_type>&& reductions)
+        : reductions_(std::move(reductions)), flags_(reductions_.size()) {
         buffer_.reserve(reductions_.size());
         for (const auto& reduction : reductions_)
             buffer_.emplace_back(static_cast<result_type>(reduction));
     }
 
-    ReduceNodeData(std::vector<reduction_type>&& reductions, std::span<const ssize_t> shape) :
-        ReduceNodeData(std::move(reductions)) {
+    ReduceNodeData(std::vector<reduction_type>&& reductions, std::span<const ssize_t> shape)
+        : ReduceNodeData(std::move(reductions)) {
         shape_info_.emplace(shape_info_type(reductions_.size(), shape));
     }
 
@@ -520,12 +520,12 @@ class ReduceNodeData : public NodeStateData {
     struct shape_info_type {
         shape_info_type() = delete;
 
-        shape_info_type(ssize_t size, std::span<const ssize_t> shape) :
-            shape(shape.begin(), shape.end()),
-            size_divisor(
-                std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>())
-            ),
-            previous_size(size) {
+        shape_info_type(ssize_t size, std::span<const ssize_t> shape)
+            : shape(shape.begin(), shape.end()),
+              size_divisor(
+                  std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>())
+              ),
+              previous_size(size) {
             this->shape[0] = size / size_divisor;
         }
 
@@ -800,13 +800,13 @@ ReduceNode<BinaryOp>::ReduceNode(
     ArrayNode* array_ptr,
     std::span<const ssize_t> axes,
     std::optional<double> initial
-) :
-    ArrayOutputMixin(reduce_shape(array_ptr, axes)),
-    initial(initial),
-    array_ptr_(array_ptr),
-    axes_(normalize_axes(array_ptr, axes)),
-    values_info_(values_info<BinaryOp>(array_ptr_, axes_, initial)),
-    sizeinfo_(reducenode_calculate_sizeinfo(this, array_ptr_, axes_)) {
+)
+    : ArrayOutputMixin(reduce_shape(array_ptr, axes)),
+      initial(initial),
+      array_ptr_(array_ptr),
+      axes_(normalize_axes(array_ptr, axes)),
+      values_info_(values_info<BinaryOp>(array_ptr_, axes_, initial)),
+      sizeinfo_(reducenode_calculate_sizeinfo(this, array_ptr_, axes_)) {
     add_predecessor(array_ptr);
 }
 
@@ -815,8 +815,8 @@ ReduceNode<BinaryOp>::ReduceNode(
     ArrayNode* array_ptr,
     std::initializer_list<ssize_t> axes,
     std::optional<double> initial
-) :
-    ReduceNode(array_ptr, std::span(axes), initial) {}
+)
+    : ReduceNode(array_ptr, std::span(axes), initial) {}
 
 template <class BinaryOp>
 double const* ReduceNode<BinaryOp>::buff(const State& state) const {

@@ -29,8 +29,8 @@ struct QuadraticModelNodeData : public NodeStateData {
         double value,
         std::vector<double>&& state,
         index_type num_variables
-    ) :
-        value_old(value), value(value_old), update(0, value, value), previous_state_(state) {
+    )
+        : value_old(value), value(value_old), update(0, value, value), previous_state_(state) {
         effective_changes_.reserve(num_variables);
     }
 
@@ -272,11 +272,8 @@ void QuadraticModel::shrink_to_fit() {
     square_biases_.shrink_to_fit();
 }
 
-QuadraticModelNode::QuadraticModelNode(
-    ArrayNode* state_node_ptr,
-    QuadraticModel&& quadratic_model
-) :
-    quadratic_model_(quadratic_model) {
+QuadraticModelNode::QuadraticModelNode(ArrayNode* state_node_ptr, QuadraticModel&& quadratic_model)
+    : quadratic_model_(quadratic_model) {
     if (!std::ranges::equal(
             state_node_ptr->shape(), std::vector<ssize_t>{quadratic_model_.num_variables()}
         )) {

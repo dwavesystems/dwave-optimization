@@ -20,8 +20,8 @@ namespace dwave::optimization {
 
 class ArrayValidationNodeData : public dwave::optimization::NodeStateData {
  public:
-    explicit ArrayValidationNodeData(Array::View data) :
-        old_data(data.begin(), data.end()), current_data(data.begin(), data.end()) {}
+    explicit ArrayValidationNodeData(Array::View data)
+        : old_data(data.begin(), data.end()), current_data(data.begin(), data.end()) {}
 
     std::vector<double> old_data;
     std::vector<double> current_data;
@@ -260,16 +260,16 @@ class DynamicArrayTestingNodeData : public dwave::optimization::NodeStateData {
  public:
     DynamicArrayTestingNodeData() = default;
 
-    explicit DynamicArrayTestingNodeData(const std::span<const ssize_t> shape) :
-        current_shape(shape.begin(), shape.end()), old_shape(shape.begin(), shape.end()) {
+    explicit DynamicArrayTestingNodeData(const std::span<const ssize_t> shape)
+        : current_shape(shape.begin(), shape.end()), old_shape(shape.begin(), shape.end()) {
         assert(shape.size() > 0);
     }
 
     DynamicArrayTestingNodeData(
         const std::span<const ssize_t> shape,
         const std::span<const double> values
-    ) :
-        DynamicArrayTestingNodeData(shape) {
+    )
+        : DynamicArrayTestingNodeData(shape) {
         current_data.insert(current_data.begin(), values.begin(), values.end());
         old_data = current_data;
     }
@@ -321,16 +321,16 @@ class DynamicArrayTestingNodeData : public dwave::optimization::NodeStateData {
     std::vector<ssize_t> old_shape;
 };
 
-DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape) :
-    DynamicArrayTestingNode(shape, std::nullopt, std::nullopt, false) {}
+DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape)
+    : DynamicArrayTestingNode(shape, std::nullopt, std::nullopt, false) {}
 
 DynamicArrayTestingNode::DynamicArrayTestingNode(
     std::initializer_list<ssize_t> shape,
     std::optional<double> min,
     std::optional<double> max,
     bool integral
-) :
-    DynamicArrayTestingNode(shape, min, max, integral, std::nullopt, std::nullopt) {}
+)
+    : DynamicArrayTestingNode(shape, min, max, integral, std::nullopt, std::nullopt) {}
 
 DynamicArrayTestingNode::DynamicArrayTestingNode(
     std::initializer_list<ssize_t> shape,
@@ -339,13 +339,13 @@ DynamicArrayTestingNode::DynamicArrayTestingNode(
     bool integral,
     std::optional<ssize_t> min_size,
     std::optional<ssize_t> max_size
-) :
-    ArrayOutputMixin(shape),
-    shape_(shape),
-    min_(min),
-    max_(max),
-    integral_(integral),
-    sizeinfo_(SizeInfo(this, min_size, max_size)) {
+)
+    : ArrayOutputMixin(shape),
+      shape_(shape),
+      min_(min),
+      max_(max),
+      integral_(integral),
+      sizeinfo_(SizeInfo(this, min_size, max_size)) {
     if (shape.size() == 0 || *shape.begin() != -1) {
         throw std::invalid_argument(
             "DynamicArrayTestingNode is meant to be used as a dynamic array"

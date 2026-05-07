@@ -27,10 +27,10 @@ class AccumulateZipNodeData : public ArrayNodeStateData {
         std::vector<double>&& values,
         std::vector<Array::const_iterator>&& iterators,
         State&& state
-    ) :
-        ArrayNodeStateData(std::move(values)),
-        iterators(std::move(iterators)),
-        register_(std::move(state)) {}
+    )
+        : ArrayNodeStateData(std::move(values)),
+          iterators(std::move(iterators)),
+          register_(std::move(state)) {}
 
     // used to avoid reallocating memory for predecessor iterators every propagation
     std::vector<Array::const_iterator> iterators;
@@ -42,12 +42,12 @@ AccumulateZipNode::AccumulateZipNode(
     std::shared_ptr<Graph> expression_ptr,
     const std::vector<ArrayNode*>& operands,
     array_or_double initial
-) :
-    ArrayOutputMixin(operands.empty() ? std::span<ssize_t, 0>() : operands[0]->shape()),
-    initial(initial),
-    expression_ptr_(std::move(expression_ptr)),
-    operands_(operands),
-    sizeinfo_(operands.empty() ? SizeInfo(0) : operands_[0]->sizeinfo()) {
+)
+    : ArrayOutputMixin(operands.empty() ? std::span<ssize_t, 0>() : operands[0]->shape()),
+      initial(initial),
+      expression_ptr_(std::move(expression_ptr)),
+      operands_(operands),
+      sizeinfo_(operands.empty() ? SizeInfo(0) : operands_[0]->sizeinfo()) {
     check(*expression_ptr_, operands, initial);
 
     if (std::holds_alternative<ArrayNode*>(initial)) {

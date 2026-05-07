@@ -26,8 +26,8 @@ namespace dwave::optimization {
 
 // Generic data storage for nodes that index other nodes.
 struct IndexingNodeData : NodeStateData {
-    IndexingNodeData(std::vector<ssize_t>&& offsets, std::vector<double>&& values) noexcept :
-        offsets(offsets), data(values), old_size(offsets.size()) {}
+    IndexingNodeData(std::vector<ssize_t>&& offsets, std::vector<double>&& values) noexcept
+        : offsets(offsets), data(values), old_size(offsets.size()) {}
 
     void commit() {
         diff.clear();
@@ -83,12 +83,12 @@ struct AdvancedIndexingNodeData : NodeStateData {
         std::vector<ssize_t>&& offsets,
         std::vector<double>&& values,
         bool maintain_reverse_offset_map
-    ) noexcept :
-        data(values),
-        old_offsets_size(offsets.size()),
-        old_data_size(data.size()),
-        offsets_(offsets),
-        maintain_reverse_offset_map(maintain_reverse_offset_map) {
+    ) noexcept
+        : data(values),
+          old_offsets_size(offsets.size()),
+          old_data_size(data.size()),
+          offsets_(offsets),
+          maintain_reverse_offset_map(maintain_reverse_offset_map) {
         for (ssize_t idx = 0; idx < static_cast<ssize_t>(offsets_.size()); ++idx) {
             add_to_reverse(idx, offsets_[idx]);
         }
@@ -225,8 +225,8 @@ struct AdvancedIndexingNodeData : NodeStateData {
 };
 
 struct AdvancedIndexingNode::IndexParser_ {
-    IndexParser_(Array* array_ptr, std::vector<array_or_slice>&& indices) :
-        indices_(std::move(indices)) {
+    IndexParser_(Array* array_ptr, std::vector<array_or_slice>&& indices)
+        : indices_(std::move(indices)) {
         // This may happen if the dynamic_cast to Array from Node fails in the
         // AdvancedIndexingNode constructor
         if (array_ptr == nullptr) {
@@ -491,22 +491,22 @@ struct AdvancedIndexingNode::IndexParser_ {
 AdvancedIndexingNode::AdvancedIndexingNode(
     ArrayNode* array_ptr,
     std::vector<array_or_slice> indices
-) :
-    AdvancedIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
+)
+    : AdvancedIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
 
-AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser) :
-    array_ptr_(array_ptr),
-    ndim_(parser.ndim),
-    strides_(std::move(parser.strides)),
-    shape_(std::move(parser.shape)),
-    array_item_strides_(std::move(parser.simple_array_strides)),
-    size_(Array::shape_to_size(ndim_, shape_.get())),
-    indices_(std::move(parser.indices_)),
-    indexing_arrays_ndim_(parser.indexing_arrays_ndim),
-    grouped_indexers_mode_(parser.grouped_indexers_mode),
-    first_array_index_(parser.first_array_index),
-    subspace_stride_(parser.subspace_stride),
-    values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()) {
+AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser)
+    : array_ptr_(array_ptr),
+      ndim_(parser.ndim),
+      strides_(std::move(parser.strides)),
+      shape_(std::move(parser.shape)),
+      array_item_strides_(std::move(parser.simple_array_strides)),
+      size_(Array::shape_to_size(ndim_, shape_.get())),
+      indices_(std::move(parser.indices_)),
+      indexing_arrays_ndim_(parser.indexing_arrays_ndim),
+      grouped_indexers_mode_(parser.grouped_indexers_mode),
+      first_array_index_(parser.first_array_index),
+      subspace_stride_(parser.subspace_stride),
+      values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()) {
     assert(!array_ptr->ndim() || array_item_strides_);
 
     // Now actually add them. This way if there is an error thrown we're not
@@ -1363,20 +1363,20 @@ SizeInfo basicindexing_calculate_sizeinfo(
     return sizeinfo.substitute(1);
 }
 
-BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, std::vector<slice_or_int> indices) :
-    BasicIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
+BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, std::vector<slice_or_int> indices)
+    : BasicIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
 
-BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser) :
-    array_ptr_(array_ptr),
-    ndim_(parser.ndim),
-    strides_(std::move(parser.strides)),
-    shape_(std::move(parser.shape)),
-    start_(parser.start),
-    size_(Array::shape_to_size(ndim_, shape_.get())),
-    axis0_slice_(parser.axis0_slice),
-    contiguous_(is_contiguous(ndim_, shape_.get(), strides_.get())),
-    values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()),
-    sizeinfo_(basicindexing_calculate_sizeinfo(this, array_ptr_, axis0_slice_)) {
+BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser)
+    : array_ptr_(array_ptr),
+      ndim_(parser.ndim),
+      strides_(std::move(parser.strides)),
+      shape_(std::move(parser.shape)),
+      start_(parser.start),
+      size_(Array::shape_to_size(ndim_, shape_.get())),
+      axis0_slice_(parser.axis0_slice),
+      contiguous_(is_contiguous(ndim_, shape_.get(), strides_.get())),
+      values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()),
+      sizeinfo_(basicindexing_calculate_sizeinfo(this, array_ptr_, axis0_slice_)) {
     if (!contiguous_ && dynamic() &&
         (this->axis0_slice_->start < 0 || this->axis0_slice_->stop < 0)) {
         throw std::invalid_argument(
@@ -1928,11 +1928,11 @@ std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
 
 // PermutationNode ************************************************************
 
-PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr) :
-    ArrayOutputMixin(array_ptr->shape()),
-    array_ptr_(array_ptr),
-    order_ptr_(order_ptr),
-    values_info_(array_ptr_) {
+PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr)
+    : ArrayOutputMixin(array_ptr->shape()),
+      array_ptr_(array_ptr),
+      order_ptr_(order_ptr),
+      values_info_(array_ptr_) {
     std::span<const ssize_t> array_shape = array_ptr_->shape();
 
     // For now, we are only going to support permutation on constant nodes

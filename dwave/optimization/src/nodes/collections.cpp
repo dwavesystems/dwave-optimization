@@ -77,11 +77,11 @@ struct CollectionStateData : NodeStateData {
         }
     }
 
-    explicit CollectionStateData(std::vector<double> elements) :
-        CollectionStateData(std::move(elements), elements.size()) {}
+    explicit CollectionStateData(std::vector<double> elements)
+        : CollectionStateData(std::move(elements), elements.size()) {}
 
-    CollectionStateData(std::vector<double> elements, ssize_t size) :
-        elements(std::move(elements)), size(size) {
+    CollectionStateData(std::vector<double> elements, ssize_t size)
+        : elements(std::move(elements)), size(size) {
         assert(0 <= size && static_cast<std::size_t>(size) <= this->elements.size());
     }
 
@@ -303,8 +303,8 @@ ssize_t CollectionNode::size_diff(const State& state) const {
 }
 
 struct DisjointBitSetsNodeData : NodeStateData {
-    DisjointBitSetsNodeData(ssize_t primary_set_size, ssize_t num_disjoint_sets) :
-        primary_set_size(primary_set_size), num_disjoint_sets(num_disjoint_sets) {
+    DisjointBitSetsNodeData(ssize_t primary_set_size, ssize_t num_disjoint_sets)
+        : primary_set_size(primary_set_size), num_disjoint_sets(num_disjoint_sets) {
         data.resize(primary_set_size * num_disjoint_sets, 0);
         diffs.resize(num_disjoint_sets);
 
@@ -318,8 +318,8 @@ struct DisjointBitSetsNodeData : NodeStateData {
         ssize_t primary_set_size,
         ssize_t num_disjoint_sets,
         const std::vector<std::vector<double>>& contents
-    ) :
-        primary_set_size(primary_set_size), num_disjoint_sets(num_disjoint_sets) {
+    )
+        : primary_set_size(primary_set_size), num_disjoint_sets(num_disjoint_sets) {
         if (static_cast<ssize_t>(contents.size()) != num_disjoint_sets) {
             throw std::invalid_argument("must provide correct number of sets");
         }
@@ -399,8 +399,8 @@ struct DisjointBitSetsNodeData : NodeStateData {
     std::vector<std::vector<Update>> diffs;
 };
 
-DisjointBitSetsNode::DisjointBitSetsNode(ssize_t primary_set_size, ssize_t num_disjoint_sets) :
-    primary_set_size_(primary_set_size), num_disjoint_sets_(num_disjoint_sets) {
+DisjointBitSetsNode::DisjointBitSetsNode(ssize_t primary_set_size, ssize_t num_disjoint_sets)
+    : primary_set_size_(primary_set_size), num_disjoint_sets_(num_disjoint_sets) {
     if (primary_set_size < 0) throw std::invalid_argument("primary_set_size must be non-negative");
     if (num_disjoint_sets < 1) throw std::invalid_argument("num_disjoint_sets must be positive");
 }
@@ -460,8 +460,8 @@ double DisjointBitSetNode::min() const { return 0; }
 double DisjointBitSetNode::max() const { return 1; }
 
 struct DisjointListStateData : NodeStateData {
-    DisjointListStateData(ssize_t primary_set_size, ssize_t num_disjoint_lists) :
-        primary_set_size(primary_set_size) {
+    DisjointListStateData(ssize_t primary_set_size, ssize_t num_disjoint_lists)
+        : primary_set_size(primary_set_size) {
         lists.resize(num_disjoint_lists);
         all_list_updates.resize(num_disjoint_lists);
         list_sizes.resize(num_disjoint_lists);
@@ -485,12 +485,12 @@ struct DisjointListStateData : NodeStateData {
         size_t primary_set_size,
         size_t num_disjoint_lists,
         std::vector<std::vector<double>> lists_
-    ) :
-        primary_set_size(primary_set_size),
-        lists(std::move(lists_)),
-        all_list_updates(num_disjoint_lists),
-        list_sizes(num_disjoint_lists),
-        previous_list_sizes(num_disjoint_lists) {
+    )
+        : primary_set_size(primary_set_size),
+          lists(std::move(lists_)),
+          all_list_updates(num_disjoint_lists),
+          list_sizes(num_disjoint_lists),
+          previous_list_sizes(num_disjoint_lists) {
         if (lists.size() != num_disjoint_lists) {
             throw std::invalid_argument("must provide the correct number of disjoint lists");
         }
@@ -683,8 +683,8 @@ struct DisjointListStateData : NodeStateData {
     std::vector<ssize_t> previous_list_sizes;
 };
 
-DisjointListsNode::DisjointListsNode(ssize_t primary_set_size, ssize_t num_disjoint_lists) :
-    primary_set_size_(primary_set_size), num_disjoint_lists_(num_disjoint_lists) {
+DisjointListsNode::DisjointListsNode(ssize_t primary_set_size, ssize_t num_disjoint_lists)
+    : primary_set_size_(primary_set_size), num_disjoint_lists_(num_disjoint_lists) {
     if (primary_set_size < 0) throw std::invalid_argument("primary_set_size must be non-negative");
     if (num_disjoint_lists < 1) throw std::invalid_argument("num_disjoint_lists must be positive");
 }
@@ -780,11 +780,11 @@ void DisjointListsNode::pop_to_list(
     );
 }
 
-DisjointListNode::DisjointListNode(DisjointListsNode* disjoint_list_node) :
-    ArrayOutputMixin(Array::DYNAMIC_SIZE),
-    disjoint_list_node_ptr(disjoint_list_node),
-    list_index_(disjoint_list_node->successors().size()),
-    primary_set_size_(disjoint_list_node->primary_set_size()) {
+DisjointListNode::DisjointListNode(DisjointListsNode* disjoint_list_node)
+    : ArrayOutputMixin(Array::DYNAMIC_SIZE),
+      disjoint_list_node_ptr(disjoint_list_node),
+      list_index_(disjoint_list_node->successors().size()),
+      primary_set_size_(disjoint_list_node->primary_set_size()) {
     if (list_index_ >= disjoint_list_node->num_disjoint_lists()) {
         throw std::length_error("disjoint-list node already has all output nodes");
     }

@@ -27,13 +27,13 @@ InputNode::InputNode(
     std::optional<double> min,
     std::optional<double> max,
     std::optional<bool> integral
-) :
-    ArrayOutputMixin(shape),
-    values_info_(
-        min.value_or(std::numeric_limits<double>::lowest()),
-        max.value_or(std::numeric_limits<double>::max()),
-        integral.value_or(false)
-    ) {
+)
+    : ArrayOutputMixin(shape),
+      values_info_(
+          min.value_or(std::numeric_limits<double>::lowest()),
+          max.value_or(std::numeric_limits<double>::max()),
+          integral.value_or(false)
+      ) {
     // these errors are propagated to Python so we use "Input" rather than "InputNode"
     if (values_info_.min > values_info_.max) {
         throw std::invalid_argument(

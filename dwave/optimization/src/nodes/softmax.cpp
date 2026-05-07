@@ -44,21 +44,21 @@ struct SoftMaxNodeDataHelper_ {
 };
 
 struct SoftMaxNodeStateData : public ArrayNodeStateData {
-    SoftMaxNodeStateData(std::vector<double> input) :
-        SoftMaxNodeStateData(SoftMaxNodeDataHelper_(std::move(input))) {}
+    SoftMaxNodeStateData(std::vector<double> input)
+        : SoftMaxNodeStateData(SoftMaxNodeDataHelper_(std::move(input))) {}
 
-    SoftMaxNodeStateData(SoftMaxNodeDataHelper_&& helper) :
-        ArrayNodeStateData(std::move(helper.values)),
-        denominator(helper.denominator),
-        prior_denominator(helper.prior_denominator) {}
+    SoftMaxNodeStateData(SoftMaxNodeDataHelper_&& helper)
+        : ArrayNodeStateData(std::move(helper.values)),
+          denominator(helper.denominator),
+          prior_denominator(helper.prior_denominator) {}
 
     double denominator;
     double prior_denominator;
     std::vector<bool> index_changed;
 };
 
-SoftMaxNode::SoftMaxNode(ArrayNode* arr_ptr) :
-    ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr), sizeinfo_(arr_ptr_->sizeinfo()) {
+SoftMaxNode::SoftMaxNode(ArrayNode* arr_ptr)
+    : ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr), sizeinfo_(arr_ptr_->sizeinfo()) {
     add_predecessor(arr_ptr);
 }
 

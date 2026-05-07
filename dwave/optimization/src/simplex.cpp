@@ -25,15 +25,15 @@ class Matrix {
  public:
     Matrix(ssize_t n, ssize_t m) : n_(n), m_(m) { buffer_.resize(n_ * m_); }
 
-    Matrix(std::vector<double>&& data, ssize_t n, ssize_t m) :
-        n_(n), m_(m), buffer_(std::move(data)) {
+    Matrix(std::vector<double>&& data, ssize_t n, ssize_t m)
+        : n_(n), m_(m), buffer_(std::move(data)) {
         assert(
             n_ * m_ == static_cast<ssize_t>(buffer_.size()) && "shape does not match provided data"
         );
     }
 
-    Matrix(std::span<const double> data, ssize_t n, ssize_t m) :
-        Matrix(std::vector<double>(data.begin(), data.end()), n, m) {}
+    Matrix(std::span<const double> data, ssize_t n, ssize_t m)
+        : Matrix(std::vector<double>(data.begin(), data.end()), n, m) {}
 
     double& operator()(ssize_t i, ssize_t j) {
         if (i < 0) i += n_;
@@ -320,8 +320,8 @@ SolveResult _linprog_simplex(
 }
 
 struct LP {
-    LP(std::vector<double>&& c, double c0, Matrix&& A, std::vector<double>&& b) :
-        c(c), c0(c0), A(A), b(b) {};
+    LP(std::vector<double>&& c, double c0, Matrix&& A, std::vector<double>&& b)
+        : c(c), c0(c0), A(A), b(b) {};
 
     std::vector<double> c;
     double c0;

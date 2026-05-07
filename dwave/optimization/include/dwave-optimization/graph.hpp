@@ -264,8 +264,8 @@ class Node {
 
  protected:
     // For use by non-dynamic node constructors.
-    Node(std::initializer_list<Node*> nodes) noexcept :
-        predecessors_(nodes), expired_ptr_(new bool(false)) {
+    Node(std::initializer_list<Node*> nodes) noexcept
+        : predecessors_(nodes), expired_ptr_(new bool(false)) {
         int idx = 0;
         for (Node* ptr : predecessors_) {
             ptr->successors_.emplace_back(this, idx);

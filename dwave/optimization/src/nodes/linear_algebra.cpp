@@ -336,19 +336,19 @@ std::vector<ssize_t> atleast_2d_shape(std::span<const ssize_t> shape, bool vecto
 
 class MatrixMultiplyNodeData : public ArrayNodeStateData {
  public:
-    explicit MatrixMultiplyNodeData(std::vector<double>&& values, std::span<const ssize_t> shape) :
-        ArrayNodeStateData(std::move(values)), shape(shape.begin(), shape.end()) {}
+    explicit MatrixMultiplyNodeData(std::vector<double>&& values, std::span<const ssize_t> shape)
+        : ArrayNodeStateData(std::move(values)), shape(shape.begin(), shape.end()) {}
 
     std::vector<double> output;
     std::vector<ssize_t> shape;
 };
 
-MatrixMultiplyNode::MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr) :
-    ArrayOutputMixin(output_shape(x_ptr, y_ptr)),
-    x_ptr_(x_ptr),
-    y_ptr_(y_ptr),
-    sizeinfo_(get_sizeinfo(x_ptr, y_ptr)),
-    values_info_(get_values_info(x_ptr, y_ptr)) {
+MatrixMultiplyNode::MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr)
+    : ArrayOutputMixin(output_shape(x_ptr, y_ptr)),
+      x_ptr_(x_ptr),
+      y_ptr_(y_ptr),
+      sizeinfo_(get_sizeinfo(x_ptr, y_ptr)),
+      values_info_(get_values_info(x_ptr, y_ptr)) {
     add_predecessor(x_ptr);
     add_predecessor(y_ptr);
 }

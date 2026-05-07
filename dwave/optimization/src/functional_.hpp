@@ -402,8 +402,8 @@ struct Multiply : BinaryFunctionMixin<Multiply<T>> {
     struct reduction_type {
      public:
         reduction_type() = delete;
-        reduction_type(result_type value) noexcept :
-            nonzero_(value ? value : 1), num_zero_(value == 0) {}
+        reduction_type(result_type value) noexcept
+            : nonzero_(value ? value : 1), num_zero_(value == 0) {}
         bool operator==(const reduction_type& rhs) const {
             return nonzero_ == rhs.nonzero_ and num_zero_ == rhs.num_zero_;
         }

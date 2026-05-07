@@ -58,10 +58,10 @@ class BufferIterator {
     BufferIterator() = default;
 
     /// Copy Constructor.
-    BufferIterator(const BufferIterator& other) noexcept :
-        ptr_(other.ptr_),
-        format_(other.format_),
-        shape_(other.shape_ ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
+    BufferIterator(const BufferIterator& other) noexcept
+        : ptr_(other.ptr_),
+          format_(other.format_),
+          shape_(other.shape_ ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
 
     /// Move Constructor.
     BufferIterator(BufferIterator&& other) = default;
@@ -92,10 +92,9 @@ class BufferIterator {
     )  // strides for each dimension of the array
         noexcept
         requires(!DType<From>)
-        :
-        ptr_(ptr),
-        format_(format_of<T>()),
-        shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
+        : ptr_(ptr),
+          format_(format_of<T>()),
+          shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
 
     /// Construct a non-contiguous iterator from a shape/strides defined as
     /// ranges when `From` is `void`.
@@ -366,19 +365,19 @@ class BufferIterator {
         ShapeInfo() = default;
 
         // Copy constructor
-        ShapeInfo(const ShapeInfo& other) noexcept :
-            ndim(other.ndim),
-            shape(other.shape),
-            strides(other.strides),
-            loc(std::make_unique<ssize_t[]>(ndim)) {
+        ShapeInfo(const ShapeInfo& other) noexcept
+            : ndim(other.ndim),
+              shape(other.shape),
+              strides(other.strides),
+              loc(std::make_unique<ssize_t[]>(ndim)) {
             std::copy(other.loc.get(), other.loc.get() + ndim, loc.get());
         }
 
         // Move Constructor
         ShapeInfo(ShapeInfo&& other) = default;
 
-        ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept :
-            ndim(ndim), shape(shape), strides(strides), loc(std::make_unique<ssize_t[]>(ndim)) {
+        ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
+            : ndim(ndim), shape(shape), strides(strides), loc(std::make_unique<ssize_t[]>(ndim)) {
             std::fill(loc.get(), loc.get() + ndim, 0);
         }
 

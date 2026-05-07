@@ -41,8 +41,8 @@ struct LinearProgramNodeData : NodeStateData {
     SolveResult result;
 };
 
-LinearProgramFeasibleNode::LinearProgramFeasibleNode(LinearProgramNodeBase* lp_ptr) :
-    lp_ptr_(lp_ptr) {
+LinearProgramFeasibleNode::LinearProgramFeasibleNode(LinearProgramNodeBase* lp_ptr)
+    : lp_ptr_(lp_ptr) {
     add_predecessor(lp_ptr);
 }
 
@@ -175,19 +175,19 @@ LinearProgramNode::LinearProgramNode(
     ArrayNode* b_eq_ptr,
     ArrayNode* lb_ptr,
     ArrayNode* ub_ptr
-) :
-    c_ptr_(c_ptr),
-    b_lb_ptr_(b_lb_ptr),
-    A_ptr_(A_ptr),
-    b_ub_ptr_(b_ub_ptr),
-    A_eq_ptr_(A_eq_ptr),
-    b_eq_ptr_(b_eq_ptr),
-    lb_ptr_(lb_ptr),
-    ub_ptr_(ub_ptr),
-    variables_minmax_(
-        lb_ptr_ ? lb_ptr_->min() : LinearProgramNode::default_lower_bound(),
-        ub_ptr_ ? ub_ptr_->max() : LinearProgramNode::default_upper_bound()
-    ) {
+)
+    : c_ptr_(c_ptr),
+      b_lb_ptr_(b_lb_ptr),
+      A_ptr_(A_ptr),
+      b_ub_ptr_(b_ub_ptr),
+      A_eq_ptr_(A_eq_ptr),
+      b_eq_ptr_(b_eq_ptr),
+      lb_ptr_(lb_ptr),
+      ub_ptr_(ub_ptr),
+      variables_minmax_(
+          lb_ptr_ ? lb_ptr_->min() : LinearProgramNode::default_lower_bound(),
+          ub_ptr_ ? ub_ptr_->max() : LinearProgramNode::default_upper_bound()
+      ) {
     check_input_arguments(c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, A_eq_ptr, b_eq_ptr, lb_ptr, ub_ptr);
 
     // Finally, add the nodes (if they were passed in) as predecessors. This does
@@ -352,8 +352,8 @@ std::pair<double, double> LinearProgramNode::variables_minmax() const { return v
 
 std::span<const ssize_t> LinearProgramNode::variables_shape() const { return c_ptr_->shape(); }
 
-LinearProgramObjectiveValueNode::LinearProgramObjectiveValueNode(LinearProgramNodeBase* lp_ptr) :
-    lp_ptr_(lp_ptr) {
+LinearProgramObjectiveValueNode::LinearProgramObjectiveValueNode(LinearProgramNodeBase* lp_ptr)
+    : lp_ptr_(lp_ptr) {
     add_predecessor(lp_ptr);
 }
 
@@ -373,8 +373,8 @@ void LinearProgramObjectiveValueNode::propagate(State& state) const {
     // We could consider setting ourselves to max()
 }
 
-LinearProgramSolutionNode::LinearProgramSolutionNode(LinearProgramNodeBase* lp_ptr) :
-    ArrayOutputMixin(lp_ptr->variables_shape()), lp_ptr_(lp_ptr) {
+LinearProgramSolutionNode::LinearProgramSolutionNode(LinearProgramNodeBase* lp_ptr)
+    : ArrayOutputMixin(lp_ptr->variables_shape()), lp_ptr_(lp_ptr) {
     add_predecessor(lp_ptr);
 }
 

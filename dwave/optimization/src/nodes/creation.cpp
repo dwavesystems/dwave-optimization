@@ -267,78 +267,78 @@ ARangeNode::ARangeNode() : ARangeNode(ssize_t(0)) {}
 ARangeNode::ARangeNode(ssize_t stop) : ARangeNode(ssize_t(0), stop) {}
 ARangeNode::ARangeNode(ArrayNode* stop) : ARangeNode(ssize_t(0), stop) {}
 
-ARangeNode::ARangeNode(ssize_t start, ssize_t stop, ssize_t step) :
-    ArrayOutputMixin(range_shape(start, stop, step)),
-    start_(start),
-    stop_(stop),
-    step_(step),
-    values_minmax_(calculate_values_minmax(start, stop, step)),
-    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {}
+ARangeNode::ARangeNode(ssize_t start, ssize_t stop, ssize_t step)
+    : ArrayOutputMixin(range_shape(start, stop, step)),
+      start_(start),
+      stop_(stop),
+      step_(step),
+      values_minmax_(calculate_values_minmax(start, stop, step)),
+      sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {}
 
-ARangeNode::ARangeNode(ssize_t start, ssize_t stop, ArrayNode* step) :
-    ArrayOutputMixin(range_shape(start, stop, step)),
-    start_(start),
-    stop_(stop),
-    step_(step),
-    values_minmax_(calculate_values_minmax(start, stop, step)),
-    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ssize_t start, ssize_t stop, ArrayNode* step)
+    : ArrayOutputMixin(range_shape(start, stop, step)),
+      start_(start),
+      stop_(stop),
+      step_(step),
+      values_minmax_(calculate_values_minmax(start, stop, step)),
+      sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(step);
 }
-ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ssize_t step) :
-    ArrayOutputMixin(range_shape(start, stop, step)),
-    start_(start),
-    stop_(stop),
-    step_(step),
-    values_minmax_(calculate_values_minmax(start, stop, step)),
-    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ssize_t step)
+    : ArrayOutputMixin(range_shape(start, stop, step)),
+      start_(start),
+      stop_(stop),
+      step_(step),
+      values_minmax_(calculate_values_minmax(start, stop, step)),
+      sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(stop);
 }
-ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ArrayNode* step) :
-    ArrayOutputMixin(range_shape(start, stop, step)),
-    start_(start),
-    stop_(stop),
-    step_(step),
-    values_minmax_(calculate_values_minmax(start, stop, step)),
-    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ArrayNode* step)
+    : ArrayOutputMixin(range_shape(start, stop, step)),
+      start_(start),
+      stop_(stop),
+      step_(step),
+      values_minmax_(calculate_values_minmax(start, stop, step)),
+      sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(stop);
     add_predecessor(step);
 }
-ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ssize_t step) :
-    ArrayOutputMixin(range_shape(start, stop, step)),
-    start_(start),
-    stop_(stop),
-    step_(step),
-    values_minmax_(calculate_values_minmax(start, stop, step)),
-    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ssize_t step)
+    : ArrayOutputMixin(range_shape(start, stop, step)),
+      start_(start),
+      stop_(stop),
+      step_(step),
+      values_minmax_(calculate_values_minmax(start, stop, step)),
+      sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(start);
 }
-ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ArrayNode* step) :
-    ArrayOutputMixin(range_shape(start, stop, step)),
-    start_(start),
-    stop_(stop),
-    step_(step),
-    values_minmax_(calculate_values_minmax(start, stop, step)),
-    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ArrayNode* step)
+    : ArrayOutputMixin(range_shape(start, stop, step)),
+      start_(start),
+      stop_(stop),
+      step_(step),
+      values_minmax_(calculate_values_minmax(start, stop, step)),
+      sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(start);
     add_predecessor(step);
 }
-ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ssize_t step) :
-    ArrayOutputMixin(range_shape(start, stop, step)),
-    start_(start),
-    stop_(stop),
-    step_(step),
-    values_minmax_(calculate_values_minmax(start, stop, step)),
-    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ssize_t step)
+    : ArrayOutputMixin(range_shape(start, stop, step)),
+      start_(start),
+      stop_(stop),
+      step_(step),
+      values_minmax_(calculate_values_minmax(start, stop, step)),
+      sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(start);
     add_predecessor(stop);
 }
-ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ArrayNode* step) :
-    ArrayOutputMixin(range_shape(start, stop, step)),
-    start_(start),
-    stop_(stop),
-    step_(step),
-    values_minmax_(calculate_values_minmax(start, stop, step)),
-    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ArrayNode* step)
+    : ArrayOutputMixin(range_shape(start, stop, step)),
+      start_(start),
+      stop_(stop),
+      step_(step),
+      values_minmax_(calculate_values_minmax(start, stop, step)),
+      sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(start);
     add_predecessor(stop);
     add_predecessor(step);

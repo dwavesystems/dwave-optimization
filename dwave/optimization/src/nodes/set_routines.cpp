@@ -50,10 +50,11 @@ struct IsInNodeDataHelper_ {
 };
 
 struct IsInNodeData : public ArrayNodeStateData {
-    IsInNodeData(std::vector<double> element, std::vector<double> test_elements) :
-        IsInNodeData(IsInNodeDataHelper_(std::move(element), std::move(test_elements))) {}
-    IsInNodeData(IsInNodeDataHelper_&& helper) :
-        ArrayNodeStateData(std::move(helper.element_isin)), set_data(std::move(helper.set_data)) {}
+    IsInNodeData(std::vector<double> element, std::vector<double> test_elements)
+        : IsInNodeData(IsInNodeDataHelper_(std::move(element), std::move(test_elements))) {}
+    IsInNodeData(IsInNodeDataHelper_&& helper)
+        : ArrayNodeStateData(std::move(helper.element_isin)),
+          set_data(std::move(helper.set_data)) {}
 
     // Used to track if elements are added/removed from `test_elements`
     // during IsInNode::propagate()
@@ -66,10 +67,10 @@ struct IsInNodeData : public ArrayNodeStateData {
     std::vector<Update> test_element_updates;
 };
 
-IsInNode::IsInNode(ArrayNode* element_ptr, ArrayNode* test_elements_ptr) :
-    ArrayOutputMixin(element_ptr->shape()),
-    element_ptr_(element_ptr),
-    test_elements_ptr_(test_elements_ptr) {
+IsInNode::IsInNode(ArrayNode* element_ptr, ArrayNode* test_elements_ptr)
+    : ArrayOutputMixin(element_ptr->shape()),
+      element_ptr_(element_ptr),
+      test_elements_ptr_(test_elements_ptr) {
     add_predecessor(element_ptr);
     add_predecessor(test_elements_ptr);
 }

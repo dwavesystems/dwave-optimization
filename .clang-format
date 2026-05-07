@@ -24,7 +24,6 @@ BreakBeforeCloseBracketBracedList: true
 BreakBeforeCloseBracketFunction: true
 BreakBeforeCloseBracketIf: true
 BreakBeforeCloseBracketLoop: true
-BreakConstructorInitializers: AfterColon
 
 # Prevent putting the return type on its own line most of the time
 PenaltyReturnTypeOnItsOwnLine: 1000

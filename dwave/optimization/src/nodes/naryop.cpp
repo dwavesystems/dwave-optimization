@@ -59,8 +59,8 @@ struct NaryOpNodeData : public ArrayNodeStateData {
     explicit NaryOpNodeData(
         std::vector<double> values,
         std::vector<Array::const_iterator> iterators
-    ) :
-        ArrayNodeStateData(std::move(values)), iterators(std::move(iterators)) {}
+    )
+        : ArrayNodeStateData(std::move(values)), iterators(std::move(iterators)) {}
 
     // used to avoid reallocating memory for predecessor iterators every propagation
     std::vector<Array::const_iterator> iterators;
@@ -159,8 +159,8 @@ ArrayNode* nonempty(std::span<ArrayNode*> node_ptrs) {
 }
 
 template <class BinaryOp>
-NaryOpNode<BinaryOp>::NaryOpNode(std::span<ArrayNode*> node_ptrs) :
-    ArrayOutputMixin(nonempty(node_ptrs)->shape()) {
+NaryOpNode<BinaryOp>::NaryOpNode(std::span<ArrayNode*> node_ptrs)
+    : ArrayOutputMixin(nonempty(node_ptrs)->shape()) {
     for (ArrayNode* ptr : node_ptrs) {
         add_node(ptr, false);
     }
