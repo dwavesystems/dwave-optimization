@@ -31,15 +31,19 @@ import numpy.typing
 
 from dwave.optimization.mathematical import (
     add,
+    concatenate,
     exp,
     expit,
     logical_or,
     maximum,
+    minimum,
+    put,
     softmax,
     tanh,
     where
 )
 from dwave.optimization.model import ArraySymbol, Model
+from dwave.optimization.symbols import AccumulateZip
 
 __all__ = [
     "bin_packing",
@@ -1006,6 +1010,15 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     `E. Taillard <http://mistic.heig-vd.ch/taillard/problemes.dir/problemes.html>`_
     provides benchmark instances compatible with this generator.
 
+    .. versionchanged:: 0.6.13
+        From version `0.4.1` to `0.6.12`, the model generated used integer
+        variables for the start times and included explicit non-overlap
+        constraints between each pair of jobs on the machines.
+
+        Now the model uses a list variable for the global ordering of all tasks
+        and greedily constructs a feasible ordering from which the start times
+        are determined.
+
     .. versionchanged:: 0.4.1
         Prior to version `0.4.1`, the model generated was based on one proposed by
 
@@ -1037,12 +1050,40 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
             model may be infeasible.
 
     Returns:
-        A model encoding the job-shop scheduling problem.
+        A model encoding the job-shop scheduling problem. The model includes
+        three additional methods added to it:
+
+        -     ``model.get_global_task_ordering(state_index: int)``: Given an
+              index of a state on the model, returns an array corresponding to
+              the global ordering of all tasks where the global task index for
+              the :math:`j` th task of the :math:`i` th job is given by :math:`n * i + j`.
+        -     ``model.get_start_times(state_index: int)``: Given an
+              index of a state on the model, returns an :math:`n` by :math:`m` array of
+              start times of each task of each job.
+        -     ``model.get_end_times(state_index: int)``: Given an
+              index of a state on the model, returns an :math:`n` by :math:`m` array of
+              end times of each task of each job.
 
     Notes:
-        The model uses a :class:`~dwave.optimization.symbols.IntegerVariable`
-        class as the decision variable being optimized, with permutations of its
-        values representing various start times for tasks.
+        The model formulation has a single
+        :class:`~dwave.optimization.symbols.ListVariable` decision variable of size
+        :math:`n \times m` (total number of tasks), and consists of two main parts:
+        One to derive a global task ordering that respects the task-ordering
+        requirement of each job, and another to build a feasible schedule based on
+        that global ordering.
+
+        The first part is achieved by taking the list decision variable output, and
+        using :math:`m` :class:`~dwave.optimization.symbols.AccumulateZip`
+        nodes nodes to select and then reorder the tasks of each job.
+
+        The second part is achieved by iterating through the tasks in the global
+        ordering and placing each task at the earliest possible time it can run.
+        Finish times for each task, as well as the finish time for the last task
+        on each machine, are maintained in lists and updated with
+        :class:`~dwave.optimization.symbols.Put` nodes at each iteration.
+
+        Finally, the makespan is equal to the maximum value of the finish-times
+        array.
 
     Examples:
 
@@ -1056,57 +1097,68 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
         >>> times = [[2, 1, 3],
         ...          [4, 1, 2],
         ...          [1, 1, 2]]
-        >>> machines = [[1, 2, 3],
-        ...             [3, 1, 2],
-        ...             [3, 2, 1]]
+        >>> machines = [[0, 1, 2],
+        ...             [2, 0, 1],
+        ...             [2, 1, 0]]
         >>> model = job_shop_scheduling(times, machines)
 
-        An example feasible solution might be,
+        In the global task ordering, the index for the :math:`j` th task for the
+        :math:`i` th job is equal to :math:`n*i + j`. An example solution for the final
+        global task ordering might be:
 
         .. math::
-            \begin{bmatrix} 0. & 3. & 4. \\ 2. & 6. & 0. \\ 6. & 4. & 2.
-            \end{bmatrix},
+            [0, 3, 4, 6, 1, 2, 7, 5, 8],
 
-        meaning the first job starts on the first machine at time 0, on the
-        second machine at time 3, and on the third machine at time 4; the second
-        job starts on the third machine at time 0, on the first machine at time
-        2, and on the second machine at time 6; the third job starts on the
-        third machine at time 2, on the second machine at time 4, and on the
-        first machine at time 6. The makespan (objective value) is 7, as shown
-        in the following code.
+        meaning that the first task is the first job on the first machine, the
+        next task is the second job on the third machine, the next task is the
+        second job on the first machine, etc. The model constructs a schedule
+        based on when the next task is available to run. The goal of the solver
+        is to determine a global ordering of tasks whose corresponding schedule
+        minimizes the makespan. The makespan (objective value) is 7, as shown in
+        the following code.
 
         The :meth:`~dwave.optimization.model.Model.iter_decisions` method
         obtains the decision variables of the generated model.
 
-        >>> schedule = next(model.iter_decisions())
+        >>> task_ordering = next(model.iter_decisions())
 
-        To test the solution above, set it in the model as the state of the
-        decision variable. **Skip these next lines** if you have submitted your
-        model to the `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid`
+        This gives the initial global task ordering from which the feasible
+        final global task ordering is constructed.
+
+        To test the solution above, set the corresponding initial global task
+        ordering in the model as the state of the decision variable. **Skip
+        these next lines** if you have submitted your model to the
+        `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid`
         nonlinear :term:`solver`.
 
         >>> model.states.resize(1)
-        >>> schedule.set_state(0, [[0, 3, 4], [2, 6, 0], [6, 4, 2]])
+        >>> task_ordering.set_state(0, [0, 5, 4, 7, 1, 2, 6, 3, 8])
 
-        You can use the :meth:`~dwave.optimization.model.Model.iter_constraints`
-        method to check feasibility of constructed or returned solutions. Here,
-        the number of states (:meth:`~dwave.optimization.states.States.size`) is
-        set to 1 for the constructed solution so a single value of the
-        :attr:`~dwave.optimization.model.Model.objective` property is printed.
+        To check that this task ordering corresponds to the global feasible task
+        ordering ``[0,3,4,6,1,2,7,5,8]`` , use the method
+        :meth:`~model.get_global_task_ordering`.
 
-        >>> with model.lock():
-        ...     for i in range(model.states.size()):
-        ...         if all(sym.state(i) for sym in model.iter_constraints()): # Filter feasibility
-        ...             print((f"Makespan #{i} is {model.objective.state(i).round(2)} for schedule\n"
-        ...                    f"{schedule.state(i)}"))
-        Makespan #0 is 7.0 for schedule
-        [[0. 3. 4.]
-         [2. 6. 0.]
-         [6. 4. 2.]]
+        >>> final_ordering = model.get_global_task_ordering(0)
+
+        You can use the methods :meth:`~model.get_start_times` and
+        :meth:`~model.get_end_times` to obtain the corresponding start and end
+        times of all tasks.
+        
+        >>> start_times = model.get_start_times(0)
+        >>> end_times = model.get_end_times(0)
+
+        Finally, you can check the objective value of this state.
+
+        >>> makespan = model.objective.state(0)
+
+        The makespan is 7.0 for the schedule with start times
+        [[0. 2. 4.]
+        [0. 2. 6.]
+        [2. 4. 6.]]
 
         This solution is shown in the figure below.
 
-        .. figure:: /_images/job_shop_scheduling_3x3.png
+        .. figure:: /_images/job_shop_scheduling_3x3.svg
             :width: 800 px
             :name: job-shop-scheduling-3x3-example
             :alt: Image of the model constructed in this example, showing
@@ -1158,45 +1210,91 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     # Alright, model construction time
     model = Model()
 
-    # Add the constants
-    times = model.constant(times)
-    machines = model.constant(machines)
+    num_tasks = num_jobs * num_machines
+    NO_TASK = num_tasks
 
-    # The "main" decision symbol is a num_jobs x num_machines array of integer variables
-    # giving the start time for each task
-    start_times = model.integer(shape=(num_jobs, num_machines),
-                                lower_bound=0, upper_bound=upper_bound)
+    # Index task durations by (job, task_index)
+    task_durations = np.array([times[job][machines[job]] for job in range(num_jobs)])
+    task_durations_ = model.constant(task_durations.flatten())
 
-    # The objective is simply to minimize the last end time
-    end_times = start_times + times
-    model.minimize(end_times.max())
+    machine_assignments_ = model.constant(machines.flatten())
+    zero_ = model.constant(0)
+    zero_n_ = model.constant([0] * num_tasks)
 
-    # Ensure that for each job, its tasks do not overlap
-    for j in range(num_jobs):
-        ends = end_times[j, machines[j, :-1]]
-        starts = start_times[j, machines[j, 1:]]
+    def task_index(job, machine):
+        return job * num_machines + machine
+    
+    # Construct an array containing the previous task for each index 
+    previous_tasks = [0] * num_tasks
+    for job in range(num_jobs):
+        previous_tasks[task_index(job, 0)] = NO_TASK
+        for i in range(1, num_machines):
+            previous_tasks[task_index(job, i)] = task_index(job, i - 1)
 
-        model.add_constraint((ends <= starts).all())
+    previous_tasks_ = model.constant(previous_tasks)
+    NO_TASK_ = model.constant(NO_TASK)
 
-    # Ensure for each machine, its tasks do not overlap
-    # Collect all the pairs of jobs in two indices arrays
-    u_idx = []
-    v_idx = []
-    for i, j in itertools.combinations(range(num_jobs), 2):
-        u_idx.append(i)
-        v_idx.append(j)
+    # The only decision variable is a list containing the global ordering of all tasks
+    order = model.list(num_tasks)
+    mask = model.constant(np.repeat(np.arange(num_jobs) * num_machines, num_machines))
+    mo = mask[order]
 
-    u = model.constant(u_idx)
-    v = model.constant(v_idx)
+    # Determine a feasible ordering of tasks based on the global ordering
+    from dwave.optimization.expression import expression
+    
+    offsets = []
+    for job_idx in range(num_jobs):
+        base_task = job_idx * num_machines
 
-    # Finally impose the non-overlapping constraints between jobs,
-    # on all machines
-    model.add_constraint(
-        logical_or(
-            end_times[u, :] <= start_times[v, :],
-            end_times[v, :] <= start_times[u, :]
-        ).all()
+        @expression(task_index=dict(integral=True), next_base_task=dict(integral=True))
+        def increase_task_index(task_index, next_base_task):
+            return task_index + (next_base_task == base_task)
+
+        job_offset = AccumulateZip(increase_task_index, (mo,), initial=-1)
+        offsets.append(where(mo == model.constant(base_task), job_offset, zero_n_))
+
+    final_order = minimum(
+        maximum(add(mo, *offsets), zero_), model.constant(num_tasks - 1)
     )
+
+    # Determine the end time of the last job on each machine 
+    current_machine_time = model.constant([0] * num_machines)
+
+    task_end_times = model.constant([0] * num_tasks)
+
+    for task_idx in range(num_tasks):
+        task = final_order[task_idx]
+        previous_task = previous_tasks_[task]
+        prev_task_end_time = where(
+            previous_task == NO_TASK_,
+            zero_,
+            task_end_times[minimum(previous_task, num_tasks - 1)],
+        )
+        machine_index = machine_assignments_[task]
+        selected_machine_time = current_machine_time[machine_index]
+        task_start_time = maximum(prev_task_end_time, selected_machine_time)
+        task_end_time = task_start_time + task_durations_[task]
+        task_end_time = task_end_time.reshape(1)
+        current_machine_time = put(
+            current_machine_time, machine_index.reshape(1), task_end_time
+        )
+
+        task_end_times = put(task_end_times, task.reshape(1), task_end_time)
+
+    model.minimize(current_machine_time.max())
+
+    def get_global_task_ordering(state_index: int):
+        return final_order.state(state_index)
+
+    def get_end_times(state_index: int):
+        return task_end_times.state(state_index).reshape(num_jobs, num_machines)
+
+    def get_start_times(state_index: int):
+        return get_end_times(state_index) - task_durations
+
+    model.get_global_task_ordering = get_global_task_ordering
+    model.get_start_times = get_start_times
+    model.get_end_times = get_end_times
 
     model.lock()
     return model
