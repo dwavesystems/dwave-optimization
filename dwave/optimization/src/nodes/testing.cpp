@@ -20,8 +20,9 @@ namespace dwave::optimization {
 
 class ArrayValidationNodeData : public dwave::optimization::NodeStateData {
  public:
-    explicit ArrayValidationNodeData(Array::View data)
-            : old_data(data.begin(), data.end()), current_data(data.begin(), data.end()) {}
+    explicit ArrayValidationNodeData(std::ranges::random_access_range auto&& data)
+            : old_data(data.begin(), data.begin() + data.size()),
+              current_data(data.begin(), data.begin() + data.size()) {}
 
     std::vector<double> old_data;
     std::vector<double> current_data;
@@ -153,7 +154,7 @@ void ArrayValidationNode::propagate(State& state) const {
         }
     }
 
-    std::vector<double> expected(array_ptr->view(state).begin(), array_ptr->view(state).end());
+    std::vector<double> expected(array_ptr->begin(state), array_ptr->end(state));
 
     if (!std::ranges::equal(current_data, expected)) {
         if (do_logging) {

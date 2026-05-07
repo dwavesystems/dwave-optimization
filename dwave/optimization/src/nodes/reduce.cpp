@@ -1023,12 +1023,8 @@ auto ReduceNode<BinaryOp>::reduce_(const State& state, const ssize_t index) cons
 
     // We can then create an iterator that iterates of the reduction group
     auto begin = array_ptr_->begin(state);
-    if (begin.shaped()) {
-        begin += multi_index;
-    } else {
-        begin += ravel_multi_index(multi_index, array_ptr_->shape());
-    }
-    auto it = BufferIterator<double, double, true>(&*begin, subspace_shape, subspace_strides);
+    begin += multi_index;
+    auto it = BufferIterator<const double, const double>(&*begin, subspace_shape, subspace_strides);
 
     return ufunc.reduce(std::ranges::subrange(it, std::default_sentinel), initial);
 }

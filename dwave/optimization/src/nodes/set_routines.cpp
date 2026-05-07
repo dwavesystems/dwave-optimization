@@ -86,11 +86,10 @@ std::span<const Update> IsInNode::diff(const State& state) const {
 }
 
 void IsInNode::initialize_state(State& state) const {
-    const Array::View element = element_ptr_->view(state);
-    const Array::View test_elements = test_elements_ptr_->view(state);
-
-    emplace_data_ptr<IsInNodeData>(state, std::vector<double>{element.begin(), element.end()},
-                                   std::vector<double>{test_elements.begin(), test_elements.end()});
+    std::vector<double> element(element_ptr_->begin(state), element_ptr_->end(state));
+    std::vector<double> test_elements(test_elements_ptr_->begin(state),
+                                      test_elements_ptr_->end(state));
+    emplace_data_ptr<IsInNodeData>(state, std::move(element), std::move(test_elements));
 }
 
 bool IsInNode::integral() const { return true; }  // All values are true/false

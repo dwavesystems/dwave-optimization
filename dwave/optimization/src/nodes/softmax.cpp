@@ -75,8 +75,8 @@ std::span<const Update> SoftMaxNode::diff(const State& state) const {
 }
 
 void SoftMaxNode::initialize_state(State& state) const {
-    const Array::View arr = arr_ptr_->view(state);
-    emplace_data_ptr<SoftMaxNodeStateData>(state, std::vector<double>{arr.begin(), arr.end()});
+    emplace_data_ptr<SoftMaxNodeStateData>(
+            state, std::vector<double>{arr_ptr_->begin(state), arr_ptr_->end(state)});
 }
 
 bool SoftMaxNode::integral() const { return false; }

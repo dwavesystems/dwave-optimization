@@ -1,0 +1,12 @@
+---
+features:
+  - Make C++ ``BufferIterator`` always shaped.
+upgrade:
+  - |
+    Drop support for contiguous C++ ``BufferIterator``. This means that one must
+    always provide a `shape` and `strides` argument when constructing the iterator.
+  - |
+    Change ``Array::view`` to use `std::default_sentinel`. This means ``Array::view``
+    is no longer a ``std::common_range``.
+  - |
+    Drop the ``Array::View`` type declaration.

@@ -233,7 +233,8 @@ std::vector<std::vector<double>> get_sum_constraints_lhs(const NumberNode& node,
 
     // Define a BufferIterator for `number_data` given the shape and strides of
     // NumberNode and iterate over it.
-    for (BufferIterator<double, double, true> it(number_data.data(), node_shape, node.strides());
+    for (BufferIterator<const double, const double> it(number_data.data(), node_shape,
+                                                       node.strides());
          it != std::default_sentinel; ++it) {
         // Increment the sum of the appropriate slice per sum constraint.
         for (ssize_t i = 0; i < num_sum_constraints; ++i) {
@@ -416,8 +417,8 @@ void construct_state_given_exactly_one_sum_constraint(const NumberNode& node,
     const std::vector<ssize_t> buff_strides = shift_axis_data(node.strides(), *axis);
     // Define an iterator for `values` corresponding with the beginning of
     // slice 0 along the constrained axis.
-    const BufferIterator<double, double, false> slice_0_it(values.data(), ndim, buff_shape.data(),
-                                                           buff_strides.data());
+    const BufferIterator<double, double> slice_0_it(values.data(), ndim, buff_shape.data(),
+                                                    buff_strides.data());
     // Determine the size of each slice along the constrained axis.
     const ssize_t slice_size = std::accumulate(buff_shape.begin() + 1, buff_shape.end(), 1.0,
                                                std::multiplies<ssize_t>());
@@ -1175,7 +1176,8 @@ void BinaryNodeStateData::compute_slice_indices_(const BinaryNode& node) {
     }
 
     // Define a BufferIterator for state data given the shape and strides of BinaryNode.
-    BufferIterator<double, double, true> buf_start_it(this->buff(), node_shape, node.strides());
+    BufferIterator<const double, const double> buf_start_it(this->buff(), node_shape,
+                                                            node.strides());
     for (auto buf_it = buf_start_it; buf_it != std::default_sentinel; ++buf_it) {
         for (ssize_t i = 0; i < num_sum_constraints; ++i) {
             const std::optional<const ssize_t> axis = sum_constraints[i].axis();
