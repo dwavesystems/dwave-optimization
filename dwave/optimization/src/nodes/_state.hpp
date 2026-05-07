@@ -32,12 +32,12 @@ namespace dwave::optimization {
 // difference should be quite minimal.
 class ArrayStateData {
  public:
-    explicit ArrayStateData(std::vector<double>&& values) noexcept
-            : buffer(std::move(values)), size_(buffer.size()), previous_size_(buffer.size()) {}
+    explicit ArrayStateData(std::vector<double>&& values) noexcept :
+        buffer(std::move(values)), size_(buffer.size()), previous_size_(buffer.size()) {}
 
     template <std::ranges::range Range>
-    explicit ArrayStateData(Range&& values) noexcept
-            : ArrayStateData(std::vector<double>(values.begin(), values.end())) {}
+    explicit ArrayStateData(Range&& values) noexcept :
+        ArrayStateData(std::vector<double>(values.begin(), values.end())) {}
 
     // Assign new values to the state starting from an offset, tracking the changes from the
     // previous state to the new. If the original buffer extends past the new range of values,
@@ -45,7 +45,7 @@ class ArrayStateData {
     bool assign(std::ranges::sized_range auto&& values, ssize_t offset = 0) {
         // dev note: we could implement a version of this that doesn't need sized_range.
         const ssize_t overlap_length =
-                std::min<ssize_t>(buffer.size(), std::ranges::size(values) + offset) - offset;
+            std::min<ssize_t>(buffer.size(), std::ranges::size(values) + offset) - offset;
 
         auto vit = std::ranges::begin(values);
 
@@ -66,8 +66,11 @@ class ArrayStateData {
         // buffer
         {
             buffer.reserve(std::ranges::size(values));
-            for (ssize_t index = buffer.size(), stop = std::ranges::size(values) + offset;
-                 index < stop; ++index, ++vit) {
+            for (
+                ssize_t index = buffer.size(), stop = std::ranges::size(values) + offset;
+                index < stop;
+                ++index, ++vit
+            ) {
                 updates.emplace_back(Update::placement(index, *vit));
                 buffer.emplace_back(*vit);
             }
@@ -227,13 +230,12 @@ class ArrayStateData {
 
 class ArrayNodeStateData : public ArrayStateData, public NodeStateData {
  public:
-    explicit ArrayNodeStateData(std::vector<double>&& values) noexcept
-            : ArrayStateData(std::move(values)), NodeStateData() {}
+    explicit ArrayNodeStateData(std::vector<double>&& values) noexcept :
+        ArrayStateData(std::move(values)), NodeStateData() {}
 
     template <std::ranges::random_access_range Range>
-    explicit ArrayNodeStateData(Range&& values) noexcept
-            : ArrayNodeStateData(
-                      std::vector<double>(values.begin(), values.begin() + values.size())) {}
+    explicit ArrayNodeStateData(Range&& values) noexcept :
+        ArrayNodeStateData(std::vector<double>(values.begin(), values.begin() + values.size())) {}
 
     std::unique_ptr<NodeStateData> copy() const override {
         return std::make_unique<ArrayNodeStateData>(*this);

@@ -79,10 +79,16 @@ class LinearProgramNodeBase : public Node {
 
  protected:
     /// Enforce the rules on the input node(s).
-    static void check_input_arguments(const ArrayNode* c_ptr, const ArrayNode* b_lb_ptr,
-                                      const ArrayNode* A_ptr, const ArrayNode* b_ub_ptr,
-                                      const ArrayNode* A_eq_ptr, const ArrayNode* b_eq_ptr,
-                                      const ArrayNode* lb_ptr, const ArrayNode* ub_ptr);
+    static void check_input_arguments(
+        const ArrayNode* c_ptr,
+        const ArrayNode* b_lb_ptr,
+        const ArrayNode* A_ptr,
+        const ArrayNode* b_ub_ptr,
+        const ArrayNode* A_eq_ptr,
+        const ArrayNode* b_eq_ptr,
+        const ArrayNode* lb_ptr,
+        const ArrayNode* ub_ptr
+    );
 };
 
 /// Node that solves a given LP defined by its predecessors, and outputs the optimal solution
@@ -96,9 +102,16 @@ class LinearProgramNode : public LinearProgramNodeBase {
     /// Construct a LinearProgramNode
     ///
     /// Note: parameter names are chosen to match scipy.optimize.lingprog()
-    LinearProgramNode(ArrayNode* c_ptr, ArrayNode* b_lb_ptr, ArrayNode* A_ptr, ArrayNode* b_ub_ptr,
-                      ArrayNode* A_eq_ptr, ArrayNode* b_eq_ptr, ArrayNode* lb_ptr,
-                      ArrayNode* ub_ptr);
+    LinearProgramNode(
+        ArrayNode* c_ptr,
+        ArrayNode* b_lb_ptr,
+        ArrayNode* A_ptr,
+        ArrayNode* b_ub_ptr,
+        ArrayNode* A_eq_ptr,
+        ArrayNode* b_eq_ptr,
+        ArrayNode* lb_ptr,
+        ArrayNode* ub_ptr
+    );
 
     /// @copydoc Node::commit()
     void commit(State& state) const override;

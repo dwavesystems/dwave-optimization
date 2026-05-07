@@ -23,11 +23,14 @@ namespace dwave::optimization {
 
 class AccumulateZipNodeData : public ArrayNodeStateData {
  public:
-    explicit AccumulateZipNodeData(std::vector<double>&& values,
-                                   std::vector<Array::const_iterator>&& iterators, State&& state)
-            : ArrayNodeStateData(std::move(values)),
-              iterators(std::move(iterators)),
-              register_(std::move(state)) {}
+    explicit AccumulateZipNodeData(
+        std::vector<double>&& values,
+        std::vector<Array::const_iterator>&& iterators,
+        State&& state
+    ) :
+        ArrayNodeStateData(std::move(values)),
+        iterators(std::move(iterators)),
+        register_(std::move(state)) {}
 
     // used to avoid reallocating memory for predecessor iterators every propagation
     std::vector<Array::const_iterator> iterators;
@@ -35,14 +38,16 @@ class AccumulateZipNodeData : public ArrayNodeStateData {
     State register_;
 };
 
-AccumulateZipNode::AccumulateZipNode(std::shared_ptr<Graph> expression_ptr,
-                                     const std::vector<ArrayNode*>& operands,
-                                     array_or_double initial)
-        : ArrayOutputMixin(operands.empty() ? std::span<ssize_t, 0>() : operands[0]->shape()),
-          initial(initial),
-          expression_ptr_(std::move(expression_ptr)),
-          operands_(operands),
-          sizeinfo_(operands.empty()? SizeInfo(0) : operands_[0]->sizeinfo()) {
+AccumulateZipNode::AccumulateZipNode(
+    std::shared_ptr<Graph> expression_ptr,
+    const std::vector<ArrayNode*>& operands,
+    array_or_double initial
+) :
+    ArrayOutputMixin(operands.empty() ? std::span<ssize_t, 0>() : operands[0]->shape()),
+    initial(initial),
+    expression_ptr_(std::move(expression_ptr)),
+    operands_(operands),
+    sizeinfo_(operands.empty() ? SizeInfo(0) : operands_[0]->sizeinfo()) {
     check(*expression_ptr_, operands, initial);
 
     if (std::holds_alternative<ArrayNode*>(initial)) {
@@ -58,8 +63,11 @@ double const* AccumulateZipNode::buff(const State& state) const {
     return data_ptr<AccumulateZipNodeData>(state)->buff();
 }
 
-void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode* const> operands,
-                              array_or_double initial) {
+void AccumulateZipNode::check(
+    const Graph& expression,
+    std::span<const ArrayNode* const> operands,
+    array_or_double initial
+) {
     // First, let's check that the expression is valid
     {
         if (!expression.topologically_sorted()) {
@@ -84,20 +92,23 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
 
             if (!array_ptr) {
                 throw std::invalid_argument(
-                        std::string("expression must contain only array nodes, ") +
-                        node_ptr->repr() + " is not supported");
+                    std::string("expression must contain only array nodes, ") + node_ptr->repr() +
+                    " is not supported"
+                );
             }
 
             if (!supported_node_types::add_const::add_pointer::check(node_ptr)) {
                 throw std::invalid_argument(
-                        std::string("expression contains an unsupported node type, ") +
-                        node_ptr->repr() + " is not supported");
+                    std::string("expression contains an unsupported node type, ") +
+                    node_ptr->repr() + " is not supported"
+                );
             }
 
             if (array_ptr->ndim() != 0) {
                 throw std::invalid_argument(
-                        std::string("expression nodes should all be scalars, ") + node_ptr->repr() +
-                        " is " + std::to_string(array_ptr->ndim()) + " dimensional");
+                    std::string("expression nodes should all be scalars, ") + node_ptr->repr() +
+                    " is " + std::to_string(array_ptr->ndim()) + " dimensional"
+                );
             }
         }
     }
@@ -107,7 +118,8 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
         ArrayNode* initial_node = std::get<ArrayNode*>(initial);
         if (initial_node->ndim() != 0) {
             throw std::invalid_argument(
-                    "when using a node for the initial value, it must have scalar output");
+                "when using a node for the initial value, it must have scalar output"
+            );
         }
     }
 
@@ -120,9 +132,10 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
 
         if (static_cast<ssize_t>(operands.size()) + 1 != expression.num_inputs()) {
             throw std::invalid_argument(
-                    std::string("expression must have one more input than operands, ") +
-                    "expression.num_inputs()=" + std::to_string(expression.num_inputs()) +
-                    ", operands.size()=" + std::to_string(operands.size()));
+                std::string("expression must have one more input than operands, ") +
+                "expression.num_inputs()=" + std::to_string(expression.num_inputs()) +
+                ", operands.size()=" + std::to_string(operands.size())
+            );
         }
 
         // For array_shape_equal we need Array*, not ArrayNode* so we do a copy.
@@ -144,17 +157,22 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
             const auto inmax = operand_inputs[op_idx]->max();
 
             if (outmin < inmin) {
-                throw std::invalid_argument(std::string("the ") + std::to_string(op_idx) +
-                                            "th operand has minimum smaller than the corresponding "
-                                            "input in the expression");
+                throw std::invalid_argument(
+                    std::string("the ") + std::to_string(op_idx) +
+                    "th operand has minimum smaller than the corresponding "
+                    "input in the expression"
+                );
             } else if (outmax > inmax) {
-                throw std::invalid_argument(std::string("the ") + std::to_string(op_idx) +
-                                            "th operand has maximum larger than the corresponding "
-                                            "input in the expression");
+                throw std::invalid_argument(
+                    std::string("the ") + std::to_string(op_idx) +
+                    "th operand has maximum larger than the corresponding "
+                    "input in the expression"
+                );
             } else if (operand_inputs[op_idx]->integral() && !operands[op_idx]->integral()) {
                 throw std::invalid_argument(
-                        std::string("the ") + std::to_string(op_idx) +
-                        "th operand is not integral, but the corresponding input is integral");
+                    std::string("the ") + std::to_string(op_idx) +
+                    "th operand is not integral, but the corresponding input is integral"
+                );
             }
         }
 
@@ -164,13 +182,16 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
         const auto accmax = expression.inputs()[0]->max();
         if (expression.inputs()[0]->integral() && !expression.objective()->integral()) {
             throw std::invalid_argument(
-                    "if expression output can be non-integral, first input must not be integral");
+                "if expression output can be non-integral, first input must not be integral"
+            );
         } else if (expmin < accmin) {
             throw std::invalid_argument(
-                    "expression output must not have a lower min than the first input");
+                "expression output must not have a lower min than the first input"
+            );
         } else if (expmax > accmax) {
             throw std::invalid_argument(
-                    "expression output must not have a higher max than the first input");
+                "expression output must not have a higher max than the first input"
+            );
         }
 
         if (std::holds_alternative<ArrayNode*>(initial)) {
@@ -178,11 +199,13 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
             const auto initmax = std::get<ArrayNode*>(initial)->max();
             if (initmin < accmin) {
                 throw std::invalid_argument(
-                        "initial value must not have a lower min than the first input");
+                    "initial value must not have a lower min than the first input"
+                );
             }
             if (initmax > accmax) {
                 throw std::invalid_argument(
-                        "initial value must not have a higher max than the first input");
+                    "initial value must not have a higher max than the first input"
+                );
             }
         } else {
             assert(std::holds_alternative<double>(initial));
@@ -191,7 +214,8 @@ void AccumulateZipNode::check(const Graph& expression, std::span<const ArrayNode
             }
             if (std::get<double>(initial) > accmax) {
                 throw std::invalid_argument(
-                        "initial value must not be greater than the first input");
+                    "initial value must not be greater than the first input"
+                );
             }
         }
     }
@@ -272,8 +296,9 @@ void AccumulateZipNode::initialize_state(State& state) const {
         values.push_back(val);
     }
 
-    state[node_idx] = std::make_unique<AccumulateZipNodeData>(std::move(values),
-                                                              std::move(iterators), std::move(reg));
+    state[node_idx] = std::make_unique<AccumulateZipNodeData>(
+        std::move(values), std::move(iterators), std::move(reg)
+    );
 }
 
 bool AccumulateZipNode::integral() const { return expression_ptr_->objective()->integral(); }

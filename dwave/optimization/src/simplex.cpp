@@ -25,14 +25,15 @@ class Matrix {
  public:
     Matrix(ssize_t n, ssize_t m) : n_(n), m_(m) { buffer_.resize(n_ * m_); }
 
-    Matrix(std::vector<double>&& data, ssize_t n, ssize_t m)
-            : n_(n), m_(m), buffer_(std::move(data)) {
-        assert(n_ * m_ == static_cast<ssize_t>(buffer_.size()) &&
-               "shape does not match provided data");
+    Matrix(std::vector<double>&& data, ssize_t n, ssize_t m) :
+        n_(n), m_(m), buffer_(std::move(data)) {
+        assert(
+            n_ * m_ == static_cast<ssize_t>(buffer_.size()) && "shape does not match provided data"
+        );
     }
 
-    Matrix(std::span<const double> data, ssize_t n, ssize_t m)
-            : Matrix(std::vector<double>(data.begin(), data.end()), n, m) {}
+    Matrix(std::span<const double> data, ssize_t n, ssize_t m) :
+        Matrix(std::vector<double>(data.begin(), data.end()), n, m) {}
 
     double& operator()(ssize_t i, ssize_t j) {
         if (i < 0) i += n_;
@@ -81,8 +82,14 @@ ssize_t _pivot_col(Matrix& T, double tolerance, bool bland) {
 }
 
 /// Find the pivot row. Will return -1 if no candidate row is found.
-ssize_t _pivot_row(Matrix& T, const std::vector<ssize_t>& basis, ssize_t pivcol, ssize_t phase,
-                   double tolerance, bool bland) {
+ssize_t _pivot_row(
+    Matrix& T,
+    const std::vector<ssize_t>& basis,
+    ssize_t pivcol,
+    ssize_t phase,
+    double tolerance,
+    bool bland
+) {
     ssize_t k = phase == 1 ? 2 : 1;
 
     double min_q = std::numeric_limits<double>::infinity();
@@ -116,8 +123,13 @@ ssize_t _pivot_row(Matrix& T, const std::vector<ssize_t>& basis, ssize_t pivcol,
     return min_row;
 }
 
-void _apply_pivot(Matrix& T, std::vector<ssize_t>& basis, ssize_t pivrow, ssize_t pivcol,
-                  double tolerance) {
+void _apply_pivot(
+    Matrix& T,
+    std::vector<ssize_t>& basis,
+    ssize_t pivrow,
+    ssize_t pivcol,
+    double tolerance
+) {
     basis[pivrow] = pivcol;
 
     double pivval = T(pivrow, pivcol);
@@ -136,9 +148,16 @@ void _apply_pivot(Matrix& T, std::vector<ssize_t>& basis, ssize_t pivrow, ssize_
     }
 }
 
-SolveResult _solve_simplex(Matrix& T, ssize_t n, std::vector<ssize_t>& basis,
-                           ssize_t max_iterations, double tolerance, ssize_t phase, bool bland,
-                           ssize_t initial_num_iterations) {
+SolveResult _solve_simplex(
+    Matrix& T,
+    ssize_t n,
+    std::vector<ssize_t>& basis,
+    ssize_t max_iterations,
+    double tolerance,
+    ssize_t phase,
+    bool bland,
+    ssize_t initial_num_iterations
+) {
     SolveResult status(SolveResult::SolveStatus::UNSET, initial_num_iterations);
 
     ssize_t m = phase == 1 ? T.m() - 2 : T.m() - 1;
@@ -164,7 +183,7 @@ SolveResult _solve_simplex(Matrix& T, ssize_t n, std::vector<ssize_t>& basis,
         solution.resize(T.m() - 1);
     } else {
         ssize_t max_basis =
-                *std::max_element(basis.begin(), basis.begin() + std::min(m, basis_size));
+            *std::max_element(basis.begin(), basis.begin() + std::min(m, basis_size));
         ssize_t size = std::max(T.m() - 1, max_basis + 1);
         assert(size >= 0);
         solution.resize(size);
@@ -196,8 +215,12 @@ SolveResult _solve_simplex(Matrix& T, ssize_t n, std::vector<ssize_t>& basis,
     return status;
 }
 
-Matrix construct_T(std::span<const double> c, double c0, const Matrix& A,
-                   std::span<const double> b) {
+Matrix construct_T(
+    std::span<const double> c,
+    double c0,
+    const Matrix& A,
+    std::span<const double> b
+) {
     Matrix T(A.n() + 2, A.m() + A.n() + 1);
     // Copy in A to T[:n, :m] and b.T to T[:, -1]
     for (ssize_t i = 0; i < A.n(); i++) {
@@ -232,9 +255,15 @@ Matrix construct_T(std::span<const double> c, double c0, const Matrix& A,
     return T;
 }
 
-SolveResult _linprog_simplex(std::span<const double> c, double c0, const Matrix& A,
-                             std::span<const double> b, ssize_t max_iterations, double tolerance,
-                             bool bland) {
+SolveResult _linprog_simplex(
+    std::span<const double> c,
+    double c0,
+    const Matrix& A,
+    std::span<const double> b,
+    ssize_t max_iterations,
+    double tolerance,
+    bool bland
+) {
     assert(static_cast<ssize_t>(c.size()) == A.m());
 
     std::vector<ssize_t> basis;
@@ -246,7 +275,7 @@ SolveResult _linprog_simplex(std::span<const double> c, double c0, const Matrix&
 
     ssize_t phase = 1;
     SolveResult status =
-            _solve_simplex(T, A.n(), basis, max_iterations, tolerance, phase, bland, 0);
+        _solve_simplex(T, A.n(), basis, max_iterations, tolerance, phase, bland, 0);
 
     if (std::abs(T(-1, -1)) < tolerance) {
         Matrix newT(A.n() + 1, A.m() + 1);
@@ -270,8 +299,9 @@ SolveResult _linprog_simplex(std::span<const double> c, double c0, const Matrix&
     if (status.solve_status == SolveResult::SolveStatus::SUCCESS) {
         phase = 2;
         assert(T.n() == A.n() + 1 && T.m() == A.m() + 1);
-        SolveResult status2 = _solve_simplex(T, A.n(), basis, max_iterations, tolerance, phase,
-                                             bland, status.num_iterations);
+        SolveResult status2 = _solve_simplex(
+            T, A.n(), basis, max_iterations, tolerance, phase, bland, status.num_iterations
+        );
 
         std::swap(status, status2);
     }
@@ -290,8 +320,8 @@ SolveResult _linprog_simplex(std::span<const double> c, double c0, const Matrix&
 }
 
 struct LP {
-    LP(std::vector<double>&& c, double c0, Matrix&& A, std::vector<double>&& b)
-            : c(c), c0(c0), A(A), b(b){};
+    LP(std::vector<double>&& c, double c0, Matrix&& A, std::vector<double>&& b) :
+        c(c), c0(c0), A(A), b(b) {};
 
     std::vector<double> c;
     double c0;
@@ -299,10 +329,16 @@ struct LP {
     std::vector<double> b;
 };
 
-void check_LP_sizes(std::span<const double> c, std::span<const double> b_lb,
-                    std::span<const double> A_data, std::span<const double> b_ub,
-                    std::span<const double> A_eq_data, std::span<const double> b_eq,
-                    std::span<const double> lb, std::span<const double> ub) {
+void check_LP_sizes(
+    std::span<const double> c,
+    std::span<const double> b_lb,
+    std::span<const double> A_data,
+    std::span<const double> b_ub,
+    std::span<const double> A_eq_data,
+    std::span<const double> b_eq,
+    std::span<const double> lb,
+    std::span<const double> ub
+) {
     [[maybe_unused]] const ssize_t num_vars = c.size();
 
     assert(b_lb.size() == b_ub.size() && "b_lb length does not match b_ub length");
@@ -318,10 +354,16 @@ bool ub_is_unbounded(double ub) { return ub >= LP_INFINITY; }
 
 /// Translate the general LP form to the simple:
 ///     minimize(c @ x) subject to A @ x == b, x >= 0
-LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_lb,
-                          std::span<const double> A_data, std::span<const double> b_ub,
-                          std::span<const double> A_eq_data, std::span<const double> b_eq,
-                          std::span<const double> lb, std::span<const double> ub) {
+LP translate_LP_to_simple(
+    std::span<const double> c,
+    std::span<const double> b_lb,
+    std::span<const double> A_data,
+    std::span<const double> b_ub,
+    std::span<const double> A_eq_data,
+    std::span<const double> b_eq,
+    std::span<const double> lb,
+    std::span<const double> ub
+) {
     check_LP_sizes(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub);
 
     const ssize_t num_vars = c.size();
@@ -359,8 +401,10 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
     }
 
     ssize_t slack_var_count = A_constraint_count + upper_bounded_var_count;
-    Matrix A_(A_eq.n() + A_constraint_count + upper_bounded_var_count,
-              num_vars + unbounded_var_count + slack_var_count);
+    Matrix A_(
+        A_eq.n() + A_constraint_count + upper_bounded_var_count,
+        num_vars + unbounded_var_count + slack_var_count
+    );
     c_.resize(A_.m());
     std::vector<double> b(A_.n(), 0);
 
@@ -451,10 +495,14 @@ LP translate_LP_to_simple(std::span<const double> c, std::span<const double> b_l
     return LP(std::move(c_), c0, std::move(A_), std::move(b));
 }
 
-void SolveResult::_postprocess_solution_variables(std::span<const double> lb,
-                                                  std::span<const double> ub) {
-    assert(partial_solution_set &&
-           "postprocess_solution must be called after partial solution has been set");
+void SolveResult::_postprocess_solution_variables(
+    std::span<const double> lb,
+    std::span<const double> ub
+) {
+    assert(
+        partial_solution_set &&
+        "postprocess_solution must be called after partial solution has been set"
+    );
     assert(lb.size() == ub.size());
 
     ssize_t num_vars = lb.size();
@@ -477,12 +525,17 @@ void SolveResult::_postprocess_solution_variables(std::span<const double> lb,
     solution_.resize(num_vars);
 }
 
-void SolveResult::recompute_feasibility(std::span<const double> c, std::span<const double> b_lb,
-                                        std::span<const double> A_data,
-                                        std::span<const double> b_ub,
-                                        std::span<const double> A_eq_data,
-                                        std::span<const double> b_eq, std::span<const double> lb,
-                                        std::span<const double> ub, double tolerance) {
+void SolveResult::recompute_feasibility(
+    std::span<const double> c,
+    std::span<const double> b_lb,
+    std::span<const double> A_data,
+    std::span<const double> b_ub,
+    std::span<const double> A_eq_data,
+    std::span<const double> b_eq,
+    std::span<const double> lb,
+    std::span<const double> ub,
+    double tolerance
+) {
     assert(solution_.size() == c.size());
 
     double tol = std::sqrt(tolerance) * 10.0;
@@ -534,17 +587,25 @@ void SolveResult::recompute_feasibility(std::span<const double> c, std::span<con
     }
 }
 
-void SolveResult::set_solution(std::vector<double>&& solution, std::span<const double> c,
-                               std::span<const double> b_lb, std::span<const double> A_data,
-                               std::span<const double> b_ub, std::span<const double> A_eq_data,
-                               std::span<const double> b_eq, std::span<const double> lb,
-                               std::span<const double> ub, double tolerance) {
+void SolveResult::set_solution(
+    std::vector<double>&& solution,
+    std::span<const double> c,
+    std::span<const double> b_lb,
+    std::span<const double> A_data,
+    std::span<const double> b_ub,
+    std::span<const double> A_eq_data,
+    std::span<const double> b_eq,
+    std::span<const double> lb,
+    std::span<const double> ub,
+    double tolerance
+) {
     // check shape of solution relative to the other values.
     // we do not check the LP values amoung themselves for consistency
     if (solution.size() != c.size()) {
-        throw std::invalid_argument("expected a solution of size " + std::to_string(c.size()) +
-                                    ", given a solution of size " +
-                                    std::to_string(solution.size()));
+        throw std::invalid_argument(
+            "expected a solution of size " + std::to_string(c.size()) +
+            ", given a solution of size " + std::to_string(solution.size())
+        );
     }
 
     // In the case that we're currently holding an optimal solution, we could
@@ -561,28 +622,41 @@ void SolveResult::set_solution(std::vector<double>&& solution, std::span<const d
     final_solution_set = true;
 }
 
-void SolveResult::postprocess_solution(std::span<const double> c, std::span<const double> b_lb,
-                                       std::span<const double> A_data, std::span<const double> b_ub,
-                                       std::span<const double> A_eq_data,
-                                       std::span<const double> b_eq, std::span<const double> lb,
-                                       std::span<const double> ub, double tolerance) {
+void SolveResult::postprocess_solution(
+    std::span<const double> c,
+    std::span<const double> b_lb,
+    std::span<const double> A_data,
+    std::span<const double> b_ub,
+    std::span<const double> A_eq_data,
+    std::span<const double> b_eq,
+    std::span<const double> lb,
+    std::span<const double> ub,
+    double tolerance
+) {
     _postprocess_solution_variables(lb, ub);
     recompute_feasibility(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub, tolerance);
     final_solution_set = true;
 }
 
 /// Solve a linear program using the Simplex method.
-SolveResult linprog(std::span<const double> c, std::span<const double> b_lb,
-                    std::span<const double> A_data, std::span<const double> b_ub,
-                    std::span<const double> A_eq_data, std::span<const double> b_eq,
-                    std::span<const double> lb, std::span<const double> ub, double tolerance) {
+SolveResult linprog(
+    std::span<const double> c,
+    std::span<const double> b_lb,
+    std::span<const double> A_data,
+    std::span<const double> b_ub,
+    std::span<const double> A_eq_data,
+    std::span<const double> b_eq,
+    std::span<const double> lb,
+    std::span<const double> ub,
+    double tolerance
+) {
     const LP model = translate_LP_to_simple(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub);
 
     ssize_t max_iterations = 1000;
     bool bland = false;
 
     SolveResult result =
-            _linprog_simplex(model.c, model.c0, model.A, model.b, max_iterations, tolerance, bland);
+        _linprog_simplex(model.c, model.c0, model.A, model.b, max_iterations, tolerance, bland);
 
     result.postprocess_solution(c, b_lb, A_data, b_ub, A_eq_data, b_eq, lb, ub, tolerance);
 

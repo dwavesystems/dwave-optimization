@@ -19,25 +19,26 @@
 
 namespace dwave::optimization {
 
-SizeInfo::SizeInfo(const Array* array_ptr, std::optional<ssize_t> min, std::optional<ssize_t> max)
-        : array_ptr(array_ptr), multiplier(1), offset(0), min(min), max(max) {
+SizeInfo::SizeInfo(const Array* array_ptr, std::optional<ssize_t> min, std::optional<ssize_t> max) :
+    array_ptr(array_ptr), multiplier(1), offset(0), min(min), max(max) {
     assert(array_ptr->dynamic());
     assert(!min.has_value() || !max.has_value() || *min <= *max);
 }
 
-ValuesInfo::ValuesInfo(const Array* array_ptr)
-        : min(array_ptr->min()), max(array_ptr->max()), integral(array_ptr->integral()) {}
+ValuesInfo::ValuesInfo(const Array* array_ptr) :
+    min(array_ptr->min()), max(array_ptr->max()), integral(array_ptr->integral()) {}
 
-ValuesInfo::ValuesInfo(std::initializer_list<const Array*> array_ptrs)
-        : ValuesInfo(std::vector<const Array*>(array_ptrs)) {}
+ValuesInfo::ValuesInfo(std::initializer_list<const Array*> array_ptrs) :
+    ValuesInfo(std::vector<const Array*>(array_ptrs)) {}
 
-ValuesInfo::ValuesInfo(std::span<const Array* const> array_ptrs)
-        : min(std::ranges::min(array_ptrs |
-                               std::views::transform([](const Array* ptr) { return ptr->min(); }))),
-          max(std::ranges::max(array_ptrs |
-                               std::views::transform([](const Array* ptr) { return ptr->max(); }))),
-          integral(std::ranges::all_of(array_ptrs,
-                                       [](const Array* ptr) { return ptr->integral(); })) {}
+ValuesInfo::ValuesInfo(std::span<const Array* const> array_ptrs) :
+    min(std::ranges::min(array_ptrs | std::views::transform([](const Array* ptr) {
+                             return ptr->min();
+                         }))),
+    max(std::ranges::max(array_ptrs | std::views::transform([](const Array* ptr) {
+                             return ptr->max();
+                         }))),
+    integral(std::ranges::all_of(array_ptrs, [](const Array* ptr) { return ptr->integral(); })) {}
 
 bool SizeInfo::operator==(const SizeInfo& other) const {
     // if one or the other is a fixed number, then this is straightforward
@@ -54,15 +55,19 @@ bool SizeInfo::operator==(const SizeInfo& other) const {
     // if they aren't the same array, then we're not equal
     if (this->array_ptr != other.array_ptr) return false;
 
-    return (this->multiplier == other.multiplier && this->offset == other.offset &&
-            this->min.value_or(0) == other.min.value_or(0) && this->max == other.max);
+    return (
+        this->multiplier == other.multiplier && this->offset == other.offset &&
+        this->min.value_or(0) == other.min.value_or(0) && this->max == other.max
+    );
 }
 
 SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
     if (this->array_ptr == nullptr) {
-        assert(this->min.has_value() && this->max.has_value() &&
-               this->min.value() == this->max.value() &&
-               "SizeInfo should either have an associated array or have its min and max be equal");
+        assert(
+            this->min.has_value() && this->max.has_value() &&
+            this->min.value() == this->max.value() &&
+            "SizeInfo should either have an associated array or have its min and max be equal"
+        );
         return *this;
     }
 
@@ -84,7 +89,8 @@ SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
     sizeinfo.offset += this->offset;
 
     if (sizeinfo.min) {
-        sizeinfo.min = std::max<ssize_t>(0, (*sizeinfo.min * this->multiplier + this->offset).ceil());
+        sizeinfo.min =
+            std::max<ssize_t>(0, (*sizeinfo.min * this->multiplier + this->offset).ceil());
         if (this->min) {
             sizeinfo.min = std::max<ssize_t>(*sizeinfo.min, *this->min);
         }
@@ -93,7 +99,8 @@ SizeInfo SizeInfo::substitute(ssize_t max_depth) const {
     }
 
     if (sizeinfo.max) {
-        sizeinfo.max = std::max<ssize_t>(0, (*sizeinfo.max * this->multiplier + this->offset).ceil());
+        sizeinfo.max =
+            std::max<ssize_t>(0, (*sizeinfo.max * this->multiplier + this->offset).ceil());
         if (this->max) {
             sizeinfo.max = std::min<ssize_t>(*sizeinfo.max, *this->max);
         }
@@ -152,8 +159,9 @@ std::ostream& operator<<(std::ostream& os, const Update& update) {
 }
 
 std::ostream& operator<<(
-        std::ostream& os,
-        const std::ranges::subrange<Array::const_iterator, std::default_sentinel_t>& view) {
+    std::ostream& os,
+    const std::ranges::subrange<Array::const_iterator, std::default_sentinel_t>& view
+) {
     const ssize_t size = view.size();
     os << "View{";
     auto it = view.begin();
@@ -225,8 +233,10 @@ bool array_shape_equal(const Array& lhs, const Array& rhs) { return array_shape_
 
 // We follow NumPy's broadcasting rules
 // See https://numpy.org/doc/stable/user/basics.broadcasting.html
-std::vector<ssize_t> broadcast_shapes(const std::span<const ssize_t> lhs,
-                                      const std::span<const ssize_t> rhs) {
+std::vector<ssize_t> broadcast_shapes(
+    const std::span<const ssize_t> lhs,
+    const std::span<const ssize_t> rhs
+) {
     // The resulting number of dimensions is the larger of the two broadcast arrays.
     std::vector<ssize_t> shape(std::max(lhs.size(), rhs.size()));
 
@@ -250,8 +260,10 @@ std::vector<ssize_t> broadcast_shapes(const std::span<const ssize_t> lhs,
             // one of them is 1, in which case the other determines the shape
             *sit = *lit;
         } else {
-            throw std::invalid_argument("operands could not be broadcast together with shapes " +
-                                        shape_to_string(lhs) + " " + shape_to_string(rhs));
+            throw std::invalid_argument(
+                "operands could not be broadcast together with shapes " + shape_to_string(lhs) +
+                " " + shape_to_string(rhs)
+            );
         }
     }
 
@@ -268,14 +280,18 @@ std::vector<ssize_t> broadcast_shapes(const std::span<const ssize_t> lhs,
 
     // Check that we haven't put a dynamic axis anywhere except axis 0
     if (std::ranges::any_of(shape | std::views::drop(1), [](const auto& val) { return val < 0; })) {
-        throw std::invalid_argument("operands could not be broadcast together with shapes " +
-                                    shape_to_string(lhs) + " " + shape_to_string(rhs));
+        throw std::invalid_argument(
+            "operands could not be broadcast together with shapes " + shape_to_string(lhs) + " " +
+            shape_to_string(rhs)
+        );
     }
 
     return shape;
 }
-std::vector<ssize_t> broadcast_shapes(std::initializer_list<ssize_t> lhs,
-                                      std::initializer_list<ssize_t> rhs) {
+std::vector<ssize_t> broadcast_shapes(
+    std::initializer_list<ssize_t> lhs,
+    std::initializer_list<ssize_t> rhs
+) {
     return broadcast_shapes(std::span(lhs), std::span(rhs));
 }
 
@@ -398,13 +414,17 @@ std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape
     return indices;
 }
 
-ssize_t ravel_multi_index(std::initializer_list<ssize_t> multi_index,
-                          std::initializer_list<ssize_t> shape) {
+ssize_t ravel_multi_index(
+    std::initializer_list<ssize_t> multi_index,
+    std::initializer_list<ssize_t> shape
+) {
     return ravel_multi_index(std::span(multi_index), std::span(shape));
 }
 
-ssize_t ravel_multi_index(const std::span<const ssize_t> multi_index,
-                          const std::span<const ssize_t> shape) {
+ssize_t ravel_multi_index(
+    const std::span<const ssize_t> multi_index,
+    const std::span<const ssize_t> shape
+) {
     assert(multi_index.size() == shape.size() && "mismatched number of dimensions");
 
     // Handle the empty case
@@ -413,8 +433,9 @@ ssize_t ravel_multi_index(const std::span<const ssize_t> multi_index,
     ssize_t index = 0;
     ssize_t multiplier = 1;
     for (ssize_t axis = multi_index.size() - 1; axis >= 0; --axis) {
-        assert((!axis || 0 <= shape[axis]) &&
-               "all dimensions except the first must be non-negative");
+        assert(
+            (!axis || 0 <= shape[axis]) && "all dimensions except the first must be non-negative"
+        );
 
         // NumPy supports "clip" and "wrap" which we could add support for
         // but for now let's just assert.

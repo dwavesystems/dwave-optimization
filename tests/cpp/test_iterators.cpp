@@ -31,35 +31,39 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
-TEMPLATE_PRODUCT_TEST_CASE("BufferIterator", "", BufferIterator,
-                           ((const float, const void),                 //
-                            (const double, const void),                //
-                            (const bool, const void),                  //
-                            (const std::int8_t, const void),           //
-                            (const std::int16_t, const void),          //
-                            (const std::int32_t, const void),          //
-                            (const std::int64_t, const void),          //
-                            (float, float),                            //
-                            (double, double),                          //
-                            (bool, bool),                              //
-                            (std::int8_t, std::int8_t),                //
-                            (std::int16_t, std::int16_t),              //
-                            (std::int32_t, std::int32_t),              //
-                            (std::int64_t, std::int64_t),              //
-                            (const float, float),                      //
-                            (const double, double),                    //
-                            (const bool, bool),                        //
-                            (const std::int8_t, std::int8_t),          //
-                            (const std::int16_t, std::int16_t),        //
-                            (const std::int32_t, std::int32_t),        //
-                            (const std::int64_t, std::int64_t),        //
-                            (const float, const float),                //
-                            (const double, const double),              //
-                            (const bool, const bool),                  //
-                            (const std::int8_t, const std::int8_t),    //
-                            (const std::int16_t, const std::int16_t),  //
-                            (const std::int32_t, const std::int32_t),  //
-                            (const std::int64_t, const std::int64_t))) {
+TEMPLATE_PRODUCT_TEST_CASE(
+    "BufferIterator",
+    "",
+    BufferIterator,
+    ((const float, const void),                 //
+     (const double, const void),                //
+     (const bool, const void),                  //
+     (const std::int8_t, const void),           //
+     (const std::int16_t, const void),          //
+     (const std::int32_t, const void),          //
+     (const std::int64_t, const void),          //
+     (float, float),                            //
+     (double, double),                          //
+     (bool, bool),                              //
+     (std::int8_t, std::int8_t),                //
+     (std::int16_t, std::int16_t),              //
+     (std::int32_t, std::int32_t),              //
+     (std::int64_t, std::int64_t),              //
+     (const float, float),                      //
+     (const double, double),                    //
+     (const bool, bool),                        //
+     (const std::int8_t, std::int8_t),          //
+     (const std::int16_t, std::int16_t),        //
+     (const std::int32_t, std::int32_t),        //
+     (const std::int64_t, std::int64_t),        //
+     (const float, const float),                //
+     (const double, const double),              //
+     (const bool, const bool),                  //
+     (const std::int8_t, const std::int8_t),    //
+     (const std::int16_t, const std::int16_t),  //
+     (const std::int32_t, const std::int32_t),  //
+     (const std::int64_t, const std::int64_t))
+) {
     using To = TestType::value_type;
 
     static_assert(std::is_nothrow_constructible<TestType>::value);
@@ -108,14 +112,17 @@ TEMPLATE_PRODUCT_TEST_CASE("BufferIterator", "", BufferIterator,
     }
 }
 
-TEMPLATE_TEST_CASE("BufferIterator", "",
-                   float,         //
-                   double,        //
-                   bool,          //
-                   std::int8_t,   //
-                   std::int16_t,  //
-                   std::int32_t,  //
-                   std::int64_t) {
+TEMPLATE_TEST_CASE(
+    "BufferIterator",
+    "",
+    float,         //
+    double,        //
+    bool,          //
+    std::int8_t,   //
+    std::int16_t,  //
+    std::int32_t,  //
+    std::int64_t
+) {
     // Check that we can interpret buffers of each type as a double
     GIVEN("A buffer of the given type") {
         std::array<TestType, 10> buffer;
@@ -123,8 +130,10 @@ TEMPLATE_TEST_CASE("BufferIterator", "",
         std::array<const ssize_t, 1> shape{10};
         std::array<const ssize_t, 1> strides{sizeof(TestType)};
 
-        THEN("We can construct an iterator reading it as if it was doubles without specifying the "
-             "buffer type at compile-time") {
+        THEN(
+            "We can construct an iterator reading it as if it was doubles without specifying the "
+            "buffer type at compile-time"
+        ) {
             auto it = BufferIterator<const double, const void>(buffer.data(), shape, strides);
 
             // the output of the iterator is double as requested
@@ -133,8 +142,10 @@ TEMPLATE_TEST_CASE("BufferIterator", "",
             CHECK_THAT(std::ranges::subrange(it, it + buffer.size()), RangeEquals(buffer));
         }
 
-        THEN("We can construct an iterator reading it as if it was doubles specifying the buffer "
-             "type at compile-time") {
+        THEN(
+            "We can construct an iterator reading it as if it was doubles specifying the buffer "
+            "type at compile-time"
+        ) {
             auto it = BufferIterator<const double, TestType>(buffer.data(), shape, strides);
 
             // the output of the iterator is double as requested
@@ -196,15 +207,16 @@ TEST_CASE("BufferIterator") {
     GIVEN("A buffer encoding 2d array [[0, 1, 2], [3, 4, 5]]") {
         auto values = std::array<double, 6>{0, 1, 2, 3, 4, 5};
         auto shape = std::array<ssize_t, 2>{2, 3};
-        auto [strides, start] = GENERATE(std::pair(std::array<ssize_t, 2>{24, 8}, 0),
-                                         std::pair(std::array<ssize_t, 2>{-24, 8}, 3));
+        auto [strides, start] = GENERATE(
+            std::pair(std::array<ssize_t, 2>{24, 8}, 0),
+            std::pair(std::array<ssize_t, 2>{-24, 8}, 3)
+        );
 
         auto n = GENERATE(0, 3, 4, 5);
 
         AND_GIVEN("a = buffer.begin(), b = a + n") {
             const BufferIterator<const double, const double> a =
-                    BufferIterator<const double, const double>(values.data() + start, shape,
-                                                               strides);
+                BufferIterator<const double, const double>(values.data() + start, shape, strides);
             const BufferIterator<const double, const double> b = a + n;
 
             // semantic requirements
@@ -307,8 +319,9 @@ TEST_CASE("BufferIterator") {
         WHEN("We specify a shape and strides defining a subset of the values") {
             std::vector<ssize_t> shape{5};
             std::vector<ssize_t> strides{2 * sizeof(double)};
-            auto it = BufferIterator<const double, const double>(values.data(), 1, shape.data(),
-                                                                 strides.data());
+            auto it = BufferIterator<const double, const double>(
+                values.data(), 1, shape.data(), strides.data()
+            );
 
             THEN("It behaves like a strided iterator") {
                 CHECK(*it == 0);
@@ -345,8 +358,9 @@ TEST_CASE("BufferIterator") {
             std::vector<ssize_t> shape{-1, 2};
             std::vector<ssize_t> strides{4 * sizeof(double), sizeof(double)};
 
-            auto it = BufferIterator<const double, const double>(values.data(), 2, shape.data(),
-                                                                 strides.data());
+            auto it = BufferIterator<const double, const double>(
+                values.data(), 2, shape.data(), strides.data()
+            );
 
             THEN("We can calculate the distance between two pointers in the strided array") {
                 const auto end = it + 2;
@@ -391,10 +405,13 @@ TEST_CASE("BufferIterator") {
             std::array<ssize_t, 1> strides{7};
 
             auto it = BufferIterator<const double, const std::int32_t>(
-                    reinterpret_cast<std::int32_t*>(bytes.data()), shape, strides);
+                reinterpret_cast<std::int32_t*>(bytes.data()), shape, strides
+            );
 
-            CHECK_THAT(std::ranges::subrange(it, std::default_sentinel),
-                       RangeEquals({0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+            CHECK_THAT(
+                std::ranges::subrange(it, std::default_sentinel),
+                RangeEquals({0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+            );
         }
 
         WHEN("We iterate through the buffer as a 1d strided array") {
@@ -402,10 +419,12 @@ TEST_CASE("BufferIterator") {
             std::array<ssize_t, 1> strides{2 * 7};
 
             auto it = BufferIterator<const double, const std::int32_t>(
-                    reinterpret_cast<std::int32_t*>(bytes.data()), shape, strides);
+                reinterpret_cast<std::int32_t*>(bytes.data()), shape, strides
+            );
 
-            CHECK_THAT(std::ranges::subrange(it, std::default_sentinel),
-                       RangeEquals({0, 2, 4, 6, 8}));
+            CHECK_THAT(
+                std::ranges::subrange(it, std::default_sentinel), RangeEquals({0, 2, 4, 6, 8})
+            );
         }
     }
 
@@ -438,8 +457,9 @@ TEST_CASE("BufferIterator") {
 
         THEN("We can interpret it as a 2d array and sort") {
             std::array<ssize_t, 2> shape{2, 5};
-            std::array<ssize_t, 2> strides{-5 * static_cast<ssize_t>(sizeof(double)),
-                                           sizeof(double)};
+            std::array<ssize_t, 2> strides{
+                -5 * static_cast<ssize_t>(sizeof(double)), sizeof(double)
+            };
 
             auto begin = BufferIterator<double, double>(buffer.data() + 5, shape, strides);
             auto end = begin + 10;

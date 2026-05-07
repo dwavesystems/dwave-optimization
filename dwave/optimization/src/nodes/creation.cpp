@@ -114,8 +114,12 @@ std::vector<double> arange(const ssize_t start, const ssize_t stop, const ssize_
 
     return arange;
 }
-std::vector<double> arange(const State& state, array_or_int start_, array_or_int stop_,
-                           array_or_int step_) {
+std::vector<double> arange(
+    const State& state,
+    array_or_int start_,
+    array_or_int stop_,
+    array_or_int step_
+) {
     auto visitor = get_value(state);
     const ssize_t start = std::visit(visitor, start_);
     const ssize_t stop = std::visit(visitor, stop_);
@@ -124,8 +128,11 @@ std::vector<double> arange(const State& state, array_or_int start_, array_or_int
     return arange(start, stop, step);
 }
 
-std::pair<double, double> calculate_values_minmax(array_or_int start_, array_or_int stop_,
-                                                  array_or_int step_) {
+std::pair<double, double> calculate_values_minmax(
+    array_or_int start_,
+    array_or_int stop_,
+    array_or_int step_
+) {
     auto visitor = get_minmax();
     const auto [start_low, start_high] = std::visit(visitor, start_);
     const auto [stop_low, stop_high] = std::visit(visitor, stop_);
@@ -146,10 +153,10 @@ std::pair<double, double> calculate_values_minmax(array_or_int start_, array_or_
         // Our max value will always use the largest stop, but we do need
         // to check several combinations of start/step.
         const double high = std::max({
-                start_low + ((stop_high - start_low - 1) / step_low) * step_low,
-                start_low + ((stop_high - start_low - 1) / step_high) * step_high,
-                start_high + ((stop_high - start_high - 1) / step_low) * step_low,
-                start_high + ((stop_high - start_high - 1) / step_high) * step_high,
+            start_low + ((stop_high - start_low - 1) / step_low) * step_low,
+            start_low + ((stop_high - start_low - 1) / step_high) * step_high,
+            start_high + ((stop_high - start_high - 1) / step_low) * step_low,
+            start_high + ((stop_high - start_high - 1) / step_high) * step_high,
         });
 
         return std::pair<double, double>{start_low, high};
@@ -161,10 +168,10 @@ std::pair<double, double> calculate_values_minmax(array_or_int start_, array_or_
         // Our min value will always use the smallest stop, but we do need
         // to check several combinations of start/step.
         const double low = std::min({
-                start_low + ((start_low - stop_low - 1) / -step_low) * step_low,
-                start_low + ((start_low - stop_low - 1) / -step_high) * step_high,
-                start_high + ((start_high - stop_low - 1) / -step_low) * step_low,
-                start_high + ((start_high - stop_low - 1) / -step_high) * step_high,
+            start_low + ((start_low - stop_low - 1) / -step_low) * step_low,
+            start_low + ((start_low - stop_low - 1) / -step_high) * step_high,
+            start_high + ((start_high - stop_low - 1) / -step_low) * step_low,
+            start_high + ((start_high - stop_low - 1) / -step_high) * step_high,
         });
 
         return std::pair<double, double>{low, start_high};
@@ -174,8 +181,12 @@ std::pair<double, double> calculate_values_minmax(array_or_int start_, array_or_
     unreachable();
 }
 
-const SizeInfo calculate_arange_sizeinfo(const ArrayNode* node_ptr, const array_or_int start,
-                                         const array_or_int stop, const array_or_int step) {
+const SizeInfo calculate_arange_sizeinfo(
+    const ArrayNode* node_ptr,
+    const array_or_int start,
+    const array_or_int stop,
+    const array_or_int step
+) {
     if (!node_ptr->dynamic()) return SizeInfo(node_ptr->size());
 
     auto visitor = get_minmax();
@@ -202,15 +213,17 @@ const SizeInfo calculate_arange_sizeinfo(const ArrayNode* node_ptr, const array_
     ssize_t min;
     ssize_t max;
     if (step_low > 0) {
-        min = std::max<ssize_t>(std::ceil(static_cast<double>(stop_low - start_high) / step_high),
-                                0);
-        max = std::max<ssize_t>(std::ceil(static_cast<double>(stop_high - start_low) / step_low),
-                                min);
+        min =
+            std::max<ssize_t>(std::ceil(static_cast<double>(stop_low - start_high) / step_high), 0);
+        max = std::max<ssize_t>(
+            std::ceil(static_cast<double>(stop_high - start_low) / step_low), min
+        );
     } else if (step_high < 0) {
-        min = std::max<ssize_t>(std::ceil(static_cast<double>(stop_high - start_low) / step_high),
-                                0);
-        max = std::max<ssize_t>(std::ceil(static_cast<double>(stop_low - start_high) / step_low),
-                                min);
+        min =
+            std::max<ssize_t>(std::ceil(static_cast<double>(stop_high - start_low) / step_high), 0);
+        max = std::max<ssize_t>(
+            std::ceil(static_cast<double>(stop_low - start_high) / step_low), min
+        );
     } else {
         assert(false && "unreachable");
         unreachable();
@@ -229,7 +242,8 @@ const SizeInfo calculate_arange_sizeinfo(const ArrayNode* node_ptr, const array_
     // The size of this node is a linear function of the size of the node its
     // predecessor (the SizeNode defining `stop`) is listening to.
     auto sizenode_pred_ptr = dynamic_cast<const ArrayNode*>(
-            static_cast<const ArrayNode*>(std::get<const Array*>(stop))->predecessors()[0]);
+        static_cast<const ArrayNode*>(std::get<const Array*>(stop))->predecessors()[0]
+    );
 
     // SizeInfo is computed as follows (see SizeInfo docs):
     // clamp(ceil(multiplier * array_ptr->size() + offset), min, max)
@@ -253,78 +267,78 @@ ARangeNode::ARangeNode() : ARangeNode(ssize_t(0)) {}
 ARangeNode::ARangeNode(ssize_t stop) : ARangeNode(ssize_t(0), stop) {}
 ARangeNode::ARangeNode(ArrayNode* stop) : ARangeNode(ssize_t(0), stop) {}
 
-ARangeNode::ARangeNode(ssize_t start, ssize_t stop, ssize_t step)
-        : ArrayOutputMixin(range_shape(start, stop, step)),
-          start_(start),
-          stop_(stop),
-          step_(step),
-          values_minmax_(calculate_values_minmax(start, stop, step)),
-          sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {}
+ARangeNode::ARangeNode(ssize_t start, ssize_t stop, ssize_t step) :
+    ArrayOutputMixin(range_shape(start, stop, step)),
+    start_(start),
+    stop_(stop),
+    step_(step),
+    values_minmax_(calculate_values_minmax(start, stop, step)),
+    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {}
 
-ARangeNode::ARangeNode(ssize_t start, ssize_t stop, ArrayNode* step)
-        : ArrayOutputMixin(range_shape(start, stop, step)),
-          start_(start),
-          stop_(stop),
-          step_(step),
-          values_minmax_(calculate_values_minmax(start, stop, step)),
-          sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ssize_t start, ssize_t stop, ArrayNode* step) :
+    ArrayOutputMixin(range_shape(start, stop, step)),
+    start_(start),
+    stop_(stop),
+    step_(step),
+    values_minmax_(calculate_values_minmax(start, stop, step)),
+    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(step);
 }
-ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ssize_t step)
-        : ArrayOutputMixin(range_shape(start, stop, step)),
-          start_(start),
-          stop_(stop),
-          step_(step),
-          values_minmax_(calculate_values_minmax(start, stop, step)),
-          sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ssize_t step) :
+    ArrayOutputMixin(range_shape(start, stop, step)),
+    start_(start),
+    stop_(stop),
+    step_(step),
+    values_minmax_(calculate_values_minmax(start, stop, step)),
+    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(stop);
 }
-ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ArrayNode* step)
-        : ArrayOutputMixin(range_shape(start, stop, step)),
-          start_(start),
-          stop_(stop),
-          step_(step),
-          values_minmax_(calculate_values_minmax(start, stop, step)),
-          sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ArrayNode* step) :
+    ArrayOutputMixin(range_shape(start, stop, step)),
+    start_(start),
+    stop_(stop),
+    step_(step),
+    values_minmax_(calculate_values_minmax(start, stop, step)),
+    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(stop);
     add_predecessor(step);
 }
-ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ssize_t step)
-        : ArrayOutputMixin(range_shape(start, stop, step)),
-          start_(start),
-          stop_(stop),
-          step_(step),
-          values_minmax_(calculate_values_minmax(start, stop, step)),
-          sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ssize_t step) :
+    ArrayOutputMixin(range_shape(start, stop, step)),
+    start_(start),
+    stop_(stop),
+    step_(step),
+    values_minmax_(calculate_values_minmax(start, stop, step)),
+    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(start);
 }
-ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ArrayNode* step)
-        : ArrayOutputMixin(range_shape(start, stop, step)),
-          start_(start),
-          stop_(stop),
-          step_(step),
-          values_minmax_(calculate_values_minmax(start, stop, step)),
-          sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ArrayNode* step) :
+    ArrayOutputMixin(range_shape(start, stop, step)),
+    start_(start),
+    stop_(stop),
+    step_(step),
+    values_minmax_(calculate_values_minmax(start, stop, step)),
+    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(start);
     add_predecessor(step);
 }
-ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ssize_t step)
-        : ArrayOutputMixin(range_shape(start, stop, step)),
-          start_(start),
-          stop_(stop),
-          step_(step),
-          values_minmax_(calculate_values_minmax(start, stop, step)),
-          sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ssize_t step) :
+    ArrayOutputMixin(range_shape(start, stop, step)),
+    start_(start),
+    stop_(stop),
+    step_(step),
+    values_minmax_(calculate_values_minmax(start, stop, step)),
+    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(start);
     add_predecessor(stop);
 }
-ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ArrayNode* step)
-        : ArrayOutputMixin(range_shape(start, stop, step)),
-          start_(start),
-          stop_(stop),
-          step_(step),
-          values_minmax_(calculate_values_minmax(start, stop, step)),
-          sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
+ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ArrayNode* step) :
+    ArrayOutputMixin(range_shape(start, stop, step)),
+    start_(start),
+    stop_(stop),
+    step_(step),
+    values_minmax_(calculate_values_minmax(start, stop, step)),
+    sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
     add_predecessor(start);
     add_predecessor(stop);
     add_predecessor(step);

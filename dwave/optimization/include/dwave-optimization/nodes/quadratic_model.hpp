@@ -55,8 +55,12 @@ class QuadraticModel {
     void get_linear(bias_type* linear_ptr) const;
     void add_squares(const bias_type* squares_ptr);
     void get_squares(bias_type* squares_ptr) const;
-    void add_quadratic(const size_type n_interactions, const index_type* row, const index_type* col,
-                       const bias_type* quad);
+    void add_quadratic(
+        const size_type n_interactions,
+        const index_type* row,
+        const index_type* col,
+        const bias_type* quad
+    );
     void get_quadratic(index_type* row, index_type* col, bias_type* quad) const;
 
  private:

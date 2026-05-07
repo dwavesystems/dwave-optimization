@@ -39,11 +39,10 @@ concept shape_like = std::ranges::sized_range<T> and std::integral<std::ranges::
 /// `From` specifies the type of the underlying buffer. `void` means that the type
 /// is specified at run-time.
 template <DType To, OptionalDType From = To>
-    requires requires {
-        // Cannot create an output iterator when From != To
-        requires std::is_const<To>::value or std::is_same<To, From>::value;
-    }
-class BufferIterator {
+requires requires {
+    // Cannot create an output iterator when From != To
+    requires std::is_const<To>::value or std::is_same<To, From>::value;
+} class BufferIterator {
  public:
     // Iterator public types
     using difference_type = std::ptrdiff_t;
@@ -63,13 +62,13 @@ class BufferIterator {
     BufferIterator() = default;
 
     /// Copy constructor
-    BufferIterator(const BufferIterator& other) noexcept
-            : ptr_(other.ptr_),
-              format_(other.format_),
-              ndim_(other.ndim_),
-              shape_(other.shape_),
-              strides_(other.strides_),
-              loc_(ndim_ > 0 ? std::make_unique_for_overwrite<ssize_t[]>(ndim_) : nullptr) {
+    BufferIterator(const BufferIterator& other) noexcept :
+        ptr_(other.ptr_),
+        format_(other.format_),
+        ndim_(other.ndim_),
+        shape_(other.shape_),
+        strides_(other.strides_),
+        loc_(ndim_ > 0 ? std::make_unique_for_overwrite<ssize_t[]>(ndim_) : nullptr) {
         assert(ndim_ >= 0);
         for (ssize_t axis = 0; axis < ndim_; ++axis) {
             loc_[axis] = other.loc_[axis];
@@ -84,13 +83,13 @@ class BufferIterator {
     /// Note that the pointer to shape/strides is not owning! The lifespan of those
     /// pointers must exceed that of the iterator.
     BufferIterator(From* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
-        requires(DType<From>)
-            : ptr_(ptr),
-              format_(format_of<From>()),
-              ndim_(ndim),
-              shape_(shape),
-              strides_(strides),
-              loc_(ndim_ > 0 ? std::make_unique<ssize_t[]>(ndim_) : nullptr) {
+        requires(DType<From>) :
+        ptr_(ptr),
+        format_(format_of<From>()),
+        ndim_(ndim),
+        shape_(shape),
+        strides_(strides),
+        loc_(ndim_ > 0 ? std::make_unique<ssize_t[]>(ndim_) : nullptr) {
         assert(ndim_ >= 0);
 
         // there is an edge case where if the shape contains any zeros we want our
@@ -104,13 +103,13 @@ class BufferIterator {
     }
     template <DType T>
     BufferIterator(T* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
-        requires(not DType<From>)
-            : ptr_(ptr),
-              format_(format_of<T>()),
-              ndim_(ndim),
-              shape_(shape),
-              strides_(strides),
-              loc_(ndim_ > 0 ? std::make_unique<ssize_t[]>(ndim_) : nullptr) {
+        requires(not DType<From>) :
+        ptr_(ptr),
+        format_(format_of<T>()),
+        ndim_(ndim),
+        shape_(shape),
+        strides_(strides),
+        loc_(ndim_ > 0 ? std::make_unique<ssize_t[]>(ndim_) : nullptr) {
         assert(ndim_ >= 0);
 
         // there is an edge case where if the shape contains any zeros we want our
@@ -126,8 +125,8 @@ class BufferIterator {
     /// Convenience constructor when using shape/strides specified as spans (or things that can
     /// be read using a span).
     template <OptionalDType T>
-    BufferIterator(T* ptr, std::span<const ssize_t> shape, std::span<const ssize_t> strides)
-            : BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
+    BufferIterator(T* ptr, std::span<const ssize_t> shape, std::span<const ssize_t> strides) :
+        BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
         assert(std::ranges::size(shape) == std::ranges::size(strides));
     }
 
@@ -161,28 +160,22 @@ class BufferIterator {
 
     /// Dereference the iterator. When `To` matches `From` this can return
     /// a reference, otherwise it returns a value.
-    reference operator*() const noexcept
-        requires(std::same_as<const To, const From>)
-    {
+    reference operator*() const noexcept requires(std::same_as<const To, const From>) {
         return *ptr_;
     }
-    value_type operator*() const noexcept
-        requires(not std::same_as<const To, const From>)
-    {
+    value_type operator*() const noexcept requires(not std::same_as<const To, const From>) {
         return value_(ptr_);
     }
 
     /// Access the value of the iterator at the given offset
     reference operator[](difference_type index) const noexcept
-        requires(std::same_as<const To, const From>)
-    {
+        requires(std::same_as<const To, const From>) {
         From* ptr = ptr_;
         increment_impl_<false>(index, &ptr, loc_.get());
         return *ptr;
     }
     value_type operator[](difference_type index) const noexcept
-        requires(not std::same_as<const To, const From>)
-    {
+        requires(not std::same_as<const To, const From>) {
         From* ptr = ptr_;
         increment_impl_<false>(index, &ptr, loc_.get());
         return value_(ptr);
@@ -231,12 +224,18 @@ class BufferIterator {
     /// Equality comparison between two buffer iterators.
     friend bool operator==(const BufferIterator& lhs, const BufferIterator& rhs) {
         // Check that lhs and rhs are consistent with each other.
-        assert(std::ranges::equal(std::span(lhs.shape_, lhs.ndim_),
-                                  std::span(rhs.shape_, rhs.ndim_)) &&
-               "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
-        assert(std::ranges::equal(std::span(lhs.strides_, lhs.ndim_),
-                                  std::span(rhs.strides_, rhs.ndim_)) &&
-               "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
+        assert(
+            std::ranges::equal(
+                std::span(lhs.shape_, lhs.ndim_), std::span(rhs.shape_, rhs.ndim_)
+            ) &&
+            "lhs must be reachable from rhs but lhs and rhs do not have the same shape"
+        );
+        assert(
+            std::ranges::equal(
+                std::span(lhs.strides_, lhs.ndim_), std::span(rhs.strides_, rhs.ndim_)
+            ) &&
+            "lhs must be reachable from rhs but lhs and rhs do not have the same strides"
+        );
         for (ssize_t axis = 0; axis < lhs.ndim_; ++axis) {
             if (lhs.loc_[axis] != rhs.loc_[axis]) return false;
         }
@@ -254,12 +253,18 @@ class BufferIterator {
     /// Three-way comparison between two iterators.
     friend std::strong_ordering operator<=>(const BufferIterator& lhs, const BufferIterator& rhs) {
         // Check that lhs and rhs are consistent with each other.
-        assert(std::ranges::equal(std::span(lhs.shape_, lhs.ndim_),
-                                  std::span(rhs.shape_, rhs.ndim_)) &&
-               "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
-        assert(std::ranges::equal(std::span(lhs.strides_, lhs.ndim_),
-                                  std::span(rhs.strides_, rhs.ndim_)) &&
-               "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
+        assert(
+            std::ranges::equal(
+                std::span(lhs.shape_, lhs.ndim_), std::span(rhs.shape_, rhs.ndim_)
+            ) &&
+            "lhs must be reachable from rhs but lhs and rhs do not have the same shape"
+        );
+        assert(
+            std::ranges::equal(
+                std::span(lhs.strides_, lhs.ndim_), std::span(rhs.strides_, rhs.ndim_)
+            ) &&
+            "lhs must be reachable from rhs but lhs and rhs do not have the same strides"
+        );
 
         for (ssize_t axis = 0; axis < lhs.ndim_; ++axis) {
             if (lhs.loc_[axis] != rhs.loc_[axis]) return lhs.loc_[axis] <=> rhs.loc_[axis];
@@ -286,12 +291,18 @@ class BufferIterator {
     /// Return the number of times we would need to increment `rhs` in order to reach `lhs`.
     friend difference_type operator-(const BufferIterator& lhs, const BufferIterator& rhs) {
         // Check that lhs and rhs are consistent with each other.
-        assert(std::ranges::equal(std::span(lhs.shape_, lhs.ndim_),
-                                  std::span(rhs.shape_, rhs.ndim_)) &&
-               "lhs must be reachable from rhs but lhs and rhs do not have the same shape");
-        assert(std::ranges::equal(std::span(lhs.strides_, lhs.ndim_),
-                                  std::span(rhs.strides_, rhs.ndim_)) &&
-               "lhs must be reachable from rhs but lhs and rhs do not have the same strides");
+        assert(
+            std::ranges::equal(
+                std::span(lhs.shape_, lhs.ndim_), std::span(rhs.shape_, rhs.ndim_)
+            ) &&
+            "lhs must be reachable from rhs but lhs and rhs do not have the same shape"
+        );
+        assert(
+            std::ranges::equal(
+                std::span(lhs.strides_, lhs.ndim_), std::span(rhs.strides_, rhs.ndim_)
+            ) &&
+            "lhs must be reachable from rhs but lhs and rhs do not have the same strides"
+        );
 
         // calculate the difference in steps based on the respective locs
         difference_type difference = 0;
@@ -358,8 +369,10 @@ class BufferIterator {
     //     `UpdateLoc` is `true`.
     template <bool UpdateLoc>
     void increment_impl_(
-            const ssize_t n, From** const ptr,
-            std::conditional<UpdateLoc, ssize_t* const, const ssize_t* const>::type loc) const {
+        const ssize_t n,
+        From** const ptr,
+        std::conditional<UpdateLoc, ssize_t* const, const ssize_t* const>::type loc
+    ) const {
         if (n == 0) return;      // no increments to apply, exit early
         if (ndim_ == 0) return;  // incrementing a scalar does nothing
 

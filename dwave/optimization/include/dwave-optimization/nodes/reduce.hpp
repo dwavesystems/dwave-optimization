@@ -33,10 +33,16 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
  public:
     ReduceNode(ArrayNode* array_ptr);
 
-    ReduceNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> axes,
-               std::optional<double> initial = std::nullopt);
-    ReduceNode(ArrayNode* array_ptr, std::span<const ssize_t> axes,
-               std::optional<double> initial = std::nullopt);
+    ReduceNode(
+        ArrayNode* array_ptr,
+        std::initializer_list<ssize_t> axes,
+        std::optional<double> initial = std::nullopt
+    );
+    ReduceNode(
+        ArrayNode* array_ptr,
+        std::span<const ssize_t> axes,
+        std::optional<double> initial = std::nullopt
+    );
 
     /// The axes over which the reduction is performed.
     std::span<const ssize_t> axes() const { return axes_; }

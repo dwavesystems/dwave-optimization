@@ -47,8 +47,9 @@ TEST_CASE("MatrixMultiplyNode") {
     }
 
     GIVEN("A dynamic testing array node with minimum size and matmul on it") {
-        auto arr = DynamicArrayTestingNode(std::initializer_list<ssize_t>{-1}, -10.0, -5.0, false,
-                                           3, std::nullopt);
+        auto arr = DynamicArrayTestingNode(
+            std::initializer_list<ssize_t>{-1}, -10.0, -5.0, false, 3, std::nullopt
+        );
         auto constant = ConstantNode(15.0);
         auto add = AddNode(&arr, &constant);
         REQUIRE(add.min() == 5.0);
@@ -61,8 +62,8 @@ TEST_CASE("MatrixMultiplyNode") {
     }
 
     GIVEN("A dynamic testing array node with minimum and maximum size and matmul on it") {
-        auto arr = DynamicArrayTestingNode(std::initializer_list<ssize_t>{-1}, -10.0, -5.0, false,
-                                           3, 7);
+        auto arr =
+            DynamicArrayTestingNode(std::initializer_list<ssize_t>{-1}, -10.0, -5.0, false, 3, 7);
         auto constant = ConstantNode(15.0);
         auto add = AddNode(&arr, &constant);
         REQUIRE(add.min() == 5.0);
@@ -111,10 +112,12 @@ TEST_CASE("MatrixMultiplyNode") {
     }
 
     GIVEN("Two constant 2d nodes and a MatrixMultiplyNode") {
-        auto c1_ptr = graph.emplace_node<ConstantNode>(std::vector{1.0, 2.0, 3.0, 4.0, 5.0, 6.0},
-                                                       std::vector<ssize_t>{2, 3});
-        auto c2_ptr = graph.emplace_node<ConstantNode>(std::vector{7.0, 8.0, 9.0, 10.0, 11.0, 12.0},
-                                                       std::vector<ssize_t>{3, 2});
+        auto c1_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{1.0, 2.0, 3.0, 4.0, 5.0, 6.0}, std::vector<ssize_t>{2, 3}
+        );
+        auto c2_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{7.0, 8.0, 9.0, 10.0, 11.0, 12.0}, std::vector<ssize_t>{3, 2}
+        );
 
         auto matmul_ptr = graph.emplace_node<MatrixMultiplyNode>(c1_ptr, c2_ptr);
 
@@ -137,10 +140,12 @@ TEST_CASE("MatrixMultiplyNode") {
     }
 
     GIVEN("Two constant 2d nodes and a MatrixMultiplyNode") {
-        auto c1_ptr = graph.emplace_node<ConstantNode>(std::vector{1.0, 2.0, 3.0, 4.0, 5.0, 6.0},
-                                                       std::vector<ssize_t>{2, 3});
-        auto c2_ptr = graph.emplace_node<ConstantNode>(std::vector{7.0, 8.0, 9.0, 10.0, 11.0, 12.0},
-                                                       std::vector<ssize_t>{3, 2});
+        auto c1_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{1.0, 2.0, 3.0, 4.0, 5.0, 6.0}, std::vector<ssize_t>{2, 3}
+        );
+        auto c2_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{7.0, 8.0, 9.0, 10.0, 11.0, 12.0}, std::vector<ssize_t>{3, 2}
+        );
 
         auto matmul_ptr = graph.emplace_node<MatrixMultiplyNode>(c2_ptr, c1_ptr);
 
@@ -154,18 +159,19 @@ TEST_CASE("MatrixMultiplyNode") {
             auto state = graph.initialize_state();
 
             THEN("The initial MatrixMultiplyNode state is correct") {
-                CHECK_THAT(matmul_ptr->view(state),
-                           RangeEquals({39, 54, 69, 49, 68, 87, 59, 82, 105}));
+                CHECK_THAT(
+                    matmul_ptr->view(state), RangeEquals({39, 54, 69, 49, 68, 87, 59, 82, 105})
+                );
             }
         }
     }
 
     GIVEN("One constant 1d node and one constant 2d node") {
-        auto c1_ptr = graph.emplace_node<ConstantNode>(std::vector{1.0, 2.0, 3.0},
-                                                       std::vector<ssize_t>{3});
+        auto c1_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{1.0, 2.0, 3.0}, std::vector<ssize_t>{3});
         auto c2_ptr = graph.emplace_node<ConstantNode>(
-                std::vector{4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0},
-                std::vector<ssize_t>{3, 3});
+            std::vector{4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0}, std::vector<ssize_t>{3, 3}
+        );
 
         AND_GIVEN("The 1d node @ the 2d node") {
             auto matmul_ptr = graph.emplace_node<MatrixMultiplyNode>(c1_ptr, c2_ptr);
@@ -235,10 +241,11 @@ TEST_CASE("MatrixMultiplyNode") {
 
             THEN("The initial MatrixMultiplyNode state is correct") {
                 CHECK_THAT(
-                        matmul_ptr->view(state),
-                        RangeEquals({-84,  -49,  406,  441,  896,  931,  1386, 1421, 1876, 1911,
-                                     2366, 2401, 2856, 2891, 3346, 3381, 3836, 3871, 4326, 4361,
-                                     4816, 4851, 5306, 5341, 5796, 5831, 6286, 6321, 6776, 6811}));
+                    matmul_ptr->view(state),
+                    RangeEquals({-84,  -49,  406,  441,  896,  931,  1386, 1421, 1876, 1911,
+                                 2366, 2401, 2856, 2891, 3346, 3381, 3836, 3871, 4326, 4361,
+                                 4816, 4851, 5306, 5341, 5796, 5831, 6286, 6321, 6776, 6811})
+                );
             }
         }
     }
@@ -276,10 +283,11 @@ TEST_CASE("MatrixMultiplyNode") {
 
             THEN("The initial MatrixMultiplyNode state is correct") {
                 CHECK_THAT(
-                        matmul_ptr->view(state),
-                        RangeEquals({-217, 28,   273,  518,  763,  1008, 1253, 1498, 1743, 1988,
-                                     2233, 2478, 2723, 2968, 3213, 3458, 3703, 3948, 4193, 4438,
-                                     4683, 4928, 5173, 5418, 5663, 5908, 6153, 6398, 6643, 6888}));
+                    matmul_ptr->view(state),
+                    RangeEquals({-217, 28,   273,  518,  763,  1008, 1253, 1498, 1743, 1988,
+                                 2233, 2478, 2723, 2968, 3213, 3458, 3703, 3948, 4193, 4438,
+                                 4683, 4928, 5173, 5418, 5663, 5908, 6153, 6398, 6643, 6888})
+                );
             }
         }
     }
@@ -316,11 +324,13 @@ TEST_CASE("MatrixMultiplyNode") {
             auto state = graph.initialize_state();
 
             THEN("The initial MatrixMultiplyNode state is correct") {
-                CHECK_THAT(matmul_ptr->view(state),
-                           RangeEquals({532,   413,   -644,  -714,  -448,   -469,  1120,  1148,
-                                        4060,  4137,  8372,  8498,  14056,  14231, 21112, 21336,
-                                        29540, 29813, 39340, 39662, 50512,  50883, 63056, 63476,
-                                        76972, 77441, 92260, 92778, 108920, 109487}));
+                CHECK_THAT(
+                    matmul_ptr->view(state),
+                    RangeEquals({532,   413,   -644,  -714,  -448,   -469,  1120,  1148,
+                                 4060,  4137,  8372,  8498,  14056,  14231, 21112, 21336,
+                                 29540, 29813, 39340, 39662, 50512,  50883, 63056, 63476,
+                                 76972, 77441, 92260, 92778, 108920, 109487})
+                );
             }
         }
     }
@@ -375,7 +385,8 @@ TEST_CASE("MatrixMultiplyNode") {
 
     GIVEN("A 2d dynamic testing node and a 1d constant") {
         auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 3}, -3.0, 10.0, false);
+            std::initializer_list<ssize_t>{-1, 3}, -3.0, 10.0, false
+        );
         auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 2, 3});
 
         CHECK_THROWS_AS(MatrixMultiplyNode(c_ptr, arr_ptr), std::invalid_argument);
@@ -434,7 +445,7 @@ TEST_CASE("MatrixMultiplyNode") {
 
     GIVEN("A 2d dynamic testing node and a 1d column slice") {
         auto arr_ptr =
-                graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 3});
+            graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 3});
         auto vec_ptr = graph.emplace_node<BasicIndexingNode>(arr_ptr, Slice(), 0);
 
         CHECK_THROWS_AS(MatrixMultiplyNode(arr_ptr, vec_ptr), std::invalid_argument);
@@ -484,9 +495,10 @@ TEST_CASE("MatrixMultiplyNode") {
 
     GIVEN("A 4d dynamic testing node and a matmulable reshape") {
         auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 3, 2, 7});
+            std::initializer_list<ssize_t>{-1, 3, 2, 7}
+        );
         auto reshape_ptr =
-                graph.emplace_node<ReshapeNode>(arr_ptr, std::vector<ssize_t>{-1, 3, 7, 2});
+            graph.emplace_node<ReshapeNode>(arr_ptr, std::vector<ssize_t>{-1, 3, 7, 2});
 
         auto matmul_ptr = graph.emplace_node<MatrixMultiplyNode>(arr_ptr, reshape_ptr);
         graph.emplace_node<ArrayValidationNode>(matmul_ptr);

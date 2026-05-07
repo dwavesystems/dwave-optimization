@@ -29,10 +29,21 @@ namespace dwave::optimization {
 
 // NOTE: square_root and log should also be included but the templated tests need to be updated
 // first.
-TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::cos<double>,
-                   functional::exp<double>, functional::expit<double>, functional::logical<double>,
-                   functional::rint<double>, functional::sin<double>, functional::square<double>,
-                   functional::tanh<double>, std::negate<double>, std::logical_not<double>) {
+TEMPLATE_TEST_CASE(
+    "UnaryOpNode",
+    "",
+    functional::abs<double>,
+    functional::cos<double>,
+    functional::exp<double>,
+    functional::expit<double>,
+    functional::logical<double>,
+    functional::rint<double>,
+    functional::sin<double>,
+    functional::square<double>,
+    functional::tanh<double>,
+    std::negate<double>,
+    std::logical_not<double>
+) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -127,8 +138,11 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::cos<d
     }
 
     GIVEN("A 0-d integer decision input") {
-        auto a_ptr = graph.emplace_node<IntegerNode>(std::span<const ssize_t>{}, -100,
-                                                     100);  // Scalar output
+        auto a_ptr = graph.emplace_node<IntegerNode>(
+            std::span<const ssize_t>{},
+            -100,
+            100
+        );  // Scalar output
 
         auto p_ptr = graph.emplace_node<UnaryOpNode<TestType>>(a_ptr);
 
@@ -177,8 +191,11 @@ TEMPLATE_TEST_CASE("UnaryOpNode", "", functional::abs<double>, functional::cos<d
     }
 
     GIVEN("A 3-d integer decision input") {
-        auto a_ptr = graph.emplace_node<IntegerNode>(std::span<const ssize_t>({2, 3, 2}), -100,
-                                                     100);  // Scalar output
+        auto a_ptr = graph.emplace_node<IntegerNode>(
+            std::span<const ssize_t>({2, 3, 2}),
+            -100,
+            100
+        );  // Scalar output
 
         auto p_ptr = graph.emplace_node<UnaryOpNode<TestType>>(a_ptr);
 
@@ -404,8 +421,9 @@ TEST_CASE("UnaryOpNode - LogicalNode") {
 
         THEN("The negation has the state we expect") {
             auto state = graph.initialize_state();
-            CHECK_THAT(logical_ptr->view(state),
-                       RangeEquals({true, true, false, true, true, true, true}));
+            CHECK_THAT(
+                logical_ptr->view(state), RangeEquals({true, true, false, true, true, true, true})
+            );
         }
     }
 }
@@ -442,8 +460,9 @@ TEST_CASE("UnaryOpNode - NotNode") {
 
         THEN("The negation has the state we expect") {
             auto state = graph.initialize_state();
-            CHECK_THAT(nc_ptr->view(state),
-                       RangeEquals({false, false, true, false, false, false, false}));
+            CHECK_THAT(
+                nc_ptr->view(state), RangeEquals({false, false, true, false, false, false, false})
+            );
         }
     }
 }
@@ -512,8 +531,10 @@ TEST_CASE("UnaryOpNode - SquareNode") {
         THEN("The min/max are expected") {
             CHECK(square_ptr->min() == 0);
             // we might consider capping this differently for integer types in the future
-            CHECK(square_ptr->max() ==
-                  static_cast<std::size_t>(2000000000) * static_cast<std::size_t>(2000000000));
+            CHECK(
+                square_ptr->max() ==
+                static_cast<std::size_t>(2000000000) * static_cast<std::size_t>(2000000000)
+            );
         }
     }
 }

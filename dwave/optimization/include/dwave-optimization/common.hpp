@@ -17,7 +17,7 @@
 #pragma once
 
 #if defined(_MSC_VER) && defined(_WIN64) && (_MSC_VER > 1400) || defined(__MINGW32__) || \
-        defined(__MINGW64__)  // Not POSIX
+    defined(__MINGW64__)  // Not POSIX
 
 #include <cstdint>  // for int64_t
 

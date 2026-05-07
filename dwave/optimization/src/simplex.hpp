@@ -47,8 +47,8 @@ class SolveResult {
     };
 
     SolveResult() : solve_status(SolveStatus::UNSET), num_iterations(0) {}
-    SolveResult(SolveStatus solve_status, ssize_t num_iterations)
-            : solve_status(solve_status), num_iterations(num_iterations) {}
+    SolveResult(SolveStatus solve_status, ssize_t num_iterations) :
+        solve_status(solve_status), num_iterations(num_iterations) {}
 
     void set_partial_solution(std::vector<double>&& partial_solution) {
         solution_ = std::move(partial_solution);
@@ -58,17 +58,30 @@ class SolveResult {
     // Set the solution explicitly.
     // Throws an error if the ``solution`` is not the same size as ``c``.
     // Does not check the LP parameters for consistency.
-    void set_solution(std::vector<double>&& solution, std::span<const double> c,
-                      std::span<const double> b_lb, std::span<const double> A_data,
-                      std::span<const double> b_ub, std::span<const double> A_eq_data,
-                      std::span<const double> b_eq, std::span<const double> lb,
-                      std::span<const double> ub, double tolerance = 1e-7);
+    void set_solution(
+        std::vector<double>&& solution,
+        std::span<const double> c,
+        std::span<const double> b_lb,
+        std::span<const double> A_data,
+        std::span<const double> b_ub,
+        std::span<const double> A_eq_data,
+        std::span<const double> b_eq,
+        std::span<const double> lb,
+        std::span<const double> ub,
+        double tolerance = 1e-7
+    );
 
-    void postprocess_solution(std::span<const double> c, std::span<const double> b_lb,
-                              std::span<const double> A_data, std::span<const double> b_ub,
-                              std::span<const double> A_eq_data, std::span<const double> b_eq,
-                              std::span<const double> lb, std::span<const double> ub,
-                              double tolerance);
+    void postprocess_solution(
+        std::span<const double> c,
+        std::span<const double> b_lb,
+        std::span<const double> A_data,
+        std::span<const double> b_ub,
+        std::span<const double> A_eq_data,
+        std::span<const double> b_eq,
+        std::span<const double> lb,
+        std::span<const double> ub,
+        double tolerance
+    );
 
     const std::vector<double>& solution() const {
         check_final_solution_set();
@@ -100,11 +113,17 @@ class SolveResult {
 
     void _postprocess_solution_variables(std::span<const double> lb, std::span<const double> ub);
 
-    void recompute_feasibility(std::span<const double> c, std::span<const double> b_lb,
-                               std::span<const double> A_data, std::span<const double> b_ub,
-                               std::span<const double> A_eq_data, std::span<const double> b_eq,
-                               std::span<const double> lb, std::span<const double> ub,
-                               double tolerance);
+    void recompute_feasibility(
+        std::span<const double> c,
+        std::span<const double> b_lb,
+        std::span<const double> A_data,
+        std::span<const double> b_ub,
+        std::span<const double> A_eq_data,
+        std::span<const double> b_eq,
+        std::span<const double> lb,
+        std::span<const double> ub,
+        double tolerance
+    );
 
     SolutionStatus solution_status_ = SolutionStatus::SOLUTION_UNSET;
 
@@ -143,10 +162,16 @@ class SolveResult {
 /// @param lb Length N vector, lower bounds on the variables.
 /// @param ub Length N vector, upper bounds on the variables.
 /// @param tolerance The absolute tolerance allowed for bounds.
-SolveResult linprog(std::span<const double> c, std::span<const double> b_lb,
-                    std::span<const double> A_data, std::span<const double> b_ub,
-                    std::span<const double> A_eq_data, std::span<const double> b_eq,
-                    std::span<const double> lb, std::span<const double> ub,
-                    double tolerance = 1e-7);
+SolveResult linprog(
+    std::span<const double> c,
+    std::span<const double> b_lb,
+    std::span<const double> A_data,
+    std::span<const double> b_ub,
+    std::span<const double> A_eq_data,
+    std::span<const double> b_eq,
+    std::span<const double> lb,
+    std::span<const double> ub,
+    double tolerance = 1e-7
+);
 
 }  // namespace dwave::optimization

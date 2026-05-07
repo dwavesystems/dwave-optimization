@@ -33,7 +33,7 @@ TEST_CASE("AdvancedIndexingNode") {
     GIVEN("A 2d NxN matrix with two const 1d index arrays") {
         std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7, 8};
         auto arr_ptr =
-                graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{3, 3});
+            graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{3, 3});
 
         std::vector<double> i = {0, 1, 2};
         auto i_ptr = graph.emplace_node<ConstantNode>(i);
@@ -53,8 +53,11 @@ TEST_CASE("AdvancedIndexingNode") {
             }
 
             THEN("We see the predecessors we expect") {
-                CHECK(std::ranges::equal(out_ptr->predecessors(),
-                                         std::vector<Node*>{arr_ptr, i_ptr, j_ptr}));
+                CHECK(
+                    std::ranges::equal(
+                        out_ptr->predecessors(), std::vector<Node*>{arr_ptr, i_ptr, j_ptr}
+                    )
+                );
             }
 
             THEN("We see the min/max/integral we expect") {
@@ -238,8 +241,8 @@ TEST_CASE("AdvancedIndexingNode") {
     }
 
     GIVEN("A 2d 5x2 matrix A accessed by Set(5) and Slice()") {
-        auto A_ptr = graph.emplace_node<ConstantNode>(std::views::iota(0, 10),
-                                                      std::vector<ssize_t>{5, 2});
+        auto A_ptr =
+            graph.emplace_node<ConstantNode>(std::views::iota(0, 10), std::vector<ssize_t>{5, 2});
         auto s_ptr = graph.emplace_node<SetNode>(5);
         auto B_ptr = graph.emplace_node<AdvancedIndexingNode>(A_ptr, s_ptr, Slice());
 
@@ -355,7 +358,8 @@ TEST_CASE("AdvancedIndexingNode") {
         auto A_ptr = graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{3, 3});
 
         auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 2}, 0, 2, true);
+            std::initializer_list<ssize_t>{-1, 2}, 0, 2, true
+        );
 
         auto i_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
         graph.emplace_node<ArrayValidationNode>(i_ptr);
@@ -508,7 +512,7 @@ TEST_CASE("AdvancedIndexingNode") {
         std::vector<double> values(30);
         std::iota(values.begin(), values.end(), 0);
         auto arr_ptr =
-                graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 3, 5});
+            graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 3, 5});
 
         std::vector<double> i = {1, 0};
         auto i_ptr = graph.emplace_node<ConstantNode>(i);
@@ -525,8 +529,11 @@ TEST_CASE("AdvancedIndexingNode") {
             }
 
             THEN("We see the predecessors we expect") {
-                CHECK(std::ranges::equal(adv->predecessors(),
-                                         std::vector<Node*>{arr_ptr, i_ptr, j_ptr}));
+                CHECK(
+                    std::ranges::equal(
+                        adv->predecessors(), std::vector<Node*>{arr_ptr, i_ptr, j_ptr}
+                    )
+                );
             }
 
             AND_WHEN("We create a state") {
@@ -548,8 +555,11 @@ TEST_CASE("AdvancedIndexingNode") {
             }
 
             THEN("We see the predecessors we expect") {
-                CHECK(std::ranges::equal(adv->predecessors(),
-                                         std::vector<Node*>{arr_ptr, i_ptr, j_ptr}));
+                CHECK(
+                    std::ranges::equal(
+                        adv->predecessors(), std::vector<Node*>{arr_ptr, i_ptr, j_ptr}
+                    )
+                );
             }
 
             AND_WHEN("We create a state") {
@@ -566,8 +576,8 @@ TEST_CASE("AdvancedIndexingNode") {
     GIVEN("A 4d 2x3x5x4 matrix with three const 1d index arrays") {
         std::vector<double> values(2 * 3 * 5 * 4);
         std::iota(values.begin(), values.end(), 0);
-        auto arr_ptr = graph.emplace_node<ConstantNode>(values,
-                                                        std::initializer_list<ssize_t>{2, 3, 5, 4});
+        auto arr_ptr =
+            graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 3, 5, 4});
 
         std::vector<double> i = {1, 0};
         auto i_ptr = graph.emplace_node<ConstantNode>(i);
@@ -580,7 +590,7 @@ TEST_CASE("AdvancedIndexingNode") {
 
         WHEN("We access the matrix by (i, j, k, :)") {
             auto adv =
-                    graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, k_ptr, Slice());
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, k_ptr, Slice());
 
             THEN("We get the shape we expect") {
                 CHECK(adv->size() == 8);
@@ -599,7 +609,7 @@ TEST_CASE("AdvancedIndexingNode") {
 
         WHEN("We access the matrix by (i, j, :, k)") {
             auto adv =
-                    graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, Slice(), k_ptr);
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, Slice(), k_ptr);
 
             THEN("We get the shape we expect") {
                 CHECK(adv->size() == 10);
@@ -611,15 +621,16 @@ TEST_CASE("AdvancedIndexingNode") {
 
                 THEN("We can read out the state of the nodes") {
                     CHECK(std::ranges::equal(arr_ptr->view(state), values));
-                    CHECK_THAT(adv->view(state),
-                               RangeEquals({81, 85, 89, 93, 97, 22, 26, 30, 34, 38}));
+                    CHECK_THAT(
+                        adv->view(state), RangeEquals({81, 85, 89, 93, 97, 22, 26, 30, 34, 38})
+                    );
                 }
             }
         }
 
         WHEN("We access the matrix by (i, :, j, k)") {
             auto adv =
-                    graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr, k_ptr);
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr, k_ptr);
 
             THEN("We get the shape we expect") {
                 CHECK(adv->size() == 6);
@@ -637,8 +648,8 @@ TEST_CASE("AdvancedIndexingNode") {
         }
 
         WHEN("We access the matrix by (i, :, :, k)") {
-            auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), Slice(),
-                                                                k_ptr);
+            auto adv =
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), Slice(), k_ptr);
 
             THEN("We get the shape we expect") {
                 CHECK(adv->size() == 30);
@@ -650,18 +661,21 @@ TEST_CASE("AdvancedIndexingNode") {
 
                 THEN("We can read out the state of the nodes") {
                     CHECK(std::ranges::equal(arr_ptr->view(state), values));
-                    CHECK(std::ranges::equal(
+                    CHECK(
+                        std::ranges::equal(
                             adv->view(state),
                             std::vector{61,  65,  69,  73,  77,  81, 85, 89, 93, 97,
                                         101, 105, 109, 113, 117, 2,  6,  10, 14, 18,
-                                        22,  26,  30,  34,  38,  42, 46, 50, 54, 58}));
+                                        22,  26,  30,  34,  38,  42, 46, 50, 54, 58}
+                        )
+                    );
                 }
             }
         }
 
         WHEN("We access the matrix by (i, :, k, :)") {
-            auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), k_ptr,
-                                                                Slice());
+            auto adv =
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), k_ptr, Slice());
 
             THEN("We get the shape we expect") {
                 CHECK(adv->size() == 24);
@@ -673,16 +687,16 @@ TEST_CASE("AdvancedIndexingNode") {
 
                 THEN("We can read out the state of the nodes") {
                     CHECK(std::ranges::equal(arr_ptr->view(state), values));
-                    CHECK_THAT(adv->view(state),
-                               RangeEquals({64, 65, 66, 67, 84, 85, 86, 87, 104, 105, 106, 107,
-                                            8,  9,  10, 11, 28, 29, 30, 31, 48,  49,  50,  51}));
+                    CHECK_THAT(adv->view(state), RangeEquals({64,  65,  66,  67,  84, 85, 86, 87,
+                                                              104, 105, 106, 107, 8,  9,  10, 11,
+                                                              28,  29,  30,  31,  48, 49, 50, 51}));
                 }
             }
         }
 
         WHEN("We access the matrix by (:, i, k, :)") {
-            auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, k_ptr,
-                                                                Slice());
+            auto adv =
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, k_ptr, Slice());
 
             THEN("We get the shape we expect") {
                 CHECK(adv->size() == 16);
@@ -694,8 +708,10 @@ TEST_CASE("AdvancedIndexingNode") {
 
                 THEN("We can read out the state of the nodes") {
                     CHECK(std::ranges::equal(arr_ptr->view(state), values));
-                    CHECK_THAT(adv->view(state), RangeEquals({24, 25, 26, 27, 8, 9, 10, 11, 84, 85,
-                                                              86, 87, 68, 69, 70, 71}));
+                    CHECK_THAT(
+                        adv->view(state),
+                        RangeEquals({24, 25, 26, 27, 8, 9, 10, 11, 84, 85, 86, 87, 68, 69, 70, 71})
+                    );
                 }
             }
         }
@@ -704,10 +720,11 @@ TEST_CASE("AdvancedIndexingNode") {
     GIVEN("A 4d 2x3x5x4 matrix with 3 dynamic indexing arrays of length M") {
         std::vector<double> values(2 * 3 * 5 * 4);
         std::iota(values.begin(), values.end(), 0);
-        auto arr_ptr = graph.emplace_node<ConstantNode>(values,
-                                                        std::initializer_list<ssize_t>{2, 3, 5, 4});
+        auto arr_ptr =
+            graph.emplace_node<ConstantNode>(values, std::initializer_list<ssize_t>{2, 3, 5, 4});
         auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 3}, 0, 1, true);
+            std::initializer_list<ssize_t>{-1, 3}, 0, 1, true
+        );
 
         auto i_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
         auto j_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 1);
@@ -715,7 +732,7 @@ TEST_CASE("AdvancedIndexingNode") {
 
         WHEN("We access the matrix by (i, j, k, :)") {
             auto adv =
-                    graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, k_ptr, Slice());
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, k_ptr, Slice());
 
             graph.emplace_node<ArrayValidationNode>(adv);
 
@@ -751,8 +768,9 @@ TEST_CASE("AdvancedIndexingNode") {
 
                     THEN("The state has the expected values and the diff is correct") {
                         CHECK(adv->size(state) == 8);
-                        CHECK_THAT(adv->view(state),
-                                   RangeEquals({36, 37, 38, 39, 116, 117, 118, 119}));
+                        CHECK_THAT(
+                            adv->view(state), RangeEquals({36, 37, 38, 39, 116, 117, 118, 119})
+                        );
                     }
 
                     AND_WHEN("We shrink the indexing nodes and propagate") {
@@ -772,9 +790,12 @@ TEST_CASE("AdvancedIndexingNode") {
 
                             THEN("The state has returned to the original") {
                                 CHECK(adv->size(state) == 8);
-                                CHECK(std::ranges::equal(
+                                CHECK(
+                                    std::ranges::equal(
                                         adv->view(state),
-                                        std::vector{36, 37, 38, 39, 116, 117, 118, 119}));
+                                        std::vector{36, 37, 38, 39, 116, 117, 118, 119}
+                                    )
+                                );
                                 CHECK(adv->diff(state).size() == 0);
                             }
                         }
@@ -785,7 +806,7 @@ TEST_CASE("AdvancedIndexingNode") {
 
         WHEN("We access the matrix by (i, :, j, k)") {
             auto adv =
-                    graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr, k_ptr);
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr, k_ptr);
 
             graph.emplace_node<ArrayValidationNode>(adv);
 
@@ -852,12 +873,16 @@ TEST_CASE("AdvancedIndexingNode") {
 
     GIVEN("A dynamic 4d Nx3x5x4 matrix with 3 dynamic indexing arrays of length M with M < 3") {
         auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 3, 5, 4},  //
-                -180, 180, true,  // takes values in [-180, 180] and will always be integers
-                120, 1200);  // will always have at least two rows in the first dimension, up to 20
+            std::initializer_list<ssize_t>{-1, 3, 5, 4},  //
+            -180,
+            180,
+            true,  // takes values in [-180, 180] and will always be integers
+            120,
+            1200
+        );  // will always have at least two rows in the first dimension, up to 20
 
         auto i_range_ptr =
-                graph.emplace_node<ConstantNode>(std::vector{0, 1});  // will index axis 1
+            graph.emplace_node<ConstantNode>(std::vector{0, 1});  // will index axis 1
         auto j_range_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3, 4});  // axis 3
         auto k_range_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});     // axis 4
 
@@ -874,7 +899,7 @@ TEST_CASE("AdvancedIndexingNode") {
 
         WHEN("We access the matrix by (i, :, j, k)") {
             auto adv_ptr =
-                    graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr, k_ptr);
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr, k_ptr);
 
             graph.emplace_node<ArrayValidationNode>(adv_ptr);
 
@@ -938,8 +963,8 @@ TEST_CASE("AdvancedIndexingNode") {
         }
 
         WHEN("We access the matrix by (i, :, j, :)") {
-            auto adv_ptr = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr,
-                                                                    Slice());
+            auto adv_ptr =
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, Slice(), j_ptr, Slice());
 
             graph.emplace_node<ArrayValidationNode>(adv_ptr);
 
@@ -986,9 +1011,12 @@ TEST_CASE("AdvancedIndexingNode") {
                         graph.commit(state, graph.descendants(state, {arr_ptr, dyn_ptr}));
 
                         THEN("The output is as expected") {
-                            CHECK(std::ranges::equal(
+                            CHECK(
+                                std::ranges::equal(
                                     adv_ptr->view(state),
-                                    std::vector{0, 1, 2, 3, 20, -1, 22, 23, 40, 41, -2, 43}));
+                                    std::vector{0, 1, 2, 3, 20, -1, 22, 23, 40, 41, -2, 43}
+                                )
+                            );
                             // ArrayValidationNode checks most of the consistency etc
                         }
                     }
@@ -1006,20 +1034,23 @@ TEST_CASE("AdvancedIndexingNode") {
         }
 
         THEN("We get an exception when accessing the matrix by (:, i, :, j)") {
-            CHECK_THROWS(graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, Slice(),
-                                                                  j_ptr));
+            CHECK_THROWS(
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, Slice(), j_ptr)
+            );
         }
 
         THEN("We get an exception when accessing the matrix by (:, i, j, :)") {
-            CHECK_THROWS(graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr,
-                                                                  Slice()));
+            CHECK_THROWS(
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr, Slice())
+            );
         }
     }
 
     GIVEN("A non-constant and non-dynamic 1d array and a dynamic indexing array") {
         auto arr_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{10});
-        auto i_ptr = graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1},
-                                                                 0, 8, true);
+        auto i_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+            std::initializer_list<ssize_t>{-1}, 0, 8, true
+        );
 
         WHEN("We access the array by i") {
             auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr);
@@ -1140,7 +1171,8 @@ TEST_CASE("AdvancedIndexingNode") {
 
     GIVEN("A dynamic 4d Nx3x5x4 matrix with 3 non-constant and non-dynamic indexing arrays") {
         auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 3, 5, 4});
+            std::initializer_list<ssize_t>{-1, 3, 5, 4}
+        );
 
         auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3}, 0, 2);
         auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3}, 0, 4);
@@ -1148,7 +1180,7 @@ TEST_CASE("AdvancedIndexingNode") {
 
         WHEN("We access the matrix by (:, i, j, k)") {
             auto adv =
-                    graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr, k_ptr);
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr, k_ptr);
 
             graph.emplace_node<ArrayValidationNode>(adv);
 
@@ -1220,8 +1252,8 @@ TEST_CASE("AdvancedIndexingNode") {
         }
 
         WHEN("We access the matrix by (:, i, j, :)") {
-            auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr,
-                                                                Slice());
+            auto adv =
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr, Slice());
             graph.emplace_node<ArrayValidationNode>(adv);
 
             graph.emplace_node<ArrayValidationNode>(adv);
@@ -1324,10 +1356,10 @@ TEST_CASE("AdvancedIndexingNode") {
                         i_ptr->set_value(state, 2, 1);  // 1, 0, 1
                         j_ptr->set_value(state, 1, 1);  // 1, 1, 1
 
-                        std::vector<double> new_expected({1024, 1025, 1026, 1027, 1004, 1005,
-                                                          1006, 1007, 1024, 1025, 1026, 1027,
-                                                          1084, 1085, 1086, 1087, 1064, 1065,
-                                                          1066, 1067, 1084, 1085, 1086, 1087});
+                        std::vector<double> new_expected(
+                            {1024, 1025, 1026, 1027, 1004, 1005, 1006, 1007, 1024, 1025, 1026, 1027,
+                             1084, 1085, 1086, 1087, 1064, 1065, 1066, 1067, 1084, 1085, 1086, 1087}
+                        );
 
                         graph.propagate(state, graph.descendants(state, {i_ptr, j_ptr}));
 
@@ -1352,22 +1384,24 @@ TEST_CASE("AdvancedIndexingNode") {
         }
 
         THEN("We get an exception when accessing the matrix by (:, i, :, j)") {
-            CHECK_THROWS(graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, Slice(),
-                                                                  j_ptr));
+            CHECK_THROWS(
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, Slice(), j_ptr)
+            );
         }
     }
 
     GIVEN("A static-sized 4d 2x3x5x4 matrix with 3 non-constant scalar indices") {
-        auto arr_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 5, 4},
-                                                       -1000, 1000);
+        auto arr_ptr = graph.emplace_node<IntegerNode>(
+            std::initializer_list<ssize_t>{2, 3, 5, 4}, -1000, 1000
+        );
 
         auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 1);
         auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 2);
         auto k_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 3);
 
         WHEN("We access the matrix by (i, j, :, :)") {
-            auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, Slice(),
-                                                                Slice());
+            auto adv =
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, Slice(), Slice());
 
             graph.emplace_node<ArrayValidationNode>(adv);
 
@@ -1386,9 +1420,9 @@ TEST_CASE("AdvancedIndexingNode") {
                 j_ptr->initialize_state(state, {1});
                 graph.initialize_state(state);
 
-                std::vector<double> expected_initial_state({80, 81, 82, 83, 84, 85, 86,
-                                                            87, 88, 89, 90, 91, 92, 93,
-                                                            94, 95, 96, 97, 98, 99});
+                std::vector<double> expected_initial_state(
+                    {80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99}
+                );
 
                 THEN("The state starts with the expected values") {
                     CHECK(std::ranges::equal(adv->view(state), expected_initial_state));
@@ -1430,8 +1464,8 @@ TEST_CASE("AdvancedIndexingNode") {
         }
 
         WHEN("We access the matrix by (:, i, j, :)") {
-            auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr,
-                                                                Slice());
+            auto adv =
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr, Slice());
 
             graph.emplace_node<ArrayValidationNode>(adv);
 
@@ -1491,7 +1525,7 @@ TEST_CASE("AdvancedIndexingNode") {
 
         WHEN("We access the matrix by (i, j, :, k)") {
             auto adv =
-                    graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, Slice(), k_ptr);
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, i_ptr, j_ptr, Slice(), k_ptr);
 
             graph.emplace_node<ArrayValidationNode>(adv);
 
@@ -1552,8 +1586,8 @@ TEST_CASE("AdvancedIndexingNode") {
         }
 
         WHEN("We access the matrix by (:, i, j, :)") {
-            auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr,
-                                                                Slice());
+            auto adv =
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr, Slice());
 
             graph.emplace_node<ArrayValidationNode>(adv);
 
@@ -1599,8 +1633,9 @@ TEST_CASE("AdvancedIndexingNode") {
                     graph.propagate(state, graph.descendants(state, {arr_ptr}));
 
                     THEN("The state has the expected values and the diff is correct") {
-                        CHECK_THAT(adv->view(state),
-                                   RangeEquals({28, 29, 30, -31, 88, -89, 90, 91}));
+                        CHECK_THAT(
+                            adv->view(state), RangeEquals({28, 29, 30, -31, 88, -89, 90, 91})
+                        );
                     }
                 }
             }
@@ -1608,28 +1643,31 @@ TEST_CASE("AdvancedIndexingNode") {
     }
 
     GIVEN("A static-sized 4d 2x3x5x4 matrix with a 2d indexing array") {
-        auto arr_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3, 5, 4},
-                                                       -1000, 1000);
+        auto arr_ptr = graph.emplace_node<IntegerNode>(
+            std::initializer_list<ssize_t>{2, 3, 5, 4}, -1000, 1000
+        );
 
         auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{2, 3}, 0, 1);
 
         THEN("We are prevented from doing an indexing operation") {
-            CHECK_THROWS(graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, Slice(),
-                                                                  Slice()));
+            CHECK_THROWS(
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, Slice(), Slice())
+            );
         }
     }
 
     GIVEN("A dynamic 4d Nx3x5x4 matrix with 3 non-constant and non-dynamic indexing arrays") {
         auto arr_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 3, 5, 4});
+            std::initializer_list<ssize_t>{-1, 3, 5, 4}
+        );
 
         auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 1);
         auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 2);
         // auto k_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, 0, 3);
 
         WHEN("We access the matrix by (:, i, j, :)") {
-            auto adv = graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr,
-                                                                Slice());
+            auto adv =
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, j_ptr, Slice());
 
             graph.emplace_node<ArrayValidationNode>(adv);
 
@@ -1673,8 +1711,9 @@ TEST_CASE("AdvancedIndexingNode") {
                     graph.propagate(state, graph.descendants(state, {arr_ptr}));
 
                     THEN("The state has the expected values and the diff is correct") {
-                        CHECK_THAT(adv->view(state),
-                                   RangeEquals({28, 29, 30, -31, 88, -89, 90, 91}));
+                        CHECK_THAT(
+                            adv->view(state), RangeEquals({28, 29, 30, -31, 88, -89, 90, 91})
+                        );
                     }
                 }
 
@@ -1690,8 +1729,10 @@ TEST_CASE("AdvancedIndexingNode") {
 
                     THEN("The state has the expected values and the diff is correct") {
                         CHECK_THAT(adv->shape(state), RangeEquals({3, 4}));
-                        CHECK_THAT(adv->view(state), RangeEquals({28, 29, 30, 31, 88, 89, 90, 91,
-                                                                  148, 149, 150, 151}));
+                        CHECK_THAT(
+                            adv->view(state),
+                            RangeEquals({28, 29, 30, 31, 88, 89, 90, 91, 148, 149, 150, 151})
+                        );
                     }
                 }
 
@@ -1711,8 +1752,9 @@ TEST_CASE("AdvancedIndexingNode") {
         }
 
         THEN("We get an exception when accessing the matrix by (:, i, :, j)") {
-            CHECK_THROWS(graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, Slice(),
-                                                                  j_ptr));
+            CHECK_THROWS(
+                graph.emplace_node<AdvancedIndexingNode>(arr_ptr, Slice(), i_ptr, Slice(), j_ptr)
+            );
         }
     }
 }

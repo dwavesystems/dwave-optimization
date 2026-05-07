@@ -341,7 +341,10 @@ TEST_CASE("Multiply") {
         CHECK(op.result_bounds({0, 5, true}, 2) == ValuesInfo(0, 25, true));
         CHECK(op.result_bounds({-1, 5, true}, 2) == ValuesInfo(-5, 25, true));
 
-        CHECK(op.result_bounds({0, 5, true}, limit_type()) == ValuesInfo(0, std::numeric_limits<double>::max(), true));
+        CHECK(
+            op.result_bounds({0, 5, true}, limit_type()) ==
+            ValuesInfo(0, std::numeric_limits<double>::max(), true)
+        );
     }
 }
 

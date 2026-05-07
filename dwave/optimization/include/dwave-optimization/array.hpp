@@ -61,8 +61,8 @@ class Array;
 /// `dwave::optimization::fraction`).
 struct SizeInfo {
     SizeInfo() : SizeInfo(0) {}
-    explicit SizeInfo(const std::integral auto size)
-            : array_ptr(nullptr), multiplier(0), offset(size), min(size), max(size) {
+    explicit SizeInfo(const std::integral auto size) :
+        array_ptr(nullptr), multiplier(0), offset(size), min(size), max(size) {
         assert(size >= 0);
     }
     explicit SizeInfo(const Array* array_ptr) : SizeInfo(array_ptr, std::nullopt, std::nullopt) {}
@@ -93,13 +93,17 @@ struct SizeInfo {
         multiplier /= n;
         offset /= n;
         if (min.has_value()) {
-            assert(min.value() % n == 0 and
-                   "dividing SizeInfo with a divisor that does not evenly divide the minimum");
+            assert(
+                min.value() % n == 0 and
+                "dividing SizeInfo with a divisor that does not evenly divide the minimum"
+            );
             min.value() /= n;
         }
         if (max.has_value()) {
-            assert(max.value() % n == 0 and
-                   "dividing SizeInfo with a divisor that does not evenly divide the maximum");
+            assert(
+                max.value() % n == 0 and
+                "dividing SizeInfo with a divisor that does not evenly divide the maximum"
+            );
             max.value() /= n;
         }
         return *this;
@@ -133,8 +137,8 @@ struct ValuesInfo {
 
     /// Construct a ValuesInfo from a fixed `min`/`max`/`integral`.
     ValuesInfo(double min, double max, bool integral) : min(min), max(max), integral(integral) {}
-    ValuesInfo(std::pair<double, double> minmax, bool integral)
-            : ValuesInfo(minmax.first, minmax.second, integral) {}
+    ValuesInfo(std::pair<double, double> minmax, bool integral) :
+        ValuesInfo(minmax.first, minmax.second, integral) {}
 
     /// Copy the min/max/integral from the array
     ValuesInfo(const Array* array_ptr);
@@ -185,10 +189,13 @@ struct ValuesInfo {
 // A slice represents a set of indices specified by range(start, stop, step).
 struct Slice {
     constexpr Slice() noexcept : Slice(std::nullopt, std::nullopt, std::nullopt) {}
-    explicit constexpr Slice(std::optional<ssize_t> stop) noexcept
-            : Slice(std::nullopt, stop, std::nullopt) {}
-    constexpr Slice(std::optional<ssize_t> start, std::optional<ssize_t> stop,
-                    std::optional<ssize_t> step = std::nullopt) {
+    explicit constexpr Slice(std::optional<ssize_t> stop) noexcept :
+        Slice(std::nullopt, stop, std::nullopt) {}
+    constexpr Slice(
+        std::optional<ssize_t> start,
+        std::optional<ssize_t> stop,
+        std::optional<ssize_t> step = std::nullopt
+    ) {
         constexpr ssize_t MAX = std::numeric_limits<ssize_t>::max();
         constexpr ssize_t MIN = std::numeric_limits<ssize_t>::lowest();
 
@@ -287,8 +294,8 @@ struct Slice {
 };
 
 struct Update {
-    constexpr Update(ssize_t index, double old, double value)
-            : index(index), old(old), value(value) {}
+    constexpr Update(ssize_t index, double old, double value) :
+        index(index), old(old), value(value) {}
 
     // Factory function to create an Update representing a new value added to
     // the array as part of a resize. In this case the old value is encoded as
@@ -309,9 +316,11 @@ struct Update {
         return lhs.index <=> rhs.index;
     }
     friend constexpr bool operator==(const Update& lhs, const Update& rhs) noexcept {
-        return (lhs.index == rhs.index &&
-                (lhs.old == rhs.old || (std::isnan(lhs.old) && std::isnan(rhs.old))) &&
-                (lhs.value == rhs.value || (std::isnan(lhs.value) && std::isnan(rhs.value))));
+        return (
+            lhs.index == rhs.index &&
+            (lhs.old == rhs.old || (std::isnan(lhs.old) && std::isnan(rhs.old))) &&
+            (lhs.value == rhs.value || (std::isnan(lhs.value) && std::isnan(rhs.value)))
+        );
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Update& update);
@@ -491,7 +500,7 @@ class Array {
     /// Whether the shape of the array is state-dependent or not.
     /// Note that it's possible for the array to have a state-dependent shape
     /// but a fixed size e.g., ``(-1, 0, 2)``.
-    bool dynamic() const { 
+    bool dynamic() const {
         const auto shape = this->shape();
         return shape.size() && shape[0] < 0;
     }
@@ -503,8 +512,10 @@ class Array {
 
     /// The change in the array's size.
     virtual ssize_t size_diff(const State& state) const {
-        assert(size() >= 0 &&
-               "size_diff(const State&) must be overloaded if the size is state-dependent");
+        assert(
+            size() >= 0 &&
+            "size_diff(const State&) must be overloaded if the size is state-dependent"
+        );
         return 0;
     }
 
@@ -520,6 +531,7 @@ class Array {
     static ssize_t shape_to_size(const std::span<const ssize_t> shape) noexcept {
         return shape_to_size(shape.size(), shape.data());
     }
+
  protected:
     // Some utility methods that might be useful to subclasses
 
@@ -527,8 +539,10 @@ class Array {
     // Assumes itemsize = sizeof(double).
     // Expects the shape to be stored in a C-style array of length ndim.
     // Returns the strides as a C-style array of length ndim managed by a unique_ptr.
-    static std::unique_ptr<ssize_t[]> shape_to_strides(const ssize_t ndim,
-                                                       const ssize_t* shape) noexcept {
+    static std::unique_ptr<ssize_t[]> shape_to_strides(
+        const ssize_t ndim,
+        const ssize_t* shape
+    ) noexcept {
         if (ndim <= 0) return nullptr;
         auto strides = std::make_unique<ssize_t[]>(ndim);
         // otherwise strides are a function of the shape
@@ -548,26 +562,28 @@ class ArrayOutputMixin : public Base {
     // 1D array with n elements. -1 will create a 1D dynamic array.
     explicit ArrayOutputMixin(ssize_t n) : ArrayOutputMixin({n}) {}
 
-    explicit ArrayOutputMixin(std::initializer_list<ssize_t> shape)
-            : ArrayOutputMixin(std::span(shape)) {}
+    explicit ArrayOutputMixin(std::initializer_list<ssize_t> shape) :
+        ArrayOutputMixin(std::span(shape)) {}
 
     template <std::ranges::sized_range Range>
-    explicit ArrayOutputMixin(Range&& shape)
-            : ndim_(shape.size()), shape_(make_shape(std::forward<Range>(shape))) {}
+    explicit ArrayOutputMixin(Range&& shape) :
+        ndim_(shape.size()), shape_(make_shape(std::forward<Range>(shape))) {}
 
     ssize_t ndim() const noexcept final { return ndim_; }
 
     ssize_t size() const noexcept final { return size_; }
     ssize_t size(const State& state) const override {
-        assert(size() >= 0 &&
-               "size(const State&) must be overloaded if the size is state-dependent");
+        assert(
+            size() >= 0 && "size(const State&) must be overloaded if the size is state-dependent"
+        );
         return size();
     }
 
     std::span<const ssize_t> shape() const final { return std::span(shape_.get(), ndim_); }
     std::span<const ssize_t> shape(const State& state) const override {
-        assert(size() >= 0 &&
-               "shape(const State&) must be overloaded if the size is state-dependent");
+        assert(
+            size() >= 0 && "shape(const State&) must be overloaded if the size is state-dependent"
+        );
         return shape();
     }
 
@@ -672,8 +688,9 @@ class ScalarOutputMixin<Base, true> : public ScalarOutputMixin<Base, false> {
 
 // Views are printable
 std::ostream& operator<<(
-        std::ostream& os,
-        const std::ranges::subrange<Array::const_iterator, std::default_sentinel_t>& view);
+    std::ostream& os,
+    const std::ranges::subrange<Array::const_iterator, std::default_sentinel_t>& view
+);
 
 // Test whether two arrays are sure to have the same shape.
 bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr);
@@ -685,10 +702,14 @@ bool array_shape_equal(const std::span<const Array* const> array_ptrs);
 /// Get the shape induced by broadcasting two arrays together.
 /// See https://numpy.org/doc/stable/user/basics.broadcasting.html.
 /// Raises an exception if the two arrays cannot be broadcast together
-std::vector<ssize_t> broadcast_shapes(const std::span<const ssize_t> lhs,
-                                      const std::span<const ssize_t> rhs);
-std::vector<ssize_t> broadcast_shapes(std::initializer_list<ssize_t> lhs,
-                                      std::initializer_list<ssize_t> rhs);
+std::vector<ssize_t> broadcast_shapes(
+    const std::span<const ssize_t> lhs,
+    const std::span<const ssize_t> rhs
+);
+std::vector<ssize_t> broadcast_shapes(
+    std::initializer_list<ssize_t> lhs,
+    std::initializer_list<ssize_t> rhs
+);
 
 void deduplicate_diff(std::vector<Update>& diff);
 
@@ -717,8 +738,10 @@ bool is_integer(const double& value);
 
 /// Convert a multi index to a flat index
 /// The behavior of out-of-bounds indices is undefined. Bounds are enforced via asserts.
-ssize_t ravel_multi_index(std::initializer_list<ssize_t> multi_index,
-                          std::initializer_list<ssize_t> shape);
+ssize_t ravel_multi_index(
+    std::initializer_list<ssize_t> multi_index,
+    std::initializer_list<ssize_t> shape
+);
 ssize_t ravel_multi_index(std::span<const ssize_t> multi_index, std::span<const ssize_t> shape);
 
 /// Convert a flat index to multi-index
@@ -729,12 +752,13 @@ std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape
 std::string shape_to_string(const std::span<const ssize_t> shape);
 
 template <std::ranges::viewable_range R>
-ValuesInfo::ValuesInfo(R&& array_ptrs)
-        : min(std::ranges::min(array_ptrs |
-                               std::views::transform([](const Array* ptr) { return ptr->min(); }))),
-          max(std::ranges::max(array_ptrs |
-                               std::views::transform([](const Array* ptr) { return ptr->max(); }))),
-          integral(std::ranges::all_of(array_ptrs,
-                                       [](const Array* ptr) { return ptr->integral(); })) {}
+ValuesInfo::ValuesInfo(R&& array_ptrs) :
+    min(std::ranges::min(array_ptrs | std::views::transform([](const Array* ptr) {
+                             return ptr->min();
+                         }))),
+    max(std::ranges::max(array_ptrs | std::views::transform([](const Array* ptr) {
+                             return ptr->max();
+                         }))),
+    integral(std::ranges::all_of(array_ptrs, [](const Array* ptr) { return ptr->integral(); })) {}
 
 }  // namespace dwave::optimization
