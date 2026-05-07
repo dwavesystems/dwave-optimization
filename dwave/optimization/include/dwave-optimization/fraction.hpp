@@ -30,8 +30,8 @@ class fraction {
     // fractions can be constructed from a single integer or a pair of integers
     constexpr fraction() noexcept : fraction(0) {}
     constexpr fraction(const std::integral auto n) noexcept : numerator_(n), denominator_(1) {}
-    constexpr fraction(const std::integral auto numerator, const std::integral auto denominator)
-            : numerator_(numerator), denominator_(denominator) {
+    constexpr fraction(const std::integral auto numerator, const std::integral auto denominator) :
+        numerator_(numerator), denominator_(denominator) {
         if (!denominator) throw std::invalid_argument("cannot divide by 0");
         reduce();
     }
@@ -105,7 +105,7 @@ class fraction {
 
     constexpr fraction& operator+=(const fraction& other) noexcept {
         this->numerator_ =
-                this->numerator_ * other.denominator_ + other.numerator_ * this->denominator_;
+            this->numerator_ * other.denominator_ + other.numerator_ * this->denominator_;
         this->denominator_ *= other.denominator_;
         reduce();
         return *this;

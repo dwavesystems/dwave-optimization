@@ -69,7 +69,8 @@ constexpr FormatCharacter format_of() {
     if constexpr (std::same_as<const T, const signed char>) return FormatCharacter::signedchar_;
     if constexpr (std::same_as<const T, const signed short>) return FormatCharacter::signedshort_;
     if constexpr (std::same_as<const T, const signed long>) return FormatCharacter::signedlong_;
-    if constexpr (std::same_as<const T, const signed long long>) return FormatCharacter::signedlonglong_;
+    if constexpr (std::same_as<const T, const signed long long>)
+        return FormatCharacter::signedlonglong_;
 }
 
 }  // namespace dwave::optimization

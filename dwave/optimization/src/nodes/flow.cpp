@@ -28,8 +28,10 @@ namespace dwave::optimization {
 // NOTE: this does not check that dynamic arrays have the same (dynamic) size
 // (i.e. does not use sizeinfo()), only that their remaining static dimensions
 // are equivalent.
-std::span<const ssize_t> same_shape(const Array* node_ptr,
-                                    std::convertible_to<const Array*> auto... node_ptrs) {
+std::span<const ssize_t> same_shape(
+    const Array* node_ptr,
+    std::convertible_to<const Array*> auto... node_ptrs
+) {
     if (!node_ptr) throw std::invalid_argument("node pointer cannot be nullptr");
 
     // successively check that any remaining args have the same shape
@@ -47,12 +49,12 @@ std::span<const ssize_t> same_shape(const Array* node_ptr,
 
 /// ExtractNode
 
-ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr)
-        : ArrayOutputMixin({-1}),
-          condition_ptr_(condition_ptr),
-          arr_ptr_(arr_ptr),
-          values_info_(arr_ptr_),
-          sizeinfo_(this, 0, condition_ptr_->sizeinfo().max) {
+ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr) :
+    ArrayOutputMixin({-1}),
+    condition_ptr_(condition_ptr),
+    arr_ptr_(arr_ptr),
+    values_info_(arr_ptr_),
+    sizeinfo_(this, 0, condition_ptr_->sizeinfo().max) {
     if (condition_ptr_->sizeinfo() != arr_ptr_->sizeinfo()) {
         throw std::invalid_argument("condition and arr must have the same size");
     }
@@ -78,8 +80,10 @@ void ExtractNode::initialize_state(State& state) const {
     std::vector<double> values;
     values.reserve(condition.size());
 
-    for (auto cit = condition.begin(), arrit = arr.begin(); cit != std::default_sentinel;
-         ++cit, ++arrit) {
+    for (
+        auto cit = condition.begin(), arrit = arr.begin(); cit != std::default_sentinel;
+        ++cit, ++arrit
+    ) {
         if (*cit) {
             values.emplace_back(*arrit);
         }
@@ -124,12 +128,15 @@ void ExtractNode::propagate(State& state) const {
     // Count the trues before this index
     auto add_true = [](ssize_t acc, double val) -> ssize_t { return acc + static_cast<bool>(val); };
     ssize_t count =
-            std::accumulate(condition.begin(), condition.begin() + min_changed_idx, 0, add_true);
+        std::accumulate(condition.begin(), condition.begin() + min_changed_idx, 0, add_true);
 
     // Get the new values
     std::vector<double> new_values;
-    for (auto cit = condition.begin() + min_changed_idx, arrit = arr.begin() + min_changed_idx;
-         cit != std::default_sentinel; ++cit, ++arrit) {
+    for (
+        auto cit = condition.begin() + min_changed_idx, arrit = arr.begin() + min_changed_idx;
+        cit != std::default_sentinel;
+        ++cit, ++arrit
+    ) {
         if (*cit) new_values.push_back(*arrit);
     }
 
@@ -156,16 +163,21 @@ SizeInfo ExtractNode::sizeinfo() const { return this->sizeinfo_; }
 
 struct WhereNodeData : ArrayNodeStateData {
     // Initialize the state with the values given
-    explicit WhereNodeData(const std::ranges::view auto& values) noexcept
-            : ArrayNodeStateData(std::vector<double>(values.begin(), values.begin() + values.size())) {}
+    explicit WhereNodeData(const std::ranges::view auto& values) noexcept :
+        ArrayNodeStateData(std::vector<double>(values.begin(), values.begin() + values.size())) {}
 
-    explicit WhereNodeData(std::vector<double>&& values) noexcept
-            : ArrayNodeStateData(std::move(values)) {}
+    explicit WhereNodeData(std::vector<double>&& values) noexcept :
+        ArrayNodeStateData(std::move(values)) {}
 
     // Update the buffer according to the given diffs
-    void apply_diffs(std::ranges::view auto&& condition, std::span<const Update> condition_diff,
-                     std::ranges::view auto&& x, std::span<const Update> x_diff,
-                     std::ranges::view auto&& y, std::span<const Update> y_diff) {
+    void apply_diffs(
+        std::ranges::view auto&& condition,
+        std::span<const Update> condition_diff,
+        std::ranges::view auto&& x,
+        std::span<const Update> x_diff,
+        std::ranges::view auto&& y,
+        std::span<const Update> y_diff
+    ) {
         // rather than doing a lot of fancy things to track the various changes, let's
         // just get the indices that have been updated in at least one predecessor and
         // recalculate those from scratch
@@ -226,13 +238,13 @@ SizeInfo wherenode_calculate_sizeinfo(const Array* node_ptr, const Array* condit
     return condition_ptr->sizeinfo();
 }
 
-WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_ptr)
-        : ArrayOutputMixin(same_shape(x_ptr, y_ptr)),
-          condition_ptr_(condition_ptr),
-          x_ptr_(x_ptr),
-          y_ptr_(y_ptr),
-          values_info_({x_ptr, y_ptr}),
-          sizeinfo_(wherenode_calculate_sizeinfo(this, condition_ptr_)) {
+WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_ptr) :
+    ArrayOutputMixin(same_shape(x_ptr, y_ptr)),
+    condition_ptr_(condition_ptr),
+    x_ptr_(x_ptr),
+    y_ptr_(y_ptr),
+    values_info_({x_ptr, y_ptr}),
+    sizeinfo_(wherenode_calculate_sizeinfo(this, condition_ptr_)) {
     // x and y where checked for nullptr by same_shape() above
     if (!condition_ptr_) throw std::invalid_argument("node pointer cannot be nullptr");
 
@@ -244,7 +256,8 @@ WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_pt
         if (cond_size != x_ptr_->sizeinfo().substitute(100) ||
             cond_size != y_ptr->sizeinfo().substitute(100)) {
             throw std::invalid_argument(
-                    "If condition is not of size 1, condition, x and y must all be the same size");
+                "If condition is not of size 1, condition, x and y must all be the same size"
+            );
         }
     }
 
@@ -274,8 +287,11 @@ void WhereNode::initialize_state(State& state) const {
         values.reserve(condition.size());
 
         // zip would be very nice here...
-        for (auto cit = condition.begin(), xit = x.begin(), yit = y.begin();
-             cit != std::default_sentinel; ++cit, ++xit, ++yit) {
+        for (
+            auto cit = condition.begin(), xit = x.begin(), yit = y.begin();
+            cit != std::default_sentinel;
+            ++cit, ++xit, ++yit
+        ) {
             values.emplace_back((*cit) ? *xit : *yit);
         }
 
@@ -313,9 +329,14 @@ void WhereNode::propagate(State& state) const {
     if (condition_ptr_->size() != 1) {
         // `condition` is an array
 
-        node_data->apply_diffs(condition_ptr_->view(state), condition_ptr_->diff(state),
-                               x_ptr_->view(state), x_ptr_->diff(state), y_ptr_->view(state),
-                               y_ptr_->diff(state));
+        node_data->apply_diffs(
+            condition_ptr_->view(state),
+            condition_ptr_->diff(state),
+            x_ptr_->view(state),
+            x_ptr_->diff(state),
+            y_ptr_->view(state),
+            y_ptr_->diff(state)
+        );
 
     } else if (_flipped(condition_ptr_->diff(state))) {
         // `condition` is a single value and it changed

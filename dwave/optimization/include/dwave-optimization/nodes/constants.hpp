@@ -43,8 +43,8 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     ConstantNode() noexcept : ConstantNode(std::vector<double>{}, std::vector<ssize_t>{0}) {}
 
     // A single scalar value
-    explicit ConstantNode(double value)
-            : ConstantNode(std::vector{value}, std::vector<ssize_t>{}) {}
+    explicit ConstantNode(double value) :
+        ConstantNode(std::vector{value}, std::vector<ssize_t>{}) {}
 
     // A pointer to another array or similar. In this case the ConstantNode will be a *view*
     // rather than a container. That is it does not manage the lifespan of the array data.
@@ -53,22 +53,25 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
 
     // For use from Python, where we will pass in a PyDataSource which manages the python reference
     // to the original object (a numpy array) that holds the data.
-    ConstantNode(std::unique_ptr<DataSource> data_source, const double* data_ptr,
-                 const std::span<const ssize_t> shape);
+    ConstantNode(
+        std::unique_ptr<DataSource> data_source,
+        const double* data_ptr,
+        const std::span<const ssize_t> shape
+    );
 
     /// Create a ConstantNode by copying the contents of a range
     template <std::ranges::sized_range Range>
-    explicit ConstantNode(Range&& values)
-            : ConstantNode(std::forward<Range>(values), {static_cast<ssize_t>(values.size())}) {}
+    explicit ConstantNode(Range&& values) :
+        ConstantNode(std::forward<Range>(values), {static_cast<ssize_t>(values.size())}) {}
 
     /// Create a ConstantNode by copying the contents of a range and interpreting
     /// it as the given shape
     template <std::ranges::sized_range Range>
-    ConstantNode(Range&& values, std::initializer_list<ssize_t> shape)
-            : ConstantNode(from_range(std::forward<Range>(values), shape), shape) {}
+    ConstantNode(Range&& values, std::initializer_list<ssize_t> shape) :
+        ConstantNode(from_range(std::forward<Range>(values), shape), shape) {}
     template <std::ranges::sized_range Range>
-    ConstantNode(Range&& values, const std::span<const ssize_t> shape)
-            : ConstantNode(from_range(std::forward<Range>(values), shape), shape) {}
+    ConstantNode(Range&& values, const std::span<const ssize_t> shape) :
+        ConstantNode(from_range(std::forward<Range>(values), shape), shape) {}
 
     // Stateless access to the underlying data.
     std::span<const double> data() const noexcept {
@@ -110,8 +113,8 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
 
  private:
     struct OwningDataSource : public DataSource {
-        OwningDataSource(std::unique_ptr<const double[]>&& owning_ptr)
-                : data_(std::move(owning_ptr)) {}
+        OwningDataSource(std::unique_ptr<const double[]>&& owning_ptr) :
+            data_(std::move(owning_ptr)) {}
         const double* get() const { return data_.get(); }
 
         std::unique_ptr<const double[]> data_;

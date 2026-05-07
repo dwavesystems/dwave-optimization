@@ -39,10 +39,17 @@ namespace dwave::optimization {
 // B is a (k,n) matrix
 // C is a (m,n) matrix
 template <DType T>
-void gemm(const ssize_t m, const ssize_t n, const ssize_t k,        // size of the arrays
-          const T* const A, std::span<const ssize_t, 2> A_strides,  // lhs matrix
-          const T* const B, std::span<const ssize_t, 2> B_strides,  // rhs matrix
-          T* const C, std::span<const ssize_t, 2> C_strides) {      // output matrix
+void gemm(
+    const ssize_t m,
+    const ssize_t n,
+    const ssize_t k,  // size of the arrays
+    const T* const A,
+    std::span<const ssize_t, 2> A_strides,  // lhs matrix
+    const T* const B,
+    std::span<const ssize_t, 2> B_strides,  // rhs matrix
+    T* const C,
+    std::span<const ssize_t, 2> C_strides
+) {  // output matrix
 
     constexpr ssize_t num_bytes = sizeof(T);
 
@@ -67,9 +74,12 @@ void gemm(const ssize_t m, const ssize_t n, const ssize_t k,        // size of t
 #ifdef HAS_BLAS_
 
 // Given a strided 2D array, dump it to a contiguous vector.
-std::vector<double> make_contiguous(const double* const start,  // beginning of the array
-                                    const ssize_t rows, const ssize_t cols,  // assume 2D
-                                    std::span<const ssize_t, 2> strides) {
+std::vector<double> make_contiguous(
+    const double* const start,  // beginning of the array
+    const ssize_t rows,
+    const ssize_t cols,  // assume 2D
+    std::span<const ssize_t, 2> strides
+) {
     const ssize_t row_leap = strides[0] / sizeof(double);
     const ssize_t col_leap = strides[1] / sizeof(double);
 
@@ -89,10 +99,17 @@ std::vector<double> make_contiguous(const double* const start,  // beginning of 
 // An overload of gemm() that uses BLAS for matmul with doubles. We could also extend this to
 // float in the future without a lot of fuss.
 template <>
-void gemm<double>(const ssize_t m, const ssize_t n, const ssize_t k,        // size of the arrays
-          const double* const A, std::span<const ssize_t, 2> A_strides,  // lhs matrix
-          const double* const B, std::span<const ssize_t, 2> B_strides,  // rhs matrix
-          double* const C, std::span<const ssize_t, 2> C_strides) {      // output matrix
+void gemm<double>(
+    const ssize_t m,
+    const ssize_t n,
+    const ssize_t k,  // size of the arrays
+    const double* const A,
+    std::span<const ssize_t, 2> A_strides,  // lhs matrix
+    const double* const B,
+    std::span<const ssize_t, 2> B_strides,  // rhs matrix
+    double* const C,
+    std::span<const ssize_t, 2> C_strides
+) {  // output matrix
     // OpenBLAS has some requirements for A,B,C.
     // Specifically, they must be contiguous within each "row" and they must
     // have positive strides in the first dimension.
@@ -102,10 +119,16 @@ void gemm<double>(const ssize_t m, const ssize_t n, const ssize_t k,        // s
     if (A_strides[0] < 0 or A_strides[1] != sizeof(double)) {
         std::vector<double> a = make_contiguous(A, m, k, A_strides);
         std::array<ssize_t, 2> a_strides{k * static_cast<ssize_t>(sizeof(double)), sizeof(double)};
-        return gemm(m, n, k,              // same size
-                    a.data(), a_strides,  // new A
-                    B, B_strides,         // same B
-                    C, C_strides          // same C
+        return gemm(
+            m,
+            n,
+            k,  // same size
+            a.data(),
+            a_strides,  // new A
+            B,
+            B_strides,  // same B
+            C,
+            C_strides  // same C
         );
     }
     assert(A_strides[0] % sizeof(double) == 0);
@@ -113,10 +136,16 @@ void gemm<double>(const ssize_t m, const ssize_t n, const ssize_t k,        // s
     if (B_strides[0] < 0 or B_strides[1] != sizeof(double)) {
         std::vector<double> b = make_contiguous(B, k, n, B_strides);
         std::array<ssize_t, 2> b_strides{n * static_cast<ssize_t>(sizeof(double)), sizeof(double)};
-        return gemm(m, n, k,              // same size
-                    A, A_strides,         // same A
-                    b.data(), b_strides,  // new B
-                    C, C_strides          // same C
+        return gemm(
+            m,
+            n,
+            k,  // same size
+            A,
+            A_strides,  // same A
+            b.data(),
+            b_strides,  // new B
+            C,
+            C_strides  // same C
         );
     }
     assert(B_strides[0] % sizeof(double) == 0);
@@ -129,20 +158,21 @@ void gemm<double>(const ssize_t m, const ssize_t n, const ssize_t k,        // s
     // Ok! Everything is in good shape, now all that's left is to call BLAS.
     // Do note that BLAS's strides are *not* counted in bytes.
 
-    scipy_cblas_dgemm64_(CblasRowMajor,  // OPENBLAS_CONST enum CBLAS_ORDER Order,
-                         CblasNoTrans,   // OPENBLAS_CONST enum CBLAS_TRANSPOSE TransA,
-                         CblasNoTrans,   // OPENBLAS_CONST enum CBLAS_TRANSPOSE TransB,
-                         m,              // OPENBLAS_CONST blasint M,
-                         n,              // OPENBLAS_CONST blasint N,
-                         k,              // OPENBLAS_CONST blasint K,
-                         1,              // OPENBLAS_CONST double alpha,
-                         A,              // OPENBLAS_CONST double *A,
-                         A_strides[0] / sizeof(double),  // OPENBLAS_CONST blasint lda,
-                         B,                              // OPENBLAS_CONST double *B,
-                         B_strides[0] / sizeof(double),  // OPENBLAS_CONST blasint ldb,
-                         0,                              // OPENBLAS_CONST double beta,
-                         C,                              // double *C,
-                         C_strides[0] / sizeof(double)   // OPENBLAS_CONST blasint ldc
+    scipy_cblas_dgemm64_(
+        CblasRowMajor,                  // OPENBLAS_CONST enum CBLAS_ORDER Order,
+        CblasNoTrans,                   // OPENBLAS_CONST enum CBLAS_TRANSPOSE TransA,
+        CblasNoTrans,                   // OPENBLAS_CONST enum CBLAS_TRANSPOSE TransB,
+        m,                              // OPENBLAS_CONST blasint M,
+        n,                              // OPENBLAS_CONST blasint N,
+        k,                              // OPENBLAS_CONST blasint K,
+        1,                              // OPENBLAS_CONST double alpha,
+        A,                              // OPENBLAS_CONST double *A,
+        A_strides[0] / sizeof(double),  // OPENBLAS_CONST blasint lda,
+        B,                              // OPENBLAS_CONST double *B,
+        B_strides[0] / sizeof(double),  // OPENBLAS_CONST blasint ldb,
+        0,                              // OPENBLAS_CONST double beta,
+        C,                              // double *C,
+        C_strides[0] / sizeof(double)   // OPENBLAS_CONST blasint ldc
     );
 }
 
@@ -177,8 +207,9 @@ std::vector<ssize_t> output_shape(const ArrayNode* x_ptr, const ArrayNode* y_ptr
     const ssize_t y_penultimate_axis_size = get_axis_size(y_ptr->shape(), -2, false);
     if (x_last_axis_size != y_penultimate_axis_size) {
         throw std::invalid_argument(
-                "the last dimension of `x` is not the same size as the second to last dimension of "
-                "`y`");
+            "the last dimension of `x` is not the same size as the second to last dimension of "
+            "`y`"
+        );
     } else if (x_last_axis_size == -1) {
         assert(x_ptr->dynamic() && y_ptr->dynamic());
         // Both are dynamic. We need to check that the dynamic dimension is
@@ -189,8 +220,9 @@ std::vector<ssize_t> output_shape(const ArrayNode* x_ptr, const ArrayNode* y_ptr
         assert(y_subspace_size != Array::DYNAMIC_SIZE);
         if (x_ptr->sizeinfo() / x_subspace_size != y_ptr->sizeinfo() / y_subspace_size) {
             throw std::invalid_argument(
-                    "the last dimension of `x` is not the same size as the second to last "
-                    "dimension of `y`");
+                "the last dimension of `x` is not the same size as the second to last "
+                "dimension of `y`"
+            );
         }
     }
 
@@ -198,14 +230,16 @@ std::vector<ssize_t> output_shape(const ArrayNode* x_ptr, const ArrayNode* y_ptr
     if (x_ptr->ndim() >= 2 && y_ptr->ndim() >= 2) {
         if (x_ptr->ndim() != y_ptr->ndim()) {
             throw std::invalid_argument(
-                    "operands have different dimensions (use BroadcastNode if you wish to "
-                    "broadcast missing dimensions)");
+                "operands have different dimensions (use BroadcastNode if you wish to "
+                "broadcast missing dimensions)"
+            );
         }
         for (ssize_t i = 0, stop = x_ptr->ndim() - 2; i < stop; i++) {
             if (x_ptr->shape()[i] != y_ptr->shape()[i]) {
                 throw std::invalid_argument(
-                        "operands must have matching leading shape (up to the last two "
-                        "dimensions)");
+                    "operands must have matching leading shape (up to the last two "
+                    "dimensions)"
+                );
             }
         }
     }
@@ -254,8 +288,12 @@ SizeInfo get_sizeinfo(const ArrayNode* x_ptr, const ArrayNode* y_ptr) {
 
 ValuesInfo get_values_info(const ArrayNode* x_ptr, const ArrayNode* y_ptr) {
     // Get all possible combinations of values
-    const std::array<double, 4> combos{x_ptr->min() * y_ptr->min(), x_ptr->min() * y_ptr->max(),
-                                       x_ptr->max() * y_ptr->min(), x_ptr->max() * y_ptr->max()};
+    const std::array<double, 4> combos{
+        x_ptr->min() * y_ptr->min(),
+        x_ptr->min() * y_ptr->max(),
+        x_ptr->max() * y_ptr->min(),
+        x_ptr->max() * y_ptr->max()
+    };
 
     const double min_val = std::ranges::min(combos);
     const double max_val = std::ranges::max(combos);
@@ -298,19 +336,19 @@ std::vector<ssize_t> atleast_2d_shape(std::span<const ssize_t> shape, bool vecto
 
 class MatrixMultiplyNodeData : public ArrayNodeStateData {
  public:
-    explicit MatrixMultiplyNodeData(std::vector<double>&& values, std::span<const ssize_t> shape)
-            : ArrayNodeStateData(std::move(values)), shape(shape.begin(), shape.end()) {}
+    explicit MatrixMultiplyNodeData(std::vector<double>&& values, std::span<const ssize_t> shape) :
+        ArrayNodeStateData(std::move(values)), shape(shape.begin(), shape.end()) {}
 
     std::vector<double> output;
     std::vector<ssize_t> shape;
 };
 
-MatrixMultiplyNode::MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr)
-        : ArrayOutputMixin(output_shape(x_ptr, y_ptr)),
-          x_ptr_(x_ptr),
-          y_ptr_(y_ptr),
-          sizeinfo_(get_sizeinfo(x_ptr, y_ptr)),
-          values_info_(get_values_info(x_ptr, y_ptr)) {
+MatrixMultiplyNode::MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr) :
+    ArrayOutputMixin(output_shape(x_ptr, y_ptr)),
+    x_ptr_(x_ptr),
+    y_ptr_(y_ptr),
+    sizeinfo_(get_sizeinfo(x_ptr, y_ptr)),
+    values_info_(get_values_info(x_ptr, y_ptr)) {
     add_predecessor(x_ptr);
     add_predecessor(y_ptr);
 }
@@ -322,16 +360,22 @@ ssize_t get_leading_leap(std::span<const ssize_t> shape) {
     return Array::shape_to_size(shape.subspan(shape.size() - 2));
 }
 
-ssize_t get_leading_subspace_size(std::span<const ssize_t> x_shape,
-                                  std::span<const ssize_t> y_shape) {
+ssize_t get_leading_subspace_size(
+    std::span<const ssize_t> x_shape,
+    std::span<const ssize_t> y_shape
+) {
     const auto shape = x_shape.size() > y_shape.size() ? x_shape : y_shape;
     const ssize_t penultimate_axis = std::max<ssize_t>(0, static_cast<ssize_t>(shape.size()) - 2);
-    return std::reduce(shape.begin(), shape.begin() + penultimate_axis, 1,
-                       std::multiplies<ssize_t>());
+    return std::reduce(
+        shape.begin(), shape.begin() + penultimate_axis, 1, std::multiplies<ssize_t>()
+    );
 }
 
-void MatrixMultiplyNode::matmul_(State& state, std::span<double> out,
-                                 std::span<const ssize_t> out_shape) const {
+void MatrixMultiplyNode::matmul_(
+    State& state,
+    std::span<double> out,
+    std::span<const ssize_t> out_shape
+) const {
     assert(static_cast<ssize_t>(out.size()) == Array::shape_to_size(out_shape));
 
     // If out is empty (possible when predecessors have 0 size) there is nothing to do
@@ -343,7 +387,7 @@ void MatrixMultiplyNode::matmul_(State& state, std::span<double> out,
 
     // const ssize_t x_penultimate_axis_size = get_axis_size(x_ptr_->shape(state), -2, true);
     const ssize_t leading_subspace_size =
-            get_leading_subspace_size(x_ptr_->shape(state), y_ptr_->shape(state));
+        get_leading_subspace_size(x_ptr_->shape(state), y_ptr_->shape(state));
 
     const ssize_t x_leading_leap = get_leading_leap(x_ptr_->shape(state));
     const ssize_t y_leading_leap = get_leading_leap(y_ptr_->shape(state));
@@ -383,8 +427,9 @@ void MatrixMultiplyNode::matmul_(State& state, std::span<double> out,
         return std::array<ssize_t, 2>{get(strides, -2), get(strides, -1)};
     }(y_ptr_->strides());
 
-    std::array<ssize_t, 2> out_matmul_strides{n * static_cast<ssize_t>(sizeof(double)),
-                                              sizeof(double)};
+    std::array<ssize_t, 2> out_matmul_strides{
+        n * static_cast<ssize_t>(sizeof(double)), sizeof(double)
+    };
 
     for (ssize_t w = 0; w < leading_subspace_size; w++) {
         // In order to avoid having to iterate over all leading dimensions
@@ -395,10 +440,17 @@ void MatrixMultiplyNode::matmul_(State& state, std::span<double> out,
         const double* const y_data = &y_ptr_->view(state).begin()[w * y_leading_leap];
         double* const out_data = out.data() + w * out_leading_leap;
 
-        gemm(m, n, k,                   //
-             x_data, x_matmul_strides,  //
-             y_data, y_matmul_strides,  //
-             out_data, out_matmul_strides);
+        gemm(
+            m,
+            n,
+            k,  //
+            x_data,
+            x_matmul_strides,  //
+            y_data,
+            y_matmul_strides,  //
+            out_data,
+            out_matmul_strides
+        );
     }
 }
 

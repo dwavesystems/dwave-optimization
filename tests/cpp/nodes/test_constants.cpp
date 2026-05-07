@@ -110,8 +110,8 @@ TEST_CASE("ConstantNode") {
 
     GIVEN("A constant node that is a view of data held by a vector") {
         std::vector<double> values = {30, 10, 40, 20, 50};  // deliberately too large
-        auto ptr = graph.emplace_node<ConstantNode>(values.data(),
-                                                    std::initializer_list<ssize_t>{2, 2});
+        auto ptr =
+            graph.emplace_node<ConstantNode>(values.data(), std::initializer_list<ssize_t>{2, 2});
 
         THEN("It acts as a 2d array") {
             CHECK(ptr->ndim() == 2);
@@ -132,16 +132,18 @@ TEST_CASE("ConstantNode") {
 
     SECTION("exception - dynamic shape") {
         std::vector<double> values = {30, 10};
-        REQUIRE_THROWS_AS(graph.emplace_node<ConstantNode>(values.data(),
-                                                           std::initializer_list<ssize_t>{-1, 2}),
-                          std::invalid_argument);
+        REQUIRE_THROWS_AS(
+            graph.emplace_node<ConstantNode>(values.data(), std::initializer_list<ssize_t>{-1, 2}),
+            std::invalid_argument
+        );
     }
 
     SECTION("exception - dynamic, size 0 shape") {
         std::vector<double> values{};
-        REQUIRE_THROWS_AS(graph.emplace_node<ConstantNode>(values.data(),
-                                                           std::initializer_list<ssize_t>{-1, 0}),
-                          std::invalid_argument);
+        REQUIRE_THROWS_AS(
+            graph.emplace_node<ConstantNode>(values.data(), std::initializer_list<ssize_t>{-1, 0}),
+            std::invalid_argument
+        );
     }
 }
 

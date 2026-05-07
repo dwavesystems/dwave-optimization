@@ -37,10 +37,10 @@ std::pair<double, double> calculate_values_minmax_(const Array* arr_ptr) {
     return std::make_pair(std::min(arr_ptr->min(), 0.0), std::max(arr_ptr->max(), 0.0));
 }
 
-MeanNode::MeanNode(ArrayNode* arr_ptr)
-        : ScalarOutputMixin<ArrayNode, true>(),
-          arr_ptr_(arr_ptr),
-          minmax_(calculate_values_minmax_(arr_ptr_)) {
+MeanNode::MeanNode(ArrayNode* arr_ptr) :
+    ScalarOutputMixin<ArrayNode, true>(),
+    arr_ptr_(arr_ptr),
+    minmax_(calculate_values_minmax_(arr_ptr_)) {
     add_predecessor(arr_ptr);
 }
 

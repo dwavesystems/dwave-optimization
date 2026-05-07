@@ -26,8 +26,8 @@ namespace dwave::optimization {
 
 // Generic data storage for nodes that index other nodes.
 struct IndexingNodeData : NodeStateData {
-    IndexingNodeData(std::vector<ssize_t>&& offsets, std::vector<double>&& values) noexcept
-            : offsets(offsets), data(values), old_size(offsets.size()) {}
+    IndexingNodeData(std::vector<ssize_t>&& offsets, std::vector<double>&& values) noexcept :
+        offsets(offsets), data(values), old_size(offsets.size()) {}
 
     void commit() {
         diff.clear();
@@ -78,14 +78,17 @@ struct IndexingNodeData : NodeStateData {
 
 struct AdvancedIndexingNodeData : NodeStateData {
  public:
-    AdvancedIndexingNodeData(const AdvancedIndexingNode* node, std::vector<ssize_t>&& offsets,
-                             std::vector<double>&& values,
-                             bool maintain_reverse_offset_map) noexcept
-            : data(values),
-              old_offsets_size(offsets.size()),
-              old_data_size(data.size()),
-              offsets_(offsets),
-              maintain_reverse_offset_map(maintain_reverse_offset_map) {
+    AdvancedIndexingNodeData(
+        const AdvancedIndexingNode* node,
+        std::vector<ssize_t>&& offsets,
+        std::vector<double>&& values,
+        bool maintain_reverse_offset_map
+    ) noexcept :
+        data(values),
+        old_offsets_size(offsets.size()),
+        old_data_size(data.size()),
+        offsets_(offsets),
+        maintain_reverse_offset_map(maintain_reverse_offset_map) {
         for (ssize_t idx = 0; idx < static_cast<ssize_t>(offsets_.size()); ++idx) {
             add_to_reverse(idx, offsets_[idx]);
         }
@@ -222,8 +225,8 @@ struct AdvancedIndexingNodeData : NodeStateData {
 };
 
 struct AdvancedIndexingNode::IndexParser_ {
-    IndexParser_(Array* array_ptr, std::vector<array_or_slice>&& indices)
-            : indices_(std::move(indices)) {
+    IndexParser_(Array* array_ptr, std::vector<array_or_slice>&& indices) :
+        indices_(std::move(indices)) {
         // This may happen if the dynamic_cast to Array from Node fails in the
         // AdvancedIndexingNode constructor
         if (array_ptr == nullptr) {
@@ -234,14 +237,18 @@ struct AdvancedIndexingNode::IndexParser_ {
         assert(array_ptr->ndim() >= 0);  // Should always be true
         if (static_cast<std::size_t>(array_ptr->ndim()) < indices_.size()) {
             // NumPy handles this case, we could as well
-            throw std::invalid_argument(std::string("too many indices for array: array is ") +
-                                        std::to_string(array_ptr->ndim()) + "-dimensional, but " +
-                                        std::to_string(indices_.size()) + " were indexed");
+            throw std::invalid_argument(
+                std::string("too many indices for array: array is ") +
+                std::to_string(array_ptr->ndim()) + "-dimensional, but " +
+                std::to_string(indices_.size()) + " were indexed"
+            );
         }
         if (static_cast<std::size_t>(array_ptr->ndim()) > indices_.size()) {
-            throw std::invalid_argument(std::string("too few indices for array: array is ") +
-                                        std::to_string(array_ptr->ndim()) + "-dimensional, but " +
-                                        std::to_string(indices_.size()) + " were indexed");
+            throw std::invalid_argument(
+                std::string("too few indices for array: array is ") +
+                std::to_string(array_ptr->ndim()) + "-dimensional, but " +
+                std::to_string(indices_.size()) + " were indexed"
+            );
         }
 
         if (array_ptr->ndim() == 0) return;
@@ -269,8 +276,9 @@ struct AdvancedIndexingNode::IndexParser_ {
 
                 if (!indexing_array_ptr->integral()) {
                     throw std::out_of_range(
-                            std::string("index may not contain non-integer values for axis ") +
-                            std::to_string(idx));
+                        std::string("index may not contain non-integer values for axis ") +
+                        std::to_string(idx)
+                    );
                 }
                 if (indexing_array_ptr->min() < 0) {
                     // todo: support negative values
@@ -293,22 +301,24 @@ struct AdvancedIndexingNode::IndexParser_ {
                     }
 
                     // from the min size of the dynamic array, get the min size of the first axis
-                    ssize_t min_axis_size = (sizeinfo.min.value() * array_ptr->itemsize()) /
-                                            array_ptr->strides()[0];
+                    ssize_t min_axis_size =
+                        (sizeinfo.min.value() * array_ptr->itemsize()) / array_ptr->strides()[0];
 
                     if (indexing_array_ptr->max() >= min_axis_size) {
                         throw std::out_of_range(
-                                std::string("index's largest possible value ") +
-                                std::to_string(static_cast<ssize_t>(indexing_array_ptr->max())) +
-                                std::string(" is out of bounds for axis ") + std::to_string(idx) +
-                                std::string(" with minimum size ") + std::to_string(min_axis_size));
-                    }
-                } else if (indexing_array_ptr->max() >= array_ptr->shape()[idx]) {
-                    throw std::out_of_range(
                             std::string("index's largest possible value ") +
                             std::to_string(static_cast<ssize_t>(indexing_array_ptr->max())) +
                             std::string(" is out of bounds for axis ") + std::to_string(idx) +
-                            std::string(" with size ") + std::to_string(array_ptr->shape()[idx]));
+                            std::string(" with minimum size ") + std::to_string(min_axis_size)
+                        );
+                    }
+                } else if (indexing_array_ptr->max() >= array_ptr->shape()[idx]) {
+                    throw std::out_of_range(
+                        std::string("index's largest possible value ") +
+                        std::to_string(static_cast<ssize_t>(indexing_array_ptr->max())) +
+                        std::string(" is out of bounds for axis ") + std::to_string(idx) +
+                        std::string(" with size ") + std::to_string(array_ptr->shape()[idx])
+                    );
                 }
 
                 ssize_t a_ndim = indexing_array_ptr->ndim();
@@ -318,10 +328,12 @@ struct AdvancedIndexingNode::IndexParser_ {
                     first_array_index = idx;
                 } else if (!array_shape_equal(first_array, indexing_array_ptr)) {
                     throw std::invalid_argument(
-                            "shape mismatch: indexing arrays could not be broadcast together");
+                        "shape mismatch: indexing arrays could not be broadcast together"
+                    );
                 } else if (a_ndim != indexing_arrays_ndim) {
                     throw std::invalid_argument(
-                            "dimension mismatch: indexing arrays could not be broadcast together");
+                        "dimension mismatch: indexing arrays could not be broadcast together"
+                    );
                 }
 
                 encountered_array = true;
@@ -338,7 +350,8 @@ struct AdvancedIndexingNode::IndexParser_ {
 
         if (!encountered_array) {
             throw std::invalid_argument(
-                    "there must be at least one array-type index to use AdvancedIndexingNode");
+                "there must be at least one array-type index to use AdvancedIndexingNode"
+            );
         }
 
         if (not grouped_indexers_mode and array_ptr->dynamic() and
@@ -348,8 +361,9 @@ struct AdvancedIndexingNode::IndexParser_ {
             // only in the first dimension. However the current implementation of this mode does
             // not support that case.
             throw std::invalid_argument(
-                    "Indexed array cannot be dynamic with an empty slice in the first dimension "
-                    "and non-grouped indexers");
+                "Indexed array cannot be dynamic with an empty slice in the first dimension "
+                "and non-grouped indexers"
+            );
         }
 
         assert(first_array != nullptr);
@@ -363,8 +377,9 @@ struct AdvancedIndexingNode::IndexParser_ {
 
         if (indexing_arrays_ndim > 1) {
             throw std::invalid_argument(
-                    "Advanced indexing currently only supports 0- and 1-dimensional indexing "
-                    "arrays");
+                "Advanced indexing currently only supports 0- and 1-dimensional indexing "
+                "arrays"
+            );
         }
 
         simple_array_strides = shape_to_strides(array_ptr->ndim(), array_ptr->shape().data());
@@ -410,8 +425,11 @@ struct AdvancedIndexingNode::IndexParser_ {
 
                         // Fill in the intermediate shape which is the same as the shape of the
                         // indexing arrays
-                        for (ssize_t indexing_array_axis = 0;
-                             indexing_array_axis < indexing_arrays_ndim; ++indexing_array_axis) {
+                        for (
+                            ssize_t indexing_array_axis = 0;
+                            indexing_array_axis < indexing_arrays_ndim;
+                            ++indexing_array_axis
+                        ) {
                             this->shape[slice_idx++] = first_array->shape()[indexing_array_axis];
                         }
                     }
@@ -419,8 +437,9 @@ struct AdvancedIndexingNode::IndexParser_ {
                     if (std::holds_alternative<ArrayNode*>(indices_[idx]) &&
                         std::get<ArrayNode*>(indices_[idx])->dynamic()) {
                         throw std::invalid_argument(
-                                "Indexing arrays cannot be dynamic when using in-place combined "
-                                "indexing");
+                            "Indexing arrays cannot be dynamic when using in-place combined "
+                            "indexing"
+                        );
                     }
                 }
             }
@@ -428,9 +447,11 @@ struct AdvancedIndexingNode::IndexParser_ {
             strides = shape_to_strides(this->ndim, shape.get());
 
             if (indexing_arrays_ndim == 0 and array_ptr->dynamic()) {
-                assert(grouped_indexers_mode and
-                       "If the parent array is dynamic and indexers are scalar, only "
-                       "grouped-indexers mode is supported");
+                assert(
+                    grouped_indexers_mode and
+                    "If the parent array is dynamic and indexers are scalar, only "
+                    "grouped-indexers mode is supported"
+                );
                 subspace_stride = Array::DYNAMIC_SIZE;
             } else if (indexing_arrays_ndim == 0) {
                 subspace_stride = ndim > 0 ? strides[0] * shape[0] : array_ptr->itemsize();
@@ -467,23 +488,25 @@ struct AdvancedIndexingNode::IndexParser_ {
     std::unique_ptr<ssize_t[]> simple_array_strides = nullptr;
 };
 
-AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr,
-                                           std::vector<array_or_slice> indices)
-        : AdvancedIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
+AdvancedIndexingNode::AdvancedIndexingNode(
+    ArrayNode* array_ptr,
+    std::vector<array_or_slice> indices
+) :
+    AdvancedIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
 
-AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser)
-        : array_ptr_(array_ptr),
-          ndim_(parser.ndim),
-          strides_(std::move(parser.strides)),
-          shape_(std::move(parser.shape)),
-          array_item_strides_(std::move(parser.simple_array_strides)),
-          size_(Array::shape_to_size(ndim_, shape_.get())),
-          indices_(std::move(parser.indices_)),
-          indexing_arrays_ndim_(parser.indexing_arrays_ndim),
-          grouped_indexers_mode_(parser.grouped_indexers_mode),
-          first_array_index_(parser.first_array_index),
-          subspace_stride_(parser.subspace_stride),
-          values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()) {
+AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser) :
+    array_ptr_(array_ptr),
+    ndim_(parser.ndim),
+    strides_(std::move(parser.strides)),
+    shape_(std::move(parser.shape)),
+    array_item_strides_(std::move(parser.simple_array_strides)),
+    size_(Array::shape_to_size(ndim_, shape_.get())),
+    indices_(std::move(parser.indices_)),
+    indexing_arrays_ndim_(parser.indexing_arrays_ndim),
+    grouped_indexers_mode_(parser.grouped_indexers_mode),
+    first_array_index_(parser.first_array_index),
+    subspace_stride_(parser.subspace_stride),
+    values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()) {
     assert(!array_ptr->ndim() || array_item_strides_);
 
     // Now actually add them. This way if there is an error thrown we're not
@@ -504,49 +527,87 @@ std::span<const Update> AdvancedIndexingNode::diff(const State& state) const {
     return data_ptr<AdvancedIndexingNodeData>(state)->diff;
 }
 
-void AdvancedIndexingNode::fill_subspace(State& state, ssize_t array_offset,
-                                         std::vector<double>& data, ssize_t index_in_arrays) const {
+void AdvancedIndexingNode::fill_subspace(
+    State& state,
+    ssize_t array_offset,
+    std::vector<double>& data,
+    ssize_t index_in_arrays
+) const {
     assert(index_in_arrays == 0 or subspace_stride_ >= 0);
     ssize_t starting_output_axis = grouped_indexers_mode_ ? 0 : indexing_arrays_ndim_;
-    fill_subspace_recurse<false, false, false>(array_ptr_->shape(state), array_ptr_->buff(state),
-                                               array_offset * static_cast<ssize_t>(itemsize()), 0,
-                                               data, index_in_arrays * subspace_stride_,
-                                               starting_output_axis, nullptr);
+    fill_subspace_recurse<false, false, false>(
+        array_ptr_->shape(state),
+        array_ptr_->buff(state),
+        array_offset * static_cast<ssize_t>(itemsize()),
+        0,
+        data,
+        index_in_arrays * subspace_stride_,
+        starting_output_axis,
+        nullptr
+    );
 }
 
 template <bool placement, bool removal>
-void AdvancedIndexingNode::fill_subspace(State& state, ssize_t array_item_offset,
-                                         std::vector<double>& data, ssize_t index_in_arrays,
-                                         std::vector<Update>& diff) const {
+void AdvancedIndexingNode::fill_subspace(
+    State& state,
+    ssize_t array_item_offset,
+    std::vector<double>& data,
+    ssize_t index_in_arrays,
+    std::vector<Update>& diff
+) const {
     assert(index_in_arrays == 0 or subspace_stride_ >= 0);
     ssize_t starting_output_axis = grouped_indexers_mode_ ? 0 : indexing_arrays_ndim_;
     fill_subspace_recurse<true, placement, removal>(
-            array_ptr_->shape(state), array_ptr_->buff(state),
-            array_item_offset * static_cast<ssize_t>(itemsize()), 0, data,
-            index_in_arrays * subspace_stride_, starting_output_axis, &diff);
+        array_ptr_->shape(state),
+        array_ptr_->buff(state),
+        array_item_offset * static_cast<ssize_t>(itemsize()),
+        0,
+        data,
+        index_in_arrays * subspace_stride_,
+        starting_output_axis,
+        &diff
+    );
 }
 
 template <bool placement, bool removal>
-void AdvancedIndexingNode::fill_axis0_subspace(State& state, ssize_t axis0_index,
-                                               ssize_t array_item_offset, std::vector<double>& data,
-                                               ssize_t index_in_arrays,
-                                               std::vector<Update>& diff) const {
-    assert(grouped_indexers_mode_ &&
-           "fill_axis0_subspace should only be called in grouped-indexers mode");
+void AdvancedIndexingNode::fill_axis0_subspace(
+    State& state,
+    ssize_t axis0_index,
+    ssize_t array_item_offset,
+    std::vector<double>& data,
+    ssize_t index_in_arrays,
+    std::vector<Update>& diff
+) const {
+    assert(
+        grouped_indexers_mode_ &&
+        "fill_axis0_subspace should only be called in grouped-indexers mode"
+    );
     assert(index_in_arrays == 0 or subspace_stride_ >= 0);
     ssize_t array_offset = axis0_index * array_ptr_->strides()[0] + array_item_offset * itemsize();
     size_t data_offset = axis0_index * strides()[0] + index_in_arrays * subspace_stride_;
-    fill_subspace_recurse<true, placement, removal>(array_ptr_->shape(state),
-                                                    array_ptr_->buff(state), array_offset, 1, data,
-                                                    data_offset, 1, &diff);
+    fill_subspace_recurse<true, placement, removal>(
+        array_ptr_->shape(state),
+        array_ptr_->buff(state),
+        array_offset,
+        1,
+        data,
+        data_offset,
+        1,
+        &diff
+    );
 }
 
 template <bool fill_diff, bool placement, bool removal>
-void AdvancedIndexingNode::fill_subspace_recurse(const std::span<const ssize_t>& array_shape,
-                                                 const double* array_buffer, ssize_t array_offset,
-                                                 ssize_t array_dim, std::vector<double>& data,
-                                                 ssize_t data_offset, size_t output_dim,
-                                                 std::vector<Update>* diff) const {
+void AdvancedIndexingNode::fill_subspace_recurse(
+    const std::span<const ssize_t>& array_shape,
+    const double* array_buffer,
+    ssize_t array_offset,
+    ssize_t array_dim,
+    std::vector<double>& data,
+    ssize_t data_offset,
+    size_t output_dim,
+    std::vector<Update>* diff
+) const {
     static_assert(!(!fill_diff && (placement || removal)));
     static_assert(!(placement && removal));
 
@@ -579,16 +640,28 @@ void AdvancedIndexingNode::fill_subspace_recurse(const std::span<const ssize_t>&
             if (!removal) {
                 for (ssize_t i = 0; i < axis_size; ++i) {
                     fill_subspace_recurse<fill_diff, placement, removal>(
-                            array_shape, array_buffer,
-                            array_offset + i * array_ptr_->strides()[array_dim], array_dim + 1,
-                            data, data_offset + i * strides()[output_dim], output_dim + 1, diff);
+                        array_shape,
+                        array_buffer,
+                        array_offset + i * array_ptr_->strides()[array_dim],
+                        array_dim + 1,
+                        data,
+                        data_offset + i * strides()[output_dim],
+                        output_dim + 1,
+                        diff
+                    );
                 }
             } else {
                 for (ssize_t i = array_shape[array_dim] - 1; i >= 0; --i) {
                     fill_subspace_recurse<fill_diff, placement, removal>(
-                            array_shape, array_buffer,
-                            array_offset + i * array_ptr_->strides()[array_dim], array_dim + 1,
-                            data, data_offset + i * strides()[output_dim], output_dim + 1, diff);
+                        array_shape,
+                        array_buffer,
+                        array_offset + i * array_ptr_->strides()[array_dim],
+                        array_dim + 1,
+                        data,
+                        data_offset + i * strides()[output_dim],
+                        output_dim + 1,
+                        diff
+                    );
                 }
             }
         } else {
@@ -600,9 +673,16 @@ void AdvancedIndexingNode::fill_subspace_recurse(const std::span<const ssize_t>&
             if (grouped_indexers_mode_ and array_dim == first_array_index_) {
                 output_dim += indexing_arrays_ndim_;
             }
-            fill_subspace_recurse<fill_diff, placement, removal>(array_shape, array_buffer,
-                                                                 array_offset, array_dim + 1, data,
-                                                                 data_offset, output_dim, diff);
+            fill_subspace_recurse<fill_diff, placement, removal>(
+                array_shape,
+                array_buffer,
+                array_offset,
+                array_dim + 1,
+                data,
+                data_offset,
+                output_dim,
+                diff
+            );
         }
     }
 }
@@ -641,8 +721,8 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
     // be the same for all indexers) times the subspace stride (see note in
     // IndexParser_::subspace_stride_)
     ssize_t data_size =
-            (grouped_indexers_mode_ ? array_ptr_->shape(state)[0] * (strides()[0] / itemsize())
-                                    : indexers_size * subspace_stride_ / itemsize());
+        (grouped_indexers_mode_ ? array_ptr_->shape(state)[0] * (strides()[0] / itemsize())
+                                : indexers_size * subspace_stride_ / itemsize());
 
     // Now get the values
     std::vector<double> data(data_size);
@@ -653,8 +733,9 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
 
     bool main_array_is_constant_node = dynamic_cast<const ConstantNode*>(array_ptr_) != nullptr;
 
-    emplace_data_ptr<AdvancedIndexingNodeData>(state, this, std::move(offsets), std::move(data),
-                                               !main_array_is_constant_node);
+    emplace_data_ptr<AdvancedIndexingNodeData>(
+        state, this, std::move(offsets), std::move(data), !main_array_is_constant_node
+    );
     if (dynamic()) update_dynamic_shape(state);
 }
 
@@ -731,15 +812,20 @@ SizeInfo AdvancedIndexingNode::sizeinfo() const {
 
 std::span<const ssize_t> AdvancedIndexingNode::shape(const State& state) const {
     if (!dynamic()) return shape();
-    return std::span<const ssize_t>(data_ptr<AdvancedIndexingNodeData>(state)->dynamic_shape.get(),
-                                    ndim_);
+    return std::span<const ssize_t>(
+        data_ptr<AdvancedIndexingNodeData>(state)->dynamic_shape.get(), ndim_
+    );
 }
 
 std::pair<ssize_t, ssize_t> get_mapped_index(
-        const std::vector<AdvancedIndexingNode::array_or_slice>& indices,
-        const std::span<const ssize_t>& strides, const std::span<const ssize_t>& item_strides,
-        const std::span<const ssize_t>& shape, const std::span<const ssize_t>& mapped_item_strides,
-        ssize_t itemsize, ssize_t index) {
+    const std::vector<AdvancedIndexingNode::array_or_slice>& indices,
+    const std::span<const ssize_t>& strides,
+    const std::span<const ssize_t>& item_strides,
+    const std::span<const ssize_t>& shape,
+    const std::span<const ssize_t>& mapped_item_strides,
+    ssize_t itemsize,
+    ssize_t index
+) {
     ssize_t offset = 0;
     ssize_t subspace_index = 0;
     ssize_t mapped_axis = 0;
@@ -806,8 +892,10 @@ void AdvancedIndexingNode::propagate(State& state) const {
 
         ssize_t stride = array_strides[dim] / itemsize();
 
-        assert(new_indexers_size == indexer->size(state) &&
-               "indexer has a different size than the first");
+        assert(
+            new_indexers_size == indexer->size(state) &&
+            "indexer has a different size than the first"
+        );
 
         for (const Update& update : indexer->diff(state)) {
             // Ignore all updates with index larger than the final size
@@ -818,16 +906,19 @@ void AdvancedIndexingNode::propagate(State& state) const {
                 // This means a new placement for us, and should always come from a placement
                 // on the first indexer
                 assert(update.placed() && "Trying to grow at index larger than current output");
-                assert(dim == first_array_index_ &&
-                       "New placement should only come from first indexer");
+                assert(
+                    dim == first_array_index_ && "New placement should only come from first indexer"
+                );
 
                 ssize_t new_offset = stride * update.value;
                 node_data->place_offset(new_offset);
             } else {
                 // All other updates (including placements and removals) get handled the same
                 // way
-                assert(update.index < static_cast<ssize_t>(node_data->offsets_size()) &&
-                       "Update with index more than one larger than current size");
+                assert(
+                    update.index < static_cast<ssize_t>(node_data->offsets_size()) &&
+                    "Update with index more than one larger than current size"
+                );
 
                 ssize_t old_indexer_val = update.old;
                 ssize_t new_indexer_val = update.value;
@@ -845,8 +936,11 @@ void AdvancedIndexingNode::propagate(State& state) const {
 
         if (dim == first_array_index_) {
             // If we shrank, we now need to add diff for that
-            for (ssize_t index = static_cast<ssize_t>(node_data->offsets_size()) - 1;
-                 index >= new_indexers_size; --index) {
+            for (
+                ssize_t index = static_cast<ssize_t>(node_data->offsets_size()) - 1;
+                index >= new_indexers_size;
+                --index
+            ) {
                 node_data->remove_offset();
             }
         }
@@ -865,13 +959,15 @@ void AdvancedIndexingNode::propagate(State& state) const {
         // Handle the normal updates and placements where the offsets differ
         for (const auto& offset_update : offsets_diff) {
             if (offset_update.placed()) {
-                fill_subspace<true, false>(state, offset_update.value, data, offset_update.index,
-                                           diff);
+                fill_subspace<true, false>(
+                    state, offset_update.value, data, offset_update.index, diff
+                );
             } else if (offset_update.removed()) {
                 break;
             } else {
-                fill_subspace<false, false>(state, offset_update.value, data, offset_update.index,
-                                            diff);
+                fill_subspace<false, false>(
+                    state, offset_update.value, data, offset_update.index, diff
+                );
             }
             if (parent_array_changed) offset_idxs_updated.insert(offset_update.index);
         }
@@ -890,9 +986,15 @@ void AdvancedIndexingNode::propagate(State& state) const {
             // handled by the removals above
             if (update.index >= parent_size) continue;
             // First part is the offset, second part is the subspace index
-            std::pair<ssize_t, ssize_t> mapped_index =
-                    get_mapped_index(indices_, array_strides, array_item_strides(),
-                                     array_ptr_->shape(state), strides(), itemsize(), update.index);
+            std::pair<ssize_t, ssize_t> mapped_index = get_mapped_index(
+                indices_,
+                array_strides,
+                array_item_strides(),
+                array_ptr_->shape(state),
+                strides(),
+                itemsize(),
+                update.index
+            );
             // This will return a nullptr if there currently are no mapped offsets
             const auto* idxs = node_data->get_offset_idxs(mapped_index.first);
             if (idxs != nullptr) {
@@ -919,9 +1021,9 @@ void AdvancedIndexingNode::propagate(State& state) const {
             // Growing, so need placements
             for (ssize_t axis0_idx = old_axis0_size; axis0_idx < new_axis0_size; ++axis0_idx) {
                 for (ssize_t offset_idx = 0; offset_idx < node_data->offsets_size(); ++offset_idx) {
-                    fill_axis0_subspace<true, false>(state, axis0_idx,
-                                                     node_data->offsets()[offset_idx], data,
-                                                     offset_idx, diff);
+                    fill_axis0_subspace<true, false>(
+                        state, axis0_idx, node_data->offsets()[offset_idx], data, offset_idx, diff
+                    );
                 }
             }
         }
@@ -929,11 +1031,13 @@ void AdvancedIndexingNode::propagate(State& state) const {
         if (new_axis0_size < old_axis0_size) {
             // Shrinking, so need removals
             for (ssize_t axis0_idx = old_axis0_size - 1; axis0_idx >= new_axis0_size; --axis0_idx) {
-                for (ssize_t offset_idx = node_data->offsets_size() - 1; offset_idx >= 0;
-                     --offset_idx) {
-                    fill_axis0_subspace<false, true>(state, axis0_idx,
-                                                     node_data->offsets()[offset_idx], data,
-                                                     offset_idx, diff);
+                for (
+                    ssize_t offset_idx = node_data->offsets_size() - 1; offset_idx >= 0;
+                    --offset_idx
+                ) {
+                    fill_axis0_subspace<false, true>(
+                        state, axis0_idx, node_data->offsets()[offset_idx], data, offset_idx, diff
+                    );
                 }
             }
         }
@@ -944,8 +1048,9 @@ void AdvancedIndexingNode::propagate(State& state) const {
             for (ssize_t axis0_idx = 0; axis0_idx < unchanged_axis0_size; ++axis0_idx) {
                 assert(!offset_update.placed());
                 assert(!offset_update.removed());
-                fill_axis0_subspace<false, false>(state, axis0_idx, offset_update.value, data,
-                                                  offset_update.index, diff);
+                fill_axis0_subspace<false, false>(
+                    state, axis0_idx, offset_update.value, data, offset_update.index, diff
+                );
             }
             offset_idxs_updated.insert(offset_update.index);
         }
@@ -956,17 +1061,25 @@ void AdvancedIndexingNode::propagate(State& state) const {
             if (update.index >= unchanged_parent_size) continue;
 
             // First part is the offset, second part is the subspace index
-            std::pair<ssize_t, ssize_t> mapped_index =
-                    get_mapped_index(indices_, array_strides, array_item_strides(),
-                                     array_ptr_->shape(state), strides(), itemsize(), update.index);
+            std::pair<ssize_t, ssize_t> mapped_index = get_mapped_index(
+                indices_,
+                array_strides,
+                array_item_strides(),
+                array_ptr_->shape(state),
+                strides(),
+                itemsize(),
+                update.index
+            );
             const auto* idxs = node_data->get_offset_idxs(mapped_index.first);
             if (idxs != nullptr) {
                 for (const auto& idx : *idxs) {
                     if (offset_idxs_updated.contains(idx)) continue;
                     ssize_t item_stride = subspace_stride_ / itemsize();
                     ssize_t new_index = idx * item_stride + mapped_index.second;
-                    assert(data[new_index] == update.old ||
-                           (std::isnan(data[new_index]) && update.placed()));
+                    assert(
+                        data[new_index] == update.old ||
+                        (std::isnan(data[new_index]) && update.placed())
+                    );
                     diff.emplace_back(new_index, update.old_or(0), update.value_or(0));
                     data[new_index] = update.value;
                 }
@@ -1086,7 +1199,8 @@ struct BasicIndexingNode::IndexParser_ {
 
                 if (array_dim == 0 && array_ptr->dynamic()) {
                     throw std::invalid_argument(
-                            "integer index not allowed on first dimension of dynamic array");
+                        "integer index not allowed on first dimension of dynamic array"
+                    );
                 } else if (idx < 0) {
                     // Negative indexing on a dimension with a known size
                     // We do one pass of fitting, and then raise an error if it's still
@@ -1117,8 +1231,11 @@ struct BasicIndexingNode::IndexParser_ {
     std::optional<Slice> axis0_slice;
 };
 
-SizeInfo basicindexing_calculate_sizeinfo(const Array* this_node_ptr, const Array* array_ptr_,
-                                          const std::optional<Slice>& axis0_slice_) {
+SizeInfo basicindexing_calculate_sizeinfo(
+    const Array* this_node_ptr,
+    const Array* array_ptr_,
+    const std::optional<Slice>& axis0_slice_
+) {
     // easy case, fixed size
     if (!this_node_ptr->dynamic()) return SizeInfo(this_node_ptr->size());
 
@@ -1129,7 +1246,7 @@ SizeInfo basicindexing_calculate_sizeinfo(const Array* this_node_ptr, const Arra
         // linear function of the main array's size, and thus the best we can do is compute the
         // maximum and return a SizeInfo pointing to the BasicIndexingNode itself.
         ssize_t max_size =
-                std::min<ssize_t>(-axis0_slice_->start, axis0_slice_->stop) * array_num_per_row;
+            std::min<ssize_t>(-axis0_slice_->start, axis0_slice_->stop) * array_num_per_row;
         return SizeInfo(this_node_ptr, 0, max_size);
     }
 
@@ -1141,14 +1258,18 @@ SizeInfo basicindexing_calculate_sizeinfo(const Array* this_node_ptr, const Arra
             // Both negative, the max size is the difference
             ssize_t max_size = std::max<ssize_t>(axis0_slice_->stop - axis0_slice_->start, 0);
             return SizeInfo(this_node_ptr, 0, max_size);
-        } else if (axis0_slice_->start > 0 && axis0_slice_->stop < 0 &&
-                   array_ptr_->sizeinfo().max.has_value()) {
+        } else if (
+            axis0_slice_->start > 0 && axis0_slice_->stop < 0 &&
+            array_ptr_->sizeinfo().max.has_value()
+        ) {
             // Positive start and negative end with known bound on size of predecessor
             ssize_t max_size =
-                    array_ptr_->sizeinfo().max.value() - axis0_slice_->start + axis0_slice_->stop;
+                array_ptr_->sizeinfo().max.value() - axis0_slice_->start + axis0_slice_->stop;
             return SizeInfo(this_node_ptr, 0, max_size);
-        } else if (axis0_slice_->start > 0 && axis0_slice_->stop < 0 &&
-                   array_ptr_->sizeinfo().max.has_value()) {
+        } else if (
+            axis0_slice_->start > 0 && axis0_slice_->stop < 0 &&
+            array_ptr_->sizeinfo().max.has_value()
+        ) {
             // Positive start and negative end with no known bound on size of predecessor.
             // Size is unbounded
             return SizeInfo(this_node_ptr);
@@ -1175,7 +1296,7 @@ SizeInfo basicindexing_calculate_sizeinfo(const Array* this_node_ptr, const Arra
         // Here we may be strided, so we use the shape to figure it out.
         auto shape = this_node_ptr->shape();
         ssize_t num_per_row =
-                std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>());
+            std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>());
 
         sizeinfo.multiplier *= num_per_row;
 
@@ -1203,7 +1324,7 @@ SizeInfo basicindexing_calculate_sizeinfo(const Array* this_node_ptr, const Arra
         // get the number of elements in each "row" of the model
         auto shape = this_node_ptr->shape();
         ssize_t num_per_row =
-                std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>());
+            std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>());
 
         // having a positive start imposes a size offset
         if (start > 0) sizeinfo.offset -= num_per_row * start;
@@ -1242,25 +1363,26 @@ SizeInfo basicindexing_calculate_sizeinfo(const Array* this_node_ptr, const Arra
     return sizeinfo.substitute(1);
 }
 
-BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, std::vector<slice_or_int> indices)
-        : BasicIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
+BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, std::vector<slice_or_int> indices) :
+    BasicIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
 
-BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser)
-        : array_ptr_(array_ptr),
-          ndim_(parser.ndim),
-          strides_(std::move(parser.strides)),
-          shape_(std::move(parser.shape)),
-          start_(parser.start),
-          size_(Array::shape_to_size(ndim_, shape_.get())),
-          axis0_slice_(parser.axis0_slice),
-          contiguous_(is_contiguous(ndim_, shape_.get(), strides_.get())),
-          values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()),
-          sizeinfo_(basicindexing_calculate_sizeinfo(this, array_ptr_, axis0_slice_)) {
+BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser) :
+    array_ptr_(array_ptr),
+    ndim_(parser.ndim),
+    strides_(std::move(parser.strides)),
+    shape_(std::move(parser.shape)),
+    start_(parser.start),
+    size_(Array::shape_to_size(ndim_, shape_.get())),
+    axis0_slice_(parser.axis0_slice),
+    contiguous_(is_contiguous(ndim_, shape_.get(), strides_.get())),
+    values_info_(array_ptr_->min(), array_ptr_->max(), array_ptr_->integral()),
+    sizeinfo_(basicindexing_calculate_sizeinfo(this, array_ptr_, axis0_slice_)) {
     if (!contiguous_ && dynamic() &&
         (this->axis0_slice_->start < 0 || this->axis0_slice_->stop < 0)) {
         throw std::invalid_argument(
-                "non-contiguous indexing operations on dynamic arrays, with negative starts or "
-                "stops in the first dimension, are not currently supported");
+            "non-contiguous indexing operations on dynamic arrays, with negative starts or "
+            "stops in the first dimension, are not currently supported"
+        );
     }
     add_predecessor(array_ptr);
 }
@@ -1557,11 +1679,12 @@ void BasicIndexingNode::propagate(State& state) const {
             new_slice = Slice(axis0_slice_.value().start, axis0_slice_.value().start);
         }
         assert(new_slice.step == 1);
-        const Slice flattened_new_slice(new_slice.start * parent_row_size,
-                                        new_slice.stop * parent_row_size);
+        const Slice flattened_new_slice(
+            new_slice.start * parent_row_size, new_slice.stop * parent_row_size
+        );
 
         ssize_t smallest_parent_size =
-                get_smallest_size_during_diff(old_parent_size, array_ptr_->diff(state));
+            get_smallest_size_during_diff(old_parent_size, array_ptr_->diff(state));
 
         bool growing = new_slice.size() > previous_slice.size();
         bool shrinking = new_slice.size() < previous_slice.size();
@@ -1578,7 +1701,7 @@ void BasicIndexingNode::propagate(State& state) const {
 
         ssize_t false_removals_start = std::max(smallest_parent_size, flattened_new_slice.start);
         ssize_t false_removals_size =
-                std::max<ssize_t>(0, flattened_delta.start - false_removals_start);
+            std::max<ssize_t>(0, flattened_delta.start - false_removals_start);
         assert(false_removals_size >= 0);
 
         // The first "delta size" updates will be used to track for placement/removal indices.
@@ -1596,8 +1719,11 @@ void BasicIndexingNode::propagate(State& state) const {
         }
 
         for (ssize_t i = 0; i < false_removals_size; ++i) {
-            diff.emplace_back(false_removals_start + i - flattened_new_slice.start, Update::nothing,
-                              Update::nothing);
+            diff.emplace_back(
+                false_removals_start + i - flattened_new_slice.start,
+                Update::nothing,
+                Update::nothing
+            );
         }
 
         if (growing) {
@@ -1609,7 +1735,7 @@ void BasicIndexingNode::propagate(State& state) const {
 
         for (const auto& update : array_ptr_->diff(state)) {
             bool within_delta =
-                    update.index >= flattened_delta.start && update.index < flattened_delta.stop;
+                update.index >= flattened_delta.start && update.index < flattened_delta.stop;
 
             if (shrinking && within_delta) {
                 // We're overall shrinking, and the update from the parent has an index
@@ -1623,8 +1749,9 @@ void BasicIndexingNode::propagate(State& state) const {
                     assert(diff[delta_index].index == update.index - flattened_new_slice.start);
                     diff[delta_index].old = update.old;
                 }
-            } else if (update.index < flattened_delta.start &&
-                       update.index >= false_removals_start) {
+            } else if (
+                update.index < flattened_delta.start && update.index >= false_removals_start
+            ) {
                 // Within the "false removals" range
                 auto index = flattened_delta.size() + update.index - false_removals_start;
                 assert(index >= flattened_delta.size());
@@ -1638,10 +1765,12 @@ void BasicIndexingNode::propagate(State& state) const {
                     diff[index].old = update.old;
                 }
                 diff[index].value = update.value;
-            } else if (update.index < flattened_delta.start &&
-                       update.index >= flattened_new_slice.start) {
-                diff.emplace_back(update.index - flattened_new_slice.start, update.old,
-                                  update.value);
+            } else if (
+                update.index < flattened_delta.start && update.index >= flattened_new_slice.start
+            ) {
+                diff.emplace_back(
+                    update.index - flattened_new_slice.start, update.old, update.value
+                );
             }
         }
 
@@ -1792,17 +1921,18 @@ ssize_t BasicIndexingNode::size_diff(const State& state) const {
 std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
     if (not dynamic()) return BasicIndexingNode::shape();
 
-    return std::span<const ssize_t>(data_ptr<BasicIndexingNodeData>(state)->dynamic_shape.get(),
-                                    ndim_);
+    return std::span<const ssize_t>(
+        data_ptr<BasicIndexingNodeData>(state)->dynamic_shape.get(), ndim_
+    );
 }
 
 // PermutationNode ************************************************************
 
-PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr)
-        : ArrayOutputMixin(array_ptr->shape()),
-          array_ptr_(array_ptr),
-          order_ptr_(order_ptr),
-          values_info_(array_ptr_) {
+PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr) :
+    ArrayOutputMixin(array_ptr->shape()),
+    array_ptr_(array_ptr),
+    order_ptr_(order_ptr),
+    values_info_(array_ptr_) {
     std::span<const ssize_t> array_shape = array_ptr_->shape();
 
     // For now, we are only going to support permutation on constant nodes
@@ -1814,7 +1944,8 @@ PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr)
     }
     if (!std::equal(array_shape.begin() + 1, array_shape.end(), array_shape.begin())) {
         throw std::invalid_argument(
-                "array must be square - that is every dimension must have the same size");
+            "array must be square - that is every dimension must have the same size"
+        );
     }
 
     if (order_ptr_->dynamic()) {
@@ -1872,8 +2003,9 @@ void PermutationNode::initialize_state(State& state) const {
         std::vector<ssize_t> i(ndim);
         std::vector<ssize_t> o(ndim, order[0]);
         do {
-            offsets.emplace_back(std::inner_product(o.begin(), o.end(), strides.begin(), 0) /
-                                 sizeof(double));
+            offsets.emplace_back(
+                std::inner_product(o.begin(), o.end(), strides.begin(), 0) / sizeof(double)
+            );
 
             for (ssize_t dim = ndim - 1; dim >= 0; --dim) {
                 if (++i[dim] != n) {

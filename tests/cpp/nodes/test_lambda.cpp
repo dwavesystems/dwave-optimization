@@ -39,8 +39,9 @@ TEST_CASE("AccumulateZipNode") {
 
         THEN("We get an exception trying to use it with an AccumulateZipNode") {
             CHECK_THROWS_AS(
-                    AccumulateZipNode(std::move(expression), std::vector<ArrayNode*>{}, 0.0),
-                    std::invalid_argument);
+                AccumulateZipNode(std::move(expression), std::vector<ArrayNode*>{}, 0.0),
+                std::invalid_argument
+            );
         }
     }
 
@@ -48,39 +49,45 @@ TEST_CASE("AccumulateZipNode") {
         std::vector<double> i = {0, 1, 2, 2};
         std::vector<double> j = {1, 2, 4, 3};
 
-        auto args = std::vector<ArrayNode*>{graph.emplace_node<ConstantNode>(i),
-                                            graph.emplace_node<ConstantNode>(j)};
+        auto args = std::vector<ArrayNode*>{
+            graph.emplace_node<ConstantNode>(i), graph.emplace_node<ConstantNode>(j)
+        };
 
         // x0 * x1 + x2
         auto expression = Graph();
         std::vector<InputNode*> inputs = {
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar())};
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar())
+        };
         auto output_ptr = expression.emplace_node<AddNode>(
-                expression.emplace_node<MultiplyNode>(inputs[1], inputs[2]), inputs[0]);
+            expression.emplace_node<MultiplyNode>(inputs[1], inputs[2]), inputs[0]
+        );
         expression.set_objective(output_ptr);
         expression.topological_sort();
 
         THEN("We can create a accumulate node") {
-            auto accumulate_ptr = graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 5.0);
+            auto accumulate_ptr =
+                graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 5.0);
 
             AND_WHEN("We initialize a state") {
                 auto state = graph.initialize_state();
 
                 THEN("The state is correct") {
-                    CHECK(std::ranges::equal(accumulate_ptr->view(state), std::vector{5, 7, 15, 21}));
+                    CHECK(
+                        std::ranges::equal(accumulate_ptr->view(state), std::vector{5, 7, 15, 21})
+                    );
                 }
             }
         }
 
         AND_GIVEN("A scalar node") {
             IntegerNode* initial =
-                    graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -10, 10);
+                graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{}, -10, 10);
 
             THEN("We can create a accumulate node with a non-constant initial value") {
                 auto accumulate_ptr =
-                        graph.emplace_node<AccumulateZipNode>(std::move(expression), args, initial);
+                    graph.emplace_node<AccumulateZipNode>(std::move(expression), args, initial);
 
                 AND_WHEN("We initialize a state") {
                     auto state = graph.empty_state();
@@ -88,8 +95,11 @@ TEST_CASE("AccumulateZipNode") {
                     graph.initialize_state(state);
 
                     THEN("The state is correct") {
-                        CHECK(std::ranges::equal(accumulate_ptr->view(state),
-                                                 std::vector{5, 7, 15, 21}));
+                        CHECK(
+                            std::ranges::equal(
+                                accumulate_ptr->view(state), std::vector{5, 7, 15, 21}
+                            )
+                        );
                     }
 
                     AND_WHEN("We mutate the initial value and propagate") {
@@ -97,8 +107,11 @@ TEST_CASE("AccumulateZipNode") {
                         graph.propagate(state);
 
                         THEN("The state is correct") {
-                            CHECK(std::ranges::equal(accumulate_ptr->view(state),
-                                                     std::vector{-3.0, -1.0, 7.0, 13.0}));
+                            CHECK(
+                                std::ranges::equal(
+                                    accumulate_ptr->view(state), std::vector{-3.0, -1.0, 7.0, 13.0}
+                                )
+                            );
                         }
                     }
                 }
@@ -113,24 +126,30 @@ TEST_CASE("AccumulateZipNode") {
         // (x0 + 1) * x1 - x2 + 5
         auto expression = Graph();
         std::vector<InputNode*> inputs = {
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar())};
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar())
+        };
         auto output_ptr = expression.emplace_node<AddNode>(
-                expression.emplace_node<SubtractNode>(
-                        expression.emplace_node<MultiplyNode>(
-                                expression.emplace_node<AddNode>(
-                                        inputs[1], expression.emplace_node<ConstantNode>(1)),
-                                inputs[2]),
-                        inputs[0]),
-                expression.emplace_node<ConstantNode>(5));
+            expression.emplace_node<SubtractNode>(
+                expression.emplace_node<MultiplyNode>(
+                    expression.emplace_node<AddNode>(
+                        inputs[1], expression.emplace_node<ConstantNode>(1)
+                    ),
+                    inputs[2]
+                ),
+                inputs[0]
+            ),
+            expression.emplace_node<ConstantNode>(5)
+        );
         expression.set_objective(output_ptr);
         expression.topological_sort();
 
         THEN("We can create a lambda node") {
             std::vector<ArrayNode*> args({i_ptr, j_ptr});
 
-            auto accumulate_ptr = graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 6.0);
+            auto accumulate_ptr =
+                graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 6.0);
 
             auto validation_ptr = graph.emplace_node<ArrayValidationNode>(accumulate_ptr);
 
@@ -138,8 +157,11 @@ TEST_CASE("AccumulateZipNode") {
                 auto state = graph.initialize_state();
 
                 THEN("The state is correct") {
-                    CHECK(std::ranges::equal(accumulate_ptr->view(state),
-                                             std::vector{-1, 6, -1, 6, -1}));
+                    CHECK(
+                        std::ranges::equal(
+                            accumulate_ptr->view(state), std::vector{-1, 6, -1, 6, -1}
+                        )
+                    );
                 }
 
                 AND_WHEN("We mutate the integers and propagate") {
@@ -157,27 +179,34 @@ TEST_CASE("AccumulateZipNode") {
                     validation_ptr->propagate(state);
 
                     THEN("The state is correct") {
-                        CHECK(std::ranges::equal(accumulate_ptr->view(state),
-                                                 std::vector{-5, 10, -5, 17, 13}));
+                        CHECK(
+                            std::ranges::equal(
+                                accumulate_ptr->view(state), std::vector{-5, 10, -5, 17, 13}
+                            )
+                        );
                     }
                 }
             }
         }
     }
 
-    GIVEN("Two integer nodes and an expression that produces nans when initialized with "
-          "infinities") {
+    GIVEN(
+        "Two integer nodes and an expression that produces nans when initialized with "
+        "infinities"
+    ) {
         auto i_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{5}, -10, 10);
         auto j_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{5}, -10, 10);
 
         // (x0 - x1) * x2
         auto expression = Graph();
         std::vector<InputNode*> inputs = {
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar())};
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar())
+        };
         auto output_ptr = expression.emplace_node<MultiplyNode>(
-                expression.emplace_node<SubtractNode>(inputs[0], inputs[1]), inputs[2]);
+            expression.emplace_node<SubtractNode>(inputs[0], inputs[1]), inputs[2]
+        );
 
         expression.set_objective(output_ptr);
         expression.topological_sort();
@@ -186,7 +215,7 @@ TEST_CASE("AccumulateZipNode") {
             std::vector<ArrayNode*> args({i_ptr, j_ptr});
 
             auto accumulate_ptr =
-                    graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0);
+                graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0);
 
             graph.emplace_node<ArrayValidationNode>(accumulate_ptr);
 
@@ -210,18 +239,21 @@ TEST_CASE("AccumulateZipNode") {
         // max(x0 + x2, x1)
         auto expression = Graph();
         std::vector<InputNode*> inputs = {
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar())};
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar())
+        };
         auto output_ptr = expression.emplace_node<MaximumNode>(
-                expression.emplace_node<AddNode>(inputs[1], inputs[0]), inputs[2]);
+            expression.emplace_node<AddNode>(inputs[1], inputs[0]), inputs[2]
+        );
         expression.set_objective(output_ptr);
         expression.topological_sort();
 
         THEN("We can create a lambda node with basic functions and logic control") {
             std::vector<ArrayNode*> args({i_ptr, j_ptr});
 
-            auto accumulate_ptr = graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0);
+            auto accumulate_ptr =
+                graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0);
 
             auto validation_ptr = graph.emplace_node<ArrayValidationNode>(accumulate_ptr);
 
@@ -233,8 +265,11 @@ TEST_CASE("AccumulateZipNode") {
                 graph.initialize_state(state);
 
                 THEN("The state is correct") {
-                    CHECK(std::ranges::equal(accumulate_ptr->view(state),
-                                             std::vector{10, 11, 20, 30, 34}));
+                    CHECK(
+                        std::ranges::equal(
+                            accumulate_ptr->view(state), std::vector{10, 11, 20, 30, 34}
+                        )
+                    );
                 }
 
                 AND_WHEN("We mutate the integers and propagate") {
@@ -249,8 +284,11 @@ TEST_CASE("AccumulateZipNode") {
                     validation_ptr->propagate(state);
 
                     THEN("The state is correct") {
-                        CHECK(std::ranges::equal(accumulate_ptr->view(state),
-                                                 std::vector{10, 15, 17, 30, 35}));
+                        CHECK(
+                            std::ranges::equal(
+                                accumulate_ptr->view(state), std::vector{10, 15, 17, 30, 35}
+                            )
+                        );
                     }
                 }
             }
@@ -265,11 +303,12 @@ TEST_CASE("AccumulateZipNode") {
         THEN("We can't create a AccumulateZipNode with an expression with decision variables") {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
-                    expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                    expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
             };
-            expression.set_objective(expression.emplace_node<AddNode>(
-                    inputs[0], expression.emplace_node<IntegerNode>()));
+            expression.set_objective(
+                expression.emplace_node<AddNode>(inputs[0], expression.emplace_node<IntegerNode>())
+            );
             expression.topological_sort();
 
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
@@ -278,46 +317,54 @@ TEST_CASE("AccumulateZipNode") {
         THEN("We can't create a AccumulateZipNode with non-scalar nodes") {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
-                    expression.emplace_node<InputNode>(std::vector<ssize_t>{2}, 0, 10, false),
-                    expression.emplace_node<InputNode>(std::vector<ssize_t>{2}, 0, 10, false),
+                expression.emplace_node<InputNode>(std::vector<ssize_t>{2}, 0, 10, false),
+                expression.emplace_node<InputNode>(std::vector<ssize_t>{2}, 0, 10, false),
             };
             expression.set_objective(expression.emplace_node<MinNode>(
-                    expression.emplace_node<AddNode>(inputs[0], inputs[1])));
+                expression.emplace_node<AddNode>(inputs[0], inputs[1])
+            ));
             expression.topological_sort();
 
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
 
-        THEN("We can't create a AccumulateZipNode with an expression that has inputs with a smaller "
-             "domain") {
+        THEN(
+            "We can't create a AccumulateZipNode with an expression that has inputs with a smaller "
+            "domain"
+        ) {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
-                    expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 1, false),
-                    expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 1, false),
+                expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 1, false),
+                expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 1, false),
             };
             expression.set_objective(expression.emplace_node<AddNode>(inputs[0], inputs[1]));
             expression.topological_sort();
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
 
-        THEN("We can't create a AccumulateZipNode with an expression that has inputs with an integral "
-             "domain") {
+        THEN(
+            "We can't create a AccumulateZipNode with an expression that has inputs with an "
+            "integral "
+            "domain"
+        ) {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
-                    expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
-                    expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
+                expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
+                expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
             };
             expression.set_objective(expression.emplace_node<AddNode>(inputs[0], inputs[1]));
             expression.topological_sort();
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
 
-        THEN("We can't create a AccumulateZipNode with an initial value larger than allowed by the "
-             "first input") {
+        THEN(
+            "We can't create a AccumulateZipNode with an initial value larger than allowed by the "
+            "first input"
+        ) {
             auto expression = std::make_shared<Graph>();
             std::vector<InputNode*> inputs = {
-                    expression->emplace_node<InputNode>(std::vector<ssize_t>{}, -10, 10, false),
-                    expression->emplace_node<InputNode>(std::vector<ssize_t>{}, -10, 10, false),
+                expression->emplace_node<InputNode>(std::vector<ssize_t>{}, -10, 10, false),
+                expression->emplace_node<InputNode>(std::vector<ssize_t>{}, -10, 10, false),
             };
             expression->set_objective(inputs[0]);
             expression->topological_sort();
@@ -325,11 +372,11 @@ TEST_CASE("AccumulateZipNode") {
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(expression, args, -11.0));
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(expression, args, +11.0));
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(
-                    expression, args,
-                    graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -11, 10)));
+                expression, args, graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -11, 10)
+            ));
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(
-                    expression, args,
-                    graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -10, 11)));
+                expression, args, graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -10, 11)
+            ));
         }
     }
 
@@ -338,16 +385,22 @@ TEST_CASE("AccumulateZipNode") {
 
         auto args = std::vector<ArrayNode*>{graph.emplace_node<ConstantNode>(i)};
 
-        THEN("We can't create a AccumulateZipNode with an expression that has inputs with an integral "
-             "domain, and output that is non-integral") {
+        THEN(
+            "We can't create a AccumulateZipNode with an expression that has inputs with an "
+            "integral "
+            "domain, and output that is non-integral"
+        ) {
             auto expression = Graph();
             std::vector<InputNode*> inputs = {
-                    expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
-                    expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
+                expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
+                expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 10, true),
             };
             expression.set_objective(expression.emplace_node<AddNode>(
-                    inputs[0], expression.emplace_node<MultiplyNode>(
-                                       expression.emplace_node<ConstantNode>(0.5), inputs[1])));
+                inputs[0],
+                expression.emplace_node<MultiplyNode>(
+                    expression.emplace_node<ConstantNode>(0.5), inputs[1]
+                )
+            ));
             expression.topological_sort();
             CHECK_THROWS(graph.emplace_node<AccumulateZipNode>(std::move(expression), args, 0.0));
         }
@@ -358,15 +411,16 @@ TEST_CASE("AccumulateZipNode") {
 
         auto expression = Graph();
         std::vector<InputNode*> inputs = {
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
-                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+            expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
         };
         expression.set_objective(expression.emplace_node<AddNode>(inputs[0], inputs[1]));
         expression.topological_sort();
 
         THEN("We create and initialize a AccumulateZipNode") {
             auto accumulatezip_ptr = graph.emplace_node<AccumulateZipNode>(
-                    std::move(expression), std::vector<ArrayNode*>{set_ptr}, 0.0);
+                std::move(expression), std::vector<ArrayNode*>{set_ptr}, 0.0
+            );
 
             auto state = graph.initialize_state();
 

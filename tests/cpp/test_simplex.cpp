@@ -57,8 +57,9 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
             CHECK_THAT(result.solution(), RangeEquals({0, 0, 5}));
 
             // even though it's optimal, the SolveResult does not know that
-            CHECK(result.solution_status() ==
-                  SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL);
+            CHECK(
+                result.solution_status() == SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL
+            );
         }
 
         WHEN("We explicitly set the solution to a feasible but not optimal value") {
@@ -66,8 +67,9 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
             result.set_solution({0, 0, 4}, c, b_lb, A, b_ub, A_eq, b_eq, lb, ub);
 
             CHECK(result.solve_status == SolveResult::SolveStatus::UNSET);
-            CHECK(result.solution_status() ==
-                  SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL);
+            CHECK(
+                result.solution_status() == SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL
+            );
             CHECK(result.feasible());
             CHECK(result.objective() == -16);
             CHECK_THAT(result.solution(), RangeEquals({0, 0, 4}));
@@ -95,8 +97,10 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
 
         WHEN("We explicitly set the solution to something with the wrong shape") {
             SolveResult result;
-            CHECK_THROWS_AS(result.set_solution({-1, 0}, c, b_lb, A, b_ub, A_eq, b_eq, lb, ub),
-                            std::invalid_argument);
+            CHECK_THROWS_AS(
+                result.set_solution({-1, 0}, c, b_lb, A, b_ub, A_eq, b_eq, lb, ub),
+                std::invalid_argument
+            );
         }
     }
 
@@ -104,16 +108,27 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
         std::vector<double> c{-5, -10, -3, -4};
 
         std::vector<double> A{
-                1, 1, 1, 1, 0, 5, -3, 0, 1, 2, 3, 4,
+            1,
+            1,
+            1,
+            1,
+            0,
+            5,
+            -3,
+            0,
+            1,
+            2,
+            3,
+            4,
         };
         std::vector<double> b_lb{-LP_INFINITY, -LP_INFINITY, -LP_INFINITY};
         std::vector<double> b_ub{100, 50, 20};
 
         std::vector<double> A_eq{
-                3,
-                0,
-                0,
-                -1,
+            3,
+            0,
+            0,
+            -1,
         };
         std::vector<double> b_eq{7};
 
@@ -138,17 +153,17 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
         std::vector<double> c{-5, -10, -3};
 
         std::vector<double> A{
-                1,
-                1,
-                0,
+            1,
+            1,
+            0,
         };
         std::vector<double> b_lb{-LP_INFINITY};
         std::vector<double> b_ub{10};
 
         std::vector<double> A_eq{
-                1,
-                0,
-                1,
+            1,
+            0,
+            1,
         };
         std::vector<double> b_eq{7};
 
@@ -170,9 +185,9 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
         std::vector<double> c{1, 2, 3};
 
         std::vector<double> A{
-                1,
-                1,
-                1,
+            1,
+            1,
+            1,
         };
         std::vector<double> b_lb{-2};
         std::vector<double> b_ub{LP_INFINITY};
@@ -198,9 +213,9 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
         std::vector<double> c{1, 2, 3};
 
         std::vector<double> A{
-                1,
-                1,
-                1,
+            1,
+            1,
+            1,
         };
         std::vector<double> b_lb{-2};
         std::vector<double> b_ub{2};
@@ -230,8 +245,9 @@ TEST_CASE("LP solver (simplex)", "[simplex]") {
         THEN("We return failure unbounded") {
             SolveResult result = linprog(c, {}, {}, {}, {}, {}, lb, ub);
             CHECK(result.solve_status == SolveResult::SolveStatus::FAILURE_UNBOUNDED);
-            CHECK(result.solution_status() ==
-                  SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL);
+            CHECK(
+                result.solution_status() == SolveResult::SolutionStatus::FEASIBLE_BUT_NOT_OPTIMAL
+            );
         }
     }
 

@@ -38,23 +38,26 @@ struct ArgSortNodeDataHelper_ {
 };
 
 struct ArgSortNodeData : public ArrayNodeStateData {
-    ArgSortNodeData(std::vector<double> values)
-            : ArgSortNodeData(ArgSortNodeDataHelper_(std::move(values))) {}
-    ArgSortNodeData(ArgSortNodeDataHelper_&& helper)
-            : ArrayNodeStateData(std::move(helper.indices)), order(std::move(helper.order)) {}
+    ArgSortNodeData(std::vector<double> values) :
+        ArgSortNodeData(ArgSortNodeDataHelper_(std::move(values))) {}
+    ArgSortNodeData(ArgSortNodeDataHelper_&& helper) :
+        ArrayNodeStateData(std::move(helper.indices)), order(std::move(helper.order)) {}
 
     /// Pairs are <value in the original array, index of the value>
     std::set<std::pair<double, ssize_t>> order;
     std::vector<Update> predecessor_updates;
 };
 
-ArgSortNode::ArgSortNode(ArrayNode* arr_ptr)
-        : ArrayOutputMixin(arr_ptr->shape()),
-          arr_ptr_(arr_ptr),
-          minmax_(0, static_cast<double>(arr_ptr_->sizeinfo().max.value_or(
-                                                 std::numeric_limits<ssize_t>::max()) -
-                                         1)),
-          sizeinfo_(arr_ptr_->sizeinfo()) {
+ArgSortNode::ArgSortNode(ArrayNode* arr_ptr) :
+    ArrayOutputMixin(arr_ptr->shape()),
+    arr_ptr_(arr_ptr),
+    minmax_(
+        0,
+        static_cast<double>(
+            arr_ptr_->sizeinfo().max.value_or(std::numeric_limits<ssize_t>::max()) - 1
+        )
+    ),
+    sizeinfo_(arr_ptr_->sizeinfo()) {
     add_predecessor(arr_ptr);
 }
 
@@ -70,7 +73,8 @@ std::span<const Update> ArgSortNode::diff(const State& state) const {
 
 void ArgSortNode::initialize_state(State& state) const {
     emplace_data_ptr<ArgSortNodeData>(
-            state, std::vector<double>{arr_ptr_->begin(state), arr_ptr_->end(state)});
+        state, std::vector<double>{arr_ptr_->begin(state), arr_ptr_->end(state)}
+    );
 }
 
 bool ArgSortNode::integral() const { return true; }
@@ -103,8 +107,9 @@ void ArgSortNode::propagate(State& state) const {
     // and only assign from there which might help when all the updates only affect
     // the end region of the final ordering.
     node_data->assign(
-            node_data->order |
-            std::views::transform([](const std::pair<double, ssize_t>& p) { return p.second; }));
+        node_data->order |
+        std::views::transform([](const std::pair<double, ssize_t>& p) { return p.second; })
+    );
 }
 
 void ArgSortNode::revert(State& state) const {

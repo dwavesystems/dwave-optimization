@@ -125,7 +125,8 @@ TEST_CASE("MeanNode") {
     }
     GIVEN("A dynamic array with (min,max) = (1,5) and a mean node") {
         auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1}, 1, 5, false);
+            std::initializer_list<ssize_t>{-1}, 1, 5, false
+        );
         auto mean_ptr = graph.emplace_node<MeanNode>(dyn_ptr);
         graph.emplace_node<ArrayValidationNode>(mean_ptr);
 
@@ -140,7 +141,8 @@ TEST_CASE("MeanNode") {
     }
     GIVEN("A dynamic array with (min,max) = (-10,-2) and a mean node") {
         auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1}, -10, -2, false);
+            std::initializer_list<ssize_t>{-1}, -10, -2, false
+        );
         auto mean_ptr = graph.emplace_node<MeanNode>(dyn_ptr);
         graph.emplace_node<ArrayValidationNode>(mean_ptr);
 

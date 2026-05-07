@@ -53,8 +53,8 @@ class AdvancedIndexingNode : public ArrayNode {
     // Just calls the runtime constructor for simplicity, but we could implement
     // a faster version by using more compile-time information
     template <std::convertible_to<array_or_slice>... Indices>
-    explicit AdvancedIndexingNode(ArrayNode* array_ptr, Indices... indices)
-            : AdvancedIndexingNode(array_ptr, make_indices(indices...)) {}
+    explicit AdvancedIndexingNode(ArrayNode* array_ptr, Indices... indices) :
+        AdvancedIndexingNode(array_ptr, make_indices(indices...)) {}
 
     // Array overloads
     ssize_t ndim() const noexcept override { return ndim_; }
@@ -100,22 +100,43 @@ class AdvancedIndexingNode : public ArrayNode {
         return output;
     }
 
-    void fill_subspace(State& state, ssize_t array_offset, std::vector<double>& data,
-                       ssize_t index_in_arrays) const;
+    void fill_subspace(
+        State& state,
+        ssize_t array_offset,
+        std::vector<double>& data,
+        ssize_t index_in_arrays
+    ) const;
 
     template <bool placement, bool removal>
-    void fill_subspace(State& state, ssize_t array_offset, std::vector<double>& data,
-                       ssize_t index_in_arrays, std::vector<Update>& diff) const;
+    void fill_subspace(
+        State& state,
+        ssize_t array_offset,
+        std::vector<double>& data,
+        ssize_t index_in_arrays,
+        std::vector<Update>& diff
+    ) const;
 
     template <bool placement, bool removal>
-    void fill_axis0_subspace(State& state, ssize_t axis0_index, ssize_t array_item_offset,
-                             std::vector<double>& data, ssize_t index_in_arrays,
-                             std::vector<Update>& diff) const;
+    void fill_axis0_subspace(
+        State& state,
+        ssize_t axis0_index,
+        ssize_t array_item_offset,
+        std::vector<double>& data,
+        ssize_t index_in_arrays,
+        std::vector<Update>& diff
+    ) const;
 
     template <bool fill_diff, bool placement, bool removal>
-    void fill_subspace_recurse(const std::span<const ssize_t>& shape, const double* array_buffer,
-                               ssize_t array_offset, ssize_t array_dim, std::vector<double>& data,
-                               ssize_t data_offset, size_t output_dim, std::vector<Update>*) const;
+    void fill_subspace_recurse(
+        const std::span<const ssize_t>& shape,
+        const double* array_buffer,
+        ssize_t array_offset,
+        ssize_t array_dim,
+        std::vector<double>& data,
+        ssize_t data_offset,
+        size_t output_dim,
+        std::vector<Update>*
+    ) const;
 
     std::span<const ssize_t> array_item_strides() const {
         return std::span(array_item_strides_.get(), array_ptr_->ndim());
@@ -170,8 +191,8 @@ class BasicIndexingNode : public ArrayNode {
     // Just calls the runtime constructor for simplicity, but we could implement
     // a faster version by using more compile-time information
     template <std::convertible_to<slice_or_int>... Indices>
-    explicit BasicIndexingNode(ArrayNode* array_ptr, Indices... indices)
-            : BasicIndexingNode(array_ptr, make_indices(indices...)) {}
+    explicit BasicIndexingNode(ArrayNode* array_ptr, Indices... indices) :
+        BasicIndexingNode(array_ptr, make_indices(indices...)) {}
 
     // Overloads needed by the Array ABC **************************************
 

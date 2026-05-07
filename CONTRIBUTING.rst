@@ -3,10 +3,11 @@ Contributing
 ============
 
 Ocean's `contributing guide <https://docs.dwavequantum.com/en/latest/ocean/contribute.html>`_
-has guidelines for contributing to Ocean packages.
+has guidelines for contributing to Ocean packages. With the following changes
 
-``dwave-optimization`` includes some formatting customization in the
-`.clang-format <.clang-format>`_ and `setup.cfg <setup.cfg>`_ files.
+* ``dwave-optimization`` uses C++20.
+* ``dwave-optimization`` includes some formatting customization in the
+  `.clang-format <.clang-format>`_ file.
 
 Release Notes
 =============

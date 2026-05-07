@@ -31,14 +31,18 @@ std::pair<double, double> calculate_minmax(const std::vector<double>& c) {
     return std::make_pair(low, high);
 }
 
-BSplineNode::BSplineNode(ArrayNode* array_ptr, const int k, const std::vector<double> t,
-                         const std::vector<double> c)
-        : ArrayOutputMixin(array_ptr->size()),
-          array_ptr_(array_ptr),
-          k_(k),
-          t_(std::move(t)),
-          c_(std::move(c)),
-          minmax_(calculate_minmax(c_)) {
+BSplineNode::BSplineNode(
+    ArrayNode* array_ptr,
+    const int k,
+    const std::vector<double> t,
+    const std::vector<double> c
+) :
+    ArrayOutputMixin(array_ptr->size()),
+    array_ptr_(array_ptr),
+    k_(k),
+    t_(std::move(t)),
+    c_(std::move(c)),
+    minmax_(calculate_minmax(c_)) {
     if (!array_ptr) throw std::invalid_argument("node pointer cannot be nullptr");
     if (array_ptr->ndim() > 1) throw std::invalid_argument("node pointer cannot be multi-d array");
 
@@ -47,8 +51,9 @@ BSplineNode::BSplineNode(ArrayNode* array_ptr, const int k, const std::vector<do
     if (t.size() >= 20) throw std::invalid_argument("number of knots should be smaller than 20");
     if (t.size() != k + c.size() + 1) {
         throw std::invalid_argument(
-                "number of knots should be equal to sum of"
-                "degree, number of coefficients and 1");
+            "number of knots should be equal to sum of"
+            "degree, number of coefficients and 1"
+        );
     }
 
     // bspline node does not extrapolate outside of the base interval
@@ -58,9 +63,10 @@ BSplineNode::BSplineNode(ArrayNode* array_ptr, const int k, const std::vector<do
     double base_interval_min = t[k];
     double base_interval_max = t[c.size()];
     if (pred_min < base_interval_min || pred_max > base_interval_max) {
-        throw std::invalid_argument("bspline node only interpolates inside the base interval: " +
-                                    std::to_string(base_interval_min) + " to " +
-                                    std::to_string(base_interval_max));
+        throw std::invalid_argument(
+            "bspline node only interpolates inside the base interval: " +
+            std::to_string(base_interval_min) + " to " + std::to_string(base_interval_max)
+        );
     }
 
     this->add_predecessor(array_ptr);
@@ -83,7 +89,7 @@ std::vector<double> BSplineNode::bspline_basis(double state) const {
 
             double c2_denom = t_[i + d + 1] - t_[i + 1];
             double c2 =
-                    (c2_denom != 0) ? (B[d - 1][i + 1] * (t_[i + d + 1] - state) / c2_denom) : 0.0;
+                (c2_denom != 0) ? (B[d - 1][i + 1] * (t_[i + d + 1] - state) / c2_denom) : 0.0;
 
             B[d][i] = c1 + c2;
         }

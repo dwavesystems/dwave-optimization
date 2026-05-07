@@ -21,8 +21,7 @@
 namespace dwave::optimization {
 
 TEST_CASE("BSpline") {
-
-    GIVEN("A simple BSplineNode"){
+    GIVEN("A simple BSplineNode") {
         auto graph = Graph();
         auto x = ConstantNode(std::vector<double>{2.5});
 
@@ -30,27 +29,29 @@ TEST_CASE("BSpline") {
         std::vector<double> t = {0, 1, 2, 3, 4, 5, 6};
         std::vector<double> c = {-1, 2, 0, -1};
 
-        WHEN("We create a BSplineNode"){
+        WHEN("We create a BSplineNode") {
             auto bspline = BSplineNode(&x, k, t, c);
 
             THEN("The BSplineNode is a scalar output") {
-                    CHECK(bspline.size() == 1);
-                    CHECK(bspline.ndim() == 1);
-                    CHECK(!bspline.dynamic());
+                CHECK(bspline.size() == 1);
+                CHECK(bspline.ndim() == 1);
+                CHECK(!bspline.dynamic());
             }
 
-            THEN("The output is not a integer, we know the min/max and can get the bspline constants") {
-                    CHECK(!bspline.integral());
-                    CHECK(bspline.min() == -1);
-                    CHECK(bspline.max() == 2);
-                    CHECK(bspline.k() == k);
-                    CHECK(bspline.t() == t);
-                    CHECK(bspline.c() == c);
+            THEN(
+                "The output is not a integer, we know the min/max and can get the bspline constants"
+            ) {
+                CHECK(!bspline.integral());
+                CHECK(bspline.min() == -1);
+                CHECK(bspline.max() == 2);
+                CHECK(bspline.k() == k);
+                CHECK(bspline.t() == t);
+                CHECK(bspline.c() == c);
             }
         }
     }
 
-    GIVEN("A graph with a ConstantNode and a corresponding BSplineNode"){
+    GIVEN("A graph with a ConstantNode and a corresponding BSplineNode") {
         auto graph = Graph();
 
         std::vector<double> x = {2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75, 4.0};
@@ -59,19 +60,21 @@ TEST_CASE("BSpline") {
         std::vector<double> c = {-1, 2, 0, -1};
 
         auto array_ptr = graph.emplace_node<ConstantNode>(x);
-        auto bspline_ptr = graph.emplace_node<BSplineNode>(array_ptr, k, t,  c);
+        auto bspline_ptr = graph.emplace_node<BSplineNode>(array_ptr, k, t, c);
 
         auto state = graph.empty_state();
         array_ptr->initialize_state(state);
         graph.initialize_state(state);
 
-        THEN("The state of the BSplineNode is as expected" ) {
-            std::vector<double> expected = {0.5, 1.09375, 1.375, 1.34375, 1.0, 0.53125, 0.125, -0.21875, -0.5};
+        THEN("The state of the BSplineNode is as expected") {
+            std::vector<double> expected = {
+                0.5, 1.09375, 1.375, 1.34375, 1.0, 0.53125, 0.125, -0.21875, -0.5
+            };
             CHECK(std::ranges::equal(bspline_ptr->view(state), expected));
         }
     }
 
-    GIVEN("A graph with a IntegerNode and a corresponding BSplineNode"){
+    GIVEN("A graph with a IntegerNode and a corresponding BSplineNode") {
         auto graph = Graph();
 
         int k = 2;
@@ -79,13 +82,13 @@ TEST_CASE("BSpline") {
         std::vector<double> c = {-1, 2, 0, -1};
 
         auto x_ptr = graph.emplace_node<IntegerNode>(std::span<const ssize_t>{}, 2, 4);
-        auto bspline_ptr = graph.emplace_node<BSplineNode>(x_ptr, k, t,  c);
+        auto bspline_ptr = graph.emplace_node<BSplineNode>(x_ptr, k, t, c);
 
         auto state = graph.empty_state();
         x_ptr->initialize_state(state, {2});
         graph.initialize_state(state);
 
-        THEN("The state of the BSplineNode is as expected" ) {
+        THEN("The state of the BSplineNode is as expected") {
             CHECK(bspline_ptr->view(state)[0] == 0.5);
 
             AND_WHEN("We change the integer's state and propagate") {
@@ -98,7 +101,7 @@ TEST_CASE("BSpline") {
                     CHECK(bspline_ptr->diff(state).size() == 1);
                 }
 
-            AND_WHEN("We revert") {
+                AND_WHEN("We revert") {
                     x_ptr->revert(state);
                     bspline_ptr->revert(state);
 

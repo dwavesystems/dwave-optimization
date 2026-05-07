@@ -44,21 +44,21 @@ struct SoftMaxNodeDataHelper_ {
 };
 
 struct SoftMaxNodeStateData : public ArrayNodeStateData {
-    SoftMaxNodeStateData(std::vector<double> input)
-            : SoftMaxNodeStateData(SoftMaxNodeDataHelper_(std::move(input))) {}
+    SoftMaxNodeStateData(std::vector<double> input) :
+        SoftMaxNodeStateData(SoftMaxNodeDataHelper_(std::move(input))) {}
 
-    SoftMaxNodeStateData(SoftMaxNodeDataHelper_&& helper)
-            : ArrayNodeStateData(std::move(helper.values)),
-              denominator(helper.denominator),
-              prior_denominator(helper.prior_denominator) {}
+    SoftMaxNodeStateData(SoftMaxNodeDataHelper_&& helper) :
+        ArrayNodeStateData(std::move(helper.values)),
+        denominator(helper.denominator),
+        prior_denominator(helper.prior_denominator) {}
 
     double denominator;
     double prior_denominator;
     std::vector<bool> index_changed;
 };
 
-SoftMaxNode::SoftMaxNode(ArrayNode* arr_ptr)
-        : ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr), sizeinfo_(arr_ptr_->sizeinfo()) {
+SoftMaxNode::SoftMaxNode(ArrayNode* arr_ptr) :
+    ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr), sizeinfo_(arr_ptr_->sizeinfo()) {
     add_predecessor(arr_ptr);
 }
 
@@ -76,7 +76,8 @@ std::span<const Update> SoftMaxNode::diff(const State& state) const {
 
 void SoftMaxNode::initialize_state(State& state) const {
     emplace_data_ptr<SoftMaxNodeStateData>(
-            state, std::vector<double>{arr_ptr_->begin(state), arr_ptr_->end(state)});
+        state, std::vector<double>{arr_ptr_->begin(state), arr_ptr_->end(state)}
+    );
 }
 
 bool SoftMaxNode::integral() const { return false; }

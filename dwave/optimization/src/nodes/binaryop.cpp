@@ -39,9 +39,10 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
         // can broadcast safely.
     } else if (lhs_ptr->sizeinfo().substitute(100) != rhs_ptr->sizeinfo().substitute(100)) {
         throw std::invalid_argument("arrays must have the same size or one must be a scalar");
-    } else if (lhs_ptr->shape().size() != rhs_ptr->shape().size() ||
-               !std::equal(lhs_ptr->shape().begin(), lhs_ptr->shape().end(),
-                           rhs_ptr->shape().begin())) {
+    } else if (
+        lhs_ptr->shape().size() != rhs_ptr->shape().size() ||
+        !std::equal(lhs_ptr->shape().begin(), lhs_ptr->shape().end(), rhs_ptr->shape().begin())
+    ) {
         throw std::invalid_argument("arrays must have the same shape or one must be a scalar");
     }
 
@@ -50,8 +51,9 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
         bool strictly_positive = rhs_ptr->min() > 0 && rhs_ptr->max() > 0;
         if (!strictly_negative && !strictly_positive) {
             throw std::invalid_argument(
-                    "Divide's denominator predecessor must be either strictly positive or strictly "
-                    "negative");
+                "Divide's denominator predecessor must be either strictly positive or strictly "
+                "negative"
+            );
         }
     }
 
@@ -72,23 +74,33 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
 
     // these can result in inf. If we update propagation/initialization to handle
     // that case we should update these as well.
-    if constexpr (std::same_as<BinaryOp, std::divides<double>> ||
-                  std::same_as<BinaryOp, std::multiplies<double>>) {
+    if constexpr (
+        std::same_as<BinaryOp, std::divides<double>> ||
+        std::same_as<BinaryOp, std::multiplies<double>>
+    ) {
         // The constructor should prevent us from getting here, but just in case...
         assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_low != 0));
         assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_high != 0));
 
         // just get all possible combinations of values
-        std::array<double, 4> combos{op(lhs_low, rhs_low), op(lhs_low, rhs_high),
-                                     op(lhs_high, rhs_low), op(lhs_high, rhs_high)};
+        std::array<double, 4> combos{
+            op(lhs_low, rhs_low),
+            op(lhs_low, rhs_high),
+            op(lhs_high, rhs_low),
+            op(lhs_high, rhs_high)
+        };
 
         return std::make_pair(std::ranges::min(combos), std::ranges::max(combos));
     }
     if constexpr (std::same_as<BinaryOp, functional::safe_divides<double>>) {
         // safe_divide is, well, safe. So we start by calculating all combos.
         // Though there are some possible other values depending on our rhs.
-        std::vector<double> combos = {op(lhs_low, rhs_low), op(lhs_low, rhs_high),
-                                      op(lhs_high, rhs_low), op(lhs_high, rhs_high)};
+        std::vector<double> combos = {
+            op(lhs_low, rhs_low),
+            op(lhs_low, rhs_high),
+            op(lhs_high, rhs_low),
+            op(lhs_high, rhs_high)
+        };
 
         if (rhs_ptr->integral()) {
             if (rhs_low < 0 && 0 < rhs_high) {
@@ -122,9 +134,10 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
 
         return std::make_pair(std::ranges::min(combos), std::ranges::max(combos));
     }
-    if constexpr (std::same_as<BinaryOp, functional::max<double>> ||
-                  std::same_as<BinaryOp, functional::min<double>> ||
-                  std::same_as<BinaryOp, std::plus<double>>) {
+    if constexpr (
+        std::same_as<BinaryOp, functional::max<double>> ||
+        std::same_as<BinaryOp, functional::min<double>> || std::same_as<BinaryOp, std::plus<double>>
+    ) {
         return std::make_pair(op(lhs_low, rhs_low), op(lhs_high, rhs_high));
     }
     if constexpr (std::same_as<BinaryOp, std::minus<double>>) {
@@ -132,8 +145,9 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
     }
     if constexpr (std::same_as<BinaryOp, functional::modulus<double>>) {
         // Lower bound is the smallest negative absolute value
-        return std::make_pair(-rhs_high < rhs_low ? -rhs_high : rhs_low,
-                              -rhs_low > rhs_high ? -rhs_low : rhs_high);
+        return std::make_pair(
+            -rhs_high < rhs_low ? -rhs_high : rhs_low, -rhs_low > rhs_high ? -rhs_low : rhs_high
+        );
     }
 
     assert(false && "not implemeted yet");
@@ -150,16 +164,20 @@ bool calculate_integral(const Array* lhs_ptr, const Array* rhs_ptr) {
 
     // The mathematical operations require a bit more fiddling.
 
-    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value ||
-                  std::is_same<BinaryOp, functional::safe_divides<double>>::value) {
+    if constexpr (
+        std::is_same<BinaryOp, std::divides<double>>::value ||
+        std::is_same<BinaryOp, functional::safe_divides<double>>::value
+    ) {
         return false;
     }
-    if constexpr (std::is_same<BinaryOp, functional::max<double>>::value ||
-                  std::is_same<BinaryOp, functional::min<double>>::value ||
-                  std::is_same<BinaryOp, std::minus<double>>::value ||
-                  std::is_same<BinaryOp, functional::modulus<double>>::value ||
-                  std::is_same<BinaryOp, std::multiplies<double>>::value ||
-                  std::is_same<BinaryOp, std::plus<double>>::value) {
+    if constexpr (
+        std::is_same<BinaryOp, functional::max<double>>::value ||
+        std::is_same<BinaryOp, functional::min<double>>::value ||
+        std::is_same<BinaryOp, std::minus<double>>::value ||
+        std::is_same<BinaryOp, functional::modulus<double>>::value ||
+        std::is_same<BinaryOp, std::multiplies<double>>::value ||
+        std::is_same<BinaryOp, std::plus<double>>::value
+    ) {
         return lhs_ptr->integral() && rhs_ptr->integral();
     }
 
@@ -168,12 +186,14 @@ bool calculate_integral(const Array* lhs_ptr, const Array* rhs_ptr) {
 }
 
 template <class BinaryOp>
-BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
-        : ArrayOutputMixin(broadcast_shapes(a_ptr->shape(), b_ptr->shape())),
-          operands_({a_ptr, b_ptr}),
-          values_info_(calculate_values_minmax<BinaryOp>(operands_[0], operands_[1]),
-                       calculate_integral<BinaryOp>(operands_[0], operands_[1])),
-          sizeinfo_(binaryop_calculate_sizeinfo(this, operands_[0], operands_[1])) {
+BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr) :
+    ArrayOutputMixin(broadcast_shapes(a_ptr->shape(), b_ptr->shape())),
+    operands_({a_ptr, b_ptr}),
+    values_info_(
+        calculate_values_minmax<BinaryOp>(operands_[0], operands_[1]),
+        calculate_integral<BinaryOp>(operands_[0], operands_[1])
+    ),
+    sizeinfo_(binaryop_calculate_sizeinfo(this, operands_[0], operands_[1])) {
     this->add_predecessor(a_ptr);
     this->add_predecessor(b_ptr);
 }
@@ -302,8 +322,9 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
             ptr->update(lhs_diff | std::views::transform(apply_op));
             // For the RHS, we have already dealt with growing/shrinking the array,
             // so we just ignore all updates that are placements/removals.
-            ptr->update(rhs_diff | std::views::filter(is_standard_update) |
-                        std::views::transform(apply_op));
+            ptr->update(
+                rhs_diff | std::views::filter(is_standard_update) | std::views::transform(apply_op)
+            );
         } else if (lhs_diff.size()) {
             // LHS modified, but not RHS
             auto rit = rhs_ptr->begin(state);
@@ -416,8 +437,11 @@ ssize_t BinaryOpNode<BinaryOp>::size_diff(const State& state) const {
     return data_ptr<ArrayNodeStateData>(state)->size_diff();
 }
 
-SizeInfo binaryop_calculate_sizeinfo(const Array* node_ptr, const Array* lhs_ptr,
-                                     const Array* rhs_ptr) {
+SizeInfo binaryop_calculate_sizeinfo(
+    const Array* node_ptr,
+    const Array* lhs_ptr,
+    const Array* rhs_ptr
+) {
     if (!node_ptr->dynamic()) return SizeInfo(node_ptr->size());
 
     if (lhs_ptr->dynamic() && rhs_ptr->dynamic()) {

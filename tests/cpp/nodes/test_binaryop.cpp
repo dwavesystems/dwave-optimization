@@ -29,13 +29,23 @@ using Catch::Matchers::RangeEquals;
 namespace dwave::optimization {
 
 // NOTE: divides test is disabled because the template-tests have invalid denominators.
-TEMPLATE_TEST_CASE("BinaryOpNode", "",
-                   // std::divides<double>,
-                   std::equal_to<double>, std::less_equal<double>, std::plus<double>,
-                   std::minus<double>, functional::modulus<double>, std::multiplies<double>,
-                   functional::max<double>, functional::min<double>, std::logical_and<double>,
-                   std::logical_or<double>, functional::logical_xor<double>,
-                   functional::safe_divides<double>) {
+TEMPLATE_TEST_CASE(
+    "BinaryOpNode",
+    "",
+    // std::divides<double>,
+    std::equal_to<double>,
+    std::less_equal<double>,
+    std::plus<double>,
+    std::minus<double>,
+    functional::modulus<double>,
+    std::multiplies<double>,
+    functional::max<double>,
+    functional::min<double>,
+    std::logical_and<double>,
+    std::logical_or<double>,
+    functional::logical_xor<double>,
+    functional::safe_divides<double>
+) {
     auto graph = Graph();
 
     auto func = TestType();
@@ -180,8 +190,9 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "",
                 CHECK(p_ptr->shape(state).size() == 1);
 
                 for (int i = 0; i < p_ptr->size(state); ++i) {
-                    CHECK(p_ptr->view(state)[i] ==
-                          func(a_ptr->view(state)[i], b_ptr->view(state)[i]));
+                    CHECK(
+                        p_ptr->view(state)[i] == func(a_ptr->view(state)[i], b_ptr->view(state)[i])
+                    );
                 }
             }
 
@@ -198,8 +209,10 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "",
                     CHECK(p_ptr->shape(state).size() == 1);
 
                     for (int i = 0; i < p_ptr->size(state); ++i) {
-                        CHECK(p_ptr->view(state)[i] ==
-                              func(a_ptr->view(state)[i], b_ptr->view(state)[i]));
+                        CHECK(
+                            p_ptr->view(state)[i] ==
+                            func(a_ptr->view(state)[i], b_ptr->view(state)[i])
+                        );
                     }
                 }
             }
@@ -208,7 +221,8 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "",
 
     GIVEN("Two dynamic arrays of the same size operated on") {
         auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 2}, 0, 1000, true);
+            std::initializer_list<ssize_t>{-1, 2}, 0, 1000, true
+        );
 
         auto a_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
         graph.emplace_node<ArrayValidationNode>(a_ptr);
@@ -245,8 +259,10 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "",
                     CHECK(p_ptr->shape(state).size() == 1);
 
                     for (int i = 0; i < p_ptr->size(state); ++i) {
-                        CHECK(p_ptr->view(state)[i] ==
-                              func(a_ptr->view(state)[i], b_ptr->view(state)[i]));
+                        CHECK(
+                            p_ptr->view(state)[i] ==
+                            func(a_ptr->view(state)[i], b_ptr->view(state)[i])
+                        );
                     }
                 }
             }
@@ -263,8 +279,10 @@ TEMPLATE_TEST_CASE("BinaryOpNode", "",
                     CHECK(p_ptr->shape(state).size() == 1);
 
                     for (int i = 0; i < p_ptr->size(state); ++i) {
-                        CHECK(p_ptr->view(state)[i] ==
-                              func(a_ptr->view(state)[i], b_ptr->view(state)[i]));
+                        CHECK(
+                            p_ptr->view(state)[i] ==
+                            func(a_ptr->view(state)[i], b_ptr->view(state)[i])
+                        );
                     }
 
                     CHECK(p_ptr->diff(state).size() == 2);  // we did some deduplication
@@ -853,11 +871,13 @@ TEST_CASE("BinaryOpNode - SubtractNode") {
     GIVEN("x = Set(10), y = x[1:][-1:], z = x[:-1][-1:]") {
         auto x_ptr = graph.emplace_node<SetNode>(10);
         auto y_ptr = graph.emplace_node<BasicIndexingNode>(
-                graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(1, std::nullopt)),
-                Slice(-1, std::nullopt));
+            graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(1, std::nullopt)),
+            Slice(-1, std::nullopt)
+        );
         auto z_ptr = graph.emplace_node<BasicIndexingNode>(
-                graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(std::nullopt, -1)),
-                Slice(-1, std::nullopt));
+            graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(std::nullopt, -1)),
+            Slice(-1, std::nullopt)
+        );
 
         THEN("We can create y - z") { graph.emplace_node<SubtractNode>(y_ptr, z_ptr); }
     }
@@ -869,26 +889,36 @@ TEST_CASE("BinaryOpNode - SubtractNode") {
         auto y_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3, 2, 1, 4});
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<SubtractNode>(x_ptr, y_ptr),
-                            "arrays must have the same shape or one must be a scalar");
-        REQUIRE_THROWS_WITH(graph.emplace_node<SubtractNode>(y_ptr, x_ptr),
-                            "arrays must have the same shape or one must be a scalar");
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<SubtractNode>(x_ptr, y_ptr),
+            "arrays must have the same shape or one must be a scalar"
+        );
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<SubtractNode>(y_ptr, x_ptr),
+            "arrays must have the same shape or one must be a scalar"
+        );
     }
 
     // testing dynamic arrays with the same size but different, broadcastable shape
-    GIVEN("x = DynamicArrayTestingNode(shape = {-1, 1, 3}), y = reshape(x, {-1, 3, 1}), z = x - y, "
-          "y - x") {
-        auto x_ptr = graph.emplace_node<DynamicArrayTestingNode>(
-                std::initializer_list<ssize_t>{-1, 1, 3});
+    GIVEN(
+        "x = DynamicArrayTestingNode(shape = {-1, 1, 3}), y = reshape(x, {-1, 3, 1}), z = x - y, "
+        "y - x"
+    ) {
+        auto x_ptr =
+            graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 1, 3});
         graph.emplace_node<ArrayValidationNode>(x_ptr);
         auto y_ptr =
-                graph.emplace_node<ReshapeNode>(x_ptr, std::initializer_list<ssize_t>{-1, 3, 1});
+            graph.emplace_node<ReshapeNode>(x_ptr, std::initializer_list<ssize_t>{-1, 3, 1});
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
-        REQUIRE_THROWS_WITH(graph.emplace_node<SubtractNode>(x_ptr, y_ptr),
-                            "arrays must have the same shape or one must be a scalar");
-        REQUIRE_THROWS_WITH(graph.emplace_node<SubtractNode>(y_ptr, x_ptr),
-                            "arrays must have the same shape or one must be a scalar");
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<SubtractNode>(x_ptr, y_ptr),
+            "arrays must have the same shape or one must be a scalar"
+        );
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<SubtractNode>(y_ptr, x_ptr),
+            "arrays must have the same shape or one must be a scalar"
+        );
     }
 }
 

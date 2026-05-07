@@ -25,9 +25,12 @@ using size_type = ssize_t;
 using hi_res_t = long double;
 
 struct QuadraticModelNodeData : public NodeStateData {
-    explicit QuadraticModelNodeData(double value, std::vector<double>&& state,
-                                    index_type num_variables)
-            : value_old(value), value(value_old), update(0, value, value), previous_state_(state) {
+    explicit QuadraticModelNodeData(
+        double value,
+        std::vector<double>&& state,
+        index_type num_variables
+    ) :
+        value_old(value), value(value_old), update(0, value, value), previous_state_(state) {
         effective_changes_.reserve(num_variables);
     }
 
@@ -193,8 +196,12 @@ void QuadraticModel::get_squares(bias_type* squares) const {
     }
 }
 
-void QuadraticModel::add_quadratic(const size_type n_interactions, const index_type* row,
-                                   const index_type* col, const bias_type* quad) {
+void QuadraticModel::add_quadratic(
+    const size_type n_interactions,
+    const index_type* row,
+    const index_type* col,
+    const bias_type* quad
+) {
     for (size_type i = 0; i < n_interactions; ++i) {
         auto irow = row[i];
         auto icol = col[i];
@@ -222,8 +229,10 @@ void QuadraticModel::get_quadratic(index_type* row, index_type* col, bias_type* 
     assert(idx == num_interactions());
 }
 
-bias_type QuadraticModel::get_effective_linear_bias(index_type u,
-                                                    std::span<const double> state) const {
+bias_type QuadraticModel::get_effective_linear_bias(
+    index_type u,
+    std::span<const double> state
+) const {
     assert(static_cast<size_type>(state.size()) == num_variables_);
     hi_res_t effective_linear_bias = linear_biases_[u];
     auto& biases = adj_[u].biases;
@@ -263,12 +272,17 @@ void QuadraticModel::shrink_to_fit() {
     square_biases_.shrink_to_fit();
 }
 
-QuadraticModelNode::QuadraticModelNode(ArrayNode* state_node_ptr, QuadraticModel&& quadratic_model)
-        : quadratic_model_(quadratic_model) {
-    if (!std::ranges::equal(state_node_ptr->shape(),
-                            std::vector<ssize_t>{quadratic_model_.num_variables()})) {
+QuadraticModelNode::QuadraticModelNode(
+    ArrayNode* state_node_ptr,
+    QuadraticModel&& quadratic_model
+) :
+    quadratic_model_(quadratic_model) {
+    if (!std::ranges::equal(
+            state_node_ptr->shape(), std::vector<ssize_t>{quadratic_model_.num_variables()}
+        )) {
         throw std::invalid_argument(
-                "node array must be one dimensional of length same as QuadraticModelNode.shape[0]");
+            "node array must be one dimensional of length same as QuadraticModelNode.shape[0]"
+        );
     }
 
     quadratic_model_.shrink_to_fit();
@@ -295,8 +309,9 @@ void QuadraticModelNode::initialize_state(State& state) const {
     Array* ptr = dynamic_cast<Array*>(predecessors()[0]);
     std::vector<double> state_copy(ptr->begin(state), ptr->end(state));
     double value = quadratic_model_.compute_value(state_copy);
-    emplace_data_ptr<QuadraticModelNodeData>(state, value, std::move(state_copy),
-                                             quadratic_model_.num_variables());
+    emplace_data_ptr<QuadraticModelNodeData>(
+        state, value, std::move(state_copy), quadratic_model_.num_variables()
+    );
 }
 
 void QuadraticModelNode::propagate(State& state) const {
@@ -310,7 +325,7 @@ void QuadraticModelNode::propagate(State& state) const {
 
         if (state_node_ptr->contiguous()) {
             auto current_state =
-                    std::span(state_node_ptr->buff(state), state_node_ptr->size(state));
+                std::span(state_node_ptr->buff(state), state_node_ptr->size(state));
             for (auto& update : diff) {
                 auto index = update.index;
                 auto neo = current_state[index];
