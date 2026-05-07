@@ -84,11 +84,11 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     void shrink(State& state) const;
 
  protected:
-    CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size)
-        : ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),
-          max_value_(max_value),
-          min_size_(min_size),
-          max_size_(max_size) {
+    CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size) :
+        ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),
+        max_value_(max_value),
+        min_size_(min_size),
+        max_size_(max_size) {
         if (min_size < 0 || max_size < 0) {
             throw std::invalid_argument("a collection cannot contain fewer than 0 elements");
         }
@@ -153,11 +153,11 @@ class DisjointBitSetsNode : public DecisionNode {
 // Successor node for the output of `DisjointBitSetsNode`
 class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    explicit DisjointBitSetNode(DisjointBitSetsNode* disjoint_bit_sets_node)
-        : ArrayOutputMixin(disjoint_bit_sets_node->primary_set_size()),
-          disjoint_bit_sets_node(disjoint_bit_sets_node),
-          set_index_(disjoint_bit_sets_node->successors().size()),
-          primary_set_size_(disjoint_bit_sets_node->primary_set_size()) {
+    explicit DisjointBitSetNode(DisjointBitSetsNode* disjoint_bit_sets_node) :
+        ArrayOutputMixin(disjoint_bit_sets_node->primary_set_size()),
+        disjoint_bit_sets_node(disjoint_bit_sets_node),
+        set_index_(disjoint_bit_sets_node->successors().size()),
+        primary_set_size_(disjoint_bit_sets_node->primary_set_size()) {
         if (set_index_ >= disjoint_bit_sets_node->num_disjoint_sets()) {
             throw std::length_error("disjoint-bit-set node already has all output nodes");
         }
@@ -302,8 +302,8 @@ class ListNode : public CollectionNode {
  public:
     // Create a ListNode that is always a permutation of range(n)
     explicit ListNode(ssize_t n) : CollectionNode(n, n, n) {}
-    explicit ListNode(ssize_t n, ssize_t min_size, ssize_t max_size)
-        : CollectionNode(n, min_size, max_size) {}
+    explicit ListNode(ssize_t n, ssize_t min_size, ssize_t max_size) :
+        CollectionNode(n, min_size, max_size) {}
 
     // A ListNode's initial state defaults to range(n)
     void initialize_state(State& state) const override;
@@ -320,8 +320,8 @@ class SetNode : public CollectionNode {
 
     /// Create a set node encoding subsets of range(n) such that the size of
     /// the subset is between `min_size` and `max_size` (inclusive).
-    explicit SetNode(ssize_t n, ssize_t min_size, ssize_t max_size)
-        : CollectionNode(n, min_size, max_size) {}
+    explicit SetNode(ssize_t n, ssize_t min_size, ssize_t max_size) :
+        CollectionNode(n, min_size, max_size) {}
 
     // A SetNode's default initial state is empty
     void initialize_state(State& state) const override;

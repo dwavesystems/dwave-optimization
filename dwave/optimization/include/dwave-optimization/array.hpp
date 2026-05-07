@@ -61,8 +61,8 @@ class Array;
 /// `dwave::optimization::fraction`).
 struct SizeInfo {
     SizeInfo() : SizeInfo(0) {}
-    explicit SizeInfo(const std::integral auto size)
-        : array_ptr(nullptr), multiplier(0), offset(size), min(size), max(size) {
+    explicit SizeInfo(const std::integral auto size) :
+        array_ptr(nullptr), multiplier(0), offset(size), min(size), max(size) {
         assert(size >= 0);
     }
     explicit SizeInfo(const Array* array_ptr) : SizeInfo(array_ptr, std::nullopt, std::nullopt) {}
@@ -137,8 +137,8 @@ struct ValuesInfo {
 
     /// Construct a ValuesInfo from a fixed `min`/`max`/`integral`.
     ValuesInfo(double min, double max, bool integral) : min(min), max(max), integral(integral) {}
-    ValuesInfo(std::pair<double, double> minmax, bool integral)
-        : ValuesInfo(minmax.first, minmax.second, integral) {}
+    ValuesInfo(std::pair<double, double> minmax, bool integral) :
+        ValuesInfo(minmax.first, minmax.second, integral) {}
 
     /// Copy the min/max/integral from the array
     ValuesInfo(const Array* array_ptr);
@@ -189,8 +189,8 @@ struct ValuesInfo {
 // A slice represents a set of indices specified by range(start, stop, step).
 struct Slice {
     constexpr Slice() noexcept : Slice(std::nullopt, std::nullopt, std::nullopt) {}
-    explicit constexpr Slice(std::optional<ssize_t> stop) noexcept
-        : Slice(std::nullopt, stop, std::nullopt) {}
+    explicit constexpr Slice(std::optional<ssize_t> stop) noexcept :
+        Slice(std::nullopt, stop, std::nullopt) {}
     constexpr Slice(
         std::optional<ssize_t> start,
         std::optional<ssize_t> stop,
@@ -294,8 +294,8 @@ struct Slice {
 };
 
 struct Update {
-    constexpr Update(ssize_t index, double old, double value)
-        : index(index), old(old), value(value) {}
+    constexpr Update(ssize_t index, double old, double value) :
+        index(index), old(old), value(value) {}
 
     // Factory function to create an Update representing a new value added to
     // the array as part of a resize. In this case the old value is encoded as
@@ -548,12 +548,12 @@ class ArrayOutputMixin : public Base {
     // 1D array with n elements. -1 will create a 1D dynamic array.
     explicit ArrayOutputMixin(ssize_t n) : ArrayOutputMixin({n}) {}
 
-    explicit ArrayOutputMixin(std::initializer_list<ssize_t> shape)
-        : ArrayOutputMixin(std::span(shape)) {}
+    explicit ArrayOutputMixin(std::initializer_list<ssize_t> shape) :
+        ArrayOutputMixin(std::span(shape)) {}
 
     template <std::ranges::sized_range Range>
-    explicit ArrayOutputMixin(Range&& shape)
-        : ndim_(shape.size()), shape_(make_shape(std::forward<Range>(shape))) {}
+    explicit ArrayOutputMixin(Range&& shape) :
+        ndim_(shape.size()), shape_(make_shape(std::forward<Range>(shape))) {}
 
     ssize_t ndim() const noexcept final { return ndim_; }
 
@@ -735,13 +735,13 @@ std::vector<ssize_t> unravel_index(ssize_t index, std::span<const ssize_t> shape
 std::string shape_to_string(const std::span<const ssize_t> shape);
 
 template <std::ranges::viewable_range R>
-ValuesInfo::ValuesInfo(R&& array_ptrs)
-    : min(std::ranges::min(array_ptrs | std::views::transform([](const Array* ptr) {
-                               return ptr->min();
-                           }))),
-      max(std::ranges::max(array_ptrs | std::views::transform([](const Array* ptr) {
-                               return ptr->max();
-                           }))),
-      integral(std::ranges::all_of(array_ptrs, [](const Array* ptr) { return ptr->integral(); })) {}
+ValuesInfo::ValuesInfo(R&& array_ptrs) :
+    min(std::ranges::min(array_ptrs | std::views::transform([](const Array* ptr) {
+                             return ptr->min();
+                         }))),
+    max(std::ranges::max(array_ptrs | std::views::transform([](const Array* ptr) {
+                             return ptr->max();
+                         }))),
+    integral(std::ranges::all_of(array_ptrs, [](const Array* ptr) { return ptr->integral(); })) {}
 
 }  // namespace dwave::optimization

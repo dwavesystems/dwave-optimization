@@ -36,13 +36,13 @@ BSplineNode::BSplineNode(
     const int k,
     const std::vector<double> t,
     const std::vector<double> c
-)
-    : ArrayOutputMixin(array_ptr->size()),
-      array_ptr_(array_ptr),
-      k_(k),
-      t_(std::move(t)),
-      c_(std::move(c)),
-      minmax_(calculate_minmax(c_)) {
+) :
+    ArrayOutputMixin(array_ptr->size()),
+    array_ptr_(array_ptr),
+    k_(k),
+    t_(std::move(t)),
+    c_(std::move(c)),
+    minmax_(calculate_minmax(c_)) {
     if (!array_ptr) throw std::invalid_argument("node pointer cannot be nullptr");
     if (array_ptr->ndim() > 1) throw std::invalid_argument("node pointer cannot be multi-d array");
 

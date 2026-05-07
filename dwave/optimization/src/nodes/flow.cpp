@@ -49,12 +49,12 @@ std::span<const ssize_t> same_shape(
 
 /// ExtractNode
 
-ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr)
-    : ArrayOutputMixin({-1}),
-      condition_ptr_(condition_ptr),
-      arr_ptr_(arr_ptr),
-      values_info_(arr_ptr_),
-      sizeinfo_(this, 0, condition_ptr_->sizeinfo().max) {
+ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr) :
+    ArrayOutputMixin({-1}),
+    condition_ptr_(condition_ptr),
+    arr_ptr_(arr_ptr),
+    values_info_(arr_ptr_),
+    sizeinfo_(this, 0, condition_ptr_->sizeinfo().max) {
     if (condition_ptr_->sizeinfo() != arr_ptr_->sizeinfo()) {
         throw std::invalid_argument("condition and arr must have the same size");
     }
@@ -165,11 +165,11 @@ SizeInfo ExtractNode::sizeinfo() const { return this->sizeinfo_; }
 
 struct WhereNodeData : ArrayNodeStateData {
     // Initialize the state with the values given
-    explicit WhereNodeData(const Array::View values) noexcept
-        : ArrayNodeStateData(std::vector<double>(values.begin(), values.end())) {}
+    explicit WhereNodeData(const Array::View values) noexcept :
+        ArrayNodeStateData(std::vector<double>(values.begin(), values.end())) {}
 
-    explicit WhereNodeData(std::vector<double>&& values) noexcept
-        : ArrayNodeStateData(std::move(values)) {}
+    explicit WhereNodeData(std::vector<double>&& values) noexcept :
+        ArrayNodeStateData(std::move(values)) {}
 
     // Update the buffer according to the given diffs
     void apply_diffs(
@@ -240,13 +240,13 @@ SizeInfo wherenode_calculate_sizeinfo(const Array* node_ptr, const Array* condit
     return condition_ptr->sizeinfo();
 }
 
-WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_ptr)
-    : ArrayOutputMixin(same_shape(x_ptr, y_ptr)),
-      condition_ptr_(condition_ptr),
-      x_ptr_(x_ptr),
-      y_ptr_(y_ptr),
-      values_info_({x_ptr, y_ptr}),
-      sizeinfo_(wherenode_calculate_sizeinfo(this, condition_ptr_)) {
+WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_ptr) :
+    ArrayOutputMixin(same_shape(x_ptr, y_ptr)),
+    condition_ptr_(condition_ptr),
+    x_ptr_(x_ptr),
+    y_ptr_(y_ptr),
+    values_info_({x_ptr, y_ptr}),
+    sizeinfo_(wherenode_calculate_sizeinfo(this, condition_ptr_)) {
     // x and y where checked for nullptr by same_shape() above
     if (!condition_ptr_) throw std::invalid_argument("node pointer cannot be nullptr");
 

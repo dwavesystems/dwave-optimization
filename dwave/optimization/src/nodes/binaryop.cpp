@@ -186,14 +186,14 @@ bool calculate_integral(const Array* lhs_ptr, const Array* rhs_ptr) {
 }
 
 template <class BinaryOp>
-BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr)
-    : ArrayOutputMixin(broadcast_shapes(a_ptr->shape(), b_ptr->shape())),
-      operands_({a_ptr, b_ptr}),
-      values_info_(
-          calculate_values_minmax<BinaryOp>(operands_[0], operands_[1]),
-          calculate_integral<BinaryOp>(operands_[0], operands_[1])
-      ),
-      sizeinfo_(binaryop_calculate_sizeinfo(this, operands_[0], operands_[1])) {
+BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr) :
+    ArrayOutputMixin(broadcast_shapes(a_ptr->shape(), b_ptr->shape())),
+    operands_({a_ptr, b_ptr}),
+    values_info_(
+        calculate_values_minmax<BinaryOp>(operands_[0], operands_[1]),
+        calculate_integral<BinaryOp>(operands_[0], operands_[1])
+    ),
+    sizeinfo_(binaryop_calculate_sizeinfo(this, operands_[0], operands_[1])) {
     this->add_predecessor(a_ptr);
     this->add_predecessor(b_ptr);
 }

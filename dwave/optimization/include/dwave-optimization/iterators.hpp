@@ -46,8 +46,7 @@ concept shape_like = std::ranges::sized_range<T> and std::integral<std::ranges::
 /// `IsConst` toggles whether the iterator is an output iterator or not.
 /// `IsConst` must be `false` unless `To` is the same type as `From`.
 template <DType To, OptionalDType From = void, bool IsConst = true>
-    requires(IsConst || std::same_as<To, From>)
-class BufferIterator {
+requires(IsConst || std::same_as<To, From>) class BufferIterator {
  public:
     using difference_type = std::ptrdiff_t;
     using pointer = std::conditional<IsConst, const To*, To*>::type;
@@ -58,27 +57,24 @@ class BufferIterator {
     BufferIterator() = default;
 
     /// Copy Constructor.
-    BufferIterator(const BufferIterator& other) noexcept
-        : ptr_(other.ptr_),
-          format_(other.format_),
-          shape_(other.shape_ ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
+    BufferIterator(const BufferIterator& other) noexcept :
+        ptr_(other.ptr_),
+        format_(other.format_),
+        shape_(other.shape_ ? std::make_unique<ShapeInfo>(*other.shape_) : nullptr) {}
 
     /// Move Constructor.
     BufferIterator(BufferIterator&& other) = default;
 
     /// Construct a contiguous iterator pointing to `ptr` when `From` is `void`.
     template <DType T>
-    explicit BufferIterator(const T* ptr) noexcept
-        requires(!DType<From>)
+    explicit BufferIterator(const T* ptr) noexcept requires(!DType<From>)
         : ptr_(ptr), format_(format_of<T>()), shape_() {}
 
     /// Construct a contiguous iterator pointing to ptr when the type of ptr is
     /// known at compile-time.
-    explicit BufferIterator(const From* ptr) noexcept
-        requires(DType<From>)
+    explicit BufferIterator(const From* ptr) noexcept requires(DType<From>)
         : ptr_(ptr), format_(), shape_() {}
-    explicit BufferIterator(From* ptr) noexcept
-        requires(DType<From> && !IsConst)
+    explicit BufferIterator(From* ptr) noexcept requires(DType<From> && !IsConst)
         : ptr_(ptr), format_(), shape_() {}
 
     /// Construct a non-contiguous iterator from a shape/strides defined as
@@ -90,11 +86,10 @@ class BufferIterator {
         const ssize_t* shape,  // shape of the array
         const ssize_t* strides
     )  // strides for each dimension of the array
-        noexcept
-        requires(!DType<From>)
-        : ptr_(ptr),
-          format_(format_of<T>()),
-          shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
+        noexcept requires(!DType<From>) :
+        ptr_(ptr),
+        format_(format_of<T>()),
+        shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
 
     /// Construct a non-contiguous iterator from a shape/strides defined as
     /// ranges when `From` is `void`.
@@ -117,8 +112,7 @@ class BufferIterator {
         const ssize_t* shape,  // shape of the array
         const ssize_t* strides
     )  // strides for each dimension of the array
-        noexcept
-        requires(DType<From>)
+        noexcept requires(DType<From>)
         : ptr_(ptr), format_(), shape_(std::make_unique<ShapeInfo>(ndim, shape, strides)) {}
 
     /// Construct a non-contiguous iterator from a shape/strides defined as
@@ -145,24 +139,18 @@ class BufferIterator {
     ~BufferIterator() = default;
 
     /// Dereference the iterator when the iterator is an output iterator.
-    value_type& operator*() const noexcept
-        requires(std::same_as<To, From> && !IsConst)
-    {
+    value_type& operator*() const noexcept requires(std::same_as<To, From> && !IsConst) {
         return *static_cast<From*>(ptr_);
     }
 
     /// Dereference the iterator when it is not an output iterator, but To and From types
     /// are the same.
-    const value_type& operator*() const noexcept
-        requires(std::same_as<To, From> && IsConst)
-    {
+    const value_type& operator*() const noexcept requires(std::same_as<To, From> && IsConst) {
         return *static_cast<const From*>(ptr_);
     }
 
     /// Dereference the iterator when the iterator is not an output iterator.
-    value_type operator*() const noexcept
-        requires(!std::same_as<To, From> && IsConst)
-    {
+    value_type operator*() const noexcept requires(!std::same_as<To, From> && IsConst) {
         if constexpr (DType<From>) {
             // In this case we know at compile-time what type we're converting from
             return *static_cast<const From*>(ptr_);
@@ -365,19 +353,19 @@ class BufferIterator {
         ShapeInfo() = default;
 
         // Copy constructor
-        ShapeInfo(const ShapeInfo& other) noexcept
-            : ndim(other.ndim),
-              shape(other.shape),
-              strides(other.strides),
-              loc(std::make_unique<ssize_t[]>(ndim)) {
+        ShapeInfo(const ShapeInfo& other) noexcept :
+            ndim(other.ndim),
+            shape(other.shape),
+            strides(other.strides),
+            loc(std::make_unique<ssize_t[]>(ndim)) {
             std::copy(other.loc.get(), other.loc.get() + ndim, loc.get());
         }
 
         // Move Constructor
         ShapeInfo(ShapeInfo&& other) = default;
 
-        ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
-            : ndim(ndim), shape(shape), strides(strides), loc(std::make_unique<ssize_t[]>(ndim)) {
+        ShapeInfo(ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept :
+            ndim(ndim), shape(shape), strides(strides), loc(std::make_unique<ssize_t[]>(ndim)) {
             std::fill(loc.get(), loc.get() + ndim, 0);
         }
 
