@@ -123,7 +123,8 @@ class BufferIterator {
         }
     }
 
-    /// Convenience constructor when using shape/strides specified as ranges.
+    /// Convenience constructor when using shape/strides specified as spans (or things that can
+    /// be read using a span).
     template <OptionalDType T>
     BufferIterator(T* ptr, std::span<const ssize_t> shape, std::span<const ssize_t> strides)
             : BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
@@ -239,6 +240,7 @@ class BufferIterator {
         for (ssize_t axis = 0; axis < lhs.ndim_; ++axis) {
             if (lhs.loc_[axis] != rhs.loc_[axis]) return false;
         }
+        assert(lhs.ptr_ == rhs.ptr_ && "lhs must be reachable from rhs but lhs and rhs");
         return true;
     }
 
