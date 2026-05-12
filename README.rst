@@ -86,7 +86,7 @@ for more details.
 .. code-block:: bash
 
     pip install --group dev --group blas
-    pip install --editable . \
+    FORCE_PKGCONF_PYPI=1 pip install --editable . \
         --no-build-isolation \
         --config-settings=editable-verbose=true \
         --config-settings=setup-args="-Dblas=enabled"
