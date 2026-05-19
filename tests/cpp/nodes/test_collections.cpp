@@ -446,6 +446,68 @@ TEST_CASE("ListNode") {
         CHECK(sizeinfo.min == 0);
         CHECK(sizeinfo.max == 0);
     }
+
+    GIVEN("A list(10, min_size=2, max_size=5)") {
+        auto l_ptr = graph.emplace_node<ListNode>(10, 2, 5);
+
+        // Add a validation node
+        graph.emplace_node<ArrayValidationNode>(l_ptr);
+
+        WHEN("We default-initialize the state") {
+            auto state = graph.initialize_state();
+
+            THEN("The node's state defaults to range(2)") {
+                CHECK_THAT(l_ptr->view(state), RangeEquals({0, 1}));
+                CHECK(l_ptr->size(state) == 2);
+                CHECK_THAT(l_ptr->shape(state), RangeEquals({2}));
+            }
+        }
+
+        WHEN("We initialize the state to the max size") {
+            auto state = graph.empty_state();
+            l_ptr->initialize_state(state, {0, 1, 2, 3, 4});
+            graph.initialize_state(state);
+
+            THEN("The node's state is correct") {
+                CHECK_THAT(l_ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
+                CHECK(l_ptr->size(state) == 5);
+                CHECK_THAT(l_ptr->shape(state), RangeEquals({5}));
+            }
+
+            AND_WHEN("We then mutate the node and propagate") {
+                l_ptr->exchange(state, 1, 3);  // [0 3 2 1 4]
+                l_ptr->exchange(state, 1, 2);  // [0 2 3 1 4]
+                l_ptr->shrink(state);          // [0 2 3 1]
+                l_ptr->shrink(state);          // [0 2 3]
+                l_ptr->exchange(state, 0, 7);  // [7 2 3]
+                l_ptr->grow(state);            // [7 2 3 1]
+
+                graph.propagate(state, graph.descendants(state, {l_ptr}));
+
+                THEN("The node's state reflects the relevant changes") {
+                    CHECK_THAT(l_ptr->view(state), RangeEquals({7, 2, 3, 1}));
+                }
+
+                AND_WHEN("We commit") {
+                    graph.commit(state, graph.descendants(state, {l_ptr}));
+
+                    THEN("The changes persist") {
+                        CHECK_THAT(l_ptr->view(state), RangeEquals({7, 2, 3, 1}));
+                        CHECK(l_ptr->diff(state).size() == 0);
+                    }
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state, graph.descendants(state, {l_ptr}));
+
+                    THEN("The changes are undone") {
+                        CHECK_THAT(l_ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
+                        CHECK(l_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+        }
+    }
 }
 
 TEST_CASE("SetNode") {
