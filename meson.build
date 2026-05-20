@@ -52,6 +52,7 @@ dwave_optimization_src = [
     'dwave/optimization/src/array.cpp',
     'dwave/optimization/src/fraction.cpp',
     'dwave/optimization/src/graph.cpp',
+    'dwave/optimization/src/interval.cpp',
     'dwave/optimization/src/simplex.cpp',
 ]
 
