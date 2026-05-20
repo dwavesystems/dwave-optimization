@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Fix an issue with ``ListVariable``s with a maximum size set to less than
+    ``n``, the size of the main set. In this case the underlying node's state
+    was not initialized correctly causing some valid operations to later fail.

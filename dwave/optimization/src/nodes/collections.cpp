@@ -835,7 +835,7 @@ ssize_t DisjointListNode::size_diff(const State& state) const {
 }
 
 void ListNode::initialize_state(State& state) const {
-    emplace_data_ptr<CollectionStateData>(state, max_size_);
+    emplace_data_ptr<CollectionStateData>(state, max_value_, min_size_);
 }
 
 void SetNode::initialize_state(State& state) const {
