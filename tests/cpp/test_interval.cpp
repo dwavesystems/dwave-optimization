@@ -15,8 +15,11 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
+#include <catch2/matchers/catch_matchers_range_equals.hpp>
 
 #include "dwave-optimization/interval.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -46,24 +49,73 @@ TEMPLATE_TEST_CASE(
         CHECK(in.contains(0));
         CHECK(not in.contains(1));
         CHECK(not in.contains(std::numeric_limits<double>::epsilon()));
+    }
 
-        auto [inf, sup] = in;
-        STATIC_REQUIRE(std::same_as<decltype(inf), TestType>);
-        STATIC_REQUIRE(std::same_as<decltype(sup), TestType>);
-        CHECK(inf == 0);
-        CHECK(sup == 0);
+    SECTION("get<...>(interval)") {
+        SECTION("const rvalue") {
+            const interval<TestType> in{0, 1};
+            const TestType&& inf = get<0>(std::move(in));
+            CHECK(inf == 0);
+        }
+    }
+
+    SECTION("printing") {
+        std::stringstream ss;
+        ss << interval<TestType>(0, 1);
+        CHECK(ss.str() == "[0, 1]");
+    }
+
+    SECTION("structured binding") {
+        SECTION("const reference") {
+            auto in = interval<TestType>(0, 1);
+            const auto& [inf, sup] = in;
+            STATIC_REQUIRE(std::same_as<decltype(inf), const TestType>);
+            STATIC_REQUIRE(std::same_as<decltype(sup), const TestType>);
+            CHECK(inf == 0);
+            CHECK(sup == 1);
+        }
+
+        SECTION("rvalue") {
+            auto in = interval<TestType>(0, 1);
+            auto [inf, sup] = in;
+            STATIC_REQUIRE(std::same_as<decltype(inf), TestType>);
+            STATIC_REQUIRE(std::same_as<decltype(sup), TestType>);
+            CHECK(inf == 0);
+            CHECK(sup == 1);
+        }
+
+        SECTION("const rvalue") {
+            const auto in = interval<TestType>(0, 1);
+
+            auto&& [inf, sup] = in;
+            STATIC_REQUIRE(std::same_as<decltype(inf), const TestType>);
+            STATIC_REQUIRE(std::same_as<decltype(sup), const TestType>);
+            CHECK(inf == 0);
+            CHECK(sup == 1);
+        }
     }
 }
 
 TEST_CASE("interval") {
-    SECTION("union operations") {
+    SECTION("addition") {
+        CHECK((interval<int>(0, 3) + interval<float>(.5, .5)) == interval<float>(.5, 3.5));
+    }
+
+    SECTION("union") {
         auto in = interval<int>();
         in |= .5;
         CHECK(in == interval<int>(0, 1));
         in |= -5;
         CHECK(in == interval<int>(-5, 1));
+
+        CHECK((interval<int>(0, 1) | interval<double>(.5, 1.5)) == interval<double>(0, 1.5));
+        CHECK((interval<float>(0, 1) | interval<double>(.5, 1.5)) == interval<double>(0, 1.5));
+        CHECK((interval<float>(0, 1.5) | interval<bool>(0, 1)) == interval<float>(0, 1.5));
     }
-    // CHECK((interval<int>() | static_cast<float>(.5)) == interval<float>(0, 1));
+
+    SECTION("Copy construction") {
+        CHECK(interval<int>(interval<float>(.2, .8)) == interval<int>(0, 1));
+    }
 }
 
 }  // namespace dwave::optimization

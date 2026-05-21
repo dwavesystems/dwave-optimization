@@ -13,7 +13,18 @@
 //    limitations under the License.
 
 #include "dwave-optimization/interval.hpp"
+#include "dwave-optimization/common.hpp"  // for ssize_t
+#include "dwave-optimization/typing.hpp"
+
+#include <iostream>
 
 namespace dwave::optimization {
+
+std::ostream& operator<<(std::ostream& os, const interval<std::int64_t>& rhs) {
+    return os << "[" << rhs.infimum() << ", " << rhs.supremum() << "]";
+}
+std::ostream& operator<<(std::ostream& os, const interval<double>& rhs) {
+    return os << "[" << rhs.infimum() << ", " << rhs.supremum() << "]";
+}
 
 }  // namespace dwave::optimization
