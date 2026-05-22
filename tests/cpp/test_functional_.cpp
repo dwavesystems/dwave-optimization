@@ -12,9 +12,10 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#include "catch2/catch_template_test_macros.hpp"
-#include "catch2/catch_test_macros.hpp"
-#include "catch2/generators/catch_generators.hpp"
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
+
 #include "functional_.hpp"
 
 namespace dwave::optimization::functional_ {
