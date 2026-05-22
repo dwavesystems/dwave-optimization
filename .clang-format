@@ -40,7 +40,7 @@ PenaltyReturnTypeOnItsOwnLine: 1000
 IncludeCategories:
   - Regex: '<[^.>]+>'
     Priority: 1
-  - Regex: '<catch2.+\.hpp>'
+  - Regex: '<(catch2|cblas).*\.(h|hpp)>'
     Priority: 3
   - Regex: '<.+\.(h|hpp)>'
     Priority: 2
