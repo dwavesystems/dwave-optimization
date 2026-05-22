@@ -29,4 +29,21 @@ RequiresClausePosition: SingleLine
 
 # Prevent putting the return type on its own line most of the time
 PenaltyReturnTypeOnItsOwnLine: 1000
+
+# Our header order should be
+# 1) The "main" include, i.e., the corresponding .hpp file to a .cpp file. clang-format
+#    handles that separately
+# 2) All includes with <> without an extension, i.e., the std
+# 3) All includes with <> with an extension, e.g., #include <sys/types.h>
+# 4) 3rd party includes, i.e., catch2
+# 5) All includes with ""
+IncludeCategories:
+  - Regex: '<[^.>]+>'
+    Priority: 1
+  - Regex: '<(catch2|cblas).*\.(h|hpp)>'
+    Priority: 3
+  - Regex: '<.+\.(h|hpp)>'
+    Priority: 2
+  - Regex: '".+"'
+    Priority: 4
 ...

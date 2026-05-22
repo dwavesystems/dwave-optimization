@@ -18,15 +18,15 @@
 #include <array>
 #include <ranges>
 
+#if __has_include(<openblas_config.h>) and __has_include(<cblas.h>)
+#include <cblas.h>
+#define HAS_BLAS_
+#endif
+
 #include "../functional_.hpp"
 #include "_state.hpp"
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/state.hpp"
-
-#if __has_include(<openblas_config.h>) and __has_include(<cblas.h>)
-#include "cblas.h"
-#define HAS_BLAS_
-#endif
 
 namespace dwave::optimization {
 
