@@ -35,6 +35,7 @@ tests_all = executable(
         'test_functional.cpp',
         'test_functional_.cpp',
         'test_graph.cpp',
+        'test_interval.cpp',
         'test_iterators.cpp',
         'test_simplex.cpp',
         'test_type_list.cpp',

@@ -1,0 +1,3 @@
+---
+features:
+  - Add C++ ``interval<T>()`` class for interval arithmetic.
