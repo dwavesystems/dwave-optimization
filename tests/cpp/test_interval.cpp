@@ -114,7 +114,8 @@ TEST_CASE("interval") {
     }
 
     SECTION("Copy construction") {
-        CHECK(interval<int>(interval<float>(.2, .8)) == interval<int>(0, 1));
+        // truncates
+        CHECK(interval<int>(interval<float>(.2, .8)) == interval<int>(0, 0));
     }
 }
 

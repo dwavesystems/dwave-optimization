@@ -24,8 +24,11 @@
 
 #pragma once
 
+#include <cmath>
+
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/functional.hpp"
+#include "dwave-optimization/interval.hpp"
 #include "dwave-optimization/typing.hpp"
 
 namespace dwave::optimization::functional_ {
@@ -84,6 +87,24 @@ struct BinaryFunctionMixin {
     template <std::ranges::range Range, DType T>
     static auto reduce(Range&& range, T initial) {
         return reduce(std::forward<Range>(range), std::optional<T>(initial));
+    }
+};
+
+template <typename UnaryFunction>
+struct UnaryFunctionMixin {};
+
+template <DType T>
+struct Abs : UnaryFunctionMixin<Abs<T>> {
+    using result_type = T;
+
+    constexpr T operator()(DType auto&& x) const noexcept {
+        return std::abs(x);
+    }
+
+    template<DType U>
+    interval<T> operator()(const interval<U>& in) const noexcept {
+        // first get the absolute value, using the type of the input interval
+        return static_cast<interval<T>>((-in | in) & interval<U>::nonnegative());
     }
 };
 

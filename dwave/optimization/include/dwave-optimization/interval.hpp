@@ -43,8 +43,7 @@ requires(not std::is_const_v<T>) class interval {
     interval& operator=(const interval&) = default;
     interval& operator=(interval&&) = default;
 
-    // todo: note the difference between interval<int>(.5, .5) and interval<int>(interval<float>(.5,
-    // .5))
+    // todo: note the difference between interval<int>(.5, .5) and union operations
     explicit interval(T value) noexcept : interval(value, value) {}
     interval(T infimum, T supremum) noexcept : infimum_(infimum), supremum_(supremum) {
         assert(not std::isnan(infimum_) and "infimum must not be nan");
@@ -52,24 +51,17 @@ requires(not std::is_const_v<T>) class interval {
     }
 
     template <DType U>
-    explicit(std::integral<T> != std::integral<U>) interval(const interval<U>& rhs) : interval() {
-        *this = rhs;
-    }
+    explicit(std::integral<T> != std::integral<U>) interval(const interval<U>& rhs) :
+        infimum_(rhs.infimum()), supremum_(rhs.supremum()) {}
     template <DType U>
-    explicit(std::integral<T> != std::integral<U>) interval(interval<U>&& rhs) : interval() {
-        *this = rhs;
-    }
+    explicit(std::integral<T> != std::integral<U>) interval(interval<U>&& rhs) :
+        infimum_(rhs.infimum()), supremum_(rhs.supremum()) {}
 
     template <DType U>
     interval& operator=(const interval<U>& rhs) {
         // dev note: numeric issues
-        if constexpr (std::floating_point<U> and std::integral<T>) {
-            infimum_ = std::floor(rhs.infimum());
-            supremum_ = std::ceil(rhs.supremum());
-        } else {
-            infimum_ = rhs.infimum();
-            supremum_ = rhs.supremum();
-        }
+        infimum_ = rhs.infimum();
+        supremum_ = rhs.supremum();
         return *this;
     }
 
@@ -80,6 +72,44 @@ requires(not std::is_const_v<T>) class interval {
         return infimum_ == rhs.infimum_ and supremum_ == rhs.supremum_;
     }
 
+    interval operator-() const { return interval(-supremum_, -infimum_); }
+
+    template <DType U>
+    interval& operator&=(const interval<U>& rhs) {
+        // if lhs is an empty interval than the result is also empty
+        if (not static_cast<bool>(*this)) return *this;
+
+        // if rhs is an empty interval, then set lhs to rhs (making lhs empty)
+        if (not static_cast<bool>(rhs)) {
+            // if lhs is an empty interval, then set it to rhs (which we know is not empty)
+            if constexpr (std::integral<T> and std::floating_point<U>) {
+                infimum_ = std::floor(rhs.infimum());
+                supremum_ = std::ceil(rhs.supremum());
+            } else {
+                infimum_ = rhs.infimum();
+                supremum_ = rhs.supremum();
+            }
+        } else {
+            // otherwise, adjust our interval to be the union
+            if constexpr (std::integral<T> and std::floating_point<U>) {
+                infimum_ = std::max<T>(infimum_, std::floor(rhs.infimum()));
+                supremum_ = std::min<T>(supremum_, std::ceil(rhs.supremum()));
+            } else {
+                infimum_ = std::max<T>(infimum_, rhs.infimum());
+                supremum_ = std::min<T>(supremum_, rhs.supremum());
+            }
+        }
+
+        return *this;
+    }
+
+    template <DType U>
+    friend auto operator&(interval lhs, const interval<U>& rhs) {
+        interval<decltype(T() + U())> out(std::move(lhs));
+        out &= rhs;
+        return out;
+    }
+
     interval& operator|=(DType auto scalar) { return *this |= interval<decltype(scalar)>(scalar); }
 
     template <DType U>
@@ -87,18 +117,27 @@ requires(not std::is_const_v<T>) class interval {
         // if rhs is an empty interval, do nothing
         if (not static_cast<bool>(rhs)) return *this;
 
-        // if lhs is an empty interval, then set it to rhs (which we know is not empty)
-        if (not static_cast<bool>(*this)) return *this = rhs;
-
-        // otherwise, adjust our interval to also contain the other.
         // dev note: numeric issues
-        if constexpr (std::integral<T> and std::floating_point<U>) {
-            infimum_ = std::min<T>(infimum_, std::floor(rhs.infimum()));
-            supremum_ = std::max<T>(supremum_, std::ceil(rhs.supremum()));
+        if (not static_cast<bool>(*this)) {
+            // if lhs is an empty interval, then set it to rhs (which we know is not empty)
+            if constexpr (std::integral<T> and std::floating_point<U>) {
+                infimum_ = std::floor(rhs.infimum());
+                supremum_ = std::ceil(rhs.supremum());
+            } else {
+                infimum_ = rhs.infimum();
+                supremum_ = rhs.supremum();
+            }
         } else {
-            infimum_ = std::min<T>(infimum_, rhs.infimum());
-            supremum_ = std::max<T>(supremum_, rhs.supremum());
+            // otherwise, adjust our interval to also contain the other.
+            if constexpr (std::integral<T> and std::floating_point<U>) {
+                infimum_ = std::min<T>(infimum_, std::floor(rhs.infimum()));
+                supremum_ = std::max<T>(supremum_, std::ceil(rhs.supremum()));
+            } else {
+                infimum_ = std::min<T>(infimum_, rhs.infimum());
+                supremum_ = std::max<T>(supremum_, rhs.supremum());
+            }
         }
+
         return *this;
     }
 
@@ -163,6 +202,15 @@ requires(not std::is_const_v<T>) class interval {
     }
 
     const T& infimum() const noexcept { return infimum_; }
+
+    static interval nonnegative() {
+        using limits = std::numeric_limits<T>;
+        if constexpr (limits::has_infinity) {
+            return interval(0, limits::infinity());
+        } else {
+            return interval(0, limits::max());
+        }
+    }
 
     /// The size of the interval is the max(supremum_ - infimum_, 0)
     double size() const noexcept requires(std::floating_point<T>) {

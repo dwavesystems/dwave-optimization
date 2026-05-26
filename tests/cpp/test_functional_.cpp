@@ -12,12 +12,42 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#include "catch2/catch_template_test_macros.hpp"
-#include "catch2/catch_test_macros.hpp"
-#include "catch2/generators/catch_generators.hpp"
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
+
+#include "dwave-optimization/interval.hpp"
 #include "functional_.hpp"
 
 namespace dwave::optimization::functional_ {
+
+TEST_CASE("Abs") {
+    SECTION(".operator(...)") {
+        SECTION("Abs<double>") {
+            const Abs<double> op;
+
+            CHECK(op(1.5) == 1.5);
+            CHECK(op(-1) == 1);
+            CHECK(op(static_cast<const double>(1.5)) == 1.5);
+
+            CHECK(op(interval(-1, 1)) == interval<double>(0, 1));
+            CHECK(op(interval(-12.5, 1.)) == interval<double>(0, 12.5));
+        }
+        SECTION("Abs<int>") {
+            const Abs<int> op;
+
+            CHECK(op(1.999) == 1);  // going to int truncates
+            CHECK(op(-1.999) == 1);  // going to int truncates
+            CHECK(op(-1) == 1);
+            CHECK(op(static_cast<const double>(-1.9999999)) == 1);
+
+            CHECK(op(interval(-1, 1)) == interval<int>(0, 1));
+
+            // because abs itself truncates, we want our bounds to also be truncated
+            CHECK(op(interval(-12.5, 1.)) == interval<int>(0, 12));
+        }
+    }
+}
 
 TEST_CASE("Add") {
     static_assert(Add<double>::associative);
