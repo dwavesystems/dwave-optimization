@@ -35,4 +35,11 @@ struct NodeStateData {
 
 using State = typename std::vector<std::unique_ptr<NodeStateData>>;
 
+struct NodeStateCheckpoint {
+    virtual ~NodeStateCheckpoint() = default;
+
+    // TODO: better name?
+    virtual bool valid() = 0;
+};
+
 }  // namespace dwave::optimization

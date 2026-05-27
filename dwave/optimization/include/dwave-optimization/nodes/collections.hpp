@@ -68,6 +68,10 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // Set the node's state, tracking the diff.
     void assign(State& state, std::vector<double> values) const;
 
+    void assign_from_checkpoint(State& state, std::unique_ptr<NodeStateCheckpoint>&& checkpoint) const;
+
+    std::unique_ptr<NodeStateCheckpoint> checkpoint(State& state) const;
+
     // Exchange the values in the list at index i and index j
     // Note that for variable-length collections these indices might not
     // be in the "visible" range.

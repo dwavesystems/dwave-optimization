@@ -66,6 +66,46 @@ std::vector<double> augment_collection(std::vector<double> values, const ssize_t
     return values;
 }
 
+struct CollectionStateData;
+
+struct CollectionStateCheckpoint_ : NodeStateCheckpoint {
+    // We want our checkpoint to be moveable but not copyable or default constructable
+    CollectionStateCheckpoint_() = delete;
+    CollectionStateCheckpoint_(const CollectionStateCheckpoint_&) = delete;
+    CollectionStateCheckpoint_(CollectionStateCheckpoint_&&) = default;
+    CollectionStateCheckpoint_& operator=(const CollectionStateCheckpoint_&) = delete;
+    CollectionStateCheckpoint_& operator=(CollectionStateCheckpoint_&&) = default;
+
+    ~CollectionStateCheckpoint_();
+
+    CollectionStateCheckpoint_(CollectionStateData* state_ptr) noexcept;
+
+    void emplace_updates(std::vector<Update>&& updates) {
+        this->updates.emplace_back(std::move(updates));
+    }
+    void emplace_updates(CollectionStateCheckpoint_& other) {
+        updates.insert(updates.end(), other.updates.begin(), other.updates.end());
+        // assert that we used move?
+    }
+
+    void reset() {
+        updates.clear();
+        state_ptr = nullptr;
+    }
+
+    bool valid() override { return state_ptr != nullptr; }
+
+    CollectionStateData* state_ptr;
+
+    // the size of the array at the time the checkpoint was made
+    const ssize_t size;
+
+    // all of the updates since the checkpoint was made (until the next checkpoint)
+    // we could keep them as a flat vector of updates but this way the move semantics
+    // are fast
+    std::vector<std::vector<Update>> updates;
+};
+
 struct CollectionStateData : NodeStateData {
     explicit CollectionStateData(ssize_t n) : CollectionStateData(n, n) {}
 
@@ -83,6 +123,14 @@ struct CollectionStateData : NodeStateData {
     CollectionStateData(std::vector<double> elements, ssize_t size) :
         elements(std::move(elements)), size(size) {
         assert(0 <= size && static_cast<std::size_t>(size) <= this->elements.size());
+    }
+
+    ~CollectionStateData() {
+        // in case the state gets deallocated before the checkpoints we don't want
+        // a segfault
+        for (CollectionStateCheckpoint_* checkpoint_ptr : checkpoints) {
+            checkpoint_ptr->state_ptr = nullptr;
+        }
     }
 
     void assign(std::vector<double>&& values, ssize_t size) {
@@ -111,9 +159,59 @@ struct CollectionStateData : NodeStateData {
         assert(this->size == size);
     }
 
+    void assign_from_checkpoint(std::unique_ptr<CollectionStateCheckpoint_>&& checkpoint) {
+        // we once again have ownership of the checkpoint! Walk backwards through out checkpoints
+        // changing our values until we hit it
+
+        // this is actually easy to support if we want to
+        assert(all_updates.empty() and "cannot assign a checkpoint after mutating");
+
+        assert(not checkpoints.empty());
+        for (ssize_t i = checkpoints.size() - 1; i >= 0; --i) {
+            // unapply all the changes in this checkpoint
+            for (const auto& diff : checkpoints[i]->updates | std::views::reverse) {
+                for (const auto [idx, old, _] : diff | std::views::reverse) {
+                    all_updates.emplace_back(idx, elements[idx], old);
+                    if (idx < size) updates.emplace_back(idx, elements[idx], old);
+                    elements[idx] = old;
+                }
+            }
+
+            checkpoints[i]->reset();
+
+            if (checkpoints[i] == checkpoint.get()) {
+                // we found the checkpoint we were looking for!
+                if (checkpoints[i]->size != size) {
+                    assert(false and "not yet implemented");
+                }
+                checkpoints.erase(checkpoints.begin() + i, checkpoints.end());
+                return;
+            }
+        }
+
+        assert(false);
+    }
+
+    std::unique_ptr<CollectionStateCheckpoint_> checkpoint() {
+        assert(all_updates.empty() and "cannot checkpoint after mutating, commit or revert first");
+
+        auto checkpoint = std::make_unique<CollectionStateCheckpoint_>(this);
+
+        checkpoints.emplace_back(checkpoint.get());
+
+        return checkpoint;
+    }
+
     void commit() {
         updates.clear();
-        all_updates.clear();
+        if (checkpoints.empty()) {
+            // we don't have any checkpoints that we need to revert to, so just
+            // clear the updates
+            all_updates.clear();
+        } else {
+            // append any updates to the most revent checkpoint
+            checkpoints.back()->emplace_updates(std::move(all_updates));
+        }
         previous_size = size;
     }
 
@@ -145,6 +243,23 @@ struct CollectionStateData : NodeStateData {
         assert(size < static_cast<ssize_t>(elements.size()));
         updates.emplace_back(Update::placement(size, elements[size]));
         ++size;
+    }
+
+    /// Deconstruct a checkpoint without reverting the state to it.
+    void remove_checkpoint(CollectionStateCheckpoint_* checkpoint) {
+        assert(not checkpoints.empty() and "checkpoints unexpectedly empty");
+
+        for (ssize_t i = 0, num_checkpoints = checkpoints.size(); i < num_checkpoints; ++i) {
+            if (checkpoints[i] == checkpoint) {
+                if (i > 0) {
+                    checkpoints[i - 1]->emplace_updates(*checkpoint);
+                }
+                checkpoints.erase(checkpoints.begin() + i);
+                return;
+            }
+        }
+
+        assert(false and "given checkpoint not tracked by the state");
     }
 
     void revert() {
@@ -204,7 +319,16 @@ struct CollectionStateData : NodeStateData {
     // commit/revert
     ssize_t size;
     ssize_t previous_size = size;
+
+    std::vector<CollectionStateCheckpoint_*> checkpoints;
 };
+
+CollectionStateCheckpoint_::CollectionStateCheckpoint_(CollectionStateData* state_ptr) noexcept :
+    state_ptr(state_ptr), size(state_ptr->size) {}
+
+CollectionStateCheckpoint_::~CollectionStateCheckpoint_() {
+    if (state_ptr != nullptr) state_ptr->remove_checkpoint(this);
+}
 
 void CollectionNode::assign(State& state, std::vector<double> values) const {
     const ssize_t size = values.size();
@@ -217,11 +341,26 @@ void CollectionNode::assign(State& state, std::vector<double> values) const {
     data_ptr<CollectionStateData>(state)->assign(std::move(augemented), size);
 }
 
+void CollectionNode::assign_from_checkpoint(
+    State& state,
+    std::unique_ptr<NodeStateCheckpoint>&& checkpoint
+) const {
+    data_ptr<CollectionStateData>(state)->assign_from_checkpoint(
+        std::unique_ptr<CollectionStateCheckpoint_>(
+            static_cast<CollectionStateCheckpoint_*>(checkpoint.release())
+        )
+    );
+}
+
 void CollectionNode::commit(State& state) const { data_ptr<CollectionStateData>(state)->commit(); }
 
 double const* CollectionNode::buff(const State& state) const {
     auto ptr = data_ptr<CollectionStateData>(state);
     return ptr->elements.data();
+}
+
+std::unique_ptr<NodeStateCheckpoint> CollectionNode::checkpoint(State& state) const {
+    return data_ptr<CollectionStateData>(state)->checkpoint();
 }
 
 std::span<const Update> CollectionNode::diff(const State& state) const {
