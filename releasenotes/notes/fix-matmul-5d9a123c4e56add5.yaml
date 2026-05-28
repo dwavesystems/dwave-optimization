@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Fix ``MatrixMultiply`` symbol when multiplying non-contiguous arrays and/or
+    arrays with size 1 in one dimension.
+    See `#553 <https://github.com/dwavesystems/dwave-optimization/issues/553>`_.

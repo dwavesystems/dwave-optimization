@@ -2782,6 +2782,66 @@ class TestMatrixMultiply(utils.SymbolTests):
                 model.states.resize(1)
                 self.assertTrue(np.array_equal(mm.state(0), np_res))
 
+    def test_outer_product(self):
+        # https://github.com/dwavesystems/dwave-optimization/issues/553
+        model = Model()
+
+        x = model.integer(shape=(1, 3))
+        xTx = matmul(dwave.optimization.transpose(x), x)
+
+        y = model.integer(shape=(3, 1))
+        yyT = matmul(y, dwave.optimization.transpose(y))
+
+        with model.lock():
+            model.states.resize(1)
+            x.set_state(0, [5] * 3)
+            y.set_state(0, [5] * 3)
+            np.testing.assert_array_equal(xTx.state(), yyT.state())
+
+    def test_strided_one_dimension(self):
+        # We want an (n,n) matrix that's strided in one of the two dimensions
+        model = Model()
+
+        arr = np.zeros((6, 3), dtype=int)
+        arr[::2, :] = np.arange(9).reshape(3, 3)
+
+        a = arr[::2, :]  # array version
+        A = model.constant(arr)[::2, :]  # symbol version
+
+        AA = A @ A
+        ATA = dwave.optimization.transpose(A) @ A
+        AAT = A @ dwave.optimization.transpose(A)
+        ATAT = dwave.optimization.transpose(A) @ dwave.optimization.transpose(A)
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(a @ a, AA.state())
+            np.testing.assert_array_equal(a.T @ a, ATA.state())
+            np.testing.assert_array_equal(a @ a.T, AAT.state())
+            np.testing.assert_array_equal(a.T @ a.T, ATAT.state())
+
+    def test_strided_two_dimensions(self):
+        # We want an (n,n) matrix that's strided in one of the two dimensions
+        model = Model()
+
+        arr = np.zeros((6, 6), dtype=int)
+        arr[::2, ::2] = np.arange(9).reshape(3, 3)
+
+        a = arr[::2, ::2]  # array version
+        A = model.constant(arr)[::2, ::2]  # symbol version
+
+        AA = A @ A
+        ATA = dwave.optimization.transpose(A) @ A
+        AAT = A @ dwave.optimization.transpose(A)
+        ATAT = dwave.optimization.transpose(A) @ dwave.optimization.transpose(A)
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(a @ a, AA.state())
+            np.testing.assert_array_equal(a.T @ a, ATA.state())
+            np.testing.assert_array_equal(a @ a.T, AAT.state())
+            np.testing.assert_array_equal(a.T @ a.T, ATAT.state())
+
     @staticmethod
     def _shaped_range(*shape):
         return np.arange(np.prod(shape)).reshape(shape)
