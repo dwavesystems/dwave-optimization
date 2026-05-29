@@ -231,39 +231,269 @@ TEST_CASE("IsInNode") {
     }
 
     GIVEN("Two dynamic set nodes and an isin node") {
-            auto set1_ptr = graph.emplace_node<SetNode>(6);
-            auto set2_ptr = graph.emplace_node<SetNode>(6);
-            auto isin_ptr = graph.emplace_node<IsInNode>(set1_ptr, set2_ptr);
-            graph.emplace_node<ArrayValidationNode>(isin_ptr);
+        auto set1_ptr = graph.emplace_node<SetNode>(6);
+        auto set2_ptr = graph.emplace_node<SetNode>(6);
+        auto isin_ptr = graph.emplace_node<IsInNode>(set1_ptr, set2_ptr);
+        graph.emplace_node<ArrayValidationNode>(isin_ptr);
 
-            CHECK(isin_ptr->size() == -1);
+        CHECK(isin_ptr->size() == -1);
 
-            WHEN("We initialize a state") {
-                auto state = graph.initialize_state();
+        WHEN("We initialize a state") {
+            auto state = graph.initialize_state();
 
-                AND_WHEN("We assign the set nodes and propagate") {
-                    set1_ptr->assign(state, std::vector<double>{2});
-                    set2_ptr->assign(state, std::vector<double>{2});
+            AND_WHEN("We assign the set nodes and propagate") {
+                set1_ptr->assign(state, std::vector<double>{2});
+                set2_ptr->assign(state, std::vector<double>{2});
+                graph.propagate(state);
+
+                THEN("The isin's state is correct") {
+                    CHECK_THAT(isin_ptr->view(state), RangeEquals({1.0}));
+                }
+
+                AND_WHEN("We commit, shrink the state of both set nodes, and propagate") {
+                    graph.commit(state);
+
+                    set1_ptr->shrink(state);
+                    set2_ptr->shrink(state);
+
                     graph.propagate(state);
 
                     THEN("The isin's state is correct") {
-                        CHECK_THAT(isin_ptr->view(state), RangeEquals({1.0}));
+                        CHECK(isin_ptr->view(state).size() == 0);
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("DisjointCoverNode") {
+    auto graph = Graph();
+
+    GIVEN("Two constant nodes that are disjoint") {
+        auto c1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2});
+        auto c2_ptr = graph.emplace_node<ConstantNode>(std::vector{3, 4});
+
+        THEN("We can construct a DisjointCover node") {
+            auto dc_ptr =
+                graph.emplace_node<DisjointCoverNode>(5, std::vector<ArrayNode*>{c1_ptr, c2_ptr});
+            graph.emplace_node<ArrayValidationNode>(dc_ptr);
+
+            CHECK(dc_ptr->min() == 0.0);
+            CHECK(dc_ptr->max() == 1.0);
+            CHECK(dc_ptr->integral());
+            CHECK(dc_ptr->logical());
+
+            AND_WHEN("We initialize a state") {
+                auto state = graph.initialize_state();
+
+                THEN("The initial DisjointCover state is correct") {
+                    CHECK_THAT(dc_ptr->view(state), RangeEquals({1.0}));
+                }
+            }
+        }
+        THEN("We can construct a DisjointCover node with a larger primary set size") {
+            auto dc_ptr =
+                graph.emplace_node<DisjointCoverNode>(6, std::vector<ArrayNode*>{c1_ptr, c2_ptr});
+            graph.emplace_node<ArrayValidationNode>(dc_ptr);
+
+            CHECK(dc_ptr->min() == 0.0);
+            CHECK(dc_ptr->max() == 1.0);
+            CHECK(dc_ptr->integral());
+            CHECK(dc_ptr->logical());
+
+            AND_WHEN("We initialize a state") {
+                auto state = graph.initialize_state();
+
+                THEN("The initial DisjointCover state is correct") {
+                    CHECK_THAT(dc_ptr->view(state), RangeEquals({0.0}));
+                }
+            }
+        }
+        THEN("We cannot construct a DisjointCover node with a smaller primary set size") {
+            CHECK_THROWS(
+                graph.emplace_node<DisjointCoverNode>(4, std::vector<ArrayNode*>{c1_ptr, c2_ptr})
+            );
+        }
+    }
+
+    GIVEN("Two constant nodes that are disjoint but not sets") {
+        auto c1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 2});
+        auto c2_ptr = graph.emplace_node<ConstantNode>(std::vector{3, 4});
+
+        THEN("We can construct a DisjointCover node") {
+            auto dc_ptr =
+                graph.emplace_node<DisjointCoverNode>(5, std::vector<ArrayNode*>{c1_ptr, c2_ptr});
+            graph.emplace_node<ArrayValidationNode>(dc_ptr);
+
+            CHECK(dc_ptr->min() == 0.0);
+            CHECK(dc_ptr->max() == 1.0);
+            CHECK(dc_ptr->integral());
+            CHECK(dc_ptr->logical());
+
+            AND_WHEN("We initialize a state") {
+                auto state = graph.initialize_state();
+
+                THEN("The initial DisjointCover state is correct") {
+                    CHECK_THAT(dc_ptr->view(state), RangeEquals({0.0}));
+                }
+            }
+        }
+    }
+
+    GIVEN("Two set nodes") {
+        auto set1_ptr = graph.emplace_node<SetNode>(4);
+        auto set2_ptr = graph.emplace_node<SetNode>(5);
+
+        THEN("We can construct a DisjointCover node") {
+            auto dc_ptr = graph.emplace_node<DisjointCoverNode>(
+                5, std::vector<ArrayNode*>{set1_ptr, set2_ptr}
+            );
+            graph.emplace_node<ArrayValidationNode>(dc_ptr);
+
+            CHECK(dc_ptr->min() == 0.0);
+            CHECK(dc_ptr->max() == 1.0);
+            CHECK(dc_ptr->integral());
+            CHECK(dc_ptr->logical());
+
+            AND_WHEN("We initialize a state with disjoint sets that cover the primary set") {
+                auto state = graph.initialize_state();
+                set1_ptr->assign(state, std::vector<double>{0, 1, 2});
+                set2_ptr->assign(state, std::vector<double>{3, 4});
+                graph.propagate(state);
+
+                THEN("The initial DisjointCover state is correct") {
+                    CHECK_THAT(dc_ptr->view(state), RangeEquals({1.0}));
+                }
+
+                AND_WHEN("We commit and change the state") {
+                    graph.commit(state);
+                    set1_ptr->assign(state, std::vector<double>{0, 1, 2});
+                    set2_ptr->assign(state, std::vector<double>{3});
+                    graph.propagate(state);
+
+                    THEN("The DisjointCover state is correct") {
+                        CHECK_THAT(dc_ptr->view(state), RangeEquals({0.0}));
                     }
 
-                    AND_WHEN("We commit, shrink the state of both set nodes, and propagate") {
-                        graph.commit(state);
+                    AND_WHEN("We revert") {
+                        graph.revert(state);
 
-                        set1_ptr->shrink(state);
-                        set2_ptr->shrink(state);
+                        THEN("The DisjointCover state is correct") {
+                            CHECK_THAT(dc_ptr->view(state), RangeEquals({1.0}));
+                        }
+                    }
+                }
+            }
+            AND_WHEN("We initialize a state with not-disjoint sets") {
+                auto state = graph.initialize_state();
+                set1_ptr->assign(state, std::vector<double>{0, 1, 2});
+                set2_ptr->assign(state, std::vector<double>{2, 3, 4});
+                graph.propagate(state);
 
-                        graph.propagate(state);
+                THEN("The initial DisjointCover state is correct") {
+                    CHECK_THAT(dc_ptr->view(state), RangeEquals({0.0}));
+                }
 
-                        THEN("The isin's state is correct") {
-                            CHECK(isin_ptr->view(state).size() == 0);
+                AND_WHEN("We commit and change the state") {
+                    graph.commit(state);
+                    set1_ptr->assign(state, std::vector<double>{3, 1, 2});
+                    set2_ptr->assign(state, std::vector<double>{4, 0});
+                    graph.propagate(state);
+
+                    THEN("The DisjointCover state is correct") {
+                        CHECK_THAT(dc_ptr->view(state), RangeEquals({1.0}));
+                    }
+
+                    AND_WHEN("We revert") {
+                        graph.revert(state);
+
+                        THEN("The DisjointCover state is correct") {
+                            CHECK_THAT(dc_ptr->view(state), RangeEquals({0.0}));
+                        }
+                    }
+                }
+            }
+            AND_WHEN("We initialize a state with disjoint sets that do not cover the primary set") {
+                auto state = graph.initialize_state();
+                set1_ptr->assign(state, std::vector<double>{0, 1, 2});
+                set2_ptr->assign(state, std::vector<double>{3});
+                graph.propagate(state);
+
+                THEN("The initial DisjointCover state is correct") {
+                    CHECK_THAT(dc_ptr->view(state), RangeEquals({0.0}));
+                }
+
+                AND_WHEN("We commit and change the state") {
+                    graph.commit(state);
+                    set1_ptr->assign(state, std::vector<double>{0, 1, 3});
+                    set2_ptr->assign(state, std::vector<double>{2, 4});
+                    graph.propagate(state);
+
+                    THEN("The DisjointCover state is correct") {
+                        CHECK_THAT(dc_ptr->view(state), RangeEquals({1.0}));
+                    }
+
+                    AND_WHEN("We revert") {
+                        graph.revert(state);
+
+                        THEN("The DisjointCover state is correct") {
+                            CHECK_THAT(dc_ptr->view(state), RangeEquals({0.0}));
                         }
                     }
                 }
             }
         }
     }
+
+    GIVEN("Three list nodes") {
+        auto list1_ptr = graph.emplace_node<ListNode>(5, 0, 5);
+        auto list2_ptr = graph.emplace_node<ListNode>(5, 0, 5);
+        auto list3_ptr = graph.emplace_node<ListNode>(5, 0, 5);
+
+        THEN("We can construct a DisjointCover node") {
+            auto dc_ptr = graph.emplace_node<DisjointCoverNode>(
+                5, std::vector<ArrayNode*>{list1_ptr, list2_ptr, list3_ptr}
+            );
+            graph.emplace_node<ArrayValidationNode>(dc_ptr);
+
+            CHECK(dc_ptr->min() == 0.0);
+            CHECK(dc_ptr->max() == 1.0);
+            CHECK(dc_ptr->integral());
+            CHECK(dc_ptr->logical());
+
+            AND_WHEN("We initialize a state with disjoint lists that cover the primary set") {
+                auto state = graph.initialize_state();
+                list1_ptr->assign(state, std::vector<double>{0, 1, 2});
+                list2_ptr->assign(state, std::vector<double>{3, 4});
+                list3_ptr->assign(state, std::vector<double>{});
+                graph.propagate(state);
+
+                THEN("The initial DisjointCover state is correct") {
+                    CHECK_THAT(dc_ptr->view(state), RangeEquals({1.0}));
+                }
+
+                AND_WHEN("We commit and change the state") {
+                    graph.commit(state);
+                    list1_ptr->exchange(state, 0, 2);
+                    graph.propagate(state);
+
+                    THEN("The DisjointCover state is correct") {
+                        CHECK_THAT(dc_ptr->view(state), RangeEquals({1.0}));
+                    }
+                }
+                AND_WHEN("We commit and change the state") {
+                    graph.commit(state);
+                    list1_ptr->shrink(state);
+                    graph.propagate(state);
+
+                    THEN("The DisjointCover state is correct") {
+                        CHECK_THAT(dc_ptr->view(state), RangeEquals({0.0}));
+                    }
+                }
+            }
+        }
+    }
+}
+
 }  // namespace dwave::optimization

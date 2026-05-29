@@ -75,4 +75,44 @@ class IsInNode : public ArrayOutputMixin<ArrayNode> {
     const Array* test_elements_ptr_;
 };
 
+class DisjointCoverNode : public ScalarOutputMixin<ArrayNode, false> {
+ public:
+    DisjointCoverNode(ssize_t primary_set_size, std::vector<ArrayNode*> node_ptrs);
+
+    // Node overloads **********
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+    // Array overloads **********
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
+
+ private:
+    ssize_t primary_set_size_;
+    std::vector<Array*> operands_;
+};
+
 }  // namespace dwave::optimization
