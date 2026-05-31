@@ -308,7 +308,7 @@ struct DisjointCoverNodeData : public NodeStateData {
  public:
     DisjointCoverNodeData(std::vector<ssize_t>& count) : is_disjoint_cover(0, 0.0, 0.0) {
         // Record whether the count is not equal to 1 in the count_violations map
-        for (ssize_t i = 0; i < count.size(); ++i) {
+        for (ssize_t i = 0, stop = count.size(); i < stop; ++i) {
             if (count[i] != 1) {
                 count_violations[i] = count[i];
             }
@@ -370,7 +370,7 @@ struct DisjointCoverNodeData : public NodeStateData {
     std::vector<ssize_t> elements_incremented;
 };
 
-DisjointCoverNode::DisjointCoverNode(ssize_t primary_set_size, std::vector<ArrayNode*> node_ptrs) :
+DisjointCoverNode::DisjointCoverNode(ssize_t primary_set_size, std::span<ArrayNode*> node_ptrs) :
     ScalarOutputMixin<ArrayNode, false>(), primary_set_size_(primary_set_size) {
     for (const auto& node : node_ptrs) {
         if (!node->integral()) {

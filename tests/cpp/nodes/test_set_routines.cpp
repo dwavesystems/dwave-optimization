@@ -273,10 +273,10 @@ TEST_CASE("DisjointCoverNode") {
     GIVEN("Two constant nodes that are disjoint") {
         auto c1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2});
         auto c2_ptr = graph.emplace_node<ConstantNode>(std::vector{3, 4});
+        std::vector<ArrayNode*> sets{c1_ptr, c2_ptr};
 
         THEN("We can construct a DisjointCover node") {
-            auto dc_ptr =
-                graph.emplace_node<DisjointCoverNode>(5, std::vector<ArrayNode*>{c1_ptr, c2_ptr});
+            auto dc_ptr = graph.emplace_node<DisjointCoverNode>(5, sets);
             graph.emplace_node<ArrayValidationNode>(dc_ptr);
 
             CHECK(dc_ptr->min() == 0.0);
@@ -293,8 +293,7 @@ TEST_CASE("DisjointCoverNode") {
             }
         }
         THEN("We can construct a DisjointCover node with a larger primary set size") {
-            auto dc_ptr =
-                graph.emplace_node<DisjointCoverNode>(6, std::vector<ArrayNode*>{c1_ptr, c2_ptr});
+            auto dc_ptr = graph.emplace_node<DisjointCoverNode>(6, sets);
             graph.emplace_node<ArrayValidationNode>(dc_ptr);
 
             CHECK(dc_ptr->min() == 0.0);
@@ -311,19 +310,17 @@ TEST_CASE("DisjointCoverNode") {
             }
         }
         THEN("We cannot construct a DisjointCover node with a smaller primary set size") {
-            CHECK_THROWS(
-                graph.emplace_node<DisjointCoverNode>(4, std::vector<ArrayNode*>{c1_ptr, c2_ptr})
-            );
+            CHECK_THROWS(graph.emplace_node<DisjointCoverNode>(4, sets));
         }
     }
 
     GIVEN("Two constant nodes that are disjoint but not sets") {
         auto c1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 2});
         auto c2_ptr = graph.emplace_node<ConstantNode>(std::vector{3, 4});
+        std::vector<ArrayNode*> sets{c1_ptr, c2_ptr};
 
         THEN("We can construct a DisjointCover node") {
-            auto dc_ptr =
-                graph.emplace_node<DisjointCoverNode>(5, std::vector<ArrayNode*>{c1_ptr, c2_ptr});
+            auto dc_ptr = graph.emplace_node<DisjointCoverNode>(5, sets);
             graph.emplace_node<ArrayValidationNode>(dc_ptr);
 
             CHECK(dc_ptr->min() == 0.0);
@@ -344,11 +341,10 @@ TEST_CASE("DisjointCoverNode") {
     GIVEN("Two set nodes") {
         auto set1_ptr = graph.emplace_node<SetNode>(4);
         auto set2_ptr = graph.emplace_node<SetNode>(5);
+        std::vector<ArrayNode*> sets{set1_ptr, set2_ptr};
 
         THEN("We can construct a DisjointCover node") {
-            auto dc_ptr = graph.emplace_node<DisjointCoverNode>(
-                5, std::vector<ArrayNode*>{set1_ptr, set2_ptr}
-            );
+            auto dc_ptr = graph.emplace_node<DisjointCoverNode>(5, sets);
             graph.emplace_node<ArrayValidationNode>(dc_ptr);
 
             CHECK(dc_ptr->min() == 0.0);
@@ -450,11 +446,10 @@ TEST_CASE("DisjointCoverNode") {
         auto list1_ptr = graph.emplace_node<ListNode>(5, 0, 5);
         auto list2_ptr = graph.emplace_node<ListNode>(5, 0, 5);
         auto list3_ptr = graph.emplace_node<ListNode>(5, 0, 5);
+        std::vector<ArrayNode*> lists{list1_ptr, list2_ptr, list3_ptr};
 
         THEN("We can construct a DisjointCover node") {
-            auto dc_ptr = graph.emplace_node<DisjointCoverNode>(
-                5, std::vector<ArrayNode*>{list1_ptr, list2_ptr, list3_ptr}
-            );
+            auto dc_ptr = graph.emplace_node<DisjointCoverNode>(5, lists);
             graph.emplace_node<ArrayValidationNode>(dc_ptr);
 
             CHECK(dc_ptr->min() == 0.0);

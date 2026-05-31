@@ -77,7 +77,7 @@ class IsInNode : public ArrayOutputMixin<ArrayNode> {
 
 class DisjointCoverNode : public ScalarOutputMixin<ArrayNode, false> {
  public:
-    DisjointCoverNode(ssize_t primary_set_size, std::vector<ArrayNode*> node_ptrs);
+    DisjointCoverNode(ssize_t primary_set_size, std::span<ArrayNode*> node_ptrs);
 
     // Node overloads **********
 
