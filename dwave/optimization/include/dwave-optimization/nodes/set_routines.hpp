@@ -110,6 +110,9 @@ class DisjointCoverNode : public ScalarOutputMixin<ArrayNode, false> {
     /// @copydoc Array::max()
     double max() const override;
 
+    /// The size of the primary set to be covered
+    ssize_t primary_set_size() const { return primary_set_size_; };
+
  private:
     ssize_t primary_set_size_;
     std::vector<Array*> operands_;

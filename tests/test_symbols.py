@@ -1497,6 +1497,52 @@ class TestDisjointBitSetsVariable(utils.SymbolTests):
         np.testing.assert_array_equal(ys[2].state(), [0, 0, 0, 0, 1])
 
 
+class TestDisjointCover(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        sets = [
+            model.constant([0, 1, 2]),
+            model.constant([3, 4])
+        ]
+        cover = dwave.optimization.symbols.DisjointCover(5, sets)
+
+        with model.lock():
+            yield cover
+
+    def test(self):
+        from dwave.optimization.symbols import DisjointCover
+        model = Model()
+        sets = [
+            model.constant([0, 1, 2]),
+            model.constant([3, 4])
+        ]
+        cover = dwave.optimization.symbols.DisjointCover(5, sets)
+        self.assertIsInstance(cover, DisjointCover)
+
+    def test_state(self):
+        model = Model()
+        # a disjoint cover
+        sets = [
+            model.constant([0, 1, 2]),
+            model.constant([3, 4])
+        ]
+        cover = dwave.optimization.symbols.DisjointCover(5, sets)
+        model.states.resize(1)
+        with model.lock():
+            expected = np.array([1.0])
+            np.testing.assert_array_almost_equal(cover.state(0), expected)
+
+        # not disjoint
+        sets = [
+            model.constant([0, 1, 2]),
+            model.constant([2, 3, 4])
+        ]
+        cover = dwave.optimization.symbols.DisjointCover(5, sets)
+        with model.lock():
+            expected = np.array([0.0])
+            np.testing.assert_array_almost_equal(cover.state(0), expected)
+
+
 class TestDisjointListsVariable(utils.SymbolTests):
     def test_inequality(self):
         # TODO re-enable this once equality has been fixed
