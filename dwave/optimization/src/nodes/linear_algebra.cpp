@@ -102,77 +102,113 @@ template <>
 void gemm<double>(
     const ssize_t m,
     const ssize_t n,
-    const ssize_t k,  // size of the arrays
+    const ssize_t k,
     const double* const A,
-    std::span<const ssize_t, 2> A_strides,  // lhs matrix
+    std::span<const ssize_t, 2> A_strides,
     const double* const B,
-    std::span<const ssize_t, 2> B_strides,  // rhs matrix
+    std::span<const ssize_t, 2> B_strides,
     double* const C,
     std::span<const ssize_t, 2> C_strides
-) {  // output matrix
-    // OpenBLAS has some requirements for A,B,C.
-    // Specifically, they must be contiguous within each "row" and they must
-    // have positive strides in the first dimension.
-    // So, if they don't satisfy those requirements, we copy the state into
-    // a contiguous array that does.
+) {
+    // dev note: we could check here if we want to actually use dot or gemv, for
+    // now let's keep it simple and always use gemm
 
-    if (A_strides[0] < 0 or A_strides[1] != sizeof(double)) {
+    static constexpr ssize_t itemsize = sizeof(decltype(*A));
+
+    // One special case we do want to handle before anything else is the k==1 case.
+    // In this case A_strides[1] and B_strides[0] can be any value at all, but
+    // blas is pickier than that.
+    // So let's use equivalent strides that blas is happier with and try again.
+    if (k == 1 and (A_strides[1] != itemsize or B_strides[0] != n * itemsize)) {
+        std::array<ssize_t, 2> a_strides{A_strides[0], itemsize};
+        std::array<ssize_t, 2> b_strides{n * itemsize, B_strides[1]};
+
+        return gemm(m, n, k, A, a_strides, B, b_strides, C, C_strides);
+    }
+
+    // BLAS's strides are *not* counted in bytes so let's assert that we can
+    // do the translations without errors.
+    // If we need to support non-divisible strides in the future, we can.
+    assert(A_strides[0] % itemsize == 0);
+    assert(A_strides[1] % itemsize == 0);
+    assert(B_strides[0] % itemsize == 0);
+    assert(B_strides[1] % itemsize == 0);
+    assert(C_strides[0] % itemsize == 0);
+    assert(C_strides[1] % itemsize == 0);
+
+    // Note that we're going to call the row major version.
+    // For all of A,B,C:
+    // * We must be contiguous within each "row"
+    // * We need to have positive strides in the first dimension
+
+    // Ok, first up let's handle A
+    CBLAS_TRANSPOSE TransA;
+    ssize_t lda;
+    if (A_strides[0] / itemsize >= k and A_strides[1] == itemsize) {
+        // A has the strides we want
+        TransA = CblasNoTrans;
+        lda = A_strides[0] / itemsize;
+    } else if (A_strides[0] == itemsize and A_strides[1] / itemsize >= k) {
+        // A.T has the strides we want
+        TransA = CblasTrans;
+        lda = A_strides[1] / itemsize;
+    } else {
+        // Neither A, nor A.T have contiguous rows and lda >= k, so let's dump A
+        // to a contiguous array and try again.
         std::vector<double> a = make_contiguous(A, m, k, A_strides);
-        std::array<ssize_t, 2> a_strides{k * static_cast<ssize_t>(sizeof(double)), sizeof(double)};
-        return gemm(
-            m,
-            n,
-            k,  // same size
-            a.data(),
-            a_strides,  // new A
-            B,
-            B_strides,  // same B
-            C,
-            C_strides  // same C
-        );
-    }
-    assert(A_strides[0] % sizeof(double) == 0);
+        std::array<ssize_t, 2> a_strides{k * itemsize, itemsize};
 
-    if (B_strides[0] < 0 or B_strides[1] != sizeof(double)) {
-        std::vector<double> b = make_contiguous(B, k, n, B_strides);
-        std::array<ssize_t, 2> b_strides{n * static_cast<ssize_t>(sizeof(double)), sizeof(double)};
-        return gemm(
-            m,
-            n,
-            k,  // same size
-            A,
-            A_strides,  // same A
-            b.data(),
-            b_strides,  // new B
-            C,
-            C_strides  // same C
-        );
+        // We should take the first if-branch next time.
+        assert(a_strides[1] == itemsize and a_strides[0] / itemsize >= k);
+
+        return gemm(m, n, k, a.data(), a_strides, B, B_strides, C, C_strides);
     }
-    assert(B_strides[0] % sizeof(double) == 0);
+
+    // Next, handle B
+    CBLAS_TRANSPOSE TransB;
+    ssize_t ldb;
+    if (B_strides[0] / itemsize >= n and B_strides[1] == itemsize) {
+        // B has the strides we want
+        TransB = CblasNoTrans;
+        ldb = B_strides[0] / itemsize;
+    } else if (B_strides[0] == itemsize and B_strides[1] / itemsize >= n) {
+        // B.T has the strides we want
+        TransB = CblasTrans;
+        ldb = B_strides[1] / itemsize;
+    } else {
+        std::vector<double> b = make_contiguous(B, k, n, B_strides);
+        std::array<ssize_t, 2> b_strides{n * itemsize, itemsize};
+
+        // We should take the first if-branch next time.
+        assert(b_strides[0] / itemsize >= n and b_strides[1] == itemsize);
+
+        return gemm(m, n, k, A, A_strides, b.data(), b_strides, C, C_strides);
+    }
 
     // We could handle non-contiguous C, but it should be true for our MatrixMultiplyNode
     // always so for now let's leave it alone.
     assert(C_strides[0] == n * static_cast<ssize_t>(sizeof(double)));
     assert(C_strides[1] == sizeof(double));
+    const ssize_t ldc = C_strides[0] / sizeof(double);
+    assert(ldc >= n);
 
     // Ok! Everything is in good shape, now all that's left is to call BLAS.
-    // Do note that BLAS's strides are *not* counted in bytes.
 
     scipy_cblas_dgemm64_(
-        CblasRowMajor,                  // OPENBLAS_CONST enum CBLAS_ORDER Order,
-        CblasNoTrans,                   // OPENBLAS_CONST enum CBLAS_TRANSPOSE TransA,
-        CblasNoTrans,                   // OPENBLAS_CONST enum CBLAS_TRANSPOSE TransB,
-        m,                              // OPENBLAS_CONST blasint M,
-        n,                              // OPENBLAS_CONST blasint N,
-        k,                              // OPENBLAS_CONST blasint K,
-        1,                              // OPENBLAS_CONST double alpha,
-        A,                              // OPENBLAS_CONST double *A,
-        A_strides[0] / sizeof(double),  // OPENBLAS_CONST blasint lda,
-        B,                              // OPENBLAS_CONST double *B,
-        B_strides[0] / sizeof(double),  // OPENBLAS_CONST blasint ldb,
-        0,                              // OPENBLAS_CONST double beta,
-        C,                              // double *C,
-        C_strides[0] / sizeof(double)   // OPENBLAS_CONST blasint ldc
+        CblasRowMajor,  // OPENBLAS_CONST enum CBLAS_ORDER Order,
+        TransA,         // OPENBLAS_CONST enum CBLAS_TRANSPOSE TransA,
+        TransB,         // OPENBLAS_CONST enum CBLAS_TRANSPOSE TransB,
+        m,              // OPENBLAS_CONST blasint M,
+        n,              // OPENBLAS_CONST blasint N,
+        k,              // OPENBLAS_CONST blasint K,
+        1,              // OPENBLAS_CONST double alpha,
+        A,              // OPENBLAS_CONST double *A,
+        lda,            // OPENBLAS_CONST blasint lda,
+        B,              // OPENBLAS_CONST double *B,
+        ldb,            // OPENBLAS_CONST blasint ldb,
+        0,              // OPENBLAS_CONST double beta,
+        C,              // double *C,
+        ldc             // OPENBLAS_CONST blasint ldc
     );
 }
 
