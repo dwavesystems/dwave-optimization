@@ -138,6 +138,77 @@ class _ConstantCache:
     # definition.
 
 
+class DisjointListsContainer:
+    """Container for Disjoint-lists decision-variable symbols.
+
+    See Also:
+        :meth:`~dwave.optimization.model.Model.disjoint_lists_container`:
+        Instantiation and usage of this symbol.
+    """
+    def __init__(self, primary_set_size: int, lists: list[ListVariable]):
+        self.primary_set_size_ = primary_set_size
+        self.disjoint_lists_ = lists
+
+    def __getitem__(self, index: int) -> ListVariable:
+        return self.disjoint_lists_[index]
+
+    def set_state(self, index: int, state):
+        r"""Set the state of the disjoint-lists symbol.
+
+        Args:
+            index (int):
+                Index of the state to set
+            state (list[list, ...]):
+                Assignment of values for the state. The specified state must be
+                a partition of ``range(primary_set_size)`` into
+                :meth:`.num_disjoint_lists` partitions as a list of lists.
+
+        Examples:
+            This example sets the state of a disjoint-lists symbol. You can
+            inspect the state of each list individually.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> lists_symbol = model.disjoint_lists_symbol(
+            ...     primary_set_size=5,
+            ...     num_disjoint_lists=3
+            ... )
+            >>> with model.lock():
+            ...     model.states.resize(1)
+            ...     lists_symbol.set_state(0, [[0, 1, 2, 3], [4], []])
+            ...     for index, disjoint_list in enumerate(lists_symbol):
+            ...         print(f"DisjointList {index}:")
+            ...         print(disjoint_list.state(0))
+            DisjointList 0:
+            [0. 1. 2. 3.]
+            DisjointList 1:
+            [4.]
+            DisjointList 2:
+            []
+        """
+        # Pass state to contained list variables
+        for i in range(len(state)):
+            self[i].set_state(index, state[i])
+
+    def num_disjoint_lists(self):
+        """Return the number of disjoint lists.
+
+        Examples:
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> lists_symbol = model.disjoint_lists_symbol(
+            ...     primary_set_size=5,
+            ...     num_disjoint_lists=3)
+            >>> lists_symbol.num_disjoint_lists() == 3
+            True
+        """
+        return len(self.disjoint_lists_)
+
+    def primary_set_size(self):
+        """Return the total number of elements in the partitioned lists."""
+        return self.primary_set_size_
+
+
 class Model(_Graph):
     """Nonlinear model.
 
@@ -598,6 +669,76 @@ class Model(_Graph):
         # though we won't use them directly here
         for i in range(num_disjoint_lists):
             DisjointList(disjoint_lists, i)
+
+        return disjoint_lists
+
+    def disjoint_lists_container(
+            self,
+            primary_set_size: int,
+            num_disjoint_lists: int,
+            ) -> DisjointListsContainer:
+        """Create disjoint list symbols as decision variables.
+
+        Disjoint list symbols divide a set of the elements of
+        ``range(primary_set_size)`` into ``num_disjoint_lists`` ordered
+        partitions, where the division is assigned as a solution to the problem
+        being modeled.
+
+        Creates ``num_disjoint_lists`` list variables and adds a DisjointCover constraint.
+
+        Args:
+            primary_set_size: Number of elements in the primary set to
+                be partitioned into disjoint lists. Must be non-negative.
+            num_disjoint_lists: Number of disjoint lists. Must be positive.
+
+        Returns:
+            An object organizing the list symbols at the root of the
+            :term:`directed acyclic graph` for the model.
+
+        Examples:
+            This example creates a symbol of 10 elements that is divided
+            into 4 lists.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> disjoint_lists = model.disjoint_lists_container(10, 4)
+            >>> disjoint_lists.primary_set_size()
+            10
+            >>> disjoint_lists.num_disjoint_lists()
+            4
+            >>> with model.lock():
+            ...    model.states.resize(1)
+            ...    disjoint_lists.set_state(0, [[0, 1, 2], [3, 5, 6], [4], [7, 8, 9]])
+            ...    for i, disjoint_list in enumerate(disjoint_lists):
+            ...        print(f"Element {i}: {disjoint_list.state(0)}")
+            Element 0: [0. 1. 2.]
+            Element 1: [3. 5. 6.]
+            Element 2: [4.]
+            Element 3: [7. 8. 9.]
+
+            .. figure:: /_images/disjoint_lists_symbol.svg
+                :width: 500 px
+                :name: dwave-optimization-disjoint-lists-symbol-example
+                :alt: Image of the model constructed in this example
+
+                Visualization of the model as a :term:`directed acyclic graph`.
+                See the :func:`~dwave.optimization.model.Model.to_networkx`
+                function for information on visualizing models.
+
+        See Also:
+            :class:`~dwave.optimization.symbols.DisjointListsContainer`,
+            :class:`~dwave.optimization.symbols.DisjointCover`,
+            :class:`~dwave.optimization.symbols.List`: Generated
+            symbols
+
+            :meth:`.disjoint_bit_sets`, :meth:`.list`, :meth:`.set`
+
+            :meth:`.iter_decisions`, :meth:`.iter_successors`
+        """
+        from dwave.optimization.symbols import DisjointCover  # avoid circular import
+        lists = [self.list(primary_set_size, min_size=0, max_size=primary_set_size) for _ in range(num_disjoint_lists)]
+        self.add_constraint(DisjointCover(primary_set_size, lists))
+        disjoint_lists = DisjointListsContainer(primary_set_size, lists)
 
         return disjoint_lists
 
