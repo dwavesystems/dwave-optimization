@@ -1520,7 +1520,7 @@ std::vector<BasicIndexingNode::slice_or_int> BasicIndexingNode::infer_indices() 
 }
 
 std::vector<ssize_t> BasicIndexingNode::flat_source_indices() const {
-    assert(!dynamic() && "does not support dynamic arrays")
+    assert(!dynamic() && "does not support dynamic arrays");
     const ssize_t view_ndim = ndim();
     const auto view_shape = shape();
     const auto view_strides = strides();

@@ -242,7 +242,7 @@ class BasicIndexingNode : public ArrayNode {
     // Infer the indices used to create the node.
     std::vector<slice_or_int> infer_indices() const;
 
-    // Compute the flattened source indicices into the source array this view points to.
+    // Compute the flattened source indices into the source array this view points to.
     // For static (non-dynamic arrays)
     std::vector<ssize_t> flat_source_indices() const;
 
