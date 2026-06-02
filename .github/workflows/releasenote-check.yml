@@ -20,8 +20,6 @@ jobs:
         with:
           # We use GitHub commands to check the files rather than git in order to
           # avoiding needing to check out the whole repo.
-          # We use reno for release notes so each note is a new file. Hence why we
-          # only check for files added.
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
@@ -37,13 +35,27 @@ jobs:
               }
             );
 
+            // If the contributor made any changes at all in the releasenotes/
+            // directory then we assume we don't need to remind them.
             const hasReleaseNote = files.some(file =>
-              file.status === "added" &&
               file.filename.startsWith("releasenotes/")
             );
 
             if (hasReleaseNote) {
-              core.info("Release note found.");
+              core.info("Changes found in releasenotes/");
+              return;
+            }
+
+            // We'll only raise a reminder if the user has changed something
+            // in the dwave/ directory.
+            // There are edge cases (e.g., updating supported Python versions)
+            // but we don't need to be inclusive for this reminder.
+            const madeChanges = files.some(file =>
+              file.filename.startsWith("dwave/")
+            );
+
+            if (!madeChanges) {
+              core.info("No changes found in dwave/");
               return;
             }
 
