@@ -65,8 +65,8 @@ applications of each.
     *   - **Item Uniqueness**
         - All ``N`` items appear exactly once in the list
         - Unique subset from universe
-        - Each item appears in at most one list; lists are permutations
-        - Each item appears in at most one set; sets contain unique items
+        - Each item appears in exactly one list; lists are permutations
+        - Each item appears in exactly one set; sets contain unique items
     *   - **Number of Collections**
         - 1 list
         - 1 set
@@ -468,7 +468,7 @@ Overview
     |                        | ordered lists.                                                      |
     +------------------------+---------------------------------------------------------------------+
     | Implicit Constraints   | - Each item from the primary set (indices :math:`0` to              |
-    |                        |   ``primary_set_size-1``) appears in at most one list.              |
+    |                        |   ``primary_set_size-1``) appears in exactly one list.              |
     |                        |                                                                     |
     |                        | - Order matters within each list.                                   |
     |                        |                                                                     |
@@ -645,7 +645,7 @@ Overview
     |                          | unordered sets.                                                   |
     +--------------------------+-------------------------------------------------------------------+
     | Implicit Constraints     | - Each item from the universe (indices :math:`0` to               |
-    |                          |   ``primary_set_size-1``) appears in at most one set.             |
+    |                          |   ``primary_set_size-1``) appears in exactly one set.             |
     |                          |                                                                   |
     |                          | - Order does not matter within each set.                          |
     |                          |                                                                   |
