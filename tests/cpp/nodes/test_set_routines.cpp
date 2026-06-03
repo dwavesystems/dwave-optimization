@@ -184,5 +184,50 @@ TEST_CASE("IsInNode") {
             }
         }
     }
+
+    GIVEN("Two integer nodes and an isin node") {
+        auto i1_ptr = graph.emplace_node<IntegerNode>(2);
+        auto i2_ptr = graph.emplace_node<IntegerNode>(2);
+
+        auto isin_ptr = graph.emplace_node<IsInNode>(i1_ptr, i2_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(isin_ptr);
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            i1_ptr->initialize_state(state, {1, 3});
+            i2_ptr->initialize_state(state, {1, 2});
+
+            graph.initialize_state(state);
+
+            REQUIRE_THAT(isin_ptr->view(state), RangeEquals({1.0, 0.0}));
+
+            AND_WHEN("We make some changes to element integer node and propagate") {
+                i1_ptr->exchange(state, 0, 1); // should be [3, 1] now
+                REQUIRE(i1_ptr->view(state)[0] == 3.0);
+                REQUIRE(i1_ptr->view(state)[1] == 1.0);
+                graph.propagate(state);
+                REQUIRE_THAT(isin_ptr->view(state), RangeEquals({0.0, 1.0}));
+
+                AND_WHEN("We commit then revert") {
+                    graph.commit(state);
+                    graph.revert(state);
+
+                    AND_WHEN("We make some changes to element integer node and propagate") {
+                        i1_ptr->set_value(state, 0, 1); // should be [1, 1] now
+                        REQUIRE(i1_ptr->view(state)[0] == 1.0);
+                        REQUIRE(i1_ptr->view(state)[1] == 1.0);
+
+                        graph.propagate(state);
+
+                        THEN("The isin state is correct") {
+                            CHECK_THAT(isin_ptr->view(state), RangeEquals({1.0, 1.0}));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 }
 }  // namespace dwave::optimization

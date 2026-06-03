@@ -78,7 +78,12 @@ double const* IsInNode::buff(const State& state) const {
     return data_ptr<IsInNodeData>(state)->buff();
 }
 
-void IsInNode::commit(State& state) const { data_ptr<IsInNodeData>(state)->commit(); }
+void IsInNode::commit(State &state) const {
+  IsInNodeData *node_data = data_ptr<IsInNodeData>(state);
+  node_data->element_updates.clear();
+  node_data->test_element_updates.clear();
+  node_data->commit();
+}
 
 std::span<const Update> IsInNode::diff(const State& state) const {
     return data_ptr<IsInNodeData>(state)->diff();
