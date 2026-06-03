@@ -183,7 +183,13 @@ void IsInNode::propagate(State& state) const {
     // that are new or fully removed
     for (const auto& [key, assignment] : node_data->add_or_rm_test_elements) {
         auto set_data_it = node_data->set_data.find(key);
-        // find() should be successful since we need to remove the index
+        // We erased this data in rm_index(), nothing to do.
+        if (set_data_it == node_data->set_data.end()) {
+            assert(not assignment);
+            continue;
+        }
+
+        // find() should be successful since we have not yet removed the index.
         assert(set_data_it != node_data->set_data.end());
         // Vector containing indices of `element` with value `key`
         const std::vector<ssize_t>& indices_vec = set_data_it->second.element_indices;

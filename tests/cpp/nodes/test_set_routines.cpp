@@ -229,5 +229,40 @@ TEST_CASE("IsInNode") {
         }
     }
 
-}
+    GIVEN("Two dynamic set nodes and an isin node") {
+            auto set1_ptr = graph.emplace_node<SetNode>(6);
+            auto set2_ptr = graph.emplace_node<SetNode>(6);
+            auto isin_ptr = graph.emplace_node<IsInNode>(set1_ptr, set2_ptr);
+            graph.emplace_node<ArrayValidationNode>(isin_ptr);
+
+            CHECK(isin_ptr->size() == -1);
+
+            WHEN("We initialize a state") {
+                auto state = graph.initialize_state();
+
+                AND_WHEN("We assign the set nodes and propagate") {
+                    set1_ptr->assign(state, std::vector<double>{2});
+                    set2_ptr->assign(state, std::vector<double>{2});
+                    graph.propagate(state);
+
+                    THEN("The isin's state is correct") {
+                        CHECK_THAT(isin_ptr->view(state), RangeEquals({1.0}));
+                    }
+
+                    AND_WHEN("We commit, shrink the state of both set nodes, and propagate") {
+                        graph.commit(state);
+
+                        set1_ptr->shrink(state);
+                        set2_ptr->shrink(state);
+
+                        graph.propagate(state);
+
+                        THEN("The isin's state is correct") {
+                            CHECK(isin_ptr->view(state).size() == 0);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }  // namespace dwave::optimization
