@@ -78,11 +78,29 @@ double const* IsInNode::buff(const State& state) const {
     return data_ptr<IsInNodeData>(state)->buff();
 }
 
+bool set_data_is_correct(State& state, const Array *element_ptr, IsInNodeData& node_data) {
+    for (ssize_t i = 0, stop = element_ptr->size(state); i < stop; ++i) {
+        const double value = element_ptr->view(state)[i];
+
+        auto set_data_it = node_data.set_data.find(value);
+        if (set_data_it == node_data.set_data.end()) return false;
+
+        // Vector containing indices of `element` with value `key`
+        std::vector<ssize_t>& indices_vec = set_data_it->second.element_indices;
+        auto index_ptr = std::find(indices_vec.begin(), indices_vec.end(), i);
+        if (index_ptr == indices_vec.end()) return false;
+
+        if (*index_ptr != i) return false;
+    }
+    return true;
+}
+
 void IsInNode::commit(State &state) const {
-  IsInNodeData *node_data = data_ptr<IsInNodeData>(state);
-  node_data->element_updates.clear();
-  node_data->test_element_updates.clear();
-  node_data->commit();
+    IsInNodeData *node_data = data_ptr<IsInNodeData>(state);
+    node_data->element_updates.clear();
+    node_data->test_element_updates.clear();
+    node_data->commit();
+    assert(set_data_is_correct(state, element_ptr_, *node_data));
 }
 
 std::span<const Update> IsInNode::diff(const State& state) const {
@@ -209,6 +227,7 @@ void IsInNode::propagate(State& state) const {
     if (element_ptr_->size_diff(state) != 0) {
         node_data->trim_to(element_ptr_->size(state));
     }
+    assert(set_data_is_correct(state, element_ptr_, *node_data));
 }
 
 void IsInNode::revert(State& state) const {
@@ -245,6 +264,7 @@ void IsInNode::revert(State& state) const {
     node_data->element_updates.clear();
     node_data->test_element_updates.clear();
     node_data->revert();
+    assert(set_data_is_correct(state, element_ptr_, *node_data));
 }
 
 std::span<const ssize_t> IsInNode::shape(const State& state) const {

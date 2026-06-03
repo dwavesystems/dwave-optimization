@@ -211,6 +211,7 @@ TEST_CASE("IsInNode") {
 
                 AND_WHEN("We commit then revert") {
                     graph.commit(state);
+                    graph.propagate(state);
                     graph.revert(state);
 
                     AND_WHEN("We make some changes to element integer node and propagate") {
