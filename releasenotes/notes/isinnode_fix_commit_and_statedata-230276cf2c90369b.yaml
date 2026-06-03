@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+      ``IsInNode`` previously did not clear cached state data during
+      ``commit()``, causing future propagation-and-reverts to encounter
+      memory issues. The implementation has been fixed.
