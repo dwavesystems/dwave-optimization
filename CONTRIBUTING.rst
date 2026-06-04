@@ -12,11 +12,23 @@ has guidelines for contributing to Ocean packages. With the following changes
 Release Notes
 =============
 
-``dwave-optimization`` makes use of `reno <https://docs.openstack.org/reno/>`_
-to manage its release notes.
+Pull request descriptions and commit messages are written for the developers of
+the package, release notes are written for the end-user. These two audiences are
+interested in different information.
 
-When making a contribution to ``dwave-optimization`` that will affect users,
-create a new release note file by running
+Release notes tell the user about changes in a release that might affect them.
+For example, new functions, bug fixes, and performance improvements all need
+release notes.
+
+Not every pull request needs a release note. Changes to docs, refactors without
+a change in behavior, CI changes, package maintenace, etc., generally do not
+require a release note. 
+
+Creating a Release Note
+-----------------------
+
+``dwave-optimization`` makes use of `reno <https://docs.openstack.org/reno/>`_
+to manage its release notes. Create a new release note file by running
 
 .. code-block:: bash
 
