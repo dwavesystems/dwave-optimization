@@ -16,8 +16,8 @@ from dwave.optimization.libcpp.graph cimport ArrayNode
 
 
 cdef extern from "dwave-optimization/nodes/set_routines.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass IsDisjointCoverNode(ArrayNode):
+        Py_ssize_t primary_set_size() const
+
     cdef cppclass IsInNode(ArrayNode):
         pass
-
-    cdef cppclass DisjointCoverNode(ArrayNode):
-        Py_ssize_t primary_set_size() const

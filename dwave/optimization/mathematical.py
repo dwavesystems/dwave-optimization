@@ -38,6 +38,7 @@ from dwave.optimization.symbols import (
     Exp,
     Expit,
     Extract,
+    IsDisjointCover,
     IsIn,
     LessEqual,
     LinearProgram,
@@ -95,6 +96,7 @@ __all__ = [
     "expit",
     "extract",
     "hstack",
+    "is_disjoint_cover",
     "isin",
     "less_equal",
     "linprog",
@@ -1108,6 +1110,44 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
         return concatenate(arrays, 0)
     else:
         return concatenate(arrays, 1)
+
+
+def is_disjoint_cover(primary_set_size: int, subsets: list[ArraySymbol]) -> IsDisjointCover:
+    """Return whether the symbols are disjoint, set-like, and cover a set of integers.
+
+    Determines whether a collection of array symbols is disjoint and the union equals a fixed set.
+
+    Args:
+        primary_set_size: Number of elements in the primary set: {0, 1, ..., primary_set_size - 1}.
+            Must be non-negative.
+        subsets: List of array symbols to test whether they are disjoint and cover the primary set
+
+    Returns:
+        A scalar boolean-valued array symbol indicating whether the subsets 
+
+    Examples:
+        >>> from dwave.optimization.model import Model
+        >>> from dwave.optimization.mathematical import is_disjoint_cover
+        ...
+        >>> model = Model()
+        >>> model.states.resize(1)
+        >>> subsets = []
+        >>> subsets.append(model.constant([0, 1])
+        >>> subsets.append(model.constant([2, 3, 4])
+        >>> subsets.append(model.constant([])
+        >>> is_disjoint = is_disjoint_cover(5, subsets)
+        >>> with model.lock():
+        ...     print(is_disjoint.state(0))
+        [1.]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.IsDisjointCover`: Generated symbol
+
+        :func:`.isin`
+
+    .. versionadded:: 0.7.1
+    """
+    return IsDisjointCover(primary_set_size, subsets)
 
 
 def isin(element: ArraySymbol, test_elements: ArraySymbol) -> IsIn:

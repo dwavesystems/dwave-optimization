@@ -1504,20 +1504,20 @@ class TestDisjointCover(utils.SymbolTests):
             model.constant([0, 1, 2]),
             model.constant([3, 4])
         ]
-        cover = dwave.optimization.symbols.DisjointCover(5, sets)
+        cover = dwave.optimization.symbols.IsDisjointCover(5, sets)
 
         with model.lock():
             yield cover
 
     def test(self):
-        from dwave.optimization.symbols import DisjointCover
+        from dwave.optimization.symbols import IsDisjointCover
         model = Model()
         sets = [
             model.constant([0, 1, 2]),
             model.constant([3, 4])
         ]
-        cover = dwave.optimization.symbols.DisjointCover(5, sets)
-        self.assertIsInstance(cover, DisjointCover)
+        cover = dwave.optimization.symbols.IsDisjointCover(5, sets)
+        self.assertIsInstance(cover, IsDisjointCover)
 
     def test_state(self):
         model = Model()
@@ -1526,7 +1526,7 @@ class TestDisjointCover(utils.SymbolTests):
             model.constant([0, 1, 2]),
             model.constant([3, 4])
         ]
-        cover = dwave.optimization.symbols.DisjointCover(5, sets)
+        cover = dwave.optimization.symbols.IsDisjointCover(5, sets)
         model.states.resize(1)
         with model.lock():
             expected = np.array([1.0])
@@ -1537,140 +1537,10 @@ class TestDisjointCover(utils.SymbolTests):
             model.constant([0, 1, 2]),
             model.constant([2, 3, 4])
         ]
-        cover = dwave.optimization.symbols.DisjointCover(5, sets)
+        cover = dwave.optimization.symbols.IsDisjointCover(5, sets)
         with model.lock():
             expected = np.array([0.0])
             np.testing.assert_array_almost_equal(cover.state(0), expected)
-
-
-# Strictly speaking, not a symbol, but thematically it makes sense here
-class TestDisjointListsContainer(utils.SymbolTests):
-    def test_inequality(self):
-        # TODO re-enable this once equality has been fixed
-        pass
-
-    def generate_symbols(self):
-        model = Model()
-        d = model.disjoint_lists_container(10, 4)
-        model.lock()
-        yield from d
-
-    def test(self):
-        model = Model()
-
-        dls = model.disjoint_lists_container(10, 4)
-
-        self.assertEqual(dls.primary_set_size(), 10)
-        self.assertEqual(dls.num_disjoint_lists(), 4)
-
-    def test_indexing(self):
-        model = Model()
-
-        dls = model.disjoint_lists_container(10, 4)
-
-        self.assertEqual(len(list(dls)), 4)
-        self.assertIsInstance(dls[0], dwave.optimization.symbols.ListVariable)
-        self.assertIsInstance(dls[3], dwave.optimization.symbols.ListVariable)
-
-        with self.assertRaises(IndexError):
-            dls[4]
-
-    def test_construction(self):
-        model = Model()
-
-        with self.assertRaises(ValueError):
-            model.disjoint_lists_container(-5, 1)
-        with self.assertRaises(ValueError):
-            model.disjoint_lists_container(1, -5)
-        with self.assertRaises(ValueError):
-            model.disjoint_lists_container(0, 1)
-
-    def test_num_returned_nodes(self):
-        model = Model()
-
-        model.disjoint_lists_container(10, 4)
-
-        # One node for each of the 4 successor lists, plus a DisjointCover node
-        self.assertEqual(model.num_nodes(), 5)
-
-    def test_set_state(self):
-        with self.subTest("array-like output lists"):
-            model = Model()
-            model.states.resize(1)
-            x = model.disjoint_lists_container(5, 3)
-            model.lock()
-
-            x.set_state(0, [[0, 1], [2, 3], [4]])
-
-            np.testing.assert_array_equal(x[0].state(), [0, 1])
-            np.testing.assert_array_equal(x[1].state(), [2, 3])
-            np.testing.assert_array_equal(x[2].state(), [4])
-
-        with self.subTest("invalid state index"):
-            model = Model()
-            x = model.disjoint_lists_container(5, 3)
-
-            state = [[0, 1, 2, 3, 4], [], []]
-
-            # No states have been created
-            with self.assertRaisesRegex(ValueError, r"^index out of range: 0$"):
-                x.set_state(0, state)
-            with self.assertRaisesRegex(ValueError, r"^index out of range: -1$"):
-                x.set_state(-1, state)
-
-            # Some states have been created
-            model.states.resize(5)
-            with self.assertRaisesRegex(ValueError, r"^index out of range: 5$"):
-                x.set_state(5, state)
-            with self.assertRaisesRegex(ValueError, r"^index out of range: -1$"):
-                x.set_state(-1, state)
-
-        with self.subTest("non-integer"):
-            # gets translated into integer according to NumPy rules
-            model = Model()
-            model.states.resize(1)
-            x = model.disjoint_lists_container(5, 3)
-            model.lock()
-
-            x.set_state(0, [[4.5, 3, 2, 1, 0], [], []])
-            np.testing.assert_array_equal(x[0].state(), [4, 3, 2, 1, 0])
-
-        with self.subTest("invalid"):
-            model = Model()
-            model.states.resize(1)
-            x = model.disjoint_lists_container(5, 3)
-            model.lock()
-
-            with self.assertRaisesRegex(
-                ValueError, r"^values must be a subset of range\(5\)$"
-            ):
-                x.set_state(0, [[0, 0, 1, 2, 3], [], []])
-
-            # wrong number of lists
-            with self.assertRaises(IndexError):
-                x.set_state(0, [[0, 1, 2, 3, 4], [], [], []])
-
-        with self.subTest("infeasible"):
-            model = Model()
-            model.states.resize(1)
-            x = model.disjoint_lists_container(5, 3)
-            model.lock()
-
-            # Not disjoint
-            x.set_state(0, [[0, 1, 2, 3], [3], [4]])
-            self.assertFalse(model.feasible(0))
-
-            # Not a cover
-            x.set_state(0, [[0, 1, 2], [], [4]])
-            self.assertFalse(model.feasible(0))
-
-    def test_state_size(self):
-        model = Model()
-
-        d = model.disjoint_lists_container(10, 4)
-
-        for s in d:
-            self.assertEqual(s.state_size(), 10 * 8)
 
 
 class TestDisjointListsVariable(utils.SymbolTests):
