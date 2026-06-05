@@ -175,7 +175,7 @@ requires(not std::is_const_v<T>) class interval {
         return out;
     }
 
-    bool contains(DType auto&& value) const {
+    bool contains(auto&& value) const {
         // dev note: numeric issues
         return infimum_ <= value and value <= supremum_;
     }
@@ -218,7 +218,7 @@ requires(not std::is_const_v<T>) class interval {
         return 0;
     }
     std::ptrdiff_t size() const noexcept requires(std::integral<T>) {
-        if (supremum_ >= infimum_) return static_cast<std::ptrdiff_t>(supremum_) - infimum_;
+        if (supremum_ >= infimum_) return static_cast<std::ptrdiff_t>(supremum_) - infimum_ + 1;
         return 0;
     }
 

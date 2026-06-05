@@ -97,14 +97,21 @@ template <DType T>
 struct Abs : UnaryFunctionMixin<Abs<T>> {
     using result_type = T;
 
-    constexpr T operator()(DType auto&& x) const noexcept {
-        return std::abs(x);
-    }
+    constexpr T operator()(DType auto&& x) const noexcept { return std::abs(x); }
 
-    template<DType U>
+    template <DType U>
     interval<T> operator()(const interval<U>& in) const noexcept {
         // first get the absolute value, using the type of the input interval
         return static_cast<interval<T>>((-in | in) & interval<U>::nonnegative());
+    }
+
+    template <DType U>
+    interval<T> inverse(const interval<U>& in) const noexcept {
+        assert(
+            (interval<U>::nonnegative() | in) == in and
+            "argument for inverse of abs should be nonnegative"
+        );
+        return in | -in;
     }
 };
 
