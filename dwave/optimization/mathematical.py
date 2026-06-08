@@ -1123,7 +1123,7 @@ def is_disjoint_cover(primary_set_size: int, subsets: list[ArraySymbol]) -> IsDi
         subsets: List of array symbols to test whether they are disjoint and cover the primary set
 
     Returns:
-        A scalar boolean-valued array symbol indicating whether the subsets 
+        A scalar boolean-valued array symbol indicating whether the subsets are a disjoint cover
 
     Examples:
         >>> from dwave.optimization.model import Model
