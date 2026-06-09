@@ -509,6 +509,30 @@ TEST_CASE("ListNode") {
             }
         }
     }
+
+    SECTION("checkpoints") {
+        auto list_ptr = graph.emplace_node<ListNode>(5);
+        auto state = graph.initialize_state();
+
+        // make a checkpoint
+        auto checkpoint0 = list_ptr->checkpoint(state);
+
+        // mutate the state a bit
+        list_ptr->exchange(state, 0, 1);
+        list_ptr->commit(state);
+
+        // make another checkpoint
+
+        auto checkpoint1 = list_ptr->checkpoint(state);
+
+        WHEN("We revert to the first checkpoint") {
+            list_ptr->assign_from_checkpoint(state, std::move(checkpoint0));
+
+            CHECK(not checkpoint1->valid());
+
+            CHECK_THAT(list_ptr->view(state), RangeEquals({0, 1, 2, 3, 4}));
+        }
+    }
 }
 
 TEST_CASE("SetNode") {
