@@ -1132,13 +1132,13 @@ def is_disjoint_cover(primary_set_size: int, subsets: list[ArraySymbol]) -> IsDi
         >>> model = Model()
         >>> model.states.resize(1)
         >>> subsets = []
-        >>> subsets.append(model.constant([0, 1])
-        >>> subsets.append(model.constant([2, 3, 4])
-        >>> subsets.append(model.constant([])
+        >>> subsets.append(model.constant([0, 1]))
+        >>> subsets.append(model.constant([2, 3, 4]))
+        >>> subsets.append(model.constant([]))
         >>> is_disjoint = is_disjoint_cover(5, subsets)
         >>> with model.lock():
         ...     print(is_disjoint.state(0))
-        [1.]
+        1.0
 
     See Also:
         :class:`~dwave.optimization.symbols.IsDisjointCover`: Generated symbol
