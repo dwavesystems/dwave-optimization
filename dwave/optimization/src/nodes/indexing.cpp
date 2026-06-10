@@ -1519,48 +1519,6 @@ std::vector<BasicIndexingNode::slice_or_int> BasicIndexingNode::infer_indices() 
     return indices;
 }
 
-std::vector<ssize_t> BasicIndexingNode::flat_source_indices() const {
-    assert(!dynamic() && "does not support dynamic arrays");
-    const ssize_t view_ndim = ndim();
-    const auto view_shape = shape();
-    const auto view_strides = strides();
-    const ssize_t total_size = size();
-
-    if (total_size == 0){
-        return {};
-    }
-
-    std::vector<ssize_t> flat_indices;
-    flat_indices.reserve(total_size);
-
-    // Convert strides from bytes to element counts
-    std::vector<ssize_t> elem_strides(view_ndim);
-    for(ssize_t d = 0; d < view_ndim; ++d){
-        elem_strides[d] = view_strides[d] / static_cast<ssize_t>(sizeof(double));
-    }
-
-    //Multi-dimensional index counter (row major iteration)
-    std::vector<ssize_t> multi_idx(view_ndim);
-
-    for (ssize_t i = 0; i < total_size; ++i){
-        ssize_t offset = start_;
-        for (ssize_t d = 0; d < view_ndim; ++d){
-            offset += multi_idx[d] * elem_strides[d];
-        }
-        flat_indices.push_back(offset);
-
-        // Increment multi idx in row major order (last dim first)
-        for (ssize_t d = view_ndim - 1; d >= 0; --d){
-            ++multi_idx[d];
-            if(multi_idx[d] < view_shape[d]){
-                break;
-            }
-            multi_idx[d] = 0;
-        }
-    }
-    return flat_indices;
-}
-
 void BasicIndexingNode::initialize_state(State& state) const {
     // we're a view, so we don't really need state other than for the updates
     emplace_data_ptr<BasicIndexingNodeData>(state, this);
