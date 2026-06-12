@@ -23,9 +23,9 @@ namespace dwave::optimization {
 // Given a collection, check that it is a valid sub-permutation of range(n),
 // and then "augment" it so that the values not in collection are appended onto
 // the end.
-std::vector<double> augment_collection(std::vector<double> values, const ssize_t n) {
+std::vector<double> augment_collection_(std::vector<double> values, const ssize_t n) {
     // First check that our given values has the values we expect
-    if (!std::ranges::all_of(values, is_integer)) {
+    if (not std::ranges::all_of(values, is_integer)) {
         throw std::invalid_argument("values values must be integers");
     }
     if (std::ranges::any_of(values, [](const auto& val) -> bool { return val < 0; })) {
@@ -38,12 +38,12 @@ std::vector<double> augment_collection(std::vector<double> values, const ssize_t
     // Next check that we have a sub-permutation of range(n)
 
     // We'll track how many times each value appears in the values.
-    // We void the weird vector<bool> overload for performance even though
+    // We avoid the weird vector<bool> overload for performance even though
     // that's all we need here.
     std::vector<signed char> count(n, 0);
 
     for (const auto& val : values) {
-        const size_t i = static_cast<std::size_t>(val);  // should be safe due to previous checks
+        const size_t i = static_cast<size_t>(val);  // relies on previous checks
 
         if (count[i]) {
             throw std::invalid_argument(
@@ -60,91 +60,93 @@ std::vector<double> augment_collection(std::vector<double> values, const ssize_t
 
     // Otherwise add any "missing" values to the values.
     for (ssize_t i = 0; i < n; ++i) {
-        if (!count[i]) values.emplace_back(i);
+        if (not count[i]) values.emplace_back(i);
     }
 
     return values;
 }
 
-struct CollectionStateData : NodeStateData {
-    explicit CollectionStateData(ssize_t n) : CollectionStateData(n, n) {}
+class CollectionStateData_ : public NodeStateData {
+ public:
+    explicit CollectionStateData_(ssize_t n) : CollectionStateData_(n, n) {}
 
-    CollectionStateData(ssize_t n, ssize_t size) : size(size) {
-        assert(0 <= n && "n must be positive");
-        assert(0 <= size && size <= n && "size must be in [0, n] inclusive");
+    CollectionStateData_(ssize_t n, ssize_t size) : size_(size), previous_size_(size_) {
+        assert(0 <= n and "n must be positive");
+        assert(0 <= size_ and size_ <= n and "size must be in [0, n] inclusive");
         for (ssize_t i = 0; i < n; ++i) {
-            elements.push_back(i);
+            elements_.push_back(i);
         }
     }
 
-    explicit CollectionStateData(std::vector<double> elements) :
-        CollectionStateData(std::move(elements), elements.size()) {}
-
-    CollectionStateData(std::vector<double> elements, ssize_t size) :
-        elements(std::move(elements)), size(size) {
-        assert(0 <= size && static_cast<std::size_t>(size) <= this->elements.size());
+    CollectionStateData_(std::vector<double> elements, ssize_t size) :
+        elements_(std::move(elements)), size_(size), previous_size_(size_) {
+        assert(0 <= size_ and static_cast<size_t>(size_) <= elements_.size());
     }
 
     void assign(std::vector<double>&& values, ssize_t size) {
         // this should have been checked already by the CollectionNode
-        assert(values.size() == elements.size());
+        assert(values.size() == elements_.size());
 
         // First shrink the visible part down so that we're correctly tracking
         // our visible/invisible changes.
-        while (this->size > size) shrink();
+        while (this->size_ > size) shrink();
 
         // Then, let's note the public changes to the visible part of the buffer
-        for (ssize_t i = 0, stop = std::min(this->size, size); i < stop; ++i) {
-            updates.emplace_back(i, elements[i], values[i]);
+        for (ssize_t i = 0, stop = std::min(this->size_, size); i < stop; ++i) {
+            updates_.emplace_back(i, elements_[i], values[i]);
         }
 
         // Next, actually swap the buffers (tracking the changes for a later revert)
-        for (ssize_t i = 0, n = elements.size(); i < n; ++i) {
-            if (elements[i] == values[i]) continue;  // no change
-            all_updates.emplace_back(i, elements[i], values[i]);
+        for (ssize_t i = 0, n = elements_.size(); i < n; ++i) {
+            if (elements_[i] == values[i]) continue;  // no change
+            all_updates_.emplace_back(i, elements_[i], values[i]);
         }
-        std::swap(elements, values);
+        std::swap(elements_, values);
 
         // Finally do any growing we need to do.
-        while (this->size < size) grow();
+        while (this->size_ < size) grow();
 
-        assert(this->size == size);
+        assert(this->size_ == size);
     }
 
+    const double* buff() const { return elements_.data(); }
+
     void commit() {
-        updates.clear();
-        all_updates.clear();
-        previous_size = size;
+        updates_.clear();
+        all_updates_.clear();
+        previous_size_ = size_;
     }
 
     std::unique_ptr<NodeStateData> copy() const override {
-        return std::make_unique<CollectionStateData>(*this);
+        return std::make_unique<CollectionStateData_>(*this);
     }
 
+    std::span<const Update> diff() const { return updates_; }
+
     void exchange(ssize_t i, ssize_t j) {
-        assert(i >= 0 && static_cast<std::size_t>(i) < elements.size());
-        assert(j >= 0 && static_cast<std::size_t>(j) < elements.size());
+        assert(i >= 0 and static_cast<size_t>(i) < elements_.size());
+        assert(j >= 0 and static_cast<size_t>(j) < elements_.size());
 
-        std::swap(elements[i], elements[j]);
+        std::swap(elements_[i], elements_[j]);
 
-        all_updates.emplace_back(i, elements[j], elements[i]);
-        all_updates.emplace_back(j, elements[i], elements[j]);
+        all_updates_.emplace_back(i, elements_[j], elements_[i]);
+        all_updates_.emplace_back(j, elements_[i], elements_[j]);
 
         // only track changes within the visible part of the array
-        if (i < size && j < size) {
-            updates.emplace_back(i, elements[j], elements[i]);
-            updates.emplace_back(j, elements[i], elements[j]);
-        } else if (j < size) {
-            updates.emplace_back(j, elements[i], elements[j]);
-        } else if (i < size) {
-            updates.emplace_back(i, elements[j], elements[i]);
+        if (i < size_ and j < size_) {
+            updates_.emplace_back(i, elements_[j], elements_[i]);
+            updates_.emplace_back(j, elements_[i], elements_[j]);
+        } else if (j < size_) {
+            updates_.emplace_back(j, elements_[i], elements_[j]);
+        } else if (i < size_) {
+            updates_.emplace_back(i, elements_[j], elements_[i]);
         }  // if neither are visible we don't need to track it
     }
 
     void grow() {
-        assert(size < static_cast<ssize_t>(elements.size()));
-        updates.emplace_back(Update::placement(size, elements[size]));
-        ++size;
+        assert(size_ < static_cast<ssize_t>(elements_.size()));
+        updates_.emplace_back(Update::placement(size_, elements_[size_]));
+        ++size_;
     }
 
     void revert() {
@@ -152,59 +154,82 @@ struct CollectionStateData : NodeStateData {
         // If we end up enforcing updates being sorted and unique later then
         // we could do this any order (or better in parallel).
 
-        for (const Update& update : all_updates | std::views::reverse) {
-            elements[update.index] = update.old;
+        for (const Update& update : all_updates_ | std::views::reverse) {
+            elements_[update.index] = update.old;
         }
 
-        updates.clear();
-        all_updates.clear();
-        size = previous_size;
+        updates_.clear();
+        all_updates_.clear();
+        size_ = previous_size_;
     }
 
     void rotate(ssize_t dest_idx, ssize_t src_idx) {
         // We want the rotate function to be called only on the visible part of the list.
-        assert(src_idx >= 0 && src_idx < size);
-        assert(dest_idx >= 0 && dest_idx < size);
+        assert(src_idx >= 0 and src_idx < size_);
+        assert(dest_idx >= 0 and dest_idx < size_);
 
         // Elements move from left to right.
         if (src_idx > dest_idx) {
-            auto prev = elements[src_idx];
+            auto prev = elements_[src_idx];
             for (ssize_t i = dest_idx; i <= src_idx; i++) {
-                std::swap(elements[i], prev);
-                all_updates.emplace_back(i, prev, elements[i]);
-                updates.emplace_back(i, prev, elements[i]);
+                std::swap(elements_[i], prev);
+                all_updates_.emplace_back(i, prev, elements_[i]);
+                updates_.emplace_back(i, prev, elements_[i]);
             }
         } else if (src_idx < dest_idx) {
-            auto prev = elements[src_idx];
+            auto prev = elements_[src_idx];
             for (ssize_t i = dest_idx; i >= src_idx; i--) {
-                std::swap(elements[i], prev);
-                all_updates.emplace_back(i, prev, elements[i]);
-                updates.emplace_back(i, prev, elements[i]);
+                std::swap(elements_[i], prev);
+                all_updates_.emplace_back(i, prev, elements_[i]);
+                updates_.emplace_back(i, prev, elements_[i]);
             }
         }
     }
 
+    std::span<const ssize_t> shape() const { return std::span<const ssize_t>(&size_, 1); }
+
     void shrink() {
-        assert(size > 0);
-        --size;
-        updates.emplace_back(Update::removal(size, elements[size]));
+        assert(size_ > 0);
+        --size_;
+        updates_.emplace_back(Update::removal(size_, elements_[size_]));
     }
 
+    ssize_t size() const { return size_; }
+
+    ssize_t size_diff() const { return size_ - previous_size_; }
+
+ private:
     // The elements in the collection
-    std::vector<double> elements;
+    std::vector<double> elements_;
 
     // The updates to the *visible* elements
-    std::vector<Update> updates;
+    std::vector<Update> updates_;
 
     // The updates to the buffer, including the changes that are not currently
     // visible to the user
-    std::vector<Update> all_updates;
+    std::vector<Update> all_updates_;
 
     // The current size of visible buffer, as well as the size after the last
     // commit/revert
-    ssize_t size;
-    ssize_t previous_size = size;
+    ssize_t size_;
+    ssize_t previous_size_;
 };
+
+CollectionNode::CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size) :
+    ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),
+    max_value_(max_value),
+    min_size_(min_size),
+    max_size_(max_size) {
+    if (min_size < 0 or max_size < 0) {
+        throw std::invalid_argument("a collection cannot contain fewer than 0 elements");
+    }
+    if (min_size > max_size) {
+        throw std::invalid_argument("min_size cannot be greater than max_size");
+    }
+    if (max_size > max_value) {
+        throw std::invalid_argument("a collection cannot be larger than its maximum value");
+    }
+}
 
 void CollectionNode::assign(State& state, std::vector<double> values) const {
     const ssize_t size = values.size();
@@ -212,36 +237,35 @@ void CollectionNode::assign(State& state, std::vector<double> values) const {
     if (size > max_size_) throw std::invalid_argument("values contains too many values");
 
     // Check that the values are a proper subset and fill out the invisible part
-    auto augemented = augment_collection(std::move(values), max_value_);
+    auto augemented = augment_collection_(std::move(values), max_value_);
 
-    data_ptr<CollectionStateData>(state)->assign(std::move(augemented), size);
+    data_ptr<CollectionStateData_>(state)->assign(std::move(augemented), size);
 }
 
-void CollectionNode::commit(State& state) const { data_ptr<CollectionStateData>(state)->commit(); }
+void CollectionNode::commit(State& state) const { data_ptr<CollectionStateData_>(state)->commit(); }
 
-double const* CollectionNode::buff(const State& state) const {
-    auto ptr = data_ptr<CollectionStateData>(state);
-    return ptr->elements.data();
+const double* CollectionNode::buff(const State& state) const {
+    return data_ptr<CollectionStateData_>(state)->buff();
 }
 
 std::span<const Update> CollectionNode::diff(const State& state) const {
-    return data_ptr<CollectionStateData>(state)->updates;
+    return data_ptr<CollectionStateData_>(state)->diff();
 }
 
 void CollectionNode::exchange(State& state, ssize_t i, ssize_t j) const {
     if (i == j) return;
-    data_ptr<CollectionStateData>(state)->exchange(i, j);  // handles the asserts
+    data_ptr<CollectionStateData_>(state)->exchange(i, j);  // handles the asserts
 }
 
 void CollectionNode::rotate(State& state, ssize_t dest_idx, ssize_t src_idx) const {
     if (src_idx == dest_idx) return;
-    data_ptr<CollectionStateData>(state)->rotate(dest_idx, src_idx);  // handles the asserts
+    data_ptr<CollectionStateData_>(state)->rotate(dest_idx, src_idx);  // handles the asserts
 }
 
 void CollectionNode::grow(State& state) const {
     assert(this->dynamic());
-    assert(data_ptr<CollectionStateData>(state)->size < max_size_);
-    data_ptr<CollectionStateData>(state)->grow();
+    assert(data_ptr<CollectionStateData_>(state)->size() < max_size_);
+    data_ptr<CollectionStateData_>(state)->grow();
 }
 
 void CollectionNode::initialize_state(State& state, std::vector<double> values) const {
@@ -250,9 +274,9 @@ void CollectionNode::initialize_state(State& state, std::vector<double> values) 
     if (size > max_size_) throw std::invalid_argument("values contains too many values");
 
     // Check that the values are a proper subset and fill out the invisible part
-    auto augemented = augment_collection(std::move(values), max_value_);
+    auto augemented = augment_collection_(std::move(values), max_value_);
 
-    emplace_data_ptr<CollectionStateData>(state, std::move(augemented), size);
+    emplace_data_ptr<CollectionStateData_>(state, std::move(augemented), size);
 }
 
 bool CollectionNode::integral() const { return true; }
@@ -264,46 +288,45 @@ double CollectionNode::max() const {
     return max_value_ - 1;
 }
 
-void CollectionNode::revert(State& state) const { data_ptr<CollectionStateData>(state)->revert(); }
+void CollectionNode::revert(State& state) const { data_ptr<CollectionStateData_>(state)->revert(); }
 
 std::span<const ssize_t> CollectionNode::shape(const State& state) const {
-    if (this->dynamic()) {
-        const auto ptr = data_ptr<CollectionStateData>(state);
-        return std::span<const ssize_t>(&(ptr->size), 1);
-    } else {
-        assert(this->min_size_ == this->max_size_);
-        return std::span<const ssize_t>(&(this->min_size_), 1);
+    if (not dynamic()) {
+        assert(min_size_ == max_size_);
+        return std::span<const ssize_t>(&min_size_, 1);
     }
+    return data_ptr<CollectionStateData_>(state)->shape();
 }
 
 void CollectionNode::shrink(State& state) const {
-    assert(this->dynamic());
-    assert(data_ptr<CollectionStateData>(state)->size > min_size_);
-    data_ptr<CollectionStateData>(state)->shrink();
+    assert(dynamic());
+    assert(size(state) > min_size_);
+    data_ptr<CollectionStateData_>(state)->shrink();
 }
 
 ssize_t CollectionNode::size(const State& state) const {
-    if (this->dynamic()) {
-        return data_ptr<CollectionStateData>(state)->size;
+    if (ssize_t size = this->size(); size >= 0) {
+        assert(data_ptr<CollectionStateData_>(state)->size() == size);
+        return size;
     }
-    return this->size();
+    return data_ptr<CollectionStateData_>(state)->size();
 }
 
 SizeInfo CollectionNode::sizeinfo() const {
-    if (!dynamic()) return SizeInfo(size());
+    if (not dynamic()) return SizeInfo(size());
     return SizeInfo(this, min_size_, max_size_);
 }
 
 ssize_t CollectionNode::size_diff(const State& state) const {
-    if (this->dynamic()) {
-        auto ptr = data_ptr<CollectionStateData>(state);
-        return ptr->size - ptr->previous_size;
+    if (not dynamic()) {
+        assert(data_ptr<CollectionStateData_>(state)->size_diff() == 0);
+        return 0;
     }
-    return 0;
+    return data_ptr<CollectionStateData_>(state)->size_diff();
 }
 
-struct DisjointBitSetsNodeData : NodeStateData {
-    DisjointBitSetsNodeData(ssize_t primary_set_size, ssize_t num_disjoint_sets) :
+struct DisjointBitSetsNodeData_ : NodeStateData {
+    DisjointBitSetsNodeData_(ssize_t primary_set_size, ssize_t num_disjoint_sets) :
         primary_set_size(primary_set_size), num_disjoint_sets(num_disjoint_sets) {
         data.resize(primary_set_size * num_disjoint_sets, 0);
         diffs.resize(num_disjoint_sets);
@@ -314,7 +337,7 @@ struct DisjointBitSetsNodeData : NodeStateData {
         }
     }
 
-    DisjointBitSetsNodeData(
+    DisjointBitSetsNodeData_(
         ssize_t primary_set_size,
         ssize_t num_disjoint_sets,
         const std::vector<std::vector<double>>& contents
@@ -336,7 +359,7 @@ struct DisjointBitSetsNodeData : NodeStateData {
                 );
             }
             for (ssize_t el_index = 0; el_index < primary_set_size; ++el_index) {
-                if (!(contents[set_index][el_index] == 0 || contents[set_index][el_index] == 1)) {
+                if (not(contents[set_index][el_index] == 0 or contents[set_index][el_index] == 1)) {
                     throw std::invalid_argument("provided set must be binary valued");
                 }
                 data[set_index * primary_set_size + el_index] = contents[set_index][el_index];
@@ -363,12 +386,12 @@ struct DisjointBitSetsNodeData : NodeStateData {
     }
 
     ssize_t get_containing_set_index(ssize_t element) const {
-        assert(element >= 0 && element < primary_set_size);
+        assert(element >= 0 and element < primary_set_size);
         for (ssize_t set_index = 0; set_index < num_disjoint_sets; ++set_index) {
             if (data[set_index * primary_set_size + element]) return set_index;
         }
 
-        assert(false && "disjoint set elements must be in exactly one bit-set once");
+        assert(false and "disjoint set elements must be in exactly one bit-set once");
         unreachable();
     }
 
@@ -379,7 +402,7 @@ struct DisjointBitSetsNodeData : NodeStateData {
     }
 
     std::unique_ptr<NodeStateData> copy() const override {
-        return std::make_unique<DisjointBitSetsNodeData>(*this);
+        return std::make_unique<DisjointBitSetsNodeData_>(*this);
     }
 
     void revert() {
@@ -391,7 +414,7 @@ struct DisjointBitSetsNodeData : NodeStateData {
         }
     }
 
-    double const* get_data(ssize_t set_index) { return &data[set_index * primary_set_size]; }
+    const double* get_data(ssize_t set_index) { return &data[set_index * primary_set_size]; }
 
     ssize_t primary_set_size;
     ssize_t num_disjoint_sets;
@@ -406,24 +429,24 @@ DisjointBitSetsNode::DisjointBitSetsNode(ssize_t primary_set_size, ssize_t num_d
 }
 
 void DisjointBitSetsNode::initialize_state(State& state) const {
-    emplace_data_ptr<DisjointBitSetsNodeData>(state, primary_set_size_, num_disjoint_sets_);
+    emplace_data_ptr<DisjointBitSetsNodeData_>(state, primary_set_size_, num_disjoint_sets_);
 }
 
 void DisjointBitSetsNode::initialize_state(
     State& state,
     const std::vector<std::vector<double>>& contents
 ) const {
-    emplace_data_ptr<DisjointBitSetsNodeData>(
+    emplace_data_ptr<DisjointBitSetsNodeData_>(
         state, primary_set_size_, num_disjoint_sets_, contents
     );
 }
 
 void DisjointBitSetsNode::commit(State& state) const {
-    data_ptr<DisjointBitSetsNodeData>(state)->commit();
+    data_ptr<DisjointBitSetsNodeData_>(state)->commit();
 }
 
 void DisjointBitSetsNode::revert(State& state) const {
-    data_ptr<DisjointBitSetsNodeData>(state)->revert();
+    data_ptr<DisjointBitSetsNodeData_>(state)->revert();
 }
 
 void DisjointBitSetsNode::swap_between_sets(
@@ -432,24 +455,37 @@ void DisjointBitSetsNode::swap_between_sets(
     ssize_t to_disjoint_set,
     ssize_t element
 ) const {
-    data_ptr<DisjointBitSetsNodeData>(state)->swap_between_sets(
+    data_ptr<DisjointBitSetsNodeData_>(state)->swap_between_sets(
         from_disjoint_set, to_disjoint_set, element
     );
 }
 
 ssize_t DisjointBitSetsNode::get_containing_set_index(State& state, ssize_t element) const {
-    return data_ptr<DisjointBitSetsNodeData>(state)->get_containing_set_index(element);
+    return data_ptr<DisjointBitSetsNodeData_>(state)->get_containing_set_index(element);
 }
 
-double const* DisjointBitSetNode::buff(const State& state) const {
-    int index = disjoint_bit_sets_node->topological_index();
-    DisjointBitSetsNodeData* pred_data = static_cast<DisjointBitSetsNodeData*>(state[index].get());
+DisjointBitSetNode::DisjointBitSetNode(DisjointBitSetsNode* disjoint_bit_sets_node) :
+    ArrayOutputMixin(disjoint_bit_sets_node->primary_set_size()),
+    disjoint_bit_sets_node_(disjoint_bit_sets_node),
+    set_index_(disjoint_bit_sets_node->successors().size()),
+    primary_set_size_(disjoint_bit_sets_node_->primary_set_size()) {
+    if (set_index_ >= disjoint_bit_sets_node_->num_disjoint_sets()) {
+        throw std::length_error("disjoint-bit-set node already has all output nodes");
+    }
+    add_predecessor(disjoint_bit_sets_node);
+}
+
+const double* DisjointBitSetNode::buff(const State& state) const {
+    int index = disjoint_bit_sets_node_->topological_index();
+    DisjointBitSetsNodeData_* pred_data =
+        static_cast<DisjointBitSetsNodeData_*>(state[index].get());
     return pred_data->get_data(set_index_);
 }
 
 std::span<const Update> DisjointBitSetNode::diff(const State& state) const {
-    int index = disjoint_bit_sets_node->topological_index();
-    DisjointBitSetsNodeData* pred_data = static_cast<DisjointBitSetsNodeData*>(state[index].get());
+    int index = disjoint_bit_sets_node_->topological_index();
+    DisjointBitSetsNodeData_* pred_data =
+        static_cast<DisjointBitSetsNodeData_*>(state[index].get());
     return pred_data->diffs[set_index_];
 }
 
@@ -459,8 +495,8 @@ double DisjointBitSetNode::min() const { return 0; }
 
 double DisjointBitSetNode::max() const { return 1; }
 
-struct DisjointListStateData : NodeStateData {
-    DisjointListStateData(ssize_t primary_set_size, ssize_t num_disjoint_lists) :
+struct DisjointListStateData_ : NodeStateData {
+    DisjointListStateData_(ssize_t primary_set_size, ssize_t num_disjoint_lists) :
         primary_set_size(primary_set_size) {
         lists.resize(num_disjoint_lists);
         all_list_updates.resize(num_disjoint_lists);
@@ -481,7 +517,7 @@ struct DisjointListStateData : NodeStateData {
         previous_list_sizes[0] = primary_set_size;
     }
 
-    explicit DisjointListStateData(
+    explicit DisjointListStateData_(
         size_t primary_set_size,
         size_t num_disjoint_lists,
         std::vector<std::vector<double>> lists_
@@ -499,7 +535,7 @@ struct DisjointListStateData : NodeStateData {
         for (const auto& list : lists) {
             for (const auto& el : list) {
                 size_t int_el = static_cast<size_t>(el);
-                if (el < 0.0 || static_cast<double>(int_el) != el) {
+                if (el < 0.0 or static_cast<double>(int_el) != el) {
                     throw std::invalid_argument(
                         "disjoint list elements must be integral and non-negative"
                     );
@@ -511,7 +547,7 @@ struct DisjointListStateData : NodeStateData {
                     );
                 }
                 auto [_, inserted] = elements.insert(int_el);
-                if (!inserted) {
+                if (not inserted) {
                     throw std::invalid_argument(
                         "disjoint list elements must be in exactly one list once"
                     );
@@ -542,8 +578,8 @@ struct DisjointListStateData : NodeStateData {
     void rotate_in_list(ssize_t list_index, ssize_t dest_idx, ssize_t src_idx) {
         // We want the rotate function to be called only on the visible part of the list.
         auto& list = lists[list_index];
-        assert(src_idx >= 0 && static_cast<std::size_t>(src_idx) < list.size());
-        assert(dest_idx >= 0 && static_cast<std::size_t>(dest_idx) < list.size());
+        assert(src_idx >= 0 and static_cast<size_t>(src_idx) < list.size());
+        assert(dest_idx >= 0 and static_cast<size_t>(dest_idx) < list.size());
 
         // Elements move from left to right.
         if (src_idx > dest_idx) {
@@ -606,8 +642,8 @@ struct DisjointListStateData : NodeStateData {
     void swap_in_list(ssize_t list_index, ssize_t element_i, ssize_t element_j) {
         // Swap two items in the same list
         auto& list = lists[list_index];
-        assert(element_i >= 0 && static_cast<std::size_t>(element_i) < list.size());
-        assert(element_j >= 0 && static_cast<std::size_t>(element_j) < list.size());
+        assert(element_i >= 0 and static_cast<size_t>(element_i) < list.size());
+        assert(element_j >= 0 and static_cast<size_t>(element_j) < list.size());
 
         std::swap(list[element_i], list[element_j]);
 
@@ -624,8 +660,8 @@ struct DisjointListStateData : NodeStateData {
         // Pop an item from one list and insert it into another
         auto& from_list = lists[from_list_index];
         auto& to_list = lists[to_list_index];
-        assert(element_i >= 0 && static_cast<std::size_t>(element_i) < from_list.size());
-        assert(element_j >= 0 && static_cast<std::size_t>(element_j) <= to_list.size());
+        assert(element_i >= 0 and static_cast<size_t>(element_i) < from_list.size());
+        assert(element_j >= 0 and static_cast<size_t>(element_j) <= to_list.size());
 
         auto value = from_list[element_i];
 
@@ -672,7 +708,7 @@ struct DisjointListStateData : NodeStateData {
     }
 
     std::unique_ptr<NodeStateData> copy() const override {
-        return std::make_unique<DisjointListStateData>(*this);
+        return std::make_unique<DisjointListStateData_>(*this);
     }
 
     ssize_t primary_set_size;
@@ -690,7 +726,7 @@ DisjointListsNode::DisjointListsNode(ssize_t primary_set_size, ssize_t num_disjo
 }
 
 void DisjointListsNode::initialize_state(State& state) const {
-    emplace_data_ptr<DisjointListStateData>(
+    emplace_data_ptr<DisjointListStateData_>(
         state, this->primary_set_size(), this->num_disjoint_lists()
     );
 }
@@ -699,22 +735,22 @@ void DisjointListsNode::initialize_state(
     State& state,
     std::vector<std::vector<double>> contents
 ) const {
-    emplace_data_ptr<DisjointListStateData>(
+    emplace_data_ptr<DisjointListStateData_>(
         state, this->primary_set_size(), this->num_disjoint_lists(), std::move(contents)
     );
 }
 
 void DisjointListsNode::commit(State& state) const {
-    data_ptr<DisjointListStateData>(state)->commit();
+    data_ptr<DisjointListStateData_>(state)->commit();
 }
 
 void DisjointListsNode::revert(State& state) const {
-    data_ptr<DisjointListStateData>(state)->revert();
+    data_ptr<DisjointListStateData_>(state)->revert();
 }
 
 void DisjointListsNode::propagate(State& state) const {
 #ifndef NDEBUG
-    auto data = data_ptr<DisjointListStateData>(state);
+    auto data = data_ptr<DisjointListStateData_>(state);
     std::vector<bool> items(this->primary_set_size());
     for (auto const& list : data->lists) {
         for (const auto& item : list) {
@@ -734,7 +770,7 @@ void DisjointListsNode::propagate(State& state) const {
 }
 
 ssize_t DisjointListsNode::get_disjoint_list_size(State& state, ssize_t list_index) const {
-    auto data = data_ptr<DisjointListStateData>(state);
+    auto data = data_ptr<DisjointListStateData_>(state);
     auto size = data->lists[list_index].size();
     return size;
 }
@@ -746,7 +782,7 @@ void DisjointListsNode::rotate_in_list(
     ssize_t dest_idx
 ) const {
     if (src_idx == dest_idx) return;
-    data_ptr<DisjointListStateData>(state)->rotate_in_list(list_index, src_idx, dest_idx);
+    data_ptr<DisjointListStateData_>(state)->rotate_in_list(list_index, src_idx, dest_idx);
 }
 
 void DisjointListsNode::set_state(
@@ -754,7 +790,7 @@ void DisjointListsNode::set_state(
     ssize_t list_index,
     const std::span<const double>& new_values
 ) const {
-    data_ptr<DisjointListStateData>(state)->set_state(list_index, new_values);
+    data_ptr<DisjointListStateData_>(state)->set_state(list_index, new_values);
 }
 
 void DisjointListsNode::swap_in_list(
@@ -765,7 +801,7 @@ void DisjointListsNode::swap_in_list(
 ) const {
     if (element_i == element_j) return;
 
-    data_ptr<DisjointListStateData>(state)->swap_in_list(list_index, element_i, element_j);
+    data_ptr<DisjointListStateData_>(state)->swap_in_list(list_index, element_i, element_j);
 }
 
 void DisjointListsNode::pop_to_list(
@@ -775,14 +811,14 @@ void DisjointListsNode::pop_to_list(
     ssize_t to_list_index,
     ssize_t element_j
 ) const {
-    data_ptr<DisjointListStateData>(state)->pop_to_list(
+    data_ptr<DisjointListStateData_>(state)->pop_to_list(
         from_list_index, element_i, to_list_index, element_j
     );
 }
 
 DisjointListNode::DisjointListNode(DisjointListsNode* disjoint_list_node) :
     ArrayOutputMixin(Array::DYNAMIC_SIZE),
-    disjoint_list_node_ptr(disjoint_list_node),
+    disjoint_list_node_ptr_(disjoint_list_node),
     list_index_(disjoint_list_node->successors().size()),
     primary_set_size_(disjoint_list_node->primary_set_size()) {
     if (list_index_ >= disjoint_list_node->num_disjoint_lists()) {
@@ -792,15 +828,15 @@ DisjointListNode::DisjointListNode(DisjointListsNode* disjoint_list_node) :
     add_predecessor(disjoint_list_node);
 }
 
-double const* DisjointListNode::buff(const State& state) const {
-    int index = disjoint_list_node_ptr->topological_index();
-    DisjointListStateData* data = static_cast<DisjointListStateData*>(state[index].get());
+const double* DisjointListNode::buff(const State& state) const {
+    int index = disjoint_list_node_ptr_->topological_index();
+    DisjointListStateData_* data = static_cast<DisjointListStateData_*>(state[index].get());
     return data->lists[list_index_].data();
 }
 
 std::span<const Update> DisjointListNode::diff(const State& state) const {
-    int index = disjoint_list_node_ptr->topological_index();
-    DisjointListStateData* data = static_cast<DisjointListStateData*>(state[index].get());
+    int index = disjoint_list_node_ptr_->topological_index();
+    DisjointListStateData_* data = static_cast<DisjointListStateData_*>(state[index].get());
     return data->all_list_updates[list_index_];
 }
 
@@ -811,14 +847,14 @@ double DisjointListNode::min() const { return 0; }
 double DisjointListNode::max() const { return primary_set_size_ - 1; }
 
 ssize_t DisjointListNode::size(const State& state) const {
-    int index = disjoint_list_node_ptr->topological_index();
-    DisjointListStateData* data = static_cast<DisjointListStateData*>(state[index].get());
+    int index = disjoint_list_node_ptr_->topological_index();
+    DisjointListStateData_* data = static_cast<DisjointListStateData_*>(state[index].get());
     return data->lists[list_index_].size();
 }
 
 std::span<const ssize_t> DisjointListNode::shape(const State& state) const {
-    int index = disjoint_list_node_ptr->topological_index();
-    DisjointListStateData* data = static_cast<DisjointListStateData*>(state[index].get());
+    int index = disjoint_list_node_ptr_->topological_index();
+    DisjointListStateData_* data = static_cast<DisjointListStateData_*>(state[index].get());
     data->list_sizes[list_index_] = data->lists[list_index_].size();
     return std::span<const ssize_t>(&(data->list_sizes[list_index_]), 1);
 }
@@ -829,17 +865,17 @@ SizeInfo DisjointListNode::sizeinfo() const {
 }
 
 ssize_t DisjointListNode::size_diff(const State& state) const {
-    int index = disjoint_list_node_ptr->topological_index();
-    DisjointListStateData* data = static_cast<DisjointListStateData*>(state[index].get());
+    int index = disjoint_list_node_ptr_->topological_index();
+    DisjointListStateData_* data = static_cast<DisjointListStateData_*>(state[index].get());
     return data->lists[list_index_].size() - data->previous_list_sizes[list_index_];
 }
 
 void ListNode::initialize_state(State& state) const {
-    emplace_data_ptr<CollectionStateData>(state, max_value_, min_size_);
+    emplace_data_ptr<CollectionStateData_>(state, max_value_, min_size_);
 }
 
 void SetNode::initialize_state(State& state) const {
-    emplace_data_ptr<CollectionStateData>(state, max_value_, min_size_);
+    emplace_data_ptr<CollectionStateData_>(state, max_value_, min_size_);
 }
 
 }  // namespace dwave::optimization

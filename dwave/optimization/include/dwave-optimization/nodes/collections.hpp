@@ -29,76 +29,56 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
  public:
     CollectionNode() = delete;
 
-    // Set the node's initial state explicitly
-    void initialize_state(State& state, std::vector<double> values) const;
-    using Node::initialize_state;  // inherit the default overload
-
-    // Overloads needed by the Array ABC **************************************
-
-    double const* buff(const State& state) const override;
-    std::span<const Update> diff(const State& state) const override;
-
-    /// @copydoc Array::integral()
-    bool integral() const override;
-
-    /// @copydoc Array::min()
-    double min() const override;
-
-    /// @copydoc Array::max()
-    double max() const override;
-
-    using ArrayOutputMixin::size;  // for size()
-    ssize_t size(const State& state) const override;
-
-    using ArrayOutputMixin::shape;  // for shape()
-    std::span<const ssize_t> shape(const State& state) const override;
-
-    ssize_t size_diff(const State& state) const override;
-
-    // Overloads required by the Node ABC *************************************
-
-    void commit(State&) const override;
-    void revert(State&) const override;
-
-    // Information about the size of the collection.
-    SizeInfo sizeinfo() const override;
-
-    // Moves ******************************************************************
-
     // Set the node's state, tracking the diff.
     void assign(State& state, std::vector<double> values) const;
+
+    const double* buff(const State& state) const override;
+
+    void commit(State&) const override;
+
+    std::span<const Update> diff(const State& state) const override;
 
     // Exchange the values in the list at index i and index j
     // Note that for variable-length collections these indices might not
     // be in the "visible" range.
     void exchange(State& state, ssize_t i, ssize_t j) const;
 
+    // Grow the size of the collection by one
+    void grow(State& state) const;
+
+    using Node::initialize_state;  // for initialize_state()
+
+    // Set the node's initial state explicitly
+    void initialize_state(State& state, std::vector<double> values) const;
+
+    bool integral() const override;
+
+    double max() const override;
+
+    double min() const override;
+
+    void revert(State&) const override;
+
     // Rotate the elements between src_idx and dest_idx with dest_idx getting the value of src_idx.
     // Equivalent change through exchange operation will be more computationally expensive.
     void rotate(State& state, ssize_t dest_idx, ssize_t src_idx) const;
 
-    // Grow the size of the collection by one
-    void grow(State& state) const;
+    using ArrayOutputMixin::shape;  // for shape()
+    std::span<const ssize_t> shape(const State& state) const override;
 
     // Shrink the size of the collection by one
     void shrink(State& state) const;
 
+    using ArrayOutputMixin::size;  // for size()
+    ssize_t size(const State& state) const override;
+
+    ssize_t size_diff(const State& state) const override;
+
+    // Information about the size of the collection.
+    SizeInfo sizeinfo() const override;
+
  protected:
-    CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size) :
-        ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),
-        max_value_(max_value),
-        min_size_(min_size),
-        max_size_(max_size) {
-        if (min_size < 0 || max_size < 0) {
-            throw std::invalid_argument("a collection cannot contain fewer than 0 elements");
-        }
-        if (min_size > max_size) {
-            throw std::invalid_argument("min_size cannot be greater than max_size");
-        }
-        if (max_size > max_value) {
-            throw std::invalid_argument("a collection cannot be larger than its maximum value");
-        }
-    }
+    CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size);
 
     // The collection draws its values from [0, max_value_)
     const ssize_t max_value_;
@@ -120,17 +100,20 @@ class DisjointBitSetsNode : public DecisionNode {
     // i.e. the set `range(primary_set_size)`.
     DisjointBitSetsNode(ssize_t primary_set_size, ssize_t num_disjoint_sets);
 
+    void commit(State&) const override;
+
+    ssize_t get_containing_set_index(State& state, ssize_t element_i) const;
+
     void initialize_state(State& state) const override;
 
     // Set the node's initial state explicitly
     void initialize_state(State& state, const std::vector<std::vector<double>>& contents) const;
 
-    // Overloads required by the Node ABC *************************************
+    ssize_t num_disjoint_sets() const { return num_disjoint_sets_; }
 
-    void commit(State&) const override;
+    ssize_t primary_set_size() const { return primary_set_size_; }
+
     void revert(State&) const override;
-
-    // Disjoint-Bitset-specific methods ********************************************
 
     void swap_between_sets(
         State& state,
@@ -138,12 +121,6 @@ class DisjointBitSetsNode : public DecisionNode {
         ssize_t to_disjoint_set,
         ssize_t element_i
     ) const;
-
-    ssize_t get_containing_set_index(State& state, ssize_t element_i) const;
-
-    ssize_t primary_set_size() const { return primary_set_size_; }
-
-    ssize_t num_disjoint_sets() const { return num_disjoint_sets_; }
 
  protected:
     const ssize_t primary_set_size_;
@@ -153,20 +130,12 @@ class DisjointBitSetsNode : public DecisionNode {
 // Successor node for the output of `DisjointBitSetsNode`
 class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    explicit DisjointBitSetNode(DisjointBitSetsNode* disjoint_bit_sets_node) :
-        ArrayOutputMixin(disjoint_bit_sets_node->primary_set_size()),
-        disjoint_bit_sets_node(disjoint_bit_sets_node),
-        set_index_(disjoint_bit_sets_node->successors().size()),
-        primary_set_size_(disjoint_bit_sets_node->primary_set_size()) {
-        if (set_index_ >= disjoint_bit_sets_node->num_disjoint_sets()) {
-            throw std::length_error("disjoint-bit-set node already has all output nodes");
-        }
-        add_predecessor(disjoint_bit_sets_node);
-    }
+    explicit DisjointBitSetNode(DisjointBitSetsNode* disjoint_bit_sets_node);
 
-    // Overloads needed by the Array ABC **************************************
+    const double* buff(const State&) const override;
 
-    double const* buff(const State&) const override;
+    void commit(State&) const override {};
+
     std::span<const Update> diff(const State& state) const override;
 
     /// @copydoc Array::integral()
@@ -178,19 +147,17 @@ class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::max()
     double max() const override;
 
-    // Overloads required by the Node ABC *************************************
-
-    void commit(State&) const override {};
     void revert(State&) const override {};
-    void update(State&, int) const override {};
 
     ssize_t set_index() const noexcept { return set_index_; };
+
+    void update(State&, int) const override {};
 
  protected:
     // This node is a pseudo-decision, so it is not removeable
     bool removable() const override { return false; }
 
-    const DisjointBitSetsNode* disjoint_bit_sets_node;
+    const DisjointBitSetsNode* disjoint_bit_sets_node_;
     const ssize_t set_index_;
     const ssize_t primary_set_size_;
 };
@@ -205,28 +172,16 @@ class DisjointListsNode : public DecisionNode {
     // i.e. the set `range(primary_set_size)`.
     DisjointListsNode(ssize_t primary_set_size, ssize_t num_disjoint_lists);
 
+    void commit(State&) const override;
+
+    ssize_t get_disjoint_list_size(State& state, ssize_t list_index) const;
+
     void initialize_state(State& state) const override;
 
     // Set the node's initial state explicitly
     void initialize_state(State& state, std::vector<std::vector<double>> contents) const;
 
-    // Overloads required by the Node ABC *************************************
-
-    void commit(State&) const override;
-    void revert(State&) const override;
-    void propagate(State&) const override;
-
-    // Disjoint-list-specific methods ********************************************
-    ssize_t get_disjoint_list_size(State& state, ssize_t list_index) const;
-
-    void rotate_in_list(State& state, ssize_t list_index, ssize_t dest_idx, ssize_t src_idx) const;
-
-    void swap_in_list(
-        State& state,
-        ssize_t disjoint_list,
-        ssize_t element_i,
-        ssize_t element_j
-    ) const;
+    ssize_t num_disjoint_lists() const { return num_disjoint_lists_; }
 
     void pop_to_list(
         State& state,
@@ -236,14 +191,26 @@ class DisjointListsNode : public DecisionNode {
         ssize_t element_j
     ) const;
 
+    ssize_t primary_set_size() const { return primary_set_size_; }
+
+    void propagate(State&) const override;
+
+    void revert(State&) const override;
+
+    void rotate_in_list(State& state, ssize_t list_index, ssize_t dest_idx, ssize_t src_idx) const;
+
     void set_state(
         State& state,
         ssize_t list_index,
         const std::span<const double>& new_values
     ) const;
 
-    ssize_t num_disjoint_lists() const { return num_disjoint_lists_; }
-    ssize_t primary_set_size() const { return primary_set_size_; }
+    void swap_in_list(
+        State& state,
+        ssize_t disjoint_list,
+        ssize_t element_i,
+        ssize_t element_j
+    ) const;
 
  protected:
     const ssize_t primary_set_size_;
@@ -255,44 +222,43 @@ class DisjointListNode : public ArrayOutputMixin<ArrayNode> {
  public:
     explicit DisjointListNode(DisjointListsNode* disjoint_list_node);
 
-    // Overloads needed by the Array ABC **************************************
+    const double* buff(const State& state) const override;
 
-    double const* buff(const State& state) const override;
+    void commit(State&) const override {};
+
     std::span<const Update> diff(const State& state) const override;
 
     /// @copydoc Array::integral()
     bool integral() const override;
 
-    /// @copydoc Array::min()
-    double min() const override;
+    ssize_t list_index() const noexcept { return list_index_; };
 
     /// @copydoc Array::max()
     double max() const override;
 
-    using ArrayOutputMixin::size;  // for size()
-    ssize_t size(const State& state) const override;
+    /// @copydoc Array::min()
+    double min() const override;
+
+    void revert(State&) const override {};
 
     using ArrayOutputMixin::shape;  // for shape()
     std::span<const ssize_t> shape(const State& state) const override;
+
+    using ArrayOutputMixin::size;  // for size()
+    ssize_t size(const State& state) const override;
 
     // Information about the size of the collection.
     SizeInfo sizeinfo() const override;
 
     ssize_t size_diff(const State& state) const override;
 
-    // Overloads required by the Node ABC *************************************
-
-    void commit(State&) const override {};
-    void revert(State&) const override {};
     void update(State&, int) const override {};
-
-    ssize_t list_index() const noexcept { return list_index_; };
 
  protected:
     // This node is a pseudo-decision, so it is not removeable
     bool removable() const override { return false; }
 
-    const DisjointListsNode* disjoint_list_node_ptr;
+    const DisjointListsNode* disjoint_list_node_ptr_;
     const ssize_t list_index_;
     const ssize_t primary_set_size_;
 };
@@ -306,8 +272,8 @@ class ListNode : public CollectionNode {
         CollectionNode(n, min_size, max_size) {}
 
     // A ListNode's initial state defaults to range(n)
-    void initialize_state(State& state) const override;
     using CollectionNode::initialize_state;  // for explicit initialization
+    void initialize_state(State& state) const override;
 };
 
 // A set node is an unordered subset of range(n)
@@ -324,8 +290,8 @@ class SetNode : public CollectionNode {
         CollectionNode(n, min_size, max_size) {}
 
     // A SetNode's default initial state is empty
-    void initialize_state(State& state) const override;
     using CollectionNode::initialize_state;  // for explicit initialization
+    void initialize_state(State& state) const override;
 };
 
 }  // namespace dwave::optimization
