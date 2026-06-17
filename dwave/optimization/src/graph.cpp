@@ -279,7 +279,7 @@ ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
     // Now walk backwards through the topologically sorted node list
     // removing any nodes with no successors that we haven't marked.
     for (auto& ptr : nodes_ | std::views::drop(num_decisions) | std::views::reverse) {
-        if (!ptr->removable()) continue;                // some nodes can never be removed
+        if (!ptr->removable_()) continue;               // some nodes can never be removed
         if (ptr->topological_index_ == keep) continue;  // we marked these to keep
         if (ptr->successors().size() > 0) continue;     // this node is used by other nodes
 

@@ -194,23 +194,23 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr) :
         calculate_integral<BinaryOp>(operands_[0], operands_[1])
     ),
     sizeinfo_(binaryop_calculate_sizeinfo(this, operands_[0], operands_[1])) {
-    this->add_predecessor(a_ptr);
-    this->add_predecessor(b_ptr);
+    this->add_predecessor_(a_ptr);
+    this->add_predecessor_(b_ptr);
 }
 
 template <class BinaryOp>
 double const* BinaryOpNode<BinaryOp>::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
+    return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
 
 template <class BinaryOp>
 std::span<const Update> BinaryOpNode<BinaryOp>::diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->diff();
+    return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::commit(State& state) const {
-    data_ptr<ArrayNodeStateData>(state)->commit();
+    data_ptr_<ArrayNodeStateData>(state)->commit();
 }
 
 template <class BinaryOp>
@@ -254,7 +254,7 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
         unreachable();
     }
 
-    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
+    emplace_data_ptr_<ArrayNodeStateData>(state, std::move(values));
 }
 
 template <class BinaryOp>
@@ -274,7 +274,7 @@ double BinaryOpNode<BinaryOp>::min() const {
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::propagate(State& state) const {
-    auto ptr = data_ptr<ArrayNodeStateData>(state);
+    auto ptr = data_ptr_<ArrayNodeStateData>(state);
 
     const Array* lhs_ptr = operands_[0];
     const Array* rhs_ptr = operands_[1];
@@ -389,7 +389,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::revert(State& state) const {
-    data_ptr<ArrayNodeStateData>(state)->revert();
+    data_ptr_<ArrayNodeStateData>(state)->revert();
 }
 
 template <class BinaryOp>
@@ -434,7 +434,7 @@ ssize_t BinaryOpNode<BinaryOp>::size(const State& state) const {
 
 template <class BinaryOp>
 ssize_t BinaryOpNode<BinaryOp>::size_diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->size_diff();
+    return data_ptr_<ArrayNodeStateData>(state)->size_diff();
 }
 
 SizeInfo binaryop_calculate_sizeinfo(

@@ -654,22 +654,22 @@ class ScalarOutputMixin<Base, true> : public ScalarOutputMixin<Base, false> {
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const final {
-        return this->template data_ptr<ScalarOutputMixinStateData>(state)->buff();
+        return this->template data_ptr_<ScalarOutputMixinStateData>(state)->buff();
     }
 
     /// @copydoc Node::commit()
     void commit(State& state) const final {
-        this->template data_ptr<ScalarOutputMixinStateData>(state)->commit();
+        this->template data_ptr_<ScalarOutputMixinStateData>(state)->commit();
     }
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const final {
-        return this->template data_ptr<ScalarOutputMixinStateData>(state)->diff();
+        return this->template data_ptr_<ScalarOutputMixinStateData>(state)->diff();
     }
 
     /// @copydoc Node::revert()
     void revert(State& state) const final {
-        this->template data_ptr<ScalarOutputMixinStateData>(state)->revert();
+        this->template data_ptr_<ScalarOutputMixinStateData>(state)->revert();
     }
 
  protected:
@@ -677,12 +677,12 @@ class ScalarOutputMixin<Base, true> : public ScalarOutputMixin<Base, false> {
 
     /// Emplace a state with the given scalar value.
     void emplace_state(State& state, double value) const {
-        this->template emplace_data_ptr<ScalarOutputMixinStateData>(state, value);
+        this->template emplace_data_ptr_<ScalarOutputMixinStateData>(state, value);
     }
 
     /// Update the state value with the given value
     void set_state(State& state, double value) const {
-        this->template data_ptr<ScalarOutputMixinStateData>(state)->set(value);
+        this->template data_ptr_<ScalarOutputMixinStateData>(state)->set(value);
     }
 };
 

@@ -59,18 +59,18 @@ ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr) :
         throw std::invalid_argument("condition and arr must have the same size");
     }
 
-    add_predecessor(condition_ptr);
-    add_predecessor(arr_ptr);
+    add_predecessor_(condition_ptr);
+    add_predecessor_(arr_ptr);
 }
 
 double const* ExtractNode::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
+    return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
 
-void ExtractNode::commit(State& state) const { data_ptr<ArrayNodeStateData>(state)->commit(); }
+void ExtractNode::commit(State& state) const { data_ptr_<ArrayNodeStateData>(state)->commit(); }
 
 std::span<const Update> ExtractNode::diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->diff();
+    return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 
 void ExtractNode::initialize_state(State& state) const {
@@ -89,7 +89,7 @@ void ExtractNode::initialize_state(State& state) const {
         }
     }
 
-    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
+    emplace_data_ptr_<ArrayNodeStateData>(state, std::move(values));
 }
 
 bool ExtractNode::integral() const { return values_info_.integral; }
@@ -99,7 +99,7 @@ double ExtractNode::max() const { return values_info_.max; }
 double ExtractNode::min() const { return values_info_.min; }
 
 void ExtractNode::propagate(State& state) const {
-    auto node_data = data_ptr<ArrayNodeStateData>(state);
+    auto node_data = data_ptr_<ArrayNodeStateData>(state);
 
     // Nothing to do in this case
     if (condition_ptr_->diff(state).empty() && arr_ptr_->diff(state).empty()) return;
@@ -143,18 +143,18 @@ void ExtractNode::propagate(State& state) const {
     node_data->assign(std::move(new_values), count);
 }
 
-void ExtractNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
+void ExtractNode::revert(State& state) const { data_ptr_<ArrayNodeStateData>(state)->revert(); }
 
 std::span<const ssize_t> ExtractNode::shape(const State& state) const {
-    return std::span(&data_ptr<ArrayNodeStateData>(state)->size(), 1);
+    return std::span(&data_ptr_<ArrayNodeStateData>(state)->size(), 1);
 }
 
 ssize_t ExtractNode::size(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->size();
+    return data_ptr_<ArrayNodeStateData>(state)->size();
 }
 
 ssize_t ExtractNode::size_diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->size_diff();
+    return data_ptr_<ArrayNodeStateData>(state)->size_diff();
 }
 
 SizeInfo ExtractNode::sizeinfo() const { return this->sizeinfo_; }
@@ -261,19 +261,19 @@ WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_pt
         }
     }
 
-    add_predecessor(condition_ptr);
-    add_predecessor(x_ptr);
-    add_predecessor(y_ptr);
+    add_predecessor_(condition_ptr);
+    add_predecessor_(x_ptr);
+    add_predecessor_(y_ptr);
 }
 
 double const* WhereNode::buff(const State& state) const {
-    return data_ptr<WhereNodeData>(state)->buff();
+    return data_ptr_<WhereNodeData>(state)->buff();
 }
 
-void WhereNode::commit(State& state) const { data_ptr<WhereNodeData>(state)->commit(); }
+void WhereNode::commit(State& state) const { data_ptr_<WhereNodeData>(state)->commit(); }
 
 std::span<const Update> WhereNode::diff(const State& state) const {
-    return data_ptr<WhereNodeData>(state)->diff();
+    return data_ptr_<WhereNodeData>(state)->diff();
 }
 
 void WhereNode::initialize_state(State& state) const {
@@ -295,15 +295,15 @@ void WhereNode::initialize_state(State& state) const {
             values.emplace_back((*cit) ? *xit : *yit);
         }
 
-        emplace_data_ptr<WhereNodeData>(state, std::move(values));
+        emplace_data_ptr_<WhereNodeData>(state, std::move(values));
     } else if (condition_ptr_->buff(state)[0]) {
         // `condition` is a single value and is currently selecting x
         // so our state is just a copy of x's
-        emplace_data_ptr<WhereNodeData>(state, x_ptr_->view(state));
+        emplace_data_ptr_<WhereNodeData>(state, x_ptr_->view(state));
     } else {
         // `condition` is a single value and is currently selecting y
         // so our state is just a copy of y's
-        emplace_data_ptr<WhereNodeData>(state, y_ptr_->view(state));
+        emplace_data_ptr_<WhereNodeData>(state, y_ptr_->view(state));
     }
 }
 
@@ -324,7 +324,7 @@ bool _flipped(std::span<const Update> diff) {
 }
 
 void WhereNode::propagate(State& state) const {
-    auto node_data = data_ptr<WhereNodeData>(state);
+    auto node_data = data_ptr_<WhereNodeData>(state);
 
     if (condition_ptr_->size() != 1) {
         // `condition` is an array
@@ -364,7 +364,7 @@ void WhereNode::propagate(State& state) const {
     }
 }
 
-void WhereNode::revert(State& state) const { data_ptr<WhereNodeData>(state)->revert(); }
+void WhereNode::revert(State& state) const { data_ptr_<WhereNodeData>(state)->revert(); }
 
 std::span<const ssize_t> WhereNode::shape(const State& state) const {
     if (!this->dynamic()) return this->shape();
@@ -391,14 +391,14 @@ ssize_t WhereNode::size(const State& state) const {
     }
 
     // should match our current buffer
-    assert(static_cast<ssize_t>(data_ptr<WhereNodeData>(state)->size()) == size);
+    assert(static_cast<ssize_t>(data_ptr_<WhereNodeData>(state)->size()) == size);
 
     return size;
 }
 
 ssize_t WhereNode::size_diff(const State& state) const {
     if (!this->dynamic()) return 0;
-    return data_ptr<WhereNodeData>(state)->size_diff();
+    return data_ptr_<WhereNodeData>(state)->size_diff();
 }
 
 SizeInfo WhereNode::sizeinfo() const { return this->sizeinfo_; }

@@ -69,7 +69,7 @@ BSplineNode::BSplineNode(
         );
     }
 
-    this->add_predecessor(array_ptr);
+    this->add_predecessor_(array_ptr);
 }
 
 std::vector<double> BSplineNode::bspline_basis(double state) const {
@@ -117,20 +117,20 @@ const std::vector<double>& BSplineNode::c() const { return c_; }
 ssize_t BSplineNode::size(const State& state) const { return array_ptr_->size(state); }
 
 double const* BSplineNode::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
+    return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
 
 void BSplineNode::commit(State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->commit();
+    return data_ptr_<ArrayNodeStateData>(state)->commit();
 }
 
 std::span<const Update> BSplineNode::diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->diff();
+    return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 bool BSplineNode::integral() const { return false; }
 
 void BSplineNode::revert(State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->revert();
+    return data_ptr_<ArrayNodeStateData>(state)->revert();
 }
 
 double BSplineNode::max() const { return minmax_.second; }
@@ -144,7 +144,7 @@ void BSplineNode::initialize_state(State& state) const {
     for (int i = 0, stop = array_ptr_->size(); i < stop; ++i) {
         bspline_values.push_back(compute_value(state_data[i]));
     }
-    emplace_data_ptr<ArrayNodeStateData>(state, std::move(bspline_values));
+    emplace_data_ptr_<ArrayNodeStateData>(state, std::move(bspline_values));
 }
 
 void BSplineNode::propagate(State& state) const {
@@ -153,7 +153,7 @@ void BSplineNode::propagate(State& state) const {
     auto state_data = node_data_ptr->view(state);
 
     for (const auto& [index, _, __] : diff) {
-        data_ptr<ArrayNodeStateData>(state)->set(index, compute_value(state_data[index]));
+        data_ptr_<ArrayNodeStateData>(state)->set(index, compute_value(state_data[index]));
     }
 }
 

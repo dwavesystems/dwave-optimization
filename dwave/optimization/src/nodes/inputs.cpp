@@ -51,11 +51,11 @@ void InputNode::assign(State& state, std::initializer_list<double> new_values) c
 void InputNode::assign(State& state, std::span<const double> new_values) const {
     check_values(new_values);
 
-    data_ptr<ArrayNodeStateData>(state)->assign(new_values);
+    data_ptr_<ArrayNodeStateData>(state)->assign(new_values);
 }
 
 double const* InputNode::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
+    return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
 
 void InputNode::check_values(std::span<const double> new_values) const {
@@ -77,11 +77,11 @@ void InputNode::check_values(std::span<const double> new_values) const {
 }
 
 void InputNode::commit(State& state) const noexcept {
-    data_ptr<ArrayNodeStateData>(state)->commit();
+    data_ptr_<ArrayNodeStateData>(state)->commit();
 }
 
 std::span<const Update> InputNode::diff(const State& state) const noexcept {
-    return data_ptr<ArrayNodeStateData>(state)->diff();
+    return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 
 void InputNode::initialize_state(State& state, std::initializer_list<double> data) const {
@@ -96,11 +96,11 @@ void InputNode::initialize_state(State& state, std::span<const double> data) con
 
     std::vector<double> copy(data.begin(), data.end());
 
-    emplace_data_ptr<ArrayNodeStateData>(state, std::move(copy));
+    emplace_data_ptr_<ArrayNodeStateData>(state, std::move(copy));
 }
 
 void InputNode::revert(State& state) const noexcept {
-    data_ptr<ArrayNodeStateData>(state)->revert();
+    data_ptr_<ArrayNodeStateData>(state)->revert();
 }
 
 }  // namespace dwave::optimization

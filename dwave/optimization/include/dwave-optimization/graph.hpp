@@ -322,7 +322,7 @@ class Node {
     }
 
     /// Add a predecessor node. Adds itself to the predecessor as a successor.
-    void add_predecessor(Node* predecessor) {
+    void add_predecessor_(Node* predecessor) {
         assert(
             this->topological_index_ <= 0 &&
             "cannot add a predecessor to a topologically sorted node"
@@ -332,14 +332,14 @@ class Node {
     }
 
     /// Add a successor node. Adds itself to the successor as a predecessor.
-    void add_successor(Node* successor) {
+    void add_successor_(Node* successor) {
         assert(successor->topological_index_ <= 0 && "cannot add a topologically sorted successor");
         this->successors_.emplace_back(successor, successor->predecessors_.size());
         successor->predecessors_.emplace_back(this);
     }
 
     template <std::derived_from<NodeStateData> StateData>
-    StateData* data_ptr(State& state) const {
+    StateData* data_ptr_(State& state) const {
         const ssize_t index = topological_index();
         assert(index >= 0 && "must be topologically sorted");
         assert(state.size() > static_cast<std::size_t>(index) && "unexpected state length");
@@ -348,7 +348,7 @@ class Node {
         return static_cast<StateData*>(state[index].get());
     }
     template <std::derived_from<NodeStateData> StateData>
-    const StateData* data_ptr(const State& state) const {
+    const StateData* data_ptr_(const State& state) const {
         const ssize_t index = topological_index();
         assert(index >= 0 && "must be topologically sorted");
         assert(state.size() > static_cast<std::size_t>(index) && "unexpected state length");
@@ -358,7 +358,7 @@ class Node {
     }
 
     template <std::derived_from<NodeStateData> StateData, class... Args>
-    void emplace_data_ptr(State& state, Args&&... args) const {
+    void emplace_data_ptr_(State& state, Args&&... args) const {
         const ssize_t index = topological_index();
         assert(index >= 0 && "must be topologically sorted");
         assert(state.size() > static_cast<std::size_t>(index) && "unexpected state length");
@@ -368,7 +368,7 @@ class Node {
     }
 
     // Whether this node type is elegible to be removed from the model
-    virtual bool removable() const { return true; }
+    virtual bool removable_() const { return true; }
 
  private:
     ssize_t topological_index_ = -1;  // negative is unset
@@ -422,7 +422,7 @@ class DecisionNode : public Decision, public virtual Node {
 
  protected:
     /// In general we do not allow decisions to be removed from models.
-    bool removable() const override { return false; }
+    bool removable_() const override { return false; }
 };
 
 }  // namespace dwave::optimization

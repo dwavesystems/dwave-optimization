@@ -155,7 +155,7 @@ class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
 
  protected:
     // This node is a pseudo-decision, so it is not removeable
-    bool removable() const override { return false; }
+    bool removable_() const override { return false; }
 
     const DisjointBitSetsNode* disjoint_bit_sets_node_;
     const ssize_t set_index_;
@@ -256,7 +256,7 @@ class DisjointListNode : public ArrayOutputMixin<ArrayNode> {
 
  protected:
     // This node is a pseudo-decision, so it is not removeable
-    bool removable() const override { return false; }
+    bool removable_() const override { return false; }
 
     const DisjointListsNode* disjoint_list_node_ptr_;
     const ssize_t list_index_;

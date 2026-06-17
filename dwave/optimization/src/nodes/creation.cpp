@@ -282,7 +282,7 @@ ARangeNode::ARangeNode(ssize_t start, ssize_t stop, ArrayNode* step) :
     step_(step),
     values_minmax_(calculate_values_minmax(start, stop, step)),
     sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
-    add_predecessor(step);
+    add_predecessor_(step);
 }
 ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ssize_t step) :
     ArrayOutputMixin(range_shape(start, stop, step)),
@@ -291,7 +291,7 @@ ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ssize_t step) :
     step_(step),
     values_minmax_(calculate_values_minmax(start, stop, step)),
     sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
-    add_predecessor(stop);
+    add_predecessor_(stop);
 }
 ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ArrayNode* step) :
     ArrayOutputMixin(range_shape(start, stop, step)),
@@ -300,8 +300,8 @@ ARangeNode::ARangeNode(ssize_t start, ArrayNode* stop, ArrayNode* step) :
     step_(step),
     values_minmax_(calculate_values_minmax(start, stop, step)),
     sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
-    add_predecessor(stop);
-    add_predecessor(step);
+    add_predecessor_(stop);
+    add_predecessor_(step);
 }
 ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ssize_t step) :
     ArrayOutputMixin(range_shape(start, stop, step)),
@@ -310,7 +310,7 @@ ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ssize_t step) :
     step_(step),
     values_minmax_(calculate_values_minmax(start, stop, step)),
     sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
-    add_predecessor(start);
+    add_predecessor_(start);
 }
 ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ArrayNode* step) :
     ArrayOutputMixin(range_shape(start, stop, step)),
@@ -319,8 +319,8 @@ ARangeNode::ARangeNode(ArrayNode* start, ssize_t stop, ArrayNode* step) :
     step_(step),
     values_minmax_(calculate_values_minmax(start, stop, step)),
     sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
-    add_predecessor(start);
-    add_predecessor(step);
+    add_predecessor_(start);
+    add_predecessor_(step);
 }
 ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ssize_t step) :
     ArrayOutputMixin(range_shape(start, stop, step)),
@@ -329,8 +329,8 @@ ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ssize_t step) :
     step_(step),
     values_minmax_(calculate_values_minmax(start, stop, step)),
     sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
-    add_predecessor(start);
-    add_predecessor(stop);
+    add_predecessor_(start);
+    add_predecessor_(stop);
 }
 ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ArrayNode* step) :
     ArrayOutputMixin(range_shape(start, stop, step)),
@@ -339,25 +339,25 @@ ARangeNode::ARangeNode(ArrayNode* start, ArrayNode* stop, ArrayNode* step) :
     step_(step),
     values_minmax_(calculate_values_minmax(start, stop, step)),
     sizeinfo_(calculate_arange_sizeinfo(this, start, stop, step)) {
-    add_predecessor(start);
-    add_predecessor(stop);
-    add_predecessor(step);
+    add_predecessor_(start);
+    add_predecessor_(stop);
+    add_predecessor_(step);
 }
 
 double const* ARangeNode::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
+    return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
 
-void ARangeNode::commit(State& state) const { data_ptr<ArrayNodeStateData>(state)->commit(); }
+void ARangeNode::commit(State& state) const { data_ptr_<ArrayNodeStateData>(state)->commit(); }
 
 std::span<const Update> ARangeNode::diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->diff();
+    return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 
 bool ARangeNode::integral() const { return true; }
 
 void ARangeNode::initialize_state(State& state) const {
-    emplace_data_ptr<ArrayNodeStateData>(state, arange(state, start_, stop_, step_));
+    emplace_data_ptr_<ArrayNodeStateData>(state, arange(state, start_, stop_, step_));
 }
 
 double ARangeNode::min() const { return values_minmax_.first; }
@@ -370,7 +370,7 @@ void ARangeNode::propagate(State& state) const {
     const auto [stop_old, stop_new] = std::visit(visitor, stop_);
     const auto [step_old, step_new] = std::visit(visitor, step_);
 
-    ArrayNodeStateData* ptr = data_ptr<ArrayNodeStateData>(state);
+    ArrayNodeStateData* ptr = data_ptr_<ArrayNodeStateData>(state);
 
     // If the start or the step has changed, we need to change everything
     // Alternatively if there is currently nothing in the buffer at all, we might
@@ -422,18 +422,18 @@ void ARangeNode::propagate(State& state) const {
     if (ptr->diff().size()) Node::propagate(state);
 }
 
-void ARangeNode::revert(State& state) const { data_ptr<ArrayNodeStateData>(state)->revert(); }
+void ARangeNode::revert(State& state) const { data_ptr_<ArrayNodeStateData>(state)->revert(); }
 
 std::span<const ssize_t> ARangeNode::shape(const State& state) const {
-    return std::span<const ssize_t>(&(data_ptr<ArrayNodeStateData>(state)->size()), 1);
+    return std::span<const ssize_t>(&(data_ptr_<ArrayNodeStateData>(state)->size()), 1);
 }
 
 ssize_t ARangeNode::size(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->size();
+    return data_ptr_<ArrayNodeStateData>(state)->size();
 }
 
 ssize_t ARangeNode::size_diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->size_diff();
+    return data_ptr_<ArrayNodeStateData>(state)->size_diff();
 }
 
 }  // namespace dwave::optimization
