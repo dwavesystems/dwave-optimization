@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Added a new method to the basic indexing node that returns the start index,
+    representing the start of the view within the source array.
