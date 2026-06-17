@@ -331,15 +331,6 @@ class Node {
         this->predecessors_.emplace_back(predecessor);
     }
 
-    /// Add a successor node. Adds itself to the successor as a predecessor.
-    void add_successor_(Node* successor) {
-        assert(
-            successor->topological_index_ <= 0 and "cannot add a topologically sorted successor"
-        );
-        this->successors_.emplace_back(successor, successor->predecessors_.size());
-        successor->predecessors_.emplace_back(this);
-    }
-
     template <std::derived_from<NodeStateData> StateData>
     StateData* data_ptr_(State& state) const {
         const ssize_t index = topological_index();

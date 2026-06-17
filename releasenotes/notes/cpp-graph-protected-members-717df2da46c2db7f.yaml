@@ -3,3 +3,5 @@ upgrade:
   - |
     Rename C++ ``Graph`` class's protected members to have a trailing underscore.
     See `#398 <https://github.com/dwavesystems/dwave-optimization/issues/398>`_.
+  - |
+    Remove C++ ``Graph::add_successor()`` method
