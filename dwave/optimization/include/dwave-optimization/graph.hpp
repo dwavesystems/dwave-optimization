@@ -333,7 +333,9 @@ class Node {
 
     /// Add a successor node. Adds itself to the successor as a predecessor.
     void add_successor_(Node* successor) {
-        assert(successor->topological_index_ <= 0 && "cannot add a topologically sorted successor");
+        assert(
+            successor->topological_index_ <= 0 and "cannot add a topologically sorted successor"
+        );
         this->successors_.emplace_back(successor, successor->predecessors_.size());
         successor->predecessors_.emplace_back(this);
     }
@@ -341,18 +343,18 @@ class Node {
     template <std::derived_from<NodeStateData> StateData>
     StateData* data_ptr_(State& state) const {
         const ssize_t index = topological_index();
-        assert(index >= 0 && "must be topologically sorted");
-        assert(state.size() > static_cast<std::size_t>(index) && "unexpected state length");
-        assert(state[index] != nullptr && "uninitialized state");
+        assert(index >= 0 and "must be topologically sorted");
+        assert(state.size() > static_cast<std::size_t>(index) and "unexpected state length");
+        assert(state[index] != nullptr and "uninitialized state");
 
         return static_cast<StateData*>(state[index].get());
     }
     template <std::derived_from<NodeStateData> StateData>
     const StateData* data_ptr_(const State& state) const {
         const ssize_t index = topological_index();
-        assert(index >= 0 && "must be topologically sorted");
-        assert(state.size() > static_cast<std::size_t>(index) && "unexpected state length");
-        assert(state[index] != nullptr && "uninitialized state");
+        assert(index >= 0 and "must be topologically sorted");
+        assert(state.size() > static_cast<std::size_t>(index) and "unexpected state length");
+        assert(state[index] != nullptr and "uninitialized state");
 
         return static_cast<const StateData*>(state[index].get());
     }
@@ -360,9 +362,9 @@ class Node {
     template <std::derived_from<NodeStateData> StateData, class... Args>
     void emplace_data_ptr_(State& state, Args&&... args) const {
         const ssize_t index = topological_index();
-        assert(index >= 0 && "must be topologically sorted");
-        assert(state.size() > static_cast<std::size_t>(index) && "unexpected state length");
-        assert(state[index] == nullptr && "already initialized state");
+        assert(index >= 0 and "must be topologically sorted");
+        assert(state.size() > static_cast<std::size_t>(index) and "unexpected state length");
+        assert(state[index] == nullptr and "already initialized state");
 
         state[index] = std::make_unique<StateData>(std::forward<Args&&>(args)...);
     }

@@ -21,7 +21,7 @@
 #include <stdexcept>
 #include <utility>
 
-#if defined(__has_include) && __has_include(<cxxabi.h>)
+#if defined(__has_include) and __has_include(<cxxabi.h>)
 #define _HAS_CXXABI
 #include <cxxabi.h>
 #endif
@@ -31,7 +31,7 @@
 namespace dwave::optimization {
 
 void Graph::add_constraint(ArrayNode* constraint_ptr) {
-    if (!constraint_ptr->logical()) {
+    if (not constraint_ptr->logical()) {
         throw std::invalid_argument("constraint must have a logical output");
     }
     // todo: we could substitute an AND on the user's behalf, or we could allow
@@ -60,7 +60,7 @@ void Graph::commit(State& state, std::span<const Node*> changed) const {
     assert(([&state, &changed]() -> bool {
         for (const Node* n_ptr : changed) {
             if (dynamic_cast<const Array*>(n_ptr) == nullptr) continue;
-            if (!dynamic_cast<const Array*>(n_ptr)->diff(state).empty()) return false;
+            if (not dynamic_cast<const Array*>(n_ptr)->diff(state).empty()) return false;
         }
         return true;
     })());
@@ -122,7 +122,7 @@ double Graph::energy(const State& state) const {
 bool Graph::feasible(const State& state) const {
     for (const Array* ptr : constraints_) {
         assert(ptr->size(state) == 1);
-        if (!(ptr->view(state)[0])) return false;
+        if (not(ptr->view(state)[0])) return false;
     }
     return true;
 }
@@ -139,8 +139,8 @@ State Graph::initialize_state() {
 }
 
 void Graph::initialize_state(State& state) const {
-    assert(static_cast<int>(state.size()) == num_nodes() && "unexpected state length");
-    assert(topologically_sorted_ && "graph must be topologically sorted");
+    assert(static_cast<int>(state.size()) == num_nodes() and "unexpected state length");
+    assert(topologically_sorted_ and "graph must be topologically sorted");
 
     for (int i = 0, end = num_nodes(); i < end; ++i) {
         if (state[i]) continue;  // should this clear any pending changes?
@@ -228,7 +228,7 @@ void Graph::recursive_reset(State& state, const Node* ptr) {
     }
 
     // We've already been reset so nothing to do
-    if (!state[index]) return;
+    if (not state[index]) return;
 
     // Otherwise, reset our own state and then all of our successors
     state[index].reset();
@@ -263,13 +263,13 @@ ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
         }
 
         // as is the objective if it exists
-        if (objective_ptr_ && objective_ptr_->topological_index_ >= num_decisions) {
+        if (objective_ptr_ and objective_ptr_->topological_index_ >= num_decisions) {
             objective_ptr_->topological_index_ = keep;
         }
 
         // If we're not ignoring listeners, we check if anyone is "listening" to
         // the expired_ptr_. If so, we keep the node.
-        if (!ignore_listeners) {
+        if (not ignore_listeners) {
             for (auto& ptr : nodes_ | std::views::drop(num_decisions)) {
                 if (ptr->expired_ptr_.use_count() > 1) ptr->topological_index_ = keep;
             }
@@ -279,7 +279,7 @@ ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
     // Now walk backwards through the topologically sorted node list
     // removing any nodes with no successors that we haven't marked.
     for (auto& ptr : nodes_ | std::views::drop(num_decisions) | std::views::reverse) {
-        if (!ptr->removable_()) continue;               // some nodes can never be removed
+        if (not ptr->removable_()) continue;            // some nodes can never be removed
         if (ptr->topological_index_ == keep) continue;  // we marked these to keep
         if (ptr->successors().size() > 0) continue;     // this node is used by other nodes
 
@@ -297,7 +297,7 @@ ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
     }
 
     // Traverse the nodes_ one last time removing any nullptrs we created
-    std::erase_if(nodes_, [](const auto& ptr) { return !ptr; });
+    std::erase_if(nodes_, [](const auto& ptr) { return not ptr; });
 
     // Undo all of the weird stuff we did with the topological indices
     reset_topological_sort();
@@ -307,7 +307,7 @@ ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
 }
 
 void Graph::reset_topological_sort() {
-    if (!topologically_sorted_) return;  // already unsorted
+    if (not topologically_sorted_) return;  // already unsorted
 
     // The decisions must have a consistent topological index, so we don't reset them
     std::for_each(
@@ -338,7 +338,7 @@ void Graph::revert(State& state, std::span<const Node*> changed) const {
     assert(([&state, &changed]() -> bool {
         for (const Node* n_ptr : changed) {
             if (dynamic_cast<const Array*>(n_ptr) == nullptr) continue;
-            if (!dynamic_cast<const Array*>(n_ptr)->diff(state).empty()) return false;
+            if (not dynamic_cast<const Array*>(n_ptr)->diff(state).empty()) return false;
         }
         return true;
     })());
@@ -350,7 +350,7 @@ void Graph::revert(State& state, std::vector<const Node*>&& changed) const {
 
 void Graph::set_objective(ArrayNode* objective_ptr) {
     // nullptr is an unset objective, so we allow it.
-    if (objective_ptr != nullptr && objective_ptr->size() != 1) {
+    if (objective_ptr != nullptr and objective_ptr->size() != 1) {
         throw std::invalid_argument("objective must have a single output");
     }
     this->objective_ptr_ = objective_ptr;
@@ -370,7 +370,7 @@ void Graph::topological_sort() {
         if (n_ptr->topological_index_ == -2) throw std::logic_error("has cycles");
 
         // decisions should already be sorted
-        assert(dynamic_cast<Decision*>(n_ptr) == nullptr && "unsorted decisions node");
+        assert(dynamic_cast<Decision*>(n_ptr) == nullptr and "unsorted decisions node");
 
         n_ptr->topological_index_ = -2;
 
@@ -407,9 +407,9 @@ void Graph::topological_sort() {
 }
 
 void Node::initialize_state(State& state) const {
-    assert(topological_index_ >= 0 && "must be topologically sorted");
-    assert(static_cast<int>(state.size()) > topological_index_ && "unexpected state length");
-    assert(state[topological_index_] == nullptr && "already initialized state");
+    assert(topological_index_ >= 0 and "must be topologically sorted");
+    assert(static_cast<int>(state.size()) > topological_index_ and "unexpected state length");
+    assert(state[topological_index_] == nullptr and "already initialized state");
 
     state[topological_index_] = std::make_unique<NodeStateData>();
 }
