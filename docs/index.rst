@@ -41,7 +41,7 @@ areas:
     :gutter: 2
 
     .. grid-item-card:: Quantum Optimization
-        :img-top: /_images/optimization_quantum_icon.svg
+        :img-top: /_images/optimization/quantum_icon.svg
         :link: optimization_philosophy_quantum_optimization
         :link-type: ref
 
@@ -49,7 +49,7 @@ areas:
         compute.
 
     .. grid-item-card:: (Mixed-Integer) Linear Programming
-        :img-top: /_images/optimization_lp_icon.svg
+        :img-top: /_images/optimization/lp_icon.svg
         :link: optimization_philosophy_linear_programming
         :link-type: ref
 
@@ -57,7 +57,7 @@ areas:
         solvers.
 
     .. grid-item-card:: Lists, Sets, and Other Combinatorial Variables
-        :img-top: /_images/optimization_combinatorial_icon.svg
+        :img-top: /_images/optimization/combinatorial_icon.svg
         :link: optimization_philosophy_combinatorial_variables
         :link-type: ref
 
@@ -65,7 +65,7 @@ areas:
         optimization simpler and more performant.
 
     .. grid-item-card:: Tensor Programming
-        :img-top: /_images/optimization_tensor_icon.svg
+        :img-top: /_images/optimization/tensor_icon.svg
         :link: optimization_philosophy_tensor_programming
         :link-type: ref
 

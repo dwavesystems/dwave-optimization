@@ -1316,7 +1316,7 @@ cdef class Symbol:
             >>> a.equals(next(b.iter_predecessors()))
             True
 
-            .. figure:: /_images/iter_predecessors.svg
+            .. figure:: /_images/optimization/iter_predecessors.svg
                :width: 500 px
                :name: dwave-optimization-iter-predecessors-example
                :alt: Image of the model constructed in this example
@@ -1351,7 +1351,7 @@ cdef class Symbol:
             >>> y.equals(next(x.iter_successors()))
             True
 
-            .. figure:: /_images/iter_successors.svg
+            .. figure:: /_images/optimization/iter_successors.svg
                :width: 500 px
                :name: dwave-optimization-iter-successors-example
                :alt: Image of the model constructed in this example
