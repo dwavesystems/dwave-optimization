@@ -187,8 +187,8 @@ class Graph {
     /// ordering.
     void topological_sort();
 
-    // Whether or not the model is currently topologically sorted.
-    // Models that are topologically sorted cannot be modified.
+    /// Whether or not the model is currently topologically sorted.
+    /// Models that are topologically sorted cannot be modified.
     bool topologically_sorted() const noexcept { return topologically_sorted_; }
 
  private:
