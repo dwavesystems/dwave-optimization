@@ -167,22 +167,22 @@ UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr) :
         calculate_integral<UnaryOp>(array_ptr_)
     ),
     sizeinfo_(array_ptr_->sizeinfo()) {
-    add_predecessor(node_ptr);
+    add_predecessor_(node_ptr);
 }
 
 template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::commit(State& state) const {
-    data_ptr<ArrayNodeStateData>(state)->commit();
+    data_ptr_<ArrayNodeStateData>(state)->commit();
 }
 
 template <class UnaryOp>
 double const* UnaryOpNode<UnaryOp>::buff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->buff();
+    return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
 
 template <class UnaryOp>
 std::span<const Update> UnaryOpNode<UnaryOp>::diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->diff();
+    return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 
 template <class UnaryOp>
@@ -193,7 +193,7 @@ void UnaryOpNode<UnaryOp>::initialize_state(State& state) const {
         values.emplace_back(op(val));
     }
 
-    emplace_data_ptr<ArrayNodeStateData>(state, std::move(values));
+    emplace_data_ptr_<ArrayNodeStateData>(state, std::move(values));
 }
 
 template <class UnaryOp>
@@ -213,7 +213,7 @@ double UnaryOpNode<UnaryOp>::max() const {
 
 template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::propagate(State& state) const {
-    auto node_data = data_ptr<ArrayNodeStateData>(state);
+    auto node_data = data_ptr_<ArrayNodeStateData>(state);
 
     for (const auto& update : array_ptr_->diff(state)) {
         const auto& [idx, _, value] = update;
@@ -234,7 +234,7 @@ void UnaryOpNode<UnaryOp>::propagate(State& state) const {
 
 template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::revert(State& state) const {
-    data_ptr<ArrayNodeStateData>(state)->revert();
+    data_ptr_<ArrayNodeStateData>(state)->revert();
 }
 
 template <class UnaryOp>
@@ -244,12 +244,12 @@ std::span<const ssize_t> UnaryOpNode<UnaryOp>::shape(const State& state) const {
 
 template <class UnaryOp>
 ssize_t UnaryOpNode<UnaryOp>::size(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->size();
+    return data_ptr_<ArrayNodeStateData>(state)->size();
 }
 
 template <class UnaryOp>
 ssize_t UnaryOpNode<UnaryOp>::size_diff(const State& state) const {
-    return data_ptr<ArrayNodeStateData>(state)->size_diff();
+    return data_ptr_<ArrayNodeStateData>(state)->size_diff();
 }
 
 template <class UnaryOp>

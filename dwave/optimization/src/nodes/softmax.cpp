@@ -59,23 +59,23 @@ struct SoftMaxNodeStateData : public ArrayNodeStateData {
 
 SoftMaxNode::SoftMaxNode(ArrayNode* arr_ptr) :
     ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr), sizeinfo_(arr_ptr_->sizeinfo()) {
-    add_predecessor(arr_ptr);
+    add_predecessor_(arr_ptr);
 }
 
 double const* SoftMaxNode::buff(const State& state) const {
-    return data_ptr<SoftMaxNodeStateData>(state)->buff();
+    return data_ptr_<SoftMaxNodeStateData>(state)->buff();
 }
 
 void SoftMaxNode::commit(State& state) const {
-    return data_ptr<SoftMaxNodeStateData>(state)->commit();
+    return data_ptr_<SoftMaxNodeStateData>(state)->commit();
 }
 
 std::span<const Update> SoftMaxNode::diff(const State& state) const {
-    return data_ptr<SoftMaxNodeStateData>(state)->diff();
+    return data_ptr_<SoftMaxNodeStateData>(state)->diff();
 }
 
 void SoftMaxNode::initialize_state(State& state) const {
-    emplace_data_ptr<SoftMaxNodeStateData>(
+    emplace_data_ptr_<SoftMaxNodeStateData>(
         state, std::vector<double>{arr_ptr_->begin(state), arr_ptr_->end(state)}
     );
 }
@@ -96,7 +96,7 @@ void SoftMaxNode::propagate(State& state) const {
     }
 
     // To update node, we need to compute the new softmax denominator
-    auto node_data = data_ptr<SoftMaxNodeStateData>(state);
+    auto node_data = data_ptr_<SoftMaxNodeStateData>(state);
     const double prior_denominator = node_data->denominator;
     double new_denominator = prior_denominator;
     // We only want to compute an exponential once per index
@@ -140,7 +140,7 @@ void SoftMaxNode::propagate(State& state) const {
 }
 
 void SoftMaxNode::revert(State& state) const {
-    auto node_data = data_ptr<SoftMaxNodeStateData>(state);
+    auto node_data = data_ptr_<SoftMaxNodeStateData>(state);
     node_data->revert();
     // Manually reset denominator
     node_data->denominator = node_data->prior_denominator;
@@ -151,11 +151,11 @@ std::span<const ssize_t> SoftMaxNode::shape(const State& state) const {
 }
 
 ssize_t SoftMaxNode::size(const State& state) const {
-    return data_ptr<SoftMaxNodeStateData>(state)->size();
+    return data_ptr_<SoftMaxNodeStateData>(state)->size();
 }
 
 ssize_t SoftMaxNode::size_diff(const State& state) const {
-    return data_ptr<SoftMaxNodeStateData>(state)->size_diff();
+    return data_ptr_<SoftMaxNodeStateData>(state)->size_diff();
 }
 
 SizeInfo SoftMaxNode::sizeinfo() const { return this->sizeinfo_; }

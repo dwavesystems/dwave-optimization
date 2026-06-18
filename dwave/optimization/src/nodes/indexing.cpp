@@ -511,20 +511,20 @@ AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& 
 
     // Now actually add them. This way if there is an error thrown we're not
     // causing segfaults
-    add_predecessor(array_ptr);
+    add_predecessor_(array_ptr);
 
     for (const array_or_slice& index : indices_) {
         if (std::holds_alternative<ArrayNode*>(index)) {
-            add_predecessor(std::get<ArrayNode*>(index));
+            add_predecessor_(std::get<ArrayNode*>(index));
         }
     }
 }
 
 double const* AdvancedIndexingNode::buff(const State& state) const {
-    return data_ptr<AdvancedIndexingNodeData>(state)->data.data();
+    return data_ptr_<AdvancedIndexingNodeData>(state)->data.data();
 }
 std::span<const Update> AdvancedIndexingNode::diff(const State& state) const {
-    return data_ptr<AdvancedIndexingNodeData>(state)->diff;
+    return data_ptr_<AdvancedIndexingNodeData>(state)->diff;
 }
 
 void AdvancedIndexingNode::fill_subspace(
@@ -733,18 +733,18 @@ void AdvancedIndexingNode::initialize_state(State& state) const {
 
     bool main_array_is_constant_node = dynamic_cast<const ConstantNode*>(array_ptr_) != nullptr;
 
-    emplace_data_ptr<AdvancedIndexingNodeData>(
+    emplace_data_ptr_<AdvancedIndexingNodeData>(
         state, this, std::move(offsets), std::move(data), !main_array_is_constant_node
     );
     if (dynamic()) update_dynamic_shape(state);
 }
 
 void AdvancedIndexingNode::commit(State& state) const {
-    data_ptr<AdvancedIndexingNodeData>(state)->commit();
+    data_ptr_<AdvancedIndexingNodeData>(state)->commit();
 }
 
 void AdvancedIndexingNode::revert(State& state) const {
-    data_ptr<AdvancedIndexingNodeData>(state)->revert();
+    data_ptr_<AdvancedIndexingNodeData>(state)->revert();
 
     if (dynamic()) update_dynamic_shape(state);
 }
@@ -756,7 +756,7 @@ double AdvancedIndexingNode::min() const { return this->values_info_.min; }
 double AdvancedIndexingNode::max() const { return this->values_info_.max; }
 
 ssize_t AdvancedIndexingNode::size(const State& state) const {
-    return dynamic() ? data_ptr<AdvancedIndexingNodeData>(state)->data.size() : this->size();
+    return dynamic() ? data_ptr_<AdvancedIndexingNodeData>(state)->data.size() : this->size();
 }
 
 SizeInfo AdvancedIndexingNode::sizeinfo() const {
@@ -813,7 +813,7 @@ SizeInfo AdvancedIndexingNode::sizeinfo() const {
 std::span<const ssize_t> AdvancedIndexingNode::shape(const State& state) const {
     if (!dynamic()) return shape();
     return std::span<const ssize_t>(
-        data_ptr<AdvancedIndexingNodeData>(state)->dynamic_shape.get(), ndim_
+        data_ptr_<AdvancedIndexingNodeData>(state)->dynamic_shape.get(), ndim_
     );
 }
 
@@ -854,7 +854,7 @@ std::pair<ssize_t, ssize_t> get_mapped_index(
 
 void AdvancedIndexingNode::propagate(State& state) const {
     // Pull the data into this namespce
-    auto node_data = data_ptr<AdvancedIndexingNodeData>(state);
+    auto node_data = data_ptr_<AdvancedIndexingNodeData>(state);
     auto& data = node_data->data;
     auto& diff = node_data->diff;
     auto& offsets_diff = node_data->offsets_diff;
@@ -1095,7 +1095,7 @@ void AdvancedIndexingNode::propagate(State& state) const {
 
 ssize_t AdvancedIndexingNode::size_diff(const State& state) const {
     if (this->dynamic()) {
-        auto ptr = data_ptr<AdvancedIndexingNodeData>(state);
+        auto ptr = data_ptr_<AdvancedIndexingNodeData>(state);
 
         return static_cast<ssize_t>(ptr->data.size()) - ptr->old_data_size;
     }
@@ -1106,7 +1106,7 @@ void AdvancedIndexingNode::update_dynamic_shape(State& state) const {
     assert(dynamic());
     assert(array_ptr_->ndim() >= 1);
 
-    auto node_data = data_ptr<AdvancedIndexingNodeData>(state);
+    auto node_data = data_ptr_<AdvancedIndexingNodeData>(state);
 
     node_data->dynamic_shape[0] = this->size(state) / (strides()[0] / itemsize());
 }
@@ -1384,7 +1384,7 @@ BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser
             "stops in the first dimension, are not currently supported"
         );
     }
-    add_predecessor(array_ptr);
+    add_predecessor_(array_ptr);
 }
 
 struct BasicIndexingNodeData : NodeStateData {
@@ -1429,7 +1429,7 @@ void BasicIndexingNode::update_dynamic_shape(State& state) const {
     const Slice& slice = axis0_slice_.value();
     const ssize_t& first_dim_size = array_ptr_->shape(state)[0];
 
-    auto node_data = data_ptr<BasicIndexingNodeData>(state);
+    auto node_data = data_ptr_<BasicIndexingNodeData>(state);
 
     node_data->fitted_first_slice = slice.fit(first_dim_size);
 
@@ -1443,12 +1443,12 @@ double const* BasicIndexingNode::buff(const State& state) const {
         return array_ptr_->buff(state) + start_;
     }
 
-    const auto node_data = data_ptr<BasicIndexingNodeData>(state);
+    const auto node_data = data_ptr_<BasicIndexingNodeData>(state);
     return array_ptr_->buff(state) + start_ + dynamic_start(node_data->fitted_first_slice.start);
 }
 
 void BasicIndexingNode::commit(State& state) const {
-    auto node_data = data_ptr<BasicIndexingNodeData>(state);
+    auto node_data = data_ptr_<BasicIndexingNodeData>(state);
     node_data->diff.clear();
     node_data->previous_size = size(state);
     if (dynamic() && axis0_slice_.value().start < 0) {
@@ -1458,7 +1458,7 @@ void BasicIndexingNode::commit(State& state) const {
 }
 
 std::span<const Update> BasicIndexingNode::diff(const State& state) const {
-    return data_ptr<BasicIndexingNodeData>(state)->diff;
+    return data_ptr_<BasicIndexingNodeData>(state)->diff;
 }
 
 std::vector<BasicIndexingNode::slice_or_int> BasicIndexingNode::infer_indices() const {
@@ -1521,10 +1521,10 @@ std::vector<BasicIndexingNode::slice_or_int> BasicIndexingNode::infer_indices() 
 
 void BasicIndexingNode::initialize_state(State& state) const {
     // we're a view, so we don't really need state other than for the updates
-    emplace_data_ptr<BasicIndexingNodeData>(state, this);
+    emplace_data_ptr_<BasicIndexingNodeData>(state, this);
     if (this->dynamic()) {
         update_dynamic_shape(state);
-        auto node_data = data_ptr<BasicIndexingNodeData>(state);
+        auto node_data = data_ptr_<BasicIndexingNodeData>(state);
         node_data->previous_size = size(state);
 
         if (axis0_slice_.value().start < 0) {
@@ -1561,7 +1561,7 @@ double BasicIndexingNode::min() const { return this->values_info_.min; }
 double BasicIndexingNode::max() const { return this->values_info_.max; }
 
 void BasicIndexingNode::propagate(State& state) const {
-    auto node_data = data_ptr<BasicIndexingNodeData>(state);
+    auto node_data = data_ptr_<BasicIndexingNodeData>(state);
     auto& diff = node_data->diff;
     assert(diff.size() == 0 && "calling propagate on an node with pending updates");
 
@@ -1890,7 +1890,7 @@ void BasicIndexingNode::propagate(State& state) const {
 }
 
 void BasicIndexingNode::revert(State& state) const {
-    auto node_data = data_ptr<BasicIndexingNodeData>(state);
+    auto node_data = data_ptr_<BasicIndexingNodeData>(state);
     node_data->diff.clear();
     if (dynamic()) {
         // todo this is only safe if revert() has been called on the predecessor array
@@ -1906,7 +1906,9 @@ void BasicIndexingNode::revert(State& state) const {
 ssize_t BasicIndexingNode::size(const State& state) const {
     if (not dynamic()) return size_;
 
-    return Array::shape_to_size(ndim_, data_ptr<BasicIndexingNodeData>(state)->dynamic_shape.get());
+    return Array::shape_to_size(
+        ndim_, data_ptr_<BasicIndexingNodeData>(state)->dynamic_shape.get()
+    );
 }
 
 SizeInfo BasicIndexingNode::sizeinfo() const { return this->sizeinfo_; }
@@ -1914,7 +1916,7 @@ SizeInfo BasicIndexingNode::sizeinfo() const { return this->sizeinfo_; }
 ssize_t BasicIndexingNode::size_diff(const State& state) const {
     if (size_ >= 0) return 0;
 
-    auto ptr = data_ptr<BasicIndexingNodeData>(state);
+    auto ptr = data_ptr_<BasicIndexingNodeData>(state);
     return size(state) - ptr->previous_size;
 }
 
@@ -1922,7 +1924,7 @@ std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
     if (not dynamic()) return BasicIndexingNode::shape();
 
     return std::span<const ssize_t>(
-        data_ptr<BasicIndexingNodeData>(state)->dynamic_shape.get(), ndim_
+        data_ptr_<BasicIndexingNodeData>(state)->dynamic_shape.get(), ndim_
     );
 }
 
@@ -1965,18 +1967,18 @@ PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr) :
         throw std::invalid_argument("order may have values out of range");
     }
 
-    this->add_predecessor(array_ptr);
-    this->add_predecessor(order_ptr);
+    this->add_predecessor_(array_ptr);
+    this->add_predecessor_(order_ptr);
 }
 
-void PermutationNode::commit(State& state) const { data_ptr<IndexingNodeData>(state)->commit(); }
+void PermutationNode::commit(State& state) const { data_ptr_<IndexingNodeData>(state)->commit(); }
 
 double const* PermutationNode::buff(const State& state) const {
-    return data_ptr<IndexingNodeData>(state)->data.data();
+    return data_ptr_<IndexingNodeData>(state)->data.data();
 }
 
 std::span<const Update> PermutationNode::diff(const State& state) const {
-    return data_ptr<IndexingNodeData>(state)->diff;
+    return data_ptr_<IndexingNodeData>(state)->diff;
 }
 
 bool PermutationNode::integral() const { return values_info_.integral; }
@@ -2029,11 +2031,11 @@ void PermutationNode::initialize_state(State& state) const {
         }
     }
 
-    emplace_data_ptr<IndexingNodeData>(state, std::move(offsets), std::move(values));
+    emplace_data_ptr_<IndexingNodeData>(state, std::move(offsets), std::move(values));
 }
 
 void PermutationNode::propagate(State& state) const {
-    auto ptr = data_ptr<IndexingNodeData>(state);
+    auto ptr = data_ptr_<IndexingNodeData>(state);
 
     auto& offsets = ptr->offsets;
     auto& values = ptr->data;
@@ -2086,6 +2088,6 @@ void PermutationNode::propagate(State& state) const {
     if (updates.size()) Node::propagate(state);
 }
 
-void PermutationNode::revert(State& state) const { data_ptr<IndexingNodeData>(state)->revert(); }
+void PermutationNode::revert(State& state) const { data_ptr_<IndexingNodeData>(state)->revert(); }
 
 }  // namespace dwave::optimization

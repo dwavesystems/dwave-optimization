@@ -52,15 +52,15 @@ AccumulateZipNode::AccumulateZipNode(
 
     if (std::holds_alternative<ArrayNode*>(initial)) {
         // was checked in check() method
-        add_predecessor(std::get<ArrayNode*>(initial));
+        add_predecessor_(std::get<ArrayNode*>(initial));
     }
     for (const auto& op : operands_) {
-        add_predecessor(op);
+        add_predecessor_(op);
     }
 }
 
 double const* AccumulateZipNode::buff(const State& state) const {
-    return data_ptr<AccumulateZipNodeData>(state)->buff();
+    return data_ptr_<AccumulateZipNodeData>(state)->buff();
 }
 
 void AccumulateZipNode::check(
@@ -222,11 +222,11 @@ void AccumulateZipNode::check(
 }
 
 void AccumulateZipNode::commit(State& state) const {
-    data_ptr<AccumulateZipNodeData>(state)->commit();
+    data_ptr_<AccumulateZipNodeData>(state)->commit();
 }
 
 std::span<const Update> AccumulateZipNode::diff(const State& state) const {
-    return data_ptr<AccumulateZipNodeData>(state)->diff();
+    return data_ptr_<AccumulateZipNodeData>(state)->diff();
 }
 
 double AccumulateZipNode::evaluate_expression(State& register_) const {
@@ -312,7 +312,7 @@ std::span<const InputNode* const> AccumulateZipNode::operand_inputs() const {
 }
 
 void AccumulateZipNode::propagate(State& state) const {
-    AccumulateZipNodeData* data = data_ptr<AccumulateZipNodeData>(state);
+    AccumulateZipNodeData* data = data_ptr_<AccumulateZipNodeData>(state);
     ssize_t new_size = this->size(state);
     ssize_t num_args = operands_.size();
 
@@ -355,7 +355,7 @@ const InputNode* const AccumulateZipNode::accumulate_input() const {
 }
 
 void AccumulateZipNode::revert(State& state) const {
-    data_ptr<AccumulateZipNodeData>(state)->revert();
+    data_ptr_<AccumulateZipNodeData>(state)->revert();
 }
 
 std::span<const ssize_t> AccumulateZipNode::shape(const State& state) const {
@@ -367,7 +367,7 @@ ssize_t AccumulateZipNode::size(const State& state) const { return operands_[0]-
 SizeInfo AccumulateZipNode::sizeinfo() const { return this->sizeinfo_; }
 
 ssize_t AccumulateZipNode::size_diff(const State& state) const {
-    return data_ptr<AccumulateZipNodeData>(state)->size_diff();
+    return data_ptr_<AccumulateZipNodeData>(state)->size_diff();
 }
 
 }  // namespace dwave::optimization

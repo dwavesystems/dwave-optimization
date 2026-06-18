@@ -70,15 +70,15 @@ IsInNode::IsInNode(ArrayNode* element_ptr, ArrayNode* test_elements_ptr) :
     ArrayOutputMixin(element_ptr->shape()),
     element_ptr_(element_ptr),
     test_elements_ptr_(test_elements_ptr) {
-    add_predecessor(element_ptr);
-    add_predecessor(test_elements_ptr);
+    add_predecessor_(element_ptr);
+    add_predecessor_(test_elements_ptr);
 }
 
 double const* IsInNode::buff(const State& state) const {
-    return data_ptr<IsInNodeData>(state)->buff();
+    return data_ptr_<IsInNodeData>(state)->buff();
 }
 
-bool set_data_is_correct(State& state, const Array *element_ptr, IsInNodeData& node_data) {
+bool set_data_is_correct(State& state, const Array* element_ptr, IsInNodeData& node_data) {
     for (ssize_t i = 0, stop = element_ptr->size(state); i < stop; ++i) {
         const double value = element_ptr->view(state)[i];
 
@@ -95,8 +95,8 @@ bool set_data_is_correct(State& state, const Array *element_ptr, IsInNodeData& n
     return true;
 }
 
-void IsInNode::commit(State &state) const {
-    IsInNodeData *node_data = data_ptr<IsInNodeData>(state);
+void IsInNode::commit(State& state) const {
+    IsInNodeData* node_data = data_ptr_<IsInNodeData>(state);
     node_data->element_updates.clear();
     node_data->test_element_updates.clear();
     node_data->commit();
@@ -104,7 +104,7 @@ void IsInNode::commit(State &state) const {
 }
 
 std::span<const Update> IsInNode::diff(const State& state) const {
-    return data_ptr<IsInNodeData>(state)->diff();
+    return data_ptr_<IsInNodeData>(state)->diff();
 }
 
 void IsInNode::initialize_state(State& state) const {
@@ -112,7 +112,7 @@ void IsInNode::initialize_state(State& state) const {
     std::vector<double> test_elements(
         test_elements_ptr_->begin(state), test_elements_ptr_->end(state)
     );
-    emplace_data_ptr<IsInNodeData>(state, std::move(element), std::move(test_elements));
+    emplace_data_ptr_<IsInNodeData>(state, std::move(element), std::move(test_elements));
 }
 
 bool IsInNode::integral() const { return true; }  // All values are true/false
@@ -149,7 +149,7 @@ void IsInNode::propagate(State& state) const {
         return;  // Nothing to do
     }
 
-    IsInNodeData* node_data = data_ptr<IsInNodeData>(state);
+    IsInNodeData* node_data = data_ptr_<IsInNodeData>(state);
 
     // Save a copy of the updates for IsInNode::revert()
     node_data->test_element_updates.assign(test_elements_diff.begin(), test_elements_diff.end());
@@ -231,7 +231,7 @@ void IsInNode::propagate(State& state) const {
 }
 
 void IsInNode::revert(State& state) const {
-    IsInNodeData* node_data = data_ptr<IsInNodeData>(state);
+    IsInNodeData* node_data = data_ptr_<IsInNodeData>(state);
 
     // Revert the changes to `test_elements`
     for (const Update& update : node_data->test_element_updates | std::views::reverse) {
@@ -271,10 +271,10 @@ std::span<const ssize_t> IsInNode::shape(const State& state) const {
     return element_ptr_->shape(state);
 }
 
-ssize_t IsInNode::size(const State& state) const { return data_ptr<IsInNodeData>(state)->size(); }
+ssize_t IsInNode::size(const State& state) const { return data_ptr_<IsInNodeData>(state)->size(); }
 
 ssize_t IsInNode::size_diff(const State& state) const {
-    return data_ptr<IsInNodeData>(state)->size_diff();
+    return data_ptr_<IsInNodeData>(state)->size_diff();
 }
 
 SizeInfo IsInNode::sizeinfo() const { return element_ptr_->sizeinfo(); }

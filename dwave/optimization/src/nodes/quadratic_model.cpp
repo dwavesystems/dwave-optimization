@@ -286,30 +286,30 @@ QuadraticModelNode::QuadraticModelNode(
     }
 
     quadratic_model_.shrink_to_fit();
-    Node::add_predecessor(state_node_ptr);
+    Node::add_predecessor_(state_node_ptr);
 }
 
 double const* QuadraticModelNode::buff(const State& state) const {
-    return data_ptr<QuadraticModelNodeData>(state)->buff();
+    return data_ptr_<QuadraticModelNodeData>(state)->buff();
 }
 
 std::span<const Update> QuadraticModelNode::diff(const State& state) const {
-    return data_ptr<QuadraticModelNodeData>(state)->diff();
+    return data_ptr_<QuadraticModelNodeData>(state)->diff();
 }
 
 void QuadraticModelNode::commit(State& state) const {
-    data_ptr<QuadraticModelNodeData>(state)->commit();
+    data_ptr_<QuadraticModelNodeData>(state)->commit();
 }
 
 void QuadraticModelNode::revert(State& state) const {
-    data_ptr<QuadraticModelNodeData>(state)->revert();
+    data_ptr_<QuadraticModelNodeData>(state)->revert();
 }
 
 void QuadraticModelNode::initialize_state(State& state) const {
     Array* ptr = dynamic_cast<Array*>(predecessors()[0]);
     std::vector<double> state_copy(ptr->begin(state), ptr->end(state));
     double value = quadratic_model_.compute_value(state_copy);
-    emplace_data_ptr<QuadraticModelNodeData>(
+    emplace_data_ptr_<QuadraticModelNodeData>(
         state, value, std::move(state_copy), quadratic_model_.num_variables()
     );
 }
@@ -318,7 +318,7 @@ void QuadraticModelNode::propagate(State& state) const {
     auto state_node_ptr = dynamic_cast<Array*>(predecessors()[0]);
     auto diff = state_node_ptr->diff(state);
     if (diff.size()) {
-        auto node_data_ptr = data_ptr<QuadraticModelNodeData>(state);
+        auto node_data_ptr = data_ptr_<QuadraticModelNodeData>(state);
         auto& previous_state = node_data_ptr->previous_state_;
         auto& effective_changes = node_data_ptr->effective_changes_;
         auto& value = node_data_ptr->value;

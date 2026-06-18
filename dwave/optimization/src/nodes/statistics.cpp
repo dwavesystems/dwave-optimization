@@ -41,7 +41,7 @@ MeanNode::MeanNode(ArrayNode* arr_ptr) :
     ScalarOutputMixin<ArrayNode, true>(),
     arr_ptr_(arr_ptr),
     minmax_(calculate_values_minmax_(arr_ptr_)) {
-    add_predecessor(arr_ptr);
+    add_predecessor_(arr_ptr);
 }
 
 void MeanNode::initialize_state(State& state) const {
@@ -82,7 +82,7 @@ void MeanNode::propagate(State& state) const {
     const ssize_t state_size_prior = state_size - arr_ptr_->size_diff(state);
 
     // Compute the sum of ArrayNode prior to change
-    double sum = data_ptr<ScalarOutputMixinStateData>(state)->update.value *
+    double sum = data_ptr_<ScalarOutputMixinStateData>(state)->update.value *
                  static_cast<double>(state_size_prior);
 
     for (const Update& u : arr_updates) {

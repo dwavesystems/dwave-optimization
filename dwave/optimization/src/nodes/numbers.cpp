@@ -207,11 +207,11 @@ void NumberNodeStateData::update(
 }
 
 double const* NumberNode::buff(const State& state) const noexcept {
-    return data_ptr<NumberNodeStateData>(state)->buff();
+    return data_ptr_<NumberNodeStateData>(state)->buff();
 }
 
 std::span<const Update> NumberNode::diff(const State& state) const noexcept {
-    return data_ptr<NumberNodeStateData>(state)->diff();
+    return data_ptr_<NumberNodeStateData>(state)->diff();
 }
 
 double NumberNode::min() const { return min_; }
@@ -320,7 +320,7 @@ void NumberNode::initialize_state(State& state, std::vector<double>&& number_dat
     }
 
     if (sum_constraints_.size() == 0) {  // No sum constraints to consider.
-        emplace_data_ptr<NumberNodeStateData>(state, std::move(number_data));
+        emplace_data_ptr_<NumberNodeStateData>(state, std::move(number_data));
     } else {
         // Given the assignment to NumberNode `number_data`, compute the sum
         // of the values within each slice per sum constraint.
@@ -330,7 +330,7 @@ void NumberNode::initialize_state(State& state, std::vector<double>&& number_dat
             throw std::invalid_argument("Initialized values do not satisfy sum constraint(s).");
         }
 
-        emplace_data_ptr<NumberNodeStateData>(
+        emplace_data_ptr_<NumberNodeStateData>(
             state, std::move(number_data), std::move(sum_constraints_lhs)
         );
     }
@@ -530,11 +530,11 @@ void NumberNode::propagate(State& state) const {
 }
 
 void NumberNode::commit(State& state) const noexcept {
-    data_ptr<NumberNodeStateData>(state)->commit();
+    data_ptr_<NumberNodeStateData>(state)->commit();
 }
 
 void NumberNode::revert(State& state) const noexcept {
-    data_ptr<NumberNodeStateData>(state)->revert();
+    data_ptr_<NumberNodeStateData>(state)->revert();
 }
 
 void NumberNode::exchange(
@@ -544,7 +544,7 @@ void NumberNode::exchange(
     std::optional<std::vector<ssize_t>> i_slices,
     std::optional<std::vector<ssize_t>> j_slices
 ) const {
-    auto state_data = data_ptr<NumberNodeStateData>(state);
+    auto state_data = data_ptr_<NumberNodeStateData>(state);
     // We expect the exchange to obey the index-wise bounds.
     assert(lower_bound(i) <= state_data->get(j));
     assert(upper_bound(i) >= state_data->get(j));
@@ -575,7 +575,7 @@ void NumberNode::exchange(
 }
 
 double NumberNode::get_value(State& state, ssize_t i) const {
-    return data_ptr<NumberNodeStateData>(state)->get(i);
+    return data_ptr_<NumberNodeStateData>(state)->get(i);
 }
 
 double NumberNode::lower_bound(ssize_t index) const {
@@ -620,7 +620,7 @@ void NumberNode::clip_and_set_value(
     double value,
     std::optional<std::vector<ssize_t>> slices
 ) const {
-    auto state_data = data_ptr<NumberNodeStateData>(state);
+    auto state_data = data_ptr_<NumberNodeStateData>(state);
     value = std::clamp(value, lower_bound(index), upper_bound(index));
     // assert() that i is a valid index occurs in ptr->set().
     // State change occurs IFF `value` != buffer[index].
@@ -641,7 +641,7 @@ const std::vector<NumberNode::SumConstraint>& NumberNode::sum_constraints() cons
 }
 
 const std::vector<std::vector<double>>& NumberNode::sum_constraints_lhs(const State& state) const {
-    return data_ptr<NumberNodeStateData>(state)->sum_constraints_lhs;
+    return data_ptr_<NumberNodeStateData>(state)->sum_constraints_lhs;
 }
 
 template <bool maximum>
@@ -966,7 +966,7 @@ void IntegerNode::set_value(
     double value,
     std::optional<std::vector<ssize_t>> slices
 ) const {
-    auto state_data = data_ptr<NumberNodeStateData>(state);
+    auto state_data = data_ptr_<NumberNodeStateData>(state);
     // We expect `value` to obey the index-wise bounds and to be an integer.
     assert(lower_bound(index) <= value);
     assert(upper_bound(index) >= value);
@@ -1436,7 +1436,7 @@ void BinaryNodeStateData::compute_slice_indices_(const BinaryNode& node) {
 }
 
 void BinaryNode::revert(State& state) const noexcept {
-    data_ptr<BinaryNodeStateData>(state)->revert();
+    data_ptr_<BinaryNodeStateData>(state)->revert();
 }
 
 void BinaryNode::initialize_state(State& state, std::vector<double>&& number_data) const {
@@ -1451,7 +1451,7 @@ void BinaryNode::initialize_state(State& state, std::vector<double>&& number_dat
     }
 
     if (sum_constraints_.size() == 0) {  // No sum constraints to consider.
-        emplace_data_ptr<BinaryNodeStateData>(state, std::move(number_data));
+        emplace_data_ptr_<BinaryNodeStateData>(state, std::move(number_data));
     } else {
         // Given the assignment to NumberNode `number_data`, compute the sum of
         // the values within each slice per sum constraint.
@@ -1461,7 +1461,7 @@ void BinaryNode::initialize_state(State& state, std::vector<double>&& number_dat
             throw std::invalid_argument("Initialized values do not satisfy sum constraint(s).");
         }
 
-        emplace_data_ptr<BinaryNodeStateData>(
+        emplace_data_ptr_<BinaryNodeStateData>(
             state, std::move(number_data), std::move(sum_constraints_lhs), *this
         );
     }
@@ -1493,7 +1493,7 @@ void BinaryNode::exchange(
     std::optional<std::vector<ssize_t>> i_slices,
     std::optional<std::vector<ssize_t>> j_slices
 ) const {
-    auto state_data = data_ptr<BinaryNodeStateData>(state);
+    auto state_data = data_ptr_<BinaryNodeStateData>(state);
     // We expect the exchange to obey the index-wise bounds.
     assert(lower_bound(i) <= state_data->get(j));
     assert(upper_bound(i) >= state_data->get(j));
@@ -1530,7 +1530,7 @@ void BinaryNode::clip_and_set_value(
     double value,
     std::optional<std::vector<ssize_t>> slices
 ) const {
-    auto state_data = data_ptr<BinaryNodeStateData>(state);
+    auto state_data = data_ptr_<BinaryNodeStateData>(state);
     value = std::clamp(value, lower_bound(index), upper_bound(index));
     // assert() that i is a valid index occurs in ptr->set().
     // State change occurs IFF `value` != buffer[index].
@@ -1552,7 +1552,7 @@ void BinaryNode::set_value(
     double value,
     std::optional<std::vector<ssize_t>> slices
 ) const {
-    auto state_data = data_ptr<BinaryNodeStateData>(state);
+    auto state_data = data_ptr_<BinaryNodeStateData>(state);
     // We expect `value` to obey the index-wise bounds and to be an integer.
     assert(lower_bound(index) <= value);
     assert(upper_bound(index) >= value);
@@ -1576,7 +1576,7 @@ void BinaryNode::flip(
     ssize_t index,
     std::optional<std::vector<ssize_t>> slices
 ) const {
-    auto state_data = data_ptr<BinaryNodeStateData>(state);
+    auto state_data = data_ptr_<BinaryNodeStateData>(state);
     // Variable should not be fixed.
     assert(lower_bound(index) != upper_bound(index));
     // assert() that `index` is valid occurs in ptr->set().
@@ -1600,7 +1600,7 @@ ssize_t BinaryNode::num_true(
     const ssize_t sum_constraint,
     const ssize_t slice
 ) const {
-    const auto& indices = data_ptr<BinaryNodeStateData>(state)->slice_indices;
+    const auto& indices = data_ptr_<BinaryNodeStateData>(state)->slice_indices;
     assert(0 <= sum_constraint && sum_constraint < static_cast<ssize_t>(indices.size()));
     assert(0 <= slice && slice < static_cast<ssize_t>(indices[sum_constraint].num_true.size()));
     return indices[sum_constraint].num_true[slice];
@@ -1611,7 +1611,7 @@ ssize_t BinaryNode::num_false(
     const ssize_t sum_constraint,
     const ssize_t slice
 ) const {
-    const auto& indices = data_ptr<BinaryNodeStateData>(state)->slice_indices;
+    const auto& indices = data_ptr_<BinaryNodeStateData>(state)->slice_indices;
     assert(0 <= sum_constraint && sum_constraint < static_cast<ssize_t>(indices.size()));
     assert(0 <= slice && slice < static_cast<ssize_t>(indices[sum_constraint].num_true.size()));
     const ssize_t num_indices = indices[sum_constraint].dense_sets[slice].size();
@@ -1624,7 +1624,7 @@ ssize_t BinaryNode::ith_true_index(
     const ssize_t slice,
     const ssize_t i
 ) const {
-    const auto& indices = data_ptr<BinaryNodeStateData>(state)->slice_indices;
+    const auto& indices = data_ptr_<BinaryNodeStateData>(state)->slice_indices;
     assert(0 <= sum_constraint && sum_constraint < static_cast<ssize_t>(indices.size()));
     assert(0 <= slice && slice < static_cast<ssize_t>(indices[sum_constraint].dense_sets.size()));
     assert(0 <= i && i < num_true(state, sum_constraint, slice));
@@ -1640,7 +1640,7 @@ ssize_t BinaryNode::ith_false_index(
     const ssize_t slice,
     const ssize_t i
 ) const {
-    const auto& indices = data_ptr<BinaryNodeStateData>(state)->slice_indices;
+    const auto& indices = data_ptr_<BinaryNodeStateData>(state)->slice_indices;
     assert(0 <= sum_constraint && sum_constraint < static_cast<ssize_t>(indices.size()));
     const ssize_t num_true = this->num_true(state, sum_constraint, slice);
     assert(0 <= slice && slice < static_cast<ssize_t>(indices[sum_constraint].dense_sets.size()));

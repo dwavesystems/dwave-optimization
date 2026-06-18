@@ -385,8 +385,8 @@ MatrixMultiplyNode::MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr) :
     y_ptr_(y_ptr),
     sizeinfo_(get_sizeinfo(x_ptr, y_ptr)),
     values_info_(get_values_info(x_ptr, y_ptr)) {
-    add_predecessor(x_ptr);
-    add_predecessor(y_ptr);
+    add_predecessor_(x_ptr);
+    add_predecessor_(y_ptr);
 }
 
 ssize_t get_leading_leap(std::span<const ssize_t> shape) {
@@ -500,19 +500,19 @@ void MatrixMultiplyNode::initialize_state(State& state) const {
 
     std::vector<double> data(start_size);
     matmul_(state, data, shape);
-    emplace_data_ptr<MatrixMultiplyNodeData>(state, std::move(data), shape);
+    emplace_data_ptr_<MatrixMultiplyNodeData>(state, std::move(data), shape);
 }
 
 double const* MatrixMultiplyNode::buff(const State& state) const {
-    return data_ptr<MatrixMultiplyNodeData>(state)->buff();
+    return data_ptr_<MatrixMultiplyNodeData>(state)->buff();
 }
 
 void MatrixMultiplyNode::commit(State& state) const {
-    return data_ptr<MatrixMultiplyNodeData>(state)->commit();
+    return data_ptr_<MatrixMultiplyNodeData>(state)->commit();
 }
 
 std::span<const Update> MatrixMultiplyNode::diff(const State& state) const {
-    return data_ptr<MatrixMultiplyNodeData>(state)->diff();
+    return data_ptr_<MatrixMultiplyNodeData>(state)->diff();
 }
 
 bool MatrixMultiplyNode::integral() const { return values_info_.integral; }
@@ -523,14 +523,14 @@ double MatrixMultiplyNode::min() const { return values_info_.min; }
 
 void MatrixMultiplyNode::update_shape_(State& state) const {
     if (this->dynamic()) {
-        data_ptr<MatrixMultiplyNodeData>(state)->shape[0] = x_ptr_->shape(state)[0];
+        data_ptr_<MatrixMultiplyNodeData>(state)->shape[0] = x_ptr_->shape(state)[0];
     }
 }
 
 void MatrixMultiplyNode::propagate(State& state) const {
     if (x_ptr_->diff(state).size() == 0 and y_ptr_->diff(state).size() == 0) return;
 
-    auto data = data_ptr<MatrixMultiplyNodeData>(state);
+    auto data = data_ptr_<MatrixMultiplyNodeData>(state);
 
     this->update_shape_(state);
     const ssize_t new_size = Array::shape_to_size(data->shape);
@@ -542,24 +542,24 @@ void MatrixMultiplyNode::propagate(State& state) const {
 }
 
 void MatrixMultiplyNode::revert(State& state) const {
-    auto data = data_ptr<MatrixMultiplyNodeData>(state);
+    auto data = data_ptr_<MatrixMultiplyNodeData>(state);
     data->revert();
     this->update_shape_(state);
 }
 
 std::span<const ssize_t> MatrixMultiplyNode::shape(const State& state) const {
     if (not this->dynamic()) return this->shape();
-    return data_ptr<MatrixMultiplyNodeData>(state)->shape;
+    return data_ptr_<MatrixMultiplyNodeData>(state)->shape;
 }
 
 ssize_t MatrixMultiplyNode::size(const State& state) const {
     if (not this->dynamic()) return this->size();
-    return data_ptr<MatrixMultiplyNodeData>(state)->size();
+    return data_ptr_<MatrixMultiplyNodeData>(state)->size();
 }
 
 ssize_t MatrixMultiplyNode::size_diff(const State& state) const {
     if (not this->dynamic()) return 0;
-    return data_ptr<MatrixMultiplyNodeData>(state)->size_diff();
+    return data_ptr_<MatrixMultiplyNodeData>(state)->size_diff();
 }
 
 SizeInfo MatrixMultiplyNode::sizeinfo() const { return sizeinfo_; }
