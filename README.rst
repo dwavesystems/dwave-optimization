@@ -7,7 +7,7 @@
 .. image:: https://circleci.com/gh/dwavesystems/dwave-optimization.svg?style=svg
     :target: https://circleci.com/gh/dwavesystems/dwave-optimization
 
-.. image:: https://raw.githubusercontent.com/dwavesystems/dwave-optimization/main/docs/_images/optimization_stride_logo_blue_light_dark.svg
+.. image:: https://raw.githubusercontent.com/dwavesystems/dwave-optimization/main/docs/_images/optimization/stride_logo_blue_light_dark.svg
     :class: only-light
     :target: https://docs.dwavequantum.com/en/latest/industrial_optimization/index.html
     :width: 225

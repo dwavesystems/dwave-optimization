@@ -930,7 +930,7 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
 
         This solution is shown in the figure below.
 
-        .. figure:: /_images/flow_shop_scheduling_2x3.png
+        .. figure:: /_images/optimization/flow_shop_scheduling_2x3.png
             :width: 800 px
             :name: flow-shop-scheduling-2x3-example
             :alt: Image of the model constructed in this example, showing
@@ -1158,7 +1158,7 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
 
         This solution is shown in the figure below.
 
-        .. figure:: /_images/job_shop_scheduling_3x3.svg
+        .. figure:: /_images/optimization/job_shop_scheduling_3x3.svg
             :width: 800 px
             :name: job-shop-scheduling-3x3-example
             :alt: Image of the model constructed in this example, showing
@@ -1666,7 +1666,7 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
 
         This solution is shown in the figure below.
 
-        .. figure:: /_images/quadratic_assignment_problem_3x3.png
+        .. figure:: /_images/optimization/quadratic_assignment_problem_3x3.png
             :width: 800 px
             :name: quadratic-assignment-problem-3x3-example
             :alt: Image of the model constructed in this example, showing

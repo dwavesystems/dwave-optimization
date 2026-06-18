@@ -441,7 +441,7 @@ class Model(_Graph):
             ...     print(in_bin0.state(0))
             3.0
 
-            .. figure:: /_images/disjoint_bit_sets.svg
+            .. figure:: /_images/optimization/disjoint_bit_sets.svg
                 :width: 500 px
                 :name: dwave-optimization-disjoint-bit-sets-example
                 :alt: Image of the model constructed in this example
@@ -573,7 +573,7 @@ class Model(_Graph):
             Element 2: [4.]
             Element 3: [7. 8. 9.]
 
-            .. figure:: /_images/disjoint_lists_symbol.svg
+            .. figure:: /_images/optimization/disjoint_lists_symbol.svg
                 :width: 500 px
                 :name: dwave-optimization-disjoint-lists-symbol-example
                 :alt: Image of the model constructed in this example
@@ -1112,7 +1112,7 @@ class Model(_Graph):
 
             This creates the following image:
 
-            .. figure:: /_images/to_networkx_example.svg
+            .. figure:: /_images/optimization/to_networkx_example.svg
                :width: 500 px
                :name: dwave-optimization-to-networkx-example
                :alt: Image of NetworkX Directed Graph
