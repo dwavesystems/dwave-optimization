@@ -33,9 +33,10 @@
 namespace dwave::optimization {
 
 class ArrayNode;
-class Node;
+class ConstantNode;
 class DecisionNode;
 class InputNode;
+class Node;
 
 // A decision is an independent variable in the model. The value(s) to be optimized.
 struct Decision {};
@@ -64,6 +65,10 @@ class Graph {
     /// Commit the changes on each changed node.
     void commit(State& state, std::span<const Node*> changed) const;
     void commit(State& state, std::vector<const Node*>&& changed) const;
+
+    /// Return the constants nodes in the graph.
+    std::span<ConstantNode* const> constants() noexcept { return constants_; }
+    std::span<const ConstantNode* const> constants() const noexcept { return constants_; }
 
     /// Return the constraints of the graph as a span of nodes.
     std::span<ArrayNode* const> constraints() noexcept { return constraints_; }
@@ -194,12 +199,16 @@ class Graph {
  private:
     std::vector<std::unique_ptr<Node>> nodes_;
 
-    // The nodes with important semantic meanings to the model.
     // All of these pointers are non-owning!
-    ArrayNode* objective_ptr_ = nullptr;
-    std::vector<ArrayNode*> constraints_;
+
+    // First, the roots of the graph, in the three categories we support.
     std::vector<DecisionNode*> decisions_;
     std::vector<InputNode*> inputs_;
+    std::vector<ConstantNode*> constants_;
+
+    // Second, the nodes that encode the objective and constraint(s)
+    ArrayNode* objective_ptr_ = nullptr;
+    std::vector<ArrayNode*> constraints_;
 
     // Track whether the model is currently topologically sorted
     bool topologically_sorted_ = false;
@@ -314,8 +323,8 @@ class Node {
     friend void Graph::topological_sort();
     friend void Graph::reset_topological_sort();
     template <class NodeType, class... Args>
-    friend NodeType* Graph::emplace_node(Args&&... args);
-    friend ssize_t Graph::remove_unused_nodes(bool ignore_listeners);
+    friend NodeType* Graph::emplace_node(Args&&...);
+    friend ssize_t Graph::remove_unused_nodes(bool);
 
  protected:
     // For use by non-dynamic node constructors.
@@ -370,6 +379,9 @@ class Node {
     // Whether this node type is elegible to be removed from the model
     virtual bool removable_() const { return true; }
 
+    // Remove a successor. *Does not* remove itself from it's successor's predecessors.
+    ssize_t remove_successor_(const Node* ptr);
+
  private:
     ssize_t topological_index_ = -1;  // negative is unset
 
@@ -392,15 +404,20 @@ NodeType* Graph::emplace_node(Args&&... args) {
     }
 
     // Construct via make_unique so we can allow the constructor to throw
-    auto uptr = std::make_unique<NodeType>(std::forward<Args&&>(args)...);
+    auto uptr = std::make_unique<NodeType>(std::forward<Args>(args)...);
     NodeType* ptr = uptr.get();
 
     // Pass ownership of the lifespan to nodes_
     nodes_.emplace_back(std::move(uptr));
 
     // Decisions get their topological index assigned immediately, in the order of insertion
-    if constexpr (std::is_base_of_v<Decision, NodeType>) {
-        static_assert(std::is_base_of_v<DecisionNode, NodeType>);
+    if constexpr (std::is_base_of_v<ConstantNode, NodeType>) {
+        constants_.emplace_back(ptr);
+    } else if constexpr (std::is_base_of_v<DecisionNode, NodeType>) {
+        // We always want the decisions to come first in the topological ordering
+        // and therefore we can proactively assign their topological index.
+        // As a side benefit, this allows us to create the state of the decisison
+        // variables without the need to topologically order everything.
         ptr->topological_index_ = decisions_.size();
         decisions_.emplace_back(ptr);
     } else if constexpr (std::is_base_of_v<InputNode, NodeType>) {

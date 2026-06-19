@@ -1,6 +1,7 @@
 ---
 features:
   - Add C++ ``Node::num_listeners()`` method.
+  - Add C++ ``Graph::constants()`` method.
 upgrade:
   - |
     Return ``std::shared_ptr<const bool>`` from ``Node::expired_ptr()`` rather than
