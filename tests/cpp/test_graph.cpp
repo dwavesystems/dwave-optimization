@@ -380,6 +380,8 @@ TEST_CASE("Graph::remove_unused_nodes()") {
             // give d a listener
             auto d_expired = d_ptr->expired_ptr();
 
+            CHECK(d_ptr->num_listeners() == 1);
+
             graph.set_objective(e_ptr);
 
             THEN("remove_unused_nodes(ignore_listeners=True) removes only the ones we want") {

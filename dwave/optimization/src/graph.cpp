@@ -271,7 +271,7 @@ ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
         // the expired_ptr_. If so, we keep the node.
         if (not ignore_listeners) {
             for (auto& ptr : nodes_ | std::views::drop(num_decisions)) {
-                if (ptr->expired_ptr_.use_count() > 1) ptr->topological_index_ = keep;
+                if (ptr->num_listeners() > 0) ptr->topological_index_ = keep;
             }
         }
     }

@@ -258,10 +258,17 @@ class Node {
 
     /// Return a shared pointer to a bool value. When the node is destructed
     /// the bool will be set to True
-    std::shared_ptr<bool> expired_ptr() const { return expired_ptr_; }
+    std::shared_ptr<const bool> expired_ptr() const { return expired_ptr_; }
 
     /// Initialize the state of the node.
     virtual void initialize_state(State& state) const;
+
+    /// Return the number of "listeners", that is the number of shared_ptrs,
+    /// as returned by expired_ptr().
+    ssize_t num_listeners() const {
+        assert(expired_ptr_.use_count() >= 1);  // self counts as 1
+        return static_cast<ssize_t>(expired_ptr_.use_count()) - 1;
+    }
 
     /// Return predecessors of the node.
     const std::vector<Node*>& predecessors() const { return predecessors_; }
