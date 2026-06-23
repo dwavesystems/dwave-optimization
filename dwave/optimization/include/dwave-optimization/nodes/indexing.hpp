@@ -56,6 +56,9 @@ class AdvancedIndexingNode : public ArrayNode {
     explicit AdvancedIndexingNode(ArrayNode* array_ptr, Indices... indices) :
         AdvancedIndexingNode(array_ptr, make_indices(indices...)) {}
 
+    bool operator==(const Node& rhs) const override;
+    bool operator==(const AdvancedIndexingNode& rhs) const;
+
     // Array overloads
     ssize_t ndim() const noexcept override { return ndim_; }
     double const* buff(const State& state) const override;
@@ -86,6 +89,9 @@ class AdvancedIndexingNode : public ArrayNode {
 
     // AdvancedIndexingHelper methods
     std::span<const array_or_slice> indices() const { return indices_; }
+
+ protected:
+    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
 
  private:
     struct IndexParser_;
@@ -194,6 +200,9 @@ class BasicIndexingNode : public ArrayNode {
     explicit BasicIndexingNode(ArrayNode* array_ptr, Indices... indices) :
         BasicIndexingNode(array_ptr, make_indices(indices...)) {}
 
+    bool operator==(const Node& rhs) const override;
+    bool operator==(const BasicIndexingNode& rhs) const;
+
     // Overloads needed by the Array ABC **************************************
 
     ssize_t ndim() const noexcept override { return ndim_; }
@@ -241,6 +250,9 @@ class BasicIndexingNode : public ArrayNode {
 
     // Infer the indices used to create the node.
     std::vector<slice_or_int> infer_indices() const;
+
+ protected:
+    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
 
  private:
     // Private constructor using an intermediate object

@@ -63,6 +63,16 @@ ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr) :
     add_predecessor_(arr_ptr);
 }
 
+bool ExtractNode::operator==(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const ExtractNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return *this == *rhs_ptr;
+}
+
+bool ExtractNode::operator==(const ExtractNode& rhs) const {
+    return condition_ptr_ == rhs.condition_ptr_ and arr_ptr_ == rhs.arr_ptr_;
+}
+
 double const* ExtractNode::buff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
@@ -141,6 +151,10 @@ void ExtractNode::propagate(State& state) const {
     }
 
     node_data->assign(std::move(new_values), count);
+}
+
+void ExtractNode::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
+    assert(false and "not yet implemented");
 }
 
 void ExtractNode::revert(State& state) const { data_ptr_<ArrayNodeStateData>(state)->revert(); }
@@ -266,6 +280,16 @@ WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_pt
     add_predecessor_(y_ptr);
 }
 
+bool WhereNode::operator==(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const WhereNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return *this == *rhs_ptr;
+}
+
+bool WhereNode::operator==(const WhereNode& rhs) const {
+    return condition_ptr_ == rhs.condition_ptr_ and x_ptr_ == rhs.x_ptr_ and y_ptr_ == rhs.y_ptr_;
+}
+
 double const* WhereNode::buff(const State& state) const {
     return data_ptr_<WhereNodeData>(state)->buff();
 }
@@ -361,6 +385,25 @@ void WhereNode::propagate(State& state) const {
             // we're pointing to y, so update ourselves according to y
             node_data->update(y_ptr_->diff(state));
         }
+    }
+}
+
+void WhereNode::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
+    Node::replace_predecessor_(previous_index, node_ptr);
+
+    assert(0 <= previous_index and previous_index < 3);
+    if (previous_index == 0) {
+        condition_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(condition_ptr_ != nullptr);
+    } else if (previous_index == 1) {
+        x_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(x_ptr_ != nullptr);
+    } else if (previous_index == 2) {
+        y_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(y_ptr_ != nullptr);
+    } else {
+        assert(false);
+        unreachable();
     }
 }
 

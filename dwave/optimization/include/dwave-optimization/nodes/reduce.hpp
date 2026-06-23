@@ -44,6 +44,9 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
         std::optional<double> initial = std::nullopt
     );
 
+    bool operator==(const Node& rhs) const override;
+    bool operator==(const ReduceNode& rhs) const;
+
     /// The axes over which the reduction is performed.
     std::span<const ssize_t> axes() const { return axes_; }
 
@@ -101,6 +104,9 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
     /// The initial value if one was provided.
     /// Otherwise uses the first element in the reduction.
     const std::optional<double> initial;
+
+ protected:
+    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
 
  private:
     // Perform a reduction over the reduction space associated with the given

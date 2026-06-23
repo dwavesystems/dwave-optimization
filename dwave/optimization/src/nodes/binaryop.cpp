@@ -199,6 +199,50 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr) :
 }
 
 template <class BinaryOp>
+bool BinaryOpNode<BinaryOp>::operator==(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const BinaryOpNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return *this == *rhs_ptr;
+}
+
+template <class BinaryOp>
+bool BinaryOpNode<BinaryOp>::operator==(const BinaryOpNode& rhs) const {
+    // if we're the same type, then we just need to make sure we're operating
+    // on the same operands (subject to whether we're commutative or not.
+    // Once we switch to ufuncs, this gets even easier
+    if (std::ranges::equal(operands_, rhs.operands_)) return true;
+
+    // Once we switch to unfuncs
+    // https://github.com/dwavesystems/dwave-optimization/pull/412
+    // we can use ::communcative. For now we hardcode it.
+
+    if constexpr (
+        std::same_as<BinaryOpNode, AddNode> or       //
+        std::same_as<BinaryOpNode, AndNode> or       //
+        std::same_as<BinaryOpNode, EqualNode> or     //
+        std::same_as<BinaryOpNode, MaximumNode> or   //
+        std::same_as<BinaryOpNode, MinimumNode> or   //
+        std::same_as<BinaryOpNode, MultiplyNode> or  //
+        std::same_as<BinaryOpNode, OrNode> or        //
+        std::same_as<BinaryOpNode, XorNode>
+    ) {
+        // commutative
+        return std::ranges::equal(operands_, rhs.operands_ | std::views::reverse);
+    } else {
+        // not commutative
+        static_assert(
+            std::same_as<BinaryOpNode, DivideNode> or      //
+            std::same_as<BinaryOpNode, LessEqualNode> or   //
+            std::same_as<BinaryOpNode, ModulusNode> or     //
+            std::same_as<BinaryOpNode, SafeDivideNode> or  //
+            std::same_as<BinaryOpNode, SubtractNode>
+        );
+    }
+
+    return false;
+}
+
+template <class BinaryOp>
 double const* BinaryOpNode<BinaryOp>::buff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
@@ -385,6 +429,15 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
     }
 
     if (ptr->diff().size()) Node::propagate(state);
+}
+
+template <class BinaryOp>
+void BinaryOpNode<BinaryOp>::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
+    Node::replace_predecessor_(previous_index, node_ptr);
+
+    assert(0 <= previous_index and previous_index < 2);
+    operands_[previous_index] = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(operands_[previous_index] != nullptr);
 }
 
 template <class BinaryOp>

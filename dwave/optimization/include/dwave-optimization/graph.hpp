@@ -158,6 +158,13 @@ class Graph {
     /// Reset the state of the given node and all successors recursively.
     static void recursive_reset(State& state, const Node* ptr);
 
+    // todo: document
+    // - all root nodes (including constants!) are ignored
+    ssize_t remove_redundant_nodes(
+        bool ignore_listeners = false,
+        double time_limit_s = std::numeric_limits<double>::infinity()
+    );
+
     /// Remove unused nodes from the graph.
     ///
     /// This method will reset the topological sort if there is one.
@@ -253,6 +260,16 @@ class Node {
     Node& operator=(const Node&) = delete;
     Node& operator=(Node&&) noexcept = delete;
 
+    // TODO: document and note that nodes *must* share the same set of
+    // predecessors (permutations are sometimes allowed) and they *must* be the
+    // same type. Also that they can have false negatives in some cases.
+    // Also, we don't check pinned values
+    virtual bool operator==(const Node& rhs) const {
+        std::cout << classname() << " missing operator==(...) *********\n";
+        assert(false and "not yet implemented");
+        return false;
+    }
+
     /// Methods for interrogating nodes as strings. Useful for error messages
     /// and debugging. We roughly follow Python's scheme of repr() and str()
     /// printing different information.
@@ -307,6 +324,11 @@ class Node {
     /// Return the successors of the node.
     const std::vector<SuccessorView>& successors() const { return successors_; }
 
+    /// Take the successors from `from` and make them successors of the node.
+    /// Note that this bypasses most checks! Use with extreme caution as it
+    /// make create undefined models.
+    void take_successors(Node& from);
+
     /// The current topological index. Will be negative if unsorted.
     ssize_t topological_index() const { return topological_index_; }
 
@@ -324,6 +346,7 @@ class Node {
     friend void Graph::reset_topological_sort();
     template <class NodeType, class... Args>
     friend NodeType* Graph::emplace_node(Args&&...);
+    friend ssize_t Graph::remove_redundant_nodes(bool, double);
     friend ssize_t Graph::remove_unused_nodes(bool);
 
  protected:
@@ -382,6 +405,9 @@ class Node {
     // Remove a successor. *Does not* remove itself from it's successor's predecessors.
     ssize_t remove_successor_(const Node* ptr);
 
+    // todo: document
+    virtual void replace_predecessor_(ssize_t previous_index, Node* node_ptr);
+
  private:
     ssize_t topological_index_ = -1;  // negative is unset
 
@@ -430,6 +456,10 @@ NodeType* Graph::emplace_node(Args&&... args) {
 class ArrayNode : public Array, public virtual Node {};
 class DecisionNode : public Decision, public virtual Node {
  public:
+    /// Decision nodes are never equal to eachother because they are
+    /// independent variables.
+    bool operator==(const Node&) const override { return false; }
+
     /// Decision nodes by definition do not have a deterministic state.
     bool deterministic_state() const final { return false; }
 

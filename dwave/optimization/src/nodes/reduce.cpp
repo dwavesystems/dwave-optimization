@@ -819,6 +819,19 @@ ReduceNode<BinaryOp>::ReduceNode(
     ReduceNode(array_ptr, std::span(axes), initial) {}
 
 template <class BinaryOp>
+bool ReduceNode<BinaryOp>::operator==(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const ReduceNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return *this == *rhs_ptr;
+}
+
+template <class BinaryOp>
+bool ReduceNode<BinaryOp>::operator==(const ReduceNode& rhs) const {
+    assert(false and "not yet implemented");
+    return false;
+}
+
+template <class BinaryOp>
 double const* ReduceNode<BinaryOp>::buff(const State& state) const {
     return data_ptr_<ReduceNodeData<BinaryOp>>(state)->buff();
 }
@@ -1064,6 +1077,11 @@ auto ReduceNode<BinaryOp>::reduce_(const State& state, const ssize_t index) cons
     auto it = BufferIterator<const double, const double>(&*begin, subspace_shape, subspace_strides);
 
     return ufunc.reduce(std::ranges::subrange(it, std::default_sentinel), initial);
+}
+
+template <class BinaryOp>
+void ReduceNode<BinaryOp>::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
+    assert(false and "not yet implemented");
 }
 
 template <class BinaryOp>

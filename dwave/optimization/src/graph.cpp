@@ -15,6 +15,7 @@
 #include "dwave-optimization/graph.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <deque>
 #include <ranges>
 #include <sstream>
@@ -239,6 +240,159 @@ void Graph::recursive_reset(State& state, const Node* ptr) {
         if (successor_ptr->topological_index() < 0) continue;  // nothing to reset
         recursive_reset(state, successor_ptr);
     }
+}
+
+ssize_t Graph::remove_redundant_nodes(bool ignore_listeners, double time_limit_s) {
+    if (topologically_sorted_) throw std::logic_error("cannot remove nodes from a locked model");
+
+    // This function can get quite expensive, so we have a timeout we'll try to respect.
+    const auto stop_time =
+        std::chrono::steady_clock::now() + std::chrono::duration<double>(time_limit_s);
+    auto out_of_time = [&stop_time]() -> bool {
+        return std::chrono::steady_clock::now() >= stop_time;
+    };
+
+    // We need to know how many nodes we started with in order to know how many we removed
+    const ssize_t num_nodes = this->num_nodes();
+
+    // We want the nodes in topological order, and we will respect that order
+    // while we're transferring successors.
+    // We will, however, abuse the topological_index_ to store information
+    topological_sort();
+
+    // We'll set the topological index to one of these values to track what we've
+    // already done.
+    // They are arbitrary values, but we steer away from -1 because that's used to
+    // indicate unsorted
+    constexpr ssize_t seen = -2;  // already checked for duplicates
+    constexpr ssize_t drop = -3;  // marked for deletion
+
+    // The actions that we always want to do before returning, whether it's because
+    // we hit the time limit or because we have no more work to do.
+    auto cleanup = [&]() -> ssize_t {
+        // we should only ever have swapped the objective_ptr
+        assert(objective_ptr_ == nullptr or objective_ptr_->topological_index() != drop);
+
+        // Whether a node was dropped
+        auto dropped = [&drop, &ignore_listeners](const auto& ptr) {
+            if (not ignore_listeners and ptr->num_listeners() > 0) return false;
+            assert(ptr->topological_index_ != drop or ptr->successors_.empty());
+            return ptr->topological_index() == drop;
+        };
+
+        // Go through our "special" nodes and drop anything
+        assert(std::ranges::none_of(decisions_, dropped));  // should never be dropped
+        assert(std::ranges::none_of(inputs_, dropped));  // should never be dropped
+        std::erase_if(constants_, dropped);
+
+        std::erase_if(constraints_, dropped);
+        assert(objective_ptr_ == nullptr or objective_ptr_->topological_index_ != drop);
+
+        // This is the step that actually deallocates the node
+        for (auto& uptr : nodes_) {
+            if (not dropped(uptr)) continue;
+
+            // Remove the node from its predecessor's successor vectors.
+            // This very leaves the node in an invalid state, very briefly
+            for (auto* pred_ptr : uptr->predecessors_) {
+                [[maybe_unused]] ssize_t num_removed = pred_ptr->remove_successor_(uptr.get());
+                assert(num_removed > 0);
+            }
+
+            // And then reset the pointer, thereby dellocating the node
+            uptr.reset();
+
+        }
+        // Finally, remove the nullptrs from the nodelist
+        std::erase_if(nodes_, [](const auto& uptr) { return not uptr; });
+
+        // Reset the topological index of everything that's left so we clean up
+        // everything
+        reset_topological_sort();
+
+        // Finally, report the number of nodes we dropped
+        return num_nodes - this->num_nodes();
+    };
+
+    // Ok, all that setup done, now let's start checking for redundancy.
+
+    // Decisions are never redundant, so we skip over them
+
+    // Nor are inputs, so likewise we skip them
+
+    // The first set of nodes we're worried about are the constants - the only
+    // class of root node that can have redundancy
+    for (ssize_t i = 0, num_constants = constants_.size(); i < num_constants; ++i) {
+        if (constants_[i]->topological_index_ == drop) continue;
+
+        for (ssize_t j = i + 1; j < num_constants; ++j) {
+            if (constants_[j]->topological_index_ == drop) continue;
+
+            // the topological indices of our constants should not yet be touched
+            // and because they are added in order, they should always be ascending
+            assert(constants_[i]->topological_index_ >= 0);
+            assert(constants_[j]->topological_index_ >= 0);
+            assert(constants_[i]->topological_index_ < constants_[j]->topological_index_);
+
+            // Check against or current time limit before doing the potentially
+            // expensive (O(buffer_size)) equality check.
+            if (out_of_time()) return cleanup();
+
+            // nothing to do if they are not equal
+            if (*constants_[i] != *constants_[j]) continue;
+
+            constants_[i]->take_successors(*constants_[j]);
+
+            constants_[j]->topological_index_ = drop;
+        }
+
+        constants_[i]->topological_index_ = seen;
+    }
+
+    // For each node, we check pairwise among all of its successors.
+    // This is because for nodes to be equal, they *must* have the same set of
+    // predecessors.
+    for (auto& uptr : nodes_) {
+        auto& successors = uptr->successors();
+
+        for (ssize_t i = 0, num_successors = successors.size(); i < num_successors; ++i) {
+            // We've already seen or dropped this node
+            if (successors[i]->topological_index_ < 0) continue;
+
+            for (ssize_t j = i + 1; j < num_successors; ++j) {
+                // We've already seen or dropped this node
+                if (successors[j]->topological_index_ < 0) continue;
+
+                // A node cannot be redundant with itself
+                if (successors[i] == successors[j]) continue;
+
+                // Check against or current time limit before doing the potentially
+                // expensive (O(num_nodes^2)) equality check.
+                if (out_of_time()) return cleanup();
+
+                // If lhs != rhs there's nothing to do, so keep looking
+                if (*successors[i] != *successors[j]) continue;
+
+                // We have a redundant node!
+
+                // We want to transfer to the node with the lower topological order
+                if (successors[i]->topological_index_ < successors[j]->topological_index_) {
+                    successors[i]->take_successors(*successors[j]);
+                    successors[j]->topological_index_ = drop;
+                } else {
+                    successors[j]->take_successors(*successors[i]);
+                    successors[i]->topological_index_ = drop;
+                    break;  // stop comparing i to other nodes because we dropped it
+                }
+            }
+
+            // Ok, we've checked i against everything, so if we didn't drop it
+            // we can mark it as seen
+            if (successors[i]->topological_index_ >= 0) successors[i]->topological_index_ = seen;
+        }
+    }
+
+    return cleanup();
 }
 
 ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
@@ -522,6 +676,22 @@ std::string Node::repr() const {
 }
 
 std::string Node::str() const { return classname(); }
+
+void Node::take_successors(Node& from) {
+    assert(this != &from and "a node cannot take successors from itself");
+
+    for (const auto& sv : from.successors_) {
+        sv.ptr->replace_predecessor_(sv.index, this);
+        this->successors_.emplace_back(sv);
+    }
+    from.successors_.clear();
+}
+
+void Node::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
+    assert(0 <= previous_index);
+    assert(static_cast<size_t>(previous_index) < predecessors_.size());
+    predecessors_[previous_index] = node_ptr;
+}
 
 std::ostream& operator<<(std::ostream& os, const Node& node) { return os << node.repr(); }
 

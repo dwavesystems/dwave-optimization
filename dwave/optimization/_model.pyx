@@ -928,6 +928,16 @@ cdef class _Graph:
         """
         return self.num_nodes()
 
+    def remove_redundant_symbols(self, time_limit_s=None):
+        """TODO
+        """
+        if self.is_locked():
+            raise ValueError("cannot remove symbols from a locked model")
+        if time_limit_s is None:
+            return self._graph.remove_redundant_nodes(False)
+        else:
+            return self._graph.remove_redundant_nodes(False, time_limit_s)
+
     def remove_unused_symbols(self):
         """Remove unused symbols from the model.
 
@@ -981,7 +991,7 @@ cdef class _Graph:
         """
         if self.is_locked():
             raise ValueError("cannot remove symbols from a locked model")
-        return self._graph.remove_unused_nodes()
+        return self._graph.remove_unused_nodes(False)
 
     def state_size(self):
         r"""Return an estimate of the size, in bytes, of a model's state.

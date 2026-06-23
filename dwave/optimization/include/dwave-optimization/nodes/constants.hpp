@@ -73,6 +73,9 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     ConstantNode(Range&& values, const std::span<const ssize_t> shape) :
         ConstantNode(from_range(std::forward<Range>(values), shape), shape) {}
 
+    bool operator==(const Node& rhs) const override;
+    bool operator==(const ConstantNode& rhs) const;
+
     // Stateless access to the underlying data.
     std::span<const double> data() const noexcept {
         return std::span<const double>(buffer_ptr_, this->size());

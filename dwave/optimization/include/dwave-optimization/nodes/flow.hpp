@@ -30,6 +30,9 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
  public:
     ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr);
 
+    bool operator==(const Node& rhs) const override;
+    bool operator==(const ExtractNode& rhs) const;
+
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
 
@@ -73,6 +76,9 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::sizeinfo()
     SizeInfo sizeinfo() const override;
 
+ protected:
+    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
+
  private:
     // these are redundant, but convenient
     const Array* condition_ptr_;
@@ -90,6 +96,9 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
 class WhereNode : public ArrayOutputMixin<ArrayNode> {
  public:
     WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_ptr);
+
+    bool operator==(const Node& rhs) const override;
+    bool operator==(const WhereNode& rhs) const;
 
     double const* buff(const State& state) const override;
     void commit(State& state) const override;
@@ -115,6 +124,9 @@ class WhereNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::sizeinfo()
     SizeInfo sizeinfo() const override;
+
+ protected:
+    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
 
  private:
     // these are redundant, but convenient

@@ -34,6 +34,9 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     // We need at least two nodes, and they must be the same shape
     BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr);
 
+    bool operator==(const Node& rhs) const override;
+    bool operator==(const BinaryOpNode& rhs) const;
+
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
 
@@ -72,11 +75,13 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     }
 
  private:
+    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
+
     BinaryOp op;
 
     // There are redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
-    std::array<Array* const, 2> operands_;
+    std::array<Array*, 2> operands_;
 
     const ValuesInfo values_info_;
     const SizeInfo sizeinfo_;

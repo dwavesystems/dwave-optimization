@@ -194,6 +194,16 @@ BroadcastToNode::BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> 
     add_predecessor_(array_ptr);
 }
 
+bool BroadcastToNode::operator==(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const BroadcastToNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return *this == *rhs_ptr;
+}
+
+bool BroadcastToNode::operator==(const BroadcastToNode& rhs) const {
+    return array_ptr_ == rhs.array_ptr_ and std::ranges::equal(shape(), rhs.shape());
+}
+
 double const* BroadcastToNode::buff(const State& state) const { return array_ptr_->buff(state); }
 
 void BroadcastToNode::commit(State& state) const {
@@ -353,6 +363,14 @@ ssize_t BroadcastToNode::convert_predecessor_index_(ssize_t index) const {
     flat_index += index * multiplier;
 
     return flat_index;
+}
+
+void BroadcastToNode::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
+    Node::replace_predecessor_(previous_index, node_ptr);
+
+    assert(previous_index == 0);  // we should only ever have one predecessor
+    array_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr_ != nullptr);
 }
 
 void BroadcastToNode::revert(State& state) const {
@@ -1082,6 +1100,17 @@ ResizeNode::ResizeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape, doubl
     add_predecessor_(array_ptr);
 }
 
+bool ResizeNode::operator==(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const ResizeNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return *this == *rhs_ptr;
+}
+
+bool ResizeNode::operator==(const ResizeNode& rhs) const {
+    assert(false and "not yet implemented");
+    return false;
+}
+
 double const* ResizeNode::buff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
@@ -1145,6 +1174,10 @@ void ResizeNode::propagate(State& state) const {
     }
 
     if (data_ptr->diff().size()) Node::propagate(state);
+}
+
+void ResizeNode::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
+    assert(false and "not yet implemented");
 }
 
 void ResizeNode::revert(State& state) const {

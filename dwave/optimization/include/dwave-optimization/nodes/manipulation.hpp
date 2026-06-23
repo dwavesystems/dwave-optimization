@@ -31,6 +31,9 @@ class BroadcastToNode : public ArrayNode {
     BroadcastToNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> shape);
     BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> shape);
 
+    bool operator==(const Node& rhs) const override;
+    bool operator==(const BroadcastToNode& rhs) const;
+
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
 
@@ -77,6 +80,9 @@ class BroadcastToNode : public ArrayNode {
 
     /// @copydoc Array::strides()
     std::span<const ssize_t> strides() const override;
+
+ protected:
+    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
 
  private:
     /// Translate a linear index of the predecessor into a linear index of the
@@ -327,6 +333,9 @@ class ResizeNode : public ArrayOutputMixin<ArrayNode> {
     ResizeNode(ArrayNode* node_ptr, Range&& shape, double fill_value = 0) :
         ResizeNode(node_ptr, std::vector<ssize_t>(shape.begin(), shape.end()), fill_value) {}
 
+    bool operator==(const Node& rhs) const override;
+    bool operator==(const ResizeNode& rhs) const;
+
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
 
@@ -356,6 +365,9 @@ class ResizeNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Node::revert()
     void revert(State& state) const override;
+
+ protected:
+    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
 
  private:
     const Array* array_ptr_;

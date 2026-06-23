@@ -316,6 +316,71 @@ TEST_CASE("Graph::objective()") {
     }
 }
 
+TEST_CASE("Graph::remove_redundant_nodes()") {
+    GIVEN("A model with two redundant nodes") {
+        auto graph = Graph();
+
+        auto* x_ptr = graph.emplace_node<BinaryNode>();
+        auto* y_ptr = graph.emplace_node<BinaryNode>();
+
+        auto* left_x_plus_y = graph.emplace_node<AddNode>(x_ptr, y_ptr);
+        auto* right_x_plus_y = graph.emplace_node<AddNode>(x_ptr, y_ptr);
+
+        CHECK(graph.num_nodes() == 4);
+
+        THEN("remove_redundant_nodes() removes one") {
+            CHECK(graph.remove_redundant_nodes() == 1);
+
+            CHECK(graph.num_nodes() == 3);
+
+            // we kept the one that's earlier in the topological order
+            CHECK(graph.nodes()[2].get() == left_x_plus_y);
+        }
+
+        AND_GIVEN("Two more redundant nodes decended from them") {
+            auto* negative_left_x_plus_y = graph.emplace_node<NegativeNode>(left_x_plus_y);
+            auto* negative_right_x_plus_y = graph.emplace_node<NegativeNode>(right_x_plus_y);
+
+            THEN("remove_redundant_nodes() removes 2") {
+                CHECK(graph.remove_redundant_nodes() == 2);
+
+                CHECK(graph.num_nodes() == 4);
+
+                // we kept the ones earlier in the topological order
+                CHECK(graph.nodes()[2].get() == left_x_plus_y);
+                CHECK(graph.nodes()[3].get() == negative_left_x_plus_y);
+            }
+
+            WHEN("we have a listener on one of the redundant nodes") {
+                auto listener_ptr = negative_right_x_plus_y->expired_ptr();
+
+                THEN("by default we don't remove the listened to node") {
+                    CHECK(graph.remove_redundant_nodes() == 1);
+                    CHECK(graph.num_nodes() == 5);
+
+                    // we kept the ones earlier in the topological order
+                    CHECK(graph.nodes()[2].get() == left_x_plus_y);
+                    CHECK(graph.nodes()[3].get() == negative_left_x_plus_y);
+                    CHECK(graph.nodes()[4].get() == negative_right_x_plus_y);
+                }
+
+                THEN("we can force the removal of the listened-to node") {
+                    CHECK(graph.remove_redundant_nodes(true) == 2);
+
+                    CHECK(graph.num_nodes() == 4);
+
+                    // we kept the ones earlier in the topological order
+                    CHECK(graph.nodes()[2].get() == left_x_plus_y);
+                    CHECK(graph.nodes()[3].get() == negative_left_x_plus_y);
+                }
+            }
+        }
+    }
+
+    // todo: test redundant constants
+    // todo: test objective/constraitns
+}
+
 TEST_CASE("Graph::remove_unused_nodes()") {
     GIVEN("A single integer variable") {
         auto graph = Graph();

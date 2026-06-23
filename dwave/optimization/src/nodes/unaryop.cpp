@@ -171,6 +171,19 @@ UnaryOpNode<UnaryOp>::UnaryOpNode(ArrayNode* node_ptr) :
 }
 
 template <class UnaryOp>
+bool UnaryOpNode<UnaryOp>::operator==(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const UnaryOpNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return *this == *rhs_ptr;
+}
+
+template <class UnaryOp>
+bool UnaryOpNode<UnaryOp>::operator==(const UnaryOpNode& rhs) const {
+    // If we're the same type, then we just need to check we have the same predecessor
+    return this->array_ptr_ == rhs.array_ptr_;
+}
+
+template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::commit(State& state) const {
     data_ptr_<ArrayNodeStateData>(state)->commit();
 }
@@ -230,6 +243,13 @@ void UnaryOpNode<UnaryOp>::propagate(State& state) const {
     }
 
     if (node_data->diff().size()) Node::propagate(state);
+}
+
+template <class UnaryOp>
+void UnaryOpNode<UnaryOp>::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
+    Node::replace_predecessor_(previous_index, node_ptr);
+    array_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr_ != nullptr);
 }
 
 template <class UnaryOp>
