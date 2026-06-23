@@ -133,7 +133,7 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     ) const;
 
     // Return the value of index i in a given state.
-    double get_value(State& state, ssize_t i) const;
+    double get_value(const State& state, ssize_t i) const;
 
     // Lower bound of value in a given index.
     double lower_bound(ssize_t index) const;
