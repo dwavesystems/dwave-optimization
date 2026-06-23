@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Modified ``NumberNode::get_value()`` arguments so that it accepts a ``const
+    state`` as opposed to a non-const ``state``.
