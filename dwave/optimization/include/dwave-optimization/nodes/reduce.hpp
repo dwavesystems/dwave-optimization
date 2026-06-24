@@ -44,9 +44,6 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
         std::optional<double> initial = std::nullopt
     );
 
-    bool operator==(const Node& rhs) const override;
-    bool operator==(const ReduceNode& rhs) const;
-
     /// The axes over which the reduction is performed.
     std::span<const ssize_t> axes() const { return axes_; }
 
@@ -58,6 +55,9 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
+
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const ReduceNode& rhs) const;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;

@@ -199,14 +199,29 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr) :
 }
 
 template <class BinaryOp>
-bool BinaryOpNode<BinaryOp>::operator==(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const BinaryOpNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return *this == *rhs_ptr;
+double const* BinaryOpNode<BinaryOp>::buff(const State& state) const {
+    return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
 
 template <class BinaryOp>
-bool BinaryOpNode<BinaryOp>::operator==(const BinaryOpNode& rhs) const {
+std::span<const Update> BinaryOpNode<BinaryOp>::diff(const State& state) const {
+    return data_ptr_<ArrayNodeStateData>(state)->diff();
+}
+
+template <class BinaryOp>
+void BinaryOpNode<BinaryOp>::commit(State& state) const {
+    data_ptr_<ArrayNodeStateData>(state)->commit();
+}
+
+template <class BinaryOp>
+bool BinaryOpNode<BinaryOp>::equal_to(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const BinaryOpNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return this->equal_to(*rhs_ptr);
+}
+
+template <class BinaryOp>
+bool BinaryOpNode<BinaryOp>::equal_to(const BinaryOpNode& rhs) const {
     // if we're the same type, then we just need to make sure we're operating
     // on the same operands (subject to whether we're commutative or not.
     // Once we switch to ufuncs, this gets even easier
@@ -244,21 +259,6 @@ bool BinaryOpNode<BinaryOp>::operator==(const BinaryOpNode& rhs) const {
     }
 
     return false;
-}
-
-template <class BinaryOp>
-double const* BinaryOpNode<BinaryOp>::buff(const State& state) const {
-    return data_ptr_<ArrayNodeStateData>(state)->buff();
-}
-
-template <class BinaryOp>
-std::span<const Update> BinaryOpNode<BinaryOp>::diff(const State& state) const {
-    return data_ptr_<ArrayNodeStateData>(state)->diff();
-}
-
-template <class BinaryOp>
-void BinaryOpNode<BinaryOp>::commit(State& state) const {
-    data_ptr_<ArrayNodeStateData>(state)->commit();
 }
 
 template <class BinaryOp>

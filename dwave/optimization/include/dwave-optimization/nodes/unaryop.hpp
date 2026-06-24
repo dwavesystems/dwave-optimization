@@ -32,11 +32,11 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
  public:
     explicit UnaryOpNode(ArrayNode* node_ptr);
 
-    bool operator==(const Node& rhs) const override;
-    bool operator==(const UnaryOpNode& rhs) const;
-
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
+
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const UnaryOpNode& rhs) const;
 
     /// @copydoc Array::integral()
     bool integral() const override;

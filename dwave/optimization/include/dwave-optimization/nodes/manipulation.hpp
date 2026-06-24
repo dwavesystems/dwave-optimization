@@ -31,9 +31,6 @@ class BroadcastToNode : public ArrayNode {
     BroadcastToNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> shape);
     BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> shape);
 
-    bool operator==(const Node& rhs) const override;
-    bool operator==(const BroadcastToNode& rhs) const;
-
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
 
@@ -45,6 +42,9 @@ class BroadcastToNode : public ArrayNode {
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
+
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const BroadcastToNode& rhs) const;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
@@ -333,9 +333,6 @@ class ResizeNode : public ArrayOutputMixin<ArrayNode> {
     ResizeNode(ArrayNode* node_ptr, Range&& shape, double fill_value = 0) :
         ResizeNode(node_ptr, std::vector<ssize_t>(shape.begin(), shape.end()), fill_value) {}
 
-    bool operator==(const Node& rhs) const override;
-    bool operator==(const ResizeNode& rhs) const;
-
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
 
@@ -344,6 +341,9 @@ class ResizeNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
+
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const ResizeNode& rhs) const;
 
     /// The fill value.
     double fill_value() const { return fill_value_; }

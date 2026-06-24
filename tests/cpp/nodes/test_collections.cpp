@@ -49,6 +49,17 @@ TEST_CASE("DisjointBitSetsNode") {
                 graph.emplace_node<ArrayValidationNode>(sets.at(i));
             }
 
+            THEN("node equality works as expected") {
+                CHECK(ptr->equal_to(*ptr));
+
+                CHECK(sets[0]->equal_to(*sets[0]));
+                CHECK(not sets[0]->equal_to(*sets[1]));
+                CHECK(static_cast<Node*>(sets[0])->equal_to(*sets[0]));
+                CHECK(not static_cast<Node*>(sets[0])->equal_to(*sets[1]));
+                CHECK(sets[0]->equal_to(*static_cast<Node*>(sets[0])));
+                CHECK(not sets[0]->equal_to(*static_cast<Node*>(sets[1])));
+            }
+
             THEN("We shouldn't be able to add any more successors") {
                 CHECK_THROWS(graph.emplace_node<DisjointBitSetNode>(ptr));
             }

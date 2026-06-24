@@ -339,7 +339,7 @@ ssize_t Graph::remove_redundant_nodes(bool ignore_listeners, double time_limit_s
             if (out_of_time()) return cleanup();
 
             // nothing to do if they are not equal
-            if (*constants_[i] != *constants_[j]) continue;
+            if (not constants_[i]->equal_to(*constants_[j])) continue;
 
             constants_[i]->take_successors(*constants_[j]);
 
@@ -371,7 +371,7 @@ ssize_t Graph::remove_redundant_nodes(bool ignore_listeners, double time_limit_s
                 if (out_of_time()) return cleanup();
 
                 // If lhs != rhs there's nothing to do, so keep looking
-                if (*successors[i] != *successors[j]) continue;
+                if (not successors[i]->equal_to(*successors[j])) continue;
 
                 // We have a redundant node!
 

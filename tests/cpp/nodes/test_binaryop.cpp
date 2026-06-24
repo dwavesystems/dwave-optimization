@@ -394,11 +394,11 @@ TEMPLATE_TEST_CASE(
         Node* c_ptr = graph.emplace_node<BinaryOpNode<TestType>>(y_ptr, x_ptr);  // commutative
         Node* d_ptr = graph.emplace_node<BinaryOpNode<TestType>>(x_ptr, z_ptr);  // not equal
 
-        CHECK(*a_ptr == *b_ptr);
-        CHECK(*b_ptr == *a_ptr);
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(b_ptr->equal_to(*a_ptr));
 
-        CHECK(*a_ptr != *d_ptr);
-        CHECK(*d_ptr != *a_ptr);
+        CHECK(not a_ptr->equal_to(*d_ptr));
+        CHECK(not d_ptr->equal_to(*a_ptr));
 
         // Once we switch to ufuncs
         // https://github.com/dwavesystems/dwave-optimization/pull/412
@@ -415,8 +415,8 @@ TEMPLATE_TEST_CASE(
             std::same_as<BinaryOpNode<TestType>, XorNode>
         ) {
             // commutative
-            CHECK(*a_ptr == *c_ptr);
-            CHECK(*c_ptr == *a_ptr);
+            CHECK(a_ptr->equal_to(*c_ptr));
+            CHECK(c_ptr->equal_to(*a_ptr));
         } else {
             // not commutative
             static_assert(
@@ -427,8 +427,8 @@ TEMPLATE_TEST_CASE(
                 std::same_as<BinaryOpNode<TestType>, SubtractNode>
             );
 
-            CHECK(*a_ptr != *c_ptr);
-            CHECK(*c_ptr != *a_ptr);
+            CHECK(not a_ptr->equal_to(*c_ptr));
+            CHECK(not c_ptr->equal_to(*a_ptr));
         }
     }
 

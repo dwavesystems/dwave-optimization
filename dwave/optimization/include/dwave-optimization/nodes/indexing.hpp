@@ -56,9 +56,6 @@ class AdvancedIndexingNode : public ArrayNode {
     explicit AdvancedIndexingNode(ArrayNode* array_ptr, Indices... indices) :
         AdvancedIndexingNode(array_ptr, make_indices(indices...)) {}
 
-    bool operator==(const Node& rhs) const override;
-    bool operator==(const AdvancedIndexingNode& rhs) const;
-
     // Array overloads
     ssize_t ndim() const noexcept override { return ndim_; }
     double const* buff(const State& state) const override;
@@ -83,6 +80,8 @@ class AdvancedIndexingNode : public ArrayNode {
 
     // Node overloads
     void commit(State& state) const override;
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const AdvancedIndexingNode& rhs) const;
     void initialize_state(State& state) const override;
     void propagate(State& state) const override;
     void revert(State& state) const override;
@@ -200,9 +199,6 @@ class BasicIndexingNode : public ArrayNode {
     explicit BasicIndexingNode(ArrayNode* array_ptr, Indices... indices) :
         BasicIndexingNode(array_ptr, make_indices(indices...)) {}
 
-    bool operator==(const Node& rhs) const override;
-    bool operator==(const BasicIndexingNode& rhs) const;
-
     // Overloads needed by the Array ABC **************************************
 
     ssize_t ndim() const noexcept override { return ndim_; }
@@ -237,6 +233,9 @@ class BasicIndexingNode : public ArrayNode {
     // Overloads required by the Node ABC *************************************
 
     // don't need to overload update()
+
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const BasicIndexingNode& rhs) const;
 
     void propagate(State& state) const override;
 

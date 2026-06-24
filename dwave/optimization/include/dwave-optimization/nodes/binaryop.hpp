@@ -34,14 +34,14 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     // We need at least two nodes, and they must be the same shape
     BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr);
 
+    double const* buff(const State& state) const override;
+    std::span<const Update> diff(const State& state) const override;
+
     /// Two BinaryOpNodes are equal if they have the same operation and the
     /// same predecessors. If the BinaryOp is commutative, then permutations
     /// of predecessors are allowed. 
-    bool operator==(const Node& rhs) const override;
-    bool operator==(const BinaryOpNode& rhs) const;
-
-    double const* buff(const State& state) const override;
-    std::span<const Update> diff(const State& state) const override;
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const BinaryOpNode& rhs) const;
 
     /// @copydoc Array::integral()
     bool integral() const override;

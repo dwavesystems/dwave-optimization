@@ -30,9 +30,6 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
  public:
     ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr);
 
-    bool operator==(const Node& rhs) const override;
-    bool operator==(const ExtractNode& rhs) const;
-
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
 
@@ -41,6 +38,9 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
+
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const ExtractNode& rhs) const;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
@@ -97,12 +97,13 @@ class WhereNode : public ArrayOutputMixin<ArrayNode> {
  public:
     WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_ptr);
 
-    bool operator==(const Node& rhs) const override;
-    bool operator==(const WhereNode& rhs) const;
-
     double const* buff(const State& state) const override;
     void commit(State& state) const override;
     std::span<const Update> diff(const State& state) const override;
+
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const WhereNode& rhs) const;
+
     void initialize_state(State& state) const override;
 
     /// @copydoc Array::integral()

@@ -194,16 +194,6 @@ BroadcastToNode::BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> 
     add_predecessor_(array_ptr);
 }
 
-bool BroadcastToNode::operator==(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const BroadcastToNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return *this == *rhs_ptr;
-}
-
-bool BroadcastToNode::operator==(const BroadcastToNode& rhs) const {
-    return array_ptr_ == rhs.array_ptr_ and std::ranges::equal(shape(), rhs.shape());
-}
-
 double const* BroadcastToNode::buff(const State& state) const { return array_ptr_->buff(state); }
 
 void BroadcastToNode::commit(State& state) const {
@@ -214,6 +204,16 @@ bool BroadcastToNode::contiguous() const { return contiguous_; }
 
 std::span<const Update> BroadcastToNode::diff(const State& state) const {
     return data_ptr_<BroadcastToNodeData>(state)->diff;
+}
+
+bool BroadcastToNode::equal_to(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const BroadcastToNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return this->equal_to(*rhs_ptr);
+}
+
+bool BroadcastToNode::equal_to(const BroadcastToNode& rhs) const {
+    return array_ptr_ == rhs.array_ptr_ and std::ranges::equal(shape(), rhs.shape());
 }
 
 void BroadcastToNode::initialize_state(State& state) const {
@@ -1100,17 +1100,6 @@ ResizeNode::ResizeNode(ArrayNode* array_ptr, std::vector<ssize_t>&& shape, doubl
     add_predecessor_(array_ptr);
 }
 
-bool ResizeNode::operator==(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const ResizeNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return *this == *rhs_ptr;
-}
-
-bool ResizeNode::operator==(const ResizeNode& rhs) const {
-    assert(false and "not yet implemented");
-    return false;
-}
-
 double const* ResizeNode::buff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
@@ -1121,6 +1110,17 @@ void ResizeNode::commit(State& state) const {
 
 std::span<const Update> ResizeNode::diff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->diff();
+}
+
+bool ResizeNode::equal_to(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const ResizeNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return this->equal_to(*rhs_ptr);
+}
+
+bool ResizeNode::equal_to(const ResizeNode& rhs) const {
+    assert(false and "not yet implemented");
+    return false;
 }
 
 void ResizeNode::initialize_state(State& state) const {

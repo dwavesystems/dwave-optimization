@@ -260,16 +260,6 @@ class Node {
     Node& operator=(const Node&) = delete;
     Node& operator=(Node&&) noexcept = delete;
 
-    // TODO: document and note that nodes *must* share the same set of
-    // predecessors (permutations are sometimes allowed) and they *must* be the
-    // same type. Also that they can have false negatives in some cases.
-    // Also, we don't check pinned values
-    virtual bool operator==(const Node& rhs) const {
-        std::cout << classname() << " missing operator==(...) *********\n";
-        assert(false and "not yet implemented");
-        return false;
-    }
-
     /// Methods for interrogating nodes as strings. Useful for error messages
     /// and debugging. We roughly follow Python's scheme of repr() and str()
     /// printing different information.
@@ -281,6 +271,16 @@ class Node {
     /// Return true if the node's state is deterministic - that is it's uniquely
     /// derived from its predecessors. Defaults to `true`, except for decisions.
     virtual bool deterministic_state() const { return true; }
+
+    // TODO: document and note that nodes *must* share the same set of
+    // predecessors (permutations are sometimes allowed) and they *must* be the
+    // same type. Also that they can have false negatives in some cases.
+    // Also, we don't check pinned values
+    virtual bool equal_to(const Node& rhs) const {
+        std::cout << classname() << " missing operator==(...) *********\n";
+        assert(false and "not yet implemented");
+        return false;
+    }
 
     /// Return a shared pointer to a bool value. When the node is destructed
     /// the bool will be set to True
@@ -456,12 +456,14 @@ NodeType* Graph::emplace_node(Args&&... args) {
 class ArrayNode : public Array, public virtual Node {};
 class DecisionNode : public Decision, public virtual Node {
  public:
-    /// Decision nodes are never equal to eachother because they are
-    /// independent variables.
-    bool operator==(const Node&) const override { return false; }
-
     /// Decision nodes by definition do not have a deterministic state.
     bool deterministic_state() const final { return false; }
+
+    /// Decision can only ever be equal to themselves because they are
+    /// independent variables.
+    bool equal_to(const Node& rhs) const final {
+        return static_cast<const Node*>(this) == &rhs;
+    }
 
     /// Decisions don't have predecessors so no one should be calling update().
     /// Always throws a logic_error.

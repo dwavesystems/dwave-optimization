@@ -520,22 +520,22 @@ AdvancedIndexingNode::AdvancedIndexingNode(ArrayNode* array_ptr, IndexParser_&& 
     }
 }
 
-bool AdvancedIndexingNode::operator==(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const AdvancedIndexingNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return *this == *rhs_ptr;
-}
-
-bool AdvancedIndexingNode::operator==(const AdvancedIndexingNode& rhs) const {
-    assert(false and "not yet implemented");
-    return false;
-}
-
 double const* AdvancedIndexingNode::buff(const State& state) const {
     return data_ptr_<AdvancedIndexingNodeData>(state)->data.data();
 }
 std::span<const Update> AdvancedIndexingNode::diff(const State& state) const {
     return data_ptr_<AdvancedIndexingNodeData>(state)->diff;
+}
+
+bool AdvancedIndexingNode::equal_to(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const AdvancedIndexingNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return this->equal_to(*rhs_ptr);
+}
+
+bool AdvancedIndexingNode::equal_to(const AdvancedIndexingNode& rhs) const {
+    assert(false and "not yet implemented");
+    return false;
 }
 
 void AdvancedIndexingNode::fill_subspace(
@@ -1402,21 +1402,6 @@ BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, IndexParser_&& parser
     add_predecessor_(array_ptr);
 }
 
-bool BasicIndexingNode::operator==(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const BasicIndexingNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return *this == *rhs_ptr;
-}
-
-bool BasicIndexingNode::operator==(const BasicIndexingNode& rhs) const {
-    return (array_ptr_ == rhs.array_ptr_ and
-        ndim_ == rhs.ndim_ and
-        start_ == rhs.start_ and
-        std::ranges::equal(shape(), rhs.shape()) and
-        std::ranges::equal(strides(), rhs.strides())
-    );
-}
-
 struct BasicIndexingNodeData : NodeStateData {
     BasicIndexingNodeData(const BasicIndexingNode* node) {
         if (node->dynamic()) {
@@ -1489,6 +1474,21 @@ void BasicIndexingNode::commit(State& state) const {
 
 std::span<const Update> BasicIndexingNode::diff(const State& state) const {
     return data_ptr_<BasicIndexingNodeData>(state)->diff;
+}
+
+bool BasicIndexingNode::equal_to(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const BasicIndexingNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return this->equal_to(*rhs_ptr);
+}
+
+bool BasicIndexingNode::equal_to(const BasicIndexingNode& rhs) const {
+    return (array_ptr_ == rhs.array_ptr_ and
+        ndim_ == rhs.ndim_ and
+        start_ == rhs.start_ and
+        std::ranges::equal(shape(), rhs.shape()) and
+        std::ranges::equal(strides(), rhs.strides())
+    );
 }
 
 std::vector<BasicIndexingNode::slice_or_int> BasicIndexingNode::infer_indices() const {

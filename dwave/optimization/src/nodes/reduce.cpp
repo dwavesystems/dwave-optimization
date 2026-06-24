@@ -819,19 +819,6 @@ ReduceNode<BinaryOp>::ReduceNode(
     ReduceNode(array_ptr, std::span(axes), initial) {}
 
 template <class BinaryOp>
-bool ReduceNode<BinaryOp>::operator==(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const ReduceNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return *this == *rhs_ptr;
-}
-
-template <class BinaryOp>
-bool ReduceNode<BinaryOp>::operator==(const ReduceNode& rhs) const {
-    assert(false and "not yet implemented");
-    return false;
-}
-
-template <class BinaryOp>
 double const* ReduceNode<BinaryOp>::buff(const State& state) const {
     return data_ptr_<ReduceNodeData<BinaryOp>>(state)->buff();
 }
@@ -844,6 +831,19 @@ void ReduceNode<BinaryOp>::commit(State& state) const {
 template <class BinaryOp>
 std::span<const Update> ReduceNode<BinaryOp>::diff(const State& state) const {
     return data_ptr_<ReduceNodeData<BinaryOp>>(state)->diff();
+}
+
+template <class BinaryOp>
+bool ReduceNode<BinaryOp>::equal_to(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const ReduceNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return this->equal_to(*rhs_ptr);
+}
+
+template <class BinaryOp>
+bool ReduceNode<BinaryOp>::equal_to(const ReduceNode& rhs) const {
+    assert(false and "not yet implemented");
+    return false;
 }
 
 template <class BinaryOp>
