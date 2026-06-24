@@ -34,6 +34,9 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     // We need at least two nodes, and they must be the same shape
     BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr);
 
+    /// Two BinaryOpNodes are equal if they have the same operation and the
+    /// same predecessors. If the BinaryOp is commutative, then permutations
+    /// of predecessors are allowed. 
     bool operator==(const Node& rhs) const override;
     bool operator==(const BinaryOpNode& rhs) const;
 

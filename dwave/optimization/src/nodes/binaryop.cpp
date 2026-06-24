@@ -212,9 +212,13 @@ bool BinaryOpNode<BinaryOp>::operator==(const BinaryOpNode& rhs) const {
     // Once we switch to ufuncs, this gets even easier
     if (std::ranges::equal(operands_, rhs.operands_)) return true;
 
-    // Once we switch to unfuncs
+    // Once we switch to ufuncs
     // https://github.com/dwavesystems/dwave-optimization/pull/412
     // we can use ::communcative. For now we hardcode it.
+
+    // Dev note: This implementation doesn't check the pathalogical case op(x, x).
+    // While it would be mathematically correct, IMO it would be more confusing
+    // than helpful.
 
     if constexpr (
         std::same_as<BinaryOpNode, AddNode> or       //

@@ -383,6 +383,70 @@ TEMPLATE_TEST_CASE(
             }
         }
     }
+
+    SECTION("equality") {
+        auto* x_ptr = graph.emplace_node<IntegerNode>();
+        auto* y_ptr = graph.emplace_node<IntegerNode>();
+        auto* z_ptr = graph.emplace_node<IntegerNode>();
+
+        Node* a_ptr = graph.emplace_node<BinaryOpNode<TestType>>(x_ptr, y_ptr);
+        Node* b_ptr = graph.emplace_node<BinaryOpNode<TestType>>(x_ptr, y_ptr);
+        Node* c_ptr = graph.emplace_node<BinaryOpNode<TestType>>(y_ptr, x_ptr);  // commutative
+        Node* d_ptr = graph.emplace_node<BinaryOpNode<TestType>>(x_ptr, z_ptr);  // not equal
+
+        CHECK(*a_ptr == *b_ptr);
+        CHECK(*b_ptr == *a_ptr);
+
+        CHECK(*a_ptr != *d_ptr);
+        CHECK(*d_ptr != *a_ptr);
+
+        // Once we switch to ufuncs
+        // https://github.com/dwavesystems/dwave-optimization/pull/412
+        // we can use ::communcative. For now we hardcode it.
+
+        if constexpr (
+            std::same_as<BinaryOpNode<TestType>, AddNode> or
+            std::same_as<BinaryOpNode<TestType>, AndNode> or
+            std::same_as<BinaryOpNode<TestType>, EqualNode> or
+            std::same_as<BinaryOpNode<TestType>, MaximumNode> or
+            std::same_as<BinaryOpNode<TestType>, MinimumNode> or
+            std::same_as<BinaryOpNode<TestType>, MultiplyNode> or
+            std::same_as<BinaryOpNode<TestType>, OrNode> or
+            std::same_as<BinaryOpNode<TestType>, XorNode>
+        ) {
+            // commutative
+            CHECK(*a_ptr == *c_ptr);
+            CHECK(*c_ptr == *a_ptr);
+        } else {
+            // not commutative
+            static_assert(
+                std::same_as<BinaryOpNode<TestType>, DivideNode> or
+                std::same_as<BinaryOpNode<TestType>, LessEqualNode> or
+                std::same_as<BinaryOpNode<TestType>, ModulusNode> or
+                std::same_as<BinaryOpNode<TestType>, SafeDivideNode> or
+                std::same_as<BinaryOpNode<TestType>, SubtractNode>
+            );
+
+            CHECK(*a_ptr != *c_ptr);
+            CHECK(*c_ptr != *a_ptr);
+        }
+    }
+
+    SECTION("predecessor replacement") {
+        auto* x_ptr = graph.emplace_node<IntegerNode>();
+        auto* y_ptr = graph.emplace_node<IntegerNode>();
+        auto* z_ptr = graph.emplace_node<IntegerNode>();
+
+        auto* a_ptr = graph.emplace_node<BinaryOpNode<TestType>>(x_ptr, y_ptr);
+
+        CHECK_THAT(a_ptr->predecessors(), RangeEquals({x_ptr, y_ptr}));
+        CHECK_THAT(a_ptr->operands(), RangeEquals({x_ptr, y_ptr}));
+
+        z_ptr->take_successors(*y_ptr);
+
+        CHECK_THAT(a_ptr->predecessors(), RangeEquals({x_ptr, z_ptr}));
+        CHECK_THAT(a_ptr->operands(), RangeEquals({x_ptr, z_ptr}));
+    }
 }
 
 TEST_CASE("BinaryOpNode - LessEqualNode") {
