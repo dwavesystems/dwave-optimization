@@ -354,6 +354,16 @@ std::span<const Update> ARangeNode::diff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 
+bool ARangeNode::equal_to(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const ARangeNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;
+    return this->equal_to(*rhs_ptr);
+}
+
+bool ARangeNode::equal_to(const ARangeNode& rhs) const {
+    return start_ == rhs.start_ and stop_ == rhs.stop_ and step_ == rhs.step_;
+}
+
 bool ARangeNode::integral() const { return true; }
 
 void ARangeNode::initialize_state(State& state) const {
@@ -420,6 +430,45 @@ void ARangeNode::propagate(State& state) const {
     }
 
     if (ptr->diff().size()) Node::propagate(state);
+}
+
+void ARangeNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    assert(0 <= index and static_cast<size_t>(index) < predecessors().size());
+
+    const Array* array_ptr = dynamic_cast<const Array*>(node_ptr);
+    assert(array_ptr != nullptr);
+
+    if (std::holds_alternative<const Array*>(start_)) {
+        if (index == 0) {
+            // found it!
+            start_ = array_ptr;
+            return;
+        }
+
+        // If we haven't found the Array* we want to replace, then "normalize"
+        // the index so that it looks like it would if start wasn't an array.
+        index -= 1;
+    }
+
+    if (std::holds_alternative<const Array*>(stop_)) {
+        if (index == 0) {
+            // found it!
+            stop_ = array_ptr;
+            return;
+        }
+
+        // If we haven't found the Array* we want to replace, then "normalize"
+        // the index so that it looks like it would if stop wasn't an array.
+        index -= 1;
+    }
+
+    // If we're here then step must be an array and index must be 0 (whether
+    // because that's what was passed or because we've changed it).
+    assert(index == 0);
+    assert(std::holds_alternative<const Array*>(step_));
+    step_ = array_ptr;
 }
 
 void ARangeNode::revert(State& state) const { data_ptr_<ArrayNodeStateData>(state)->revert(); }
