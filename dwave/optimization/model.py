@@ -593,10 +593,10 @@ class Model(_Graph):
         """
         warnings.warn(
             "The use of Model.disjoint_lists_symbol() is deprecated "
-            "since dwave.optimization 0.7.1. Use "
-            "`from dwave.optimization.mathematical import is_disjoint_cover` "
-            "`lists = [model.list(primary_set_size, min_size=0) for _ in range(num_disjoint_lists)]` "
-            "`model.add_constraint(is_disjoint_cover(primary_set_size, lists))`",
+            "since dwave.optimization 0.7.1. Use\n"
+            "from dwave.optimization.mathematical import is_disjoint_cover\n"
+            "lists = [model.list(primary_set_size, min_size=0) for _ in range(num_disjoint_lists)]\n"
+            "model.add_constraint(is_disjoint_cover(primary_set_size, lists))",
             DeprecationWarning,
         )
 
