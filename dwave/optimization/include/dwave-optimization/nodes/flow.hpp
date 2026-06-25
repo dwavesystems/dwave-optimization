@@ -77,7 +77,7 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
     SizeInfo sizeinfo() const override;
 
  protected:
-    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     // these are redundant, but convenient
@@ -127,7 +127,7 @@ class WhereNode : public ArrayOutputMixin<ArrayNode> {
     SizeInfo sizeinfo() const override;
 
  protected:
-    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     // these are redundant, but convenient

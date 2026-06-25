@@ -153,8 +153,17 @@ void ExtractNode::propagate(State& state) const {
     node_data->assign(std::move(new_values), count);
 }
 
-void ExtractNode::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
-    assert(false and "not yet implemented");
+void ExtractNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    if (index == 0) {
+        condition_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(condition_ptr_ != nullptr);
+    } else {
+        assert(index == 1);
+        arr_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(condition_ptr_ != nullptr);
+    }
 }
 
 void ExtractNode::revert(State& state) const { data_ptr_<ArrayNodeStateData>(state)->revert(); }
@@ -388,22 +397,19 @@ void WhereNode::propagate(State& state) const {
     }
 }
 
-void WhereNode::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
-    Node::replace_predecessor_(previous_index, node_ptr);
+void WhereNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
 
-    assert(0 <= previous_index and previous_index < 3);
-    if (previous_index == 0) {
+    if (index == 0) {
         condition_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
         assert(condition_ptr_ != nullptr);
-    } else if (previous_index == 1) {
+    } else if (index == 1) {
         x_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
         assert(x_ptr_ != nullptr);
-    } else if (previous_index == 2) {
+    } else {
+        assert(index == 2);
         y_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
         assert(y_ptr_ != nullptr);
-    } else {
-        assert(false);
-        unreachable();
     }
 }
 
