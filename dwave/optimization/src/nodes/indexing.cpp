@@ -1931,7 +1931,7 @@ std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
 // PermutationNode ************************************************************
 
 PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr) :
-    ArrayOutputMixin(array_ptr->shape()),
+    ArrayOutputMixin({order_ptr->size(), order_ptr->size()}),
     array_ptr_(array_ptr),
     order_ptr_(order_ptr),
     values_info_(array_ptr_) {
@@ -1960,7 +1960,7 @@ PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr) :
         throw std::invalid_argument("order must be a 1d array");
     }
 
-    if (array_shape[0] != order_ptr_->size()) {
+    if (array_shape[0] < order_ptr_->size()) {
         throw std::invalid_argument("array shape and order size mismatch");
     }
     if (order_ptr_->max() > array_ptr_->size()) {

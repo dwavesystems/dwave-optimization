@@ -9,6 +9,7 @@ tests_all = executable(
     [
         'nodes/indexing/test_advanced.cpp',
         'nodes/indexing/test_basic.cpp',
+        'nodes/indexing/test_permutation.cpp',
         'nodes/test_binaryop.cpp',
         'nodes/test_collections.cpp',
         'nodes/test_constants.cpp',
