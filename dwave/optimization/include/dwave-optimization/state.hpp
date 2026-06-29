@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <vector>
+#include <cassert>
 
 namespace dwave::optimization {
 

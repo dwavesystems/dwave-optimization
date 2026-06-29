@@ -1758,6 +1758,68 @@ TEST_CASE("AdvancedIndexingNode") {
             );
         }
     }
+
+    SECTION("equality") {
+        std::vector<double> values = {0, 1, 2, 3, 4, 5, 6, 7};
+        auto* arr0_ptr = graph.emplace_node<ConstantNode>(values, std::array<ssize_t, 3>{2, 2, 2});
+        auto* arr1_ptr = graph.emplace_node<ConstantNode>(values, std::array<ssize_t, 3>{2, 2, 2});
+
+        auto* index0_ptr = graph.emplace_node<IntegerNode>(std::array<ssize_t, 0>{}, 0, 1);
+        auto* index1_ptr = graph.emplace_node<IntegerNode>(std::array<ssize_t, 0>{}, 0, 1);
+        auto* index2_ptr = graph.emplace_node<IntegerNode>(std::array<ssize_t, 0>{}, 0, 1);
+
+        Node* a_ptr =
+            graph.emplace_node<AdvancedIndexingNode>(arr0_ptr, index0_ptr, Slice(), index1_ptr);
+        Node* b_ptr =
+            graph.emplace_node<AdvancedIndexingNode>(arr0_ptr, index0_ptr, Slice(), index1_ptr);
+        Node* c_ptr =
+            graph.emplace_node<AdvancedIndexingNode>(arr0_ptr, index0_ptr, index1_ptr, Slice());
+        Node* d_ptr =
+            graph.emplace_node<AdvancedIndexingNode>(arr1_ptr, index0_ptr, Slice(), index1_ptr);
+        Node* e_ptr =
+            graph.emplace_node<AdvancedIndexingNode>(arr0_ptr, index0_ptr, Slice(), index2_ptr);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+
+        CHECK(not a_ptr->equal_to(*arr0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+        CHECK(not a_ptr->equal_to(*e_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        std::vector<double> values0 = {0, 1, 2, 3, 4, 5, 6, 7};
+        auto* arr0_ptr = graph.emplace_node<ConstantNode>(values0, std::array<ssize_t, 3>{2, 2, 2});
+        std::vector<double> values1 = {8, 9, 10, 11, 12, 13, 14, 15};
+        auto* arr1_ptr = graph.emplace_node<ConstantNode>(values1, std::array<ssize_t, 3>{2, 2, 2});
+
+        auto* index0_ptr = graph.emplace_node<IntegerNode>(std::array<ssize_t, 0>{}, 0, 1);
+        auto* index1_ptr = graph.emplace_node<IntegerNode>(std::array<ssize_t, 0>{}, 0, 1);
+        auto* index2_ptr = graph.emplace_node<IntegerNode>(std::array<ssize_t, 0>{}, 0, 1);
+        auto* index3_ptr = graph.emplace_node<IntegerNode>(std::array<ssize_t, 0>{}, 0, 1);
+
+        auto* adv_ptr =
+            graph.emplace_node<AdvancedIndexingNode>(arr0_ptr, index0_ptr, Slice(), index1_ptr);
+
+        arr1_ptr->take_successors(*arr0_ptr);
+        index2_ptr->take_successors(*index0_ptr);
+        index3_ptr->take_successors(*index1_ptr);
+
+        CHECK_THAT(
+            adv_ptr->predecessors(),
+            RangeEquals(std::array<Node*, 3>{arr1_ptr, index2_ptr, index3_ptr})
+        );
+
+        auto state = graph.empty_state();
+        index0_ptr->initialize_state(state, {0});
+        index1_ptr->initialize_state(state, {0});
+        index2_ptr->initialize_state(state, {1});
+        index3_ptr->initialize_state(state, {1});
+        graph.initialize_state(state);
+
+        CHECK_THAT(adv_ptr->view(state), RangeEquals({13, 15}));
+    }
 }
 
 }  // namespace dwave::optimization

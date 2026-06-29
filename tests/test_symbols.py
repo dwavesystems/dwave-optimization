@@ -3469,9 +3469,12 @@ class TestPermutation(utils.SymbolTests):
         model = Model()
         A = model.constant(np.arange(25).reshape((5, 5)))
         x = model.list(5)
+        y = model.list(5, 3, 3)
         p = A[x, :][:, x]
+        p_submatrix = A[y, :][:, y]
         model.lock()
         yield p
+        yield p_submatrix
 
     def test(self):
         from dwave.optimization.symbols import Permutation
@@ -3480,9 +3483,12 @@ class TestPermutation(utils.SymbolTests):
 
         A = model.constant(np.arange(25).reshape((5, 5)))
         x = model.list(5)
+        y = model.list(5, 3, 3)
 
         self.assertIsInstance(A[x, :][:, x], Permutation)
         self.assertIsInstance(A[:, x][x, :], Permutation)
+        self.assertIsInstance(A[y, :][:, y], Permutation)
+        self.assertIsInstance(A[:, y][y, :], Permutation)
 
         b = model.constant(np.arange(30).reshape((5, 6)))
 

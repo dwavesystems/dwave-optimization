@@ -17,8 +17,11 @@
 #include <algorithm>
 #include <ranges>
 #include <unordered_set>
+#include <variant>
 
 #include "_state.hpp"
+#include "dwave-optimization/common.hpp"
+#include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/state.hpp"
 
@@ -534,8 +537,7 @@ bool AdvancedIndexingNode::equal_to(const Node& rhs) const {
 }
 
 bool AdvancedIndexingNode::equal_to(const AdvancedIndexingNode& rhs) const {
-    assert(false and "not yet implemented");
-    return false;
+    return array_ptr_ == rhs.array_ptr_ and std::ranges::equal(indices_, rhs.indices_);
 }
 
 void AdvancedIndexingNode::fill_subspace(
@@ -754,8 +756,37 @@ void AdvancedIndexingNode::commit(State& state) const {
     data_ptr_<AdvancedIndexingNodeData>(state)->commit();
 }
 
-void AdvancedIndexingNode::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
-    assert(false and "not yet implemented");
+void AdvancedIndexingNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    assert(index >= 0);
+
+    // First check if we're replacing the array. If not, we change index to refer
+    // to the index of the indexing arrays
+    if (index == 0) {
+        // replace the array
+        array_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(array_ptr_ != nullptr);
+        return;
+    }
+    index -= 1;
+
+    //
+    for (array_or_slice& indexer : indices_) {
+        if (std::holds_alternative<Slice>(indexer)) continue;  // carry on
+
+        assert(std::holds_alternative<ArrayNode*>(indexer));
+        if (index == 0) {
+            // found the indexer we want to replace
+            indexer = dynamic_cast<ArrayNode*>(node_ptr);
+            assert(std::get<ArrayNode*>(indexer) != nullptr);
+            return;
+        }
+        index -= 1;
+    }
+
+    assert(false and "should not be able to get here");
+    unreachable();
 }
 
 void AdvancedIndexingNode::revert(State& state) const {
@@ -1483,12 +1514,23 @@ bool BasicIndexingNode::equal_to(const Node& rhs) const {
 }
 
 bool BasicIndexingNode::equal_to(const BasicIndexingNode& rhs) const {
-    return (array_ptr_ == rhs.array_ptr_ and
-        ndim_ == rhs.ndim_ and
-        start_ == rhs.start_ and
-        std::ranges::equal(shape(), rhs.shape()) and
-        std::ranges::equal(strides(), rhs.strides())
-    );
+    if (array_ptr_ == rhs.array_ptr_ and              //
+        ndim_ == rhs.ndim_ and                        //
+        std::ranges::equal(shape(), rhs.shape()) and  //
+        std::ranges::equal(strides(), rhs.strides())) {
+        if (size_ < 0) {
+            // Dynamic basic indexing, so we need to inspect the first slice.
+            // Note that we don't normalize the first slice in the constructor
+            // so we can get false negatives here. E.g. x[:10000], x[:10001] in
+            // some cases could evaluate to equal.
+            return axis0_slice_ == rhs.axis0_slice_;
+        } else {
+            // Otherwise we inspect the start_
+            return start_ == rhs.start_;
+        }
+    }
+
+    return false;
 }
 
 std::vector<BasicIndexingNode::slice_or_int> BasicIndexingNode::infer_indices() const {
@@ -1919,8 +1961,17 @@ void BasicIndexingNode::propagate(State& state) const {
     if (diff.size()) Node::propagate(state);
 }
 
-void BasicIndexingNode::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
-    assert(false and "not yet implemented");
+void BasicIndexingNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    assert(index == 0);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+    assert(std::ranges::equal(this->array_ptr_->shape(), array_ptr->shape()));
+    assert(std::ranges::equal(this->array_ptr_->strides(), array_ptr->strides()));
+
+    this->array_ptr_ = array_ptr;
 }
 
 void BasicIndexingNode::revert(State& state) const {
@@ -1965,7 +2016,7 @@ std::span<const ssize_t> BasicIndexingNode::shape(const State& state) const {
 // PermutationNode ************************************************************
 
 PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr) :
-    ArrayOutputMixin(array_ptr->shape()),
+    ArrayOutputMixin({order_ptr->size(), order_ptr->size()}),
     array_ptr_(array_ptr),
     order_ptr_(order_ptr),
     values_info_(array_ptr_) {
@@ -1994,7 +2045,7 @@ PermutationNode::PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr) :
         throw std::invalid_argument("order must be a 1d array");
     }
 
-    if (array_shape[0] != order_ptr_->size()) {
+    if (array_shape[0] < order_ptr_->size()) {
         throw std::invalid_argument("array shape and order size mismatch");
     }
     if (order_ptr_->max() > array_ptr_->size()) {
@@ -2013,6 +2064,16 @@ double const* PermutationNode::buff(const State& state) const {
 
 std::span<const Update> PermutationNode::diff(const State& state) const {
     return data_ptr_<IndexingNodeData>(state)->diff;
+}
+
+bool PermutationNode::equal_to(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const PermutationNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return this->equal_to(*rhs_ptr);
+}
+
+bool PermutationNode::equal_to(const PermutationNode& rhs) const {
+    return array_ptr_ == rhs.array_ptr_ and order_ptr_ == rhs.order_ptr_;
 }
 
 bool PermutationNode::integral() const { return values_info_.integral; }
@@ -2120,6 +2181,19 @@ void PermutationNode::propagate(State& state) const {
 
     // Only signal successors if we actually have something to propagate
     if (updates.size()) Node::propagate(state);
+}
+
+void PermutationNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    if (index == 0) {
+        array_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(array_ptr_ != nullptr);
+    } else {
+        assert(index == 1);
+        order_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(order_ptr_ != nullptr);
+    }
 }
 
 void PermutationNode::revert(State& state) const { data_ptr_<IndexingNodeData>(state)->revert(); }

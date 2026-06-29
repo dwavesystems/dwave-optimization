@@ -90,7 +90,7 @@ class AdvancedIndexingNode : public ArrayNode {
     std::span<const array_or_slice> indices() const { return indices_; }
 
  protected:
-    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     struct IndexParser_;
@@ -161,7 +161,7 @@ class AdvancedIndexingNode : public ArrayNode {
 
     const ssize_t size_;
 
-    const std::vector<array_or_slice> indices_;
+    std::vector<array_or_slice> indices_;
     const ssize_t indexing_arrays_ndim_;
 
     // "Grouped-indexers mode" refers to NumPy combined indexing where all array indexers
@@ -251,7 +251,7 @@ class BasicIndexingNode : public ArrayNode {
     std::vector<slice_or_int> infer_indices() const;
 
  protected:
-    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     // Private constructor using an intermediate object
@@ -312,6 +312,10 @@ class PermutationNode : public ArrayOutputMixin<ArrayNode> {
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
 
+    /// @copydoc Node::equal_to()
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const PermutationNode& rhs) const;
+
     /// @copydoc Array::integral()
     bool integral() const override;
 
@@ -326,6 +330,9 @@ class PermutationNode : public ArrayOutputMixin<ArrayNode> {
     void revert(State& state) const override;
 
     void propagate(State& state) const override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     // we could dynamically cast each time, but it's easier to just keep separate

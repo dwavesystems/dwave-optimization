@@ -574,7 +574,7 @@ void NumberNode::exchange(
     }
 }
 
-double NumberNode::get_value(State& state, ssize_t i) const {
+double NumberNode::get_value(const State& state, ssize_t i) const {
     return data_ptr_<NumberNodeStateData>(state)->get(i);
 }
 
