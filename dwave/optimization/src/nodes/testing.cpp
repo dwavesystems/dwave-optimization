@@ -211,11 +211,32 @@ void ArrayValidationNode::propagate(State& state) const {
 
     current_data = expected;
 
-    // check that all values are within min/max
+    // check that all values are within min/max (and integral if necessary)
     if (array_ptr->size(state)) {
-        assert(std::ranges::min(array_ptr->view(state)) >= array_ptr->min());
-        assert(std::ranges::max(array_ptr->view(state)) <= array_ptr->max());
-        assert(!array_ptr->integral() || std::ranges::all_of(array_ptr->view(state), is_integer));
+        const double min = std::ranges::min(array_ptr->view(state));
+        const double max = std::ranges::max(array_ptr->view(state));
+        if (std::isinf(min) or std::isinf(max)) {
+            do_logging&& std::cout << node_id << " | output contains inf" << std::endl;
+            assert(false and "array output contains inf");
+        }
+        if (min < array_ptr->min()) {
+            do_logging&& std::cout << node_id << " | output is less than array.min(): "
+                                   << std::ranges::min(array_ptr->view(state)) << " < "
+                                   << array_ptr->min() << std::endl;
+            assert(false and "array output less than reported minimum");
+        }
+        if (max > array_ptr->max()) {
+            do_logging&& std::cout << node_id << " | output is greater than array.max(): "
+                                   << std::ranges::max(array_ptr->view(state)) << " > "
+                                   << array_ptr->max() << std::endl;
+            assert(false and "array output greater than reported maximum");
+        }
+        if (array_ptr->integral() and not std::ranges::all_of(array_ptr->view(state), is_integer)) {
+            do_logging&& std::cout << node_id
+                                   << " | output is non-integral even though integral() is true"
+                                   << std::endl;
+            assert(false and "output is non-integral even through array self-reports as integral");
+        }
     }
 
     // check that whatever sizeinfo the array reports is accurate
