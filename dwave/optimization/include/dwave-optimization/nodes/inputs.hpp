@@ -76,6 +76,9 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const noexcept override;
 
+    /// InputNodes are never equal to other nodes
+    bool equal_to(const Node& rhs) const override { return false; }
+
     /// @copydoc Array::integral()
     bool integral() const override { return values_info_.integral; };
 
@@ -101,6 +104,9 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Node::revert()
     void revert(State& state) const noexcept override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     void check_values(std::span<const double> new_values) const;
