@@ -127,6 +127,17 @@ void BSplineNode::commit(State& state) const {
 std::span<const Update> BSplineNode::diff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
+
+bool BSplineNode::equal_to(const Node& rhs) const {
+    const auto* rhs_ptr = dynamic_cast<const BSplineNode*>(&rhs);
+    if (rhs_ptr == nullptr) return false;  // not same type so not equal
+    return this->equal_to(*rhs_ptr);
+}
+
+bool BSplineNode::equal_to(const BSplineNode& rhs) const {
+    return array_ptr_ == rhs.array_ptr_ and k_ == rhs.k_ and t_ == rhs.t_ and c_ == rhs.c_;
+}
+
 bool BSplineNode::integral() const { return false; }
 
 void BSplineNode::revert(State& state) const {
@@ -155,6 +166,14 @@ void BSplineNode::propagate(State& state) const {
     for (const auto& [index, _, __] : diff) {
         data_ptr_<ArrayNodeStateData>(state)->set(index, compute_value(state_data[index]));
     }
+}
+
+void BSplineNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    assert(index == 0);
+    array_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr_ != nullptr);
 }
 
 }  // namespace dwave::optimization

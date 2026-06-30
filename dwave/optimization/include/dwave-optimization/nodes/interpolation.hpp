@@ -36,6 +36,11 @@ class BSplineNode : public ArrayOutputMixin<ArrayNode> {
     double const* buff(const State& state) const override;
     void commit(State& state) const override;
     std::span<const Update> diff(const State&) const override;
+
+    /// @copydoc Node::equal_to()
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const BSplineNode& rhs) const;
+
     void initialize_state(State& state) const override;
 
     /// @copydoc Array::integral()
@@ -57,6 +62,9 @@ class BSplineNode : public ArrayOutputMixin<ArrayNode> {
 
     using Array::size;
     ssize_t size(const State& state) const override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     const Array* array_ptr_;
