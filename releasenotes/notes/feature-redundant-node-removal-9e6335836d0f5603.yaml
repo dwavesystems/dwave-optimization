@@ -1,0 +1,3 @@
+---
+upgrade:
+  - Remove ``AccumulateZipNode::initial`` attribute and replace it with ``AccumulateZipNode::initial()`` method.

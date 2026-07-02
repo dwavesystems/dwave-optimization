@@ -97,9 +97,15 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
 
+    /// @copydoc Node::equal_to()
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const AccumulateZipNode& rhs) const;
+
     /// Access the underlying shared_ptr holding the Graph.
     /// Modifying the Graph leads to undefined behavior.
     std::shared_ptr<Graph>& expression_ptr() { return expression_ptr_; }
+
+    const array_or_double& initial() const { return initial_; }
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
@@ -125,7 +131,8 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t size_diff(const State& state) const override;
     SizeInfo sizeinfo() const override;
 
-    const array_or_double initial;
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     double evaluate_expression(State& register_) const;
@@ -136,7 +143,8 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
     const InputNode* const accumulate_input() const;
 
     std::shared_ptr<Graph> expression_ptr_;
-    const std::vector<ArrayNode*> operands_;
+    array_or_double initial_;
+    std::vector<ArrayNode*> operands_;
 
     const SizeInfo sizeinfo_;
 };

@@ -12,6 +12,9 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <memory>
+#include <vector>
+
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
 
@@ -453,6 +456,105 @@ TEST_CASE("AccumulateZipNode") {
                 }
             }
         }
+    }
+
+    SECTION("equality") {
+        auto* i0_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{0, 1, 2, 2});
+        auto* i1_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{0, 1, 2, 2});
+
+        auto* j0_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{1, 2, 4, 3});
+        auto* j1_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{1, 2, 4, 3});
+
+        // x0 * x1 + x2
+        auto make_expression = []() -> std::shared_ptr<Graph> {
+            auto expression = Graph();
+
+            std::vector<InputNode*> inputs = {
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar())
+            };
+            auto output_ptr = expression.emplace_node<AddNode>(
+                expression.emplace_node<MultiplyNode>(inputs[1], inputs[2]), inputs[0]
+            );
+            expression.set_objective(output_ptr);
+            expression.topological_sort();
+
+            return std::make_shared<Graph>(std::move(expression));
+        };
+
+        auto expr0_ptr = make_expression();
+        auto expr1_ptr = make_expression();
+
+        Node* a_ptr = graph.emplace_node<AccumulateZipNode>(
+            expr0_ptr, std::vector<ArrayNode*>{i0_ptr, j0_ptr}, 5.0
+        );
+        Node* b_ptr = graph.emplace_node<AccumulateZipNode>(
+            expr0_ptr, std::vector<ArrayNode*>{i0_ptr, j0_ptr}, 5.0
+        );
+        Node* c_ptr = graph.emplace_node<AccumulateZipNode>(
+            expr1_ptr, std::vector<ArrayNode*>{i0_ptr, j0_ptr}, 5.0
+        );
+        Node* d_ptr = graph.emplace_node<AccumulateZipNode>(
+            expr0_ptr, std::vector<ArrayNode*>{i1_ptr, j0_ptr}, 5.0
+        );
+        Node* e_ptr = graph.emplace_node<AccumulateZipNode>(
+            expr0_ptr, std::vector<ArrayNode*>{i0_ptr, j1_ptr}, 5.0
+        );
+        Node* f_ptr = graph.emplace_node<AccumulateZipNode>(
+            expr0_ptr, std::vector<ArrayNode*>{i0_ptr, j0_ptr}, 4.0
+        );
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(not a_ptr->equal_to(*i0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+        CHECK(not a_ptr->equal_to(*e_ptr));
+        CHECK(not a_ptr->equal_to(*f_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto* i0_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{0, 1, 2, 2});
+        auto* i1_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{1, 2, 2, 0});
+
+        auto* j0_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{1, 2, 4, 3});
+        auto* j1_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{2, 4, 3, 1});
+
+        auto* init0_ptr = graph.emplace_node<ConstantNode>(5);
+        auto* init1_ptr = graph.emplace_node<ConstantNode>(6);
+
+        // x0 * x1 + x2
+        auto make_expression = []() -> std::shared_ptr<Graph> {
+            auto expression = Graph();
+
+            std::vector<InputNode*> inputs = {
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar()),
+                expression.emplace_node<InputNode>(InputNode::unbounded_scalar())
+            };
+            auto output_ptr = expression.emplace_node<AddNode>(
+                expression.emplace_node<MultiplyNode>(inputs[1], inputs[2]), inputs[0]
+            );
+            expression.set_objective(output_ptr);
+            expression.topological_sort();
+
+            return std::make_shared<Graph>(std::move(expression));
+        };
+
+        auto* acc_ptr = graph.emplace_node<AccumulateZipNode>(
+            make_expression(), std::vector<ArrayNode*>{i0_ptr, j0_ptr}, init0_ptr
+        );
+
+        i1_ptr->take_successors(*i0_ptr);
+        j1_ptr->take_successors(*j0_ptr);
+        init1_ptr->take_successors(*init0_ptr);
+
+        CHECK_THAT(acc_ptr->predecessors(), RangeEquals({init1_ptr, i1_ptr, j1_ptr}));
+
+        auto state = graph.initialize_state();
+
+        CHECK_THAT(acc_ptr->view(state), RangeEquals({8, 16, 22, 22}));
     }
 }
 
