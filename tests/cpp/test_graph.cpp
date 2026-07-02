@@ -24,13 +24,13 @@ TEST_CASE("Topological Sort", "[topological_sort]") {
     auto graph = Graph();
 
     WHEN("We add a mix of unconnected decision and non-decision variables") {
-        auto x0_ptr = graph.emplace_node<ListNode>(5);
-        auto x1_ptr = graph.emplace_node<ListNode>(5);
-        auto c0_ptr = graph.emplace_node<ConstantNode>();
-        auto x2_ptr = graph.emplace_node<ListNode>(5);
-        auto c1_ptr = graph.emplace_node<ConstantNode>();
-        auto c2_ptr = graph.emplace_node<ConstantNode>();
-        auto x3_ptr = graph.emplace_node<ListNode>(5);
+        auto* x0_ptr = graph.emplace_node<ListNode>(5);
+        auto* x1_ptr = graph.emplace_node<ListNode>(5);
+        auto* c0_ptr = graph.emplace_node<ConstantNode>();
+        auto* x2_ptr = graph.emplace_node<ListNode>(5);
+        auto* c1_ptr = graph.emplace_node<ConstantNode>();
+        auto* c2_ptr = graph.emplace_node<ConstantNode>();
+        auto* x3_ptr = graph.emplace_node<ListNode>(5);
 
         THEN("The decisions are proactively topologically sorted") {
             CHECK(x0_ptr->topological_index() == 0);
@@ -100,11 +100,11 @@ TEST_CASE("Topological Sort", "[topological_sort]") {
     }
 
     WHEN("We add a disjoint lists node and successors") {
-        auto disjoint_lists = graph.emplace_node<DisjointListsNode>(10, 3);
+        auto* disjoint_lists = graph.emplace_node<DisjointListsNode>(10, 3);
 
-        auto disjoint_list0 = graph.emplace_node<DisjointListNode>(disjoint_lists);
-        auto disjoint_list1 = graph.emplace_node<DisjointListNode>(disjoint_lists);
-        auto disjoint_list2 = graph.emplace_node<DisjointListNode>(disjoint_lists);
+        auto* disjoint_list0 = graph.emplace_node<DisjointListNode>(disjoint_lists);
+        auto* disjoint_list1 = graph.emplace_node<DisjointListNode>(disjoint_lists);
+        auto* disjoint_list2 = graph.emplace_node<DisjointListNode>(disjoint_lists);
 
         AND_WHEN("We topologically sort the model") {
             graph.topological_sort();
@@ -129,11 +129,11 @@ TEST_CASE("Topological Sort", "[topological_sort]") {
     }
 
     WHEN("We add a disjoint bitsets node and successors") {
-        auto disjoint_bitsets = graph.emplace_node<DisjointBitSetsNode>(10, 3);
+        auto* disjoint_bitsets = graph.emplace_node<DisjointBitSetsNode>(10, 3);
 
-        auto disjoint_bitset0 = graph.emplace_node<DisjointBitSetNode>(disjoint_bitsets);
-        auto disjoint_bitset1 = graph.emplace_node<DisjointBitSetNode>(disjoint_bitsets);
-        auto disjoint_bitset2 = graph.emplace_node<DisjointBitSetNode>(disjoint_bitsets);
+        auto* disjoint_bitset0 = graph.emplace_node<DisjointBitSetNode>(disjoint_bitsets);
+        auto* disjoint_bitset1 = graph.emplace_node<DisjointBitSetNode>(disjoint_bitsets);
+        auto* disjoint_bitset2 = graph.emplace_node<DisjointBitSetNode>(disjoint_bitsets);
 
         AND_WHEN("We topologically sort the model") {
             graph.topological_sort();
@@ -180,9 +180,9 @@ TEST_CASE("Graph constructors, assignment operators, and swapping") {
 
     GIVEN("A graph with a few nodes in it") {
         auto graph = Graph();
-        auto a_ptr = graph.emplace_node<ConstantNode>(1.5);
-        auto b_ptr = graph.emplace_node<ConstantNode>(2);
-        auto c_ptr = graph.emplace_node<AddNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(1.5);
+        auto* b_ptr = graph.emplace_node<ConstantNode>(2);
+        auto* c_ptr = graph.emplace_node<AddNode>(a_ptr, b_ptr);
         graph.set_objective(c_ptr);
 
         WHEN("We construct another graph using the move constructor") {
@@ -212,7 +212,7 @@ TEST_CASE("Graph constructors, assignment operators, and swapping") {
 
         AND_GIVEN("A different graph with at least one node") {
             auto other = Graph();
-            auto d_ptr = other.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{1});
+            auto* d_ptr = other.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{1});
             other.add_constraint(d_ptr);
 
             WHEN("We swap the graphs") {
@@ -235,9 +235,9 @@ TEST_CASE("Graph constructors, assignment operators, and swapping") {
 
 TEST_CASE("Graph::commit(), Graph::descendants(), Graph::propagate(), and Graph::revert") {
     auto graph = Graph();
-    auto x_ptr = graph.emplace_node<BinaryNode>();
-    auto y_ptr = graph.emplace_node<BinaryNode>();
-    auto z_ptr = graph.emplace_node<AddNode>(x_ptr, y_ptr);
+    auto* x_ptr = graph.emplace_node<BinaryNode>();
+    auto* y_ptr = graph.emplace_node<BinaryNode>();
+    auto* z_ptr = graph.emplace_node<AddNode>(x_ptr, y_ptr);
     graph.set_objective(z_ptr);
     auto state = graph.initialize_state();
 
@@ -320,7 +320,7 @@ TEST_CASE("Graph::remove_unused_nodes()") {
     GIVEN("A single integer variable") {
         auto graph = Graph();
 
-        auto i_ptr = graph.emplace_node<IntegerNode>();
+        auto* i_ptr = graph.emplace_node<IntegerNode>();
 
         THEN("remove_unused_nodes() does nothing") {
             ssize_t num_removed = graph.remove_unused_nodes();
@@ -371,11 +371,11 @@ TEST_CASE("Graph::remove_unused_nodes()") {
             // i -> a -> c -> d
             // i -> b />    \> e -> objective
 
-            auto a_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
-            auto b_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
-            auto c_ptr = graph.emplace_node<AddNode>(a_ptr, b_ptr);
-            auto d_ptr = graph.emplace_node<LogicalNode>(c_ptr);
-            auto e_ptr = graph.emplace_node<LogicalNode>(c_ptr);
+            auto* a_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
+            auto* b_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
+            auto* c_ptr = graph.emplace_node<AddNode>(a_ptr, b_ptr);
+            auto* d_ptr = graph.emplace_node<LogicalNode>(c_ptr);
+            auto* e_ptr = graph.emplace_node<LogicalNode>(c_ptr);
 
             // give d a listener
             auto d_expired = d_ptr->expired_ptr();
