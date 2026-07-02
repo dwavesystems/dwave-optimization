@@ -24,7 +24,7 @@
 namespace dwave::optimization {
 
 /// A node encoding evenly spaced values within a given interval.
-class ARangeNode : public ArrayOutputMixin<ArrayNode> {
+class ARangeNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ARangeNode>> {
  public:
     using array_or_int = std::variant<const Array*, ssize_t>;
 
@@ -84,8 +84,7 @@ class ARangeNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const override;
 
     /// ARangeNode is equal to another ARangeNode encoding the same range.
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const ARangeNode& rhs) const;
+    bool equal_to(const ARangeNode& rhs) const override;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;

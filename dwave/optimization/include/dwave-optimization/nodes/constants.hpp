@@ -26,7 +26,7 @@
 namespace dwave::optimization {
 
 /// A contiguous block of numbers.
-class ConstantNode : public ArrayOutputMixin<ArrayNode> {
+class ConstantNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ConstantNode>> {
  public:
     struct DataSource {
         DataSource() = default;
@@ -100,8 +100,7 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
 
     // Overloads required by the Node ABC *************************************
 
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const ConstantNode& rhs) const;
+    bool equal_to(const ConstantNode& rhs) const override;
 
     // This node never needs to update its successors
     void propagate(State&) const noexcept override {}

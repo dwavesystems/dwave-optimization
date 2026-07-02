@@ -65,12 +65,6 @@ ConstantNode::ConstantNode(OwningDataSource&& data_source, const std::span<const
     values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),
     data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
 
-bool ConstantNode::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const ConstantNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
-}
-
 bool ConstantNode::equal_to(const ConstantNode& rhs) const {
     return this->ndim() == rhs.ndim() and                      // same ndim
            std::ranges::equal(this->shape(), rhs.shape()) and  // same shape

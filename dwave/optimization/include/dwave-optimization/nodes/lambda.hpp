@@ -36,7 +36,7 @@ namespace dwave::optimization {
 // `std::accumulate()`, the special input should be the first `InputNode`
 // on the given `Graph`, with the remaining inputs used for the values of
 // the operands.
-class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
+class AccumulateZipNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, AccumulateZipNode>> {
  public:
     // Initial value can either be a double or another node
     using array_or_double = std::variant<ArrayNode*, double>;
@@ -98,8 +98,7 @@ class AccumulateZipNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const override;
 
     /// @copydoc Node::equal_to()
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const AccumulateZipNode& rhs) const;
+    bool equal_to(const AccumulateZipNode& rhs) const override;
 
     /// Access the underlying shared_ptr holding the Graph.
     /// Modifying the Graph leads to undefined behavior.

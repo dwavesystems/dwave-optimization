@@ -530,12 +530,6 @@ std::span<const Update> AdvancedIndexingNode::diff(const State& state) const {
     return data_ptr_<AdvancedIndexingNodeData>(state)->diff;
 }
 
-bool AdvancedIndexingNode::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const AdvancedIndexingNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
-}
-
 bool AdvancedIndexingNode::equal_to(const AdvancedIndexingNode& rhs) const {
     return array_ptr_ == rhs.array_ptr_ and std::ranges::equal(indices_, rhs.indices_);
 }
@@ -1507,12 +1501,6 @@ std::span<const Update> BasicIndexingNode::diff(const State& state) const {
     return data_ptr_<BasicIndexingNodeData>(state)->diff;
 }
 
-bool BasicIndexingNode::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const BasicIndexingNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
-}
-
 bool BasicIndexingNode::equal_to(const BasicIndexingNode& rhs) const {
     if (array_ptr_ == rhs.array_ptr_ and              //
         ndim_ == rhs.ndim_ and                        //
@@ -2064,12 +2052,6 @@ double const* PermutationNode::buff(const State& state) const {
 
 std::span<const Update> PermutationNode::diff(const State& state) const {
     return data_ptr_<IndexingNodeData>(state)->diff;
-}
-
-bool PermutationNode::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const PermutationNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
 }
 
 bool PermutationNode::equal_to(const PermutationNode& rhs) const {

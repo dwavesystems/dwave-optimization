@@ -73,16 +73,6 @@ std::span<const Update> ExtractNode::diff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 
-bool ExtractNode::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const ExtractNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
-}
-
-bool ExtractNode::equal_to(const ExtractNode& rhs) const {
-    return condition_ptr_ == rhs.condition_ptr_ and arr_ptr_ == rhs.arr_ptr_;
-}
-
 void ExtractNode::initialize_state(State& state) const {
     const std::ranges::view auto condition = condition_ptr_->view(state);
     const std::ranges::view auto arr = arr_ptr_->view(state);
@@ -297,16 +287,6 @@ void WhereNode::commit(State& state) const { data_ptr_<WhereNodeData>(state)->co
 
 std::span<const Update> WhereNode::diff(const State& state) const {
     return data_ptr_<WhereNodeData>(state)->diff();
-}
-
-bool WhereNode::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const WhereNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
-}
-
-bool WhereNode::equal_to(const WhereNode& rhs) const {
-    return condition_ptr_ == rhs.condition_ptr_ and x_ptr_ == rhs.x_ptr_ and y_ptr_ == rhs.y_ptr_;
 }
 
 void WhereNode::initialize_state(State& state) const {

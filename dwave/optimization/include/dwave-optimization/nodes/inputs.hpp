@@ -77,7 +77,7 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const noexcept override;
 
     /// InputNodes are never equal to other nodes
-    bool equal_to(const Node& rhs) const override { return false; }
+    bool equal_to(const Node& rhs) const override { return static_cast<const Node*>(this) == &rhs; }
 
     /// @copydoc Array::integral()
     bool integral() const override { return values_info_.integral; };

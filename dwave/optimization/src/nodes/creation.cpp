@@ -354,12 +354,6 @@ std::span<const Update> ARangeNode::diff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 
-bool ARangeNode::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const ARangeNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;
-    return this->equal_to(*rhs_ptr);
-}
-
 bool ARangeNode::equal_to(const ARangeNode& rhs) const {
     return start_ == rhs.start_ and stop_ == rhs.stop_ and step_ == rhs.step_;
 }

@@ -128,12 +128,6 @@ std::span<const Update> BSplineNode::diff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 
-bool BSplineNode::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const BSplineNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
-}
-
 bool BSplineNode::equal_to(const BSplineNode& rhs) const {
     return array_ptr_ == rhs.array_ptr_ and k_ == rhs.k_ and t_ == rhs.t_ and c_ == rhs.c_;
 }

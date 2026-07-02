@@ -26,7 +26,7 @@ namespace dwave::optimization {
 ///
 /// `condition` and `arr` must be the same size. This always outputs a
 /// 1d array.
-class ExtractNode : public ArrayOutputMixin<ArrayNode> {
+class ExtractNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr);
 
@@ -38,9 +38,6 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
-
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const ExtractNode& rhs) const;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
@@ -93,16 +90,13 @@ class ExtractNode : public ArrayOutputMixin<ArrayNode> {
 /// `condition` must be either a scalar array or the same shape as `x` and `y`.
 /// `x` and `y` must have the same shape, including dynamic.
 /// dynamically sized `condition`s are not allowed.
-class WhereNode : public ArrayOutputMixin<ArrayNode> {
+class WhereNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_ptr);
 
     double const* buff(const State& state) const override;
     void commit(State& state) const override;
     std::span<const Update> diff(const State& state) const override;
-
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const WhereNode& rhs) const;
 
     void initialize_state(State& state) const override;
 

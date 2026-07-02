@@ -302,12 +302,6 @@ void AccumulateZipNode::initialize_state(State& state) const {
     );
 }
 
-bool AccumulateZipNode::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const AccumulateZipNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
-}
-
 bool AccumulateZipNode::equal_to(const AccumulateZipNode& rhs) const {
     // note that we don't have a notion of Graph equality, so we instead
     // just check whether we have the same underlying shared ptr

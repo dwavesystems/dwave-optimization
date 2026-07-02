@@ -41,7 +41,7 @@ namespace dwave::optimization {
 //      https://numpy.org/doc/stable/user/basics.indexing.html#combining-advanced-and-basic-indexing
 //      A combination of int/slice/array indices. The rules are... more complicated.
 
-class AdvancedIndexingNode : public ArrayNode {
+class AdvancedIndexingNode : public EqualityMixin<ArrayNode, AdvancedIndexingNode> {
  public:
     // Indices are some combination of arrays and slices
     using array_or_slice = std::variant<ArrayNode*, Slice>;
@@ -80,8 +80,7 @@ class AdvancedIndexingNode : public ArrayNode {
 
     // Node overloads
     void commit(State& state) const override;
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const AdvancedIndexingNode& rhs) const;
+    bool equal_to(const AdvancedIndexingNode& rhs) const override;
     void initialize_state(State& state) const override;
     void propagate(State& state) const override;
     void revert(State& state) const override;
@@ -184,7 +183,7 @@ class AdvancedIndexingNode : public ArrayNode {
 // See https://numpy.org/doc/stable/user/basics.indexing.html#basic-indexing
 // BasicIndex nodes always have exactly one predecessor representing the array.
 // to be indexed.
-class BasicIndexingNode : public ArrayNode {
+class BasicIndexingNode : public EqualityMixin<ArrayNode, BasicIndexingNode> {
  public:
     // Indices are some combination of slices and integers.
     using slice_or_int = std::variant<Slice, ssize_t>;
@@ -234,8 +233,7 @@ class BasicIndexingNode : public ArrayNode {
 
     // don't need to overload update()
 
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const BasicIndexingNode& rhs) const;
+    bool equal_to(const BasicIndexingNode& rhs) const override;
 
     void propagate(State& state) const override;
 
@@ -304,7 +302,7 @@ class BasicIndexingNode : public ArrayNode {
     const SizeInfo sizeinfo_;
 };
 
-class PermutationNode : public ArrayOutputMixin<ArrayNode> {
+class PermutationNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, PermutationNode>> {
  public:
     // We use this style rather than a template to support Cython later
     PermutationNode(ArrayNode* array_ptr, ArrayNode* order_ptr);
@@ -313,8 +311,7 @@ class PermutationNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State& state) const override;
 
     /// @copydoc Node::equal_to()
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const PermutationNode& rhs) const;
+    bool equal_to(const PermutationNode& rhs) const override;
 
     /// @copydoc Array::integral()
     bool integral() const override;

@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <concepts>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -461,9 +462,7 @@ class DecisionNode : public Decision, public virtual Node {
 
     /// Decision can only ever be equal to themselves because they are
     /// independent variables.
-    bool equal_to(const Node& rhs) const final {
-        return static_cast<const Node*>(this) == &rhs;
-    }
+    bool equal_to(const Node& rhs) const final { return static_cast<const Node*>(this) == &rhs; }
 
     /// Decisions don't have predecessors so no one should be calling update().
     /// Always throws a logic_error.
@@ -472,6 +471,46 @@ class DecisionNode : public Decision, public virtual Node {
  protected:
     /// In general we do not allow decisions to be removed from models.
     bool removable_() const override { return false; }
+};
+
+/// Provide an implementation of equal_to() that defers to a type-specific
+/// implementation.
+template<std::derived_from<Node> Base, typename Derived = void>
+struct EqualityMixin : Base {
+    /// @copydoc Node::equal_to()
+    bool equal_to(const Node& rhs) const final {
+        // Every node is equal with itself
+        if (&rhs == static_cast<const Node*>(this)) return true;
+
+        // A node cannot be equal if they are not of the same type.
+        const auto* rhs_ptr = dynamic_cast<const Derived*>(&rhs);
+        if (rhs_ptr == nullptr) return false;
+
+        // lhs and rhs are the same type, so let's go to our type-specific
+        // method.
+        return equal_to(*rhs_ptr);
+    }
+
+    // Nodes must implement `equal_to()` for their own type.
+    virtual bool equal_to(const Derived& rhs) const = 0;
+};
+
+/// Overload for EqualityMixin that does not require a class-specific equal_to()
+/// method overload. This simply checks that they have the same type and same
+/// predecessors.
+template<std::derived_from<Node> Base>
+struct EqualityMixin<Base, void> : Base {
+    /// @copydoc Node::equal_to()
+    bool equal_to(const Node& rhs) const final {
+        // Every node is equal with itself
+        if (&rhs == static_cast<const Node*>(this)) return true;
+
+        // Nodes that are not the same type cannot be equal
+        if (typeid(*this) != typeid(rhs)) return false;
+
+        // Nodes that are of the same type must have the same predecessors
+        return std::ranges::equal(this->predecessors(), rhs.predecessors());
+    }
 };
 
 }  // namespace dwave::optimization

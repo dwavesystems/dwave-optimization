@@ -24,7 +24,7 @@
 #include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {
-class BSplineNode : public ArrayOutputMixin<ArrayNode> {
+class BSplineNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BSplineNode>> {
  public:
     explicit BSplineNode(
         ArrayNode* array_ptr,
@@ -38,8 +38,7 @@ class BSplineNode : public ArrayOutputMixin<ArrayNode> {
     std::span<const Update> diff(const State&) const override;
 
     /// @copydoc Node::equal_to()
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const BSplineNode& rhs) const;
+    bool equal_to(const BSplineNode& rhs) const override;
 
     void initialize_state(State& state) const override;
 
