@@ -16,8 +16,12 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <catch2/matchers/catch_matchers_range_equals.hpp>
 
-#include "dwave-optimization/nodes.hpp"
+#include "dwave-optimization/nodes/constants.hpp"
+#include "dwave-optimization/nodes/lp.hpp"
+#include "dwave-optimization/nodes/numbers.hpp"
+#include "dwave-optimization/nodes/testing.hpp"
 
 using namespace Catch::Matchers;
 
@@ -737,6 +741,164 @@ TEST_CASE("LinearProgramNode") {
                 }
             }
         }
+    }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        const ssize_t num_variables = 3;
+        const ssize_t num_eq = 2;
+        const ssize_t num_ineq = 2;
+
+        const ssize_t min = IntegerNode::minimum_lower_bound;
+        const ssize_t max = IntegerNode::maximum_upper_bound;
+
+        auto* c0 = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
+        auto* c1 = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
+
+        auto* b_lb0 = graph.emplace_node<IntegerNode>(std::vector{num_ineq}, min, max);
+        auto* b_lb1 = graph.emplace_node<IntegerNode>(std::vector{num_ineq}, min, max);
+        auto* A0 = graph.emplace_node<IntegerNode>(std::vector{num_ineq, num_variables}, min, max);
+        auto* A1 = graph.emplace_node<IntegerNode>(std::vector{num_ineq, num_variables}, min, max);
+        auto* b_ub0 = graph.emplace_node<IntegerNode>(std::vector{num_ineq}, min, max);
+        auto* b_ub1 = graph.emplace_node<IntegerNode>(std::vector{num_ineq}, min, max);
+
+        auto* A_eq0 = graph.emplace_node<IntegerNode>(std::vector{num_eq, num_variables}, min, max);
+        auto* A_eq1 = graph.emplace_node<IntegerNode>(std::vector{num_eq, num_variables}, min, max);
+        auto* b_eq0 = graph.emplace_node<IntegerNode>(std::vector{num_eq}, min, max);
+        auto* b_eq1 = graph.emplace_node<IntegerNode>(std::vector{num_eq}, min, max);
+
+        auto* lb0 = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
+        auto* lb1 = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
+        auto* ub0 = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
+        auto* ub1 = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
+
+        Node* lp0 =
+            graph.emplace_node<LinearProgramNode>(c0, b_lb0, A0, b_ub0, A_eq0, b_eq0, lb0, ub0);
+        Node* lp1 =
+            graph.emplace_node<LinearProgramNode>(c0, b_lb0, A0, b_ub0, A_eq0, b_eq0, lb0, ub0);
+        Node* lp2 =
+            graph.emplace_node<LinearProgramNode>(c1, b_lb0, A0, b_ub0, A_eq0, b_eq0, lb0, ub0);
+        Node* lp3 =
+            graph.emplace_node<LinearProgramNode>(c0, b_lb1, A0, b_ub0, A_eq0, b_eq0, lb0, ub0);
+        Node* lp4 =
+            graph.emplace_node<LinearProgramNode>(c0, b_lb0, A1, b_ub0, A_eq0, b_eq0, lb0, ub0);
+        Node* lp5 =
+            graph.emplace_node<LinearProgramNode>(c0, b_lb0, A0, b_ub1, A_eq0, b_eq0, lb0, ub0);
+        Node* lp6 =
+            graph.emplace_node<LinearProgramNode>(c0, b_lb0, A0, b_ub0, A_eq1, b_eq0, lb0, ub0);
+        Node* lp7 =
+            graph.emplace_node<LinearProgramNode>(c0, b_lb0, A0, b_ub0, A_eq0, b_eq1, lb0, ub0);
+        Node* lp8 =
+            graph.emplace_node<LinearProgramNode>(c0, b_lb0, A0, b_ub0, A_eq0, b_eq0, lb1, ub0);
+        Node* lp9 =
+            graph.emplace_node<LinearProgramNode>(c0, b_lb0, A0, b_ub0, A_eq0, b_eq0, lb0, ub1);
+
+        CHECK(lp0->equal_to(*lp0));
+        CHECK(lp0->equal_to(*lp1));
+
+        CHECK(not lp0->equal_to(*c0));
+        CHECK(not lp0->equal_to(*lp2));
+        CHECK(not lp0->equal_to(*lp3));
+        CHECK(not lp0->equal_to(*lp4));
+        CHECK(not lp0->equal_to(*lp5));
+        CHECK(not lp0->equal_to(*lp6));
+        CHECK(not lp0->equal_to(*lp7));
+        CHECK(not lp0->equal_to(*lp8));
+        CHECK(not lp0->equal_to(*lp9));
+
+        Node* feas0 =
+            graph.emplace_node<LinearProgramFeasibleNode>(dynamic_cast<LinearProgramNode*>(lp0));
+        Node* feas1 =
+            graph.emplace_node<LinearProgramFeasibleNode>(dynamic_cast<LinearProgramNode*>(lp0));
+        Node* feas2 =
+            graph.emplace_node<LinearProgramFeasibleNode>(dynamic_cast<LinearProgramNode*>(lp1));
+
+        CHECK(feas0->equal_to(*feas0));
+        CHECK(feas0->equal_to(*feas1));
+        CHECK(not feas0->equal_to(*feas2));
+        CHECK(not feas0->equal_to(*c0));
+
+        Node* obj0 = graph.emplace_node<LinearProgramObjectiveValueNode>(
+            dynamic_cast<LinearProgramNode*>(lp0)
+        );
+        Node* obj1 = graph.emplace_node<LinearProgramObjectiveValueNode>(
+            dynamic_cast<LinearProgramNode*>(lp0)
+        );
+        Node* obj2 = graph.emplace_node<LinearProgramObjectiveValueNode>(
+            dynamic_cast<LinearProgramNode*>(lp1)
+        );
+
+        CHECK(obj0->equal_to(*obj0));
+        CHECK(obj0->equal_to(*obj1));
+        CHECK(not obj0->equal_to(*obj2));
+        CHECK(not obj0->equal_to(*c0));
+
+        Node* sol0 =
+            graph.emplace_node<LinearProgramSolutionNode>(dynamic_cast<LinearProgramNode*>(lp0));
+        Node* sol1 =
+            graph.emplace_node<LinearProgramSolutionNode>(dynamic_cast<LinearProgramNode*>(lp0));
+        Node* sol2 =
+            graph.emplace_node<LinearProgramSolutionNode>(dynamic_cast<LinearProgramNode*>(lp1));
+
+        CHECK(sol0->equal_to(*sol0));
+        CHECK(sol0->equal_to(*sol1));
+        CHECK(not sol0->equal_to(*sol2));
+        CHECK(not sol0->equal_to(*c0));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        const ssize_t num_variables = 3;
+        const ssize_t num_eq = 2;
+        const ssize_t num_ineq = 2;
+
+        const ssize_t min = IntegerNode::minimum_lower_bound;
+        const ssize_t max = IntegerNode::maximum_upper_bound;
+
+        auto* c0 = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
+        auto* c1 = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
+
+        auto* b_lb0 = graph.emplace_node<IntegerNode>(std::vector{num_ineq}, min, max);
+        auto* b_lb1 = graph.emplace_node<IntegerNode>(std::vector{num_ineq}, min, max);
+        auto* A0 = graph.emplace_node<IntegerNode>(std::vector{num_ineq, num_variables}, min, max);
+        auto* A1 = graph.emplace_node<IntegerNode>(std::vector{num_ineq, num_variables}, min, max);
+
+        auto* A_eq0 = graph.emplace_node<IntegerNode>(std::vector{num_eq, num_variables}, min, max);
+        auto* A_eq1 = graph.emplace_node<IntegerNode>(std::vector{num_eq, num_variables}, min, max);
+        auto* b_eq0 = graph.emplace_node<IntegerNode>(std::vector{num_eq}, min, max);
+        auto* b_eq1 = graph.emplace_node<IntegerNode>(std::vector{num_eq}, min, max);
+
+        auto* ub0 = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
+        auto* ub1 = graph.emplace_node<IntegerNode>(std::vector{num_variables}, min, max);
+
+        auto* lp0 = graph.emplace_node<LinearProgramNode>(
+            c0, b_lb0, A0, nullptr, A_eq0, b_eq0, nullptr, ub0
+        );
+        auto* lp1 = graph.emplace_node<LinearProgramNode>(
+            c0, b_lb0, A0, nullptr, A_eq0, b_eq0, nullptr, ub0
+        );
+
+        auto* feas = graph.emplace_node<LinearProgramFeasibleNode>(lp0);
+        auto* obj = graph.emplace_node<LinearProgramObjectiveValueNode>(lp0);
+        auto* sol = graph.emplace_node<LinearProgramSolutionNode>(lp0);
+
+        lp1->take_successors(*lp0);
+
+        CHECK_THAT(feas->predecessors(), RangeEquals({lp1}));
+        CHECK_THAT(obj->predecessors(), RangeEquals({lp1}));
+        CHECK_THAT(sol->predecessors(), RangeEquals({lp1}));
+
+        c1->take_successors(*c0);
+        b_lb1->take_successors(*b_lb0);
+        A1->take_successors(*A0);
+        A_eq1->take_successors(*A_eq0);
+        b_eq1->take_successors(*b_eq0);
+        ub1->take_successors(*ub0);
+
+        CHECK_THAT(lp0->predecessors(), RangeEquals({c1, b_lb1, A1, A_eq1, b_eq1, ub1}));
+        CHECK_THAT(lp1->predecessors(), RangeEquals({c1, b_lb1, A1, A_eq1, b_eq1, ub1}));
     }
 }
 
