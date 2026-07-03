@@ -100,6 +100,7 @@ class ConstantNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ConstantNo
 
     // Overloads required by the Node ABC *************************************
 
+    /// @copydoc Node::equal_to()
     bool equal_to(const ConstantNode& rhs) const override;
 
     // This node never needs to update its successors

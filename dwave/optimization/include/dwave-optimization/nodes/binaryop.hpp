@@ -29,7 +29,7 @@
 namespace dwave::optimization {
 
 template <class BinaryOp>
-class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
+class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNode<BinaryOp>>> {
  public:
     // We need at least two nodes, and they must be the same shape
     BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr);
@@ -39,9 +39,9 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
 
     /// Two BinaryOpNodes are equal if they have the same operation and the
     /// same predecessors. If the BinaryOp is commutative, then permutations
-    /// of predecessors are allowed. 
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const BinaryOpNode& rhs) const;
+    /// of predecessors are allowed.
+    // bool equal_to(const Node& rhs) const override;
+    bool equal_to(const BinaryOpNode& rhs) const override;
 
     /// @copydoc Array::integral()
     bool integral() const override;
@@ -52,10 +52,10 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::max()
     double max() const override;
 
-    using ArrayOutputMixin::shape;
+    using ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNode<BinaryOp>>>::shape;
     std::span<const ssize_t> shape(const State& state) const override;
 
-    using ArrayOutputMixin::size;
+    using ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNode<BinaryOp>>>::size;
     ssize_t size(const State& state) const override;
 
     ssize_t size_diff(const State& state) const override;
@@ -69,11 +69,11 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
 
     // The predecessors of the operation, as Array*.
     std::span<Array* const> operands() {
-        assert(predecessors().size() == operands_.size());
+        assert(this->predecessors().size() == operands_.size());
         return operands_;
     }
     std::span<const Array* const> operands() const {
-        assert(predecessors().size() == operands_.size());
+        assert(this->predecessors().size() == operands_.size());
         return operands_;
     }
 
