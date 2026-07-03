@@ -15,15 +15,16 @@
 #include "dwave-optimization/nodes/linear_algebra.hpp"
 
 #include <algorithm>
-#include <array>
 #include <ranges>
+#include <vector>
+
+#include "dwave-optimization/graph.hpp"
 
 #if __has_include(<openblas_config.h>) and __has_include(<cblas.h>)
 #include <cblas.h>
 #define HAS_BLAS_
 #endif
 
-#include "../functional_.hpp"
 #include "_state.hpp"
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/state.hpp"
@@ -381,8 +382,7 @@ class MatrixMultiplyNodeData : public ArrayNodeStateData {
 
 MatrixMultiplyNode::MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr) :
     ArrayOutputMixin(output_shape(x_ptr, y_ptr)),
-    x_ptr_(x_ptr),
-    y_ptr_(y_ptr),
+    operands_{x_ptr, y_ptr},
     sizeinfo_(get_sizeinfo(x_ptr, y_ptr)),
     values_info_(get_values_info(x_ptr, y_ptr)) {
     add_predecessor_(x_ptr);
@@ -421,15 +421,18 @@ void MatrixMultiplyNode::matmul_(
     // to handle x/y with more than 2 dimensions. We do all that handling in terms of
     // "leaps", i.e. the number of pointer increments to apply in each dimension.
 
-    // const ssize_t x_penultimate_axis_size = get_axis_size(x_ptr_->shape(state), -2, true);
-    const ssize_t leading_subspace_size =
-        get_leading_subspace_size(x_ptr_->shape(state), y_ptr_->shape(state));
+    const ArrayNode* const x_ptr = operands_[0];
+    const ArrayNode* const y_ptr = operands_[1];
 
-    const ssize_t x_leading_leap = get_leading_leap(x_ptr_->shape(state));
-    const ssize_t y_leading_leap = get_leading_leap(y_ptr_->shape(state));
+    // const ssize_t x_penultimate_axis_size = get_axis_size(x_ptr->shape(state), -2, true);
+    const ssize_t leading_subspace_size =
+        get_leading_subspace_size(x_ptr->shape(state), y_ptr->shape(state));
+
+    const ssize_t x_leading_leap = get_leading_leap(x_ptr->shape(state));
+    const ssize_t y_leading_leap = get_leading_leap(y_ptr->shape(state));
     const ssize_t out_leading_leap = [&]() -> ssize_t {
-        if (x_ptr_->ndim() >= 2 and y_ptr_->ndim() >= 2) return get_leading_leap(out_shape);
-        if (x_ptr_->ndim() == 1 and y_ptr_->ndim() == 1) return 0;
+        if (x_ptr->ndim() >= 2 and y_ptr->ndim() >= 2) return get_leading_leap(out_shape);
+        if (x_ptr->ndim() == 1 and y_ptr->ndim() == 1) return 0;
         return out_shape.back();
     }();
 
@@ -443,9 +446,9 @@ void MatrixMultiplyNode::matmul_(
         return vals[static_cast<ssize_t>(vals.size()) + index];
     };
 
-    const ssize_t m = (x_ptr_->ndim() > 1) ? get(x_ptr_->shape(state), -2) : 1;
-    const ssize_t n = (y_ptr_->ndim() > 1) ? get(y_ptr_->shape(state), -1) : 1;
-    const ssize_t k = get(x_ptr_->shape(state), -1);
+    const ssize_t m = (x_ptr->ndim() > 1) ? get(x_ptr->shape(state), -2) : 1;
+    const ssize_t n = (y_ptr->ndim() > 1) ? get(y_ptr->shape(state), -1) : 1;
+    const ssize_t k = get(x_ptr->shape(state), -1);
 
     // We also need the stride information about x/y/out
 
@@ -454,14 +457,14 @@ void MatrixMultiplyNode::matmul_(
             return std::array<ssize_t, 2>{k * static_cast<ssize_t>(sizeof(double)), strides[0]};
         }
         return std::array<ssize_t, 2>{get(strides, -2), get(strides, -1)};
-    }(x_ptr_->strides());
+    }(x_ptr->strides());
 
     std::array<ssize_t, 2> y_matmul_strides = [&get](std::span<const ssize_t> strides) {
         if (strides.size() == 1) {
             return std::array<ssize_t, 2>{strides[0], sizeof(double)};
         }
         return std::array<ssize_t, 2>{get(strides, -2), get(strides, -1)};
-    }(y_ptr_->strides());
+    }(y_ptr->strides());
 
     std::array<ssize_t, 2> out_matmul_strides{
         n * static_cast<ssize_t>(sizeof(double)), sizeof(double)
@@ -472,8 +475,8 @@ void MatrixMultiplyNode::matmul_(
         // and checking the strides of both x/y, we use ArrayIterators to
         // get us to the correct subspace, and then use the strides of the
         // predecessors to iterate through the last one or two dimensions.
-        const double* const x_data = &x_ptr_->view(state).begin()[w * x_leading_leap];
-        const double* const y_data = &y_ptr_->view(state).begin()[w * y_leading_leap];
+        const double* const x_data = &x_ptr->view(state).begin()[w * x_leading_leap];
+        const double* const y_data = &y_ptr->view(state).begin()[w * y_leading_leap];
         double* const out_data = out.data() + w * out_leading_leap;
 
         gemm(
@@ -494,7 +497,7 @@ void MatrixMultiplyNode::initialize_state(State& state) const {
     ssize_t start_size = this->size();
     std::vector<ssize_t> shape(this->shape().begin(), this->shape().end());
     if (this->dynamic()) {
-        shape[0] = x_ptr_->shape(state)[0];
+        shape[0] = operands_[0]->shape(state)[0];
         start_size = Array::shape_to_size(shape);
     }
 
@@ -523,12 +526,12 @@ double MatrixMultiplyNode::min() const { return values_info_.min; }
 
 void MatrixMultiplyNode::update_shape_(State& state) const {
     if (this->dynamic()) {
-        data_ptr_<MatrixMultiplyNodeData>(state)->shape[0] = x_ptr_->shape(state)[0];
+        data_ptr_<MatrixMultiplyNodeData>(state)->shape[0] = operands_[0]->shape(state)[0];
     }
 }
 
 void MatrixMultiplyNode::propagate(State& state) const {
-    if (x_ptr_->diff(state).size() == 0 and y_ptr_->diff(state).size() == 0) return;
+    if (operands_[0]->diff(state).size() == 0 and operands_[1]->diff(state).size() == 0) return;
 
     auto data = data_ptr_<MatrixMultiplyNodeData>(state);
 
@@ -539,6 +542,21 @@ void MatrixMultiplyNode::propagate(State& state) const {
 
     this->matmul_(state, data->output, data->shape);
     data->assign(data->output);
+}
+
+void MatrixMultiplyNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    const ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+
+    if (index == 0) {
+        assert(std::ranges::equal(operands_[0]->shape(), array_ptr->shape()));
+        operands_[0] = array_ptr;
+    } else {
+        assert(std::ranges::equal(operands_[1]->shape(), array_ptr->shape()));
+        operands_[1] = array_ptr;
+    }
 }
 
 void MatrixMultiplyNode::revert(State& state) const {

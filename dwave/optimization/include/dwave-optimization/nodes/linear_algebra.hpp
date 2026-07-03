@@ -14,15 +14,15 @@
 
 #pragma once
 
+#include <array>
 #include <string>
-#include <vector>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
 
 namespace dwave::optimization {
 
-class MatrixMultiplyNode : public ArrayOutputMixin<ArrayNode> {
+class MatrixMultiplyNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr);
 
@@ -46,6 +46,9 @@ class MatrixMultiplyNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::min()
     double min() const override;
+
+    /// The predecessors, as ArrayNode*
+    std::span<const ArrayNode* const, 2> operands() const { return operands_; }
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
@@ -71,12 +74,14 @@ class MatrixMultiplyNode : public ArrayOutputMixin<ArrayNode> {
     /// Either `"blas"` or `"fallback"`.
     static std::string implementation;
 
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
  private:
     void matmul_(State& state, std::span<double> out, std::span<const ssize_t> out_shape) const;
     void update_shape_(State& state) const;
 
-    const ArrayNode* x_ptr_;
-    const ArrayNode* y_ptr_;
+    std::array<const ArrayNode*, 2> operands_;
 
     const SizeInfo sizeinfo_;
     const ValuesInfo values_info_;
