@@ -81,7 +81,7 @@ cdef class Symbol:
 
     # The node's expired flag. If the node is destructed, the boolean value
     # pointed to by the expired_ptr will be set to True
-    cdef shared_ptr[bool] expired_ptr
+    cdef shared_ptr[const bool] expired_ptr
 
 
 # Ideally this wouldn't subclass Symbol, but Cython only allows a single

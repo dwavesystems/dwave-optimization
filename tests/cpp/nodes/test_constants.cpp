@@ -28,6 +28,10 @@ TEST_CASE("ConstantNode") {
     GIVEN("A default-constructed constant node") {
         auto ptr = graph.emplace_node<ConstantNode>();
 
+        THEN("The graph tracks the constant specially") {
+            CHECK_THAT(graph.constants(), RangeEquals({ptr}));
+        }
+
         THEN("It defaults to an empty 1d array") {
             CHECK(ptr->ndim() == 1);
             CHECK(ptr->size() == 0);

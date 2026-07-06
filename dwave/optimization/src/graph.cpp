@@ -27,6 +27,8 @@
 #endif
 
 #include "dwave-optimization/array.hpp"
+#include "dwave-optimization/nodes/constants.hpp"
+#include "dwave-optimization/nodes/inputs.hpp"
 
 namespace dwave::optimization {
 
@@ -240,70 +242,87 @@ void Graph::recursive_reset(State& state, const Node* ptr) {
 }
 
 ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
+    if (topologically_sorted_) throw std::logic_error("cannot remove nodes from a locked model");
+
     // Establish a topological ordering. We'll use the fact that the node list
     // is ordered, but we're going to mess with the topological indices!
     topological_sort();
 
-    // We'll use this later to calculate how many nodes we removed
-    const ssize_t num_nodes_before = this->num_nodes();
+    // Specifically we'll be marking the nodes with either
+    constexpr ssize_t keep = -2;  // always keep
+    constexpr ssize_t drop = -3;  // to be dropped
 
-    // We generally want to avoid touching decisions
-    const ssize_t num_decisions = this->num_decisions();
+    // We'll use this later to calculate how many nodes we removed
+    const ssize_t num_nodes = this->num_nodes();
 
     // Mark the nodes that we plan to keep regardless of their number of successors
     // For performance we store a signalling value in the topological_index of the
-    // nodes. We need to take some care to not override the topological index of
-    // any decisions.
-    constexpr ssize_t keep = -2;
+    // nodes.
+
+    // First up our roots - specifically the decisions are always kept.
+    for (auto* ptr : decisions_) ptr->topological_index_ = keep;
+
+    // Constants and Inputs are allowed to be removed
+
+    // Next up our important leaves.
+    for (auto* ptr : constraints_) ptr->topological_index_ = keep;
+    if (objective_ptr_) objective_ptr_->topological_index_ = keep;
+
+    // Some nodes are just not allowed to be removed for other reasons
+    for (auto& uptr : nodes_) {
+        if (not uptr->removable_()) uptr->topological_index_ = keep;
+    }
+
+    // Also, any nodes that have a listener, that is a node is holding a Node::expired_ptr()
+    if (not ignore_listeners) {
+        for (auto& uptr : nodes_) {
+            if (uptr->num_listeners() > 0) uptr->topological_index_ = keep;
+        }
+    }
+
+    // Having established what we're keeping, time to mark stuff for removal!
+
+    for (auto& uptr : nodes_ | std::views::reverse) {
+        if (uptr->topological_index_ == keep) continue;  // we marked these to keep
+        if (uptr->successors().size() > 0) continue;  // this node is used by other nodes
+
+        // We have a node with no successors and that we haven't marked it as important.
+        // So let's mark it to be dropped later.
+
+        // Remove the node from its predecessor's successor vectors.
+        // This leaves the node in an invalid state, until we delete it later.
+        for (auto* pred_ptr : uptr->predecessors_) {
+            [[maybe_unused]] ssize_t num_removed = pred_ptr->remove_successor_(uptr.get());
+            assert(num_removed > 0);
+        }
+
+        uptr->topological_index_ = drop;
+    }
+
+    // Now let's start actually dropping stuff
+    auto dropped = [&drop](const auto& ptr) { return ptr->topological_index_ == drop; };
+
+    assert(std::ranges::none_of(decisions_, dropped));
+    std::erase_if(inputs_, dropped);
+    std::erase_if(constants_, dropped);
+
+    assert(objective_ptr_ == nullptr or objective_ptr_->topological_index_ != drop);
+    assert(std::ranges::none_of(constraints_, dropped));
+
+    // Traverse the nodes_ one last time, this is what actualy deallocates the nodes.
+    std::erase_if(nodes_, dropped);
+
+    // Let's fix the topological indices by first fixing the decision topological
+    // indices that we overwrote then calling reset_topological_sort() to fix
+    // everything else.
     {
-        // all constraints are kept
-        for (ArrayNode* ptr : constraints_) {
-            if (ptr->topological_index_ < num_decisions) continue;  // we'll always keep these
-            ptr->topological_index_ = keep;
-        }
-
-        // as is the objective if it exists
-        if (objective_ptr_ and objective_ptr_->topological_index_ >= num_decisions) {
-            objective_ptr_->topological_index_ = keep;
-        }
-
-        // If we're not ignoring listeners, we check if anyone is "listening" to
-        // the expired_ptr_. If so, we keep the node.
-        if (not ignore_listeners) {
-            for (auto& ptr : nodes_ | std::views::drop(num_decisions)) {
-                if (ptr->expired_ptr_.use_count() > 1) ptr->topological_index_ = keep;
-            }
-        }
+        int index = 0;
+        for (auto* ptr : decisions_) ptr->topological_index_ = index++;
     }
-
-    // Now walk backwards through the topologically sorted node list
-    // removing any nodes with no successors that we haven't marked.
-    for (auto& ptr : nodes_ | std::views::drop(num_decisions) | std::views::reverse) {
-        if (not ptr->removable_()) continue;            // some nodes can never be removed
-        if (ptr->topological_index_ == keep) continue;  // we marked these to keep
-        if (ptr->successors().size() > 0) continue;     // this node is used by other nodes
-
-        // Remove ptr from its predecessor's successor vectors.
-        // This very temporarily leaves the node in an invalid state, which is
-        // why we do it here rather than via a method.
-        for (auto pred_ptr : ptr->predecessors_) {
-            std::erase_if(pred_ptr->successors_, [&ptr](const Node::SuccessorView& sv) {
-                return sv.ptr == ptr.get();
-            });
-        }
-
-        // now delete the node by clearing the unique_ptr
-        ptr.reset();
-    }
-
-    // Traverse the nodes_ one last time removing any nullptrs we created
-    std::erase_if(nodes_, [](const auto& ptr) { return not ptr; });
-
-    // Undo all of the weird stuff we did with the topological indices
     reset_topological_sort();
 
-    // Finally return the number of nodes that have been removed!
-    return num_nodes_before - this->num_nodes();
+    // Finally return the number of nodes that have been removed
+    return num_nodes - this->num_nodes();
 }
 
 void Graph::reset_topological_sort() {
@@ -359,7 +378,34 @@ void Graph::set_objective(ArrayNode* objective_ptr) {
 void Graph::topological_sort() {
     if (topologically_sorted_) return;
 
-    // The decisions already have their topological index assigned
+    // Check that all of our non-decisions have a negative label
+    assert(std::ranges::all_of(nodes_, [](const auto& uptr) {
+        if (dynamic_cast<DecisionNode*>(uptr.get())) {
+            // A decision node
+            return uptr->topological_index_ >= 0;  // specific values checked later
+        } else {
+            // Not a decision
+            return uptr->topological_index_ < 0;
+        }
+    }));
+
+    // Assign the topological order of our root nodes. Because decisions are first
+    // they always get the same topological ordering and have already had that order
+    // assigned.
+    {
+        // Double check the decisions are what we expect.
+        assert([&]() -> bool {
+            int index = 0;
+            for (auto* ptr : decisions_) {
+                if (ptr->topological_index_ != index++) return false;
+            }
+            return true;
+        }());
+
+        int index = decisions_.size();  // the decisions are already ordered
+        for (auto* ptr : inputs_) ptr->topological_index_ = index++;
+        for (auto* ptr : constants_) ptr->topological_index_ = index++;
+    }
 
     // Find a topological ordering of all of the non-decisions
     // The extra `visit` parameter is to allow for recursive lambdas
@@ -391,7 +437,10 @@ void Graph::topological_sort() {
     // Check that we have no gaps in our range.
     // Because the decisions were already sorted, that should determine the
     // count after assigning all others
-    assert(count == num_decisions() - 1);
+    assert(
+        count == static_cast<int>(decisions_.size()) + static_cast<int>(inputs_.size()) +
+                     static_cast<int>(constants_.size()) - 1
+    );
 
     // for later convenience, we sort the nodes_ by index
     // This moves all of the decisions to the front
@@ -451,6 +500,12 @@ std::string Node::classname() const {
     }
 
     return name;
+}
+
+ssize_t Node::remove_successor_(const Node* ptr) {
+    ssize_t before = successors_.size();
+    std::erase_if(successors_, [&ptr](const SuccessorView& sv) { return sv.ptr == ptr; });
+    return before - successors_.size();
 }
 
 std::string Node::repr() const {
