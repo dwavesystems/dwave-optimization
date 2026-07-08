@@ -337,6 +337,37 @@ TEST_CASE("BroadcastToNode") {
             }
         }
     }
+
+    SECTION("equality") {
+        auto* arr0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2});
+        auto* arr1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2});
+
+        Node* a_ptr = graph.emplace_node<BroadcastToNode>(arr0_ptr, std::vector<ssize_t>{2, 3});
+        Node* b_ptr = graph.emplace_node<BroadcastToNode>(arr0_ptr, std::vector<ssize_t>{2, 3});
+        Node* c_ptr = graph.emplace_node<BroadcastToNode>(arr1_ptr, std::vector<ssize_t>{2, 3});
+        Node* d_ptr = graph.emplace_node<BroadcastToNode>(arr0_ptr, std::vector<ssize_t>{5, 3});
+    
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+
+        CHECK(not a_ptr->equal_to(*arr0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto* arr0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2});
+        auto* arr1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 4});
+
+        auto* b_ptr = graph.emplace_node<BroadcastToNode>(arr0_ptr, std::vector<ssize_t>{2, 3});
+
+        arr1_ptr->take_successors(*arr0_ptr);
+
+        CHECK_THAT(b_ptr->predecessors(), RangeEquals({arr1_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(b_ptr->view(state), RangeEquals({0, 1, 4, 0, 1, 4}));
+    }
 }
 
 TEST_CASE("ConcatenateNode") {
@@ -664,6 +695,61 @@ TEST_CASE("ConcatenateNode") {
             THEN("The concatenated node is not integral") { CHECK(c.integral() == false); }
         }
     }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* arr0_ptr = graph.emplace_node<ConstantNode>(
+            std::vector<double>{1, 2.2, 3}, std::vector<ssize_t>{1, 3}
+        );
+        auto* arr1_ptr = graph.emplace_node<ConstantNode>(
+            std::vector<double>{1, 2, 3}, std::vector<ssize_t>{1, 3}
+        );
+        auto* arr2_ptr = graph.emplace_node<ConstantNode>(
+            std::vector<double>{1, 2, 3}, std::vector<ssize_t>{1, 3}
+        );
+
+        Node* a_ptr =
+            graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{arr0_ptr, arr1_ptr}, 0);
+        Node* b_ptr =
+            graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{arr0_ptr, arr1_ptr}, 0);
+        Node* c_ptr =
+            graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{arr0_ptr, arr2_ptr}, 0);
+        Node* d_ptr =
+            graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{arr0_ptr, arr1_ptr}, 1);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+
+        CHECK(not a_ptr->equal_to(*arr0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* arr0_ptr = graph.emplace_node<ConstantNode>(
+            std::vector<double>{1, 2.2, 3}, std::vector<ssize_t>{1, 3}
+        );
+        auto* arr1_ptr = graph.emplace_node<ConstantNode>(
+            std::vector<double>{1, 2, 3}, std::vector<ssize_t>{1, 3}
+        );
+        auto* arr2_ptr = graph.emplace_node<ConstantNode>(
+            std::vector<double>{4, 5, 6}, std::vector<ssize_t>{1, 3}
+        );
+
+        auto* concat_ptr =
+            graph.emplace_node<ConcatenateNode>(std::vector<ArrayNode*>{arr0_ptr, arr1_ptr}, 0);
+
+        arr2_ptr->take_successors(*arr1_ptr);
+        arr1_ptr->take_successors(*arr0_ptr);
+
+        CHECK_THAT(concat_ptr->predecessors(), RangeEquals({arr1_ptr, arr2_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(concat_ptr->view(state), RangeEquals({1, 2, 3, 4, 5, 6}));
+    }
 }
 
 TEST_CASE("CopyNode") {
@@ -767,6 +853,39 @@ TEST_CASE("CopyNode") {
                 }
             }
         }
+    }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* x0_ptr = graph.emplace_node<SetNode>(6);
+        auto* x1_ptr = graph.emplace_node<SetNode>(6);
+        
+        Node* a_ptr = graph.emplace_node<CopyNode>(x0_ptr);
+        Node* b_ptr = graph.emplace_node<CopyNode>(x0_ptr);
+        Node* c_ptr = graph.emplace_node<CopyNode>(x1_ptr);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+
+        CHECK(not a_ptr->equal_to(*x0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* x0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2});
+        auto* x1_ptr = graph.emplace_node<ConstantNode>(std::vector{3, 4, 5});
+        
+        auto* copy_ptr = graph.emplace_node<CopyNode>(x0_ptr);
+
+        x1_ptr->take_successors(*x0_ptr);
+
+        CHECK_THAT(copy_ptr->predecessors(), RangeEquals({x1_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(copy_ptr->view(state), RangeEquals({3, 4, 5}));
     }
 }
 
@@ -1057,6 +1176,57 @@ TEST_CASE("PutNode") {
             CHECK_THAT(put_ptr->mask(state), RangeEquals({2, 0, 0, 0}));
         }
     }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* a0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3, 4});
+        auto* a1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3, 4});
+
+        auto* i0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 2});
+        auto* i1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1});
+    
+        auto* v0_ptr = graph.emplace_node<ConstantNode>(std::vector{-44, -55});
+        auto* v1_ptr = graph.emplace_node<ConstantNode>(std::vector{44, 55});
+
+        Node* a_ptr = graph.emplace_node<PutNode>(a0_ptr, i0_ptr, v0_ptr);
+        Node* b_ptr = graph.emplace_node<PutNode>(a0_ptr, i0_ptr, v0_ptr);
+        Node* c_ptr = graph.emplace_node<PutNode>(a1_ptr, i0_ptr, v0_ptr);
+        Node* d_ptr = graph.emplace_node<PutNode>(a0_ptr, i1_ptr, v0_ptr);
+        Node* e_ptr = graph.emplace_node<PutNode>(a0_ptr, i0_ptr, v1_ptr);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+
+        CHECK(not a_ptr->equal_to(*a0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+        CHECK(not a_ptr->equal_to(*e_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* a0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3, 4});
+        auto* a1_ptr = graph.emplace_node<ConstantNode>(std::vector{5, 6, 7, 8, 9});
+
+        auto* i0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 2});
+        auto* i1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1});
+    
+        auto* v0_ptr = graph.emplace_node<ConstantNode>(std::vector{-44, -55});
+        auto* v1_ptr = graph.emplace_node<ConstantNode>(std::vector{44, 55});
+
+        auto* put_ptr = graph.emplace_node<PutNode>(a0_ptr, i0_ptr, v0_ptr);
+
+        a1_ptr->take_successors(*a0_ptr);
+        i1_ptr->take_successors(*i0_ptr);
+        v1_ptr->take_successors(*v0_ptr);
+
+        CHECK_THAT(put_ptr->predecessors(), RangeEquals({a1_ptr, i1_ptr, v1_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(put_ptr->view(state), RangeEquals({44, 55, 7, 8, 9}));
+    }
 }
 
 TEST_CASE("ReshapeNode") {
@@ -1208,6 +1378,41 @@ TEST_CASE("ReshapeNode") {
 
         CHECK(graph.num_nodes() == 1);  // no side effects
     }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* arr0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
+        auto* arr1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
+
+        Node* a_ptr = graph.emplace_node<ReshapeNode>(arr0_ptr, std::array<ssize_t, 2>{2, 2});
+        Node* b_ptr = graph.emplace_node<ReshapeNode>(arr0_ptr, std::array<ssize_t, 2>{2, 2});
+        Node* c_ptr = graph.emplace_node<ReshapeNode>(arr1_ptr, std::array<ssize_t, 2>{2, 2});
+        Node* d_ptr = graph.emplace_node<ReshapeNode>(arr0_ptr, std::array<ssize_t, 2>{4, 1});
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+
+        CHECK(not a_ptr->equal_to(*arr0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* arr0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
+        auto* arr1_ptr = graph.emplace_node<ConstantNode>(std::vector{2, 3, 4, 5});
+
+        auto* reshape_ptr = graph.emplace_node<ReshapeNode>(arr0_ptr, std::array<ssize_t, 2>{2, 2});
+    
+        arr1_ptr->take_successors(*arr0_ptr);
+
+        CHECK_THAT(reshape_ptr->predecessors(), RangeEquals({arr1_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(reshape_ptr->view(state), RangeEquals({2, 3, 4, 5}));
+    }
 }
 
 TEST_CASE("ResizeNode") {
@@ -1296,6 +1501,45 @@ TEST_CASE("ResizeNode") {
 
         auto state = graph.initialize_state();
         CHECK_THAT(resize_ptr->view(state), RangeEquals({0, 1, 2, 3, 4, -1}));
+    }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* set0_ptr = graph.emplace_node<SetNode>(10);
+        auto* set1_ptr = graph.emplace_node<SetNode>(10);
+
+        Node* a_ptr = graph.emplace_node<ResizeNode>(set0_ptr, std::array{5}, 15.1);
+        Node* b_ptr = graph.emplace_node<ResizeNode>(set0_ptr, std::array{5}, 15.1);
+        Node* c_ptr = graph.emplace_node<ResizeNode>(set1_ptr, std::array{5}, 15.1);
+        Node* d_ptr = graph.emplace_node<ResizeNode>(set0_ptr, std::array{6}, 15.1);
+        Node* e_ptr = graph.emplace_node<ResizeNode>(set0_ptr, std::array{5}, -15.1);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+
+        CHECK(not a_ptr->equal_to(*set0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+        CHECK(not a_ptr->equal_to(*e_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* set0_ptr = graph.emplace_node<SetNode>(10);
+        auto* set1_ptr = graph.emplace_node<SetNode>(10);
+
+        auto* resize_ptr = graph.emplace_node<ResizeNode>(set0_ptr, std::array{5}, 15.1);
+
+        set1_ptr->take_successors(*set0_ptr);
+
+        CHECK_THAT(resize_ptr->predecessors(), RangeEquals({set1_ptr}));
+
+        auto state = graph.empty_state();
+        set1_ptr->initialize_state(state, {0, 1, 2});
+        graph.initialize_state(state);
+        CHECK_THAT(resize_ptr->view(state), RangeEquals(std::vector<double>{0, 1, 2, 15.1, 15.1}));
     }
 }
 
@@ -1495,6 +1739,52 @@ TEST_CASE("RollNode") {
             }
         }
     }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* arr0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3}, std::array<ssize_t, 2>{2, 2});
+        auto* arr1_ptr = graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7}, std::array<ssize_t, 2>{2, 2});
+
+        auto* shift0_ptr = graph.emplace_node<ConstantNode>(2);
+        auto* shift1_ptr = graph.emplace_node<ConstantNode>(3);
+
+        Node* a_ptr = graph.emplace_node<RollNode>(arr0_ptr, shift0_ptr, std::vector<ssize_t>{1});
+        Node* b_ptr = graph.emplace_node<RollNode>(arr0_ptr, shift0_ptr, std::vector<ssize_t>{1});
+        Node* c_ptr = graph.emplace_node<RollNode>(arr1_ptr, shift0_ptr, std::vector<ssize_t>{1});
+        Node* d_ptr = graph.emplace_node<RollNode>(arr0_ptr, shift1_ptr, std::vector<ssize_t>{1});
+        Node* e_ptr = graph.emplace_node<RollNode>(arr0_ptr, shift0_ptr, std::vector<ssize_t>{0});
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+
+        CHECK(not a_ptr->equal_to(*arr0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+        CHECK(not a_ptr->equal_to(*e_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* arr0_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3}, std::array<ssize_t, 2>{2, 2});
+        auto* arr1_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7}, std::array<ssize_t, 2>{2, 2});
+
+        auto* shift0_ptr = graph.emplace_node<ConstantNode>(2);
+        auto* shift1_ptr = graph.emplace_node<ConstantNode>(3);
+
+        auto* roll_ptr = graph.emplace_node<RollNode>(arr0_ptr, shift0_ptr);
+
+        arr1_ptr->take_successors(*arr0_ptr);
+        shift1_ptr->take_successors(*shift0_ptr);
+
+        CHECK_THAT(roll_ptr->predecessors(), RangeEquals({arr1_ptr, shift1_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(roll_ptr->view(state), RangeEquals(std::vector<double>{5, 6, 7, 4}));
+    }
 }
 
 TEST_CASE("SizeNode") {
@@ -1622,6 +1912,25 @@ TEST_CASE("SizeNode") {
                 }
             }
         }
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* set0_ptr = graph.emplace_node<SetNode>(5);
+        auto* set1_ptr = graph.emplace_node<SetNode>(5);
+
+        auto* size_ptr = graph.emplace_node<SizeNode>(set0_ptr);
+
+        set1_ptr->take_successors(*set0_ptr);
+
+        CHECK_THAT(size_ptr->predecessors(), RangeEquals({set1_ptr}));
+
+        auto state = graph.empty_state();
+        set0_ptr->initialize_state(state, {0});
+        set1_ptr->initialize_state(state, {0, 1, 2, 3});
+        graph.initialize_state(state);
+        CHECK_THAT(size_ptr->view(state), RangeEquals({4}));
     }
 }
 
@@ -1992,6 +2301,24 @@ TEST_CASE("TransposeNode") {
                 }
             }
         }
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* arr0_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3}, std::array<ssize_t, 2>{2, 2});
+        auto* arr1_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7}, std::array<ssize_t, 2>{2, 2});
+
+        auto* transpose_ptr = graph.emplace_node<TransposeNode>(arr0_ptr);
+
+        arr1_ptr->take_successors(*arr0_ptr);
+
+        CHECK_THAT(transpose_ptr->predecessors(), RangeEquals({arr1_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(transpose_ptr->view(state), RangeEquals({4, 6, 5, 7}));
     }
 }
 

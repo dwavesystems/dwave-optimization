@@ -26,7 +26,7 @@
 
 namespace dwave::optimization {
 
-class BroadcastToNode : public ArrayNode {
+class BroadcastToNode : public EqualityMixin<ArrayNode, BroadcastToNode> {
  public:
     BroadcastToNode(ArrayNode* array_ptr, std::initializer_list<ssize_t> shape);
     BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> shape);
@@ -43,8 +43,8 @@ class BroadcastToNode : public ArrayNode {
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
 
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const BroadcastToNode& rhs) const;
+    /// @copydoc Node::equal_to()
+    bool equal_to(const BroadcastToNode& rhs) const override;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
@@ -82,7 +82,7 @@ class BroadcastToNode : public ArrayNode {
     std::span<const ssize_t> strides() const override;
 
  protected:
-    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     /// Translate a linear index of the predecessor into a linear index of the
@@ -100,7 +100,7 @@ class BroadcastToNode : public ArrayNode {
     const ValuesInfo values_info_;
 };
 
-class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
+class ConcatenateNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ConcatenateNode>> {
  public:
     explicit ConcatenateNode(std::span<ArrayNode*> array_ptrs, ssize_t axis);
     explicit ConcatenateNode(std::ranges::contiguous_range auto&& array_ptrs, ssize_t axis) :
@@ -109,6 +109,10 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
     double const* buff(const State& statfe) const override;
     void commit(State& state) const override;
     std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::equal_to()
+    bool equal_to(const ConcatenateNode& rhs) const override;
+
     void initialize_state(State& state) const override;
 
     /// @copydoc Array::integral()
@@ -125,6 +129,9 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
 
     ssize_t axis() const { return axis_; }
 
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
  private:
     ssize_t axis_;
     std::vector<ArrayNode*> array_ptrs_;
@@ -134,7 +141,7 @@ class ConcatenateNode : public ArrayOutputMixin<ArrayNode> {
 };
 
 /// An array node that is a contiguous copy of its predecessor.
-class CopyNode : public ArrayOutputMixin<ArrayNode> {
+class CopyNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     explicit CopyNode(ArrayNode* array_ptr);
 
@@ -178,6 +185,9 @@ class CopyNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::size_diff()
     ssize_t size_diff(const State& state) const override;
 
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
  private:
     const Array* array_ptr_;
 
@@ -196,7 +206,7 @@ class CopyNode : public ArrayOutputMixin<ArrayNode> {
 /// @endcode
 ///
 /// In the case of duplicate indices, the most recent update will be propagated.
-class PutNode : public ArrayOutputMixin<ArrayNode> {
+class PutNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     /// Constructor for PutNode.
     ///
@@ -236,6 +246,9 @@ class PutNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Node::revert()
     void revert(State& state) const override;
 
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
  private:
     const Array* array_ptr_;
     const Array* indices_ptr_;
@@ -245,7 +258,7 @@ class PutNode : public ArrayOutputMixin<ArrayNode> {
 };
 
 /// Propagates the values of its predecessor, interpreted into a different shape.
-class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
+class ReshapeNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ReshapeNode>> {
  public:
     /// Constructor for ReshapeNode.
     ///
@@ -269,6 +282,9 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::equal_to()
+    bool equal_to(const ReshapeNode& rhs) const override;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
@@ -304,6 +320,9 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::size_diff()
     ssize_t size_diff(const State& state) const override;
 
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
  private:
     // we could dynamically cast each time, but it's easier to just keep separate
     // pointer to the "array" part of the predecessor
@@ -315,7 +334,7 @@ class ReshapeNode : public ArrayOutputMixin<ArrayNode> {
 
 /// Reshape a node to a specific non-dynamic shape. Use fill_value for any missing
 /// values.
-class ResizeNode : public ArrayOutputMixin<ArrayNode> {
+class ResizeNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ResizeNode>> {
  public:
     /// Constructor for ResizeNode.
     ///
@@ -342,8 +361,7 @@ class ResizeNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
 
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const ResizeNode& rhs) const;
+    bool equal_to(const ResizeNode& rhs) const override;
 
     /// The fill value.
     double fill_value() const { return fill_value_; }
@@ -367,7 +385,7 @@ class ResizeNode : public ArrayOutputMixin<ArrayNode> {
     void revert(State& state) const override;
 
  protected:
-    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     const Array* array_ptr_;
@@ -377,7 +395,7 @@ class ResizeNode : public ArrayOutputMixin<ArrayNode> {
     const ValuesInfo values_info_;
 };
 
-class RollNode : public ArrayOutputMixin<ArrayNode> {
+class RollNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, RollNode>> {
  public:
     /// Construct a RollNode.
     ///
@@ -402,6 +420,9 @@ class RollNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::equal_to()
+    bool equal_to(const RollNode& rhs) const override;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
@@ -440,6 +461,9 @@ class RollNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::size_diff()
     ssize_t size_diff(const State& state) const override;
 
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
  private:
     // Rotate the given array by shift in-place.
     static void rotate_(std::span<double> array, ssize_t shift);
@@ -469,7 +493,7 @@ class RollNode : public ArrayOutputMixin<ArrayNode> {
     const SizeInfo sizeinfo_;
 };
 
-class SizeNode : public ScalarOutputMixin<ArrayNode, true> {
+class SizeNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>, true> {
  public:
     explicit SizeNode(ArrayNode* node_ptr);
 
@@ -485,6 +509,9 @@ class SizeNode : public ScalarOutputMixin<ArrayNode, true> {
     double max() const override;
 
     void propagate(State& state) const override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     // we could dynamically cast each time, but it's easier to just keep separate
@@ -548,6 +575,9 @@ class TransposeNode : public ArrayNode {
     void commit(State&) const override;
 
     void revert(State&) const override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     const Array* array_ptr_;

@@ -206,12 +206,6 @@ std::span<const Update> BroadcastToNode::diff(const State& state) const {
     return data_ptr_<BroadcastToNodeData>(state)->diff;
 }
 
-bool BroadcastToNode::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const BroadcastToNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
-}
-
 bool BroadcastToNode::equal_to(const BroadcastToNode& rhs) const {
     return array_ptr_ == rhs.array_ptr_ and std::ranges::equal(shape(), rhs.shape());
 }
@@ -365,12 +359,14 @@ ssize_t BroadcastToNode::convert_predecessor_index_(ssize_t index) const {
     return flat_index;
 }
 
-void BroadcastToNode::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
-    Node::replace_predecessor_(previous_index, node_ptr);
+void BroadcastToNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
 
-    assert(previous_index == 0);  // we should only ever have one predecessor
-    array_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
-    assert(array_ptr_ != nullptr);
+    assert(index == 0);  // we should only ever have one predecessor
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(std::ranges::equal(array_ptr_->shape(), array_ptr->shape()));
+    assert(array_ptr != nullptr);
+    array_ptr_ = array_ptr;
 }
 
 void BroadcastToNode::revert(State& state) const {
@@ -446,6 +442,10 @@ ConcatenateNode::ConcatenateNode(std::span<ArrayNode*> array_ptrs, const ssize_t
 
 std::span<const Update> ConcatenateNode::diff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->diff();
+}
+
+bool ConcatenateNode::equal_to(const ConcatenateNode& rhs) const {
+    return axis_ == rhs.axis_ and std::ranges::equal(array_ptrs_, rhs.array_ptrs_);
 }
 
 void ConcatenateNode::initialize_state(State& state) const {
@@ -557,6 +557,17 @@ void ConcatenateNode::propagate(State& state) const {
     }
 }
 
+void ConcatenateNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+    assert(std::ranges::equal(array_ptrs_[index]->shape(), array_ptr->shape()));
+
+    assert(0 <= index and static_cast<size_t>(index) < array_ptrs_.size());
+    array_ptrs_[index] = array_ptr;
+}
+
 void ConcatenateNode::revert(State& state) const { data_ptr_<ArrayNodeStateData>(state)->revert(); }
 
 CopyNode::CopyNode(ArrayNode* array_ptr) :
@@ -586,6 +597,17 @@ double CopyNode::max() const { return values_info_.max; }
 
 void CopyNode::propagate(State& state) const {
     data_ptr_<ArrayNodeStateData>(state)->update(array_ptr_->diff(state));
+}
+
+void CopyNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+    assert(std::ranges::equal(array_ptr_->shape(), array_ptr->shape()));
+
+    assert(index == 0);
+    array_ptr_ = array_ptr;
 }
 
 void CopyNode::revert(State& state) const { data_ptr_<ArrayNodeStateData>(state)->revert(); }
@@ -878,6 +900,25 @@ void PutNode::propagate(State& state) const {
     if (ptr->diff().size()) Node::propagate(state);
 }
 
+void PutNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+
+    if (index == 0) {
+        assert(std::ranges::equal(array_ptr_->shape(), array_ptr->shape()));
+        array_ptr_ = array_ptr;
+    } else if (index == 1) {
+        assert(std::ranges::equal(indices_ptr_->shape(), array_ptr->shape()));
+        indices_ptr_ = array_ptr;
+    } else {
+        assert(index == 2);
+        assert(std::ranges::equal(values_ptr_->shape(), array_ptr->shape()));
+        values_ptr_ = array_ptr;
+    }
+}
+
 void PutNode::revert(State& state) const { return data_ptr_<PutNodeState>(state)->revert(); }
 
 // Reshape allows one shape dimension to be -1. In that case the size is inferred.
@@ -1020,6 +1061,10 @@ std::span<const Update> ReshapeNode::diff(const State& state) const {
     return array_ptr_->diff(state);
 }
 
+bool ReshapeNode::equal_to(const ReshapeNode& rhs) const {
+    return array_ptr_ == rhs.array_ptr_ and std::ranges::equal(shape(), rhs.shape());
+}
+
 void ReshapeNode::initialize_state(State& state) const {
     if (!this->dynamic()) return Node::initialize_state(state);  // stateless
     emplace_data_ptr_<DynamicReshapeNodeData>(state, this->shape(), array_ptr_->size(state));
@@ -1034,6 +1079,17 @@ double ReshapeNode::max() const { return values_info_.max; }
 void ReshapeNode::propagate(State& state) const {
     if (!this->dynamic()) return;  // stateless
     data_ptr_<DynamicReshapeNodeData>(state)->set_size(array_ptr_->size(state));
+}
+
+void ReshapeNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+    assert(std::ranges::equal(array_ptr_->shape(), array_ptr->shape()));
+
+    assert(index == 0);
+    array_ptr_ = array_ptr;
 }
 
 void ReshapeNode::revert(State& state) const {
@@ -1112,15 +1168,12 @@ std::span<const Update> ResizeNode::diff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 
-bool ResizeNode::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const ResizeNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
-}
-
 bool ResizeNode::equal_to(const ResizeNode& rhs) const {
-    assert(false and "not yet implemented");
-    return false;
+    return (
+        array_ptr_ == rhs.array_ptr_ and              //
+        std::ranges::equal(shape(), rhs.shape()) and  //
+        fill_value_ == rhs.fill_value_
+    );
 }
 
 void ResizeNode::initialize_state(State& state) const {
@@ -1176,8 +1229,15 @@ void ResizeNode::propagate(State& state) const {
     if (data_ptr->diff().size()) Node::propagate(state);
 }
 
-void ResizeNode::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
-    assert(false and "not yet implemented");
+void ResizeNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+    assert(std::ranges::equal(array_ptr_->shape(), array_ptr->shape()));
+
+    assert(index == 0);
+    array_ptr_ = array_ptr;
 }
 
 void ResizeNode::revert(State& state) const {
@@ -1273,6 +1333,14 @@ void RollNode::commit(State& state) const { data_ptr_<ArrayNodeStateData>(state)
 
 std::span<const Update> RollNode::diff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->diff();
+}
+
+bool RollNode::equal_to(const RollNode& rhs) const {
+    return (
+        array_ptr_ == rhs.array_ptr_ and  //
+        shift_ == rhs.shift_ and          //
+        std::ranges::equal(axis_, rhs.axis_)
+    );
 }
 
 void RollNode::initialize_state(State& state) const {
@@ -1388,6 +1456,23 @@ void RollNode::propagate(State& state) const {
             rotate_(buffer, shape(state), shifts);
             state_ptr->assign(buffer);
         }
+    }
+}
+
+void RollNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+
+    if (index == 0) {
+        assert(std::ranges::equal(array_ptr_->shape(), array_ptr->shape()));
+        array_ptr_ = array_ptr;
+    } else {
+        assert(index == 1);
+        assert(std::holds_alternative<const Array*>(shift_));
+        assert(std::ranges::equal(std::get<const Array*>(shift_)->shape(), array_ptr->shape()));
+        shift_ = array_ptr;
     }
 }
 
@@ -1532,6 +1617,14 @@ double SizeNode::min() const { return minmax_.first; }
 double SizeNode::max() const { return minmax_.second; }
 
 void SizeNode::propagate(State& state) const { set_state(state, array_ptr_->size(state)); }
+
+void SizeNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    assert(index == 0);
+    array_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr_ != nullptr);
+}
 
 // TransposeNode **************************************************************
 
@@ -1723,6 +1816,18 @@ void TransposeNode::revert(State& state) const {
     if (ndim_ > 1) {
         data_ptr_<TransposeNodeDiffData>(state)->revert();
     }  // otherwise, stateless
+}
+
+void TransposeNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+    assert(std::ranges::equal(array_ptr_->shape(), array_ptr->shape()));
+    assert(std::ranges::equal(array_ptr_->strides(), array_ptr->strides()));
+
+    assert(index == 0);
+    array_ptr_ = array_ptr;
 }
 
 }  // namespace dwave::optimization
