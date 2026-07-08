@@ -78,7 +78,7 @@ class QuadraticModel {
     friend class QuadraticModelNode;
 };
 
-class QuadraticModelNode : public ScalarOutputMixin<ArrayNode> {
+class QuadraticModelNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     QuadraticModelNode(ArrayNode* state_node_ptr, QuadraticModel&& quadratic_model);
 

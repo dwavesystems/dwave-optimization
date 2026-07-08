@@ -444,7 +444,7 @@ ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
         // So let's mark it to be dropped later.
 
         // Remove the node from its predecessor's successor vectors.
-        // This very leaves the node in an invalid state, until we delete it later.
+        // This leaves the node in an invalid state, until we delete it later.
         for (auto* pred_ptr : uptr->predecessors_) {
             [[maybe_unused]] ssize_t num_removed = pred_ptr->remove_successor_(uptr.get());
             assert(num_removed > 0);

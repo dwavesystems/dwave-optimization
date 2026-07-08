@@ -15,6 +15,7 @@
 #pragma once
 
 #include <optional>
+#include <random>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
