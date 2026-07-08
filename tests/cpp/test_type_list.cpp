@@ -47,6 +47,24 @@ TEST_CASE("Test type_list") {
         static_assert(type_list<float, float*>::remove_pointer::count<float>() == 2);
     }
 
+    SECTION("type_list_union static asserts") {
+        using u = type_list<int, float>;
+        using v = type_list<float>;
+        using w = type_list<float, double>;
+
+        using u_v_expected = type_list<int, float>;
+        static_assert(type_list_union_v<u, v>::template is_same<u_v_expected>());
+
+        using v_u_expected = type_list<int, float>;
+        static_assert(type_list_union_v<v, u>::template is_same<v_u_expected>());
+
+        using u_w_expected = type_list<int, float, double>;
+        static_assert(type_list_union_v<u, w>::template is_same<u_w_expected>());
+
+        using u_v_w_expected = type_list<int, float, double>;
+        static_assert(type_list_union_v<u, v, w>::template is_same<u_v_w_expected>());
+    }
+
     SECTION("type_list<...>::check() with pointers") {
         struct PolymorphicBase {
             virtual ~PolymorphicBase() = default;

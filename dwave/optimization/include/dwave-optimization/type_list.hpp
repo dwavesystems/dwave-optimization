@@ -42,6 +42,7 @@
 
 #include <memory>
 #include <type_traits>
+#include <typeinfo>
 #include <utility>
 #include <variant>
 
@@ -86,6 +87,11 @@ struct type_list {
         return false;
     }
 
+    /// Add a new type to the type list iff it is not a duplicate
+    template <typename T>
+    using add =
+        std::conditional_t<contains<T>(), type_list<Type, Types...>, type_list<Type, Types..., T>>;
+
     /// Return the number of times that ``T`` appears in the ``type_list``.
     template <typename T>
     static constexpr std::size_t count() {
@@ -94,6 +100,12 @@ struct type_list {
             return count + type_list<Types...>::template count<T>();
         }
         return count;
+    }
+
+    template <typename OtherTypeList>
+    static constexpr bool is_same() {
+        return issubset<OtherTypeList>() and
+               OtherTypeList::template issubset<type_list<Type, Types...>>();
     }
 
     /// Return whether every type in the ``type_list`` is present in ``OtherTypeList``.
@@ -157,5 +169,42 @@ struct type_list {
     template <template <typename...> class U>
     using to = U<Type, Types...>;
 };
+
+/// Take the union of two or more ``type_list``s, producing a new ``type_list``
+template <typename x, typename y, typename... zs>
+struct type_list_union;
+
+template <typename x, typename y>
+struct type_list_union<x, y> {
+ private:
+    template <typename tl, typename type_tuple, typename U>
+    struct union_;
+
+    template <typename tl, typename type_tuple, std::size_t i>
+    struct union_<tl, type_tuple, std::index_sequence<i>> {
+        using value = tl::template add<std::tuple_element_t<i, type_tuple>>;
+    };
+
+    template <typename tl, typename type_tuple, std::size_t i, std::size_t... remaining_indices>
+    struct union_<tl, type_tuple, std::index_sequence<i, remaining_indices...>> {
+        using added = tl::template add<std::tuple_element_t<i, type_tuple>>;
+        using value = std::conditional_t<
+            sizeof...(remaining_indices) == 0,
+            added,
+            typename union_<added, type_tuple, std::index_sequence<remaining_indices...>>::value>;
+    };
+
+ public:
+    using value =
+        union_<x, typename y::template to<std::tuple>, std::make_index_sequence<y::size()>>::value;
+};
+
+template <typename x, typename y, typename... zs>
+struct type_list_union {
+    using value = type_list_union<typename type_list_union<x, y>::value, zs...>::value;
+};
+
+template <typename x, typename y, typename... zs>
+using type_list_union_v = type_list_union<x, y, zs...>::value;
 
 }  // namespace dwave::optimization
