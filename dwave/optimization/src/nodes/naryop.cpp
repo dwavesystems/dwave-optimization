@@ -315,6 +315,18 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
     }
 }
 
+template <class BinaryOp>
+void NaryOpNode<BinaryOp>::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    assert(0 <= index and static_cast<size_t>(index) < operands_.size());
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+
+    assert(std::ranges::equal(operands_[index]->shape(), array_ptr->shape()));
+    operands_[index] = array_ptr;
+}
+
 template class NaryOpNode<functional::max<double>>;
 template class NaryOpNode<functional::min<double>>;
 template class NaryOpNode<std::multiplies<double>>;
