@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Add C++ ``type_list_union`` and ``type_list_union_v`` templated structs
+    that make it easy to take the union of two or more ``type_list``s. Also
+    implement ``type_list::add`` to "add" a new type into the type list and
+    ``type_list::is_same()` to check if two type lists are equivalent.
