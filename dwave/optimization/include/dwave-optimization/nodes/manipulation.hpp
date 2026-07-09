@@ -522,7 +522,7 @@ class SizeNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>, true> {
 };
 
 // Compute the transpose of predecessor
-class TransposeNode : public ArrayNode {
+class TransposeNode : public EqualityMixin<ArrayNode> {
  public:
     TransposeNode(ArrayNode* array_ptr);
 

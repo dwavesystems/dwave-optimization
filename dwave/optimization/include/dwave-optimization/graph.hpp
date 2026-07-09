@@ -270,15 +270,11 @@ class Node {
     /// derived from its predecessors. Defaults to `true`, except for decisions.
     virtual bool deterministic_state() const { return true; }
 
-    // TODO: document and note that nodes *must* share the same set of
-    // predecessors (permutations are sometimes allowed) and they *must* be the
-    // same type. Also that they can have false negatives in some cases.
-    // Also, we don't check pinned values
-    virtual bool equal_to(const Node& rhs) const {
-        std::cout << classname() << " missing operator==(...) *********\n";
-        assert(false and "not yet implemented");
-        return false;
-    }
+    /// Test whether two nodes are equal. Each node class defines equality for
+    /// itself but nodes *must* share the same set of
+    /// predecessors (permutations are sometimes allowed) and they *must* be the
+    /// same type. Also that they can have false negatives in some cases.
+    virtual bool equal_to(const Node& rhs) const = 0;
 
     /// Return a shared pointer to a bool value. When the node is destructed
     /// the bool will be set to True
