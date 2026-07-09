@@ -22,7 +22,7 @@
 
 namespace dwave::optimization {
 
-class IsInNode : public ArrayOutputMixin<ArrayNode> {
+class IsInNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     IsInNode(ArrayNode* element_ptr, ArrayNode* test_elements_ptr);
 
@@ -68,6 +68,9 @@ class IsInNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::sizeinfo()
     SizeInfo sizeinfo() const override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     // these are redundant, but convenient
