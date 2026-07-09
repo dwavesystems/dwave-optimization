@@ -14,6 +14,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <catch2/matchers/catch_matchers_range_equals.hpp>
 
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
@@ -22,6 +23,7 @@
 
 namespace dwave::optimization {
 
+using Catch::Matchers::RangeEquals;
 using Catch::Matchers::WithinRel;
 
 TEST_CASE("SoftMaxNode") {
@@ -235,6 +237,38 @@ TEST_CASE("SoftMaxNode") {
                 }
             }
         }
+    }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
+        auto* c1_ptr = graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7});
+
+        Node* a_ptr = graph.emplace_node<SoftMaxNode>(c0_ptr);
+        Node* b_ptr = graph.emplace_node<SoftMaxNode>(c0_ptr);
+        Node* c_ptr = graph.emplace_node<SoftMaxNode>(c1_ptr);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(not a_ptr->equal_to(*c0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
+        auto* c1_ptr = graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7});
+
+        auto* softmax_ptr = graph.emplace_node<SoftMaxNode>(c0_ptr);
+
+        c1_ptr->take_successors(*c0_ptr);
+
+        CHECK_THAT(softmax_ptr->predecessors(), RangeEquals({c1_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(softmax_ptr->view(state)[0], WithinRel(0.03205860328008499, 1e-9));
     }
 }
 }  // namespace dwave::optimization
