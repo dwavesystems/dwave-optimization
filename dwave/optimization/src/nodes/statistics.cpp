@@ -38,7 +38,7 @@ std::pair<double, double> calculate_values_minmax_(const Array* arr_ptr) {
 }
 
 MeanNode::MeanNode(ArrayNode* arr_ptr) :
-    ScalarOutputMixin<ArrayNode, true>(),
+    ScalarOutputMixin<EqualityMixin<ArrayNode>, true>(),
     arr_ptr_(arr_ptr),
     minmax_(calculate_values_minmax_(arr_ptr_)) {
     add_predecessor_(arr_ptr);
@@ -95,4 +95,16 @@ void MeanNode::propagate(State& state) const {
     }
     set_state(state, sum / static_cast<double>(state_size));
 }
+
+void MeanNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+    assert(std::ranges::equal(arr_ptr_->shape(), array_ptr->shape()));
+
+    assert(index == 0);
+    arr_ptr_ = array_ptr;
+}
+
 }  // namespace dwave::optimization

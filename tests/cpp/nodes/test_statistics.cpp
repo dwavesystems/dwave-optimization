@@ -21,6 +21,8 @@
 #include "dwave-optimization/nodes/statistics.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
 
+using Catch::Matchers::RangeEquals;
+
 namespace dwave::optimization {
 
 TEST_CASE("MeanNode") {
@@ -155,5 +157,38 @@ TEST_CASE("MeanNode") {
             }
         }
     }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
+        auto* c1_ptr = graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7});
+
+        Node* a_ptr = graph.emplace_node<MeanNode>(c0_ptr);
+        Node* b_ptr = graph.emplace_node<MeanNode>(c0_ptr);
+        Node* c_ptr = graph.emplace_node<MeanNode>(c1_ptr);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(not a_ptr->equal_to(*c0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
+        auto* c1_ptr = graph.emplace_node<ConstantNode>(std::vector{7, 6, 5, 4});
+
+        auto* argsort_ptr = graph.emplace_node<MeanNode>(c0_ptr);
+
+        c1_ptr->take_successors(*c0_ptr);
+
+        CHECK_THAT(argsort_ptr->predecessors(), RangeEquals({c1_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(argsort_ptr->view(state), RangeEquals({5.5}));
+    }
+
 }
 }  // namespace dwave::optimization
