@@ -70,7 +70,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     }
 
  private:
-    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
     UnaryOp op;
 
