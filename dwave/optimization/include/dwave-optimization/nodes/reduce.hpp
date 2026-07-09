@@ -29,7 +29,7 @@
 namespace dwave::optimization {
 
 template <class BinaryOp>
-class ReduceNode : public ArrayOutputMixin<ArrayNode> {
+class ReduceNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ReduceNode<BinaryOp>>> {
  public:
     ReduceNode(ArrayNode* array_ptr);
 
@@ -56,8 +56,8 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
 
-    bool equal_to(const Node& rhs) const override;
-    bool equal_to(const ReduceNode& rhs) const;
+    /// @copydoc Node::equal_to()
+    bool equal_to(const ReduceNode& rhs) const override;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
@@ -73,11 +73,11 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
 
     // The predecessor of the reduction, as an Array*.
     std::span<Array* const> operands() {
-        assert(predecessors().size() == 1);
+        assert(this->predecessors().size() == 1);
         return std::span<Array* const, 1>(&array_ptr_, 1);
     }
     std::span<const Array* const> operands() const {
-        assert(predecessors().size() == 1);
+        assert(this->predecessors().size() == 1);
         return std::span<const Array* const, 1>(&array_ptr_, 1);
     }
 
@@ -88,11 +88,11 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
     void revert(State& state) const override;
 
     /// @copydoc Array::shape()
-    using ArrayOutputMixin::shape;
+    using ArrayOutputMixin<EqualityMixin<ArrayNode, ReduceNode<BinaryOp>>>::shape;
     std::span<const ssize_t> shape(const State& state) const override;
 
     /// @copydoc Array::size()
-    using ArrayOutputMixin::size;
+    using ArrayOutputMixin<EqualityMixin<ArrayNode, ReduceNode<BinaryOp>>>::size;
     ssize_t size(const State& state) const override;
 
     /// @copydoc Array::sizeinfo()
@@ -106,7 +106,7 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
     const std::optional<double> initial;
 
  protected:
-    void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     // Perform a reduction over the reduction space associated with the given
@@ -116,7 +116,7 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
 
     BinaryOp op;
 
-    Array* const array_ptr_;
+    Array* array_ptr_;
 
     // The axes we're reducing in a sorted, unique vector.
     // An empty vector means we're reducing over everything

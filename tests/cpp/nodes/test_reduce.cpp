@@ -261,6 +261,44 @@ TEMPLATE_TEST_CASE(
             }
         }
     }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* c0_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3}, std::vector<ssize_t>{2, 2});
+        auto* c1_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7}, std::vector<ssize_t>{2, 2});
+
+        Node* a_ptr = graph.emplace_node<ReduceNode<TestType>>(c0_ptr, std::vector<ssize_t>{}, 1.5);
+        Node* b_ptr = graph.emplace_node<ReduceNode<TestType>>(c0_ptr, std::vector<ssize_t>{}, 1.5);
+        Node* c_ptr = graph.emplace_node<ReduceNode<TestType>>(c1_ptr, std::vector<ssize_t>{}, 1.5);
+        Node* d_ptr = graph.emplace_node<ReduceNode<TestType>>(c0_ptr, std::vector<ssize_t>{0}, 1.5);
+        Node* e_ptr = graph.emplace_node<ReduceNode<TestType>>(c0_ptr, std::vector<ssize_t>{}, 2.5);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(not a_ptr->equal_to(*c0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+        CHECK(not a_ptr->equal_to(*e_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* c0_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3}, std::vector<ssize_t>{2, 2});
+        auto* c1_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7}, std::vector<ssize_t>{2, 2});
+
+        auto* reduce_ptr = graph.emplace_node<ReduceNode<TestType>>(c0_ptr, std::vector<ssize_t>{0});
+
+        c1_ptr->take_successors(*c0_ptr);
+
+        CHECK_THAT(reduce_ptr->predecessors(), RangeEquals({c1_ptr}));
+        CHECK_THAT(reduce_ptr->operands(), RangeEquals({c1_ptr}));
+    }
 }
 
 TEST_CASE("AllNode/AnyNode") {

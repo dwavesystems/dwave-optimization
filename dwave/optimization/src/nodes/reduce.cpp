@@ -801,13 +801,13 @@ ReduceNode<BinaryOp>::ReduceNode(
     std::span<const ssize_t> axes,
     std::optional<double> initial
 ) :
-    ArrayOutputMixin(reduce_shape(array_ptr, axes)),
+    ArrayOutputMixin<EqualityMixin<ArrayNode, ReduceNode<BinaryOp>>>(reduce_shape(array_ptr, axes)),
     initial(initial),
     array_ptr_(array_ptr),
     axes_(normalize_axes(array_ptr, axes)),
     values_info_(values_info<BinaryOp>(array_ptr_, axes_, initial)),
     sizeinfo_(reducenode_calculate_sizeinfo(this, array_ptr_, axes_)) {
-    add_predecessor_(array_ptr);
+    this->add_predecessor_(array_ptr);
 }
 
 template <class BinaryOp>
@@ -820,30 +820,26 @@ ReduceNode<BinaryOp>::ReduceNode(
 
 template <class BinaryOp>
 double const* ReduceNode<BinaryOp>::buff(const State& state) const {
-    return data_ptr_<ReduceNodeData<BinaryOp>>(state)->buff();
+    return this->template data_ptr_<ReduceNodeData<BinaryOp>>(state)->buff();
 }
 
 template <class BinaryOp>
 void ReduceNode<BinaryOp>::commit(State& state) const {
-    return data_ptr_<ReduceNodeData<BinaryOp>>(state)->commit();
+    return this->template data_ptr_<ReduceNodeData<BinaryOp>>(state)->commit();
 }
 
 template <class BinaryOp>
 std::span<const Update> ReduceNode<BinaryOp>::diff(const State& state) const {
-    return data_ptr_<ReduceNodeData<BinaryOp>>(state)->diff();
-}
-
-template <class BinaryOp>
-bool ReduceNode<BinaryOp>::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const ReduceNode*>(&rhs);
-    if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
+    return this->template data_ptr_<ReduceNodeData<BinaryOp>>(state)->diff();
 }
 
 template <class BinaryOp>
 bool ReduceNode<BinaryOp>::equal_to(const ReduceNode& rhs) const {
-    assert(false and "not yet implemented");
-    return false;
+    return (
+        array_ptr_ == rhs.array_ptr_ and  //
+        initial == rhs.initial and        //
+        std::ranges::equal(axes_, rhs.axes_)
+    );
 }
 
 template <class BinaryOp>
@@ -859,12 +855,14 @@ void ReduceNode<BinaryOp>::initialize_state(State& state) const {
             reductions.emplace_back(reduce_(state, index));
         }
 
-        emplace_data_ptr_<ReduceNodeData<BinaryOp>>(state, std::move(reductions), this->shape());
+        this->template emplace_data_ptr_<ReduceNodeData<BinaryOp>>(
+            state, std::move(reductions), this->shape()
+        );
     } else {
         for (ssize_t index = 0; index < this->size(); ++index) {
             reductions.emplace_back(reduce_(state, index));
         }
-        emplace_data_ptr_<ReduceNodeData<BinaryOp>>(state, std::move(reductions));
+        this->template emplace_data_ptr_<ReduceNodeData<BinaryOp>>(state, std::move(reductions));
     }
 }
 
@@ -957,7 +955,7 @@ ssize_t ReduceNode<BinaryOp>::convert_predecessor_index_(ssize_t index) const {
 
 template <class BinaryOp>
 void ReduceNode<BinaryOp>::propagate(State& state) const {
-    auto* const state_ptr = data_ptr_<ReduceNodeData<BinaryOp>>(state);
+    auto* const state_ptr = this->template data_ptr_<ReduceNodeData<BinaryOp>>(state);
 
     // We are reducing over all axes, so this is nice and simple
     if (axes_.empty() or axes_.size() == static_cast<std::size_t>(array_ptr_->ndim())) {
@@ -1080,31 +1078,38 @@ auto ReduceNode<BinaryOp>::reduce_(const State& state, const ssize_t index) cons
 }
 
 template <class BinaryOp>
-void ReduceNode<BinaryOp>::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
-    assert(false and "not yet implemented");
+void ReduceNode<BinaryOp>::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+    assert(std::ranges::equal(array_ptr_->shape(), array_ptr->shape()));
+
+    assert(index == 0);
+    array_ptr_ = array_ptr;
 }
 
 template <class BinaryOp>
 void ReduceNode<BinaryOp>::revert(State& state) const {
-    return data_ptr_<ReduceNodeData<BinaryOp>>(state)->revert();
+    return this->template data_ptr_<ReduceNodeData<BinaryOp>>(state)->revert();
 }
 
 template <class BinaryOp>
 std::span<const ssize_t> ReduceNode<BinaryOp>::shape(const State& state) const {
     if (ssize_t size = this->size(); size >= 0) return this->shape();  // if we're not dynamic
-    return data_ptr_<ReduceNodeData<BinaryOp>>(state)->shape();
+    return this->template data_ptr_<ReduceNodeData<BinaryOp>>(state)->shape();
 }
 
 template <class BinaryOp>
 ssize_t ReduceNode<BinaryOp>::size(const State& state) const {
     if (ssize_t size = this->size(); size >= 0) return size;  // if we're not dynamic
-    return data_ptr_<ReduceNodeData<BinaryOp>>(state)->size();
+    return this->template data_ptr_<ReduceNodeData<BinaryOp>>(state)->size();
 }
 
 template <class BinaryOp>
 ssize_t ReduceNode<BinaryOp>::size_diff(const State& state) const {
     if (ssize_t size = this->size(); size >= 0) return 0;  // if we're not dynamic
-    return data_ptr_<ReduceNodeData<BinaryOp>>(state)->size_diff();
+    return this->template data_ptr_<ReduceNodeData<BinaryOp>>(state)->size_diff();
 }
 
 template class ReduceNode<functional::max<double>>;
