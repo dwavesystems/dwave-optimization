@@ -31,7 +31,7 @@ namespace dwave::optimization {
 using DTypes = type_list<
     float,          // np.float32
     double,         // np.float64
-    bool,           // np.bool
+    bool,           // np.bool_
     std::int8_t,    // np.int8
     std::int16_t,   // np.int16
     std::int32_t,   // np.int32
@@ -42,7 +42,7 @@ using DTypes = type_list<
 template <typename T>
 concept DType = std::same_as<T, float> or         // np.float32
                 std::same_as<T, double> or        // np.float64
-                std::same_as<T, bool> or          // np.bool
+                std::same_as<T, bool> or          // np.bool_
                 std::same_as<T, std::int8_t> or   // np.int8
                 std::same_as<T, std::int16_t> or  // np.int16
                 std::same_as<T, std::int32_t> or  // np.int32
@@ -59,7 +59,7 @@ concept OptionalDType = DType<T> or std::same_as<T, void>;
 /// The `DTypeLike<T>` concept is satisfied for supported types, as well as
 /// const/volatile and references.
 template <typename T>
-concept DTypeLike = DType<std::remove_cv_t<std::remove_reference_t<T>>>;
+concept DTypeLike = DType<std::remove_cvref_t<T>>;
 
 // Dev note: We'd like to work with `DType` only, but in order to work with the
 // buffer protocol (https://docs.python.org/3/c-api/buffer.html) we need to
@@ -84,7 +84,7 @@ enum class FormatCharacter : char {
 /// Get the format character associated with a supported DType.
 template <DTypeLike T>
 constexpr FormatCharacter format_of() {
-    using U = std::remove_cv_t<std::remove_reference_t<T>>;
+    using U = std::remove_cvref_t<T>;
     if constexpr (std::same_as<U, float>) return FormatCharacter::float_;
     if constexpr (std::same_as<U, double>) return FormatCharacter::double_;
     if constexpr (std::same_as<U, bool>) return FormatCharacter::bool_;
