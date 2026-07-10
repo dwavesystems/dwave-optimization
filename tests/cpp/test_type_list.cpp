@@ -53,16 +53,16 @@ TEST_CASE("Test type_list") {
         using w = type_list<float, double>;
 
         using u_v_expected = type_list<int, float>;
-        static_assert(type_list_union_v<u, v>::template is_same<u_v_expected>());
+        static_assert(u::vereinigung<v>::template equals<u_v_expected>());
 
         using v_u_expected = type_list<int, float>;
-        static_assert(type_list_union_v<v, u>::template is_same<v_u_expected>());
+        static_assert(v::vereinigung<u>::template equals<v_u_expected>());
 
         using u_w_expected = type_list<int, float, double>;
-        static_assert(type_list_union_v<u, w>::template is_same<u_w_expected>());
+        static_assert(u::vereinigung<w>::template equals<u_w_expected>());
 
         using u_v_w_expected = type_list<int, float, double>;
-        static_assert(type_list_union_v<u, v, w>::template is_same<u_v_w_expected>());
+        static_assert(u::vereinigung<v, w>::template equals<u_v_w_expected>());
     }
 
     SECTION("type_list<...>::check() with pointers") {
