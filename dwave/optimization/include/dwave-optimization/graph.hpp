@@ -156,8 +156,12 @@ class Graph {
     /// Reset the state of the given node and all successors recursively.
     static void recursive_reset(State& state, const Node* ptr);
 
-    // todo: document
-    // - all root nodes (including constants!) are ignored
+    /// Remove redundant nodes from the graph.
+    ///
+    /// Redundant nodes are ones that are Node::equal_to() another node in the
+    /// graph.
+    ///
+    /// Returns the number of nodes removed from the graph.
     ssize_t remove_redundant_nodes(
         bool ignore_listeners = false,
         double time_limit_s = std::numeric_limits<double>::infinity()
@@ -399,8 +403,9 @@ class Node {
     // Remove a successor. *Does not* remove itself from it's successor's predecessors.
     ssize_t remove_successor_(const Node* ptr);
 
-    // todo: document
-    virtual void replace_predecessor_(ssize_t previous_index, Node* node_ptr);
+    // Replace the predecessor at `index` with the node specified by `node_ptr`.
+    // Does not update `node_ptr`.
+    virtual void replace_predecessor_(ssize_t index, Node* node_ptr);
 
  private:
     ssize_t topological_index_ = -1;  // negative is unset

@@ -16,8 +16,6 @@
 
 #include <string>
 
-#include <sys/types.h>
-
 #include "../simplex.hpp"
 #include "_state.hpp"
 #include "dwave-optimization/common.hpp"

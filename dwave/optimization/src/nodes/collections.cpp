@@ -497,8 +497,6 @@ bool DisjointBitSetNode::equal_to(const Node& rhs) const {
     return static_cast<const Node*>(this) == &rhs;
 }
 
-bool DisjointBitSetNode::equal_to(const DisjointBitSetNode& rhs) const { return this == &rhs; }
-
 bool DisjointBitSetNode::integral() const { return true; }
 
 double DisjointBitSetNode::min() const { return 0; }
@@ -853,8 +851,6 @@ std::span<const Update> DisjointListNode::diff(const State& state) const {
 bool DisjointListNode::equal_to(const Node& rhs) const {
     return static_cast<const Node*>(this) == &rhs;
 }
-
-bool DisjointListNode::equal_to(const DisjointListNode& rhs) const { return this == &rhs; }
 
 bool DisjointListNode::integral() const { return true; }
 

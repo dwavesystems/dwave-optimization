@@ -929,7 +929,37 @@ cdef class _Graph:
         return self.num_nodes()
 
     def remove_redundant_symbols(self, time_limit_s=None):
-        """TODO
+        """Remove redundant symbols from the model.
+
+        Symbols are redundant if they are the same type, they share the
+        same predecessors, and they encode the same operation.
+
+        Args:
+            time_limit_s (float): The maximum amount of time to spend trying
+                to remove redundant symbols. If not provided, the method will
+                run until there are no redundant symbols to remove.
+
+        Returns:
+            int: Number of symbols removed.
+
+        Examples:
+
+            >>> from dwave.optimization import Model
+            ...
+            >>> model = Model()
+            ...
+            >>> x = model.integer(5)
+            ...
+            >>> -(x + 1).sum()  # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.unaryop.Negative at ...>
+            >>> -(x + 1).sum()  # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.unaryop.Negative at ...>
+            >>> model.num_symbols()
+            8
+            >>> model.remove_redundant_symbols()
+            3
+            >>> model.num_symbols()
+            5
         """
         if self.is_locked():
             raise ValueError("cannot remove symbols from a locked model")

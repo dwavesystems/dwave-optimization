@@ -40,7 +40,6 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
     /// Two BinaryOpNodes are equal if they have the same operation and the
     /// same predecessors. If the BinaryOp is commutative, then permutations
     /// of predecessors are allowed.
-    // bool equal_to(const Node& rhs) const override;
     bool equal_to(const BinaryOpNode& rhs) const override;
 
     /// @copydoc Array::integral()

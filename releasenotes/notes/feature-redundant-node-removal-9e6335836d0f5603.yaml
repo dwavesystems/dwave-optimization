@@ -1,5 +1,8 @@
 ---
 features:
   - Add ``MatrixMultiplyNode::operands()`` method.
+  - Add ``Graph::remove_redundant_nodes()`` method. See `#563 <https://github.com/dwavesystems/dwave-optimization/issues/563>`_.
+  - Add ``Model.remove_redundant_symbols()`` method. See `#563 <https://github.com/dwavesystems/dwave-optimization/issues/563>`_.
+  - Add ``Node::take_successors()`` method.
 upgrade:
   - Remove ``AccumulateZipNode::initial`` attribute and replace it with ``AccumulateZipNode::initial()`` method.
