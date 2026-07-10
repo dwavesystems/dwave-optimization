@@ -20,7 +20,7 @@
 #include <memory>
 #include <span>
 
-#include "dwave-optimization/common.hpp"
+#include "dwave-optimization/common.hpp"  // for ssize_t
 #include "dwave-optimization/typing.hpp"
 
 namespace dwave::optimization {
@@ -38,11 +38,13 @@ concept shape_like = std::ranges::sized_range<T> and std::integral<std::ranges::
 /// `To` specifies the `value_type` of the iterator.
 /// `From` specifies the type of the underlying buffer. `void` means that the type
 /// is specified at run-time.
-template <DType To, OptionalDType From = To>
-requires requires {
+template <typename To, typename From = To>
+requires(
+    DType<std::remove_const_t<To>> and            // const is OK
+    OptionalDType<std::remove_const_t<From>> and  // const is OK
     // Cannot create an output iterator when From != To
-    requires std::is_const<To>::value or std::is_same<To, From>::value;
-} class BufferIterator {
+    (std::is_const<To>::value or std::same_as<To, From>)
+) class BufferIterator {
  public:
     // Iterator public types
     using difference_type = std::ptrdiff_t;
@@ -83,7 +85,7 @@ requires requires {
     /// Note that the pointer to shape/strides is not owning! The lifespan of those
     /// pointers must exceed that of the iterator.
     BufferIterator(From* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
-        requires(DType<From>) :
+        requires(DType<std::remove_const_t<From>>) :
         ptr_(ptr),
         format_(format_of<From>()),
         ndim_(ndim),
@@ -101,9 +103,10 @@ requires requires {
             }
         }
     }
-    template <DType T>
+    template <typename T>
+    requires(DType<std::remove_const_t<T>>)
     BufferIterator(T* ptr, ssize_t ndim, const ssize_t* shape, const ssize_t* strides) noexcept
-        requires(not DType<From>) :
+        requires(not DType<std::remove_const_t<From>>) :
         ptr_(ptr),
         format_(format_of<T>()),
         ndim_(ndim),
@@ -124,7 +127,8 @@ requires requires {
 
     /// Convenience constructor when using shape/strides specified as spans (or things that can
     /// be read using a span).
-    template <OptionalDType T>
+    template <typename T>
+    requires(OptionalDType<std::remove_const_t<T>>)
     BufferIterator(T* ptr, std::span<const ssize_t> shape, std::span<const ssize_t> strides) :
         BufferIterator(ptr, shape.size(), shape.data(), strides.data()) {
         assert(std::ranges::size(shape) == std::ranges::size(strides));
@@ -434,7 +438,7 @@ requires requires {
 
     /// Return the current value at the pointer as a copy.
     value_type value_(From* ptr) const noexcept {
-        if constexpr (DType<From>) {
+        if constexpr (DType<std::remove_const_t<From>>) {
             // In this case we know at compile-time what type we're converting from
             return *ptr;
         } else {

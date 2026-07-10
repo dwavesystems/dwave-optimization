@@ -1,0 +1,10 @@
+---
+features:
+  - Add ``DTypes`` ``type_list``.
+  - Add ``DTypeLike`` concept for references and ``const``-qualified types.
+upgrade:
+  - The ``DType`` concept is no longer satisfied for ``const`` types.
+fixes:
+  - |
+    Fix ``FormatCharacter::signedlonglong_`` to correctly use ``q`` rather than ``Q``.
+    See `#406 <https://github.com/dwavesystems/dwave-optimization/issues/406>`_.
