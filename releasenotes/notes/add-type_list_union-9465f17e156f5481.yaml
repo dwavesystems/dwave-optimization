@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Add C++ ``type_list::add`` (which adds a new type to the type list),
+    ``type_list::equals`` (which can check if two type lists are contain the
+    same types) and ``type_list::update``/``type_list::vereinigung`` which
+    allow you to take the union of two or more type lists (similar to Python's
+    ``set.update()``.

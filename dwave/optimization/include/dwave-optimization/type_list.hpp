@@ -42,10 +42,54 @@
 
 #include <memory>
 #include <type_traits>
+#include <typeinfo>
 #include <utility>
 #include <variant>
 
 namespace dwave::optimization {
+
+template <typename Type, typename... Types>
+struct type_list;
+
+namespace {
+/// Helper struct for taking the union of two or more ``type_list``s
+template <typename type_list_x, typename type_list_y, typename... remaining_type_lists>
+struct type_list_union;
+
+template <typename type_list_x, typename type_list_y>
+struct type_list_union<type_list_x, type_list_y> {
+ private:
+    template <typename tl, typename type_tuple, typename U>
+    struct union_;
+
+    template <typename tl, typename type_tuple, std::size_t i>
+    struct union_<tl, type_tuple, std::index_sequence<i>> {
+        using value = tl::template add<std::tuple_element_t<i, type_tuple>>;
+    };
+
+    template <typename tl, typename type_tuple, std::size_t i, std::size_t... remaining_indices>
+    struct union_<tl, type_tuple, std::index_sequence<i, remaining_indices...>> {
+        using added = tl::template add<std::tuple_element_t<i, type_tuple>>;
+        using value = std::conditional_t<
+            sizeof...(remaining_indices) == 0,
+            added,
+            typename union_<added, type_tuple, std::index_sequence<remaining_indices...>>::value>;
+    };
+
+ public:
+    using value = union_<
+        type_list_x,
+        typename type_list_y::template to<std::tuple>,
+        std::make_index_sequence<type_list_y::size()>>::value;
+};
+
+template <typename type_list_x, typename type_list_y, typename... remaining_type_lists>
+struct type_list_union {
+    using value = type_list_union<
+        typename type_list_union<type_list_x, type_list_y>::value,
+        remaining_type_lists...>::value;
+};
+}  // Anonymous namespace
 
 /// A ``type_list`` encodes a collection of types.
 template <typename Type, typename... Types>
@@ -86,6 +130,11 @@ struct type_list {
         return false;
     }
 
+    /// Add a new type to the type list iff it is not a duplicate
+    template <typename T>
+    using add =
+        std::conditional_t<contains<T>(), type_list<Type, Types...>, type_list<Type, Types..., T>>;
+
     /// Return the number of times that ``T`` appears in the ``type_list``.
     template <typename T>
     static constexpr std::size_t count() {
@@ -94,6 +143,12 @@ struct type_list {
             return count + type_list<Types...>::template count<T>();
         }
         return count;
+    }
+
+    template <typename OtherTypeList>
+    static constexpr bool equals() {
+        return issubset<OtherTypeList>() and
+               OtherTypeList::template issubset<type_list<Type, Types...>>();
     }
 
     /// Return whether every type in the ``type_list`` is present in ``OtherTypeList``.
@@ -156,6 +211,19 @@ struct type_list {
     /// ``std::tuple``.
     template <template <typename...> class U>
     using to = U<Type, Types...>;
+
+    /// Take the union of two or more ``type_list``s, producing a new
+    /// ``type_list``. We would call this ``union()`` but it is a reserved
+    /// key-word.
+    template <typename type_list_y, typename... remaining_type_lists>
+    using update =
+        type_list_union<type_list<Type, Types...>, type_list_y, remaining_type_lists...>::value;
+
+    /// An alternative to ``::update<>`` (also takes the union of the given
+    /// ``type_list``s). "Vereinigung" is the original German word for the
+    /// concept of the set union, coined by Georg Cantor.
+    template <typename type_list_y, typename... remaining_type_lists>
+    using vereinigung = update<type_list<Type, Types...>, type_list_y, remaining_type_lists...>;
 };
 
 }  // namespace dwave::optimization
