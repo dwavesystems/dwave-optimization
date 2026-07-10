@@ -314,6 +314,26 @@ ssize_t Graph::remove_redundant_nodes(bool ignore_listeners, double time_limit_s
         return num_nodes - this->num_nodes();
     };
 
+    // Given two equal nodes, transfer successors and the objective marker
+    // from `from_ptr` to `to_ptr`. This does not fix the constraints, we handle
+    // that as part of `cleanup()`.
+    auto transfer = [&](Node* from_ptr, Node* to_ptr) -> void {
+        assert(from_ptr->topological_index_ > to_ptr->topological_index_);
+
+        // Transfer the successors
+        to_ptr->take_successors(*from_ptr);
+
+        // Mark from for dropping
+        from_ptr->topological_index_ = drop;
+
+        // We also want to fix the objective if relevant
+        if (objective_ptr_ != nullptr and static_cast<Node*>(objective_ptr_) == from_ptr) {
+            objective_ptr_ = dynamic_cast<ArrayNode*>(to_ptr);
+            assert(objective_ptr_ != nullptr);
+            assert(objective_ptr_->size() == 1);
+        }
+    };
+
     // Ok, all that setup done, now let's start checking for redundancy.
 
     // Decisions are never redundant, so we skip over them
@@ -341,9 +361,7 @@ ssize_t Graph::remove_redundant_nodes(bool ignore_listeners, double time_limit_s
             // nothing to do if they are not equal
             if (not constants_[i]->equal_to(*constants_[j])) continue;
 
-            constants_[i]->take_successors(*constants_[j]);
-
-            constants_[j]->topological_index_ = drop;
+            transfer(constants_[j], constants_[i]);
         }
 
         constants_[i]->topological_index_ = seen;
@@ -377,11 +395,9 @@ ssize_t Graph::remove_redundant_nodes(bool ignore_listeners, double time_limit_s
 
                 // We want to transfer to the node with the lower topological order
                 if (successors[i]->topological_index_ < successors[j]->topological_index_) {
-                    successors[i]->take_successors(*successors[j]);
-                    successors[j]->topological_index_ = drop;
+                    transfer(successors[j], successors[i]);
                 } else {
-                    successors[j]->take_successors(*successors[i]);
-                    successors[i]->topological_index_ = drop;
+                    transfer(successors[i], successors[j]);
                     break;  // stop comparing i to other nodes because we dropped it
                 }
             }

@@ -13,10 +13,12 @@
 //    limitations under the License.
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_all.hpp>
+#include <catch2/matchers/catch_matchers_range_equals.hpp>
 
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -243,7 +245,7 @@ TEST_CASE("Graph::commit(), Graph::descendants(), Graph::propagate(), and Graph:
 
     SECTION("Find descendants") {
         auto descendants = graph.descendants({x_ptr});
-        CHECK_THAT(descendants, Catch::Matchers::RangeEquals(std::vector<Node*>{x_ptr, z_ptr}));
+        CHECK_THAT(descendants, RangeEquals(std::vector<Node*>{x_ptr, z_ptr}));
     }
     SECTION("Propagate all") {
         CHECK(x_ptr->view(state).front() == 0);
@@ -375,10 +377,30 @@ TEST_CASE("Graph::remove_redundant_nodes()") {
                 }
             }
         }
-    }
 
-    // todo: test redundant constants
-    // todo: test objective/constraitns
+        AND_GIVEN("that the later redundant node is used in the objective") {
+            graph.set_objective(right_x_plus_y);
+
+            CHECK(graph.remove_redundant_nodes() == 1);
+
+            CHECK(graph.nodes()[2].get() == left_x_plus_y);
+            CHECK(graph.objective() == left_x_plus_y);  // objective was updated
+        }
+
+        AND_GIVEN("two more redundant logical nodes") {
+            auto* logical_left_x_plus_y = graph.emplace_node<LogicalNode>(left_x_plus_y);
+            auto* logical_right_x_plus_y = graph.emplace_node<LogicalNode>(right_x_plus_y);
+
+            WHEN("both are registered as constraints") {
+                graph.add_constraint(logical_left_x_plus_y);
+                graph.add_constraint(logical_right_x_plus_y);
+
+                CHECK(graph.remove_redundant_nodes() == 2);
+                CHECK(graph.constraints().size() == 1);
+                CHECK_THAT(graph.constraints(), RangeEquals({logical_left_x_plus_y}));
+            }
+        }
+    }
 }
 
 TEST_CASE("Graph::remove_unused_nodes()") {
