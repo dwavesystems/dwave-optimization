@@ -401,6 +401,21 @@ TEST_CASE("Graph::remove_redundant_nodes()") {
             }
         }
     }
+
+    GIVEN("A model with two redundant constants used in the same unary op") {
+        auto graph = Graph();
+
+        auto* a = graph.emplace_node<ConstantNode>(5);
+        auto* negative_a = graph.emplace_node<NegativeNode>(a);
+        auto* b = graph.emplace_node<ConstantNode>(5);
+        graph.emplace_node<NegativeNode>(b);
+
+        THEN("remove_redundant_nodes() removes the redundant path") {
+            CHECK(graph.remove_redundant_nodes() == 2);
+            CHECK_THAT(graph.constants(), RangeEquals({a}));
+            CHECK_THAT(negative_a->predecessors(), RangeEquals({a}));
+        }
+    }
 }
 
 TEST_CASE("Graph::remove_unused_nodes()") {
