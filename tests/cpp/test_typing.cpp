@@ -20,7 +20,7 @@
 
 namespace dwave::optimization {
 
-void forwarding_reference_func(DTypeLike auto&& lhs) { }
+void forwarding_reference_func(DTypeLike auto&&) { }
 
 TEST_CASE("DTypeLike") {
     int a = 1;
