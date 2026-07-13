@@ -113,17 +113,7 @@ TEMPLATE_PRODUCT_TEST_CASE(
     }
 }
 
-TEMPLATE_TEST_CASE(
-    "BufferIterator",
-    "",
-    float,         //
-    double,        //
-    bool,          //
-    std::int8_t,   //
-    std::int16_t,  //
-    std::int32_t,  //
-    std::int64_t
-) {
+TEMPLATE_LIST_TEST_CASE("BufferIterator", "", DTypes) {
     // Check that we can interpret buffers of each type as a double
     GIVEN("A buffer of the given type") {
         std::array<TestType, 10> buffer;

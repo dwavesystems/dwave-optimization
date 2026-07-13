@@ -39,6 +39,7 @@ tests_all = executable(
         'test_iterators.cpp',
         'test_simplex.cpp',
         'test_type_list.cpp',
+        'test_typing.cpp',
     ],
     dependencies: [
         catch2,
