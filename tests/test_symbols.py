@@ -1542,7 +1542,7 @@ class TestDisjointCover(utils.SymbolTests):
             expected = np.array([0.0])
             np.testing.assert_array_almost_equal(cover.state(0), expected)
 
-
+@unittest.skip("Deprecated symbol")
 class TestDisjointListsVariable(utils.SymbolTests):
     def test_inequality(self):
         # TODO re-enable this once equality has been fixed

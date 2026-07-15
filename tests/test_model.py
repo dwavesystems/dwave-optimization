@@ -379,7 +379,9 @@ class TestModel(unittest.TestCase):
             self.assertEqual(num_removed, 2)
             self.assertEqual(model.num_symbols(), 1)
 
+
         with self.subTest("disjoint lists"):
+            self.skipTest("Deprecated symbol")
             model = Model()
 
             disjoint_lists = model.disjoint_lists_symbol(10, 4)

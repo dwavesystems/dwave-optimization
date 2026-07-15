@@ -34,6 +34,7 @@ from dwave.optimization.mathematical import (
     concatenate,
     exp,
     expit,
+    is_disjoint_cover,
     logical_or,
     maximum,
     minimum,
@@ -511,10 +512,8 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     demand = model.constant(customer_demand)
     capacity = model.constant(vehicle_capacity)
 
-    # Add the decision variable
-    routes = model.disjoint_lists_symbol(
-        primary_set_size=num_customers,
-        num_disjoint_lists=number_of_vehicles)
+    routes = [model.list(num_customers, min_size=0) for _ in range(number_of_vehicles)]
+    model.add_constraint(is_disjoint_cover(num_customers, routes))
 
     # The objective is to minimize the distance traveled.
     # This is calculated by adding the distance from the depot to the 1st customer
@@ -757,9 +756,8 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
     one = model.constant(1)
 
     # Add the decision variable
-    routes = model.disjoint_lists_symbol(
-        primary_set_size=num_customers,
-        num_disjoint_lists=number_of_vehicles)
+    routes = [model.list(num_customers, min_size=0) for _ in range(number_of_vehicles)]
+    model.add_constraint(is_disjoint_cover(num_customers, routes))
 
     # Capacity constraint
     capacity_constraints = [(demand[routes[vehicle_idx]].sum() <= capacity)
