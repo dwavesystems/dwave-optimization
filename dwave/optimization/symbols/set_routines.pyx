@@ -32,7 +32,7 @@ cdef class IsDisjointCover(ArraySymbol):
 
     See Also:
 
-    .. versionadded:: 0.7.1
+    .. versionadded:: 0.7.2
     """
     def __init__(self, Py_ssize_t n, object inputs):
         if (not isinstance(inputs, collections.abc.Sequence) or

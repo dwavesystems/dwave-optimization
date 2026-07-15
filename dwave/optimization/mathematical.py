@@ -1145,7 +1145,7 @@ def is_disjoint_cover(primary_set_size: int, subsets: list[ArraySymbol]) -> IsDi
 
         :func:`.isin`
 
-    .. versionadded:: 0.7.1
+    .. versionadded:: 0.7.2
     """
     return IsDisjointCover(primary_set_size, subsets)
 
