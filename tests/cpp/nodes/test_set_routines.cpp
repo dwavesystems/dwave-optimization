@@ -37,7 +37,7 @@ TEST_CASE("IsDisjointCoverNode") {
         std::vector<ArrayNode*> sets{c1_ptr, c2_ptr};
 
         THEN("We can construct a IsDisjointCover node") {
-            auto dc_ptr = graph.emplace_node<IsDisjointCoverNode>(5, sets);
+            auto dc_ptr = graph.emplace_node<IsDisjointCoverNode>(sets, 5);
             graph.emplace_node<ArrayValidationNode>(dc_ptr);
 
             CHECK(dc_ptr->min() == 0.0);
@@ -54,7 +54,7 @@ TEST_CASE("IsDisjointCoverNode") {
             }
         }
         THEN("We can construct a IsDisjointCover node with a larger primary set size") {
-            auto dc_ptr = graph.emplace_node<IsDisjointCoverNode>(6, sets);
+            auto dc_ptr = graph.emplace_node<IsDisjointCoverNode>(sets, 6);
             graph.emplace_node<ArrayValidationNode>(dc_ptr);
 
             CHECK(dc_ptr->min() == 0.0);
@@ -71,7 +71,7 @@ TEST_CASE("IsDisjointCoverNode") {
             }
         }
         THEN("We cannot construct a IsDisjointCover node with a smaller primary set size") {
-            CHECK_THROWS(graph.emplace_node<IsDisjointCoverNode>(4, sets));
+            CHECK_THROWS(graph.emplace_node<IsDisjointCoverNode>(sets, 4));
         }
     }
 
@@ -81,7 +81,7 @@ TEST_CASE("IsDisjointCoverNode") {
         std::vector<ArrayNode*> sets{c1_ptr, c2_ptr};
 
         THEN("We can construct a IsDisjointCover node") {
-            auto dc_ptr = graph.emplace_node<IsDisjointCoverNode>(5, sets);
+            auto dc_ptr = graph.emplace_node<IsDisjointCoverNode>(sets, 5);
             graph.emplace_node<ArrayValidationNode>(dc_ptr);
 
             CHECK(dc_ptr->min() == 0.0);
@@ -105,7 +105,7 @@ TEST_CASE("IsDisjointCoverNode") {
         std::vector<ArrayNode*> sets{set1_ptr, set2_ptr};
 
         THEN("We can construct a IsDisjointCover node") {
-            auto dc_ptr = graph.emplace_node<IsDisjointCoverNode>(5, sets);
+            auto dc_ptr = graph.emplace_node<IsDisjointCoverNode>(sets, 5);
             graph.emplace_node<ArrayValidationNode>(dc_ptr);
 
             CHECK(dc_ptr->min() == 0.0);
@@ -210,7 +210,7 @@ TEST_CASE("IsDisjointCoverNode") {
         std::vector<ArrayNode*> lists{list1_ptr, list2_ptr, list3_ptr};
 
         THEN("We can construct a IsDisjointCover node") {
-            auto dc_ptr = graph.emplace_node<IsDisjointCoverNode>(5, lists);
+            auto dc_ptr = graph.emplace_node<IsDisjointCoverNode>(lists, 5);
             graph.emplace_node<ArrayValidationNode>(dc_ptr);
 
             CHECK(dc_ptr->min() == 0.0);

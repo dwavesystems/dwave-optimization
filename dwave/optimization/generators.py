@@ -514,7 +514,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     capacity = model.constant(vehicle_capacity)
 
     routes = [model.list(num_customers, min_size=0) for _ in range(number_of_vehicles)]
-    model.add_constraint(is_disjoint_cover(num_customers, routes))
+    model.add_constraint(is_disjoint_cover(routes))
 
     # The objective is to minimize the distance traveled.
     # This is calculated by adding the distance from the depot to the 1st customer
@@ -759,7 +759,7 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
 
     # Add the decision variable
     routes = [model.list(num_customers, min_size=0) for _ in range(number_of_vehicles)]
-    model.add_constraint(is_disjoint_cover(num_customers, routes))
+    model.add_constraint(is_disjoint_cover(routes))
 
     # Capacity constraint
     capacity_constraints = [(demand[routes[vehicle_idx]].sum() <= capacity)

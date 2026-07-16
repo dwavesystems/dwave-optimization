@@ -24,7 +24,7 @@ namespace dwave::optimization {
 
 class IsDisjointCoverNode : public ScalarOutputMixin<ArrayNode, false> {
  public:
-    IsDisjointCoverNode(ssize_t primary_set_size, std::span<ArrayNode*> node_ptrs);
+    IsDisjointCoverNode(std::span<ArrayNode*> node_ptrs, ssize_t primary_set_size);
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;

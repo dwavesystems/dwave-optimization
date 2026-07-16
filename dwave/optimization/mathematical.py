@@ -1112,15 +1112,16 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
         return concatenate(arrays, 1)
 
 
-def is_disjoint_cover(primary_set_size: int, subsets: list[ArraySymbol]) -> IsDisjointCover:
+def is_disjoint_cover(subsets: list[ArraySymbol], *, primary_set_size: int|None = None) -> IsDisjointCover:
     """Return whether the symbols are disjoint, set-like, and cover a set of integers.
 
     Determines whether a collection of array symbols is disjoint and the union equals a fixed set.
 
     Args:
-        primary_set_size: Number of elements in the primary set: {0, 1, ..., primary_set_size - 1}.
-            Must be non-negative.
         subsets: List of array symbols to test whether they are disjoint and cover the primary set
+        primary_set_size: Number of elements in the primary set: {0, 1, ..., primary_set_size - 1}.
+            Must be non-negative. If `None`, primary set size is inferred from the common, finite,
+            nonnegative maximum value of the arrays.
 
     Returns:
         A scalar boolean-valued array symbol indicating whether the subsets are a disjoint cover
@@ -1135,7 +1136,7 @@ def is_disjoint_cover(primary_set_size: int, subsets: list[ArraySymbol]) -> IsDi
         >>> subsets.append(model.constant([0, 1]))
         >>> subsets.append(model.constant([2, 3, 4]))
         >>> subsets.append(model.constant([]))
-        >>> is_disjoint = is_disjoint_cover(5, subsets)
+        >>> is_disjoint = is_disjoint_cover(subsets, primary_set_size=5)
         >>> with model.lock():
         ...     print(is_disjoint.state(0))
         1.0
@@ -1147,7 +1148,14 @@ def is_disjoint_cover(primary_set_size: int, subsets: list[ArraySymbol]) -> IsDi
 
     .. versionadded:: 0.7.2
     """
-    return IsDisjointCover(primary_set_size, subsets)
+    if primary_set_size is None:
+        primary_set_size = int(subsets[0].info().max) + 1
+        if not np.isfinite(primary_set_size) or primary_set_size <= 0:
+            raise ValueError("Cannot infer primary set size from subsets")
+        for subset in subsets[1:]:
+            if int(subset.info().max) != primary_set_size - 1:
+                raise ValueError("Cannot infer primary set size from subsets")
+    return IsDisjointCover(subsets, primary_set_size)
 
 
 def isin(element: ArraySymbol, test_elements: ArraySymbol) -> IsIn:

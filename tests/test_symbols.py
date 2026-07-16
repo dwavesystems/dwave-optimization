@@ -1504,7 +1504,7 @@ class TestDisjointCover(utils.SymbolTests):
             model.constant([0, 1, 2]),
             model.constant([3, 4])
         ]
-        cover = dwave.optimization.symbols.IsDisjointCover(5, sets)
+        cover = dwave.optimization.symbols.IsDisjointCover(sets, 5)
 
         with model.lock():
             yield cover
@@ -1516,7 +1516,7 @@ class TestDisjointCover(utils.SymbolTests):
             model.constant([0, 1, 2]),
             model.constant([3, 4])
         ]
-        cover = dwave.optimization.symbols.IsDisjointCover(5, sets)
+        cover = dwave.optimization.symbols.IsDisjointCover(sets, 5)
         self.assertIsInstance(cover, IsDisjointCover)
 
     def test_state(self):
@@ -1526,7 +1526,7 @@ class TestDisjointCover(utils.SymbolTests):
             model.constant([0, 1, 2]),
             model.constant([3, 4])
         ]
-        cover = dwave.optimization.symbols.IsDisjointCover(5, sets)
+        cover = dwave.optimization.symbols.IsDisjointCover(sets, 5)
         model.states.resize(1)
         with model.lock():
             expected = np.array([1.0])
@@ -1537,7 +1537,7 @@ class TestDisjointCover(utils.SymbolTests):
             model.constant([0, 1, 2]),
             model.constant([2, 3, 4])
         ]
-        cover = dwave.optimization.symbols.IsDisjointCover(5, sets)
+        cover = dwave.optimization.symbols.IsDisjointCover(sets, 5)
         with model.lock():
             expected = np.array([0.0])
             np.testing.assert_array_almost_equal(cover.state(0), expected)

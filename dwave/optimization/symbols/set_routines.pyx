@@ -34,7 +34,7 @@ cdef class IsDisjointCover(ArraySymbol):
 
     .. versionadded:: 0.7.2
     """
-    def __init__(self, Py_ssize_t n, object inputs):
+    def __init__(self, object inputs, Py_ssize_t n):
         if (not isinstance(inputs, collections.abc.Sequence) or
                 not all(isinstance(arr, ArraySymbol) for arr in inputs)):
             raise TypeError("disjoint_cover takes a sequence of array symbols")
@@ -51,7 +51,7 @@ cdef class IsDisjointCover(ArraySymbol):
             cppinputs.push_back((<ArraySymbol?>symbol).array_ptr)
 
         self.primary_set_size = n
-        cdef IsDisjointCoverNode* ptr = model._graph.emplace_node[IsDisjointCoverNode](n, cppinputs)
+        cdef IsDisjointCoverNode* ptr = model._graph.emplace_node[IsDisjointCoverNode](cppinputs, n)
         self.initialize_arraynode(model, ptr)
 
     @classmethod
@@ -68,7 +68,7 @@ cdef class IsDisjointCover(ArraySymbol):
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         with zf.open(directory + "args.json", "r") as f:
             args = json.load(f)
-        return cls(args["primary_set_size"], list(predecessors))
+        return cls(list(predecessors), args["primary_set_size"])
 
     def _into_zipfile(self, zf, directory):
         super()._into_zipfile(zf, directory)

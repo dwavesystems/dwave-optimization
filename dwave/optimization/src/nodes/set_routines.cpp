@@ -112,8 +112,8 @@ struct IsDisjointCoverNodeData : public NodeStateData {
 };
 
 IsDisjointCoverNode::IsDisjointCoverNode(
-    ssize_t primary_set_size,
-    std::span<ArrayNode*> node_ptrs
+    std::span<ArrayNode*> node_ptrs,
+    ssize_t primary_set_size
 ) :
     ScalarOutputMixin<ArrayNode, false>(), primary_set_size_(primary_set_size) {
     for (const auto& node : node_ptrs) {
