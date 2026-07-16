@@ -269,16 +269,17 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
             locations_y=[2, 0],
             depot_x_y=[0, 0])
 
-        self.assertEqual(model.num_decisions(), 1)
-        self.assertEqual(model.num_constraints(), num_vehicles)
+        self.assertEqual(model.num_decisions(), 2)
+        self.assertEqual(model.num_constraints(), num_vehicles+1)
         self.assertEqual(model.num_nodes(), 34)
         self.assertEqual(model.num_edges(), 46)
         self.assertEqual(model.is_locked(), True)
 
         model.states.resize(1)
-        route = next(model.iter_decisions())
-        self.assertEqual(route.num_disjoint_lists(), 2)
-        route.set_state(0, [[0], [1]])
+        routes = list(model.iter_decisions())
+        self.assertEqual(len(routes), 2)
+        routes[0].set_state(0, [0])
+        routes[1].set_state(0, [1])
         self.assertEqual(model.objective.state(0), 10)
 
         # Depot at (0, 1.5) from demand[0] == 0
@@ -290,9 +291,10 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
             locations_y=[1.5, 1.5])
 
         model.states.resize(1)
-        route = next(model.iter_decisions())
-        self.assertEqual(route.num_disjoint_lists(), 2)
-        route.set_state(0, [[0], []])
+        routes = list(model.iter_decisions())
+        self.assertEqual(len(routes), 2)
+        routes[0].set_state(0, [0])
+        routes[1].set_state(0, [])
         self.assertEqual(model.objective.state(0), 6)
 
         # Depot at (3, 2) from depot_x_y
@@ -305,9 +307,10 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
             depot_x_y=[3, 2])
 
         model.states.resize(1)
-        route = next(model.iter_decisions())
-        self.assertEqual(route.num_disjoint_lists(), 2)
-        route.set_state(0, [[0], [1]])
+        routes = list(model.iter_decisions())
+        self.assertEqual(len(routes), 2)
+        routes[0].set_state(0, [0])
+        routes[1].set_state(0, [1])
         self.assertEqual(model.objective.state(0), 10)
 
         # Test asymmetric distances
@@ -318,9 +321,10 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
             distances=[[0, 1, 3], [2, 0, np.sqrt(17)], [4, np.sqrt(13), 0]])
 
         model.states.resize(1)
-        route = next(model.iter_decisions())
-        self.assertEqual(route.num_disjoint_lists(), 2)
-        route.set_state(0, [[0], [1]])
+        routes = list(model.iter_decisions())
+        self.assertEqual(len(routes), 2)
+        routes[0].set_state(0, [0])
+        routes[1].set_state(0, [1])
         self.assertEqual(model.objective.state(0), 10)
 
     def test_cvrplib_P_n19_k2(self):
@@ -333,9 +337,9 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
             vehicle_capacity=160)
 
         model.states.resize(1)
-        route = next(model.iter_decisions())
-        route.set_state(0, [[i - 1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]],
-                            [i - 1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]]])
+        routes = list(model.iter_decisions())
+        routes[0].set_state(0, [i - 1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]])
+        routes[1].set_state(0, [i - 1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]])
         self.assertGreater(model.objective.state(0), 212)
         self.assertLess(model.objective.state(0), 213)
 
@@ -366,10 +370,10 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
 
         model.states.resize(1)
 
-        routes, = model.iter_decisions()
+        routes = list(model.iter_decisions())
 
-        routes.set_state(0, [[i - 1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]],
-                             [i - 1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]]])
+        routes[0].set_state(0, [i - 1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]])
+        routes[1].set_state(0, [i - 1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]])
 
         # just smoke test
         with model.states.to_file() as f:
@@ -526,14 +530,15 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
             service_time=[0, 0, 0])
 
         min_expected_number_of_constraints = num_vehicles * 2 + n_time_windows + n_customers
-        self.assertEqual(model.num_decisions(), 1)
+        self.assertEqual(model.num_decisions(), 2)
         self.assertGreaterEqual(model.num_constraints(),min_expected_number_of_constraints)
         self.assertEqual(model.is_locked(), True)
 
         model.states.resize(1)
-        route = next(model.iter_decisions())
-        self.assertEqual(route.num_disjoint_lists(), 2)
-        route.set_state(0, [[0], [1]])
+        routes = list(model.iter_decisions())
+        self.assertEqual(len(routes), 2)
+        routes[0].set_state(0, [0])
+        routes[1].set_state(0, [1])
         self.assertEqual(model.objective.state(0), 15)
 
         # Test asymmetric distances
@@ -548,9 +553,10 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
         )
 
         model.states.resize(1)
-        route = next(model.iter_decisions())
-        self.assertEqual(route.num_disjoint_lists(), 2)
-        route.set_state(0, [[0], [1]])
+        routes = list(model.iter_decisions())
+        self.assertEqual(len(routes), 2)
+        routes[0].set_state(0, [0])
+        routes[1].set_state(0, [1])
         self.assertEqual(model.objective.state(0), 10)
 
     def test_serialization(self):
@@ -600,10 +606,10 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
         model.states.resize(1)
 
-        routes, = model.iter_decisions()
+        routes = list(model.iter_decisions())
 
-        routes.set_state(0, [[i-1 for i in [1, 2]],
-                             [i-1 for i in [3]]])
+        routes[0].set_state(0, [i-1 for i in [1, 2]])
+        routes[1].set_state(0, [i-1 for i in [3]])
 
         # just smoke test
         with model.states.to_file() as f:

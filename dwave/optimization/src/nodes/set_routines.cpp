@@ -20,6 +20,182 @@
 
 namespace dwave::optimization {
 
+// IsDisjointCoverNode *******************************************************************
+
+struct IsDisjointCoverNodeData : public NodeStateData {
+ private:
+    // simple wrapper around ssize_t with default value 1, indicating no violations
+    struct Count_ {
+        ssize_t value = 1;
+
+        Count_& operator=(const ssize_t& rhs) {
+            this->value = rhs;
+            return *this;
+        }
+
+        Count_& operator+=(const ssize_t& rhs) {
+            this->value += rhs;
+            return *this;
+        }
+
+        Count_& operator-=(const ssize_t& rhs) {
+            this->value -= rhs;
+            return *this;
+        }
+
+        bool operator==(const ssize_t& rhs) { return this->value == rhs; }
+    };
+
+ public:
+    IsDisjointCoverNodeData(std::vector<ssize_t>& count) : is_disjoint_cover(0, 0.0, 0.0) {
+        // Record whether the count is not equal to 1 in the count_violations map
+        for (ssize_t i = 0, stop = count.size(); i < stop; ++i) {
+            if (count[i] != 1) {
+                count_violations[i] = count[i];
+            }
+        }
+        is_disjoint_cover.value = static_cast<double>(count_violations.size() == 0);
+        is_disjoint_cover.old = is_disjoint_cover.value;
+    };
+
+    void propagate() {
+        // Incorporate changed elements diff into the count_violations map
+        for (const auto& element : elements_decremented) {
+            count_violations[element] -= 1;
+        }
+        for (const auto& element : elements_incremented) {
+            count_violations[element] += 1;
+        }
+        // Take out any non-violations
+        for (auto it = count_violations.begin(); it != count_violations.end();) {
+            if (it->second == 1) {
+                it = count_violations.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        is_disjoint_cover.value = static_cast<double>(count_violations.size() == 0);
+    };
+
+    void commit() {
+        elements_decremented.clear();
+        elements_incremented.clear();
+        is_disjoint_cover.old = is_disjoint_cover.value;
+    };
+
+    void revert() {
+        for (const auto& element : elements_decremented) {
+            // Reverse the decrement
+            count_violations[element] += 1;
+        }
+        for (const auto& element : elements_incremented) {
+            // Reverse the increment
+            count_violations[element] -= 1;
+        }
+        // We'll leave non-violation entries in count_violations - to be cleared in the next
+        // propagate
+        elements_decremented.clear();
+        elements_incremented.clear();
+        is_disjoint_cover.value = is_disjoint_cover.old;
+    };
+
+    // The actual logical output; is_disjoint_cover.value is whether the current state is a disjoint
+    // cover
+    Update is_disjoint_cover;
+    // count_violations[i] = the number of times that element `i` appears in the predecessors, if
+    // not equal to 1
+    std::unordered_map<ssize_t, Count_> count_violations;
+    // The "diffs" - lists of elements that were removed (respectively, inserted) in the predecessor
+    // diffs
+    std::vector<ssize_t> elements_decremented;
+    std::vector<ssize_t> elements_incremented;
+};
+
+IsDisjointCoverNode::IsDisjointCoverNode(
+    std::span<ArrayNode*> node_ptrs,
+    ssize_t primary_set_size
+) :
+    ScalarOutputMixin<ArrayNode, false>(), primary_set_size_(primary_set_size) {
+    for (const auto& node : node_ptrs) {
+        if (!node->integral()) {
+            throw std::invalid_argument("Predecessors of DisjointCoverNode must be integral");
+        }
+        if (!(node->max() < primary_set_size)) {
+            throw std::invalid_argument("Predecessor exceeds primary set size");
+        }
+        if (!(node->min() >= 0)) {
+            throw std::invalid_argument("Predecessor exceeds primary set size");
+        }
+        add_predecessor_(node);
+        operands_.push_back(node);
+    }
+}
+
+void IsDisjointCoverNode::initialize_state(State& state) const {
+    std::vector<ssize_t> count(primary_set_size_, 0);
+    for (const auto& node : operands_) {
+        for (const auto& value : node->view(state)) {
+            ssize_t element = static_cast<ssize_t>(value);
+            // Should not be possible because of checks in constructor
+            assert(element < primary_set_size_);
+            assert(element >= 0);
+            count[element] += 1;
+        }
+    }
+    emplace_data_ptr_<IsDisjointCoverNodeData>(state, count);
+}
+
+void IsDisjointCoverNode::commit(State& state) const {
+    data_ptr_<IsDisjointCoverNodeData>(state)->commit();
+}
+
+void IsDisjointCoverNode::propagate(State& state) const {
+    IsDisjointCoverNodeData* data = data_ptr_<IsDisjointCoverNodeData>(state);
+
+    bool no_update = true;
+    for (const auto& pred : operands_) {
+        for (const auto& update : pred->diff(state)) {
+            no_update = false;
+            if (!update.placed()) {  // i.e. removed or changed.
+                auto element = static_cast<ssize_t>(update.old);
+                data->elements_decremented.push_back(element);
+            }
+            if (!update.removed()) {  // i.e. placed or changed.
+                auto element = static_cast<ssize_t>(update.value);
+                data->elements_incremented.push_back(element);
+            }
+        }
+    }
+
+    // If no update, this node is unchanged
+    if (no_update) {
+        return;
+    }
+    // Else, propagate the populated diffs to rest of the state
+    data->propagate();
+}
+
+void IsDisjointCoverNode::revert(State& state) const {
+    data_ptr_<IsDisjointCoverNodeData>(state)->revert();
+}
+
+double const* IsDisjointCoverNode::buff(const State& state) const {
+    return &data_ptr_<IsDisjointCoverNodeData>(state)->is_disjoint_cover.value;
+}
+
+std::span<const Update> IsDisjointCoverNode::diff(const State& state) const {
+    auto data = data_ptr_<IsDisjointCoverNodeData>(state);
+    return std::span(
+        &data->is_disjoint_cover, data->is_disjoint_cover.old != data->is_disjoint_cover.value
+    );
+}
+
+bool IsDisjointCoverNode::integral() const { return true; }
+
+double IsDisjointCoverNode::min() const { return 0.0; }
+
+double IsDisjointCoverNode::max() const { return 1.0; }
+
 // IsInNode *******************************************************************
 struct IsInNodeSetData {
     IsInNodeSetData() = default;

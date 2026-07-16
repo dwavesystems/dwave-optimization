@@ -91,7 +91,7 @@ from dwave.optimization.symbols.reduce import (
     Prod,
     Sum,
 )
-from dwave.optimization.symbols.set_routines import IsIn
+from dwave.optimization.symbols.set_routines import IsDisjointCover, IsIn
 from dwave.optimization.symbols.softmax import SoftMax
 from dwave.optimization.symbols.sorting import ArgSort
 from dwave.optimization.symbols.statistics import Mean
@@ -142,6 +142,7 @@ __all__ = [
     "Extract",
     "Input",
     "IntegerVariable",
+    "IsDisjointCover",
     "IsIn",
     "LessEqual",
     "LinearProgram",
