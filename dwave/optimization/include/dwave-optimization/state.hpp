@@ -36,4 +36,20 @@ struct NodeStateData {
 
 using State = typename std::vector<std::unique_ptr<NodeStateData>>;
 
+/// A generic base class for node checkpoints.
+struct NodeStateCheckpoint {
+    NodeStateCheckpoint() = default;
+    NodeStateCheckpoint(const NodeStateCheckpoint&) = default;
+    NodeStateCheckpoint(NodeStateCheckpoint&&) = delete;
+    NodeStateCheckpoint& operator=(const NodeStateCheckpoint&) = default;
+    NodeStateCheckpoint& operator=(NodeStateCheckpoint&&) = delete;
+
+    virtual ~NodeStateCheckpoint() = default;
+
+    /// Whether the checkpoint is still available to be used.
+    virtual bool valid() const = 0;
+};
+
+using checkpoint_type = std::unique_ptr<NodeStateCheckpoint>;
+
 }  // namespace dwave::optimization

@@ -195,6 +195,11 @@ void Graph::propose(
     }
 }
 
+void Graph::propose(State& state) const {
+    propagate(state);
+    commit(state);
+}
+
 void Graph::recursive_initialize(State& state, const Node* ptr) {
     ssize_t index = ptr->topological_index();
 

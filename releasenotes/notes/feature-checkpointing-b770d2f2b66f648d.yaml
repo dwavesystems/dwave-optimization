@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Add a C++ ``Graph::propose(State&)`` overload that propagates and commits.
+  - |
+    Add checkpointing to ``CollectionNode``.
+    See `#510 <https://github.com/dwavesystems/dwave-optimization/issues/510>`_.
