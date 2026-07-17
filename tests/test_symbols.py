@@ -1856,10 +1856,14 @@ class TestInput(utils.SymbolTests):
 
     def test_set_state(self):
         model = Model()
-        inp = dwave.optimization.symbols.Input(model, shape=(2, 1, 2))
-        model.lock()
+        inp = model.input(shape=(2, 1, 2))
 
         model.states.resize(1)
+
+        with self.assertRaises(TypeError):
+            inp.set_state(0, [[[0, 1]], [[2, 3]]])
+
+        model.lock()
 
         inp.set_state(0, [[[0, 1]], [[2, 3]]])
 

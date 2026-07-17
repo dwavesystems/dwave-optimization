@@ -93,6 +93,11 @@ cdef class Input(ArraySymbol):
             ...     print(z.state(0))
             10.0
         """
+        if not self.model.is_locked() and self.node_ptr.topological_index() < 0:
+            raise TypeError(
+                "the state of an intermediate variable cannot be set without "
+                "locking the model first. See model.lock()."
+            )
 
         # can't use ascontiguousarray yet because it will turn scalars into 1d arrays
         np_arr = np.asarray(state, dtype=np.double)
