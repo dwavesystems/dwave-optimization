@@ -861,6 +861,20 @@ class TestBinaryVariable(utils.SymbolTests):
                 self.assertTrue(np.all(old.upper_bound() == new.upper_bound()))
                 self.assertEqual(old.sum_constraints(), new.sum_constraints())
 
+    def test_state_serialization_uninitialized(self):
+        model = Model()
+        x = model.binary(5)
+        model.lock()
+        model.states.resize(2)
+
+        x.set_state(1, [0, 1, 0, 0, 1])
+
+        with model.states.to_file() as f:
+            model.states.from_file(f)
+
+        self.assertFalse(x.has_state(0))
+        np.testing.assert_array_equal(x.state(1), [0, 1, 0, 0, 1])
+
     def test_set_state(self):
         with self.subTest("array-like"):
             model = Model()
@@ -1496,6 +1510,26 @@ class TestDisjointBitSetsVariable(utils.SymbolTests):
         np.testing.assert_array_equal(ys[1].state(), [0, 0, 1, 1, 0])
         np.testing.assert_array_equal(ys[2].state(), [0, 0, 0, 0, 1])
 
+    def test_state_serialization_uninitialized(self):
+        model = Model()
+        x, ys = model.disjoint_bit_sets(5, 3)
+        model.lock()
+        model.states.resize(2)
+
+        x.set_state(1, [[1, 1, 0, 0, 0], [0, 0, 1, 1, 0], [0, 0, 0, 0, 1]])
+
+        with model.states.to_file() as f:
+            model.states.from_file(f)
+
+        self.assertFalse(x.has_state(0))
+        self.assertFalse(ys[0].has_state(0))
+        self.assertFalse(ys[1].has_state(0))
+        self.assertFalse(ys[2].has_state(0))
+
+        np.testing.assert_array_equal(ys[0].state(1), [1, 1, 0, 0, 0])
+        np.testing.assert_array_equal(ys[1].state(1), [0, 0, 1, 1, 0])
+        np.testing.assert_array_equal(ys[2].state(1), [0, 0, 0, 0, 1])
+
 
 class TestDisjointListsVariable(utils.SymbolTests):
     def test_inequality(self):
@@ -1641,6 +1675,27 @@ class TestDisjointListsVariable(utils.SymbolTests):
         self.assertEqual(d.state_size(), 0)
         for s in d:
             self.assertEqual(s.state_size(), 10 * 8)
+
+    def test_state_serialization_uninitialized(self):
+        model = Model()
+        d = model.disjoint_lists_symbol(5, 3)
+        d0, d1, d2 = d[0], d[1], d[2]
+        model.lock()
+        model.states.resize(2)
+
+        d.set_state(1, [[0, 1], [2], [3, 4]])
+
+        with model.states.to_file() as f:
+            model.states.from_file(f)
+
+        self.assertFalse(d.has_state(0))
+        self.assertFalse(d0.has_state(0))
+        self.assertFalse(d1.has_state(0))
+        self.assertFalse(d2.has_state(0))
+
+        np.testing.assert_array_equal(d0.state(1), [0, 1])
+        np.testing.assert_array_equal(d1.state(1), [2])
+        np.testing.assert_array_equal(d2.state(1), [3, 4])
 
 
 # NOTE: Inheriting from BinaryOpTests causes runtime errors so just inheritting from SymbolTests
@@ -1801,10 +1856,14 @@ class TestInput(utils.SymbolTests):
 
     def test_set_state(self):
         model = Model()
-        inp = dwave.optimization.symbols.Input(model, shape=(2, 1, 2))
-        model.lock()
+        inp = model.input(shape=(2, 1, 2))
 
         model.states.resize(1)
+
+        with self.assertRaises(TypeError):
+            inp.set_state(0, [[[0, 1]], [[2, 3]]])
+
+        model.lock()
 
         inp.set_state(0, [[[0, 1]], [[2, 3]]])
 
@@ -1857,6 +1916,20 @@ class TestInput(utils.SymbolTests):
                     model.states.from_file(f)
 
                 np.testing.assert_array_equal(inp.state(), [[[0, 1]], [[2, 3]]])
+
+    def test_state_serialization_uninitialized(self):
+        model = Model()
+        x = model.input()
+        model.lock()
+        model.states.resize(2)
+
+        x.set_state(1, 2)
+
+        with model.states.to_file() as f:
+            model.states.from_file(f)
+
+        self.assertFalse(x.has_state(0))
+        np.testing.assert_array_equal(x.state(1), 2)
 
     def test_initializing_unset_state(self):
         # ensure proper error is raised when initializing the model state without having
@@ -2056,6 +2129,20 @@ class TestIntegerVariable(utils.SymbolTests):
                 self.assertTrue(np.all(old.lower_bound() == new.lower_bound()))
                 self.assertTrue(np.all(old.upper_bound() == new.upper_bound()))
                 self.assertEqual(old.sum_constraints(), new.sum_constraints())
+
+    def test_state_serialization_uninitialized(self):
+        model = Model()
+        x = model.integer(5)
+        model.lock()
+        model.states.resize(2)
+
+        x.set_state(1, [4, 1, 0, 0, 2])
+
+        with model.states.to_file() as f:
+            model.states.from_file(f)
+
+        self.assertFalse(x.has_state(0))
+        np.testing.assert_array_equal(x.state(1), [4, 1, 0, 0, 2])
 
     def test_set_state(self):
         with self.subTest("Simple positive integer"):
@@ -2369,6 +2456,20 @@ class TestListVariable(utils.SymbolTests):
             # wrong size
             with self.assertRaises(ValueError):
                 x.set_state(0, [0, 1, 2])
+
+    def test_state_serialization_uninitialized(self):
+        model = Model()
+        x = model.list(5)
+        model.lock()
+        model.states.resize(2)
+
+        x.set_state(1, [4, 1, 0, 2, 3])
+
+        with model.states.to_file() as f:
+            model.states.from_file(f)
+
+        self.assertFalse(x.has_state(0))
+        np.testing.assert_array_equal(x.state(1), [4, 1, 0, 2, 3])
 
 
 class TestLog(utils.SymbolTests):
@@ -4077,6 +4178,20 @@ class TestSetVariable(utils.SymbolTests):
         self.assertEqual(model.set(10).state_size(), 10 * 8)
         self.assertEqual(model.set(10, min_size=5).state_size(), 10 * 8)
         self.assertEqual(model.set(10, max_size=5).state_size(), 5 * 8)
+
+    def test_state_serialization_uninitialized(self):
+        model = Model()
+        x = model.set(5)
+        model.lock()
+        model.states.resize(2)
+
+        x.set_state(1, [4, 1])
+
+        with model.states.to_file() as f:
+            model.states.from_file(f)
+
+        self.assertFalse(x.has_state(0))
+        np.testing.assert_array_equal(x.state(1), [4, 1])
 
 
 class TestSize(utils.SymbolTests):

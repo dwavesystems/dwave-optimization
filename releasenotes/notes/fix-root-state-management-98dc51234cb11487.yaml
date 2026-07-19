@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Ensure that serialization supports a mix of initialized and uninitialized decision states.
+    Specifically, ``DisjointLists`` and ``DisjointBitSets`` would raise an error
+    when deserializing a model with not all states initialized.
+    See `#585 <https://github.com/dwavesystems/dwave-optimization/issues/585>`_.
+  - |
+    Prevent using ``Input.set_state()`` when the model is not locked.
+    Previously it would raise a segmentation fault.
+    See `#584 <https://github.com/dwavesystems/dwave-optimization/issues/584>`_.
