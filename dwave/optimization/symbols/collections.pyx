@@ -291,8 +291,8 @@ cdef class DisjointBitSets(Symbol):
         # If we haven't saved any states then the state must be uninitialized
         # and we can go ahead and return
         try:
-            info = zf.getinfo(directory + "set0")
-        except KeyError as err:
+            zf.getinfo(directory + "set0")
+        except KeyError:
             return
 
         arrays = []
@@ -607,8 +607,8 @@ cdef class DisjointLists(Symbol):
         # If we haven't saved any states then the state must be uninitialized
         # and we can go ahead and return
         try:
-            info = zf.getinfo(directory + "list0")
-        except KeyError as err:
+            zf.getinfo(directory + "list0")
+        except KeyError:
             return
 
         arrays = []
