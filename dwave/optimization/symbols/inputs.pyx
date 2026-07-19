@@ -95,7 +95,7 @@ cdef class Input(ArraySymbol):
         """
         if not self.model.is_locked() and self.node_ptr.topological_index() < 0:
             raise TypeError(
-                "the state of an intermediate variable cannot be set without "
+                "the state of an Input symbol cannot be set without "
                 "locking the model first. See model.lock()."
             )
 
