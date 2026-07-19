@@ -187,9 +187,9 @@ std::span<const Update> UnaryOpNode<UnaryOp>::diff(const State& state) const {
 
 template <class UnaryOp>
 bool UnaryOpNode<UnaryOp>::equal_to(const Node& rhs) const {
-    const auto* rhs_ptr = dynamic_cast<const UnaryOpNode*>(&rhs);
+    const UnaryOpNode* rhs_ptr = dynamic_cast<const UnaryOpNode*>(&rhs);
     if (rhs_ptr == nullptr) return false;  // not same type so not equal
-    return this->equal_to(*rhs_ptr);
+    return this->equal_to(*rhs_ptr);       // use the equal_to(const UnaryOpNode&) overload
 }
 
 template <class UnaryOp>

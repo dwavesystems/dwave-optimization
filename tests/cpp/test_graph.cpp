@@ -326,7 +326,7 @@ TEST_CASE("Graph::remove_redundant_nodes()") {
         auto* y_ptr = graph.emplace_node<BinaryNode>();
 
         auto* left_x_plus_y = graph.emplace_node<AddNode>(x_ptr, y_ptr);
-        auto* right_x_plus_y = graph.emplace_node<AddNode>(x_ptr, y_ptr);
+        auto* right_x_plus_y = graph.emplace_node<AddNode>(y_ptr, x_ptr);
 
         CHECK(graph.num_nodes() == 4);
 

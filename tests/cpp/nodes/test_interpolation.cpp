@@ -130,6 +130,7 @@ TEST_CASE("BSpline") {
         std::vector<double> t1 = {1, 1, 2, 3, 4, 5, 6};
         std::vector<double> c0 = {-1, 2, 0, -1};
         std::vector<double> c1 = {1, 2, 0, -1};
+        // we cannot vary `k` independently so no isolated test for that
 
         Node* a_ptr = graph.emplace_node<BSplineNode>(x0_ptr, k, t0, c0);
         Node* b_ptr = graph.emplace_node<BSplineNode>(x0_ptr, k, t0, c0);

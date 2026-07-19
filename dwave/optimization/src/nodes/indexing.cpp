@@ -765,7 +765,7 @@ void AdvancedIndexingNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
     }
     index -= 1;
 
-    //
+    // Now go through our indexers until we find the array we're looking for
     for (array_or_slice& indexer : indices_) {
         if (std::holds_alternative<Slice>(indexer)) continue;  // carry on
 
@@ -777,6 +777,7 @@ void AdvancedIndexingNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
             return;
         }
         index -= 1;
+        assert(index >= 0);
     }
 
     assert(false and "should not be able to get here");

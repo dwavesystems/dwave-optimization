@@ -267,12 +267,12 @@ TEMPLATE_TEST_CASE(
         auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
         auto* c1_ptr = graph.emplace_node<ConstantNode>(std::vector{7, 6, 5, 4});
 
-        auto* argsort_ptr = graph.emplace_node<UnaryOpNode<TestType>>(c0_ptr);
+        auto* unaryop_ptr = graph.emplace_node<UnaryOpNode<TestType>>(c0_ptr);
 
         c1_ptr->take_successors(*c0_ptr);
 
-        CHECK_THAT(argsort_ptr->predecessors(), RangeEquals({c1_ptr}));
-        CHECK_THAT(argsort_ptr->operands(), RangeEquals({c1_ptr}));
+        CHECK_THAT(unaryop_ptr->predecessors(), RangeEquals({c1_ptr}));
+        CHECK_THAT(unaryop_ptr->operands(), RangeEquals({c1_ptr}));
     }
 
 }

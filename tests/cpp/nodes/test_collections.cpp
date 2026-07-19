@@ -221,6 +221,17 @@ TEST_CASE("DisjointListsNode") {
                 CHECK_THROWS(graph.emplace_node<DisjointListNode>(ptr));
             }
 
+            THEN("node equality works as expected") {
+                CHECK(ptr->equal_to(*ptr));
+
+                CHECK(lists[0]->equal_to(*lists[0]));
+                CHECK(not lists[0]->equal_to(*lists[1]));
+                CHECK(static_cast<Node*>(lists[0])->equal_to(*lists[0]));
+                CHECK(not static_cast<Node*>(lists[0])->equal_to(*lists[1]));
+                CHECK(lists[0]->equal_to(*static_cast<Node*>(lists[0])));
+                CHECK(not lists[0]->equal_to(*static_cast<Node*>(lists[1])));
+            }
+
             THEN("The shape of the successors are as expected") {
                 for (const DisjointListNode* ptr : lists) {
                     CHECK(ptr->dynamic());

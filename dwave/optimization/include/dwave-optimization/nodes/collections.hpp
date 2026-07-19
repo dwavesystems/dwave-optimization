@@ -138,7 +138,7 @@ class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
 
     std::span<const Update> diff(const State& state) const override;
 
-    // A DisjointBitSetNode can only ever be equal to itself.
+    /// A DisjointBitSetNode can only ever be equal to itself.
     bool equal_to(const Node& rhs) const override;
 
     /// @copydoc Array::integral()
@@ -231,7 +231,7 @@ class DisjointListNode : public ArrayOutputMixin<ArrayNode> {
 
     std::span<const Update> diff(const State& state) const override;
 
-    // A DisjointListNode can only ever be equal to itself.
+    /// A DisjointListNode can only ever be equal to itself.
     bool equal_to(const Node& rhs) const override;
 
     /// @copydoc Array::integral()

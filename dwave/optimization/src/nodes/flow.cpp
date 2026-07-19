@@ -152,7 +152,7 @@ void ExtractNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
     } else {
         assert(index == 1);
         arr_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
-        assert(condition_ptr_ != nullptr);
+        assert(arr_ptr_ != nullptr);
     }
 }
 

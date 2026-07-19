@@ -293,7 +293,7 @@ ssize_t Graph::remove_redundant_nodes(bool ignore_listeners, double time_limit_s
             if (not dropped(uptr)) continue;
 
             // Remove the node from its predecessor's successor vectors.
-            // This very leaves the node in an invalid state, very briefly
+            // This leaves the node in an invalid state, very briefly
             for (auto* pred_ptr : uptr->predecessors_) {
                 [[maybe_unused]] ssize_t num_removed = pred_ptr->remove_successor_(uptr.get());
                 assert(num_removed > 0);

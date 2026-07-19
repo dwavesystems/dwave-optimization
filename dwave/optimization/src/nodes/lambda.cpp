@@ -368,6 +368,7 @@ const InputNode* const AccumulateZipNode::accumulate_input() const {
 void AccumulateZipNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
     Node::replace_predecessor_(index, node_ptr);
 
+    assert(0 <= index);
     if (std::holds_alternative<ArrayNode*>(initial_)) {
         if (index == 0) {
             // we're replacing the initial array
@@ -376,9 +377,13 @@ void AccumulateZipNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
             return;
         }
 
+        // If initial is not the array we're looking for, decrement the index
+        // so we can search in operands
         index -= 1;
+        assert(0 <= index);
     }
 
+    assert(0 <= index and static_cast<size_t>(index) < operands_.size());
     operands_[index] = dynamic_cast<ArrayNode*>(node_ptr);
     assert(operands_[index] != nullptr);
 }

@@ -934,6 +934,9 @@ cdef class _Graph:
         Symbols are redundant if they are the same type, they share the
         same predecessors, and they encode the same operation.
 
+        If a symbol will not be removed if it has :class:`ArraySymbol` object(s)
+        referring to it.
+
         Args:
             time_limit_s (float): The maximum amount of time to spend trying
                 to remove redundant symbols. If not provided, the method will
@@ -945,11 +948,8 @@ cdef class _Graph:
         Examples:
 
             >>> from dwave.optimization import Model
-            ...
             >>> model = Model()
-            ...
             >>> x = model.integer(5)
-            ...
             >>> -(x + 1).sum()  # doctest: +ELLIPSIS
             <dwave.optimization.symbols.unaryop.Negative at ...>
             >>> -(x + 1).sum()  # doctest: +ELLIPSIS
