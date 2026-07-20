@@ -88,15 +88,36 @@ class CollectionCheckpoint_ : public NodeStateCheckpoint {
     ssize_t& drop() { return drop_; }
     ssize_t drop() const { return drop_; }
 
-    void emplace_updates(std::vector<Update> updates) {
-        if (drop_) {
-            // In C++23 we could use assign_range() which would be nicer
-            auto relevant = updates | std::views::drop(drop_);
-            updates_.emplace_back(relevant.begin(), relevant.end());
-            drop_ = 0;
-        } else {
+    // Track the updates associated with a commit
+    void commit_updates(std::vector<Update> updates) {
+        assert(0 <= drop_ and static_cast<size_t>(drop_) <= updates.size());
+
+        if (not drop_) {
             updates_.emplace_back(std::move(updates));
+            return;
         }
+
+        // Otherwise we only want to take the updates up to drop
+        // In C++23 we could use assign_range() which would be nicer
+        auto relevant = std::move(updates) | std::views::drop(drop_);
+        updates_.emplace_back(relevant.begin(), relevant.end());
+        drop_ = 0;
+    }
+
+    // Track the updates associated with a revert
+    void revert_updates(std::vector<Update> updates) {
+        assert(0 <= drop_ and static_cast<size_t>(drop_) <= updates.size());
+
+        if (not drop_) return;  // nothing to do
+
+        // We want to track the updates that would revert the changes from the
+        // current state.
+        // In C++23 we could use assign_range() which would be nicer
+        auto relevant = std::move(updates) | std::views::take(drop_) | std::views::reverse |
+                        std::views::transform([](const Update& up) { return up.inverse(); });
+        updates_.emplace_back(relevant.begin(), relevant.end());
+
+        drop_ = 0;
     }
 
     ssize_t size() { return size_; }
@@ -104,6 +125,8 @@ class CollectionCheckpoint_ : public NodeStateCheckpoint {
     bool valid() const override { return true; }
 
  private:
+    friend CollectionStateData_;
+
     std::vector<std::vector<Update>> updates_;
     ssize_t drop_;
 
@@ -128,6 +151,15 @@ class CollectionStateData_ : public NodeStateData {
     CollectionStateData_(std::vector<double> elements, ssize_t size) :
         elements_(std::move(elements)), size_(size), previous_size_(size_) {
         assert(0 <= size_ and static_cast<size_t>(size_) <= elements_.size());
+    }
+
+    ~CollectionStateData_() {
+        // make sure if we're destructed before the checkpoint that we clean
+        // up the dangling pointer
+        if (older_checkpoint_ptr_ != nullptr) {
+            older_checkpoint_ptr_->newer_checkpoint_ptr_ =
+                static_cast<CollectionStateData_*>(nullptr);
+        }
     }
 
     void assign(std::vector<double>&& values, ssize_t size) {
@@ -198,7 +230,7 @@ class CollectionStateData_ : public NodeStateData {
         updates_.clear();
 
         if (older_checkpoint_ptr_ != nullptr) {
-            older_checkpoint_ptr_->emplace_updates(std::move(all_updates_));
+            older_checkpoint_ptr_->commit_updates(std::move(all_updates_));
             assert(all_updates_.empty());
         } else {
             all_updates_.clear();
@@ -208,7 +240,9 @@ class CollectionStateData_ : public NodeStateData {
     }
 
     std::unique_ptr<NodeStateData> copy() const override {
-        return std::make_unique<CollectionStateData_>(*this);
+        auto uptr = std::make_unique<CollectionStateData_>(*this);
+        uptr->older_checkpoint_ptr_ = nullptr;  // doesn't get to keep the checkpoints
+        return uptr;
     }
 
     std::span<const Update> diff() const { return updates_; }
@@ -240,16 +274,22 @@ class CollectionStateData_ : public NodeStateData {
     }
 
     void revert() {
+        updates_.clear();
+
         // Un-apply any changes by working backwards through all updates.
         // If we end up enforcing updates being sorted and unique later then
         // we could do this any order (or better in parallel).
-
         for (const Update& update : all_updates_ | std::views::reverse) {
             elements_[update.index] = update.old;
         }
 
-        updates_.clear();
-        all_updates_.clear();
+        if (older_checkpoint_ptr_ != nullptr) {
+            older_checkpoint_ptr_->revert_updates(std::move(all_updates_));
+            assert(all_updates_.empty());
+        } else {
+            all_updates_.clear();
+        }
+
         size_ = previous_size_;
     }
 
@@ -318,7 +358,7 @@ CollectionCheckpoint_::CollectionCheckpoint_(CollectionStateData_* state_ptr) :
         older_checkpoint_ptr_->newer_checkpoint_ptr_ = this;
 
         if (not state_ptr->all_updates_.empty()) {
-            older_checkpoint_ptr_->emplace_updates(state_ptr->all_updates_);  // copy!
+            older_checkpoint_ptr_->commit_updates(state_ptr->all_updates_);  // copy!
         }
         assert(older_checkpoint_ptr_->drop() == 0);
     }
@@ -330,14 +370,19 @@ CollectionCheckpoint_::~CollectionCheckpoint_() {
     if (older_checkpoint_ptr_ == nullptr) {
         // We're the oldest checkpoint, so delete ourselves from the newer one
         // and let any information we're holding die with us
-        std::visit([](auto* ptr) { ptr->older_checkpoint_ptr_ = nullptr; }, newer_checkpoint_ptr_);
+        std::visit(
+            [](auto* ptr) {
+                if (ptr != nullptr) ptr->older_checkpoint_ptr_ = nullptr;
+            },
+            newer_checkpoint_ptr_
+        );
     } else {
         // We're an intermediate checkpoint, so we need to pass any information we're
         // holding to the next oldest checkpoint and update the pointers on either side of
         // us
         assert(older_checkpoint_ptr_->drop_ == 0);
         for (std::vector<Update>& updates : updates_) {
-            older_checkpoint_ptr_->emplace_updates(std::move(updates));
+            older_checkpoint_ptr_->commit_updates(std::move(updates));
         }
         older_checkpoint_ptr_->drop_ = drop_;
 
