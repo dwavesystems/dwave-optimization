@@ -133,8 +133,6 @@ class CollectionCheckpoint_ : public LinkedListCheckpoint {
 
     ssize_t size() { return size_; }
 
-    bool valid() const override { return true; }
-
  private:
     std::vector<std::vector<Update>> updates_;
     ssize_t drop_;

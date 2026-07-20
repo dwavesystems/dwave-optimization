@@ -45,9 +45,6 @@ struct NodeStateCheckpoint {
     NodeStateCheckpoint& operator=(NodeStateCheckpoint&&) = delete;
 
     virtual ~NodeStateCheckpoint() = default;
-
-    /// Whether the checkpoint is still available to be used.
-    virtual bool valid() const = 0;
 };
 
 using checkpoint_type = std::unique_ptr<NodeStateCheckpoint>;
