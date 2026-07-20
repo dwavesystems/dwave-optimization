@@ -30,7 +30,7 @@ environment: &global-environment
 jobs:
   python-linux:
     docker:
-      - image: cimg/python:3.13  # just need a version that can install cibuildwheel
+      - image: cimg/python:3.13  # need a version that can install cibuildwheel and that has docker
 
     environment:
       <<: *global-environment
@@ -57,7 +57,7 @@ jobs:
 
   python-linux-debug:
     docker:
-      - image: cimg/python:3.10
+      - image: python:3.10
 
     steps:
       - checkout
@@ -127,7 +127,7 @@ jobs:
 
   python-sdist:
     docker:
-      - image: cimg/python:3.10
+      - image: python:3.10
 
     steps:
       - checkout
@@ -239,7 +239,7 @@ jobs:
 
   serialization:
     docker:
-      - image: cimg/python:3.13
+      - image: python:3.13
 
     steps:
       - checkout
@@ -282,7 +282,7 @@ jobs:
 
   docs:
     docker:
-      - image: cimg/python:3.13  # As of April 2026, the dwave-ocean-sdk uses 3.13
+      - image: python:3.13  # As of April 2026, the dwave-ocean-sdk uses 3.13
 
     steps:
       - checkout
@@ -337,7 +337,7 @@ jobs:
 
   deploy:
     docker:
-      - image: cimg/python:3.10
+      - image: python:3.10
 
     steps:
       - attach_workspace:
