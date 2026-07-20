@@ -17,9 +17,7 @@
 #include <array>
 #include <cassert>
 #include <functional>
-#include <optional>
 #include <span>
-#include <utility>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/functional.hpp"
@@ -81,6 +79,20 @@ class BinaryOpNode : public ArrayOutputMixin<ArrayNode> {
     const ValuesInfo values_info_;
     const SizeInfo sizeinfo_;
 };
+
+extern template class BinaryOpNode<std::plus<double>>;
+extern template class BinaryOpNode<std::logical_and<double>>;
+extern template class BinaryOpNode<std::divides<double>>;
+extern template class BinaryOpNode<std::equal_to<double>>;
+extern template class BinaryOpNode<std::less_equal<double>>;
+extern template class BinaryOpNode<functional::max<double>>;
+extern template class BinaryOpNode<functional::min<double>>;
+extern template class BinaryOpNode<functional::modulus<double>>;
+extern template class BinaryOpNode<std::multiplies<double>>;
+extern template class BinaryOpNode<std::logical_or<double>>;
+extern template class BinaryOpNode<functional::safe_divides<double>>;
+extern template class BinaryOpNode<std::minus<double>>;
+extern template class BinaryOpNode<functional::logical_xor<double>>;
 
 // We follow NumPy naming convention rather than C++ to distinguish between
 // binary operations and reduce operations.

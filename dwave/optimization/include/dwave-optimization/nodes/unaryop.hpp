@@ -16,9 +16,7 @@
 
 #include <cassert>
 #include <functional>
-#include <optional>
 #include <span>
-#include <utility>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/functional.hpp"
@@ -76,6 +74,20 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     const ValuesInfo values_info_;
     const SizeInfo sizeinfo_;
 };
+
+extern template class UnaryOpNode<functional::abs<double>>;
+extern template class UnaryOpNode<functional::cos<double>>;
+extern template class UnaryOpNode<functional::expit<double>>;
+extern template class UnaryOpNode<functional::exp<double>>;
+extern template class UnaryOpNode<functional::log<double>>;
+extern template class UnaryOpNode<functional::logical<double>>;
+extern template class UnaryOpNode<std::negate<double>>;
+extern template class UnaryOpNode<std::logical_not<double>>;
+extern template class UnaryOpNode<functional::rint<double>>;
+extern template class UnaryOpNode<functional::sin<double>>;
+extern template class UnaryOpNode<functional::square<double>>;
+extern template class UnaryOpNode<functional::square_root<double>>;
+extern template class UnaryOpNode<functional::tanh<double>>;
 
 using AbsoluteNode = UnaryOpNode<functional::abs<double>>;
 using CosNode = UnaryOpNode<functional::cos<double>>;

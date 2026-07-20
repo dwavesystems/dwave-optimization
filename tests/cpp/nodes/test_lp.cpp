@@ -17,7 +17,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "dwave-optimization/nodes.hpp"
+#include "dwave-optimization/nodes/constants.hpp"
+#include "dwave-optimization/nodes/lp.hpp"
+#include "dwave-optimization/nodes/numbers.hpp"
+#include "dwave-optimization/nodes/testing.hpp"
 
 using namespace Catch::Matchers;
 

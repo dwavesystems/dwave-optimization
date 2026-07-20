@@ -15,7 +15,6 @@
 #include <array>
 #include <cstdint>
 #include <numeric>
-#include <random>
 #include <vector>
 
 #include <catch2/benchmark/catch_benchmark_all.hpp>
@@ -23,11 +22,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/generators/catch_generators_random.hpp>
-#include <catch2/matchers/catch_matchers_all.hpp>
+#include <catch2/matchers/catch_matchers_range_equals.hpp>
 
 #include "dwave-optimization/iterators.hpp"
 
-using Catch::Generators::RandomIntegerGenerator;
 using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {

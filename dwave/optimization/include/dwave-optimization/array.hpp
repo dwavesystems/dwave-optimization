@@ -17,9 +17,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <cstdint>
 #include <functional>
-#include <iostream>
+#include <iosfwd>
 #include <limits>
 #include <memory>
 #include <numeric>
@@ -34,7 +33,6 @@
 #include "dwave-optimization/fraction.hpp"
 #include "dwave-optimization/iterators.hpp"
 #include "dwave-optimization/state.hpp"
-#include "dwave-optimization/typing.hpp"
 
 namespace dwave::optimization {
 

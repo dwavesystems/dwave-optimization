@@ -15,6 +15,7 @@
 #include "dwave-optimization/array.hpp"
 
 #include <array>
+#include <iostream>
 #include <ranges>
 
 namespace dwave::optimization {

@@ -14,11 +14,7 @@
 
 #pragma once
 
-#include <algorithm>
-#include <memory>
-#include <ranges>
 #include <span>
-#include <utility>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"

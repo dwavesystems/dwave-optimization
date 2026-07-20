@@ -17,9 +17,7 @@
 #include <cassert>
 #include <concepts>
 #include <functional>
-#include <optional>
 #include <span>
-#include <utility>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
@@ -77,6 +75,11 @@ class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
     // Note that this is not const as it may change as we add nodes
     ValuesInfo values_info_ = ValuesInfo(0, 0, true);
 };
+
+extern template class NaryOpNode<std::plus<double>>;
+extern template class NaryOpNode<functional::max<double>>;
+extern template class NaryOpNode<functional::min<double>>;
+extern template class NaryOpNode<std::multiplies<double>>;
 
 using NaryAddNode = NaryOpNode<std::plus<double>>;
 using NaryMaximumNode = NaryOpNode<functional::max<double>>;
