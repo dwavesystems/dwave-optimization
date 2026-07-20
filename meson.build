@@ -95,6 +95,7 @@ if host_machine.system() == 'windows'
             sources: dwave_optimization_src,
             include_directories: dwave_optimization_include,
             dependencies: dwave_optimization_dependencies,
+            cpp_pch: 'dwave/optimization/pch/pch.hpp',
         ),
         include_directories: dwave_optimization_include
     )
@@ -108,6 +109,7 @@ else
             install: true,
             install_dir: py.get_install_dir(pure: false) / 'dwave/optimization/',
             dependencies: dwave_optimization_dependencies,
+            cpp_pch: 'dwave/optimization/pch/pch.hpp',
         ),
         include_directories: dwave_optimization_include
     )

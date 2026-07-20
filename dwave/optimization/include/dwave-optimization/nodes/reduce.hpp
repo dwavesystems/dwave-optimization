@@ -128,6 +128,13 @@ class ReduceNode : public ArrayOutputMixin<ArrayNode> {
     ssize_t convert_predecessor_index_(ssize_t index) const;
 };
 
+extern template class ReduceNode<std::logical_and<double>>;
+extern template class ReduceNode<std::logical_or<double>>;
+extern template class ReduceNode<functional::max<double>>;
+extern template class ReduceNode<functional::min<double>>;
+extern template class ReduceNode<std::multiplies<double>>;
+extern template class ReduceNode<std::plus<double>>;
+
 using AllNode = ReduceNode<std::logical_and<double>>;
 using AnyNode = ReduceNode<std::logical_or<double>>;
 using MaxNode = ReduceNode<functional::max<double>>;

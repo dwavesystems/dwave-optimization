@@ -17,7 +17,6 @@
 #include <optional>
 #include <ranges>
 #include <span>
-#include <utility>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"

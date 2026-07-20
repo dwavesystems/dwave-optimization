@@ -14,9 +14,7 @@
 
 #pragma once
 
-#include <optional>
 #include <span>
-#include <utility>
 
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"

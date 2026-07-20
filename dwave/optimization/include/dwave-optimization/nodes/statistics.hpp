@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/state.hpp"

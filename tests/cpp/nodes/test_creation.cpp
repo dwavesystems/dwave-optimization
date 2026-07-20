@@ -13,7 +13,7 @@
 //    limitations under the License.
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_all.hpp>
+#include <catch2/matchers/catch_matchers_range_equals.hpp>
 
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/creation.hpp"

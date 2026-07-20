@@ -16,7 +16,12 @@
 #include <catch2/matchers/catch_matchers_all.hpp>
 
 #include "dwave-optimization/graph.hpp"
-#include "dwave-optimization/nodes.hpp"
+#include "dwave-optimization/nodes/binaryop.hpp"
+#include "dwave-optimization/nodes/collections.hpp"
+#include "dwave-optimization/nodes/constants.hpp"
+#include "dwave-optimization/nodes/numbers.hpp"
+#include "dwave-optimization/nodes/reduce.hpp"
+#include "dwave-optimization/nodes/unaryop.hpp"
 
 namespace dwave::optimization {
 
