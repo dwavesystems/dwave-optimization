@@ -18,7 +18,8 @@
 #include <ranges>
 #include <unordered_set>
 #include <utility>
-#include <variant>
+
+#include "_checkpoints.hpp"
 
 namespace dwave::optimization {
 
@@ -70,13 +71,23 @@ std::vector<double> augment_collection_(std::vector<double> values, const ssize_
 
 class CollectionStateData_;
 
-class CollectionCheckpoint_ : public NodeStateCheckpoint {
+class CollectionCheckpoint_ : public LinkedListCheckpoint {
  public:
     CollectionCheckpoint_() = delete;
 
-    CollectionCheckpoint_(CollectionStateData_* state_ptr);
+    CollectionCheckpoint_(CollectionStateData_& state);
 
-    ~CollectionCheckpoint_() override;
+    ~CollectionCheckpoint_() override {
+        // if we're the oldest checkpoint, just let whatever information we're
+        // holding get destructed with us
+        if (prev_ptr_ == nullptr) return;
+
+        // otherwise we need to transfer our info over
+        auto* prev_ptr = static_cast<CollectionCheckpoint_*>(prev_ptr_);
+        assert(prev_ptr->drop_ == 0);
+        for (auto& updates : updates_) prev_ptr->commit_updates(std::move(updates));
+        prev_ptr->drop_ = drop_;
+    }
 
     // detach the updates as a flattened view (in the forward order)
     auto detach_updates() {
@@ -125,18 +136,13 @@ class CollectionCheckpoint_ : public NodeStateCheckpoint {
     bool valid() const override { return true; }
 
  private:
-    friend CollectionStateData_;
-
     std::vector<std::vector<Update>> updates_;
     ssize_t drop_;
 
     ssize_t size_;
-
-    CollectionCheckpoint_* older_checkpoint_ptr_;
-    std::variant<CollectionCheckpoint_*, CollectionStateData_*> newer_checkpoint_ptr_;
 };
 
-class CollectionStateData_ : public NodeStateData {
+class CollectionStateData_ : public CheckpointableState {
  public:
     explicit CollectionStateData_(ssize_t n) : CollectionStateData_(n, n) {}
 
@@ -151,15 +157,6 @@ class CollectionStateData_ : public NodeStateData {
     CollectionStateData_(std::vector<double> elements, ssize_t size) :
         elements_(std::move(elements)), size_(size), previous_size_(size_) {
         assert(0 <= size_ and static_cast<size_t>(size_) <= elements_.size());
-    }
-
-    ~CollectionStateData_() {
-        // make sure if we're destructed before the checkpoint that we clean
-        // up the dangling pointer
-        if (older_checkpoint_ptr_ != nullptr) {
-            older_checkpoint_ptr_->newer_checkpoint_ptr_ =
-                static_cast<CollectionStateData_*>(nullptr);
-        }
     }
 
     void assign(std::vector<double>&& values, ssize_t size) {
@@ -195,7 +192,7 @@ class CollectionStateData_ : public NodeStateData {
         // Right now, you can only revert to the most recent checkpoint. It's
         // pretty straightforward to support going further back, but this is all
         // we need right now.
-        assert(older_checkpoint_ptr_ == checkpoint_ptr);
+        assert(this->checkpoint_ptr<CollectionCheckpoint_>() == checkpoint_ptr);
 
         // Ok, let's get ourselves to the same place as the checkpoint
 
@@ -223,26 +220,20 @@ class CollectionStateData_ : public NodeStateData {
     const double* buff() const { return elements_.data(); }
 
     std::unique_ptr<NodeStateCheckpoint> checkpoint() {
-        return std::make_unique<CollectionCheckpoint_>(this);
+        return std::make_unique<CollectionCheckpoint_>(*this);
     }
 
     void commit() {
         updates_.clear();
 
-        if (older_checkpoint_ptr_ != nullptr) {
-            older_checkpoint_ptr_->commit_updates(std::move(all_updates_));
+        if (auto* checkpoint_ptr = this->checkpoint_ptr<CollectionCheckpoint_>()) {
+            checkpoint_ptr->commit_updates(std::move(all_updates_));
             assert(all_updates_.empty());
         } else {
             all_updates_.clear();
         }
 
         previous_size_ = size_;
-    }
-
-    std::unique_ptr<NodeStateData> copy() const override {
-        auto uptr = std::make_unique<CollectionStateData_>(*this);
-        uptr->older_checkpoint_ptr_ = nullptr;  // doesn't get to keep the checkpoints
-        return uptr;
     }
 
     std::span<const Update> diff() const { return updates_; }
@@ -283,8 +274,8 @@ class CollectionStateData_ : public NodeStateData {
             elements_[update.index] = update.old;
         }
 
-        if (older_checkpoint_ptr_ != nullptr) {
-            older_checkpoint_ptr_->revert_updates(std::move(all_updates_));
+        if (auto* checkpoint_ptr = this->checkpoint_ptr<CollectionCheckpoint_>()) {
+            checkpoint_ptr->revert_updates(std::move(all_updates_));
             assert(all_updates_.empty());
         } else {
             all_updates_.clear();
@@ -329,6 +320,8 @@ class CollectionStateData_ : public NodeStateData {
     ssize_t size_diff() const { return size_ - previous_size_; }
 
  private:
+    friend CollectionCheckpoint_;
+
     // The elements in the collection
     std::vector<double> elements_;
 
@@ -343,54 +336,16 @@ class CollectionStateData_ : public NodeStateData {
     // commit/revert
     ssize_t size_;
     ssize_t previous_size_;
-
-    friend CollectionCheckpoint_;
-    CollectionCheckpoint_* older_checkpoint_ptr_ = nullptr;
 };
 
-CollectionCheckpoint_::CollectionCheckpoint_(CollectionStateData_* state_ptr) :
+CollectionCheckpoint_::CollectionCheckpoint_(CollectionStateData_& state) :
+    LinkedListCheckpoint(state),
     updates_(),
-    drop_(state_ptr->all_updates_.size()),  // so we ignore any updates added before we're made
-    size_(state_ptr->size()),
-    older_checkpoint_ptr_(state_ptr->older_checkpoint_ptr_),
-    newer_checkpoint_ptr_(state_ptr) {
-    if (older_checkpoint_ptr_ != nullptr) {
-        older_checkpoint_ptr_->newer_checkpoint_ptr_ = this;
-
-        if (not state_ptr->all_updates_.empty()) {
-            older_checkpoint_ptr_->commit_updates(state_ptr->all_updates_);  // copy!
-        }
-        assert(older_checkpoint_ptr_->drop() == 0);
-    }
-
-    std::get<CollectionStateData_*>(newer_checkpoint_ptr_)->older_checkpoint_ptr_ = this;
-}
-
-CollectionCheckpoint_::~CollectionCheckpoint_() {
-    if (older_checkpoint_ptr_ == nullptr) {
-        // We're the oldest checkpoint, so delete ourselves from the newer one
-        // and let any information we're holding die with us
-        std::visit(
-            [](auto* ptr) {
-                if (ptr != nullptr) ptr->older_checkpoint_ptr_ = nullptr;
-            },
-            newer_checkpoint_ptr_
-        );
-    } else {
-        // We're an intermediate checkpoint, so we need to pass any information we're
-        // holding to the next oldest checkpoint and update the pointers on either side of
-        // us
-        assert(older_checkpoint_ptr_->drop_ == 0);
-        for (std::vector<Update>& updates : updates_) {
-            older_checkpoint_ptr_->commit_updates(std::move(updates));
-        }
-        older_checkpoint_ptr_->drop_ = drop_;
-
-        older_checkpoint_ptr_->newer_checkpoint_ptr_ = newer_checkpoint_ptr_;
-        std::visit(
-            [&](auto* ptr) { ptr->older_checkpoint_ptr_ = older_checkpoint_ptr_; },
-            newer_checkpoint_ptr_
-        );
+    drop_(state.all_updates_.size()),  // so we ignore any updates added before we're made
+    size_(state.size()) {
+    if (auto* prev_checkpoint = static_cast<CollectionCheckpoint_*>(prev_ptr_)) {
+        prev_checkpoint->commit_updates(state.all_updates_);
+        assert(prev_checkpoint->drop() == 0);
     }
 }
 
