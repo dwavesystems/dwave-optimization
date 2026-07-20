@@ -44,14 +44,10 @@ class CheckpointableState : public NodeStateData {
  public:
     CheckpointableState() = default;
 
-    CheckpointableState(const CheckpointableState& other) {
-        assert(false);
-    }
+    CheckpointableState(const CheckpointableState&) {}  // the checkpoint pointer is not copied
     CheckpointableState(CheckpointableState&&) = default;
 
-    CheckpointableState& operator=(const CheckpointableState&) {
-        assert(false);
-    }
+    CheckpointableState& operator=(const CheckpointableState&) = delete;
     CheckpointableState& operator=(CheckpointableState&&) = default;
 
     ~CheckpointableState();

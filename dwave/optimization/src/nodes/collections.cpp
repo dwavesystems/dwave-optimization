@@ -236,6 +236,10 @@ class CollectionStateData_ : public CheckpointableState {
         previous_size_ = size_;
     }
 
+    std::unique_ptr<NodeStateData> copy() const override {
+        return std::make_unique<CollectionStateData_>(*this);
+    }
+
     std::span<const Update> diff() const { return updates_; }
 
     void exchange(ssize_t i, ssize_t j) {

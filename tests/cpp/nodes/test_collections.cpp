@@ -788,6 +788,12 @@ TEST_CASE("SetNode") {
                 state = graph.empty_state();
                 checkpoint0.reset();
             }
+
+            THEN("We can copy the state") {
+                auto cp = state[0]->copy();
+                // this is a smoke test because there is no public way to check
+                // that the checkpoint didn't get copied over
+            }
         }
 
         WHEN("We mutate the state and then create a checkpoint before commiting") {
