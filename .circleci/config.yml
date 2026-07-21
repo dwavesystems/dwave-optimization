@@ -239,7 +239,7 @@ jobs:
 
   serialization:
     docker:
-      - image: python:3.13
+      - image: cimg/python:3.13
 
     steps:
       - checkout
@@ -282,7 +282,7 @@ jobs:
 
   docs:
     docker:
-      - image: python:3.13  # As of April 2026, the dwave-ocean-sdk uses 3.13
+      - image: cimg/python:3.13  # As of April 2026, the dwave-ocean-sdk uses 3.13
 
     steps:
       - checkout
@@ -337,7 +337,7 @@ jobs:
 
   deploy:
     docker:
-      - image: python:3.10
+      - image: cimg/python:3.10
 
     steps:
       - attach_workspace:
