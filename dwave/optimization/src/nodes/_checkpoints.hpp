@@ -14,33 +14,18 @@
 
 #pragma once
 
+#include <span>
 #include <variant>
+#include <vector>
 
+#include "dwave-optimization/array.hpp"
 #include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {
 
-class CheckpointableState;
+class LinkedListCheckpoint;
 
-class LinkedListCheckpoint : public NodeStateCheckpoint {
- public:
-    LinkedListCheckpoint() = delete;
-    // We're not moveable or copyable because NodeStateCheckpoint is not.
-
-    LinkedListCheckpoint(CheckpointableState& state);
-
-    ~LinkedListCheckpoint() override;
-
- protected:  // todo: private?
-    friend CheckpointableState;
-
-    LinkedListCheckpoint* prev_ptr_;
-
-    // Is usually not nullptr unless the state has been destructed
-    std::variant<LinkedListCheckpoint*, CheckpointableState*> next_ptr_;
-};
-
-class CheckpointableState : public NodeStateData {
+class CheckpointableState {
  public:
     CheckpointableState() = default;
 
@@ -64,6 +49,47 @@ class CheckpointableState : public NodeStateData {
     // The name is a bit confusing, but by making it match LinkedListCheckpoint::prev_ptr_
     // it makes the implementations of the various visit methods clearer.
     LinkedListCheckpoint* prev_ptr_ = nullptr;  // Will be nullptr if there are no checkpoints
+};
+
+class LinkedListCheckpoint : public NodeStateCheckpoint {
+ public:
+    LinkedListCheckpoint() = delete;
+    // We're not moveable or copyable because NodeStateCheckpoint is not.
+
+    LinkedListCheckpoint(CheckpointableState& state);
+
+    ~LinkedListCheckpoint() override;
+
+ protected:  // todo: private?
+    friend CheckpointableState;
+
+    LinkedListCheckpoint* prev_ptr_;
+
+    // Is usually not nullptr unless the state has been destructed
+    std::variant<LinkedListCheckpoint*, CheckpointableState*> next_ptr_;
+};
+
+class DiffCheckpoint : public LinkedListCheckpoint {
+ public:
+    DiffCheckpoint(CheckpointableState& state, std::span<const Update> diff);
+
+    ~DiffCheckpoint() override;
+
+    void commit_updates(std::vector<Update> updates);
+
+    auto detach_updates() {
+        auto updates = std::move(updates_) | std::views::join;
+        assert(updates_.empty());
+        return updates;
+    }
+
+    ssize_t& drop() { return drop_; }
+
+    void revert_updates(std::vector<Update> updates);
+
+ private:
+    std::vector<std::vector<Update>> updates_;
+    ssize_t drop_;
 };
 
 }  // namespace dwave::optimization

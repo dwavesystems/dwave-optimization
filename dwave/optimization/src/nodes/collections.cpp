@@ -71,76 +71,17 @@ std::vector<double> augment_collection_(std::vector<double> values, const ssize_
 
 class CollectionStateData_;
 
-class CollectionCheckpoint_ : public LinkedListCheckpoint {
+class CollectionCheckpoint_ : public DiffCheckpoint {
  public:
-    CollectionCheckpoint_() = delete;
-
     CollectionCheckpoint_(CollectionStateData_& state);
 
-    ~CollectionCheckpoint_() override {
-        // if we're the oldest checkpoint, just let whatever information we're
-        // holding get destructed with us
-        if (prev_ptr_ == nullptr) return;
-
-        // otherwise we need to transfer our info over
-        auto* prev_ptr = static_cast<CollectionCheckpoint_*>(prev_ptr_);
-        assert(prev_ptr->drop_ == 0);
-        for (auto& updates : updates_) prev_ptr->commit_updates(std::move(updates));
-        prev_ptr->drop_ = drop_;
-    }
-
-    // detach the updates as a flattened view (in the forward order)
-    auto detach_updates() {
-        auto updates = std::move(updates_) | std::views::join;
-        assert(updates_.empty());
-        return updates;
-    }
-
-    ssize_t& drop() { return drop_; }
-    ssize_t drop() const { return drop_; }
-
-    // Track the updates associated with a commit
-    void commit_updates(std::vector<Update> updates) {
-        assert(0 <= drop_ and static_cast<size_t>(drop_) <= updates.size());
-
-        if (not drop_) {
-            updates_.emplace_back(std::move(updates));
-            return;
-        }
-
-        // Otherwise we only want to take the updates up to drop
-        // In C++23 we could use assign_range() which would be nicer
-        auto relevant = std::move(updates) | std::views::drop(drop_);
-        updates_.emplace_back(relevant.begin(), relevant.end());
-        drop_ = 0;
-    }
-
-    // Track the updates associated with a revert
-    void revert_updates(std::vector<Update> updates) {
-        assert(0 <= drop_ and static_cast<size_t>(drop_) <= updates.size());
-
-        if (not drop_) return;  // nothing to do
-
-        // We want to track the updates that would revert the changes from the
-        // current state.
-        // In C++23 we could use assign_range() which would be nicer
-        auto relevant = std::move(updates) | std::views::take(drop_) | std::views::reverse |
-                        std::views::transform([](const Update& up) { return up.inverse(); });
-        updates_.emplace_back(relevant.begin(), relevant.end());
-
-        drop_ = 0;
-    }
-
-    ssize_t size() { return size_; }
+    ssize_t size() const { return size_; }
 
  private:
-    std::vector<std::vector<Update>> updates_;
-    ssize_t drop_;
-
     ssize_t size_;
 };
 
-class CollectionStateData_ : public CheckpointableState {
+class CollectionStateData_ : public NodeStateData, public CheckpointableState {
  public:
     explicit CollectionStateData_(ssize_t n) : CollectionStateData_(n, n) {}
 
@@ -341,15 +282,7 @@ class CollectionStateData_ : public CheckpointableState {
 };
 
 CollectionCheckpoint_::CollectionCheckpoint_(CollectionStateData_& state) :
-    LinkedListCheckpoint(state),
-    updates_(),
-    drop_(state.all_updates_.size()),  // so we ignore any updates added before we're made
-    size_(state.size()) {
-    if (auto* prev_checkpoint = static_cast<CollectionCheckpoint_*>(prev_ptr_)) {
-        prev_checkpoint->commit_updates(state.all_updates_);
-        assert(prev_checkpoint->drop() == 0);
-    }
-}
+    DiffCheckpoint(state, state.all_updates_), size_(state.size()) {}
 
 CollectionNode::CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size) :
     ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),

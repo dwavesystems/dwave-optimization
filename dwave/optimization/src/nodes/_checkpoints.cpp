@@ -16,6 +16,11 @@
 
 namespace dwave::optimization {
 
+CheckpointableState::~CheckpointableState() {
+    if (prev_ptr_ == nullptr) return;  // nothing to clean up
+    prev_ptr_->next_ptr_ = static_cast<CheckpointableState*>(nullptr);
+}
+
 // Place self between the state and any checkpoint it's currently holding
 LinkedListCheckpoint::LinkedListCheckpoint(CheckpointableState& state) :
     prev_ptr_(state.prev_ptr_), next_ptr_(&state) {
@@ -36,9 +41,50 @@ LinkedListCheckpoint::~LinkedListCheckpoint() {
     );
 }
 
-CheckpointableState::~CheckpointableState() {
-    if (prev_ptr_ == nullptr) return;  // nothing to clean up
-    prev_ptr_->next_ptr_ = static_cast<CheckpointableState*>(nullptr);
+DiffCheckpoint::DiffCheckpoint(CheckpointableState& state, std::span<const Update> diff) :
+    LinkedListCheckpoint(state), updates_(), drop_(diff.size()) {
+    if (auto* prev_ptr = static_cast<DiffCheckpoint*>(prev_ptr_)) {
+        prev_ptr->commit_updates(std::vector<Update>(diff.begin(), diff.end()));
+        assert(prev_ptr->drop_ == 0);
+    }
+}
+
+DiffCheckpoint::~DiffCheckpoint() {
+    // if we're the oldest checkpoint, just let whatever information we're
+    // holding get destructed with us
+    if (prev_ptr_ == nullptr) return;
+
+    // otherwise we need to transfer our info over
+    auto* prev_ptr = static_cast<DiffCheckpoint*>(prev_ptr_);
+    assert(prev_ptr->drop_ == 0);
+    for (auto& updates : updates_) prev_ptr->commit_updates(std::move(updates));
+    prev_ptr->drop_ = drop_;
+}
+
+void DiffCheckpoint::commit_updates(std::vector<Update> updates) {
+    assert(0 <= drop_ and static_cast<size_t>(drop_) <= updates.size());
+
+    if (drop_) {
+        updates.erase(updates.begin(), updates.begin() + drop_);
+        drop_ = 0;
+    }
+
+    updates_.emplace_back(std::move(updates));
+}
+
+void DiffCheckpoint::revert_updates(std::vector<Update> updates) {
+    assert(0 <= drop_ and static_cast<size_t>(drop_) <= updates.size());
+
+    if (not drop_) return;  // nothing to do
+
+    // We want to track the updates that would revert the changes from the
+    // current state.
+    // In C++23 we could use assign_range() which would be nicer
+    auto relevant = std::move(updates) | std::views::take(drop_) | std::views::reverse |
+                    std::views::transform([](const Update& up) { return up.inverse(); });
+    updates_.emplace_back(relevant.begin(), relevant.end());
+
+    drop_ = 0;
 }
 
 }  // namespace dwave::optimization
