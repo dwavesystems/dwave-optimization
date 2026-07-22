@@ -115,6 +115,25 @@ class Graph {
     std::span<InputNode* const> inputs() noexcept { return inputs_; }
     std::span<const InputNode* const> inputs() const noexcept { return inputs_; }
 
+    /// Return the decision nodes that have been "mutated", meaning that they
+    /// have pending changes that must be propagated before committing or
+    /// reverting. Equivalently, the combined descendants of the returned nodes
+    /// are guaranteed to be a superset of the nodes that require having
+    /// `propagate()` and then `commit()` or `revert()` called on them.
+    ///
+    /// Notes:
+    ///  - Using this method in conjunction with `descendants()` and
+    ///  `propagate()`/`commit()`/`revert()` may be inefficient compared to
+    ///  doing these manually in the case where you know only some descendants
+    ///  of one or more of the decision nodes are relevant, e.g. only one of the
+    ///  `DisjointListNode` successors of `DisjointListsNode` has pending
+    ///  changes and the rest of the `DisjointListNode`s (and their descendants)
+    ///  can be ignored
+    ///  - This method will return the same nodes before and after calling
+    ///  `propagate()`. Only after committing/reverting will the returned list
+    ///  be empty again.
+    std::span<const DecisionNode*> mutated(State& state) const;
+
     /// All of the nodes in the graph.
     std::span<const std::unique_ptr<Node>> nodes() const { return nodes_; }
 
@@ -139,7 +158,7 @@ class Graph {
     void propagate(State& state) const;
 
     /// Call the propagate method on each node in changed. Note this does not call propagate on
-    /// the descendents of changed.
+    /// the descendants of changed.
     void propagate(State& state, std::span<const Node*> changed) const;
     void propagate(State& state, std::vector<const Node*>&& changed) const;
 

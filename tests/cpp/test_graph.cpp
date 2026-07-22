@@ -233,7 +233,9 @@ TEST_CASE("Graph constructors, assignment operators, and swapping") {
     }
 }
 
-TEST_CASE("Graph::commit(), Graph::descendants(), Graph::propagate(), and Graph::revert") {
+TEST_CASE(
+    "Graph::commit(), Graph::descendants(), Graph::mutated(), Graph::propagate(), and Graph::revert"
+) {
     auto graph = Graph();
     auto* x_ptr = graph.emplace_node<BinaryNode>();
     auto* y_ptr = graph.emplace_node<BinaryNode>();
@@ -246,16 +248,22 @@ TEST_CASE("Graph::commit(), Graph::descendants(), Graph::propagate(), and Graph:
         CHECK_THAT(descendants, Catch::Matchers::RangeEquals(std::vector<Node*>{x_ptr, z_ptr}));
     }
     SECTION("Propagate all") {
+        CHECK_THAT(graph.mutated(state), Catch::Matchers::RangeEquals(std::vector<Node*>{}));
+
         CHECK(x_ptr->view(state).front() == 0);
         CHECK(y_ptr->view(state).front() == 0);
         CHECK(z_ptr->view(state).front() == 0);
 
         x_ptr->flip(state, 0);
+        CHECK_THAT(graph.mutated(state), Catch::Matchers::RangeEquals({x_ptr}));
+
         y_ptr->flip(state, 0);
 
         CHECK(x_ptr->diff(state).size());
         CHECK(y_ptr->diff(state).size());
         CHECK(z_ptr->diff(state).empty());  // not yet propagated to
+
+        CHECK_THAT(graph.mutated(state), Catch::Matchers::RangeEquals({x_ptr, y_ptr}));
 
         graph.propagate(state);
 
@@ -266,6 +274,8 @@ TEST_CASE("Graph::commit(), Graph::descendants(), Graph::propagate(), and Graph:
         CHECK(x_ptr->diff(state).size());
         CHECK(y_ptr->diff(state).size());
         CHECK(z_ptr->diff(state).size());  // now has pending changes
+
+        CHECK_THAT(graph.mutated(state), Catch::Matchers::RangeEquals({x_ptr, y_ptr}));
 
         SECTION("Commit all") {
             graph.commit(state);
@@ -278,6 +288,9 @@ TEST_CASE("Graph::commit(), Graph::descendants(), Graph::propagate(), and Graph:
             CHECK(x_ptr->diff(state).empty());
             CHECK(y_ptr->diff(state).empty());
             CHECK(z_ptr->diff(state).empty());
+
+            // Committing should reset the mutated nodes
+            CHECK_THAT(graph.mutated(state), Catch::Matchers::RangeEquals(std::vector<Node*>{}));
         }
 
         SECTION("Revert all") {
@@ -291,6 +304,9 @@ TEST_CASE("Graph::commit(), Graph::descendants(), Graph::propagate(), and Graph:
             CHECK(x_ptr->diff(state).empty());
             CHECK(y_ptr->diff(state).empty());
             CHECK(z_ptr->diff(state).empty());
+
+            // Reverting should reset the mutated nodes
+            CHECK_THAT(graph.mutated(state), Catch::Matchers::RangeEquals(std::vector<Node*>{}));
         }
     }
 }
