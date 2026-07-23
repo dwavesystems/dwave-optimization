@@ -15,9 +15,13 @@
 #include "dwave-optimization/nodes/flow.hpp"
 
 #include <algorithm>
+#include <array>
+#include <limits>
+#include <numeric>
 #include <optional>
 #include <ranges>
 #include <span>
+#include <utility>
 #include <vector>
 
 #include "_state.hpp"
@@ -171,6 +175,193 @@ ssize_t ExtractNode::size_diff(const State& state) const {
 }
 
 SizeInfo ExtractNode::sizeinfo() const { return this->sizeinfo_; }
+
+/// ArgWhereNode
+
+// Validate the predecessor and return the (static) output shape (num_nonzero, ndim).
+std::vector<ssize_t> argwhere_shape(const ArrayNode* array_ptr) {
+    if (!array_ptr) throw std::invalid_argument("node pointer cannot be nullptr");
+    if (array_ptr->ndim() < 1) {
+        throw std::invalid_argument(
+            "cannot take the non-zero indices of a scalar (0d) array"
+        );
+    }
+    // The number of non-zero elements is state-dependent, so axis 0 is dynamic.
+    return {Array::DYNAMIC_SIZE, array_ptr->ndim()};
+}
+
+// The output holds one row of `ndim` indices per non-zero element, so its size
+// is `ndim` times the number of non-zero elements, which ranges from 0 to the
+// size of the predecessor.
+SizeInfo argwhere_sizeinfo(const Array* self, const Array* array_ptr) {
+    const std::optional<ssize_t> arr_max = array_ptr->sizeinfo().max;
+    std::optional<ssize_t> max = std::nullopt;
+    if (arr_max.has_value()) max = arr_max.value() * array_ptr->ndim();
+    return SizeInfo(self, 0, max);
+}
+
+// The output values are indices into the predecessor. The smallest is 0. The
+// largest is one less than the size of the predecessor's largest dimension.
+std::pair<double, double> argwhere_minmax(const Array* array_ptr) {
+    const std::span<const ssize_t> shape = array_ptr->shape();
+
+    // the product of the fixed (non-axis-0) dimensions
+    const ssize_t rest = std::reduce(shape.begin() + 1, shape.end(), 1, std::multiplies<ssize_t>());
+
+    // the maximum possible length of the (possibly dynamic) axis 0
+    ssize_t axis0;
+    if (rest == 0) {
+        axis0 = 0;  // the array is empty, so there are never any indices
+    } else if (const std::optional<ssize_t> arr_max = array_ptr->sizeinfo().max;
+               arr_max.has_value()) {
+        axis0 = arr_max.value() / rest;
+    } else {
+        axis0 = std::numeric_limits<ssize_t>::max();
+    }
+
+    double max = static_cast<double>(axis0) - 1;
+    for (const ssize_t& dim : shape | std::views::drop(1)) {
+        max = std::max<double>(max, static_cast<double>(dim) - 1);
+    }
+    return {0.0, std::max<double>(0.0, max)};
+}
+
+// Append the multi-index of a single element - the C-order flat `index`
+// unravelled according to `shape` - to the flattened output buffer.
+void argwhere_emplace_multi_index(std::vector<double>& out, ssize_t index,
+                                  std::span<const ssize_t> shape) {
+    const ssize_t ndim = shape.size();
+    const ssize_t offset = out.size();
+    out.resize(offset + ndim);
+    for (ssize_t axis = ndim - 1; axis >= 0; --axis) {
+        // shape[axis] > 0 here: if any dimension were 0 the array would be
+        // empty and this function would not be called.
+        out[offset + axis] = index % shape[axis];
+        index /= shape[axis];
+    }
+}
+
+// The state holds the flattened (num_nonzero, ndim) index buffer as well as the
+// state-dependent shape.
+struct ArgWhereNodeData : ArrayNodeStateData {
+    ArgWhereNodeData(std::vector<double>&& values, ssize_t ndim) noexcept :
+            ArrayNodeStateData(std::move(values)), shape_{0, ndim} {
+        update_shape();
+    }
+
+    std::unique_ptr<NodeStateData> copy() const override {
+        return std::make_unique<ArgWhereNodeData>(*this);
+    }
+
+    // Recompute the (dynamic) number of rows from the current buffer size.
+    void update_shape() { shape_[0] = this->size() / shape_[1]; }
+
+    std::span<const ssize_t> shape() const {
+        return std::span<const ssize_t>(shape_.data(), shape_.size());
+    }
+
+    // shape_[0] is the number of non-zero indices (dynamic), shape_[1] is the
+    // (fixed) number of dimensions of the predecessor.
+    std::array<ssize_t, 2> shape_;
+};
+
+ArgWhereNode::ArgWhereNode(ArrayNode* array_ptr) :
+        ArrayOutputMixin(argwhere_shape(array_ptr)),
+        array_ptr_(array_ptr),
+        sizeinfo_(argwhere_sizeinfo(this, array_ptr)),
+        minmax_(argwhere_minmax(array_ptr)) {
+    add_predecessor_(array_ptr);
+}
+
+double const* ArgWhereNode::buff(const State& state) const {
+    return data_ptr_<ArgWhereNodeData>(state)->buff();
+}
+
+void ArgWhereNode::commit(State& state) const { data_ptr_<ArgWhereNodeData>(state)->commit(); }
+
+std::span<const Update> ArgWhereNode::diff(const State& state) const {
+    return data_ptr_<ArgWhereNodeData>(state)->diff();
+}
+
+void ArgWhereNode::initialize_state(State& state) const {
+    const std::span<const ssize_t> shape = array_ptr_->shape(state);
+    const std::ranges::view auto arr = array_ptr_->view(state);
+
+    std::vector<double> values;
+    ssize_t index = 0;
+    for (auto it = arr.begin(); it != std::default_sentinel; ++it, ++index) {
+        if (static_cast<bool>(*it)) argwhere_emplace_multi_index(values, index, shape);
+    }
+
+    emplace_data_ptr_<ArgWhereNodeData>(state, std::move(values), array_ptr_->ndim());
+}
+
+bool ArgWhereNode::integral() const { return true; }
+
+double ArgWhereNode::max() const { return minmax_.second; }
+
+double ArgWhereNode::min() const { return minmax_.first; }
+
+void ArgWhereNode::propagate(State& state) const {
+    const std::span<const Update> arr_diff = array_ptr_->diff(state);
+    if (arr_diff.empty()) return;
+
+    auto node_data = data_ptr_<ArgWhereNodeData>(state);
+
+    // Find the smallest flat index in the predecessor that changed. Every
+    // element before it keeps both its truthiness and its (fixed) multi-index,
+    // so the corresponding output rows are unchanged.
+    const ssize_t min_changed = std::ranges::min(
+        arr_diff | std::views::transform([](const Update& update) { return update.index; })
+    );
+
+    const std::span<const ssize_t> shape = array_ptr_->shape(state);
+    const std::ranges::view auto arr = array_ptr_->view(state);
+    const ssize_t ndim = array_ptr_->ndim();
+
+    // Count the non-zero elements strictly before min_changed. Each contributes
+    // one already-correct row of `ndim` values to the front of the buffer.
+    auto is_nonzero = [](double value) { return static_cast<bool>(value); };
+    const ssize_t count = std::count_if(arr.begin(), arr.begin() + min_changed, is_nonzero);
+
+    // Recompute the rows for every element from min_changed onwards.
+    std::vector<double> values;
+    ssize_t index = min_changed;
+    for (auto it = arr.begin() + min_changed; it != std::default_sentinel; ++it, ++index) {
+        if (is_nonzero(*it)) argwhere_emplace_multi_index(values, index, shape);
+    }
+
+    node_data->assign(std::move(values), count * ndim);
+    node_data->update_shape();
+}
+
+void ArgWhereNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    assert(index == 0);
+    array_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr_ != nullptr);
+}
+
+void ArgWhereNode::revert(State& state) const {
+    auto node_data = data_ptr_<ArgWhereNodeData>(state);
+    node_data->revert();
+    node_data->update_shape();
+}
+
+std::span<const ssize_t> ArgWhereNode::shape(const State& state) const {
+    return data_ptr_<ArgWhereNodeData>(state)->shape();
+}
+
+ssize_t ArgWhereNode::size(const State& state) const {
+    return data_ptr_<ArgWhereNodeData>(state)->size();
+}
+
+ssize_t ArgWhereNode::size_diff(const State& state) const {
+    return data_ptr_<ArgWhereNodeData>(state)->size_diff();
+}
+
+SizeInfo ArgWhereNode::sizeinfo() const { return sizeinfo_; }
 
 /// WhereNode
 

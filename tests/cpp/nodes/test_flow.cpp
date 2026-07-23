@@ -246,6 +246,200 @@ TEST_CASE("ExtractNode") {
     }
 }
 
+TEST_CASE("ArgWhereNode") {
+    auto graph = Graph();
+
+    GIVEN("A scalar integer") {
+        auto scalar_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+
+        THEN("We cannot construct a ArgWhereNode from it") {
+            CHECK_THROWS_AS(graph.emplace_node<ArgWhereNode>(scalar_ptr), std::invalid_argument);
+        }
+    }
+
+    GIVEN("A 1d integer array and its ArgWhereNode") {
+        auto arr_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{5}, -5, 5);
+        auto nz_ptr = graph.emplace_node<ArgWhereNode>(arr_ptr);
+
+        THEN("The ArgWhereNode has the shape/properties we expect") {
+            CHECK(nz_ptr->ndim() == 2);
+            CHECK(nz_ptr->dynamic());
+            CHECK(std::ranges::equal(nz_ptr->shape(), std::vector<ssize_t>{-1, 1}));
+            CHECK(nz_ptr->integral());
+            CHECK(nz_ptr->min() == 0);
+            CHECK(nz_ptr->max() == 4);  // largest index into an array of length 5
+        }
+
+        THEN("The ArgWhereNode has the sizeinfo we expect") {
+            auto sizeinfo = nz_ptr->sizeinfo();
+            CHECK(sizeinfo.min == 0);
+            CHECK(sizeinfo.max == 5);  // ndim (1) * size (5)
+        }
+
+        WHEN("We initialize a state with some non-zero values") {
+            auto state = graph.empty_state();
+            arr_ptr->initialize_state(state, {0, 3, 0, -2, 1});
+            graph.initialize_state(state);
+
+            THEN("The output is the transpose of the non-zero indices") {
+                CHECK(std::ranges::equal(nz_ptr->shape(state), std::vector<ssize_t>{3, 1}));
+                CHECK(nz_ptr->size(state) == 3);
+                CHECK(std::ranges::equal(nz_ptr->view(state), std::vector<double>{1, 3, 4}));
+            }
+
+            AND_WHEN("We change some values and propagate") {
+                arr_ptr->set_value(state, 0, 4);  // becomes non-zero
+                arr_ptr->set_value(state, 3, 0);  // becomes zero
+                graph.propagate(state, graph.descendants(state, {arr_ptr}));
+
+                THEN("The output is updated") {
+                    CHECK(std::ranges::equal(nz_ptr->view(state), std::vector<double>{0, 1, 4}));
+                }
+
+                AND_WHEN("We commit") {
+                    graph.commit(state, graph.descendants(state, {arr_ptr}));
+
+                    THEN("The output is retained") {
+                        CHECK(std::ranges::equal(nz_ptr->view(state), std::vector<double>{0, 1, 4}));
+                    }
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state, graph.descendants(state, {arr_ptr}));
+
+                    THEN("The output returns to its original value") {
+                        CHECK(std::ranges::equal(nz_ptr->view(state), std::vector<double>{1, 3, 4}));
+                        CHECK(std::ranges::equal(nz_ptr->shape(state), std::vector<ssize_t>{3, 1}));
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("A 2d integer array and its ArgWhereNode") {
+        auto arr_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2, 3}, -5, 5);
+        auto nz_ptr = graph.emplace_node<ArgWhereNode>(arr_ptr);
+
+        THEN("The ArgWhereNode has the shape/properties we expect") {
+            CHECK(std::ranges::equal(nz_ptr->shape(), std::vector<ssize_t>{-1, 2}));
+            CHECK(nz_ptr->min() == 0);
+            CHECK(nz_ptr->max() == 2);  // largest index is into the length-3 axis
+        }
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            // [[0, 5, 0],
+            //  [0, 0, 2]]
+            arr_ptr->initialize_state(state, {0, 5, 0, 0, 0, 2});
+            graph.initialize_state(state);
+
+            THEN("The output holds the (row, col) index of each non-zero") {
+                CHECK(std::ranges::equal(nz_ptr->shape(state), std::vector<ssize_t>{2, 2}));
+                // (0, 1) and (1, 2)
+                CHECK(std::ranges::equal(nz_ptr->view(state), std::vector<double>{0, 1, 1, 2}));
+            }
+        }
+    }
+
+    GIVEN("A 1d dynamic array and its ArgWhereNode, tracked for consistency") {
+        auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+            std::initializer_list<ssize_t>{-1}, -5, 5, true
+        );
+        auto nz_ptr = graph.emplace_node<ArgWhereNode>(dyn_ptr);
+        graph.emplace_node<ArrayValidationNode>(nz_ptr);
+
+        auto state = graph.empty_state();
+        dyn_ptr->initialize_state(state, {0, 3, 0, 2});
+        graph.initialize_state(state);
+
+        THEN("The output starts correct") {
+            CHECK(std::ranges::equal(nz_ptr->view(state), std::vector<double>{1, 3}));
+        }
+
+        WHEN("We flip a value, grow, and shrink") {
+            dyn_ptr->set(state, 0, 5);       // index 0 becomes non-zero
+            dyn_ptr->grow(state, {0, 7});    // append indices 4 (zero) and 5 (non-zero)
+            dyn_ptr->shrink(state);          // drop index 5
+            graph.propose(state, {dyn_ptr});
+
+            THEN("The output is correct") {
+                // array is now [5, 3, 0, 2, 0], non-zero at 0, 1, 3
+                CHECK(std::ranges::equal(nz_ptr->view(state), std::vector<double>{0, 1, 3}));
+            }
+        }
+
+        WHEN("We make changes but reject them") {
+            dyn_ptr->set(state, 1, 0);
+            dyn_ptr->grow(state, {9});
+            graph.propose(state, {dyn_ptr}, [](const Graph&, State&) { return false; });
+
+            THEN("The output is unchanged") {
+                CHECK(std::ranges::equal(nz_ptr->view(state), std::vector<double>{1, 3}));
+            }
+        }
+    }
+
+    GIVEN("A 2d dynamic array and its ArgWhereNode, tracked for consistency") {
+        auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+            std::initializer_list<ssize_t>{-1, 2}, -5, 5, true
+        );
+        auto nz_ptr = graph.emplace_node<ArgWhereNode>(dyn_ptr);
+        graph.emplace_node<ArrayValidationNode>(nz_ptr);
+
+        auto state = graph.empty_state();
+        // [[0, 0], [1, 0]]
+        dyn_ptr->initialize_state(state, {0, 0, 1, 0});
+        graph.initialize_state(state);
+
+        THEN("The output starts correct") {
+            CHECK(std::ranges::equal(nz_ptr->shape(state), std::vector<ssize_t>{1, 2}));
+            CHECK(std::ranges::equal(nz_ptr->view(state), std::vector<double>{1, 0}));
+        }
+
+        WHEN("We grow a row with a non-zero and propagate") {
+            dyn_ptr->grow(state, {0, 3});  // append row [0, 3]
+            graph.propose(state, {dyn_ptr});
+
+            THEN("The new (row, col) index appears") {
+                // non-zero at (1, 0) and (2, 1)
+                CHECK(std::ranges::equal(nz_ptr->view(state), std::vector<double>{1, 0, 2, 1}));
+            }
+        }
+    }
+
+    SECTION("equality") {
+        auto* a0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 5);
+        auto* a1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 5);
+
+        Node* a_ptr = graph.emplace_node<ArgWhereNode>(a0_ptr);
+        Node* b_ptr = graph.emplace_node<ArgWhereNode>(a0_ptr);
+        Node* c_ptr = graph.emplace_node<ArgWhereNode>(a1_ptr);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*a0_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto* a0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 5);
+        auto* a1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{3}, -5, 5);
+
+        auto* nz_ptr = graph.emplace_node<ArgWhereNode>(a0_ptr);
+
+        a1_ptr->take_successors(*a0_ptr);
+
+        CHECK_THAT(nz_ptr->predecessors(), RangeEquals({a1_ptr}));
+
+        auto state = graph.empty_state();
+        a0_ptr->initialize_state(state, {0, 0, 0});
+        a1_ptr->initialize_state(state, {1, 0, 2});
+        graph.initialize_state(state);
+
+        CHECK_THAT(nz_ptr->view(state), RangeEquals({0, 2}));
+    }
+}
+
 TEST_CASE("WhereNode") {
     auto graph = Graph();
 
