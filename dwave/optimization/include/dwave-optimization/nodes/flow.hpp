@@ -85,6 +85,74 @@ class ExtractNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
     const SizeInfo sizeinfo_;
 };
 
+/// Return the indices of the non-zero elements of an array.
+///
+/// Equivalent to ``np.transpose(np.nonzero(arr))`` (i.e. ``np.argwhere(arr)``).
+/// Whereas ``np.nonzero()`` returns a tuple of ``arr.ndim`` 1d index arrays, this
+/// node always outputs a single ``(num_nonzero, arr.ndim)`` array. The rows are
+/// ordered by the C-order (row-major) flattened index of the non-zero elements.
+///
+/// The predecessor array must have ``ndim >= 1``; scalar (0d) inputs are not
+/// supported.
+class ArgWhereNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
+ public:
+    explicit ArgWhereNode(ArrayNode* array_ptr);
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+    using Array::shape;
+
+    /// @copydoc Array::shape()
+    std::span<const ssize_t> shape(const State& state) const override;
+
+    using Array::size;
+
+    /// @copydoc Array::size()
+    ssize_t size(const State& state) const override;
+
+    /// @copydoc Array::size_diff()
+    ssize_t size_diff(const State& state) const override;
+
+    /// @copydoc Array::sizeinfo()
+    SizeInfo sizeinfo() const override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
+ private:
+    const Array* array_ptr_;
+
+    const SizeInfo sizeinfo_;
+
+    // The minimum and maximum index value that can appear in the output.
+    const std::pair<double, double> minmax_;
+};
+
 /// Choose elements from x or y depending on condition.
 ///
 /// `condition` must be either a scalar array or the same shape as `x` and `y`.
