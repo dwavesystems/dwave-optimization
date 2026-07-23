@@ -201,6 +201,49 @@ TEST_CASE("ExtractNode") {
             }
         }
     }
+
+    SECTION("equality") {
+        auto* c0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 5);
+        auto* x0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -10, 10);
+
+        auto* c1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 5);
+        auto* x1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -10, 10);
+
+        Node* a_ptr = graph.emplace_node<ExtractNode>(c0_ptr, x0_ptr);
+        Node* b_ptr = graph.emplace_node<ExtractNode>(c0_ptr, x0_ptr);
+        Node* c_ptr = graph.emplace_node<ExtractNode>(c1_ptr, x0_ptr);
+        Node* d_ptr = graph.emplace_node<ExtractNode>(c0_ptr, x1_ptr);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(not a_ptr->equal_to(*x0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto* c0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 5);
+        auto* x0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -10, 10);
+
+        auto* c1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 5);
+        auto* x1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -10, 10);
+
+        auto* extract_ptr = graph.emplace_node<ExtractNode>(c0_ptr, x0_ptr);
+
+        c1_ptr->take_successors(*c0_ptr);
+        x1_ptr->take_successors(*x0_ptr);
+
+        CHECK_THAT(extract_ptr->predecessors(), RangeEquals({c1_ptr, x1_ptr}));
+
+        auto state = graph.empty_state();
+        c0_ptr->initialize_state(state, {0});
+        x0_ptr->initialize_state(state, {1});
+        c1_ptr->initialize_state(state, {1});
+        x1_ptr->initialize_state(state, {5});
+        graph.initialize_state(state);
+
+        CHECK_THAT(extract_ptr->view(state), RangeEquals({5}));
+    }
 }
 
 TEST_CASE("WhereNode") {
@@ -554,6 +597,58 @@ TEST_CASE("WhereNode") {
         THEN("We cannot create a where node with them") {
             CHECK_THROWS_AS(WhereNode(condition_ptr, x_ptr, y_ptr), std::invalid_argument);
         }
+    }
+
+    SECTION("equality") {
+        auto* c0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 5);
+        auto* x0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -10, 10);
+        auto* y0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 10);
+
+        auto* c1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 5);
+        auto* x1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -10, 10);
+        auto* y1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 10);
+
+        Node* a_ptr = graph.emplace_node<WhereNode>(c0_ptr, x0_ptr, y0_ptr);
+        Node* b_ptr = graph.emplace_node<WhereNode>(c0_ptr, x0_ptr, y0_ptr);
+        Node* c_ptr = graph.emplace_node<WhereNode>(c1_ptr, x0_ptr, y0_ptr);
+        Node* d_ptr = graph.emplace_node<WhereNode>(c0_ptr, x1_ptr, y0_ptr);
+        Node* e_ptr = graph.emplace_node<WhereNode>(c0_ptr, x0_ptr, y1_ptr);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(not a_ptr->equal_to(*x0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+        CHECK(not a_ptr->equal_to(*e_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto* c0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 5);
+        auto* x0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -10, 10);
+        auto* y0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 10);
+
+        auto* c1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 5);
+        auto* x1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -10, 10);
+        auto* y1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 10);
+
+        auto* where_ptr = graph.emplace_node<WhereNode>(c0_ptr, x0_ptr, y0_ptr);
+
+        c1_ptr->take_successors(*c0_ptr);
+        x1_ptr->take_successors(*x0_ptr);
+        y1_ptr->take_successors(*y0_ptr);
+
+        CHECK_THAT(where_ptr->predecessors(), RangeEquals({c1_ptr, x1_ptr, y1_ptr}));
+
+        auto state = graph.empty_state();
+        c0_ptr->initialize_state(state, {0});
+        x0_ptr->initialize_state(state, {1});
+        y0_ptr->initialize_state(state, {2});
+        c1_ptr->initialize_state(state, {1});
+        x1_ptr->initialize_state(state, {3});
+        y1_ptr->initialize_state(state, {4});
+        graph.initialize_state(state);
+
+        CHECK_THAT(where_ptr->view(state), RangeEquals({3}));
     }
 }
 

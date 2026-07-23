@@ -13,11 +13,15 @@
 //    limitations under the License.
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_all.hpp>
 
+#include "catch2/matchers/catch_matchers_range_equals.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/interpolation.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -113,6 +117,51 @@ TEST_CASE("BSpline") {
                 }
             }
         }
+    }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* x0_ptr = graph.emplace_node<ConstantNode>(std::vector{2.5});
+        auto* x1_ptr = graph.emplace_node<ConstantNode>(std::vector{3.5});
+
+        int k = 2;
+        std::vector<double> t0 = {0, 1, 2, 3, 4, 5, 6};
+        std::vector<double> t1 = {1, 1, 2, 3, 4, 5, 6};
+        std::vector<double> c0 = {-1, 2, 0, -1};
+        std::vector<double> c1 = {1, 2, 0, -1};
+        // we cannot vary `k` independently so no isolated test for that
+
+        Node* a_ptr = graph.emplace_node<BSplineNode>(x0_ptr, k, t0, c0);
+        Node* b_ptr = graph.emplace_node<BSplineNode>(x0_ptr, k, t0, c0);
+        Node* c_ptr = graph.emplace_node<BSplineNode>(x1_ptr, k, t1, c0);
+        Node* d_ptr = graph.emplace_node<BSplineNode>(x0_ptr, k, t0, c1);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(not a_ptr->equal_to(*x0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* x0_ptr = graph.emplace_node<ConstantNode>(std::vector{2.5});
+        auto* x1_ptr = graph.emplace_node<ConstantNode>(std::vector{3.5});
+
+        int k = 2;
+        std::vector<double> t = {0, 1, 2, 3, 4, 5, 6};
+        std::vector<double> c = {-1, 2, 0, -1};
+
+        auto* bspline_ptr = graph.emplace_node<BSplineNode>(x0_ptr, k, t, c);
+
+        x1_ptr->take_successors(*x0_ptr);
+
+        CHECK_THAT(bspline_ptr->predecessors(), RangeEquals({x1_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(bspline_ptr->view(state), RangeEquals({0.125}));
     }
 }
 

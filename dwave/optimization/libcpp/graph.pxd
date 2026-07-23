@@ -64,9 +64,11 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         void recursive_initialize(State&, Node*) except+
         @staticmethod
         void recursive_reset(State&, Node*) except+
+        Py_ssize_t remove_redundant_nodes(bool) except+
+        Py_ssize_t remove_redundant_nodes(bool, double) except+
+        Py_ssize_t remove_unused_nodes(bool) except+
         void reset_topological_sort()
         void set_objective(ArrayNode*) except+
         void add_constraint(ArrayNode*) except+
         void topological_sort()
         bool topologically_sorted() const
-        Py_ssize_t remove_unused_nodes()

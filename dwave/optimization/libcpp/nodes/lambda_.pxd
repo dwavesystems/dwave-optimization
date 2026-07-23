@@ -22,4 +22,4 @@ cdef extern from "dwave-optimization/nodes/lambda.hpp" namespace "dwave::optimiz
     cdef cppclass AccumulateZipNode(ArrayNode):
         ctypedef variant["ArrayNode*", double] array_or_double
         shared_ptr[Graph] expression_ptr()
-        const array_or_double initial
+        const array_or_double& initial() const

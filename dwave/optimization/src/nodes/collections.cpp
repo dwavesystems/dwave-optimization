@@ -493,6 +493,10 @@ std::span<const Update> DisjointBitSetNode::diff(const State& state) const {
     return pred_data->diffs[set_index_];
 }
 
+bool DisjointBitSetNode::equal_to(const Node& rhs) const {
+    return static_cast<const Node*>(this) == &rhs;
+}
+
 bool DisjointBitSetNode::integral() const { return true; }
 
 double DisjointBitSetNode::min() const { return 0; }
@@ -842,6 +846,10 @@ std::span<const Update> DisjointListNode::diff(const State& state) const {
     int index = disjoint_list_node_ptr_->topological_index();
     DisjointListStateData_* data = static_cast<DisjointListStateData_*>(state[index].get());
     return data->all_list_updates[list_index_];
+}
+
+bool DisjointListNode::equal_to(const Node& rhs) const {
+    return static_cast<const Node*>(this) == &rhs;
 }
 
 bool DisjointListNode::integral() const { return true; }

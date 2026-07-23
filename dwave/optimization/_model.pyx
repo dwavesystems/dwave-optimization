@@ -928,6 +928,46 @@ cdef class _Graph:
         """
         return self.num_nodes()
 
+    def remove_redundant_symbols(self, time_limit_s=None):
+        """Remove redundant symbols from the model.
+
+        Symbols are redundant if they are the same type, they share the
+        same predecessors, and they encode the same operation.
+
+        A symbol will not be removed if it has :class:`ArraySymbol` object(s)
+        referring to it.
+
+        Args:
+            time_limit_s (float): The maximum amount of time to spend trying
+                to remove redundant symbols. If not provided, the method will
+                run until there are no redundant symbols to remove.
+
+        Returns:
+            int: Number of symbols removed.
+
+        Examples:
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> x = model.integer(5)
+            >>> -(x + 1).sum()  # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.unaryop.Negative at ...>
+            >>> -(x + 1).sum()  # doctest: +ELLIPSIS
+            <dwave.optimization.symbols.unaryop.Negative at ...>
+            >>> model.num_symbols()
+            8
+            >>> model.remove_redundant_symbols()
+            3
+            >>> model.num_symbols()
+            5
+        """
+        if self.is_locked():
+            raise ValueError("cannot remove symbols from a locked model")
+        if time_limit_s is None:
+            return self._graph.remove_redundant_nodes(False)
+        else:
+            return self._graph.remove_redundant_nodes(False, time_limit_s)
+
     def remove_unused_symbols(self):
         """Remove unused symbols from the model.
 
@@ -981,7 +1021,7 @@ cdef class _Graph:
         """
         if self.is_locked():
             raise ValueError("cannot remove symbols from a locked model")
-        return self._graph.remove_unused_nodes()
+        return self._graph.remove_unused_nodes(False)
 
     def state_size(self):
         r"""Return an estimate of the size, in bytes, of a model's state.

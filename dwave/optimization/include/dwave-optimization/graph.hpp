@@ -156,6 +156,17 @@ class Graph {
     /// Reset the state of the given node and all successors recursively.
     static void recursive_reset(State& state, const Node* ptr);
 
+    /// Remove redundant nodes from the graph.
+    ///
+    /// Redundant nodes are ones that are Node::equal_to() another node in the
+    /// graph.
+    ///
+    /// Returns the number of nodes removed from the graph.
+    ssize_t remove_redundant_nodes(
+        bool ignore_listeners = false,
+        double time_limit_s = std::numeric_limits<double>::infinity()
+    );
+
     /// Remove unused nodes from the graph.
     ///
     /// This method will reset the topological sort if there is one.
@@ -263,6 +274,12 @@ class Node {
     /// derived from its predecessors. Defaults to `true`, except for decisions.
     virtual bool deterministic_state() const { return true; }
 
+    /// Test whether two nodes are equal. Each node class defines equality for
+    /// itself but nodes *must* share the same set of
+    /// predecessors (permutations are sometimes allowed) and they *must* be the
+    /// same type. Also that they can have false negatives in some cases.
+    virtual bool equal_to(const Node& rhs) const = 0;
+
     /// Return a shared pointer to a bool value. When the node is destructed
     /// the bool will be set to True
     std::shared_ptr<const bool> expired_ptr() const { return expired_ptr_; }
@@ -305,6 +322,11 @@ class Node {
     /// Return the successors of the node.
     const std::vector<SuccessorView>& successors() const { return successors_; }
 
+    /// Take the successors from `from` and make them successors of the node.
+    /// Note that this bypasses most checks! Use with extreme caution as it
+    /// make create undefined models.
+    void take_successors(Node& from);
+
     /// The current topological index. Will be negative if unsorted.
     ssize_t topological_index() const { return topological_index_; }
 
@@ -322,6 +344,7 @@ class Node {
     friend void Graph::reset_topological_sort();
     template <class NodeType, class... Args>
     friend NodeType* Graph::emplace_node(Args&&...);
+    friend ssize_t Graph::remove_redundant_nodes(bool, double);
     friend ssize_t Graph::remove_unused_nodes(bool);
 
  protected:
@@ -380,6 +403,10 @@ class Node {
     // Remove a successor. *Does not* remove itself from it's successor's predecessors.
     ssize_t remove_successor_(const Node* ptr);
 
+    // Replace the predecessor at `index` with the node specified by `node_ptr`.
+    // Does not update `node_ptr`.
+    virtual void replace_predecessor_(ssize_t index, Node* node_ptr);
+
  private:
     ssize_t topological_index_ = -1;  // negative is unset
 
@@ -431,6 +458,10 @@ class DecisionNode : public Decision, public virtual Node {
     /// Decision nodes by definition do not have a deterministic state.
     bool deterministic_state() const final { return false; }
 
+    /// Decision can only ever be equal to themselves because they are
+    /// independent variables.
+    bool equal_to(const Node& rhs) const final { return static_cast<const Node*>(this) == &rhs; }
+
     /// Decisions don't have predecessors so no one should be calling update().
     /// Always throws a logic_error.
     [[noreturn]] void update(State& state, int index) const override;
@@ -438,6 +469,46 @@ class DecisionNode : public Decision, public virtual Node {
  protected:
     /// In general we do not allow decisions to be removed from models.
     bool removable_() const override { return false; }
+};
+
+/// Provide an implementation of equal_to() that defers to a type-specific
+/// implementation.
+template<std::derived_from<Node> Base, typename Derived = void>
+struct EqualityMixin : Base {
+    /// @copydoc Node::equal_to()
+    bool equal_to(const Node& rhs) const final {
+        // Every node is equal with itself
+        if (&rhs == static_cast<const Node*>(this)) return true;
+
+        // A node cannot be equal if they are not of the same type.
+        const auto* rhs_ptr = dynamic_cast<const Derived*>(&rhs);
+        if (rhs_ptr == nullptr) return false;
+
+        // lhs and rhs are the same type, so let's go to our type-specific
+        // method.
+        return equal_to(*rhs_ptr);
+    }
+
+    // Nodes must implement `equal_to()` for their own type.
+    virtual bool equal_to(const Derived& rhs) const = 0;
+};
+
+/// Overload for EqualityMixin that does not require a class-specific equal_to()
+/// method overload. This simply checks that they have the same type and same
+/// predecessors.
+template<std::derived_from<Node> Base>
+struct EqualityMixin<Base, void> : Base {
+    /// @copydoc Node::equal_to()
+    bool equal_to(const Node& rhs) const final {
+        // Every node is equal with itself
+        if (&rhs == static_cast<const Node*>(this)) return true;
+
+        // Nodes that are not the same type cannot be equal
+        if (typeid(*this) != typeid(rhs)) return false;
+
+        // Nodes that are of the same type must have the same predecessors
+        return std::ranges::equal(this->predecessors(), rhs.predecessors());
+    }
 };
 
 }  // namespace dwave::optimization

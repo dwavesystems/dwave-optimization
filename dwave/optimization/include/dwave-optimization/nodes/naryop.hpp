@@ -30,7 +30,7 @@
 namespace dwave::optimization {
 
 template <class BinaryOp>
-class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
+class NaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     // Need at least one node to start with to determine the shape
     explicit NaryOpNode(ArrayNode* node_ptr);
@@ -68,6 +68,9 @@ class NaryOpNode : public ArrayOutputMixin<ArrayNode> {
         assert(predecessors().size() == operands_.size());
         return operands_;
     }
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     BinaryOp op;

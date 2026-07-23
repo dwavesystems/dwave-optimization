@@ -326,6 +326,22 @@ class TestModel(unittest.TestCase):
         with self.assertRaises(TypeError):
             model.objective = "hello"
 
+    def test_remove_redundant_symbols(self):
+        model = Model()
+
+        x = model.binary()
+        y = model.binary()
+
+        first = x + y
+        second = y + x
+
+        self.assertEqual(model.remove_redundant_symbols(), 0)  # both are named symbols
+
+        del second
+        self.assertEqual(model.remove_redundant_symbols(), 1)
+
+        self.assertEqual(list(model.iter_symbols())[2].id(), first.id())
+
     def test_remove_unused_symbols(self):
         with self.subTest("all unused"):
             model = Model()
