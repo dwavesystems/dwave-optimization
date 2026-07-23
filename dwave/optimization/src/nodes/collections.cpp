@@ -14,9 +14,12 @@
 
 #include "dwave-optimization/nodes/collections.hpp"
 
+#include <memory>
 #include <ranges>
 #include <unordered_set>
 #include <utility>
+
+#include "_checkpoints.hpp"
 
 namespace dwave::optimization {
 
@@ -66,7 +69,19 @@ std::vector<double> augment_collection_(std::vector<double> values, const ssize_
     return values;
 }
 
-class CollectionStateData_ : public NodeStateData {
+class CollectionStateData_;
+
+class CollectionCheckpoint_ : public DiffCheckpoint {
+ public:
+    CollectionCheckpoint_(CollectionStateData_& state);
+
+    ssize_t size() const { return size_; }
+
+ private:
+    ssize_t size_;
+};
+
+class CollectionStateData_ : public NodeStateData, public CheckpointableState {
  public:
     explicit CollectionStateData_(ssize_t n) : CollectionStateData_(n, n) {}
 
@@ -109,11 +124,54 @@ class CollectionStateData_ : public NodeStateData {
         assert(this->size_ == size);
     }
 
+    void assign(std::unique_ptr<NodeStateCheckpoint>& checkpoint) {
+        // convert the checkpoint into something we can read
+        auto* checkpoint_ptr = static_cast<CollectionCheckpoint_*>(checkpoint.get());
+
+        // Right now, you can only revert to the most recent checkpoint. It's
+        // pretty straightforward to support going further back, but this is all
+        // we need right now.
+        assert(this->checkpoint_ptr<CollectionCheckpoint_>() == checkpoint_ptr);
+
+        // Ok, let's get ourselves to the same place as the checkpoint
+
+        // we want to minimize the size of the visible buffer, so let's shrink ourselves
+        // if we need to
+        while (size_ > checkpoint_ptr->size()) shrink();
+
+        for (const auto& [idx, old, _] : checkpoint_ptr->detach_updates() | std::views::reverse) {
+            if (elements_[idx] == old) continue;  // nothing to do
+
+            all_updates_.emplace_back(idx, elements_[idx], old);
+            if (idx < size_) updates_.emplace_back(idx, elements_[idx], old);
+
+            elements_[idx] = old;
+        }
+
+        // now that we've filled in our buffer, grow until we're the correct size
+        while (size_ < checkpoint_ptr->size()) grow();
+
+        // update the "drop" value of the checkpoint so that our next commit doesn't
+        // add all of the changes we just added
+        checkpoint_ptr->drop() = all_updates_.size();
+    }
+
     const double* buff() const { return elements_.data(); }
+
+    std::unique_ptr<NodeStateCheckpoint> checkpoint() {
+        return std::make_unique<CollectionCheckpoint_>(*this);
+    }
 
     void commit() {
         updates_.clear();
-        all_updates_.clear();
+
+        if (auto* checkpoint_ptr = this->checkpoint_ptr<CollectionCheckpoint_>()) {
+            checkpoint_ptr->commit_updates(std::move(all_updates_));
+            assert(all_updates_.empty());
+        } else {
+            all_updates_.clear();
+        }
+
         previous_size_ = size_;
     }
 
@@ -150,16 +208,22 @@ class CollectionStateData_ : public NodeStateData {
     }
 
     void revert() {
+        updates_.clear();
+
         // Un-apply any changes by working backwards through all updates.
         // If we end up enforcing updates being sorted and unique later then
         // we could do this any order (or better in parallel).
-
         for (const Update& update : all_updates_ | std::views::reverse) {
             elements_[update.index] = update.old;
         }
 
-        updates_.clear();
-        all_updates_.clear();
+        if (auto* checkpoint_ptr = this->checkpoint_ptr<CollectionCheckpoint_>()) {
+            checkpoint_ptr->revert_updates(std::move(all_updates_));
+            assert(all_updates_.empty());
+        } else {
+            all_updates_.clear();
+        }
+
         size_ = previous_size_;
     }
 
@@ -199,6 +263,8 @@ class CollectionStateData_ : public NodeStateData {
     ssize_t size_diff() const { return size_ - previous_size_; }
 
  private:
+    friend CollectionCheckpoint_;
+
     // The elements in the collection
     std::vector<double> elements_;
 
@@ -214,6 +280,9 @@ class CollectionStateData_ : public NodeStateData {
     ssize_t size_;
     ssize_t previous_size_;
 };
+
+CollectionCheckpoint_::CollectionCheckpoint_(CollectionStateData_& state) :
+    DiffCheckpoint(state, state.all_updates_), size_(state.size()) {}
 
 CollectionNode::CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size) :
     ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),
@@ -240,6 +309,24 @@ void CollectionNode::assign(State& state, std::vector<double> values) const {
     auto augemented = augment_collection_(std::move(values), max_value_);
 
     data_ptr_<CollectionStateData_>(state)->assign(std::move(augemented), size);
+}
+
+void CollectionNode::assign_from_checkpoint(
+    State& state,
+    std::unique_ptr<NodeStateCheckpoint>& checkpoint
+) const {
+    data_ptr_<CollectionStateData_>(state)->assign(checkpoint);
+}
+void CollectionNode::assign_from_checkpoint(
+    State& state,
+    std::unique_ptr<NodeStateCheckpoint>&& checkpoint
+) const {
+    assign_from_checkpoint(state, checkpoint);  // call the lvalue version
+    checkpoint.reset();
+}
+
+std::unique_ptr<NodeStateCheckpoint> CollectionNode::checkpoint(State& state) const {
+    return data_ptr_<CollectionStateData_>(state)->checkpoint();
 }
 
 void CollectionNode::commit(State& state) const {

@@ -23,6 +23,7 @@
 
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
+#include "dwave-optimization/nodes/testing.hpp"
 
 using Catch::Matchers::RangeEquals;
 
@@ -1892,6 +1893,8 @@ TEST_CASE("IntegerNode") {
     GIVEN("An Integer Node representing an 1d array of 10 elements with lower bound -10") {
         auto ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{10}, -10);
 
+        graph.emplace_node<ArrayValidationNode>(ptr);
+
         THEN("The shape is fixed") {
             CHECK(ptr->ndim() == 1);
             CHECK(ptr->size() == 10);
@@ -1983,6 +1986,46 @@ TEST_CASE("IntegerNode") {
                     THEN("We get the initial state back") {
                         CHECK(std::ranges::equal(ptr->view(state), initial_state));
                     }
+                }
+            }
+
+            AND_WHEN("We checkpoint the state and then mutate") {
+                auto checkpoint = ptr->checkpoint(state);  // [-4, -4, -2, -2, 0, 0, 2, 2, 4, 4]
+
+                ptr->exchange(state, 0, 2);   // [-2, -4, -4, -2, 0, 0, 2, 2, 4, 4]
+                ptr->set_value(state, 3, 1);  // [-2, -4, -4, 1, 0, 0, 2, 2, 4, 4]
+
+                THEN("We can commit, then assign from the checkpoint") {
+                    graph.propose(state);
+
+                    ptr->assign_from_checkpoint(state, checkpoint);
+
+                    CHECK_THAT(ptr->view(state), RangeEquals({-4, -4, -2, -2, 0, 0, 2, 2, 4, 4}));
+                }
+            }
+
+            AND_WHEN("We mutate, checkpoint the state, and then mutate again") {
+                ptr->set_value(state, 3, 1);  // [-4, -4, -2, 1, 0, 0, 2, 2, 4, 4]
+
+                auto checkpoint = ptr->checkpoint(state);
+
+                ptr->exchange(state, 0, 2);  // [-2, -4, -4, 1, 0, 0, 2, 2, 4, 4]
+
+                THEN("We can commit, then assign from the checkpoint") {
+                    graph.propose(state);
+
+                    ptr->assign_from_checkpoint(state, checkpoint);
+
+                    CHECK_THAT(ptr->view(state), RangeEquals({-4, -4, -2, 1, 0, 0, 2, 2, 4, 4}));
+                }
+
+                THEN("We can revert, then assign from the checkpoint") {
+                    graph.propagate(state);
+                    graph.revert(state);
+
+                    ptr->assign_from_checkpoint(state, checkpoint);
+
+                    CHECK_THAT(ptr->view(state), RangeEquals({-4, -4, -2, 1, 0, 0, 2, 2, 4, 4}));
                 }
             }
         }
@@ -2195,6 +2238,8 @@ TEST_CASE("IntegerNode") {
             std::initializer_list<ssize_t>{2, 2, 2}, -5, 8, sum_constraints
         );
 
+        graph.emplace_node<ArrayValidationNode>(inode_ptr);
+
         THEN("Sum constraint is correct") {
             CHECK(inode_ptr->sum_constraints().size() == 1);
             SumConstraint inode_sum_constraint = inode_ptr->sum_constraints()[0];
@@ -2209,13 +2254,109 @@ TEST_CASE("IntegerNode") {
             auto state = graph.initialize_state();
             graph.initialize_state(state);
             std::vector<double> expected_init{8, 8, 8, 8, 8, 8, -3, -5};
-            auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
 
             THEN("Sum constraint sums and state are correct") {
-                CHECK(inode_ptr->sum_constraints_lhs(state).size() == 1);
-                CHECK(inode_ptr->sum_constraints_lhs(state).data()[0].size() == 1);
-                CHECK_THAT(inode_ptr->sum_constraints_lhs(state)[0], RangeEquals({40}));
+                auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+
+                CHECK(sum_constraints_lhs.size() == 1);
+                CHECK(sum_constraints_lhs.data()[0].size() == 1);
+                CHECK_THAT(sum_constraints_lhs[0], RangeEquals({40}));
                 CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
+            }
+
+            AND_WHEN("We create a checkpoint and then mutate the state") {
+                auto checkpoint = inode_ptr->checkpoint(state);
+
+                inode_ptr->set_value(state, 7, 3);  // [ 8, 8, 8, 8, 8, 8, -3, 3 ]
+                inode_ptr->exchange(state, 1, 6);   // [ 8, -3, 8, 8, 8, 8, 8, 3 ]
+
+                THEN("After committing, We can revert to that checkpoint") {
+                    graph.propose(state);
+                    inode_ptr->assign_from_checkpoint(state, std::move(checkpoint));
+
+                    auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+
+                    CHECK(sum_constraints_lhs.size() == 1);
+                    CHECK(sum_constraints_lhs.data()[0].size() == 1);
+                    CHECK_THAT(sum_constraints_lhs[0], RangeEquals({40}));
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals(expected_init));
+                }
+            }
+
+            AND_WHEN("We mutate, create a checkpoint, and then mutate some more") {
+                inode_ptr->set_value(state, 7, 3);  // [ 8, 8, 8, 8, 8, 8, -3, 3 ]
+                auto checkpoint = inode_ptr->checkpoint(state);
+                inode_ptr->exchange(state, 1, 6);  // [ 8, -3, 8, 8, 8, 8, 8, 3 ]
+
+                THEN("After committing, we can assign from that checkpoint") {
+                    graph.propose(state);
+                    inode_ptr->assign_from_checkpoint(state, std::move(checkpoint));
+
+                    auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+                    CHECK(sum_constraints_lhs.size() == 1);
+                    CHECK(sum_constraints_lhs.data()[0].size() == 1);
+                    CHECK_THAT(sum_constraints_lhs[0], RangeEquals({48}));
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals({8, 8, 8, 8, 8, 8, -3, 3}));
+                }
+
+                THEN("After reverting, we can assign from that checkpoint") {
+                    graph.propagate(state);
+                    graph.revert(state);
+                    inode_ptr->assign_from_checkpoint(state, std::move(checkpoint));
+
+                    auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+                    CHECK(sum_constraints_lhs.size() == 1);
+                    CHECK(sum_constraints_lhs.data()[0].size() == 1);
+                    CHECK_THAT(sum_constraints_lhs[0], RangeEquals({48}));
+                    CHECK_THAT(inode_ptr->view(state), RangeEquals({8, 8, 8, 8, 8, 8, -3, 3}));
+                }
+
+                AND_WHEN("We create a new checkpoint") {
+                    auto checkpoint1 = inode_ptr->checkpoint(state);
+
+                    THEN("We can commit, and restore the checkpoints") {
+                        inode_ptr->exchange(state, 1, 2);  // [ 8, 8, -3, 8, 8, 8, 8, 3 ]
+                        graph.propose(state);
+
+                        inode_ptr->assign_from_checkpoint(state, std::move(checkpoint1));
+
+                        auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+                        CHECK(sum_constraints_lhs.size() == 1);
+                        CHECK(sum_constraints_lhs.data()[0].size() == 1);
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({48}));
+                        CHECK_THAT(inode_ptr->view(state), RangeEquals({8, -3, 8, 8, 8, 8, 8, 3}));
+
+                        inode_ptr->assign_from_checkpoint(state, std::move(checkpoint));
+
+                        sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+                        CHECK(sum_constraints_lhs.size() == 1);
+                        CHECK(sum_constraints_lhs.data()[0].size() == 1);
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({48}));
+                        CHECK_THAT(inode_ptr->view(state), RangeEquals({8, 8, 8, 8, 8, 8, -3, 3}));
+                    }
+
+                    THEN("We can revert, and restore the checkpoints") {
+                        inode_ptr->exchange(state, 1, 2);  // [ 8, 8, -3, 8, 8, 8, 8, 3 ]
+                        graph.propagate(state);
+                        graph.revert(state);
+
+                        inode_ptr->assign_from_checkpoint(state, std::move(checkpoint1));
+
+                        auto sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+                        CHECK(sum_constraints_lhs.size() == 1);
+                        CHECK(sum_constraints_lhs.data()[0].size() == 1);
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({48}));
+                        CHECK_THAT(inode_ptr->view(state), RangeEquals({8, -3, 8, 8, 8, 8, 8, 3}));
+
+                        inode_ptr->assign_from_checkpoint(state, std::move(checkpoint));
+
+                        sum_constraints_lhs = inode_ptr->sum_constraints_lhs(state);
+                        CHECK(sum_constraints_lhs.size() == 1);
+                        CHECK(sum_constraints_lhs.data()[0].size() == 1);
+                        CHECK_THAT(sum_constraints_lhs[0], RangeEquals({48}));
+                        CHECK_THAT(inode_ptr->view(state), RangeEquals({8, 8, 8, 8, 8, 8, -3, 3}));
+                    }
+                }
             }
         }
     }

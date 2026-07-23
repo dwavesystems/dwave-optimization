@@ -12,11 +12,11 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <random>
 #include <set>
-#include <unordered_set>
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_all.hpp>
+#include <catch2/matchers/catch_matchers_range_equals.hpp>
 
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
@@ -720,6 +720,306 @@ TEST_CASE("SetNode") {
                         CHECK_THAT(ptr->view(state), RangeEquals({2, 0, 3}));
                         CHECK(ptr->size_diff(state) == 0);
                         CHECK(ptr->diff(state).size() == 0);
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("A set(5) initialized to {0, 1}") {
+        auto graph = Graph();
+
+        auto* set_ptr = graph.emplace_node<SetNode>(5);
+
+        graph.emplace_node<ArrayValidationNode>(set_ptr);
+
+        auto state = graph.empty_state();
+        set_ptr->initialize_state(state, {0, 1});
+        graph.initialize_state(state);
+
+        WHEN("We create a checkpoint from the initialized state") {
+            auto checkpoint0 = set_ptr->checkpoint(state);
+
+            AND_WHEN("The set is changed to {3, 4, 1}") {
+                set_ptr->assign(state, {3, 4, 1});
+
+                graph.propose(state);
+                CHECK(set_ptr->size(state) == 3);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({3, 4, 1}));
+
+                AND_WHEN("We revert to the checkpoint") {
+                    set_ptr->assign_from_checkpoint(state, checkpoint0);
+                    graph.propose(state);
+
+                    THEN("The state has returned to {0, 1}") {
+                        CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1}));
+                    }
+
+                    AND_WHEN(
+                        "The set is again mutated and then reverted using the same checkpoint"
+                    ) {
+                        set_ptr->assign(state, {4, 1, 0});
+                        graph.propose(state);
+                        CHECK_THAT(set_ptr->view(state), RangeEquals({4, 1, 0}));
+
+                        set_ptr->assign_from_checkpoint(state, checkpoint0);
+                        graph.propose(state);
+
+                        THEN("The state has returned to {0, 1}") {
+                            CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1}));
+                        }
+                    }
+                }
+
+                AND_WHEN("The set is changed to {3, 4, 1} and then the checkpoint is returned") {
+                    set_ptr->assign(state, {3, 4, 1});
+                    graph.propose(state);
+                    CHECK_THAT(set_ptr->view(state), RangeEquals({3, 4, 1}));
+
+                    set_ptr->assign_from_checkpoint(state, std::move(checkpoint0));
+                    graph.propose(state);
+
+                    THEN("The state has returned to {0, 1} and the checkpoint is reset") {
+                        CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1}));
+                        CHECK(checkpoint0 == nullptr);
+                    }
+                }
+
+                AND_WHEN("We create another checkpoint") {
+                    auto checkpoint1 = set_ptr->checkpoint(state);
+
+                    AND_WHEN("The set is changed to {4, 1}") {
+                        set_ptr->assign(state, {4, 1});
+                        graph.propose(state);
+
+                        THEN("We can revert to the checkpoints one-by-one") {
+                            set_ptr->assign_from_checkpoint(state, std::move(checkpoint1));
+                            graph.propose(state);
+
+                            CHECK_THAT(set_ptr->view(state), RangeEquals({3, 4, 1}));
+
+                            set_ptr->assign_from_checkpoint(state, checkpoint0);
+                            graph.propose(state);
+                            CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1}));
+                        }
+                    }
+                }
+            }
+
+            AND_WHEN("We destruct the state before the checkpoint") {
+                state = graph.empty_state();
+                checkpoint0.reset();
+            }
+
+            THEN("We can copy the state") {
+                auto cp = state[0]->copy();
+                // this is a smoke test because there is no public way to check
+                // that the checkpoint didn't get copied over
+            }
+        }
+
+        WHEN("We mutate the state and then create a checkpoint before commiting") {
+            set_ptr->assign(state, {4, 1});
+            auto checkpoint = set_ptr->checkpoint(state);
+
+            AND_WHEN("We do a sequence of commits") {
+                graph.propose(state);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({4, 1}));
+
+                set_ptr->assign(state, {3, 4, 1});
+                graph.propose(state);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({3, 4, 1}));
+
+                set_ptr->assign_from_checkpoint(state, checkpoint);
+                graph.propose(state);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({4, 1}));
+            }
+
+            AND_WHEN("We revert and then restore from the checkpoint") {
+                graph.propagate(state);
+                graph.revert(state);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1}));
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint));
+                graph.propagate(state);
+                AND_WHEN("we commit the change to the checkpoint") {
+                    graph.commit(state);
+
+                    CHECK_THAT(set_ptr->view(state), RangeEquals({4, 1}));
+                }
+            }
+
+            AND_WHEN("We make more changes, save another checkpoint and then revert") {
+                set_ptr->assign(state, {3, 2, 1, 0});
+                auto checkpoint1 = set_ptr->checkpoint(state);
+
+                graph.propagate(state);
+                graph.revert(state);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1}));
+
+                AND_WHEN("We revert to the first checkpoint") {
+                    checkpoint1.reset();  // need to get rid of the second checkpoint first
+
+                    set_ptr->assign_from_checkpoint(state, std::move(checkpoint));
+                    graph.propose(state);
+
+                    CHECK_THAT(set_ptr->view(state), RangeEquals({4, 1}));
+                }
+
+                AND_WHEN("We revert to the second checkpoint") {
+                    set_ptr->assign_from_checkpoint(state, std::move(checkpoint1));
+                    graph.propose(state);
+
+                    CHECK_THAT(set_ptr->view(state), RangeEquals({3, 2, 1, 0}));
+                }
+            }
+        }
+
+        WHEN("We do several mutations and create several checkpoints within the same commit") {
+            auto checkpoint0 = set_ptr->checkpoint(state);
+
+            set_ptr->assign(state, {4, 1});
+            auto checkpoint1 = set_ptr->checkpoint(state);
+
+            set_ptr->assign(state, {3, 4, 1});
+            auto checkpoint2 = set_ptr->checkpoint(state);
+
+            set_ptr->assign(state, {4, 2});
+            graph.propose(state);  // mix a propose in there
+            auto checkpoint3 = set_ptr->checkpoint(state);
+
+            set_ptr->assign(state, {2});
+            auto checkpoint4 = set_ptr->checkpoint(state);
+
+            set_ptr->assign(state, {3, 2, 1, 0});
+            graph.propose(state);
+
+            THEN("we can go backwards through them without commiting and everything is correct") {
+                // TODO: check mutating before assigning
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint4));
+                CHECK_THAT(set_ptr->view(state), RangeEquals({2}));
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint3));
+                CHECK_THAT(set_ptr->view(state), RangeEquals({4, 2}));
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint2));
+                CHECK_THAT(set_ptr->view(state), RangeEquals({3, 4, 1}));
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint1));
+                CHECK_THAT(set_ptr->view(state), RangeEquals({4, 1}));
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint0));
+                CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1}));
+            }
+
+            THEN(
+                "we can go backwards through them and commit each time and everything is correct"
+            ) {
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint4));
+                graph.propose(state);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({2}));
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint3));
+                graph.propose(state);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({4, 2}));
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint2));
+                graph.propose(state);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({3, 4, 1}));
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint1));
+                graph.propose(state);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({4, 1}));
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint0));
+                graph.propose(state);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1}));
+            }
+
+            THEN("we can delete some intermediate checkpoints and everything stays valid") {
+                checkpoint2.reset();
+                checkpoint4.reset();
+                checkpoint0.reset();
+                checkpoint3.reset();
+
+                set_ptr->assign_from_checkpoint(state, checkpoint1);
+                graph.propose(state);
+                CHECK_THAT(set_ptr->view(state), RangeEquals({4, 1}));
+            }
+
+            WHEN("We do some fuzzing with checkpoints") {
+                auto rng = std::default_random_engine();
+
+                // let's start by making a bunch of checkpoints with a copy of the buffer
+                // when the checkpoint was made
+                std::vector<std::tuple<checkpoint_type, std::vector<double>>> checkpoints;
+                {
+                    // Randomly generate a state. There are more efficient ways
+                    // to do this probably but for this test this is sufficient.
+                    auto buffer = [&]() -> std::vector<double> {
+                        std::vector<double> buff(5);
+                        std::iota(buff.begin(), buff.end(), 0);
+                        std::shuffle(buff.begin(), buff.end(), rng);
+
+                        std::uniform_int_distribution<int> len(0, 4);
+                        buff.erase(buff.begin() + len(rng), buff.end());
+
+                        return buff;
+                    };
+
+                    // Commit anything that's pending
+                    graph.propose(state);
+
+                    // Now, do a bunch of random actions
+                    std::uniform_int_distribution<int> action(0, 6);
+                    for (int step = 0; step < 500; ++step) {
+                        switch (action(rng)) {
+                            case 0:
+                                // make a checkpoint, tracking the current visible buffer
+                                checkpoints.emplace_back(
+                                    set_ptr->checkpoint(state),
+                                    std::vector<double>(set_ptr->begin(state), set_ptr->end(state))
+                                );
+                                break;
+                            case 1:
+                                // make a commit
+                                graph.propagate(state);
+                                graph.commit(state);
+                                break;
+                            case 2:
+                                // make a revert
+                                graph.propagate(state);
+                                graph.revert(state);
+                                break;
+                            default:  // we want to oversample this one
+                                // assign a new state
+                                set_ptr->assign(state, buffer());
+                                break;
+                        }
+                    }
+
+                    // Commit anything that's left over before the next step
+                    graph.propose(state);
+                }
+
+                // now, moving backwards through those checkpoints, let's randomly
+                // restore the state to the checkpoint or drop it
+                std::uniform_int_distribution<int> flip(0, 1);
+                for (auto& [check, buff] : checkpoints | std::views::reverse) {
+                    if (flip(rng)) {
+                        set_ptr->assign_from_checkpoint(state, std::move(check));
+                        graph.propagate(state);
+
+                        CHECK_THAT(set_ptr->view(state), RangeEquals(buff));
+
+                        if (flip(rng)) {
+                            graph.commit(state);
+                        } else {
+                            graph.revert(state);
+                        }
+                    } else {
+                        check.reset();
                     }
                 }
             }

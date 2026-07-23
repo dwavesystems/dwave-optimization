@@ -32,7 +32,14 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // Set the node's state, tracking the diff.
     void assign(State& state, std::vector<double> values) const;
 
+    /// Set the current state to match the one at the time the given checkpoint was created.
+    void assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const;
+    void assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const;
+
     const double* buff(const State& state) const override;
+
+    /// Get a checkpoint, an IOU that can be used to return the node to its current state.
+    checkpoint_type checkpoint(State& state) const;
 
     void commit(State&) const override;
 

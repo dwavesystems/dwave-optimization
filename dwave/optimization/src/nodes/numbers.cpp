@@ -23,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "_checkpoints.hpp"
 #include "_state.hpp"
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/common.hpp"
@@ -72,8 +73,75 @@ NumberNode::SumConstraint::Operator NumberNode::SumConstraint::op(const ssize_t 
     return operators_[slice];
 }
 
+class NumberNodeCheckpoint_ : public DiffCheckpoint {
+ public:
+    using slice_cache_type = std::vector<std::vector<ssize_t>>;
+
+    NumberNodeCheckpoint_(
+        CheckpointableState& state,
+        std::span<const Update> diff,
+        const slice_cache_type& slice_cache
+    ) :
+        DiffCheckpoint(state, diff.size()), slice_caches_() {
+        // If there is an older checkpoint, we want to put anything we're currently
+        // holding in our slice cache onto it
+        if (auto* prev_ptr = static_cast<NumberNodeCheckpoint_*>(prev_ptr_)) {
+            prev_ptr->commit_updates(std::vector<Update>(diff.begin(), diff.end()), slice_cache);
+            assert(prev_ptr->drop() == 0);
+        }
+    }
+
+    void commit_updates(std::vector<Update> updates, slice_cache_type slice_cache) {
+        ssize_t drop = this->drop();
+        assert(0 <= drop and static_cast<size_t>(drop) <= updates.size());
+
+        if (not slice_cache.empty()) {
+            assert(updates.size() == slice_cache.size());
+
+            if (drop) {
+                slice_cache.erase(slice_cache.begin(), slice_cache.begin() + drop);
+            }
+            slice_caches_.emplace_back(std::move(slice_cache));
+        }
+
+        DiffCheckpoint::commit_updates(std::move(updates));
+        assert(this->drop() == 0);
+    }
+
+    auto detach_slice_cache() {
+        using join_type = decltype(std::move(slice_caches_) | std::views::join);
+
+        if (slice_caches_.empty()) return std::optional<join_type>();
+
+        auto joined = std::move(slice_caches_) | std::views::join;
+        assert(slice_caches_.empty());
+        return std::optional<join_type>(std::move(joined));
+    }
+
+    void revert_updates(std::vector<Update> updates, slice_cache_type slice_cache) {
+        ssize_t drop = this->drop();
+        assert(0 <= drop and static_cast<size_t>(drop) <= updates.size());
+
+        if (not slice_cache.empty()) {
+            assert(updates.size() == slice_cache.size());
+
+            if (drop) {
+                slice_cache.erase(slice_cache.begin() + drop, slice_cache.end());
+            }
+            std::reverse(slice_cache.begin(), slice_cache.end());
+            slice_caches_.emplace_back(std::move(slice_cache));
+        }
+
+        DiffCheckpoint::revert_updates(std::move(updates));
+        assert(this->drop() == 0);
+    }
+
+ private:
+    std::vector<slice_cache_type> slice_caches_;
+};
+
 /// State dependent data attached to NumberNode
-struct NumberNodeStateData : public ArrayNodeStateData {
+class NumberNodeStateData : public ArrayNodeStateData, public CheckpointableState {
  public:
     // User does not provide sum constraints.
     NumberNodeStateData(std::vector<double> input) : ArrayNodeStateData(std::move(input)) {}
@@ -84,14 +152,28 @@ struct NumberNodeStateData : public ArrayNodeStateData {
     ) :
         ArrayNodeStateData(std::move(input)), sum_constraints_lhs(std::move(sum_constraints_lhs)) {}
 
+    std::unique_ptr<NodeStateCheckpoint> checkpoint() {
+        return std::make_unique<NumberNodeCheckpoint_>(*this, this->diff(), this->slice_cache_);
+    }
+
     std::unique_ptr<NodeStateData> copy() const override {
         return std::make_unique<NumberNodeStateData>(*this);
     }
 
     /// Commit the state dependent data of NumberNode.
     void commit() {
-        ArrayNodeStateData::commit();  // Commit changes to the buffer.
-        slice_cache_.clear();          // Empty the slice cache.
+        if (auto* checkpoint_ptr = this->checkpoint_ptr<NumberNodeCheckpoint_>()) {
+            checkpoint_ptr->commit_updates(
+                ArrayNodeStateData::commit_and_detach(), std::move(slice_cache_)
+            );
+        } else {
+            ArrayNodeStateData::commit();  // Commit changes to the buffer.
+            slice_cache_.clear();          // Empty the slice cache.
+        }
+
+        // everything should have been cleared out regardless of which path we took
+        assert(this->diff().empty());
+        assert(slice_cache_.empty());
     }
 
     /// Revert the state dependent data of NumberNode.
@@ -142,10 +224,16 @@ void NumberNodeStateData::revert() {
                 sum_constraints_lhs[j][slices[j]] -= difference;
             }
         }
-        slice_cache_.clear();  // Empty the slice cache.
     }
 
-    ArrayNodeStateData::revert();  // Revert changes to the buffer.
+    if (auto* checkpoint_ptr = this->checkpoint_ptr<NumberNodeCheckpoint_>()) {
+        checkpoint_ptr->revert_updates(
+            ArrayNodeStateData::revert_and_detach(), std::move(slice_cache_)
+        );
+    } else {
+        slice_cache_.clear();          // Empty the slice cache.
+        ArrayNodeStateData::revert();  // Revert changes to the buffer.
+    }
 }
 
 void NumberNodeStateData::update(
@@ -527,6 +615,10 @@ void NumberNode::propagate(State& state) const {
     for (const auto& sv : successors()) {
         sv->update(state, sv.index);
     }
+}
+
+std::unique_ptr<NodeStateCheckpoint> NumberNode::checkpoint(State& state) const {
+    return data_ptr_<NumberNodeStateData>(state)->checkpoint();
 }
 
 void NumberNode::commit(State& state) const noexcept {
@@ -952,6 +1044,40 @@ IntegerNode::IntegerNode(
         std::vector<double>{upper_bound},
         std::move(sum_constraints)
     ) {}
+
+void IntegerNode::assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const {
+    auto state_data = data_ptr_<NumberNodeStateData>(state);
+
+    auto* checkpoint_ptr = static_cast<NumberNodeCheckpoint_*>(checkpoint.get());
+
+    // todo: assert that this checkpoint is the latest
+
+    auto updates = checkpoint_ptr->detach_updates();
+    auto slice_cache = checkpoint_ptr->detach_slice_cache();  // this is an std::optional<...>!
+
+    if (slice_cache.has_value()) {
+        assert(sum_constraints_.size() > 0);
+
+        auto slices_rit = std::ranges::rbegin(*slice_cache);
+
+        for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
+            state_data->set(idx, old);
+            state_data->update(*this, idx, old - diff(state).back().old, *(slices_rit++));
+        }
+    } else {
+        assert(updates.empty() or sum_constraints_.empty());
+
+        // in this case we don't need to do anything to update the slice data
+        for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
+            state_data->set(idx, old);
+        }
+    }
+}
+
+void IntegerNode::assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const {
+    assign_from_checkpoint(state, checkpoint);  // call the lvalue version
+    checkpoint.reset();
+}
 
 bool IntegerNode::integral() const { return true; }
 

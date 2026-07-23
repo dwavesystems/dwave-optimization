@@ -151,6 +151,11 @@ class Graph {
         std::function<bool(const Graph&, State&)> accept = [](const Graph&, State&) { return true; }
     ) const;
 
+    /// Propagate any pending changes to all nodes in the graph and commit them.
+    void propose(State& state) const;
+    // dev note: the name is a bit funny in this case, but we essentially want
+    // an overload for a "default" `sources` and `accept`.
+
     /// Initialize the state of the given node and all predecessors recursively.
     static void recursive_initialize(State& state, const Node* ptr);
     /// Reset the state of the given node and all successors recursively.

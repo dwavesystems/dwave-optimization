@@ -91,6 +91,22 @@ class ArrayStateData {
         assert(size_ >= 0 && static_cast<std::size_t>(size_) == buffer.size());
     }
 
+    // Commit the changes and clear the diff by returning the diff buffer.
+    std::vector<Update> commit_and_detach() {
+        std::vector<Update> tmp;
+        std::swap(updates, tmp);
+        // AlexC: we could now do updates.reserve(tmp.size()) under the assumption
+        // that future update buffers will be a similar size. On the other hand,
+        // not doing this provides another meaningful difference to ::commit().
+        // For now, I think it make sense to not but performance testing needed.
+
+        previous_size_ = buffer.size();
+        assert(size_ >= 0 && static_cast<std::size_t>(size_) == buffer.size());
+
+        assert(updates.empty());
+        return tmp;
+    }
+
     std::span<const Update> diff() const noexcept { return updates; }
 
     // Append a new value to the buffer, tracking the addition in the diff
@@ -147,6 +163,29 @@ class ArrayStateData {
         }
         updates.clear();
         size_ = buffer.size();
+    }
+
+    // Commit the changes and clear the diff by returning the diff buffer.
+    std::vector<Update> revert_and_detach() {
+        assert(previous_size_ >= 0);
+        buffer.resize(previous_size_);
+        const ssize_t size = buffer.size();
+        for (const auto& [index, old, _] : updates | std::views::reverse) {
+            assert(index >= 0);
+            if (index >= size) continue;
+            buffer[index] = old;
+        }
+        size_ = buffer.size();
+
+        std::vector<Update> tmp;
+        std::swap(updates, tmp);
+        // AlexC: we could now do updates.reserve(tmp.size()) under the assumption
+        // that future update buffers will be a similar size. On the other hand,
+        // not doing this provides another meaningful difference to ::commit().
+        // For now, I think it make sense to not but performance testing needed.
+
+        assert(updates.empty());
+        return tmp;
     }
 
     // Set the value at index, tracking the change in the diff.
