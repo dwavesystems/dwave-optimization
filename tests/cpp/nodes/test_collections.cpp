@@ -873,6 +873,8 @@ TEST_CASE("SetNode") {
             graph.propose(state);
 
             THEN("we can go backwards through them without commiting and everything is correct") {
+                // TODO: check mutating before assigning
+
                 set_ptr->assign_from_checkpoint(state, std::move(checkpoint4));
                 CHECK_THAT(set_ptr->view(state), RangeEquals({2}));
 

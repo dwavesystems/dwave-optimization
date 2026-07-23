@@ -17,7 +17,6 @@
 #include <optional>
 #include <ranges>
 #include <span>
-#include <utility>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
@@ -121,6 +120,8 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     void propagate(State& state) const override;
 
     // NumberNode methods *****************************************************
+
+    std::unique_ptr<NodeStateCheckpoint> checkpoint(State& state) const; 
 
     // In the given state, swap the value of index i with the value of index j.
     // Users may pass the slices (per sum constraint) that each index lies on.
@@ -289,6 +290,10 @@ class IntegerNode : public NumberNode {
     bool is_valid(ssize_t index, double value) const override;
 
     // IntegerNode methods ****************************************************
+
+    /// Set the current state to match the one at the time the given checkpoint was created.
+    void assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const;
+    void assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const;
 
     // Set the value at the given index in the given state.
     // Users may pass the slices (per sum constraint) that each index lies on.

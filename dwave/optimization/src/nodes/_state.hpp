@@ -165,6 +165,29 @@ class ArrayStateData {
         size_ = buffer.size();
     }
 
+    // Commit the changes and clear the diff by returning the diff buffer.
+    std::vector<Update> revert_and_detach() {
+        assert(previous_size_ >= 0);
+        buffer.resize(previous_size_);
+        const ssize_t size = buffer.size();
+        for (const auto& [index, old, _] : updates | std::views::reverse) {
+            assert(index >= 0);
+            if (index >= size) continue;
+            buffer[index] = old;
+        }
+        size_ = buffer.size();
+
+        std::vector<Update> tmp;
+        std::swap(updates, tmp);
+        // AlexC: we could now do updates.reserve(tmp.size()) under the assumption
+        // that future update buffers will be a similar size. On the other hand,
+        // not doing this provides another meaningful difference to ::commit().
+        // For now, I think it make sense to not but performance testing needed.
+
+        assert(updates.empty());
+        return tmp;
+    }
+
     // Set the value at index, tracking the change in the diff.
     // If allow_emplace is true, do an emplace_back iff the index is equal to the current size.
     bool set(ssize_t i, double value, bool allow_emplace = false) {

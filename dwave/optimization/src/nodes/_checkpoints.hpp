@@ -87,6 +87,9 @@ class DiffCheckpoint : public LinkedListCheckpoint {
 
     void revert_updates(std::vector<Update> updates);
 
+ protected:
+    DiffCheckpoint(CheckpointableState& state, ssize_t drop);
+
  private:
     std::vector<std::vector<Update>> updates_;
     ssize_t drop_;

@@ -41,6 +41,9 @@ LinkedListCheckpoint::~LinkedListCheckpoint() {
     );
 }
 
+DiffCheckpoint::DiffCheckpoint(CheckpointableState& state, ssize_t drop) :
+    LinkedListCheckpoint(state), updates_(), drop_(drop) {}
+
 DiffCheckpoint::DiffCheckpoint(CheckpointableState& state, std::span<const Update> diff) :
     LinkedListCheckpoint(state), updates_(), drop_(diff.size()) {
     if (auto* prev_ptr = static_cast<DiffCheckpoint*>(prev_ptr_)) {
