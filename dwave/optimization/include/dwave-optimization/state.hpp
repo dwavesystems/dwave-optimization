@@ -14,9 +14,9 @@
 
 #pragma once
 
+#include <cassert>
 #include <memory>
 #include <vector>
-#include <cassert>
 
 namespace dwave::optimization {
 
@@ -34,6 +34,41 @@ struct NodeStateData {
     bool mark = false;
 };
 
-using State = typename std::vector<std::unique_ptr<NodeStateData>>;
+// Foward declaration
+class DecisionNode;
+
+class State {
+    friend class Graph;
+
+ public:
+    template <typename... Args>
+    State(Args&&... args) : node_data_(std::forward<Args...>(args)...) {}
+
+    template <typename... Args>
+    void emplace_back(Args&&... args) {
+        node_data_.emplace_back(std::forward<Args...>(args)...);
+    }
+
+    template <typename index_type>
+    auto& operator[](index_type index) {
+        return node_data_[index];
+    }
+
+    template <typename index_type>
+    auto& operator[](index_type index) const {
+        return node_data_[index];
+    }
+
+    template <typename size_type>
+    void resize(size_type size) {
+        node_data_.resize(size);
+    }
+
+    size_t size() const { return node_data_.size(); }
+
+ private:
+    std::vector<std::unique_ptr<NodeStateData>> node_data_;
+    std::vector<const DecisionNode*> mutated_nodes_;
+};
 
 }  // namespace dwave::optimization

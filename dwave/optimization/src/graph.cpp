@@ -28,6 +28,7 @@
 #endif
 
 #include "dwave-optimization/array.hpp"
+#include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/inputs.hpp"
 
@@ -155,6 +156,34 @@ void Graph::initialize_state(State& state) const {
 void Graph::initialize_state(State& state) {
     topological_sort();
     static_cast<const Graph*>(this)->initialize_state(state);
+}
+
+std::span<const DecisionNode*> Graph::mutated(State& state) const {
+    state.mutated_nodes_.clear();
+    for (const DecisionNode* dec_ptr : decisions()) {
+        if (const ArrayNode* arr_ptr = dynamic_cast<const ArrayNode*>(dec_ptr); arr_ptr) {
+            if (not arr_ptr->diff(state).empty()) {
+                state.mutated_nodes_.push_back(dec_ptr);
+            }
+        } else if (
+            dynamic_cast<const DisjointListsNode*>(dec_ptr) or
+            dynamic_cast<const DisjointBitSetsNode*>(dec_ptr)
+        ) {
+            for (const Node* suc_ptr : dec_ptr->successors()) {
+                const ArrayNode* arr_ptr = dynamic_cast<const ArrayNode*>(suc_ptr);
+                assert(arr_ptr and "all successors should be array nodes");
+                if (not arr_ptr->diff(state).empty()) {
+                    state.mutated_nodes_.push_back(dec_ptr);
+                    break;
+                }
+            }
+        } else {
+            assert(false and "unknown decision node type");
+            unreachable();
+        }
+    }
+
+    return state.mutated_nodes_;
 }
 
 void Graph::propagate(State& state) const {
@@ -454,7 +483,7 @@ ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
 
     for (auto& uptr : nodes_ | std::views::reverse) {
         if (uptr->topological_index_ == keep) continue;  // we marked these to keep
-        if (uptr->successors().size() > 0) continue;  // this node is used by other nodes
+        if (uptr->successors().size() > 0) continue;     // this node is used by other nodes
 
         // We have a node with no successors and that we haven't marked it as important.
         // So let's mark it to be dropped later.
