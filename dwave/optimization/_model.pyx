@@ -934,7 +934,7 @@ cdef class _Graph:
         Symbols are redundant if they are the same type, they share the
         same predecessors, and they encode the same operation.
 
-        If a symbol will not be removed if it has :class:`ArraySymbol` object(s)
+        A symbol will not be removed if it has :class:`ArraySymbol` object(s)
         referring to it.
 
         Args:
