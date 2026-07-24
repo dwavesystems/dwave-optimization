@@ -28,6 +28,7 @@
 #endif
 
 #include "dwave-optimization/array.hpp"
+#include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/inputs.hpp"
 
@@ -111,7 +112,7 @@ std::vector<const Node*> Graph::descendants(std::vector<const Node*> sources) co
     return descendants(state, sources);
 }
 
-State Graph::empty_state() const { return State(num_nodes()); }
+State Graph::empty_state() const { return State(num_nodes() + 1); }
 
 State Graph::empty_state() {
     topological_sort();
@@ -130,6 +131,16 @@ bool Graph::feasible(const State& state) const {
     return true;
 }
 
+class GraphStateData : public NodeStateData {
+ public:
+    virtual std::unique_ptr<NodeStateData> copy() const override {
+        assert(typeid(*this) == typeid(NodeStateData) && "subclasses should overload copy()");
+        return std::make_unique<GraphStateData>(*this);
+    }
+
+    std::vector<const DecisionNode*> mutated_nodes;
+};
+
 State Graph::initialize_state() const {
     auto state = empty_state();
     initialize_state(state);
@@ -142,7 +153,7 @@ State Graph::initialize_state() {
 }
 
 void Graph::initialize_state(State& state) const {
-    assert(static_cast<int>(state.size()) == num_nodes() and "unexpected state length");
+    assert(static_cast<ssize_t>(state.size()) == num_nodes() + 1 and "unexpected state length");
     assert(topologically_sorted_ and "graph must be topologically sorted");
 
     for (int i = 0, end = num_nodes(); i < end; ++i) {
@@ -150,11 +161,45 @@ void Graph::initialize_state(State& state) const {
 
         nodes_[i]->initialize_state(state);
     }
+
+    state.back() = std::make_unique<GraphStateData>();
 }
 
 void Graph::initialize_state(State& state) {
     topological_sort();
     static_cast<const Graph*>(this)->initialize_state(state);
+}
+
+std::span<const DecisionNode*> Graph::mutated(State& state) const {
+    assert(static_cast<ssize_t>(state.size()) == num_nodes() + 1);
+
+    auto& mutated_nodes = static_cast<GraphStateData*>(state.back().get())->mutated_nodes;
+
+    mutated_nodes.clear();
+    for (const DecisionNode* dec_ptr : decisions()) {
+        if (const ArrayNode* arr_ptr = dynamic_cast<const ArrayNode*>(dec_ptr); arr_ptr) {
+            if (not arr_ptr->diff(state).empty()) {
+                mutated_nodes.push_back(dec_ptr);
+            }
+        } else if (
+            dynamic_cast<const DisjointListsNode*>(dec_ptr) or
+            dynamic_cast<const DisjointBitSetsNode*>(dec_ptr)
+        ) {
+            for (const Node* suc_ptr : dec_ptr->successors()) {
+                const ArrayNode* arr_ptr = dynamic_cast<const ArrayNode*>(suc_ptr);
+                assert(arr_ptr and "all successors should be array nodes");
+                if (not arr_ptr->diff(state).empty()) {
+                    mutated_nodes.push_back(dec_ptr);
+                    break;
+                }
+            }
+        } else {
+            assert(false and "unknown decision node type");
+            unreachable();
+        }
+    }
+
+    return mutated_nodes;
 }
 
 void Graph::propagate(State& state) const {
@@ -454,7 +499,7 @@ ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
 
     for (auto& uptr : nodes_ | std::views::reverse) {
         if (uptr->topological_index_ == keep) continue;  // we marked these to keep
-        if (uptr->successors().size() > 0) continue;  // this node is used by other nodes
+        if (uptr->successors().size() > 0) continue;     // this node is used by other nodes
 
         // We have a node with no successors and that we haven't marked it as important.
         // So let's mark it to be dropped later.
