@@ -145,10 +145,10 @@ class CollectionStateData_ : public NodeStateData, public CheckpointableState {
             auto excess_view =
                 all_updates_ | std::views::reverse | std::views::take(excess_updates);
             std::vector<Update> excess(excess_view.begin(), excess_view.end());
+
+            // now do the mutation
             for (const auto& [idx, old, _] : excess) {
-                all_updates_.emplace_back(idx, elements_[idx], old);
-                if (idx < size_) updates_.emplace_back(idx, elements_[idx], old);
-                elements_[idx] = old;
+                set_(idx, old);
             }
         }
 
@@ -159,12 +159,7 @@ class CollectionStateData_ : public NodeStateData, public CheckpointableState {
         while (size_ > checkpoint_ptr->size()) shrink();
 
         for (const auto& [idx, old, _] : checkpoint_ptr->detach_updates() | std::views::reverse) {
-            if (elements_[idx] == old) continue;  // nothing to do
-
-            all_updates_.emplace_back(idx, elements_[idx], old);
-            if (idx < size_) updates_.emplace_back(idx, elements_[idx], old);
-
-            elements_[idx] = old;
+            set_(idx, old);
         }
 
         // now that we've filled in our buffer, grow until we're the correct size
@@ -282,6 +277,16 @@ class CollectionStateData_ : public NodeStateData, public CheckpointableState {
     ssize_t size_diff() const { return size_ - previous_size_; }
 
  private:
+    void set_(ssize_t index, double value) {
+        assert(0 <= index and static_cast<size_t>(index) < elements_.size());
+
+        if (elements_[index] == value) return;
+
+        all_updates_.emplace_back(index, elements_[index], value);
+        if (index < size_) updates_.emplace_back(index, elements_[index], value);
+        elements_[index] = value;
+    }
+
     friend CollectionCheckpoint_;
 
     // The elements in the collection
