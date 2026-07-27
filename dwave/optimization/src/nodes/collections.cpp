@@ -133,6 +133,25 @@ class CollectionStateData_ : public NodeStateData, public CheckpointableState {
         // we need right now.
         assert(this->checkpoint_ptr<CollectionCheckpoint_>() == checkpoint_ptr);
 
+        // Check if there are any changes not otherwise tracked by a checkpoint that we need
+        // to revert first.
+        // A better way would be to implement a partial revert on our state class, but this
+        // is not a path we care about greatly so let's err on the side of simple and well-
+        // tested.
+        if (ssize_t excess_updates = all_updates_.size() - checkpoint_ptr->drop()) {
+            assert(excess_updates > 0);  // should never be negative
+
+            // need a copy because we'll be mutating all_updates_ in the loop
+            auto excess_view =
+                all_updates_ | std::views::reverse | std::views::take(excess_updates);
+            std::vector<Update> excess(excess_view.begin(), excess_view.end());
+            for (const auto& [idx, old, _] : excess) {
+                all_updates_.emplace_back(idx, elements_[idx], old);
+                if (idx < size_) updates_.emplace_back(idx, elements_[idx], old);
+                elements_[idx] = old;
+            }
+        }
+
         // Ok, let's get ourselves to the same place as the checkpoint
 
         // we want to minimize the size of the visible buffer, so let's shrink ourselves

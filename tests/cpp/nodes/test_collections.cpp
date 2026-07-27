@@ -794,6 +794,16 @@ TEST_CASE("SetNode") {
                 // this is a smoke test because there is no public way to check
                 // that the checkpoint didn't get copied over
             }
+
+            THEN("We can commit, mutate, then revert") {
+                graph.propose(state);
+
+                set_ptr->exchange(state, 1, 2);
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint0));
+
+                // CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1}));
+            }
         }
 
         WHEN("We mutate the state and then create a checkpoint before commiting") {
@@ -853,6 +863,8 @@ TEST_CASE("SetNode") {
             }
         }
 
+        // TODO: within one propagation
+
         WHEN("We do several mutations and create several checkpoints within the same commit") {
             auto checkpoint0 = set_ptr->checkpoint(state);
 
@@ -873,8 +885,6 @@ TEST_CASE("SetNode") {
             graph.propose(state);
 
             THEN("we can go backwards through them without commiting and everything is correct") {
-                // TODO: check mutating before assigning
-
                 set_ptr->assign_from_checkpoint(state, std::move(checkpoint4));
                 CHECK_THAT(set_ptr->view(state), RangeEquals({2}));
 
@@ -924,6 +934,16 @@ TEST_CASE("SetNode") {
                 set_ptr->assign_from_checkpoint(state, checkpoint1);
                 graph.propose(state);
                 CHECK_THAT(set_ptr->view(state), RangeEquals({4, 1}));
+            }
+
+            THEN("We can assign from a checkpoint, mutate, and then assign again") {
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint4));
+                CHECK_THAT(set_ptr->view(state), RangeEquals({2}));
+
+                set_ptr->assign(state, {3, 0, 4});
+
+                set_ptr->assign_from_checkpoint(state, std::move(checkpoint3));
+                CHECK_THAT(set_ptr->view(state), RangeEquals({4, 2}));
             }
 
             WHEN("We do some fuzzing with checkpoints") {

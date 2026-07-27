@@ -108,14 +108,18 @@ class NumberNodeCheckpoint_ : public DiffCheckpoint {
         assert(this->drop() == 0);
     }
 
-    auto detach_slice_cache() {
+    auto detach_updates() {
+        auto updates = DiffCheckpoint::detach_updates();
+
         using join_type = decltype(std::move(slice_caches_) | std::views::join);
 
-        if (slice_caches_.empty()) return std::optional<join_type>();
+        if (slice_caches_.empty()) {
+            return std::make_tuple(std::move(updates), std::optional<join_type>());
+        }
 
         auto joined = std::move(slice_caches_) | std::views::join;
         assert(slice_caches_.empty());
-        return std::optional<join_type>(std::move(joined));
+        return std::make_tuple(std::move(updates), std::optional<join_type>(std::move(joined)));
     }
 
     void revert_updates(std::vector<Update> updates, slice_cache_type slice_cache) {
@@ -1052,13 +1056,27 @@ void IntegerNode::assign_from_checkpoint(State& state, checkpoint_type& checkpoi
 
     // todo: assert that this checkpoint is the latest
 
-    auto updates = checkpoint_ptr->detach_updates();
-    auto slice_cache = checkpoint_ptr->detach_slice_cache();  // this is an std::optional<...>!
+    // Check if there are any changes not otherwise tracked by a checkpoint that we need
+    // to revert first.
+    // A better way would be to implement a partial revert on our state class, but this
+    // is not a path we care about greatly so let's err on the side of simple and well-
+    // tested.
+    if (ssize_t excess_updates = state_data->diff().size() - checkpoint_ptr->drop()) {
+        assert(excess_updates > 0);
+        for (
+            const auto& [idx, old, _] :
+            state_data->diff() | std::views::reverse | std::views::take(excess_updates)
+        ) {
+            state_data->set(idx, old);
+        }
+    }
 
-    if (slice_cache.has_value()) {
+    auto [updates, optional_slice_cache] = checkpoint_ptr->detach_updates();
+
+    if (optional_slice_cache.has_value()) {
         assert(sum_constraints_.size() > 0);
 
-        auto slices_rit = std::ranges::rbegin(*slice_cache);
+        auto slices_rit = std::ranges::rbegin(*optional_slice_cache);
 
         for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
             state_data->set(idx, old);
@@ -1072,6 +1090,8 @@ void IntegerNode::assign_from_checkpoint(State& state, checkpoint_type& checkpoi
             state_data->set(idx, old);
         }
     }
+
+    checkpoint_ptr->drop() = state_data->diff().size();
 }
 
 void IntegerNode::assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const {

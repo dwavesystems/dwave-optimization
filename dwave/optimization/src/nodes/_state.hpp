@@ -181,7 +181,7 @@ class ArrayStateData {
         std::swap(updates, tmp);
         // AlexC: we could now do updates.reserve(tmp.size()) under the assumption
         // that future update buffers will be a similar size. On the other hand,
-        // not doing this provides another meaningful difference to ::commit().
+        // not doing this provides another meaningful difference to ::revert().
         // For now, I think it make sense to not but performance testing needed.
 
         assert(updates.empty());

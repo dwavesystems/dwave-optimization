@@ -2002,6 +2002,15 @@ TEST_CASE("IntegerNode") {
 
                     CHECK_THAT(ptr->view(state), RangeEquals({-4, -4, -2, -2, 0, 0, 2, 2, 4, 4}));
                 }
+
+                THEN("We can commit, mutate, then assign from the checkpoint") {
+                    graph.propose(state);
+
+                    ptr->set_value(state, 9, 0);  // [-2, -4, -4, 1, 0, 0, 2, 2, 4, 0]
+                    ptr->assign_from_checkpoint(state, checkpoint);
+
+                    CHECK_THAT(ptr->view(state), RangeEquals({-4, -4, -2, -2, 0, 0, 2, 2, 4, 4}));
+                }
             }
 
             AND_WHEN("We mutate, checkpoint the state, and then mutate again") {
