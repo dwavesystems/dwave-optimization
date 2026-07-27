@@ -115,7 +115,8 @@ jobs:
 
   python-windows:
     executor:
-      name: win/default
+      name: win/server-2022
+      version: "2026.05.1"
 
     environment:
       <<: *global-environment
