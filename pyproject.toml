@@ -2,7 +2,7 @@
 requires = [
     # Same as dependency-groups.build, last refreshed April 2026
     "cython~=3.2.0",
-    "meson~=1.11.0",
+    "meson~=1.12.0rc2",
     "meson-python~=0.19.0",
     "ninja~=1.13.0",
 ]
@@ -60,7 +60,7 @@ blas = [
 build = [
     # Same as build-system.requires, last refreshed April 2026
     "cython~=3.2.0",
-    "meson~=1.11.0",
+    "meson~=1.12.0rc2",
     "meson-python~=0.19.0",
     "ninja~=1.13.0",
 ]
