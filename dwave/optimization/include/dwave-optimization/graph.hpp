@@ -436,6 +436,13 @@ class DecisionNode : public Decision, public virtual Node {
     /// Decision nodes by definition do not have a deterministic state.
     bool deterministic_state() const final { return false; }
 
+    /// Set the current state to match the one at the time the given checkpoint was created.
+    virtual void assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const = 0;
+    virtual void assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const = 0;
+
+    /// Get a checkpoint, an IOU that can be used to return the node to its current state.
+    virtual checkpoint_type checkpoint(State& state) const = 0;
+
     /// Decisions don't have predecessors so no one should be calling update().
     /// Always throws a logic_error.
     [[noreturn]] void update(State& state, int index) const override;

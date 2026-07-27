@@ -162,6 +162,47 @@ TEST_CASE("DisjointBitSetsNode") {
                     CHECK(std::ranges::equal(sets[1]->view(state), std::vector{1, 0, 1, 0, 0}));
                     CHECK(std::ranges::equal(sets[2]->view(state), std::vector{0, 1, 0, 1, 0}));
                 }
+
+                AND_WHEN("We create a checkpoint to that state") {
+                    auto checkpoint = ptr->checkpoint(state);
+
+                    THEN("We can mutate and then assign from that checkpoint") {
+                        ptr->swap_between_sets(state, 0, 1, 0);
+                        graph.propose(state);
+
+                        ptr->assign_from_checkpoint(state, std::move(checkpoint));
+                        assert(not checkpoint);  // was reset
+
+                        CHECK_THAT(sets[0]->view(state), RangeEquals({0, 0, 0, 0, 1}));
+                        CHECK_THAT(sets[1]->view(state), RangeEquals({1, 0, 1, 0, 0}));
+                    }
+
+                    THEN("We can assign, mutate, and then reuse the checkpoint") {
+                        ptr->swap_between_sets(state, 0, 1, 0);
+                        CHECK_THAT(sets[0]->view(state), RangeEquals({1, 0, 0, 0, 1}));
+                        CHECK_THAT(sets[1]->view(state), RangeEquals({0, 0, 1, 0, 0}));
+                        CHECK_THAT(sets[2]->view(state), RangeEquals({0, 1, 0, 1, 0}));
+
+                        graph.propose(state);
+
+                        ptr->assign_from_checkpoint(state, checkpoint);
+                        CHECK_THAT(sets[0]->view(state), RangeEquals({0, 0, 0, 0, 1}));
+                        CHECK_THAT(sets[1]->view(state), RangeEquals({1, 0, 1, 0, 0}));
+                        CHECK_THAT(sets[2]->view(state), RangeEquals({0, 1, 0, 1, 0}));
+
+                        ptr->swap_between_sets(state, 1, 2, 1);
+                        CHECK_THAT(sets[0]->view(state), RangeEquals({0, 0, 0, 0, 1}));
+                        CHECK_THAT(sets[1]->view(state), RangeEquals({1, 1, 1, 0, 0}));
+                        CHECK_THAT(sets[2]->view(state), RangeEquals({0, 0, 0, 1, 0}));
+
+                        graph.propose(state);
+
+                        ptr->assign_from_checkpoint(state, std::move(checkpoint));
+                        CHECK_THAT(sets[0]->view(state), RangeEquals({0, 0, 0, 0, 1}));
+                        CHECK_THAT(sets[1]->view(state), RangeEquals({1, 0, 1, 0, 0}));
+                        CHECK_THAT(sets[2]->view(state), RangeEquals({0, 1, 0, 1, 0}));
+                    }
+                }
             }
 
             AND_WHEN("We initialize an empty state") {
@@ -321,6 +362,52 @@ TEST_CASE("DisjointListsNode") {
                     CHECK(std::ranges::equal(lists[0]->view(state), std::vector{4}));
                     CHECK(std::ranges::equal(lists[1]->view(state), std::vector{2, 0}));
                     CHECK(std::ranges::equal(lists[2]->view(state), std::vector{1, 3}));
+                }
+
+                AND_WHEN("We create a checkpoint to that state") {
+                    auto checkpoint = ptr->checkpoint(state);
+
+                    THEN("We can mutate and then assign from that checkpoint") {
+                        ptr->pop_to_list(state, 1, 0, 0, 1);
+                        CHECK_THAT(lists[0]->view(state), RangeEquals({4, 2}));
+                        CHECK_THAT(lists[1]->view(state), RangeEquals({0}));
+                        CHECK_THAT(lists[2]->view(state), RangeEquals({1, 3}));
+
+                        graph.propose(state);
+
+                        ptr->assign_from_checkpoint(state, std::move(checkpoint));
+                        assert(not checkpoint);  // was reset
+
+                        CHECK_THAT(lists[0]->view(state), RangeEquals({4}));
+                        CHECK_THAT(lists[1]->view(state), RangeEquals({2, 0}));
+                        CHECK_THAT(lists[2]->view(state), RangeEquals({1, 3}));
+                    }
+
+                    THEN("We can assign, mutate, and then reuse the checkpoint") {
+                        ptr->pop_to_list(state, 1, 0, 0, 1);
+                        CHECK_THAT(lists[0]->view(state), RangeEquals({4, 2}));
+                        CHECK_THAT(lists[1]->view(state), RangeEquals({0}));
+                        CHECK_THAT(lists[2]->view(state), RangeEquals({1, 3}));
+
+                        graph.propose(state);
+
+                        ptr->assign_from_checkpoint(state, checkpoint);
+                        CHECK_THAT(lists[0]->view(state), RangeEquals({4}));
+                        CHECK_THAT(lists[1]->view(state), RangeEquals({2, 0}));
+                        CHECK_THAT(lists[2]->view(state), RangeEquals({1, 3}));
+
+                        ptr->pop_to_list(state, 1, 1, 2, 2);
+                        CHECK_THAT(lists[0]->view(state), RangeEquals({4}));
+                        CHECK_THAT(lists[1]->view(state), RangeEquals({2}));
+                        CHECK_THAT(lists[2]->view(state), RangeEquals({1, 3, 0}));
+
+                        graph.propose(state);
+
+                        ptr->assign_from_checkpoint(state, std::move(checkpoint));
+                        CHECK_THAT(lists[0]->view(state), RangeEquals({4}));
+                        CHECK_THAT(lists[1]->view(state), RangeEquals({2, 0}));
+                        CHECK_THAT(lists[2]->view(state), RangeEquals({1, 3}));
+                    }
                 }
             }
 

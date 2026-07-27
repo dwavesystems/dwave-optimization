@@ -32,14 +32,14 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // Set the node's state, tracking the diff.
     void assign(State& state, std::vector<double> values) const;
 
-    /// Set the current state to match the one at the time the given checkpoint was created.
-    void assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const;
-    void assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const;
+    /// @copydoc DecisionNode::assign_from_checkpoint()
+    void assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const override;
+    void assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const override;
 
     const double* buff(const State& state) const override;
 
-    /// Get a checkpoint, an IOU that can be used to return the node to its current state.
-    checkpoint_type checkpoint(State& state) const;
+    /// @copydoc DecisionNode::checkpoint()
+    checkpoint_type checkpoint(State& state) const override;
 
     void commit(State&) const override;
 
@@ -106,6 +106,13 @@ class DisjointBitSetsNode : public DecisionNode {
     // `primary_set_size` is the size of the primary set that the node will partition,
     // i.e. the set `range(primary_set_size)`.
     DisjointBitSetsNode(ssize_t primary_set_size, ssize_t num_disjoint_sets);
+
+    /// @copydoc DecisionNode::assign_from_checkpoint()
+    void assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const override;
+    void assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const override;
+
+    /// @copydoc DecisionNode::checkpoint()
+    checkpoint_type checkpoint(State& state) const override;
 
     void commit(State&) const override;
 
@@ -178,6 +185,13 @@ class DisjointListsNode : public DecisionNode {
     // `primary_set_size` is the size of the primary set that the node will partition,
     // i.e. the set `range(primary_set_size)`.
     DisjointListsNode(ssize_t primary_set_size, ssize_t num_disjoint_lists);
+
+    /// @copydoc DecisionNode::assign_from_checkpoint()
+    void assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const override;
+    void assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const override;
+
+    /// @copydoc DecisionNode::checkpoint()
+    checkpoint_type checkpoint(State& state) const override;
 
     void commit(State&) const override;
 

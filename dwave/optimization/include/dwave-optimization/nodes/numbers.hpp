@@ -121,7 +121,8 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     // NumberNode methods *****************************************************
 
-    std::unique_ptr<NodeStateCheckpoint> checkpoint(State& state) const; 
+    /// @copydoc DecisionNode::checkpoint()
+    checkpoint_type checkpoint(State& state) const override;
 
     // In the given state, swap the value of index i with the value of index j.
     // Users may pass the slices (per sum constraint) that each index lies on.
@@ -291,9 +292,9 @@ class IntegerNode : public NumberNode {
 
     // IntegerNode methods ****************************************************
 
-    /// Set the current state to match the one at the time the given checkpoint was created.
-    void assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const;
-    void assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const;
+    /// @copydoc DecisionNode::assign_from_checkpoint()
+    void assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const override;
+    void assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const override;
 
     // Set the value at the given index in the given state.
     // Users may pass the slices (per sum constraint) that each index lies on.

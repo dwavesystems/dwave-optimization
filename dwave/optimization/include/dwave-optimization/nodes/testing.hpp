@@ -100,6 +100,28 @@ class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decis
     void revert(State&) const override;
     void update(State&, int) const override;
 
+    // Overloads required by the DecisionNode ABC *****************************
+
+    // DynamicArrayTestingNode does not impement checkpointing
+    [[noreturn]] void assign_from_checkpoint(
+        State& state,
+        checkpoint_type& checkpoint
+    ) const override {
+        assert(false and "not implemented");
+        unreachable();
+    }
+    [[noreturn]] void assign_from_checkpoint(
+        State& state,
+        checkpoint_type&& checkpoint
+    ) const override {
+        assert(false and "not implemented");
+        unreachable();
+    }
+    [[noreturn]] virtual checkpoint_type checkpoint(State& state) const override {
+        assert(false and "not implemented");
+        unreachable();
+    }
+
     // State mutation methods *************************************************
 
     // Grow the array by a single row of the given values.
