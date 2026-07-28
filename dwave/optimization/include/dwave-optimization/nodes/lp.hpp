@@ -149,6 +149,8 @@ class LinearProgramNode : public EqualityMixin<LinearProgramNodeBase, LinearProg
     /// @copydoc LinearProgramNodeBase::solution()
     std::span<const double> solution(const State& state) const override;
 
+    bool updated(const State& state) const override;
+
     /// @copydoc LinearProgramNodeBase::variables_minmax()
     std::pair<double, double> variables_minmax() const override;
 

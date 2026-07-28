@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <chrono>
 #include <deque>
+#include <queue>
 #include <ranges>
 #include <sstream>
 #include <stdexcept>
@@ -173,6 +174,57 @@ void Graph::propagate(State& state, std::span<const Node*> queue_to_update) cons
 
 void Graph::propagate(State& state, std::vector<const Node*>&& changed) const {
     return propagate(state, std::span(changed));
+}
+
+std::vector<const Node*> Graph::propagate_sparse(State& state) const {
+    // Create a queue of nodes that are (direct) successors of updated nodes.
+    auto comp = [](const Node* lhs, const Node* rhs) -> bool {
+        // it's a max queue so we want lhs > rhs
+        return lhs->topological_index() > rhs->topological_index();
+    };
+    std::priority_queue<const Node*, std::vector<const Node*>, decltype(comp)> queue(comp);
+
+    // Let's start by adding all of the decisions to the queue. We go ahead an skip
+    // over the ones without any pending changes, though it would work just as well
+    // to add all of them.
+    // Once we track which decisions have been mutated we can be more efficient here.
+    for (Node* ptr : decisions_) {
+        if (not ptr->updated(state)) continue;
+        queue.emplace(ptr);
+    }
+    
+    // We'll want to track which nodes will eventually need a commit or revert
+    std::vector<const Node*> updated;
+
+    while (queue.size()) {
+        // pull the lowest topological ordered node off the queue
+        const Node* ptr = queue.top();
+        queue.pop();
+
+        ssize_t tidx = ptr->topological_index();
+        state[tidx]->mark = false;
+
+        // incorporate any changes from its predecessor(s)
+        ptr->propagate(state);
+
+        // If calling propagate did nothing, then we're done
+        if (not ptr->updated(state)) continue;
+
+        // Otherwise we need to eventually commit/revert this
+        updated.emplace_back(ptr);
+
+        // Add all of its successors to the queue.
+        // In C++23 push_range() would be very helpful (and more performant)
+        // here.
+        for (const Node* successor_ptr : ptr->successors()) {
+            bool& seen = state[successor_ptr->topological_index()]->mark;
+            if (seen) continue;  // already seen
+            seen = true;
+            queue.emplace(successor_ptr);
+        }
+    }
+
+    return updated;
 }
 
 // Note: we pass the vector of changed nodes by value as we expect it to be rather small. Revisit if

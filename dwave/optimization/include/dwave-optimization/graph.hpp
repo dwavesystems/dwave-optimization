@@ -143,6 +143,9 @@ class Graph {
     void propagate(State& state, std::span<const Node*> changed) const;
     void propagate(State& state, std::vector<const Node*>&& changed) const;
 
+    // TODO: better name?
+    std::vector<const Node*> propagate_sparse(State& state) const;
+
     /// Given the source (changing) nodes, update the model incrementally and accept the changes
     /// according to the accept function.
     void propose(
@@ -337,6 +340,9 @@ class Node {
     /// updated and may even want to eagerly incorporate changes.
     virtual void update(State& state, int index) const {}
 
+    // TODO: not necessarily the same as having no diff!
+    virtual bool updated(const State& state) const = 0;
+
     /// Nodes are printable
     friend std::ostream& operator<<(std::ostream& os, const Node& node);
 
@@ -452,7 +458,10 @@ NodeType* Graph::emplace_node(Args&&... args) {
     return ptr;  // return the observing pointer
 }
 
-class ArrayNode : public Array, public virtual Node {};
+class ArrayNode : public Array, public virtual Node {
+ public:
+    bool updated(const State& state) const override { return not diff(state).empty(); }
+};
 class DecisionNode : public Decision, public virtual Node {
  public:
     /// Decision nodes by definition do not have a deterministic state.

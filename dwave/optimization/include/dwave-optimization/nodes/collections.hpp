@@ -122,6 +122,8 @@ class DisjointBitSetsNode : public DecisionNode {
         ssize_t element_i
     ) const;
 
+    bool updated(const State& state) const override;
+
  protected:
     const ssize_t primary_set_size_;
     const ssize_t num_disjoint_sets_;
@@ -214,6 +216,8 @@ class DisjointListsNode : public DecisionNode {
         ssize_t element_i,
         ssize_t element_j
     ) const;
+
+    bool updated(const State& state) const override;
 
  protected:
     const ssize_t primary_set_size_;

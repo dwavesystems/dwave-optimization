@@ -247,6 +247,24 @@ TEST_CASE("Graph::commit(), Graph::descendants(), Graph::propagate(), and Graph:
         auto descendants = graph.descendants({x_ptr});
         CHECK_THAT(descendants, RangeEquals(std::vector<Node*>{x_ptr, z_ptr}));
     }
+
+    SECTION("propagate_sparse()") {
+        SECTION("no changes") {
+            auto updated = graph.propagate_sparse(state);
+            CHECK(updated.empty());
+        }
+
+        SECTION("one decision") {
+            x_ptr->flip(state, 0);
+
+            auto updated = graph.propagate_sparse(state);
+
+            CHECK_THAT(updated, RangeEquals(std::vector<Node*>{x_ptr, z_ptr}));
+        }
+
+    }
+
+
     SECTION("Propagate all") {
         CHECK(x_ptr->view(state).front() == 0);
         CHECK(y_ptr->view(state).front() == 0);
