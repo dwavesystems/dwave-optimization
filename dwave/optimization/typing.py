@@ -26,3 +26,6 @@ ArraySymbolLike: typing.TypeAlias = ArraySymbol | numpy.typing.ArrayLike
 """Either a :class:`~dwave.optimization.ArraySymbol` or a NumPy
 `array-like <https://numpy.org/devdocs/glossary.html#term-array_like>`_.
 """
+
+ShapeLike: typing.TypeAlias = int | tuple[int, ...]
+"""Objects that can be converted to a shape"""
