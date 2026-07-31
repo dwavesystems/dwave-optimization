@@ -105,9 +105,9 @@ std::vector<const Node*> Graph::descendants(State& state, std::vector<const Node
 }
 
 std::vector<const Node*> Graph::descendants(std::vector<const Node*> sources) const {
-    State state;
+    State state(num_nodes());
     for (ssize_t i = 0, stop = num_nodes(); i < stop; ++i) {
-        state.emplace_back(std::make_unique<NodeStateData>());
+        state[i] = std::make_unique<NodeStateData>();
     }
     return descendants(state, sources);
 }
@@ -159,9 +159,14 @@ void Graph::initialize_state(State& state) {
 }
 
 std::span<const DecisionNode*> Graph::mutated(State& state) const {
+    // We will want to eventually replace this implementation with an approach where
+    // decision nodes "eagerly" add themselves to the list of mutated nodes after they
+    // are mutated. This will avoid the need to iterate over all decision nodes every
+    // time this method is called.
     state.mutated_nodes_.clear();
+
     for (const DecisionNode* dec_ptr : decisions()) {
-        if (const ArrayNode* arr_ptr = dynamic_cast<const ArrayNode*>(dec_ptr); arr_ptr) {
+        if (auto* arr_ptr = dynamic_cast<const ArrayNode*>(dec_ptr); arr_ptr) {
             if (not arr_ptr->diff(state).empty()) {
                 state.mutated_nodes_.push_back(dec_ptr);
             }

@@ -406,7 +406,7 @@ class Node {
     StateData* data_ptr_(State& state) const {
         const ssize_t index = topological_index();
         assert(index >= 0 and "must be topologically sorted");
-        assert(state.size() > static_cast<std::size_t>(index) and "unexpected state length");
+        assert(state.size() > index and "unexpected state length");
         assert(state[index] != nullptr and "uninitialized state");
 
         return static_cast<StateData*>(state[index].get());
@@ -415,7 +415,7 @@ class Node {
     const StateData* data_ptr_(const State& state) const {
         const ssize_t index = topological_index();
         assert(index >= 0 and "must be topologically sorted");
-        assert(state.size() > static_cast<std::size_t>(index) and "unexpected state length");
+        assert(state.size() > index and "unexpected state length");
         assert(state[index] != nullptr and "uninitialized state");
 
         return static_cast<const StateData*>(state[index].get());
@@ -425,7 +425,7 @@ class Node {
     void emplace_data_ptr_(State& state, Args&&... args) const {
         const ssize_t index = topological_index();
         assert(index >= 0 and "must be topologically sorted");
-        assert(state.size() > static_cast<std::size_t>(index) and "unexpected state length");
+        assert(state.size() > index and "unexpected state length");
         assert(state[index] == nullptr and "already initialized state");
 
         state[index] = std::make_unique<StateData>(std::forward<Args&&>(args)...);

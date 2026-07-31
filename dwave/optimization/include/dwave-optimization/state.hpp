@@ -34,20 +34,14 @@ struct NodeStateData {
     bool mark = false;
 };
 
-// Foward declaration
+// Foward declaration for storing the mutated decision nodes on State
 class DecisionNode;
 
 class State {
     friend class Graph;
 
  public:
-    template <typename... Args>
-    State(Args&&... args) : node_data_(std::forward<Args...>(args)...) {}
-
-    template <typename... Args>
-    void emplace_back(Args&&... args) {
-        node_data_.emplace_back(std::forward<Args...>(args)...);
-    }
+    State(ssize_t size = 0) : node_data_(size) {}
 
     template <typename index_type>
     auto& operator[](index_type index) {
@@ -59,12 +53,9 @@ class State {
         return node_data_[index];
     }
 
-    template <typename size_type>
-    void resize(size_type size) {
-        node_data_.resize(size);
-    }
+    void resize(ssize_t size) { node_data_.resize(size); }
 
-    size_t size() const { return node_data_.size(); }
+    ssize_t size() const { return node_data_.size(); }
 
  private:
     std::vector<std::unique_ptr<NodeStateData>> node_data_;

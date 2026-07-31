@@ -258,8 +258,7 @@ void AccumulateZipNode::initialize_state(State& state) const {
     ssize_t start_size = this->size(state);
     ssize_t num_args = operands_.size();
     std::vector<double> values;
-    State reg;
-    reg = expression_ptr_->empty_state();
+    State reg = expression_ptr_->empty_state();
 
     std::vector<Array::const_iterator> iterators;
     for (const ArrayNode* array_ptr : operands_) {
