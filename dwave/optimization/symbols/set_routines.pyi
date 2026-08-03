@@ -14,4 +14,6 @@
 
 from dwave.optimization.model import ArraySymbol as _ArraySymbol
 
+class IsDisjointCover(_ArraySymbol): ...
+
 class IsIn(_ArraySymbol): ...
