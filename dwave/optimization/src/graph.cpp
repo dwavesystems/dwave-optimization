@@ -157,6 +157,23 @@ void Graph::initialize_state(State& state) {
     static_cast<const Graph*>(this)->initialize_state(state);
 }
 
+void Graph::pop_decision() {
+    assert(not topologically_sorted_ and "cannot pop a decision from a locked model");
+
+    // Get the index of the node we're going to delete
+    const ssize_t i = std::ranges::ssize(decisions_) - 1;
+    assert(0 <= i and "need at least one decision");
+
+    // Check that nodes_ and decisions_ are consistent (should always be true)
+    assert(nodes_[i].get() == decisions_[i]);
+
+    // Confirm that removing the decision won't leave anything dangling
+    assert(decisions_[i]->successors().empty() and "cannot remove a decision with successors");
+
+    decisions_.pop_back();
+    nodes_.erase(nodes_.begin() + i);
+}
+
 void Graph::propagate(State& state) const {
     std::ranges::for_each(nodes(), [&state](const auto& ptr) { ptr->propagate(state); });
 }
@@ -543,6 +560,32 @@ void Graph::set_objective(ArrayNode* objective_ptr) {
         throw std::invalid_argument("objective must have a single output");
     }
     this->objective_ptr_ = objective_ptr;
+}
+
+void Graph::swap_decisions(DecisionNode* x_ptr, DecisionNode* y_ptr) {
+    assert(not topologically_sorted_ and "cannot swap decisions in a locked model");
+
+    if (x_ptr == y_ptr) return;  // nothing to do
+
+    ssize_t& x_idx = x_ptr->topological_index_; 
+    ssize_t& y_idx = y_ptr->topological_index_;
+
+    assert(0 <= x_idx and static_cast<size_t>(x_idx) < decisions_.size());
+    assert(0 <= y_idx and static_cast<size_t>(y_idx) < decisions_.size());
+
+    assert(decisions_[x_idx] == x_ptr);
+    assert(decisions_[y_idx] == y_ptr);
+
+    assert(0 <= x_idx and static_cast<size_t>(x_idx) < nodes_.size());
+    assert(0 <= y_idx and static_cast<size_t>(y_idx) < nodes_.size());
+
+    assert(nodes_[x_idx].get() == static_cast<Node*>(x_ptr));
+    assert(nodes_[y_idx].get() == static_cast<Node*>(y_ptr));
+
+    using std::swap;  // ADL shouldn't matter here, but a good habit nonetheless
+    swap(nodes_[x_idx], nodes_[y_idx]);
+    swap(decisions_[x_idx], decisions_[y_idx]);
+    swap(x_idx, y_idx);
 }
 
 void Graph::topological_sort() {

@@ -135,6 +135,10 @@ class Graph {
     ArrayNode* objective() noexcept { return objective_ptr_; }
     const ArrayNode* objective() const noexcept { return objective_ptr_; }
 
+    /// Remove the last decision. Must not have any successors or the behavior
+    /// is undefined.
+    void pop_decision();
+
     /// Call propagate on every `Node` in the `Graph`.
     void propagate(State& state) const;
 
@@ -195,6 +199,9 @@ class Graph {
     /// Specify the objective node. Must be an array with a single element.
     /// To unset the objective provide nullptr.
     void set_objective(ArrayNode* objective_ptr);
+
+    /// Swap the topological indices of the two given decision nodes.
+    void swap_decisions(DecisionNode* x_ptr, DecisionNode* y_ptr);
 
     /// Sort the nodes topologically. This "locks" the model in that nodes cannot
     /// be added to a topologically sorted model without invalidating the topological
@@ -340,12 +347,13 @@ class Node {
     /// Nodes are printable
     friend std::ostream& operator<<(std::ostream& os, const Node& node);
 
-    friend void Graph::topological_sort();
-    friend void Graph::reset_topological_sort();
     template <class NodeType, class... Args>
     friend NodeType* Graph::emplace_node(Args&&...);
     friend ssize_t Graph::remove_redundant_nodes(bool, double);
     friend ssize_t Graph::remove_unused_nodes(bool);
+    friend void Graph::reset_topological_sort();
+    friend void Graph::swap_decisions(DecisionNode* x_ptr, DecisionNode* y_ptr);
+    friend void Graph::topological_sort();
 
  protected:
     // For use by non-dynamic node constructors.
