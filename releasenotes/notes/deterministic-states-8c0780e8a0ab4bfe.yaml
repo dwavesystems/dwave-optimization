@@ -1,0 +1,6 @@
+---
+upgrade:
+  - Don't serialize the states of intermediate symbols.
+  - |
+    Remove ``Node::deterministic_state()`` method. All intermediate nodes are
+    now treated as deterministic.

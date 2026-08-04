@@ -282,10 +282,6 @@ class Node {
     /// Commit any changing updates to the node.
     virtual void commit(State& state) const = 0;
 
-    /// Return true if the node's state is deterministic - that is it's uniquely
-    /// derived from its predecessors. Defaults to `true`, except for decisions.
-    virtual bool deterministic_state() const { return true; }
-
     /// Test whether two nodes are equal. Each node class defines equality for
     /// itself but nodes *must* share the same set of
     /// predecessors (permutations are sometimes allowed) and they *must* be the
@@ -474,9 +470,6 @@ class DecisionNode : public Decision, public virtual Node {
 
     /// Get a checkpoint, an IOU that can be used to return the node to its current state.
     virtual checkpoint_type checkpoint(State& state) const = 0;
-
-    /// Decision nodes by definition do not have a deterministic state.
-    bool deterministic_state() const final { return false; }
 
     /// Decision can only ever be equal to themselves because they are
     /// independent variables.

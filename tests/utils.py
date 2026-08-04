@@ -270,10 +270,6 @@ class BinaryOpTests(SymbolTests):
         with model.lock():
             np.testing.assert_equal(out_arr, out_sym.state())
 
-    def test_deterministic(self):
-        x = next(self.generate_symbols())
-        self.assertTrue(x._deterministic_state())
-
     def test_info(self):
         for x in self.generate_symbols():
             info = x.info()
