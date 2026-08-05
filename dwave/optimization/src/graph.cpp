@@ -593,14 +593,7 @@ void Graph::swap_decisions(DecisionNode* x_ptr, DecisionNode* y_ptr) {
     assert(decisions_[x_idx] == x_ptr);
     assert(decisions_[y_idx] == y_ptr);
 
-    assert(0 <= x_idx and static_cast<size_t>(x_idx) < nodes_.size());
-    assert(0 <= y_idx and static_cast<size_t>(y_idx) < nodes_.size());
-
-    assert(nodes_[x_idx].get() == static_cast<Node*>(x_ptr));
-    assert(nodes_[y_idx].get() == static_cast<Node*>(y_ptr));
-
     using std::swap;  // ADL shouldn't matter here, but a good habit nonetheless
-    swap(nodes_[x_idx], nodes_[y_idx]);
     swap(decisions_[x_idx], decisions_[y_idx]);
     swap(x_idx, y_idx);
 }

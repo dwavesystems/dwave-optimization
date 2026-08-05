@@ -560,10 +560,6 @@ TEST_CASE("Graph::swap_decisions") {
 
         CHECK_THAT(graph.decisions(), RangeEquals({x_ptr, y_ptr, z_ptr}));
 
-        CHECK(graph.nodes()[0].get() == x_ptr);
-        CHECK(graph.nodes()[1].get() == y_ptr);
-        CHECK(graph.nodes()[2].get() == z_ptr);
-
         CHECK(x_ptr->topological_index() == 0);
         CHECK(y_ptr->topological_index() == 1);
         CHECK(z_ptr->topological_index() == 2);
@@ -572,13 +568,41 @@ TEST_CASE("Graph::swap_decisions") {
 
         CHECK_THAT(graph.decisions(), RangeEquals({x_ptr, z_ptr, y_ptr}));
 
+        CHECK(x_ptr->topological_index() == 0);
+        CHECK(y_ptr->topological_index() == 2);
+        CHECK(z_ptr->topological_index() == 1);
+
+        graph.topological_sort();
+
         CHECK(graph.nodes()[0].get() == x_ptr);
         CHECK(graph.nodes()[1].get() == z_ptr);
         CHECK(graph.nodes()[2].get() == y_ptr);
+    }
+
+    GIVEN("A graph with an intermediate node added before the last decision") {
+        auto graph = Graph();
+
+        auto* x_ptr = graph.emplace_node<BinaryNode>();
+        auto* y_ptr = graph.emplace_node<IntegerNode>();
+        auto* a_ptr = graph.emplace_node<AddNode>(x_ptr, y_ptr);
+        auto* z_ptr = graph.emplace_node<SetNode>(5);
+
+        CHECK_THAT(graph.decisions(), RangeEquals(std::vector<Node*>{x_ptr, y_ptr, z_ptr}));
+
+        graph.swap_decisions(y_ptr, z_ptr);
+
+        CHECK_THAT(graph.decisions(), RangeEquals(std::vector<Node*>{x_ptr, z_ptr, y_ptr}));
 
         CHECK(x_ptr->topological_index() == 0);
         CHECK(y_ptr->topological_index() == 2);
         CHECK(z_ptr->topological_index() == 1);
+
+        graph.topological_sort();
+
+        CHECK(graph.nodes()[0].get() == x_ptr);
+        CHECK(graph.nodes()[1].get() == z_ptr);
+        CHECK(graph.nodes()[2].get() == y_ptr);
+        CHECK(graph.nodes()[3].get() == a_ptr);
     }
 }
 
