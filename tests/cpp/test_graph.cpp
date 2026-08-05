@@ -340,6 +340,31 @@ TEST_CASE("Graph::pop_decision()") {
         CHECK(y_ptr->topological_index() == 1);
         CHECK(a_ptr->topological_index() == 2);
     }
+
+    GIVEN("A graph with an intermediate node added before the last decision") {
+        auto graph = Graph();
+
+        auto* x_ptr = graph.emplace_node<BinaryNode>();
+        auto* y_ptr = graph.emplace_node<IntegerNode>();
+        auto* a_ptr = graph.emplace_node<AddNode>(x_ptr, y_ptr);
+        graph.emplace_node<SetNode>(5);
+
+        graph.pop_decision();
+
+        CHECK(graph.nodes()[0].get() == x_ptr);
+        CHECK(graph.nodes()[1].get() == y_ptr);
+        CHECK(graph.nodes()[2].get() == a_ptr);
+
+        graph.topological_sort();
+
+        CHECK(graph.nodes()[0].get() == x_ptr);
+        CHECK(graph.nodes()[1].get() == y_ptr);
+        CHECK(graph.nodes()[2].get() == a_ptr);
+
+        CHECK(x_ptr->topological_index() == 0);
+        CHECK(y_ptr->topological_index() == 1);
+        CHECK(a_ptr->topological_index() == 2);
+    }
 }
 
 TEST_CASE("Graph::remove_redundant_nodes()") {

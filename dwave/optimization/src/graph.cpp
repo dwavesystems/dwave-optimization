@@ -159,19 +159,36 @@ void Graph::initialize_state(State& state) {
 
 void Graph::pop_decision() {
     assert(not topologically_sorted_ and "cannot pop a decision from a locked model");
+    assert(not decisions_.empty() and "need at least one decision");
 
-    // Get the index of the node we're going to delete
-    const ssize_t i = std::ranges::ssize(decisions_) - 1;
-    assert(0 <= i and "need at least one decision");
+    // Get a pointer to the node we want to remove
+    const Node* target_ptr = decisions_.back();
 
-    // Check that nodes_ and decisions_ are consistent (should always be true)
-    assert(nodes_[i].get() == decisions_[i]);
+    [[maybe_unused]] auto is_target = [&target_ptr](const auto* ptr) {
+        return static_cast<const Node*>(ptr) == target_ptr;
+    };
 
-    // Confirm that removing the decision won't leave anything dangling
-    assert(decisions_[i]->successors().empty() and "cannot remove a decision with successors");
+    // Make sure the last decision is unused
+    assert(target_ptr->successors().empty() and "cannot remove a decision with successors");
+    assert(not is_target(objective_ptr_) and "cannot remove the objective");
+    assert(std::ranges::none_of(constraints_, is_target) and "cannot remove a constraint");
 
+    // Ok, stop tracking our target in the decisions_ list
     decisions_.pop_back();
-    nodes_.erase(nodes_.begin() + i);
+
+    // Should never have the same decision twice and decisions are not inputs/constants
+    assert(std::ranges::none_of(decisions_, is_target));
+    assert(std::ranges::none_of(inputs_, is_target));
+    assert(std::ranges::none_of(constants_, is_target));
+
+    // Finally, we need to remove it from our node list. We do the swap and pop trick
+    // because we're not topologically sorted so it's OK for us to mess with the node order
+    auto it = std::find_if(nodes_.begin(), nodes_.end(), [&target_ptr](const auto& uptr) {
+        return uptr.get() == target_ptr;
+    });
+    assert(it != nodes_.end());  // our target must be in there somewhere
+    std::swap(*it, nodes_.back());
+    nodes_.pop_back();
 }
 
 void Graph::propagate(State& state) const {
