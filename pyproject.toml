@@ -12,7 +12,7 @@ build-backend = 'mesonpy'
 name = "dwave-optimization"
 dynamic = ["version"]
 authors = [
-    {name = "D-Wave Inc.", email = "tools@dwavesys.com"},
+    {name = "D-Wave", email = "tools@dwavesys.com"},
 ]
 description = "Enables the formulation of nonlinear models for industrial optimization problems."
 license = "Apache-2.0"
