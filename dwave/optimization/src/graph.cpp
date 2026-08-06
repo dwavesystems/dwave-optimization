@@ -157,6 +157,40 @@ void Graph::initialize_state(State& state) {
     static_cast<const Graph*>(this)->initialize_state(state);
 }
 
+void Graph::pop_decision() {
+    assert(not topologically_sorted_ and "cannot pop a decision from a locked model");
+    assert(not decisions_.empty() and "need at least one decision");
+
+    // Get a pointer to the node we want to remove
+    const Node* target_ptr = decisions_.back();
+
+    [[maybe_unused]] auto is_target = [&target_ptr](const auto* ptr) {
+        return static_cast<const Node*>(ptr) == target_ptr;
+    };
+
+    // Make sure the last decision is unused
+    assert(target_ptr->successors().empty() and "cannot remove a decision with successors");
+    assert(not is_target(objective_ptr_) and "cannot remove the objective");
+    assert(std::ranges::none_of(constraints_, is_target) and "cannot remove a constraint");
+
+    // Ok, stop tracking our target in the decisions_ list
+    decisions_.pop_back();
+
+    // Should never have the same decision twice and decisions are not inputs/constants
+    assert(std::ranges::none_of(decisions_, is_target));
+    assert(std::ranges::none_of(inputs_, is_target));
+    assert(std::ranges::none_of(constants_, is_target));
+
+    // Finally, we need to remove it from our node list. We do the swap and pop trick
+    // because we're not topologically sorted so it's OK for us to mess with the node order
+    auto it = std::find_if(nodes_.begin(), nodes_.end(), [&target_ptr](const auto& uptr) {
+        return uptr.get() == target_ptr;
+    });
+    assert(it != nodes_.end());  // our target must be in there somewhere
+    std::swap(*it, nodes_.back());
+    nodes_.pop_back();
+}
+
 void Graph::propagate(State& state) const {
     std::ranges::for_each(nodes(), [&state](const auto& ptr) { ptr->propagate(state); });
 }
@@ -543,6 +577,25 @@ void Graph::set_objective(ArrayNode* objective_ptr) {
         throw std::invalid_argument("objective must have a single output");
     }
     this->objective_ptr_ = objective_ptr;
+}
+
+void Graph::swap_decisions(DecisionNode* x_ptr, DecisionNode* y_ptr) {
+    assert(not topologically_sorted_ and "cannot swap decisions in a locked model");
+
+    if (x_ptr == y_ptr) return;  // nothing to do
+
+    ssize_t& x_idx = x_ptr->topological_index_; 
+    ssize_t& y_idx = y_ptr->topological_index_;
+
+    assert(0 <= x_idx and static_cast<size_t>(x_idx) < decisions_.size());
+    assert(0 <= y_idx and static_cast<size_t>(y_idx) < decisions_.size());
+
+    assert(decisions_[x_idx] == x_ptr);
+    assert(decisions_[y_idx] == y_ptr);
+
+    using std::swap;  // ADL shouldn't matter here, but a good habit nonetheless
+    swap(decisions_[x_idx], decisions_[y_idx]);
+    swap(x_idx, y_idx);
 }
 
 void Graph::topological_sort() {
