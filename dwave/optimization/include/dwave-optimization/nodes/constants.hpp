@@ -1,4 +1,4 @@
-// Copyright 2023 D-Wave Systems Inc.
+// Copyright 2023 D-Wave
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 namespace dwave::optimization {
 
 /// A contiguous block of numbers.
-class ConstantNode : public ArrayOutputMixin<ArrayNode> {
+class ConstantNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ConstantNode>> {
  public:
     struct DataSource {
         DataSource() = default;
@@ -99,6 +99,9 @@ class ConstantNode : public ArrayOutputMixin<ArrayNode> {
     double max() const override;
 
     // Overloads required by the Node ABC *************************************
+
+    /// @copydoc Node::equal_to()
+    bool equal_to(const ConstantNode& rhs) const override;
 
     // This node never needs to update its successors
     void propagate(State&) const noexcept override {}

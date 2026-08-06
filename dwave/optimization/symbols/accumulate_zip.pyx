@@ -191,10 +191,10 @@ cdef class AccumulateZip(ArraySymbol):
         return AccumulateZip(expression, operands, initial=initial)
 
     def initial(self):
-        if holds_alternative["ArrayNode*"](self.ptr.initial):
-            return symbol_from_ptr(self.model, get["ArrayNode*"](self.ptr.initial))
+        if holds_alternative["ArrayNode*"](self.ptr.initial()):
+            return symbol_from_ptr(self.model, get["ArrayNode*"](self.ptr.initial()))
         else:
-            return get[double](self.ptr.initial)
+            return get[double](self.ptr.initial())
 
     def _into_zipfile(self, zf, directory):
         """Store a AccumulateZip symbol as a compressed file.
@@ -224,13 +224,13 @@ cdef class AccumulateZip(ArraySymbol):
 
         # Now save information about the initial state
         encoder = json.JSONEncoder(separators=(',', ':'))
-        if holds_alternative["ArrayNode*"](self.ptr.initial):
+        if holds_alternative["ArrayNode*"](self.ptr.initial()):
             initial_info = dict(
                 type="node",
-                value=get["ArrayNode*"](self.ptr.initial).topological_index()
+                value=get["ArrayNode*"](self.ptr.initial()).topological_index()
             )
         else:
-            initial_info = dict(type="double", value=get[double](self.ptr.initial))
+            initial_info = dict(type="double", value=get[double](self.ptr.initial()))
         zf.writestr(directory + "initial.json", encoder.encode(initial_info))
 
     cdef AccumulateZipNode* ptr

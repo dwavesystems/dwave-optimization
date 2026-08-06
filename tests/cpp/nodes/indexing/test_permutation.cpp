@@ -16,6 +16,7 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
 
+#include "catch2/matchers/catch_matchers.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
@@ -173,6 +174,54 @@ TEST_CASE("PermutationNode") {
                 }
             }
         }
+    }
+
+    SECTION("equality") {
+        std::vector<double> values = {0, 1, 2, 3};
+        auto* arr0_ptr = graph.emplace_node<ConstantNode>(values, std::array<ssize_t, 2>{2, 2});
+        auto* arr1_ptr = graph.emplace_node<ConstantNode>(values, std::array<ssize_t, 2>{2, 2});
+
+        auto* order0_ptr = graph.emplace_node<ListNode>(2);
+        auto* order1_ptr = graph.emplace_node<ListNode>(2);
+
+        Node* a_ptr = graph.emplace_node<PermutationNode>(arr0_ptr, order0_ptr);
+        Node* b_ptr = graph.emplace_node<PermutationNode>(arr0_ptr, order0_ptr);
+        Node* c_ptr = graph.emplace_node<PermutationNode>(arr1_ptr, order0_ptr);
+        Node* d_ptr = graph.emplace_node<PermutationNode>(arr0_ptr, order1_ptr);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(not a_ptr->equal_to(*arr0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        std::vector<double> values0 = {0, 1, 2, 3};
+        auto* arr0_ptr = graph.emplace_node<ConstantNode>(values0, std::array<ssize_t, 2>{2, 2});
+        std::vector<double> values1 = {5, 6, 7, 8};
+        auto* arr1_ptr = graph.emplace_node<ConstantNode>(values1, std::array<ssize_t, 2>{2, 2});
+
+        auto* order0_ptr = graph.emplace_node<ListNode>(2);
+        auto* order1_ptr = graph.emplace_node<ListNode>(2);
+
+        auto* permutation_ptr = graph.emplace_node<PermutationNode>(arr0_ptr, order0_ptr);
+
+        arr1_ptr->take_successors(*arr0_ptr);
+        CHECK_THAT(
+            permutation_ptr->predecessors(), RangeEquals(std::array<Node*, 2>{arr1_ptr, order0_ptr})
+        );
+        order1_ptr->take_successors(*order0_ptr);
+        CHECK_THAT(
+            permutation_ptr->predecessors(), RangeEquals(std::array<Node*, 2>{arr1_ptr, order1_ptr})
+        );
+
+        auto state = graph.empty_state();
+        order0_ptr->initialize_state(state, {0, 1});
+        order1_ptr->initialize_state(state, {1, 0});
+        graph.initialize_state(state);
+
+        CHECK_THAT(permutation_ptr->view(state), RangeEquals({8, 7, 6, 5}));
     }
 }
 

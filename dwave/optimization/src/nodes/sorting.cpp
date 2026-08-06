@@ -112,6 +112,17 @@ void ArgSortNode::propagate(State& state) const {
     );
 }
 
+void ArgSortNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+    assert(std::ranges::equal(arr_ptr_->shape(), array_ptr->shape()));
+
+    assert(index == 0);
+    arr_ptr_ = array_ptr;
+}
+
 void ArgSortNode::revert(State& state) const {
     auto node_data = data_ptr_<ArgSortNodeData>(state);
 

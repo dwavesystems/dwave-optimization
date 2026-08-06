@@ -14,6 +14,7 @@
 
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_range_equals.hpp>
 
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/binaryop.hpp"
@@ -23,6 +24,8 @@
 #include "dwave-optimization/nodes/naryop.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -185,6 +188,19 @@ TEMPLATE_TEST_CASE(
                     }
                 }
             }
+        }
+
+        THEN("We can replace predecessors") {
+            auto* a0_ptr = graph.emplace_node<ListNode>(4);
+            auto* b0_ptr = graph.emplace_node<ListNode>(4);
+            auto* c0_ptr = graph.emplace_node<ListNode>(4);
+
+            a0_ptr->take_successors(*a_ptr);
+            b0_ptr->take_successors(*b_ptr);
+            c0_ptr->take_successors(*c_ptr);
+
+            CHECK_THAT(p_ptr->predecessors(), RangeEquals({a0_ptr, b0_ptr, c0_ptr}));
+            CHECK_THAT(p_ptr->operands(), RangeEquals({a0_ptr, b0_ptr, c0_ptr}));
         }
     }
 

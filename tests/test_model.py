@@ -1,4 +1,4 @@
-# Copyright 2024 D-Wave Systems Inc.
+# Copyright 2024 D-Wave
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -325,6 +325,22 @@ class TestModel(unittest.TestCase):
         # It cannot be set to the wrong type
         with self.assertRaises(TypeError):
             model.objective = "hello"
+
+    def test_remove_redundant_symbols(self):
+        model = Model()
+
+        x = model.binary()
+        y = model.binary()
+
+        first = x + y
+        second = y + x
+
+        self.assertEqual(model.remove_redundant_symbols(), 0)  # both are named symbols
+
+        del second
+        self.assertEqual(model.remove_redundant_symbols(), 1)
+
+        self.assertEqual(list(model.iter_symbols())[2].id(), first.id())
 
     def test_remove_unused_symbols(self):
         with self.subTest("all unused"):

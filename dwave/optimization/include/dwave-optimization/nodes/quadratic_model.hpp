@@ -1,4 +1,4 @@
-// Copyright 2024 D-Wave Systems Inc.
+// Copyright 2024 D-Wave
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ class QuadraticModel {
     friend class QuadraticModelNode;
 };
 
-class QuadraticModelNode : public ScalarOutputMixin<ArrayNode> {
+class QuadraticModelNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     QuadraticModelNode(ArrayNode* state_node_ptr, QuadraticModel&& quadratic_model);
 

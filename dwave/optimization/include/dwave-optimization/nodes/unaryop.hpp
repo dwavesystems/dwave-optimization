@@ -35,6 +35,9 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
 
+    bool equal_to(const Node& rhs) const override;
+    bool equal_to(const UnaryOpNode& rhs) const;
+
     /// @copydoc Array::integral()
     bool integral() const override;
 
@@ -57,21 +60,23 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     void propagate(State& state) const override;
 
     // The predecessor of the operation, as an Array*.
-    std::span<Array* const> operands() {
+    std::span<ArrayNode* const> operands() {
         assert(predecessors().size() == 1);
-        return std::span<Array* const, 1>(&array_ptr_, 1);
+        return std::span<ArrayNode* const, 1>(&array_ptr_, 1);
     }
-    std::span<const Array* const> operands() const {
+    std::span<const ArrayNode* const> operands() const {
         assert(predecessors().size() == 1);
-        return std::span<const Array* const, 1>(&array_ptr_, 1);
+        return std::span<const ArrayNode* const, 1>(&array_ptr_, 1);
     }
 
  private:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
     UnaryOp op;
 
-    // There are redundant, because we could dynamic_cast each time from
+    // This is redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
-    Array* const array_ptr_;
+    ArrayNode* array_ptr_;
 
     const ValuesInfo values_info_;
     const SizeInfo sizeinfo_;

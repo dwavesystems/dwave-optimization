@@ -1,4 +1,4 @@
-// Copyright 2023 D-Wave Inc.
+// Copyright 2023 D-Wave
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -47,6 +47,17 @@ TEST_CASE("DisjointBitSetsNode") {
                 sets.push_back(graph.emplace_node<DisjointBitSetNode>(ptr));
 
                 graph.emplace_node<ArrayValidationNode>(sets.at(i));
+            }
+
+            THEN("node equality works as expected") {
+                CHECK(ptr->equal_to(*ptr));
+
+                CHECK(sets[0]->equal_to(*sets[0]));
+                CHECK(not sets[0]->equal_to(*sets[1]));
+                CHECK(static_cast<Node*>(sets[0])->equal_to(*sets[0]));
+                CHECK(not static_cast<Node*>(sets[0])->equal_to(*sets[1]));
+                CHECK(sets[0]->equal_to(*static_cast<Node*>(sets[0])));
+                CHECK(not sets[0]->equal_to(*static_cast<Node*>(sets[1])));
             }
 
             THEN("We shouldn't be able to add any more successors") {
@@ -249,6 +260,17 @@ TEST_CASE("DisjointListsNode") {
 
             THEN("We shouldn't be able to add any more successors") {
                 CHECK_THROWS(graph.emplace_node<DisjointListNode>(ptr));
+            }
+
+            THEN("node equality works as expected") {
+                CHECK(ptr->equal_to(*ptr));
+
+                CHECK(lists[0]->equal_to(*lists[0]));
+                CHECK(not lists[0]->equal_to(*lists[1]));
+                CHECK(static_cast<Node*>(lists[0])->equal_to(*lists[0]));
+                CHECK(not static_cast<Node*>(lists[0])->equal_to(*lists[1]));
+                CHECK(lists[0]->equal_to(*static_cast<Node*>(lists[0])));
+                CHECK(not lists[0]->equal_to(*static_cast<Node*>(lists[1])));
             }
 
             THEN("The shape of the successors are as expected") {

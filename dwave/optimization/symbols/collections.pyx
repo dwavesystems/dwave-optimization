@@ -284,6 +284,17 @@ cdef class DisjointBitSets(Symbol):
         self.ptr.initialize_state((<States>self.model.states)._states[index], move(sets))
 
     def _state_from_zipfile(self, zf, directory, Py_ssize_t state_index):
+        # shouldn't be possible, but just in case
+        if not self.num_disjoint_sets():
+            return
+
+        # If we haven't saved any states then the state must be uninitialized
+        # and we can go ahead and return
+        try:
+            zf.getinfo(directory + "set0")
+        except KeyError:
+            return
+
         arrays = []
         for i in range(self.num_disjoint_sets()):
             with zf.open(directory+f"set{i}", mode="r") as f:
@@ -589,6 +600,17 @@ cdef class DisjointLists(Symbol):
         self.ptr.initialize_state((<States>self.model.states)._states[index], move(items))
 
     def _state_from_zipfile(self, zf, directory, Py_ssize_t state_index):
+        # shouldn't be possible, but just in case
+        if not self.num_disjoint_lists():
+            return
+
+        # If we haven't saved any states then the state must be uninitialized
+        # and we can go ahead and return
+        try:
+            zf.getinfo(directory + "list0")
+        except KeyError:
+            return
+
         arrays = []
         for i in range(self.num_disjoint_lists()):
             with zf.open(directory+f"list{i}", mode="r") as f:

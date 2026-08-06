@@ -20,7 +20,7 @@
 
 namespace dwave::optimization {
 
-class MeanNode : public ScalarOutputMixin<ArrayNode, true> {
+class MeanNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>, true> {
  public:
     MeanNode(ArrayNode* arr_ptr);
 
@@ -38,6 +38,9 @@ class MeanNode : public ScalarOutputMixin<ArrayNode, true> {
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     // these are redundant, but convenient

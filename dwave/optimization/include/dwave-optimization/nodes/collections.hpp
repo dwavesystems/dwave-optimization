@@ -1,4 +1,4 @@
-// Copyright 2023 D-Wave Systems Inc.
+// Copyright 2023 D-Wave
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -152,6 +152,9 @@ class DisjointBitSetNode : public ArrayOutputMixin<ArrayNode> {
 
     std::span<const Update> diff(const State& state) const override;
 
+    /// A DisjointBitSetNode can only ever be equal to itself.
+    bool equal_to(const Node& rhs) const override;
+
     /// @copydoc Array::integral()
     bool integral() const override;
 
@@ -248,6 +251,9 @@ class DisjointListNode : public ArrayOutputMixin<ArrayNode> {
     void commit(State&) const override {};
 
     std::span<const Update> diff(const State& state) const override;
+
+    /// A DisjointListNode can only ever be equal to itself.
+    bool equal_to(const Node& rhs) const override;
 
     /// @copydoc Array::integral()
     bool integral() const override;

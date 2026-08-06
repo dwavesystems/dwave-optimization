@@ -1,4 +1,4 @@
-# Copyright 2025 D-Wave Inc.
+# Copyright 2025 D-Wave
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -26,3 +26,6 @@ ArraySymbolLike: typing.TypeAlias = ArraySymbol | numpy.typing.ArrayLike
 """Either a :class:`~dwave.optimization.ArraySymbol` or a NumPy
 `array-like <https://numpy.org/devdocs/glossary.html#term-array_like>`_.
 """
+
+ShapeLike: typing.TypeAlias = int | tuple[int, ...]
+"""Objects that can be converted to a shape"""

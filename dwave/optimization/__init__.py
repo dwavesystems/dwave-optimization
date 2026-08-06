@@ -1,4 +1,4 @@
-# Copyright 2023 D-Wave Systems Inc.
+# Copyright 2023 D-Wave
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from dwave.optimization.expression import *
 from dwave.optimization.model import Model
 from dwave.optimization.mathematical import *
 
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 
 
 def get_include() -> str:

@@ -265,5 +265,23 @@ TEST_CASE("IsInNode") {
                 }
             }
         }
+
+    SECTION("predecessor replacement") {
+        auto* e0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 6, 7});
+        auto* e1_ptr = graph.emplace_node<ConstantNode>(std::vector{2, 3, 4, 5});
+
+        auto* t0_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 2});
+        auto* t1_ptr = graph.emplace_node<ConstantNode>(std::vector{6, 5});
+
+        auto* isin_ptr = graph.emplace_node<IsInNode>(e0_ptr, t0_ptr);
+
+        e1_ptr->take_successors(*e0_ptr);
+        t1_ptr->take_successors(*t0_ptr);
+
+        CHECK_THAT(isin_ptr->predecessors(), RangeEquals({e1_ptr, t1_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK_THAT(isin_ptr->view(state), RangeEquals({0, 0, 0, 1}));
     }
+}
 }  // namespace dwave::optimization

@@ -2458,6 +2458,61 @@ TEST_CASE("BasicIndexingNode") {
         }
     }
 
+    SECTION("equality") {
+        auto* x0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{5, 5});
+        auto* x1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{5, 5});
+
+        Node* a_ptr = graph.emplace_node<BasicIndexingNode>(x0_ptr, 0, 1);
+        Node* b_ptr = graph.emplace_node<BasicIndexingNode>(x0_ptr, 0, 1);
+        Node* c_ptr = graph.emplace_node<BasicIndexingNode>(x1_ptr, 0, 1);
+        Node* d_ptr = graph.emplace_node<BasicIndexingNode>(x0_ptr, 1, 1);
+        Node* e_ptr = graph.emplace_node<BasicIndexingNode>(x0_ptr, Slice(0, 3), Slice(1, 3));
+        Node* f_ptr = graph.emplace_node<BasicIndexingNode>(x0_ptr, Slice(0, 3), Slice(1, 3));
+        Node* g_ptr = graph.emplace_node<BasicIndexingNode>(x0_ptr, Slice(0, 2), Slice(1, 3));
+        Node* h_ptr = graph.emplace_node<BasicIndexingNode>(x0_ptr, Slice(0, 2), Slice(1, 10));
+        Node* i_ptr = graph.emplace_node<BasicIndexingNode>(x0_ptr, Slice(0, 2), Slice(1, 100));
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(e_ptr->equal_to(*f_ptr));
+        CHECK(h_ptr->equal_to(*i_ptr));
+
+        CHECK(not a_ptr->equal_to(*x0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+        CHECK(not e_ptr->equal_to(*g_ptr));
+
+        auto* y0_ptr = graph.emplace_node<SetNode>(5);
+
+        Node* j_ptr = graph.emplace_node<BasicIndexingNode>(y0_ptr, Slice(-3, 1000));
+        Node* k_ptr = graph.emplace_node<BasicIndexingNode>(y0_ptr, Slice(-2, 1000));
+
+        CHECK(not j_ptr->equal_to(*k_ptr));
+
+        // dev note: We don't currently support this case but could in the future, see
+        // note in .cpp file
+        // Node* l_ptr = graph.emplace_node<BasicIndexingNode>(y0_ptr, Slice(-3, 10000));
+        // CHECK(j_ptr->equal_to(*l_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto* x0_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2, 2});
+        auto* x1_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{2, 2});
+
+        auto* basic_ptr = graph.emplace_node<BasicIndexingNode>(x0_ptr, 0, 1);
+
+        x1_ptr->take_successors(*x0_ptr);
+
+        CHECK_THAT(basic_ptr->predecessors(), RangeEquals({x1_ptr}));
+
+        auto state = graph.empty_state();
+        x0_ptr->initialize_state(state, {0, 1, 2, 3});
+        x1_ptr->initialize_state(state, {4, 5, 6, 7});
+        graph.initialize_state(state);
+
+        CHECK_THAT(basic_ptr->view(state), RangeEquals({5}));
+    }
+
     // todo: slicing on multidimensional dynamic array, when we have one to test...
 }
 

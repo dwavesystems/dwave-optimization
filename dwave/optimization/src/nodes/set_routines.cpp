@@ -230,6 +230,20 @@ void IsInNode::propagate(State& state) const {
     assert(set_data_is_correct(state, element_ptr_, *node_data));
 }
 
+void IsInNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+
+    if (index == 0) {
+        element_ptr_ = array_ptr;
+    } else {
+        assert(index == 1);
+        test_elements_ptr_ = array_ptr;
+    }
+}
+
 void IsInNode::revert(State& state) const {
     IsInNodeData* node_data = data_ptr_<IsInNodeData>(state);
 

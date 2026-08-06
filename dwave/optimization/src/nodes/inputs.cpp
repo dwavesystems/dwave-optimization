@@ -99,6 +99,10 @@ void InputNode::initialize_state(State& state, std::span<const double> data) con
     emplace_data_ptr_<ArrayNodeStateData>(state, std::move(copy));
 }
 
+void InputNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    assert(false and "InputNode never has any predecessors");
+}
+
 void InputNode::revert(State& state) const noexcept {
     data_ptr_<ArrayNodeStateData>(state)->revert();
 }

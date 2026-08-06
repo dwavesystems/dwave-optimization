@@ -1,4 +1,4 @@
-// Copyright 2024 D-Wave Inc.
+// Copyright 2024 D-Wave
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -141,6 +141,19 @@ void ExtractNode::propagate(State& state) const {
     }
 
     node_data->assign(std::move(new_values), count);
+}
+
+void ExtractNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    if (index == 0) {
+        condition_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(condition_ptr_ != nullptr);
+    } else {
+        assert(index == 1);
+        arr_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(arr_ptr_ != nullptr);
+    }
 }
 
 void ExtractNode::revert(State& state) const { data_ptr_<ArrayNodeStateData>(state)->revert(); }
@@ -361,6 +374,22 @@ void WhereNode::propagate(State& state) const {
             // we're pointing to y, so update ourselves according to y
             node_data->update(y_ptr_->diff(state));
         }
+    }
+}
+
+void WhereNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    if (index == 0) {
+        condition_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(condition_ptr_ != nullptr);
+    } else if (index == 1) {
+        x_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(x_ptr_ != nullptr);
+    } else {
+        assert(index == 2);
+        y_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
+        assert(y_ptr_ != nullptr);
     }
 }
 

@@ -547,6 +547,60 @@ TEST_CASE("MatrixMultiplyNode") {
             }
         }
     }
+
+    SECTION("equality") {
+        auto* x0_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{1, 2, 3, 4}, std::vector<ssize_t>{2, 2}
+        );
+        auto* x1_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{6, 5, 4, 3}, std::vector<ssize_t>{2, 2}
+        );
+
+        auto* y0_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{7, 8, 9, 10}, std::vector<ssize_t>{2, 2}
+        );
+        auto* y1_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{12, 11, 10, 9}, std::vector<ssize_t>{2, 2}
+        );
+
+        Node* a_ptr = graph.emplace_node<MatrixMultiplyNode>(x0_ptr, y0_ptr);
+        Node* b_ptr = graph.emplace_node<MatrixMultiplyNode>(x0_ptr, y0_ptr);
+        Node* c_ptr = graph.emplace_node<MatrixMultiplyNode>(x1_ptr, y0_ptr);
+        Node* d_ptr = graph.emplace_node<MatrixMultiplyNode>(x0_ptr, y1_ptr);
+        Node* e_ptr = graph.emplace_node<MatrixMultiplyNode>(y0_ptr, x0_ptr);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+
+        CHECK(not a_ptr->equal_to(*x0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
+        CHECK(not a_ptr->equal_to(*e_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto* x0_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{1, 2, 3, 4, 5, 6}, std::vector<ssize_t>{2, 3}
+        );
+        auto* x1_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{6, 5, 4, 3, 2, 1}, std::vector<ssize_t>{2, 3}
+        );
+
+        auto* y0_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{7, 8, 9, 10, 11, 12}, std::vector<ssize_t>{3, 2}
+        );
+        auto* y1_ptr = graph.emplace_node<ConstantNode>(
+            std::vector{12, 11, 10, 9, 8, 7}, std::vector<ssize_t>{3, 2}
+        );
+
+        auto* matmul_ptr = graph.emplace_node<MatrixMultiplyNode>(x0_ptr, y0_ptr);
+
+        x1_ptr->take_successors(*x0_ptr);
+        y1_ptr->take_successors(*y0_ptr);
+
+        CHECK_THAT(matmul_ptr->predecessors(), RangeEquals({x1_ptr, y1_ptr}));
+        CHECK_THAT(matmul_ptr->operands(), RangeEquals({x1_ptr, y1_ptr}));
+    }
 }
 
 }  // namespace dwave::optimization

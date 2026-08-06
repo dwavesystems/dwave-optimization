@@ -16,6 +16,7 @@
 #include <catch2/matchers/catch_matchers_all.hpp>
 
 #include "dwave-optimization/nodes/collections.hpp"
+#include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/creation.hpp"
 #include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
@@ -564,6 +565,55 @@ TEST_CASE("ARangeNode") {
 
             CHECK(arange_ptr->size(state) == 3);
             CHECK_THAT(arange_ptr->view(state), RangeEquals({17, 14, 11}));
+        }
+    }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* x_ptr = graph.emplace_node<IntegerNode>();
+        auto* y_ptr = graph.emplace_node<IntegerNode>();
+
+        Node* a_ptr = graph.emplace_node<ARangeNode>(0, 10, 1);
+        Node* b_ptr = graph.emplace_node<ARangeNode>(0, 10, 1);
+        Node* c_ptr = graph.emplace_node<ARangeNode>(1, 10, 2);
+
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+
+        Node* d_ptr = graph.emplace_node<ARangeNode>(0, x_ptr);
+        Node* e_ptr = graph.emplace_node<ARangeNode>(0, x_ptr);
+        Node* f_ptr = graph.emplace_node<ARangeNode>(0, y_ptr);
+
+        CHECK(d_ptr->equal_to(*e_ptr));
+        CHECK(not d_ptr->equal_to(*b_ptr));
+        CHECK(not d_ptr->equal_to(*f_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* x_ptr = graph.emplace_node<ConstantNode>(1);
+        auto* y_ptr = graph.emplace_node<ConstantNode>(1);
+
+        SECTION("range(x, x, x); y.take_sucessors(x)") {
+            auto* arange_ptr = graph.emplace_node<ARangeNode>(x_ptr, x_ptr, x_ptr);
+            y_ptr->take_successors(*x_ptr);
+
+            CHECK_THAT(arange_ptr->predecessors(), RangeEquals({y_ptr, y_ptr, y_ptr}));
+            CHECK(std::get<const Array*>(arange_ptr->start()) == y_ptr);
+            CHECK(std::get<const Array*>(arange_ptr->stop()) == y_ptr);
+            CHECK(std::get<const Array*>(arange_ptr->step()) == y_ptr);
+        }
+
+        SECTION("range(x, 1, x); y.take_sucessors(x)") {
+            auto* arange_ptr = graph.emplace_node<ARangeNode>(x_ptr, 1, x_ptr);
+            y_ptr->take_successors(*x_ptr);
+
+            CHECK_THAT(arange_ptr->predecessors(), RangeEquals({y_ptr, y_ptr}));
+            CHECK(std::get<const Array*>(arange_ptr->start()) == y_ptr);
+            CHECK(std::get<ssize_t>(arange_ptr->stop()) == 1);
+            CHECK(std::get<const Array*>(arange_ptr->step()) == y_ptr);
         }
     }
 }

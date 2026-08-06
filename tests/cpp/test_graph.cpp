@@ -1,4 +1,4 @@
-// Copyright 2023 D-Wave Systems Inc.
+// Copyright 2023 D-Wave
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -13,10 +13,12 @@
 //    limitations under the License.
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_all.hpp>
+#include <catch2/matchers/catch_matchers_range_equals.hpp>
 
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes.hpp"
+
+using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
@@ -243,7 +245,7 @@ TEST_CASE("Graph::commit(), Graph::descendants(), Graph::propagate(), and Graph:
 
     SECTION("Find descendants") {
         auto descendants = graph.descendants({x_ptr});
-        CHECK_THAT(descendants, Catch::Matchers::RangeEquals(std::vector<Node*>{x_ptr, z_ptr}));
+        CHECK_THAT(descendants, RangeEquals(std::vector<Node*>{x_ptr, z_ptr}));
     }
     SECTION("Propagate all") {
         CHECK(x_ptr->view(state).front() == 0);
@@ -312,6 +314,155 @@ TEST_CASE("Graph::objective()") {
                 CHECK(graph.objective() == x_ptr);
                 CHECK(static_cast<const Graph&>(graph).objective() == x_ptr);
             }
+        }
+    }
+}
+
+TEST_CASE("Graph::pop_decision()") {
+    GIVEN("A graph with three decisions and an intermediate node") {
+        auto graph = Graph();
+
+        auto* x_ptr = graph.emplace_node<BinaryNode>();
+        auto* y_ptr = graph.emplace_node<IntegerNode>();
+        graph.emplace_node<SetNode>(5);
+
+        auto* a_ptr = graph.emplace_node<AddNode>(x_ptr, y_ptr);
+
+        graph.pop_decision();
+
+        graph.topological_sort();
+
+        CHECK(graph.nodes()[0].get() == x_ptr);
+        CHECK(graph.nodes()[1].get() == y_ptr);
+        CHECK(graph.nodes()[2].get() == a_ptr);
+
+        CHECK(x_ptr->topological_index() == 0);
+        CHECK(y_ptr->topological_index() == 1);
+        CHECK(a_ptr->topological_index() == 2);
+    }
+
+    GIVEN("A graph with an intermediate node added before the last decision") {
+        auto graph = Graph();
+
+        auto* x_ptr = graph.emplace_node<BinaryNode>();
+        auto* y_ptr = graph.emplace_node<IntegerNode>();
+        auto* a_ptr = graph.emplace_node<AddNode>(x_ptr, y_ptr);
+        graph.emplace_node<SetNode>(5);
+
+        graph.pop_decision();
+
+        CHECK(graph.nodes()[0].get() == x_ptr);
+        CHECK(graph.nodes()[1].get() == y_ptr);
+        CHECK(graph.nodes()[2].get() == a_ptr);
+
+        graph.topological_sort();
+
+        CHECK(graph.nodes()[0].get() == x_ptr);
+        CHECK(graph.nodes()[1].get() == y_ptr);
+        CHECK(graph.nodes()[2].get() == a_ptr);
+
+        CHECK(x_ptr->topological_index() == 0);
+        CHECK(y_ptr->topological_index() == 1);
+        CHECK(a_ptr->topological_index() == 2);
+    }
+}
+
+TEST_CASE("Graph::remove_redundant_nodes()") {
+    GIVEN("A model with two redundant nodes") {
+        auto graph = Graph();
+
+        auto* x_ptr = graph.emplace_node<BinaryNode>();
+        auto* y_ptr = graph.emplace_node<BinaryNode>();
+
+        auto* left_x_plus_y = graph.emplace_node<AddNode>(x_ptr, y_ptr);
+        auto* right_x_plus_y = graph.emplace_node<AddNode>(y_ptr, x_ptr);
+
+        CHECK(graph.num_nodes() == 4);
+
+        THEN("remove_redundant_nodes() removes one") {
+            CHECK(graph.remove_redundant_nodes() == 1);
+
+            CHECK(graph.num_nodes() == 3);
+
+            // we kept the one that's earlier in the topological order
+            CHECK(graph.nodes()[2].get() == left_x_plus_y);
+        }
+
+        AND_GIVEN("Two more redundant nodes decended from them") {
+            auto* negative_left_x_plus_y = graph.emplace_node<NegativeNode>(left_x_plus_y);
+            auto* negative_right_x_plus_y = graph.emplace_node<NegativeNode>(right_x_plus_y);
+
+            THEN("remove_redundant_nodes() removes 2") {
+                CHECK(graph.remove_redundant_nodes() == 2);
+
+                CHECK(graph.num_nodes() == 4);
+
+                // we kept the ones earlier in the topological order
+                CHECK(graph.nodes()[2].get() == left_x_plus_y);
+                CHECK(graph.nodes()[3].get() == negative_left_x_plus_y);
+            }
+
+            WHEN("we have a listener on one of the redundant nodes") {
+                auto listener_ptr = negative_right_x_plus_y->expired_ptr();
+
+                THEN("by default we don't remove the listened to node") {
+                    CHECK(graph.remove_redundant_nodes() == 1);
+                    CHECK(graph.num_nodes() == 5);
+
+                    // we kept the ones earlier in the topological order
+                    CHECK(graph.nodes()[2].get() == left_x_plus_y);
+                    CHECK(graph.nodes()[3].get() == negative_left_x_plus_y);
+                    CHECK(graph.nodes()[4].get() == negative_right_x_plus_y);
+                }
+
+                THEN("we can force the removal of the listened-to node") {
+                    CHECK(graph.remove_redundant_nodes(true) == 2);
+
+                    CHECK(graph.num_nodes() == 4);
+
+                    // we kept the ones earlier in the topological order
+                    CHECK(graph.nodes()[2].get() == left_x_plus_y);
+                    CHECK(graph.nodes()[3].get() == negative_left_x_plus_y);
+                }
+            }
+        }
+
+        AND_GIVEN("that the later redundant node is used in the objective") {
+            graph.set_objective(right_x_plus_y);
+
+            CHECK(graph.remove_redundant_nodes() == 1);
+
+            CHECK(graph.nodes()[2].get() == left_x_plus_y);
+            CHECK(graph.objective() == left_x_plus_y);  // objective was updated
+        }
+
+        AND_GIVEN("two more redundant logical nodes") {
+            auto* logical_left_x_plus_y = graph.emplace_node<LogicalNode>(left_x_plus_y);
+            auto* logical_right_x_plus_y = graph.emplace_node<LogicalNode>(right_x_plus_y);
+
+            WHEN("both are registered as constraints") {
+                graph.add_constraint(logical_left_x_plus_y);
+                graph.add_constraint(logical_right_x_plus_y);
+
+                CHECK(graph.remove_redundant_nodes() == 2);
+                CHECK(graph.constraints().size() == 1);
+                CHECK_THAT(graph.constraints(), RangeEquals({logical_left_x_plus_y}));
+            }
+        }
+    }
+
+    GIVEN("A model with two redundant constants used in the same unary op") {
+        auto graph = Graph();
+
+        auto* a = graph.emplace_node<ConstantNode>(5);
+        auto* negative_a = graph.emplace_node<NegativeNode>(a);
+        auto* b = graph.emplace_node<ConstantNode>(5);
+        graph.emplace_node<NegativeNode>(b);
+
+        THEN("remove_redundant_nodes() removes the redundant path") {
+            CHECK(graph.remove_redundant_nodes() == 2);
+            CHECK_THAT(graph.constants(), RangeEquals({a}));
+            CHECK_THAT(negative_a->predecessors(), RangeEquals({a}));
         }
     }
 }
@@ -396,6 +547,62 @@ TEST_CASE("Graph::remove_unused_nodes()") {
                 CHECK(!*d_expired);  // d wasn't removed because it has a listener
             }
         }
+    }
+}
+
+TEST_CASE("Graph::swap_decisions") {
+    GIVEN("A graph with three decisions") {
+        auto graph = Graph();
+
+        DecisionNode* x_ptr = graph.emplace_node<BinaryNode>();
+        DecisionNode* y_ptr = graph.emplace_node<IntegerNode>();
+        DecisionNode* z_ptr = graph.emplace_node<SetNode>(5);
+
+        CHECK_THAT(graph.decisions(), RangeEquals({x_ptr, y_ptr, z_ptr}));
+
+        CHECK(x_ptr->topological_index() == 0);
+        CHECK(y_ptr->topological_index() == 1);
+        CHECK(z_ptr->topological_index() == 2);
+
+        graph.swap_decisions(y_ptr, z_ptr);
+
+        CHECK_THAT(graph.decisions(), RangeEquals({x_ptr, z_ptr, y_ptr}));
+
+        CHECK(x_ptr->topological_index() == 0);
+        CHECK(y_ptr->topological_index() == 2);
+        CHECK(z_ptr->topological_index() == 1);
+
+        graph.topological_sort();
+
+        CHECK(graph.nodes()[0].get() == x_ptr);
+        CHECK(graph.nodes()[1].get() == z_ptr);
+        CHECK(graph.nodes()[2].get() == y_ptr);
+    }
+
+    GIVEN("A graph with an intermediate node added before the last decision") {
+        auto graph = Graph();
+
+        auto* x_ptr = graph.emplace_node<BinaryNode>();
+        auto* y_ptr = graph.emplace_node<IntegerNode>();
+        auto* a_ptr = graph.emplace_node<AddNode>(x_ptr, y_ptr);
+        auto* z_ptr = graph.emplace_node<SetNode>(5);
+
+        CHECK_THAT(graph.decisions(), RangeEquals(std::vector<Node*>{x_ptr, y_ptr, z_ptr}));
+
+        graph.swap_decisions(y_ptr, z_ptr);
+
+        CHECK_THAT(graph.decisions(), RangeEquals(std::vector<Node*>{x_ptr, z_ptr, y_ptr}));
+
+        CHECK(x_ptr->topological_index() == 0);
+        CHECK(y_ptr->topological_index() == 2);
+        CHECK(z_ptr->topological_index() == 1);
+
+        graph.topological_sort();
+
+        CHECK(graph.nodes()[0].get() == x_ptr);
+        CHECK(graph.nodes()[1].get() == z_ptr);
+        CHECK(graph.nodes()[2].get() == y_ptr);
+        CHECK(graph.nodes()[3].get() == a_ptr);
     }
 }
 

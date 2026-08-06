@@ -65,6 +65,12 @@ ConstantNode::ConstantNode(OwningDataSource&& data_source, const std::span<const
     values_info_(calculate_values_info(std::span<const double>(buffer_ptr_, this->size()))),
     data_source_(std::make_unique<OwningDataSource>(std::move(data_source))) {}
 
+bool ConstantNode::equal_to(const ConstantNode& rhs) const {
+    return this->ndim() == rhs.ndim() and                      // same ndim
+           std::ranges::equal(this->shape(), rhs.shape()) and  // same shape
+           std::ranges::equal(this->data(), rhs.data());      // same content
+}
+
 bool ConstantNode::integral() const { return this->values_info_.integral; }
 
 double ConstantNode::min() const { return this->values_info_.min; }

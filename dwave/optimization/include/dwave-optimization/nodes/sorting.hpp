@@ -23,7 +23,7 @@
 
 namespace dwave::optimization {
 
-class ArgSortNode : public ArrayOutputMixin<ArrayNode> {
+class ArgSortNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     ArgSortNode(ArrayNode* arr_ptr);
 
@@ -69,6 +69,9 @@ class ArgSortNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::sizeinfo()
     SizeInfo sizeinfo() const override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     // these are redundant, but convenient

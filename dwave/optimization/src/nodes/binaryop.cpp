@@ -187,7 +187,7 @@ bool calculate_integral(const Array* lhs_ptr, const Array* rhs_ptr) {
 
 template <class BinaryOp>
 BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr) :
-    ArrayOutputMixin(broadcast_shapes(a_ptr->shape(), b_ptr->shape())),
+    ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNode<BinaryOp>>>(broadcast_shapes(a_ptr->shape(), b_ptr->shape())),
     operands_({a_ptr, b_ptr}),
     values_info_(
         calculate_values_minmax<BinaryOp>(operands_[0], operands_[1]),
@@ -200,17 +200,58 @@ BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr) :
 
 template <class BinaryOp>
 double const* BinaryOpNode<BinaryOp>::buff(const State& state) const {
-    return data_ptr_<ArrayNodeStateData>(state)->buff();
+    return this->template data_ptr_<ArrayNodeStateData>(state)->buff();
 }
 
 template <class BinaryOp>
 std::span<const Update> BinaryOpNode<BinaryOp>::diff(const State& state) const {
-    return data_ptr_<ArrayNodeStateData>(state)->diff();
+    return this->template data_ptr_<ArrayNodeStateData>(state)->diff();
 }
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::commit(State& state) const {
-    data_ptr_<ArrayNodeStateData>(state)->commit();
+    this->template data_ptr_<ArrayNodeStateData>(state)->commit();
+}
+
+template <class BinaryOp>
+bool BinaryOpNode<BinaryOp>::equal_to(const BinaryOpNode& rhs) const {
+    // if we're the same type, then we just need to make sure we're operating
+    // on the same operands (subject to whether we're commutative or not.
+    // Once we switch to ufuncs, this gets even easier
+    if (std::ranges::equal(operands_, rhs.operands_)) return true;
+
+    // Once we switch to ufuncs
+    // https://github.com/dwavesystems/dwave-optimization/pull/412
+    // we can use ::communcative. For now we hardcode it.
+
+    // Dev note: This implementation doesn't check the pathalogical case op(x, x).
+    // While it would be mathematically correct, IMO it would be more confusing
+    // than helpful.
+
+    if constexpr (
+        std::same_as<BinaryOpNode, AddNode> or       //
+        std::same_as<BinaryOpNode, AndNode> or       //
+        std::same_as<BinaryOpNode, EqualNode> or     //
+        std::same_as<BinaryOpNode, MaximumNode> or   //
+        std::same_as<BinaryOpNode, MinimumNode> or   //
+        std::same_as<BinaryOpNode, MultiplyNode> or  //
+        std::same_as<BinaryOpNode, OrNode> or        //
+        std::same_as<BinaryOpNode, XorNode>
+    ) {
+        // commutative
+        return std::ranges::equal(operands_, rhs.operands_ | std::views::reverse);
+    } else {
+        // not commutative
+        static_assert(
+            std::same_as<BinaryOpNode, DivideNode> or      //
+            std::same_as<BinaryOpNode, LessEqualNode> or   //
+            std::same_as<BinaryOpNode, ModulusNode> or     //
+            std::same_as<BinaryOpNode, SafeDivideNode> or  //
+            std::same_as<BinaryOpNode, SubtractNode>
+        );
+    }
+
+    return false;
 }
 
 template <class BinaryOp>
@@ -254,7 +295,7 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
         unreachable();
     }
 
-    emplace_data_ptr_<ArrayNodeStateData>(state, std::move(values));
+    this->template emplace_data_ptr_<ArrayNodeStateData>(state, std::move(values));
 }
 
 template <class BinaryOp>
@@ -274,7 +315,7 @@ double BinaryOpNode<BinaryOp>::min() const {
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::propagate(State& state) const {
-    auto ptr = data_ptr_<ArrayNodeStateData>(state);
+    auto ptr = this->template data_ptr_<ArrayNodeStateData>(state);
 
     const Array* lhs_ptr = operands_[0];
     const Array* rhs_ptr = operands_[1];
@@ -388,8 +429,17 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
 }
 
 template <class BinaryOp>
+void BinaryOpNode<BinaryOp>::replace_predecessor_(ssize_t previous_index, Node* node_ptr) {
+    Node::replace_predecessor_(previous_index, node_ptr);
+
+    assert(0 <= previous_index and previous_index < 2);
+    operands_[previous_index] = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(operands_[previous_index] != nullptr);
+}
+
+template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::revert(State& state) const {
-    data_ptr_<ArrayNodeStateData>(state)->revert();
+    this->template data_ptr_<ArrayNodeStateData>(state)->revert();
 }
 
 template <class BinaryOp>
@@ -434,7 +484,7 @@ ssize_t BinaryOpNode<BinaryOp>::size(const State& state) const {
 
 template <class BinaryOp>
 ssize_t BinaryOpNode<BinaryOp>::size_diff(const State& state) const {
-    return data_ptr_<ArrayNodeStateData>(state)->size_diff();
+    return this->template data_ptr_<ArrayNodeStateData>(state)->size_diff();
 }
 
 SizeInfo binaryop_calculate_sizeinfo(

@@ -25,7 +25,7 @@ namespace dwave::optimization {
 class LinearProgramNodeBase;
 
 /// A logical node that propagates whether or not its predecessor LinearProgram is feasible.
-class LinearProgramFeasibleNode : public ScalarOutputMixin<ArrayNode, true> {
+class LinearProgramFeasibleNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>, true> {
  public:
     explicit LinearProgramFeasibleNode(LinearProgramNodeBase* lp_ptr);
 
@@ -43,6 +43,9 @@ class LinearProgramFeasibleNode : public ScalarOutputMixin<ArrayNode, true> {
 
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     const LinearProgramNodeBase* lp_ptr_;
@@ -97,7 +100,7 @@ class LinearProgramNodeBase : public Node {
 /// Following https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.linprog.html
 /// linprog(c, A_ub=None, b_ub=None, A_eq=None, b_eq=None, bounds=(0, None),
 ///         callback=None, options=None, x0=None, integrality=None)
-class LinearProgramNode : public LinearProgramNodeBase {
+class LinearProgramNode : public EqualityMixin<LinearProgramNodeBase, LinearProgramNode> {
  public:
     /// Construct a LinearProgramNode
     ///
@@ -118,6 +121,9 @@ class LinearProgramNode : public LinearProgramNodeBase {
 
     /// The LP node's state is potentially degenerate, and therefore not deterministic.
     bool deterministic_state() const override;
+
+    /// @copydoc Node::equal_to()
+    bool equal_to(const LinearProgramNode& rhs) const override;
 
     /// @copydoc LinearProgramNodeBase::feasible()
     bool feasible(const State& state) const override;
@@ -149,6 +155,9 @@ class LinearProgramNode : public LinearProgramNodeBase {
     /// @copydoc LinearProgramNodeBase::variables_shape()
     std::span<const ssize_t> variables_shape() const override;
 
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
  private:
     /// Read out each of the predecessor arrays and copy the data to `lp`, where
     /// it can be easily passed in to linprog (which expects (contiguous) vectors).
@@ -157,16 +166,19 @@ class LinearProgramNode : public LinearProgramNodeBase {
 
     // The coefficients of the linear objective function to be minimized.
     // minimize c @ x
+    // Should never be nullptr
     const ArrayNode* c_ptr_;
 
     // The inequality constraint matrix and vector.
     // b_lb <= A @ x <= b_ub
+    // Either all are nullptr or A and at least one of b_lb/b_ub exist
     const ArrayNode* b_lb_ptr_;
     const ArrayNode* A_ptr_;
     const ArrayNode* b_ub_ptr_;
 
     // The equality constaint matrix and vector.
     // A_eq @ x == b_eq
+    // Either both are nullptr or neither
     const ArrayNode* A_eq_ptr_;
     const ArrayNode* b_eq_ptr_;
 
@@ -180,7 +192,7 @@ class LinearProgramNode : public LinearProgramNodeBase {
 
 /// A scalar node that propagates the objective value of the solution found by the
 /// LinearProgramNode. Note that the output is undefined if the solution is not feasible.
-class LinearProgramObjectiveValueNode : public ScalarOutputMixin<ArrayNode, true> {
+class LinearProgramObjectiveValueNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>, true> {
  public:
     explicit LinearProgramObjectiveValueNode(LinearProgramNodeBase* lp_ptr);
 
@@ -199,13 +211,16 @@ class LinearProgramObjectiveValueNode : public ScalarOutputMixin<ArrayNode, true
     /// @copydoc Node::propagate()
     void propagate(State& state) const override;
 
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
  private:
     const LinearProgramNodeBase* lp_ptr_;
 };
 
 /// An array node that propagates the solution found by the LinearProgramNode. Note that the
 /// solution may not be feasible or optimial.
-class LinearProgramSolutionNode : public ArrayOutputMixin<ArrayNode> {
+class LinearProgramSolutionNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     explicit LinearProgramSolutionNode(LinearProgramNodeBase* lp_ptr);
 
@@ -239,6 +254,9 @@ class LinearProgramSolutionNode : public ArrayOutputMixin<ArrayNode> {
     using ArrayOutputMixin::shape;
 
     using ArrayOutputMixin::size;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     const LinearProgramNodeBase* lp_ptr_;

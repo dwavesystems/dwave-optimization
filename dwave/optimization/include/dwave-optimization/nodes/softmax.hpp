@@ -24,7 +24,7 @@
 
 namespace dwave::optimization {
 
-class SoftMaxNode : public ArrayOutputMixin<ArrayNode> {
+class SoftMaxNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     SoftMaxNode(ArrayNode* arr_ptr);
 
@@ -70,6 +70,9 @@ class SoftMaxNode : public ArrayOutputMixin<ArrayNode> {
 
     /// @copydoc Array::sizeinfo()
     SizeInfo sizeinfo() const override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 
  private:
     // these are redundant, but convenient
