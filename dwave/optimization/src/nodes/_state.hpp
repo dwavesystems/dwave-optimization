@@ -165,7 +165,7 @@ class ArrayStateData {
         size_ = buffer.size();
     }
 
-    // Commit the changes and clear the diff by returning the diff buffer.
+    // Revert the changes and clear the diff by returning the diff buffer.
     std::vector<Update> revert_and_detach() {
         assert(previous_size_ >= 0);
         buffer.resize(previous_size_);

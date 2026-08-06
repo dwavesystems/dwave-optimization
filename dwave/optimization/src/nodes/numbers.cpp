@@ -238,6 +238,10 @@ void NumberNodeStateData::revert() {
         slice_cache_.clear();          // Empty the slice cache.
         ArrayNodeStateData::revert();  // Revert changes to the buffer.
     }
+
+    // everything should have been cleared out regardless of which path we took
+    assert(this->diff().empty());
+    assert(slice_cache_.empty());
 }
 
 void NumberNodeStateData::update(

@@ -889,7 +889,7 @@ TEST_CASE("SetNode") {
 
                 set_ptr->assign_from_checkpoint(state, std::move(checkpoint0));
 
-                // CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1}));
+                CHECK_THAT(set_ptr->view(state), RangeEquals({0, 1}));
             }
         }
 
@@ -949,8 +949,6 @@ TEST_CASE("SetNode") {
                 }
             }
         }
-
-        // TODO: within one propagation
 
         WHEN("We do several mutations and create several checkpoints within the same commit") {
             auto checkpoint0 = set_ptr->checkpoint(state);

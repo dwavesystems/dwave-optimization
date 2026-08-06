@@ -585,8 +585,7 @@ void DisjointBitSetsNode::assign_from_checkpoint(
     State& state,
     std::unique_ptr<NodeStateCheckpoint>& checkpoint
 ) const {
-    const DisjointBitSetsCheckpoint_* checkpoint_ptr =
-        static_cast<DisjointBitSetsCheckpoint_*>(checkpoint.get());
+    const auto* checkpoint_ptr = static_cast<DisjointBitSetsCheckpoint_*>(checkpoint.get());
     data_ptr_<DisjointBitSetsNodeData_>(state)->assign(checkpoint_ptr->buffer);
 }
 

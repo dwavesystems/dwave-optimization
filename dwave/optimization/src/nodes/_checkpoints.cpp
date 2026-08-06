@@ -53,15 +53,13 @@ DiffCheckpoint::DiffCheckpoint(CheckpointableState& state, std::span<const Updat
 }
 
 DiffCheckpoint::~DiffCheckpoint() {
-    // if we're the oldest checkpoint, just let whatever information we're
-    // holding get destructed with us
-    if (prev_ptr_ == nullptr) return;
-
-    // otherwise we need to transfer our info over
-    auto* prev_ptr = static_cast<DiffCheckpoint*>(prev_ptr_);
-    assert(prev_ptr->drop_ == 0);
-    for (auto& updates : updates_) prev_ptr->commit_updates(std::move(updates));
-    prev_ptr->drop_ = drop_;
+    // If we're not the oldest checkpoint, we need to transfer our information
+    // over so it's not lost
+    if (auto* prev_ptr = static_cast<DiffCheckpoint*>(prev_ptr_)) {
+        assert(prev_ptr->drop_ == 0);
+        for (auto& updates : updates_) prev_ptr->commit_updates(std::move(updates));
+        prev_ptr->drop_ = drop_;
+    }
 }
 
 void DiffCheckpoint::commit_updates(std::vector<Update> updates) {

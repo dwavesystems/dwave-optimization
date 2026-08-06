@@ -102,7 +102,7 @@ class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decis
 
     // Overloads required by the DecisionNode ABC *****************************
 
-    // DynamicArrayTestingNode does not impement checkpointing
+    // DynamicArrayTestingNode does not implement checkpointing
     [[noreturn]] void assign_from_checkpoint(
         State& state,
         checkpoint_type& checkpoint

@@ -299,8 +299,8 @@ TEST_CASE("BinaryNode") {
             AND_WHEN("We create a checkpoint to that state") {
                 auto checkpoint = ptr->checkpoint(state);  // 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
 
-                THEN("We can mutate and then assign from that checkpoint") {
-                    ptr->set_value(state, 0, 1);  // 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+                THEN("We can mutate, then propose, and then assign from that checkpoint") {
+                    ptr->set_value(state, 0, 1);  // 1, 1, 0, 1, 0, 1, 0, 1, 0, 1
                     graph.propose(state);
 
                     ptr->assign_from_checkpoint(state, checkpoint);
