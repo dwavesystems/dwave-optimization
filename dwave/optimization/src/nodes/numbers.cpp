@@ -180,6 +180,10 @@ class NumberNodeStateData : public ArrayNodeStateData, public CheckpointableStat
         assert(slice_cache_.empty());
     }
 
+    const NumberNodeCheckpoint_* last_checkpoint() const {
+        return checkpoint_ptr<NumberNodeCheckpoint_>();
+    }
+
     /// Revert the state dependent data of NumberNode.
     void revert();
 
@@ -1058,7 +1062,7 @@ void IntegerNode::assign_from_checkpoint(State& state, checkpoint_type& checkpoi
 
     auto* checkpoint_ptr = static_cast<NumberNodeCheckpoint_*>(checkpoint.get());
 
-    // todo: assert that this checkpoint is the latest
+    assert(checkpoint_ptr == state_data->last_checkpoint());
 
     // Check if there are any changes not otherwise tracked by a checkpoint that we need
     // to revert first.
@@ -1067,11 +1071,14 @@ void IntegerNode::assign_from_checkpoint(State& state, checkpoint_type& checkpoi
     // tested.
     if (ssize_t excess_updates = state_data->diff().size() - checkpoint_ptr->drop()) {
         assert(excess_updates > 0);
+
         for (
             const auto& [idx, old, _] :
             state_data->diff() | std::views::reverse | std::views::take(excess_updates)
         ) {
-            state_data->set(idx, old);
+            // This is a *very* expensive call. But, again, we're not too worried about
+            // performance here.
+            this->set_value(state, idx, old);
         }
     }
 

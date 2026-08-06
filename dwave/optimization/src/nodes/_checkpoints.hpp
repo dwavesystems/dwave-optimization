@@ -71,6 +71,10 @@ class CheckpointableState {
     T* checkpoint_ptr() {
         return static_cast<T*>(prev_ptr_);
     }
+    template <std::derived_from<LinkedListCheckpoint> T>
+    const T* checkpoint_ptr() const {
+        return static_cast<T*>(prev_ptr_);
+    }
 
  private:
     friend LinkedListCheckpoint;
