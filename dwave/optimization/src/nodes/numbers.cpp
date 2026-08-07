@@ -208,15 +208,15 @@ class NumberNodeStateData : public ArrayNodeStateData, public CheckpointableStat
                 if (i_slices.has_value()) {
                     assert(j_slices.has_value());
                     // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-                    update(i, difference, *i_slices);
+                    update_(i, difference, *i_slices);
                     // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-                    update(j, -difference, *j_slices);
+                    update_(j, -difference, *j_slices);
                 } else {
                     assert(!j_slices.has_value());
                     // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-                    update(i, difference);
+                    update_(i, difference);
                     // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-                    update(j, -difference);
+                    update_(j, -difference);
                 }
             }
         }
@@ -245,22 +245,13 @@ class NumberNodeStateData : public ArrayNodeStateData, public CheckpointableStat
             // If change occurred and sum constraint exist, update running sums.
             if (node_.sum_constraints().size() > 0) {
                 if (slices.has_value()) {
-                    update(index, value - diff().back().old, *slices);
+                    update_(index, value - diff().back().old, *slices);
                 } else {
-                    update(index, value - diff().back().old);
+                    update_(index, value - diff().back().old);
                 }
             }
         }
     }
-
-    /// Update the relevant sum constraints running sums (`lhs`) given that the
-    /// value stored at `index` is changed by `difference`.
-    /// Users may pass the slices (per sum constraint) that `index` lies on.
-    virtual void update(
-        ssize_t index,
-        double difference,
-        std::optional<std::vector<ssize_t>> optional_slices = std::nullopt
-    );
 
     /// For each sum constraint, track the sum of the values within each slice.
     /// `sum_constraints_lhs[i][j]` is the sum of the values within the `j`th slice
@@ -281,6 +272,16 @@ class NumberNodeStateData : public ArrayNodeStateData, public CheckpointableStat
     /// Hold a reference to the parent node. This class can outlive the node but
     /// cannot be accessed except through it.
     const NumberNode& node_;
+
+ private:
+    /// Update the relevant sum constraints running sums (`lhs`) given that the
+    /// value stored at `index` is changed by `difference`.
+    /// Users may pass the slices (per sum constraint) that `index` lies on.
+    virtual void update_(
+        ssize_t index,
+        double difference,
+        std::optional<std::vector<ssize_t>> optional_slices = std::nullopt
+    );
 };
 
 void NumberNodeStateData::revert() {
@@ -316,7 +317,7 @@ void NumberNodeStateData::revert() {
     assert(slice_cache_.empty());
 }
 
-void NumberNodeStateData::update(
+void NumberNodeStateData::update_(
     const ssize_t index,
     const double difference,
     std::optional<std::vector<ssize_t>> optional_slices
@@ -1444,21 +1445,21 @@ struct BinaryNodeStateData : public NumberNodeStateData {
     /// Revert the state dependent data of BinaryNode.
     void revert();
 
-    /// Update `sum_constraints_lhs` and `slice_indices` given that the value
-    /// stored at `index` is changed by `difference`.
-    /// Users may pass the slices (per sum constraint) that `index` lies on.
-    void update(
-        ssize_t index,
-        double difference,
-        std::optional<std::vector<ssize_t>> optional_slices = std::nullopt
-    ) override;
-
     /// A collection of DisjointSparseSet, one per sum constraint.
     std::vector<DisjointSparseSet> slice_indices;
 
  private:
     /// Populate `slice_indices` given the BinaryNode and its assigned values.
     void compute_slice_indices_(const BinaryNode& node);
+
+    /// Update `sum_constraints_lhs` and `slice_indices` given that the value
+    /// stored at `index` is changed by `difference`.
+    /// Users may pass the slices (per sum constraint) that `index` lies on.
+    void update_(
+        ssize_t index,
+        double difference,
+        std::optional<std::vector<ssize_t>> optional_slices = std::nullopt
+    ) override;
 };
 
 void BinaryNodeStateData::revert() {
@@ -1493,7 +1494,7 @@ void BinaryNodeStateData::revert() {
     ArrayNodeStateData::revert();  // Revert changes to the buffer.
 }
 
-void BinaryNodeStateData::update(
+void BinaryNodeStateData::update_(
     const ssize_t index,
     const double difference,
     std::optional<std::vector<ssize_t>> optional_slices
