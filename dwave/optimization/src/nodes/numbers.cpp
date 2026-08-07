@@ -148,13 +148,19 @@ class NumberNodeCheckpoint_ : public DiffCheckpoint {
 class NumberNodeStateData : public ArrayNodeStateData, public CheckpointableState {
  public:
     // User does not provide sum constraints.
-    NumberNodeStateData(std::vector<double> input) : ArrayNodeStateData(std::move(input)) {}
+    NumberNodeStateData(const NumberNode& node, std::vector<double> input) :
+        ArrayNodeStateData(std::move(input)), sum_constraints_lhs(), slice_cache_(), node_(node) {}
+
     // User provides sum constraints.
     NumberNodeStateData(
+        const NumberNode& node,
         std::vector<double> input,
         std::vector<std::vector<double>> sum_constraints_lhs
     ) :
-        ArrayNodeStateData(std::move(input)), sum_constraints_lhs(std::move(sum_constraints_lhs)) {}
+        ArrayNodeStateData(std::move(input)),
+        sum_constraints_lhs(std::move(sum_constraints_lhs)),
+        slice_cache_(),
+        node_(node) {}
 
     std::unique_ptr<NodeStateCheckpoint> checkpoint() {
         return std::make_unique<NumberNodeCheckpoint_>(*this, this->diff(), this->slice_cache_);
@@ -189,10 +195,10 @@ class NumberNodeStateData : public ArrayNodeStateData, public CheckpointableStat
 
     /// Update the relevant sum constraints running sums (`lhs`) given that the
     /// value stored at `index` is changed by `difference`.
-    void update(const NumberNode& node, const ssize_t index, const double difference);
+    void update(const ssize_t index, const double difference);
+
     /// Users may pass the slices (per sum constraint) that `index` lies on.
     void update(
-        const NumberNode& node,
         const ssize_t index,
         const double difference,
         std::vector<ssize_t> slices
@@ -213,6 +219,10 @@ class NumberNodeStateData : public ArrayNodeStateData, public CheckpointableStat
     /// slice_cache_[i][j] = The slice of the `j`th sum constraint that the index
     ///                      of the `i`th update lies on.
     std::vector<std::vector<ssize_t>> slice_cache_;
+
+    /// Hold a reference to the parent node. This class can outlive the node but
+    /// cannot be accessed except through it.
+    const NumberNode& node_;
 };
 
 void NumberNodeStateData::revert() {
@@ -249,11 +259,10 @@ void NumberNodeStateData::revert() {
 }
 
 void NumberNodeStateData::update(
-    const NumberNode& node,
     const ssize_t index,
     const double difference
 ) {
-    const auto& sum_constraints = node.sum_constraints();
+    const auto& sum_constraints = node_.sum_constraints();
     assert(sum_constraints.size() != 0);  // Should only call where applicable.
     assert(difference != 0);              // Should not call when no change occurs.
     assert(sum_constraints.size() == sum_constraints_lhs.size());
@@ -262,7 +271,7 @@ void NumberNodeStateData::update(
     cache_entry.reserve(sum_constraints.size());
     // Get multidimensional indices for `index` so we can identify the slices
     // `index` lies on per sum constraint.
-    const std::vector<ssize_t> multi_index = unravel_index(index, node.shape());
+    const std::vector<ssize_t> multi_index = unravel_index(index, node_.shape());
     assert(sum_constraints.size() <= multi_index.size());
     // For each sum constraint.
     for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
@@ -280,12 +289,11 @@ void NumberNodeStateData::update(
 }
 
 void NumberNodeStateData::update(
-    const NumberNode& node,
     const ssize_t index,
     const double difference,
     std::vector<ssize_t> slices
 ) {
-    const auto& sum_constraints = node.sum_constraints();
+    const auto& sum_constraints = node_.sum_constraints();
     assert(sum_constraints.size() != 0);  // Should only call where applicable.
     assert(difference != 0);              // Should not call when no change occurs.
     assert(sum_constraints.size() == sum_constraints_lhs.size());
@@ -299,7 +307,7 @@ void NumberNodeStateData::update(
             /// If `axis == std::nullopt`, the array is treated as a flat array with a
             /// single slice. Otherwise, the slice is defined by unravel_index().
             if (!axis.has_value()) return slices[i] == 0;
-            return slices[i] == unravel_index(index, node.shape())[*axis];
+            return slices[i] == unravel_index(index, node_.shape())[*axis];
         })());
         sum_constraints_lhs[i][slices[i]] += difference;  // Offset slice sum.
     }
@@ -420,7 +428,7 @@ void NumberNode::initialize_state(State& state, std::vector<double>&& number_dat
     }
 
     if (sum_constraints_.size() == 0) {  // No sum constraints to consider.
-        emplace_data_ptr_<NumberNodeStateData>(state, std::move(number_data));
+        emplace_data_ptr_<NumberNodeStateData>(state, *this, std::move(number_data));
     } else {
         // Given the assignment to NumberNode `number_data`, compute the sum
         // of the values within each slice per sum constraint.
@@ -431,7 +439,7 @@ void NumberNode::initialize_state(State& state, std::vector<double>&& number_dat
         }
 
         emplace_data_ptr_<NumberNodeStateData>(
-            state, std::move(number_data), std::move(sum_constraints_lhs)
+            state, *this, std::move(number_data), std::move(sum_constraints_lhs)
         );
     }
 }
@@ -664,15 +672,15 @@ void NumberNode::exchange(
             if (i_slices.has_value()) {
                 assert(j_slices.has_value());
                 // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-                state_data->update(*this, i, difference, *i_slices);
+                state_data->update(i, difference, *i_slices);
                 // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-                state_data->update(*this, j, -difference, *j_slices);
+                state_data->update(j, -difference, *j_slices);
             } else {
                 assert(!j_slices.has_value());
                 // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-                state_data->update(*this, i, difference);
+                state_data->update(i, difference);
                 // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-                state_data->update(*this, j, -difference);
+                state_data->update(j, -difference);
             }
         }
     }
@@ -732,9 +740,9 @@ void NumberNode::clip_and_set_value(
         // If change occurred and sum constraint exist, update running sums.
         if (sum_constraints_.size() > 0) {
             if (slices.has_value()) {
-                state_data->update(*this, index, value - diff(state).back().old, *slices);
+                state_data->update(index, value - diff(state).back().old, *slices);
             } else {
-                state_data->update(*this, index, value - diff(state).back().old);
+                state_data->update(index, value - diff(state).back().old);
             }
         }
     }
@@ -1091,7 +1099,7 @@ void IntegerNode::assign_from_checkpoint(State& state, checkpoint_type& checkpoi
 
         for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
             state_data->set(idx, old);
-            state_data->update(*this, idx, old - diff(state).back().old, *(slices_rit++));
+            state_data->update(idx, old - diff(state).back().old, *(slices_rit++));
         }
     } else {
         assert(updates.empty() or sum_constraints_.empty());
@@ -1134,9 +1142,9 @@ void IntegerNode::set_value(
         // If change occurred and sum constraint exist, update running sums.
         if (sum_constraints_.size() > 0) {
             if (slices.has_value()) {
-                state_data->update(*this, index, value - diff(state).back().old, *slices);
+                state_data->update(index, value - diff(state).back().old, *slices);
             } else {
-                state_data->update(*this, index, value - diff(state).back().old);
+                state_data->update(index, value - diff(state).back().old);
             }
         }
     }
@@ -1417,14 +1425,16 @@ struct BinaryNodeStateData : public NumberNodeStateData {
     };
 
     // User does not provide sum constraints.
-    BinaryNodeStateData(std::vector<double> input) : NumberNodeStateData(std::move(input)) {}
+    BinaryNodeStateData(const BinaryNode& node, std::vector<double> input) :
+        NumberNodeStateData(node, std::move(input)) {}
+
     // User provides sum constraints.
     BinaryNodeStateData(
+        const BinaryNode& node,
         std::vector<double> input,
-        std::vector<std::vector<double>> sum_constraints_lhs,
-        const BinaryNode& node
+        std::vector<std::vector<double>> sum_constraints_lhs
     ) :
-        NumberNodeStateData(std::move(input), std::move(sum_constraints_lhs)) {
+        NumberNodeStateData(node, std::move(input), std::move(sum_constraints_lhs)) {
         compute_slice_indices_(node);
     }
 
@@ -1437,10 +1447,10 @@ struct BinaryNodeStateData : public NumberNodeStateData {
 
     /// Update `sum_constraints_lhs` and `slice_indices` given that the value
     /// stored at `index` is changed by `difference`.
-    void update(const BinaryNode& node, const ssize_t index, const double difference);
+    void update(const ssize_t index, const double difference);
+
     /// Users may pass the slices (per sum constraint) that `index` lies on.
     void update(
-        const BinaryNode& node,
         const ssize_t index,
         const double difference,
         std::vector<ssize_t> slices
@@ -1487,11 +1497,10 @@ void BinaryNodeStateData::revert() {
 }
 
 void BinaryNodeStateData::update(
-    const BinaryNode& node,
     const ssize_t index,
     const double difference
 ) {
-    const auto& sum_constraints = node.sum_constraints();
+    const auto& sum_constraints = node_.sum_constraints();
     assert(sum_constraints.size() != 0);  // Should only call where applicable.
     assert(difference == 1 || difference == -1);
     assert(sum_constraints.size() == sum_constraints_lhs.size());
@@ -1500,7 +1509,7 @@ void BinaryNodeStateData::update(
     cache_entry.reserve(sum_constraints.size());
     // Get multidimensional indices for `index` so we can identify the slices
     // `index` lies on per sum constraint.
-    const std::vector<ssize_t> multi_index = unravel_index(index, node.shape());
+    const std::vector<ssize_t> multi_index = unravel_index(index, node_.shape());
     assert(sum_constraints.size() <= multi_index.size());
     // For each sum constraint.
     for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
@@ -1524,12 +1533,11 @@ void BinaryNodeStateData::update(
 }
 
 void BinaryNodeStateData::update(
-    const BinaryNode& node,
     const ssize_t index,
     const double difference,
     std::vector<ssize_t> slices
 ) {
-    const auto& sum_constraints = node.sum_constraints();
+    const auto& sum_constraints = node_.sum_constraints();
     assert(sum_constraints.size() != 0);  // Should only call where applicable.
     assert(difference == 1 || difference == -1);
     assert(sum_constraints.size() == sum_constraints_lhs.size());
@@ -1544,7 +1552,7 @@ void BinaryNodeStateData::update(
             /// If `axis == std::nullopt`, the array is treated as a flat array with a
             /// single slice. Otherwise, the slice is defined by multi_index.
             if (!axis.has_value()) return slices[i] == 0;
-            return slices[i] == unravel_index(index, node.shape())[*axis];
+            return slices[i] == unravel_index(index, node_.shape())[*axis];
         })());
         sum_constraints_lhs[i][slices[i]] += difference;  // Offset slice sum.
         // Update tracked indices.
@@ -1608,7 +1616,7 @@ void BinaryNode::initialize_state(State& state, std::vector<double>&& number_dat
     }
 
     if (sum_constraints_.size() == 0) {  // No sum constraints to consider.
-        emplace_data_ptr_<BinaryNodeStateData>(state, std::move(number_data));
+        emplace_data_ptr_<BinaryNodeStateData>(state, *this, std::move(number_data));
     } else {
         // Given the assignment to NumberNode `number_data`, compute the sum of
         // the values within each slice per sum constraint.
@@ -1619,8 +1627,7 @@ void BinaryNode::initialize_state(State& state, std::vector<double>&& number_dat
         }
 
         emplace_data_ptr_<BinaryNodeStateData>(
-            state, std::move(number_data), std::move(sum_constraints_lhs), *this
-        );
+            state, *this, std::move(number_data), std::move(sum_constraints_lhs));
     }
 }
 
@@ -1667,15 +1674,15 @@ void BinaryNode::exchange(
             if (i_slices.has_value()) {
                 assert(j_slices.has_value());
                 // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-                state_data->update(*this, i, difference, *i_slices);
+                state_data->update(i, difference, *i_slices);
                 // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-                state_data->update(*this, j, -difference, *j_slices);
+                state_data->update(j, -difference, *j_slices);
             } else {
                 assert(!j_slices.has_value());
                 // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-                state_data->update(*this, i, difference);
+                state_data->update(i, difference);
                 // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-                state_data->update(*this, j, -difference);
+                state_data->update(j, -difference);
             }
         }
     }
@@ -1695,9 +1702,9 @@ void BinaryNode::clip_and_set_value(
         // If change occurred and sum constraint exist, update running sums.
         if (sum_constraints_.size() > 0) {
             if (slices.has_value()) {
-                state_data->update(*this, index, value - diff(state).back().old, *slices);
+                state_data->update(index, value - diff(state).back().old, *slices);
             } else {
-                state_data->update(*this, index, value - diff(state).back().old);
+                state_data->update(index, value - diff(state).back().old);
             }
         }
     }
@@ -1720,9 +1727,9 @@ void BinaryNode::set_value(
         // If change occurred and sum constraint exist, update running sums.
         if (sum_constraints_.size() > 0) {
             if (slices.has_value()) {
-                state_data->update(*this, index, value - diff(state).back().old, *slices);
+                state_data->update(index, value - diff(state).back().old, *slices);
             } else {
-                state_data->update(*this, index, value - diff(state).back().old);
+                state_data->update(index, value - diff(state).back().old);
             }
         }
     }
@@ -1744,9 +1751,9 @@ void BinaryNode::flip(
             // If value changed from 0 -> 1, update by 1.
             // If value changed from 1 -> 0, update by -1.
             if (slices.has_value()) {
-                state_data->update(*this, index, (state_data->get(index) == 1) ? 1 : -1, *slices);
+                state_data->update(index, (state_data->get(index) == 1) ? 1 : -1, *slices);
             } else {
-                state_data->update(*this, index, (state_data->get(index) == 1) ? 1 : -1);
+                state_data->update(index, (state_data->get(index) == 1) ? 1 : -1);
             }
         }
     }
