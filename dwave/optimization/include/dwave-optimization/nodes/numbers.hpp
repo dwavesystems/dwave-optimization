@@ -415,15 +415,6 @@ class BinaryNode : public IntegerNode {
         return initialize_state(state, std::vector<double>(values.begin(), values.end()));
     }
 
-    /// @copydoc NumberNode::exchange()
-    void exchange(
-        State& state,
-        ssize_t i,
-        ssize_t j,
-        std::optional<std::vector<ssize_t>> i_slices = std::nullopt,
-        std::optional<std::vector<ssize_t>> j_slices = std::nullopt
-    ) const;
-
     /// @copydoc NumberNode::clip_and_set_value()
     void clip_and_set_value(
         State& state,

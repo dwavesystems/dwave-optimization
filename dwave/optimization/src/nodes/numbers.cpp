@@ -186,6 +186,42 @@ class NumberNodeStateData : public ArrayNodeStateData, public CheckpointableStat
         assert(slice_cache_.empty());
     }
 
+    void exchange(
+        ssize_t i,
+        ssize_t j,
+        std::optional<std::vector<ssize_t>> i_slices,
+        std::optional<std::vector<ssize_t>> j_slices
+    ) {
+        // We expect the exchange to obey the index-wise bounds.
+        assert(node_.lower_bound(i) <= get(j));
+        assert(node_.upper_bound(i) >= get(j));
+        assert(node_.lower_bound(j) <= get(i));
+        assert(node_.upper_bound(j) >= get(i));
+
+        // assert() that i and j are valid indices occurs in ptr->exchange().
+        // State change occurs IFF (i != j) and (buffer[i] != buffer[j]).
+        if (ArrayNodeStateData::exchange(i, j)) {
+            // If change occurred and sum constraint exist, update running sums.
+            if (node_.sum_constraints().size() > 0) {
+                const double difference = get(i) - get(j);
+
+                if (i_slices.has_value()) {
+                    assert(j_slices.has_value());
+                    // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
+                    update(i, difference, *i_slices);
+                    // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
+                    update(j, -difference, *j_slices);
+                } else {
+                    assert(!j_slices.has_value());
+                    // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
+                    update(i, difference);
+                    // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
+                    update(j, -difference);
+                }
+            }
+        }
+    }
+
     const NumberNodeCheckpoint_* last_checkpoint() const {
         return checkpoint_ptr<NumberNodeCheckpoint_>();
     }
@@ -652,34 +688,7 @@ void NumberNode::exchange(
     std::optional<std::vector<ssize_t>> i_slices,
     std::optional<std::vector<ssize_t>> j_slices
 ) const {
-    auto state_data = data_ptr_<NumberNodeStateData>(state);
-    // We expect the exchange to obey the index-wise bounds.
-    assert(lower_bound(i) <= state_data->get(j));
-    assert(upper_bound(i) >= state_data->get(j));
-    assert(lower_bound(j) <= state_data->get(i));
-    assert(upper_bound(j) >= state_data->get(i));
-    // assert() that i and j are valid indices occurs in ptr->exchange().
-    // State change occurs IFF (i != j) and (buffer[i] != buffer[j]).
-    if (state_data->exchange(i, j)) {
-        // If change occurred and sum constraint exist, update running sums.
-        if (sum_constraints_.size() > 0) {
-            const double difference = state_data->get(i) - state_data->get(j);
-
-            if (i_slices.has_value()) {
-                assert(j_slices.has_value());
-                // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-                state_data->update(i, difference, *i_slices);
-                // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-                state_data->update(j, -difference, *j_slices);
-            } else {
-                assert(!j_slices.has_value());
-                // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-                state_data->update(i, difference);
-                // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-                state_data->update(j, -difference);
-            }
-        }
-    }
+    data_ptr_<NumberNodeStateData>(state)->exchange(i, j, std::move(i_slices), std::move(j_slices));
 }
 
 double NumberNode::get_value(const State& state, ssize_t i) const {
@@ -1672,44 +1681,6 @@ void BinaryNode::initialize_state(State& state) const {
     } else {
         assert(false && "Multiple sum constraints not yet supported.");
         unreachable();
-    }
-}
-
-void BinaryNode::exchange(
-    State& state,
-    ssize_t i,
-    ssize_t j,
-    std::optional<std::vector<ssize_t>> i_slices,
-    std::optional<std::vector<ssize_t>> j_slices
-) const {
-    auto state_data = data_ptr_<BinaryNodeStateData>(state);
-    // We expect the exchange to obey the index-wise bounds.
-    assert(lower_bound(i) <= state_data->get(j));
-    assert(upper_bound(i) >= state_data->get(j));
-    assert(lower_bound(j) <= state_data->get(i));
-    assert(upper_bound(j) >= state_data->get(i));
-    // assert() that i and j are valid indices occurs in ptr->exchange(). State
-    // change occurs IFF (i != j) and (buffer[i] != buffer[j]).
-    if (state_data->exchange(i, j)) {
-        // If change occurred and sum constraint exist, update
-        // running sums.
-        if (sum_constraints_.size() > 0) {
-            const double difference = state_data->get(i) - state_data->get(j);
-
-            if (i_slices.has_value()) {
-                assert(j_slices.has_value());
-                // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-                state_data->update(i, difference, *i_slices);
-                // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-                state_data->update(j, -difference, *j_slices);
-            } else {
-                assert(!j_slices.has_value());
-                // Index i changed from (what is now) ptr->get(j) to ptr->get(i)
-                state_data->update(i, difference);
-                // Index j changed from (what is now) ptr->get(i) to ptr->get(j)
-                state_data->update(j, -difference);
-            }
-        }
     }
 }
 
