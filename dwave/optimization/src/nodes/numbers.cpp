@@ -229,6 +229,30 @@ class NumberNodeStateData : public ArrayNodeStateData, public CheckpointableStat
     /// Revert the state dependent data of NumberNode.
     void revert();
 
+    void set(
+        ssize_t index,
+        double value,
+        std::optional<std::vector<ssize_t>> slices
+    ) {
+        // We expect `value` to obey the index-wise bounds and integrality
+        assert(node_.lower_bound(index) <= value);
+        assert(node_.upper_bound(index) >= value);
+        assert(not node_.integral() or value == std::round(value));
+
+        // assert() that i is a valid index occurs in ptr->set().
+        // State change occurs IFF `value` != buffer[index].
+        if (ArrayNodeStateData::set(index, value)) {
+            // If change occurred and sum constraint exist, update running sums.
+            if (node_.sum_constraints().size() > 0) {
+                if (slices.has_value()) {
+                    update(index, value - diff().back().old, *slices);
+                } else {
+                    update(index, value - diff().back().old);
+                }
+            }
+        }
+    }
+
     /// Update the relevant sum constraints running sums (`lhs`) given that the
     /// value stored at `index` is changed by `difference`.
     /// Users may pass the slices (per sum constraint) that `index` lies on.
@@ -344,6 +368,56 @@ void NumberNodeStateData::update(
         }
         slice_cache_.emplace_back(std::move(cache_entry));  // Cache the slices.
     }
+}
+
+void NumberNode::assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const {
+    auto state_data = data_ptr_<NumberNodeStateData>(state);
+
+    auto* checkpoint_ptr = static_cast<NumberNodeCheckpoint_*>(checkpoint.get());
+
+    assert(checkpoint_ptr == state_data->last_checkpoint());
+
+    // Check if there are any changes not otherwise tracked by a checkpoint that we need
+    // to revert first.
+    // A better way would be to implement a partial revert on our state class, but this
+    // is not a path we care about greatly so let's err on the side of simple and well-
+    // tested.
+    if (ssize_t excess_updates = state_data->diff().size() - checkpoint_ptr->drop()) {
+        assert(excess_updates > 0);
+
+        for (
+            const auto& [idx, old, _] :
+            state_data->diff() | std::views::reverse | std::views::take(excess_updates)
+        ) {
+            state_data->set(idx, old, std::nullopt);
+        }
+    }
+
+    auto [updates, optional_slice_cache] = checkpoint_ptr->detach_updates();
+
+    if (optional_slice_cache.has_value()) {
+        assert(sum_constraints_.size() > 0);
+
+        auto slices_rit = std::ranges::rbegin(*optional_slice_cache);
+
+        for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
+            state_data->set(idx, old, *(slices_rit++));
+        }
+    } else {
+        assert(updates.empty() or sum_constraints_.empty());
+
+        // in this case we don't need to do anything to update the slice data
+        for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
+            state_data->set(idx, old, std::nullopt);
+        }
+    }
+
+    checkpoint_ptr->drop() = state_data->diff().size();
+}
+
+void NumberNode::assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const {
+    assign_from_checkpoint(state, checkpoint);  // call the lvalue version
+    checkpoint.reset();
 }
 
 double const* NumberNode::buff(const State& state) const noexcept {
@@ -737,20 +811,18 @@ void NumberNode::clip_and_set_value(
     double value,
     std::optional<std::vector<ssize_t>> slices
 ) const {
-    auto state_data = data_ptr_<NumberNodeStateData>(state);
-    value = std::clamp(value, lower_bound(index), upper_bound(index));
-    // assert() that i is a valid index occurs in ptr->set().
-    // State change occurs IFF `value` != buffer[index].
-    if (state_data->set(index, value)) {
-        // If change occurred and sum constraint exist, update running sums.
-        if (sum_constraints_.size() > 0) {
-            if (slices.has_value()) {
-                state_data->update(index, value - diff(state).back().old, *slices);
-            } else {
-                state_data->update(index, value - diff(state).back().old);
-            }
-        }
-    }
+    data_ptr_<NumberNodeStateData>(state)->set(
+        index, std::clamp(value, lower_bound(index), upper_bound(index)), std::move(slices)
+    );
+}
+
+void NumberNode::set_value(
+    State& state,
+    ssize_t index,
+    double value,
+    std::optional<std::vector<ssize_t>> slices
+) const {
+    data_ptr_<NumberNodeStateData>(state)->set(index, value, std::move(slices));
 }
 
 const std::vector<NumberNode::SumConstraint>& NumberNode::sum_constraints() const {
@@ -1070,89 +1142,11 @@ IntegerNode::IntegerNode(
         std::move(sum_constraints)
     ) {}
 
-void IntegerNode::assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const {
-    auto state_data = data_ptr_<NumberNodeStateData>(state);
-
-    auto* checkpoint_ptr = static_cast<NumberNodeCheckpoint_*>(checkpoint.get());
-
-    assert(checkpoint_ptr == state_data->last_checkpoint());
-
-    // Check if there are any changes not otherwise tracked by a checkpoint that we need
-    // to revert first.
-    // A better way would be to implement a partial revert on our state class, but this
-    // is not a path we care about greatly so let's err on the side of simple and well-
-    // tested.
-    if (ssize_t excess_updates = state_data->diff().size() - checkpoint_ptr->drop()) {
-        assert(excess_updates > 0);
-
-        for (
-            const auto& [idx, old, _] :
-            state_data->diff() | std::views::reverse | std::views::take(excess_updates)
-        ) {
-            // This is a *very* expensive call. But, again, we're not too worried about
-            // performance here.
-            this->set_value(state, idx, old);
-        }
-    }
-
-    auto [updates, optional_slice_cache] = checkpoint_ptr->detach_updates();
-
-    if (optional_slice_cache.has_value()) {
-        assert(sum_constraints_.size() > 0);
-
-        auto slices_rit = std::ranges::rbegin(*optional_slice_cache);
-
-        for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
-            state_data->set(idx, old);
-            state_data->update(idx, old - diff(state).back().old, *(slices_rit++));
-        }
-    } else {
-        assert(updates.empty() or sum_constraints_.empty());
-
-        // in this case we don't need to do anything to update the slice data
-        for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
-            state_data->set(idx, old);
-        }
-    }
-
-    checkpoint_ptr->drop() = state_data->diff().size();
-}
-
-void IntegerNode::assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const {
-    assign_from_checkpoint(state, checkpoint);  // call the lvalue version
-    checkpoint.reset();
-}
-
 bool IntegerNode::integral() const { return true; }
 
 bool IntegerNode::is_valid(ssize_t index, double value) const {
     return (value >= lower_bound(index)) && (value <= upper_bound(index)) &&
            (std::round(value) == value);
-}
-
-void IntegerNode::set_value(
-    State& state,
-    ssize_t index,
-    double value,
-    std::optional<std::vector<ssize_t>> slices
-) const {
-    auto state_data = data_ptr_<NumberNodeStateData>(state);
-    // We expect `value` to obey the index-wise bounds and to be an integer.
-    assert(lower_bound(index) <= value);
-    assert(upper_bound(index) >= value);
-    assert(value == std::round(value));
-    // assert() that i is a valid index occurs in ptr->set().
-    // State change occurs IFF `value` != buffer[index].
-    if (state_data->set(index, value)) {
-        // If change occurred and sum constraint exist, update running sums.
-        if (sum_constraints_.size() > 0) {
-            if (slices.has_value()) {
-                state_data->update(index, value - diff(state).back().old, *slices);
-            } else {
-                state_data->update(index, value - diff(state).back().old);
-            }
-        }
-    }
 }
 
 double IntegerNode::default_value(ssize_t index) const {
@@ -1651,53 +1645,6 @@ void BinaryNode::initialize_state(State& state) const {
     }
 }
 
-void BinaryNode::clip_and_set_value(
-    State& state,
-    ssize_t index,
-    double value,
-    std::optional<std::vector<ssize_t>> slices
-) const {
-    auto state_data = data_ptr_<BinaryNodeStateData>(state);
-    value = std::clamp(value, lower_bound(index), upper_bound(index));
-    // assert() that i is a valid index occurs in ptr->set().
-    // State change occurs IFF `value` != buffer[index].
-    if (state_data->set(index, value)) {
-        // If change occurred and sum constraint exist, update running sums.
-        if (sum_constraints_.size() > 0) {
-            if (slices.has_value()) {
-                state_data->update(index, value - diff(state).back().old, *slices);
-            } else {
-                state_data->update(index, value - diff(state).back().old);
-            }
-        }
-    }
-}
-
-void BinaryNode::set_value(
-    State& state,
-    ssize_t index,
-    double value,
-    std::optional<std::vector<ssize_t>> slices
-) const {
-    auto state_data = data_ptr_<BinaryNodeStateData>(state);
-    // We expect `value` to obey the index-wise bounds and to be an integer.
-    assert(lower_bound(index) <= value);
-    assert(upper_bound(index) >= value);
-    assert(value == std::round(value));
-    // assert() that i is a valid index occurs in ptr->set().
-    // State change occurs IFF `value` != buffer[index].
-    if (state_data->set(index, value)) {
-        // If change occurred and sum constraint exist, update running sums.
-        if (sum_constraints_.size() > 0) {
-            if (slices.has_value()) {
-                state_data->update(index, value - diff(state).back().old, *slices);
-            } else {
-                state_data->update(index, value - diff(state).back().old);
-            }
-        }
-    }
-}
-
 void BinaryNode::flip(
     State& state,
     ssize_t index,
@@ -1706,20 +1653,8 @@ void BinaryNode::flip(
     auto state_data = data_ptr_<BinaryNodeStateData>(state);
     // Variable should not be fixed.
     assert(lower_bound(index) != upper_bound(index));
-    // assert() that `index` is valid occurs in ptr->set().
-    // State change occurs IFF `value` != buffer[index].
-    if (state_data->set(index, !state_data->get(index))) {
-        // If change occurred and sum constraint exist, update running sums.
-        if (sum_constraints_.size() > 0) {
-            // If value changed from 0 -> 1, update by 1.
-            // If value changed from 1 -> 0, update by -1.
-            if (slices.has_value()) {
-                state_data->update(index, (state_data->get(index) == 1) ? 1 : -1, *slices);
-            } else {
-                state_data->update(index, (state_data->get(index) == 1) ? 1 : -1);
-            }
-        }
-    }
+
+    state_data->set(index, not state_data->get(index), std::move(slices));
 }
 
 ssize_t BinaryNode::num_true(
