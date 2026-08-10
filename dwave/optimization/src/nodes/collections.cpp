@@ -14,9 +14,12 @@
 
 #include "dwave-optimization/nodes/collections.hpp"
 
+#include <memory>
 #include <ranges>
 #include <unordered_set>
 #include <utility>
+
+#include "_checkpoints.hpp"
 
 namespace dwave::optimization {
 
@@ -66,7 +69,19 @@ std::vector<double> augment_collection_(std::vector<double> values, const ssize_
     return values;
 }
 
-class CollectionStateData_ : public NodeStateData {
+class CollectionStateData_;
+
+class CollectionCheckpoint_ : public DiffCheckpoint {
+ public:
+    CollectionCheckpoint_(CollectionStateData_& state);
+
+    ssize_t size() const { return size_; }
+
+ private:
+    ssize_t size_;
+};
+
+class CollectionStateData_ : public NodeStateData, public CheckpointableState {
  public:
     explicit CollectionStateData_(ssize_t n) : CollectionStateData_(n, n) {}
 
@@ -109,11 +124,68 @@ class CollectionStateData_ : public NodeStateData {
         assert(this->size_ == size);
     }
 
+    void assign(std::unique_ptr<NodeStateCheckpoint>& checkpoint) {
+        // convert the checkpoint into something we can read
+        auto* checkpoint_ptr = static_cast<CollectionCheckpoint_*>(checkpoint.get());
+
+        // Right now, you can only revert to the most recent checkpoint. It's
+        // pretty straightforward to support going further back, but this is all
+        // we need right now.
+        assert(this->checkpoint_ptr<CollectionCheckpoint_>() == checkpoint_ptr);
+
+        // Check if there are any changes not otherwise tracked by a checkpoint that we need
+        // to revert first.
+        // A better way would be to implement a partial revert on our state class, but this
+        // is not a path we care about greatly so let's err on the side of simple and well-
+        // tested.
+        if (ssize_t excess_updates = all_updates_.size() - checkpoint_ptr->drop()) {
+            assert(excess_updates > 0);  // should never be negative
+
+            // need a copy because we'll be mutating all_updates_ in the loop
+            auto excess_view =
+                all_updates_ | std::views::reverse | std::views::take(excess_updates);
+            std::vector<Update> excess(excess_view.begin(), excess_view.end());
+
+            // now do the mutation
+            for (const auto& [idx, old, _] : excess) {
+                set_(idx, old);
+            }
+        }
+
+        // Ok, let's get ourselves to the same place as the checkpoint
+
+        // we want to minimize the size of the visible buffer, so let's shrink ourselves
+        // if we need to
+        while (size_ > checkpoint_ptr->size()) shrink();
+
+        for (const auto& [idx, old, _] : checkpoint_ptr->detach_updates() | std::views::reverse) {
+            set_(idx, old);
+        }
+
+        // now that we've filled in our buffer, grow until we're the correct size
+        while (size_ < checkpoint_ptr->size()) grow();
+
+        // update the "drop" value of the checkpoint so that our next commit doesn't
+        // add all of the changes we just added
+        checkpoint_ptr->drop() = all_updates_.size();
+    }
+
     const double* buff() const { return elements_.data(); }
+
+    std::unique_ptr<NodeStateCheckpoint> checkpoint() {
+        return std::make_unique<CollectionCheckpoint_>(*this);
+    }
 
     void commit() {
         updates_.clear();
-        all_updates_.clear();
+
+        if (auto* checkpoint_ptr = this->checkpoint_ptr<CollectionCheckpoint_>()) {
+            checkpoint_ptr->commit_updates(std::move(all_updates_));
+            assert(all_updates_.empty());
+        } else {
+            all_updates_.clear();
+        }
+
         previous_size_ = size_;
     }
 
@@ -150,16 +222,22 @@ class CollectionStateData_ : public NodeStateData {
     }
 
     void revert() {
+        updates_.clear();
+
         // Un-apply any changes by working backwards through all updates.
         // If we end up enforcing updates being sorted and unique later then
         // we could do this any order (or better in parallel).
-
         for (const Update& update : all_updates_ | std::views::reverse) {
             elements_[update.index] = update.old;
         }
 
-        updates_.clear();
-        all_updates_.clear();
+        if (auto* checkpoint_ptr = this->checkpoint_ptr<CollectionCheckpoint_>()) {
+            checkpoint_ptr->revert_updates(std::move(all_updates_));
+            assert(all_updates_.empty());
+        } else {
+            all_updates_.clear();
+        }
+
         size_ = previous_size_;
     }
 
@@ -199,6 +277,18 @@ class CollectionStateData_ : public NodeStateData {
     ssize_t size_diff() const { return size_ - previous_size_; }
 
  private:
+    void set_(ssize_t index, double value) {
+        assert(0 <= index and static_cast<size_t>(index) < elements_.size());
+
+        if (elements_[index] == value) return;
+
+        all_updates_.emplace_back(index, elements_[index], value);
+        if (index < size_) updates_.emplace_back(index, elements_[index], value);
+        elements_[index] = value;
+    }
+
+    friend CollectionCheckpoint_;
+
     // The elements in the collection
     std::vector<double> elements_;
 
@@ -214,6 +304,9 @@ class CollectionStateData_ : public NodeStateData {
     ssize_t size_;
     ssize_t previous_size_;
 };
+
+CollectionCheckpoint_::CollectionCheckpoint_(CollectionStateData_& state) :
+    DiffCheckpoint(state, state.all_updates_), size_(state.size()) {}
 
 CollectionNode::CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size) :
     ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),
@@ -240,6 +333,24 @@ void CollectionNode::assign(State& state, std::vector<double> values) const {
     auto augemented = augment_collection_(std::move(values), max_value_);
 
     data_ptr_<CollectionStateData_>(state)->assign(std::move(augemented), size);
+}
+
+void CollectionNode::assign_from_checkpoint(
+    State& state,
+    std::unique_ptr<NodeStateCheckpoint>& checkpoint
+) const {
+    data_ptr_<CollectionStateData_>(state)->assign(checkpoint);
+}
+void CollectionNode::assign_from_checkpoint(
+    State& state,
+    std::unique_ptr<NodeStateCheckpoint>&& checkpoint
+) const {
+    assign_from_checkpoint(state, checkpoint);  // call the lvalue version
+    checkpoint.reset();
+}
+
+std::unique_ptr<NodeStateCheckpoint> CollectionNode::checkpoint(State& state) const {
+    return data_ptr_<CollectionStateData_>(state)->checkpoint();
 }
 
 void CollectionNode::commit(State& state) const {
@@ -329,7 +440,17 @@ ssize_t CollectionNode::size_diff(const State& state) const {
     return data_ptr_<CollectionStateData_>(state)->size_diff();
 }
 
-struct DisjointBitSetsNodeData_ : NodeStateData {
+// DisjointBitSetsNode is on the way out, so let's do the simplest possible
+// implementation for now.
+class DisjointBitSetsCheckpoint_ : public LinkedListCheckpoint {
+ public:
+    DisjointBitSetsCheckpoint_(CheckpointableState& state, const std::ranges::range auto& buff) :
+        LinkedListCheckpoint(state), buffer(buff.begin(), buff.end()) {}
+
+    std::vector<double> buffer;
+};
+
+struct DisjointBitSetsNodeData_ : CheckpointableState, NodeStateData {
     DisjointBitSetsNodeData_(ssize_t primary_set_size, ssize_t num_disjoint_sets) :
         primary_set_size(primary_set_size), num_disjoint_sets(num_disjoint_sets) {
         data.resize(primary_set_size * num_disjoint_sets, 0);
@@ -375,6 +496,21 @@ struct DisjointBitSetsNodeData_ : NodeStateData {
             throw std::invalid_argument(
                 "disjoint set elements must be in exactly one bit-set once"
             );
+        }
+    }
+
+    void assign(std::span<const double> buff) {
+        assert(data.size() == buff.size());
+
+        for (ssize_t disjoint_set = 0; disjoint_set < num_disjoint_sets; ++disjoint_set) {
+            const ssize_t start = disjoint_set * primary_set_size;
+            const ssize_t stop = start + primary_set_size;
+            for (ssize_t i = start; i < stop; ++i) {
+                if (data[i] != buff[i]) {
+                    diffs[disjoint_set].emplace_back(i % primary_set_size, data[i], buff[i]);
+                    data[i] = buff[i];
+                }
+            }
         }
     }
 
@@ -445,6 +581,27 @@ void DisjointBitSetsNode::initialize_state(
     );
 }
 
+void DisjointBitSetsNode::assign_from_checkpoint(
+    State& state,
+    std::unique_ptr<NodeStateCheckpoint>& checkpoint
+) const {
+    const auto* checkpoint_ptr = static_cast<DisjointBitSetsCheckpoint_*>(checkpoint.get());
+    data_ptr_<DisjointBitSetsNodeData_>(state)->assign(checkpoint_ptr->buffer);
+}
+
+void DisjointBitSetsNode::assign_from_checkpoint(
+    State& state,
+    std::unique_ptr<NodeStateCheckpoint>&& checkpoint
+) const {
+    assign_from_checkpoint(state, checkpoint);  // use the lvalue version
+    checkpoint.reset();
+}
+
+std::unique_ptr<NodeStateCheckpoint> DisjointBitSetsNode::checkpoint(State& state) const {
+    auto* state_ptr = data_ptr_<DisjointBitSetsNodeData_>(state);
+    return std::make_unique<DisjointBitSetsCheckpoint_>(*state_ptr, state_ptr->data);
+}
+
 void DisjointBitSetsNode::commit(State& state) const {
     data_ptr_<DisjointBitSetsNodeData_>(state)->commit();
 }
@@ -503,7 +660,20 @@ double DisjointBitSetNode::min() const { return 0; }
 
 double DisjointBitSetNode::max() const { return 1; }
 
-struct DisjointListStateData_ : NodeStateData {
+// DisjointListsNode is on the way out, so let's do the simplest possible
+// implementation for now.
+class DisjointListsCheckpoint_ : public LinkedListCheckpoint {
+ public:
+    DisjointListsCheckpoint_(
+        CheckpointableState& state,
+        const std::vector<std::vector<double>>& lists
+    ) :
+        LinkedListCheckpoint(state), lists(lists) {}
+
+    std::vector<std::vector<double>> lists;
+};
+
+struct DisjointListStateData_ : CheckpointableState, NodeStateData {
     DisjointListStateData_(ssize_t primary_set_size, ssize_t num_disjoint_lists) :
         primary_set_size(primary_set_size) {
         lists.resize(num_disjoint_lists);
@@ -731,6 +901,34 @@ DisjointListsNode::DisjointListsNode(ssize_t primary_set_size, ssize_t num_disjo
     primary_set_size_(primary_set_size), num_disjoint_lists_(num_disjoint_lists) {
     if (primary_set_size < 0) throw std::invalid_argument("primary_set_size must be non-negative");
     if (num_disjoint_lists < 1) throw std::invalid_argument("num_disjoint_lists must be positive");
+}
+
+void DisjointListsNode::assign_from_checkpoint(
+    State& state,
+    std::unique_ptr<NodeStateCheckpoint>& checkpoint
+) const {
+    auto* state_ptr = data_ptr_<DisjointListStateData_>(state);
+
+    const DisjointListsCheckpoint_* checkpoint_ptr =
+        static_cast<DisjointListsCheckpoint_*>(checkpoint.get());
+
+    ssize_t list_index = 0;
+    for (const std::vector<double>& list : checkpoint_ptr->lists) {
+        state_ptr->set_state(list_index++, list);
+    }
+}
+
+void DisjointListsNode::assign_from_checkpoint(
+    State& state,
+    std::unique_ptr<NodeStateCheckpoint>&& checkpoint
+) const {
+    assign_from_checkpoint(state, checkpoint);  // use the lvalue version
+    checkpoint.reset();
+}
+
+std::unique_ptr<NodeStateCheckpoint> DisjointListsNode::checkpoint(State& state) const {
+    auto* state_ptr = data_ptr_<DisjointListStateData_>(state);
+    return std::make_unique<DisjointListsCheckpoint_>(*state_ptr, state_ptr->lists);
 }
 
 void DisjointListsNode::initialize_state(State& state) const {

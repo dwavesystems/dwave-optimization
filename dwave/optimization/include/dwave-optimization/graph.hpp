@@ -155,6 +155,11 @@ class Graph {
         std::function<bool(const Graph&, State&)> accept = [](const Graph&, State&) { return true; }
     ) const;
 
+    /// Propagate any pending changes to all nodes in the graph and commit them.
+    void propose(State& state) const;
+    // dev note: the name is a bit funny in this case, but we essentially want
+    // an overload for a "default" `sources` and `accept`.
+
     /// Initialize the state of the given node and all predecessors recursively.
     static void recursive_initialize(State& state, const Node* ptr);
     /// Reset the state of the given node and all successors recursively.
@@ -463,6 +468,13 @@ NodeType* Graph::emplace_node(Args&&... args) {
 class ArrayNode : public Array, public virtual Node {};
 class DecisionNode : public Decision, public virtual Node {
  public:
+    /// Set the current state to match the one at the time the given checkpoint was created.
+    virtual void assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const = 0;
+    virtual void assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const = 0;
+
+    /// Get a checkpoint, an IOU that can be used to return the node to its current state.
+    virtual checkpoint_type checkpoint(State& state) const = 0;
+
     /// Decision nodes by definition do not have a deterministic state.
     bool deterministic_state() const final { return false; }
 

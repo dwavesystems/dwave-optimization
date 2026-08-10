@@ -17,7 +17,6 @@
 #include <optional>
 #include <ranges>
 #include <span>
-#include <utility>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
@@ -122,6 +121,13 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     // NumberNode methods *****************************************************
 
+    /// @copydoc DecisionNode::assign_from_checkpoint()
+    void assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const override;
+    void assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const override;
+
+    /// @copydoc DecisionNode::checkpoint()
+    checkpoint_type checkpoint(State& state) const override;
+
     // In the given state, swap the value of index i with the value of index j.
     // Users may pass the slices (per sum constraint) that each index lies on.
     void exchange(
@@ -147,6 +153,15 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     // in a given index. Users may pass the slices (per sum constraint) that
     // each index lies on.
     void clip_and_set_value(
+        State& state,
+        ssize_t index,
+        double value,
+        std::optional<std::vector<ssize_t>> slices = std::nullopt
+    ) const;
+
+    // Set the value at the given index in the given state.
+    // Users may pass the slices (per sum constraint) that each index lies on.
+    void set_value(
         State& state,
         ssize_t index,
         double value,
@@ -288,16 +303,6 @@ class IntegerNode : public NumberNode {
     // @copydoc NumberNode::is_valid()
     bool is_valid(ssize_t index, double value) const override;
 
-    // IntegerNode methods ****************************************************
-
-    // Set the value at the given index in the given state.
-    // Users may pass the slices (per sum constraint) that each index lies on.
-    void set_value(
-        State& state,
-        ssize_t index,
-        double value,
-        std::optional<std::vector<ssize_t>> slices = std::nullopt
-    ) const;
 
  protected:
     // Overloads needed by the Node ABC ***************************************
@@ -408,33 +413,6 @@ class BinaryNode : public IntegerNode {
     void initialize_state(State& state, const R& values) const {
         return initialize_state(state, std::vector<double>(values.begin(), values.end()));
     }
-
-    /// @copydoc NumberNode::exchange()
-    void exchange(
-        State& state,
-        ssize_t i,
-        ssize_t j,
-        std::optional<std::vector<ssize_t>> i_slices = std::nullopt,
-        std::optional<std::vector<ssize_t>> j_slices = std::nullopt
-    ) const;
-
-    /// @copydoc NumberNode::clip_and_set_value()
-    void clip_and_set_value(
-        State& state,
-        ssize_t index,
-        double value,
-        std::optional<std::vector<ssize_t>> slices = std::nullopt
-    ) const;
-
-    /// ** Redefined IntegerNode method since BinaryNode has custom StateData **
-
-    /// @copydoc IntegerNode::set_value()
-    void set_value(
-        State& state,
-        ssize_t index,
-        double value,
-        std::optional<std::vector<ssize_t>> slices = std::nullopt
-    ) const;
 
     /// ************************** BinaryNode methods **************************
 
