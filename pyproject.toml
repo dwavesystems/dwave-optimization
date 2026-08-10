@@ -33,13 +33,13 @@ classifiers = [
     'Programming Language :: Python :: Implementation :: CPython',
 ]
 requires-python = ">=3.10"
-dependencies = [
-    "numpy>=1.21.3",  # oldest that supports Python 3.10
+dependencies = [ # Keep synced with dependency-groups.dependencies-oldest
+    "numpy>=2",
 ]
 
 [project.optional-dependencies]
-all = [
-    "dimod>=0.12.0",  # oldest minor that passes tests
+all = [ # Keep synced with dependency-groups.dependencies-all-oldest
+    "dimod>=0.12.16",  # oldest dimod that supports NumPy>=2
     "scikit-learn>=1.6.0",  # oldest minor that passes tests
 ]
 
@@ -74,13 +74,29 @@ changelog = [
 clang-format = [
     "clang-format~=22.0",  # latest as of April 2026, we require >=22
 ]
+dependencies-oldest = [ # Keep synced with project.dependencies
+    "numpy==2.0.0; python_version<'3.13'",  # oldest we support
+    "numpy==2.1.0; python_version>='3.13' and python_version<'3.14'",
+    "numpy==2.3.2; python_version>='3.14' and python_version<'3.15'",
+    "numpy; python_version>='3.15'",  # once 3.15 releases we'll lock this down
+]
+dependencies-all-oldest = [  # Keep synced with project.optional-dependencies
+    {include-group = "dependencies-oldest"},
+
+    "dimod==0.12.16; python_version<'3.13'", # oldest we support
+    "dimod==0.12.17; python_version>='3.13' and python_version<'3.14'",
+    "dimod==0.12.21; python_version>='3.14' and python_version<'3.15'",
+    "dimod; python_version>='3.15'",  # once 3.15 releases we'll lock this down
+
+    "scikit-learn==1.6.0; python_version<'3.14'", # oldest we support
+    "scikit-learn==1.8.0; python_version>='3.14' and python_version<'3.15'",
+    "scikit-learn; python_version>='3.15'",  # once 3.15 releases we'll lock this down
+]
 dev = [
-    # Install requirements
-    "numpy==2.2.6; python_version < '3.11'",  # last that supports 3.10
-    "numpy==2.3.3; python_version >= '3.11'",
     {include-group = "build"},
     {include-group = "changelog"},
     {include-group = "clang-format"},
+    {include-group = "dependencies-oldest"},
 ]
 docs = [
     # Matches dwave-ocean-sdk as of Dec 2025
@@ -88,11 +104,6 @@ docs = [
     "sphinx==8.2.3",
     "sphinx-design==0.6.1",
     "breathe==4.35.0",
-]
-test = [
-    "dimod==0.12.21",
-    "scikit-learn==1.7.2; python_version<'3.11'",   # last that supports 3.10
-    "scikit-learn==1.8.0; python_version>='3.11'",  # first that supports 3.14t
 ]
 
 [tool.cibuildwheel]
@@ -105,7 +116,6 @@ skip = "pp* *musllinux*"
 before-build = "pip install --group blas-build"
 build-frontend = { name = "build", args = ["--no-isolation"] }
 
-before-test = "pip install --group test"
 test-command = "python -Werror -m unittest discover {project}/tests/"
 
 [tool.cibuildwheel.config-settings]
