@@ -18,6 +18,8 @@
 #include <memory>
 #include <vector>
 
+#include "dwave-optimization/common.hpp"
+
 namespace dwave::optimization {
 
 // Generic base class for encoding the state of the model. In general, nodes
@@ -41,7 +43,7 @@ class State {
     friend class Graph;
 
  public:
-    State(ssize_t size = 0) : node_data_(size) {}
+    State() {}
 
     template <typename index_type>
     auto& operator[](index_type index) {
@@ -58,6 +60,8 @@ class State {
     ssize_t size() const { return node_data_.size(); }
 
  private:
+    State(ssize_t size) : node_data_(size) {}
+
     std::vector<std::unique_ptr<NodeStateData>> node_data_;
     std::vector<const DecisionNode*> mutated_nodes_;
 };

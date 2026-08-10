@@ -40,8 +40,6 @@ class Node;
 struct Decision {};
 
 class Graph {
-    friend class State;
-
  public:
     Graph() noexcept = default;
     ~Graph() noexcept = default;
