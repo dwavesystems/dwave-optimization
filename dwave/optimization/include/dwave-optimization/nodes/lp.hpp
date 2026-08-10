@@ -102,6 +102,17 @@ class LinearProgramNodeBase : public Node {
 ///         callback=None, options=None, x0=None, integrality=None)
 class LinearProgramNode : public EqualityMixin<LinearProgramNodeBase, LinearProgramNode> {
  public:
+    using linprog_type = std::function<std::vector<double>(
+        std::span<const double> c,
+        std::span<const double> b_lb,
+        std::span<const double> A,
+        std::span<const double> b_ub,
+        std::span<const double> A_eq,
+        std::span<const double> b_eq,
+        std::span<const double> lb,
+        std::span<const double> ub
+    )>;
+
     /// Construct a LinearProgramNode
     ///
     /// Note: parameter names are chosen to match scipy.optimize.lingprog()
@@ -113,7 +124,8 @@ class LinearProgramNode : public EqualityMixin<LinearProgramNodeBase, LinearProg
         ArrayNode* A_eq_ptr,
         ArrayNode* b_eq_ptr,
         ArrayNode* lb_ptr,
-        ArrayNode* ub_ptr
+        ArrayNode* ub_ptr,
+        linprog_type linprog = linprog_type()
     );
 
     /// @copydoc Node::commit()
@@ -186,6 +198,8 @@ class LinearProgramNode : public EqualityMixin<LinearProgramNodeBase, LinearProg
     // lb <= x <= ub
     const ArrayNode* lb_ptr_;
     const ArrayNode* ub_ptr_;
+
+    linprog_type linprog_;
 
     const std::pair<double, double> variables_minmax_;
 };

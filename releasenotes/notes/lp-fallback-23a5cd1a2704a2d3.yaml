@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Use SciPy's ``scipy.optimize.linprog()`` function to calculate the state of
+    the ``LinearProgram`` symbol when SciPy is available.
+    See `#599 <https://github.com/dwavesystems/dwave-optimization/issues/599>`_.
+  - |
+    Accept ``ArraySymbolLike`` inputs to ``linprog()`` function.

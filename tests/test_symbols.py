@@ -19,6 +19,7 @@ import operator
 import sys
 import typing
 import unittest
+import unittest.mock
 
 import numpy as np
 
@@ -2740,6 +2741,63 @@ class TestLinearProgram(utils.SymbolTests):
             np.testing.assert_array_equal(lp.state(1), [1, 0])
             self.assertFalse(lp.has_state(2))
             np.testing.assert_array_equal(lp.state(3), [1, 1])
+
+    def test_fallback(self):
+        expected_c = np.asarray([1, 2, 3])
+        expected_A_eq = np.asarray([[4, 5, 6], [7, 8, 9]])
+        expected_b_eq = np.asarray([1, 2])
+        expected_lb = np.asarray([-1, -2, -3])
+        expected_ub = np.asarray([100, 101, 102])
+        expected_x = np.asarray([50, 51, 52], dtype=np.double)
+        count = [0]
+
+        def mock_linprog(**kwargs):
+            count[0] += 1
+
+            np.testing.assert_array_equal(kwargs['c'], expected_c)
+            np.testing.assert_array_equal(kwargs['A_eq'], expected_A_eq)
+            np.testing.assert_array_equal(kwargs['b_eq'], expected_b_eq)
+            np.testing.assert_array_equal(
+                kwargs['bounds'],
+                np.vstack((expected_lb, expected_ub)).T,
+            )
+
+            self.assertEqual(len(kwargs), 4)
+
+            class Res:
+                pass
+
+            res = Res()
+            res.x = expected_x
+
+            return res
+
+        with unittest.mock.patch("dwave.optimization.symbols.lp.linprog", new=mock_linprog):
+            model = Model()
+            model.states.resize(1)
+
+            c = model.integer(3)
+            c.set_state(0, expected_c)
+
+            x = dwave.optimization.linprog(
+                c,
+                A_eq=expected_A_eq,
+                b_eq=expected_b_eq,
+                lb=expected_lb,
+                ub=expected_ub,
+            ).x
+
+            with model.lock():
+                np.testing.assert_array_equal(x.state(), expected_x)
+
+        # having established that the fallback works, let's make sure we're
+        # pointing to scipy
+        try:
+            import scipy
+        except ImportError:
+            return  # all done
+
+        self.assertIs(dwave.optimization.symbols.lp.linprog, scipy.optimize.linprog)
 
 
 class TestMatrixMultiply(utils.SymbolTests):

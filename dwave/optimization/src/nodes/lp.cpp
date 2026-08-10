@@ -182,7 +182,8 @@ LinearProgramNode::LinearProgramNode(
     ArrayNode* A_eq_ptr,
     ArrayNode* b_eq_ptr,
     ArrayNode* lb_ptr,
-    ArrayNode* ub_ptr
+    ArrayNode* ub_ptr,
+    linprog_type lingprog_
 ) :
     c_ptr_(c_ptr),
     b_lb_ptr_(b_lb_ptr),
@@ -192,6 +193,7 @@ LinearProgramNode::LinearProgramNode(
     b_eq_ptr_(b_eq_ptr),
     lb_ptr_(lb_ptr),
     ub_ptr_(ub_ptr),
+    linprog_(lingprog_),
     variables_minmax_(
         lb_ptr_ ? lb_ptr_->min() : LinearProgramNode::default_lower_bound(),
         ub_ptr_ ? ub_ptr_->max() : LinearProgramNode::default_upper_bound()
@@ -307,10 +309,16 @@ void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp)
 void LinearProgramNode::initialize_state(State& state) const {
     LPData lp;
     readout_predecessor_data(state, lp);
+
+    if (linprog_) {
+        return initialize_state(
+            state, linprog_(lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub)
+        );
+    }
+
     SolveResult result = linprog(
         lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub, FEASIBILITY_TOLERANCE
     );
-
     emplace_data_ptr_<LinearProgramNodeData>(state, std::move(result));
 }
 
@@ -346,17 +354,50 @@ void LinearProgramNode::propagate(State& state) const {
     auto data = data_ptr_<LinearProgramNodeData>(state);
 
     readout_predecessor_data(state, data->lp);
-    data->result = linprog(
-        data->lp.c,
-        data->lp.b_lb,
-        data->lp.A,
-        data->lp.b_ub,
-        data->lp.A_eq,
-        data->lp.b_eq,
-        data->lp.lb,
-        data->lp.ub,
-        FEASIBILITY_TOLERANCE
-    );
+
+    SolveResult result;
+
+    if (linprog_) {
+        // If the user has specified a linprog function, use that
+        auto solution = linprog_(
+            data->lp.c,
+            data->lp.b_lb,
+            data->lp.A,
+            data->lp.b_ub,
+            data->lp.A_eq,
+            data->lp.b_eq,
+            data->lp.lb,
+            data->lp.ub
+        );
+
+        result.set_solution(
+            std::move(solution),
+            data->lp.c,
+            data->lp.b_lb,
+            data->lp.A,
+            data->lp.b_ub,
+            data->lp.A_eq,
+            data->lp.b_eq,
+            data->lp.lb,
+            data->lp.ub,
+            FEASIBILITY_TOLERANCE
+        );
+    } else {
+        // otherwise, use our simplex method
+        result = linprog(
+            data->lp.c,
+            data->lp.b_lb,
+            data->lp.A,
+            data->lp.b_ub,
+            data->lp.A_eq,
+            data->lp.b_eq,
+            data->lp.lb,
+            data->lp.ub,
+            FEASIBILITY_TOLERANCE
+        );
+    }
+
+    data->result = result;
 
     Node::propagate(state);
 }
