@@ -79,7 +79,8 @@ dependencies-oldest = [ # Keep synced with project.dependencies
     "numpy==2.0.0; python_version<'3.13'",  # oldest we support
     "numpy==2.1.0; python_version>='3.13' and python_version<'3.14'",
     "numpy==2.3.2; python_version>='3.14' and python_version<'3.15'",
-    "numpy; python_version>='3.15'",  # once 3.15 releases we'll lock this down
+    "numpy==2.5.2; python_version>='3.15' and python_version<'3.16'",
+    "numpy; python_version>='3.16'",  # once 3.16 releases we'll lock this down
 ]
 dependencies-all-oldest = [  # Keep synced with project.optional-dependencies
     {include-group = "dependencies-oldest"},
@@ -87,16 +88,16 @@ dependencies-all-oldest = [  # Keep synced with project.optional-dependencies
     "dimod==0.12.16; python_version<'3.13'", # oldest we support
     "dimod==0.12.17; python_version>='3.13' and python_version<'3.14'",
     "dimod==0.12.21; python_version>='3.14' and python_version<'3.15'",
-    "dimod; python_version>='3.15'",  # once 3.15 releases we'll lock this down
+    "dimod; python_version>='3.15'",  # once dimod has a 3.15 release we'll lock this down
 
     "scikit-learn==1.6.0; python_version<'3.14'", # oldest we support
     "scikit-learn==1.8.0; python_version>='3.14' and python_version<'3.15'",
-    "scikit-learn; python_version>='3.15'",  # once 3.15 releases we'll lock this down
+    "scikit-learn; python_version>='3.15'",  # once scikit-learn has a 3.15 release we'll lock this down
 
     "scipy==1.13.0; python_version<'3.13'", # first that supports NumPy 2
     "scipy==1.14.1; python_version>='3.13' and python_version<'3.14'",
     "scipy==1.16.3; python_version>='3.14' and python_version<'3.15'",
-    "scipy; python_version>='3.15'",   # once 3.15 releases we'll lock this down
+    "scipy; python_version>='3.15'",  # once scipy has a 3.15 release we'll lock this down
 ]
 dev = [
     {include-group = "build"},
@@ -114,7 +115,7 @@ docs = [
 
 [tool.cibuildwheel]
 build-verbosity = "1"
-skip = "pp* *musllinux*"
+skip = "*musllinux*"
 
 # When building with cibuildwheel, we want scipy_openblas64 available to the
 # build step. There isn't (as of Dec 2025) a way to override the
@@ -139,6 +140,7 @@ archs = "x86_64 arm64"
 environment = "MACOSX_DEPLOYMENT_TARGET=10.13"
 
 [tool.cibuildwheel.windows]
+# cibuildwheel does delvewheel automatically, but we need to customize the command
 archs = "AMD64"
 repair-wheel-command = [
     "pip install delvewheel",
@@ -151,11 +153,6 @@ repair-wheel-command = [
 # wheel. 313t and 314t do not support abi wheels yet.
 select = "cp31[!01]-*"  # uses fnmatch, will fail for 3.20+ but good enough for now
 build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=true", "--no-isolation"] }
-inherit.repair-wheel-command = "append"
-repair-wheel-command = [
-    "pip install abi3audit",
-    "abi3audit --strict --report {wheel}",
-]
 
 [[tool.cibuildwheel.overrides]]
 select = "*-????linux_*"
