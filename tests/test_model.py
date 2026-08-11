@@ -395,6 +395,7 @@ class TestModel(unittest.TestCase):
             self.assertEqual(num_removed, 2)
             self.assertEqual(model.num_symbols(), 1)
 
+
         with self.subTest("disjoint lists"):
             model = Model()
 

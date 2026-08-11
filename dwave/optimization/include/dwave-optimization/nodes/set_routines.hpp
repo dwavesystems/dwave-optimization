@@ -22,6 +22,51 @@
 
 namespace dwave::optimization {
 
+class IsDisjointCoverNode
+    : public ScalarOutputMixin<EqualityMixin<ArrayNode, IsDisjointCoverNode>, false> {
+ public:
+    IsDisjointCoverNode(std::span<ArrayNode*> node_ptrs, ssize_t primary_set_size);
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::equal_to()
+    bool equal_to(const IsDisjointCoverNode& rhs) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// The size of the primary set to be covered
+    ssize_t primary_set_size() const { return primary_set_size_; };
+
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+ private:
+    ssize_t primary_set_size_;
+    std::vector<Array*> operands_;
+
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+};
+
 class IsInNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
  public:
     IsInNode(ArrayNode* element_ptr, ArrayNode* test_elements_ptr);
