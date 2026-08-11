@@ -33,6 +33,8 @@ class ArrayValidationNode : public EqualityMixin<Node> {
     void propagate(State& state) const override;
     void revert(State& state) const override;
 
+    bool updated(const State& state) const override { return false; }
+
  protected:
     void replace_predecessor_(ssize_t index, Node* node_ptr) override {
         assert(false and "ArrayValidationNode cannot have its predecessor replaced");

@@ -445,6 +445,10 @@ std::span<const double> LinearProgramNode::solution(const State& state) const {
     return data_ptr_<LinearProgramNodeData>(state)->result.solution();
 }
 
+bool LinearProgramNode::updated(const State& state) const {
+    return true;  // TODO: think about this more
+}
+
 std::pair<double, double> LinearProgramNode::variables_minmax() const { return variables_minmax_; }
 
 std::span<const ssize_t> LinearProgramNode::variables_shape() const { return c_ptr_->shape(); }

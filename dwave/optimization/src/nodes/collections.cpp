@@ -621,6 +621,14 @@ void DisjointBitSetsNode::swap_between_sets(
     );
 }
 
+bool DisjointBitSetsNode::updated(const State& state) const {
+    const auto* data_ptr = data_ptr_<DisjointBitSetsNodeData_>(state);
+    for (const auto& diff : data_ptr->diffs) {
+        if (diff.size()) return true;
+    }
+    return false;
+}
+
 ssize_t DisjointBitSetsNode::get_containing_set_index(State& state, ssize_t element) const {
     return data_ptr_<DisjointBitSetsNodeData_>(state)->get_containing_set_index(element);
 }
@@ -1020,6 +1028,14 @@ void DisjointListsNode::pop_to_list(
     data_ptr_<DisjointListStateData_>(state)->pop_to_list(
         from_list_index, element_i, to_list_index, element_j
     );
+}
+
+bool DisjointListsNode::updated(const State& state) const {
+    const auto* data_ptr = data_ptr_<DisjointListStateData_>(state);
+    for (const auto& diff : data_ptr->all_list_updates) {
+        if (diff.size()) return true;
+    }
+    return false;
 }
 
 DisjointListNode::DisjointListNode(DisjointListsNode* disjoint_list_node) :
