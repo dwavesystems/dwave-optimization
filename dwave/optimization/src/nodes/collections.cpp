@@ -625,6 +625,10 @@ ssize_t DisjointBitSetsNode::get_containing_set_index(State& state, ssize_t elem
     return data_ptr_<DisjointBitSetsNodeData_>(state)->get_containing_set_index(element);
 }
 
+ssize_t DisjointBitSetsNode::get_containing_set_index(const State& state, ssize_t element) const {
+    return data_ptr_<DisjointBitSetsNodeData_>(state)->get_containing_set_index(element);
+}
+
 DisjointBitSetNode::DisjointBitSetNode(DisjointBitSetsNode* disjoint_bit_sets_node) :
     ArrayOutputMixin(disjoint_bit_sets_node->primary_set_size()),
     disjoint_bit_sets_node_(disjoint_bit_sets_node),
