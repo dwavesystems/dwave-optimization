@@ -116,7 +116,7 @@ class DisjointBitSetsNode : public DecisionNode {
 
     void commit(State&) const override;
 
-    ssize_t get_containing_set_index(State& state, ssize_t element_i) const;
+    ssize_t get_containing_set_index(const State& state, ssize_t element_i) const;
 
     void initialize_state(State& state) const override;
 
