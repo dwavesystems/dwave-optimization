@@ -17,8 +17,14 @@
 import json
 
 import numpy as np
-
 from cython.operator cimport typeid
+from libcpp.span cimport span
+from libcpp.vector cimport vector
+
+try:
+    from scipy.optimize import linprog
+except ImportError:
+    linprog = None
 
 from dwave.optimization._model cimport _Graph, _register, ArraySymbol, Symbol
 from dwave.optimization._utilities cimport as_span
@@ -32,6 +38,87 @@ from dwave.optimization.libcpp.nodes.lp cimport (
     LinearProgramSolutionNode,
 )
 from dwave.optimization.states cimport States
+
+
+cdef object _as_array(span[const double] sp):
+    if not sp.size():
+        return None
+    return np.asarray(<const double[:sp.size():1]>sp.data())
+
+
+cdef object _parse_A_ub(
+    span[const double] _b_lb,
+    span[const double] _A,
+    span[const double] _b_ub,
+):
+    b_lb = _as_array(_b_lb)
+
+    # if one is empty, they all are
+    if b_lb is None:
+        return dict()
+
+    A = _as_array(_A).reshape(b_lb.size, -1)
+    b_ub = _as_array(_b_ub)
+
+    # We need to convert to only upper bounds
+    A_ub = np.vstack((A, -A))
+    b_ub = np.hstack((b_ub, -b_lb))
+
+    # we can have infinities sometimes, so let's drop those
+    if (b_ub == np.inf).any():
+        A_ub = A_ub[b_ub != np.inf, :]
+        b_ub = b_ub[b_ub != np.inf]
+
+    return dict(A_ub=A_ub, b_ub=b_ub)
+
+
+cdef object _parse_A_eq(
+    span[const double] _A_eq,
+    span[const double] _b_eq,
+):
+    A_eq = _as_array(_A_eq)
+
+    if A_eq is None:
+        return dict()
+
+    b_eq = _as_array(_b_eq)
+
+    return dict(A_eq=A_eq.reshape(b_eq.size, -1), b_eq=b_eq)
+
+
+cdef object _parse_bounds(
+    span[const double] lb,
+    span[const double] ub,
+):
+    return np.vstack((_as_array(lb), _as_array(ub))).T
+
+
+# We currently don't allow the user to specify the `method` kwarg to linprog()
+# because getting that information into this function is tricky. A sketch would
+# be to use `std::bind()`, but Cython finds that kind of function quite
+# challenging so for simplicity we just use the default.
+cdef vector[double] _linprog(
+    span[const double] c,
+    span[const double] b_lb,
+    span[const double] A,
+    span[const double] b_ub,
+    span[const double] A_eq,
+    span[const double] b_eq,
+    span[const double] lb,
+    span[const double] ub,
+):
+    res = linprog(
+        c=_as_array(c),
+        **_parse_A_ub(b_lb, A, b_ub),
+        **_parse_A_eq(A_eq, b_eq),
+        bounds=_parse_bounds(lb, ub)
+    )
+
+    cdef vector[double] x  # output
+    for x_i in res.x:
+        x.push_back(<double?>x_i)
+
+    return x
 
 
 cdef class LinearProgram(Symbol):
@@ -64,14 +151,17 @@ cdef class LinearProgram(Symbol):
     .. versionadded:: 0.6.0
     """
 
-    def __init__(self, ArraySymbol c,
-                 ArraySymbol b_lb = None,
-                 ArraySymbol A = None,
-                 ArraySymbol b_ub = None,
-                 ArraySymbol A_eq = None,
-                 ArraySymbol b_eq = None,
-                 ArraySymbol lb = None,
-                 ArraySymbol ub = None):
+    def __init__(
+        self,
+        ArraySymbol c,
+        ArraySymbol b_lb = None,
+        ArraySymbol A = None,
+        ArraySymbol b_ub = None,
+        ArraySymbol A_eq = None,
+        ArraySymbol b_eq = None,
+        ArraySymbol lb = None,
+        ArraySymbol ub = None,
+    ):
         cdef _Graph model = c.model
 
         cdef ArrayNode* c_ptr = c.array_ptr
@@ -86,8 +176,16 @@ cdef class LinearProgram(Symbol):
         cdef ArrayNode* lb_ptr = LinearProgram.as_arraynodeptr(model, lb)
         cdef ArrayNode* ub_ptr = LinearProgram.as_arraynodeptr(model, ub)
 
-        self.ptr = model._graph.emplace_node[LinearProgramNode](
-            c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, A_eq_ptr, b_eq_ptr, lb_ptr, ub_ptr)
+        # In the future we could support a `method` kwarg and add a `dwopt-simplex` option
+        # or something similar. See note on _linprog above.
+        if linprog:
+            self.ptr = model._graph.emplace_node[LinearProgramNode](
+                c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, A_eq_ptr, b_eq_ptr, lb_ptr, ub_ptr, _linprog
+            )
+        else:
+            self.ptr = model._graph.emplace_node[LinearProgramNode](
+                c_ptr, b_lb_ptr, A_ptr, b_ub_ptr, A_eq_ptr, b_eq_ptr, lb_ptr, ub_ptr)
+
         self.initialize_node(model, self.ptr)
 
     @staticmethod

@@ -1240,15 +1240,15 @@ def less_equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> LessEqual:
 
 def linprog(
     c: ArraySymbol,
-    A_ub: None | ArraySymbol = None,  # alias for A
-    b_ub: None | ArraySymbol = None,
-    A_eq: None | ArraySymbol = None,
-    b_eq: None | ArraySymbol = None,
+    A_ub: None | ArraySymbolLike = None,  # alias for A
+    b_ub: None | ArraySymbolLike = None,
+    A_eq: None | ArraySymbolLike = None,
+    b_eq: None | ArraySymbolLike = None,
     *,  # the args up until here match SciPy's linprog() which accepts them positionally
-    b_lb: None | ArraySymbol = None,
-    A: None | ArraySymbol = None,
-    lb: None | ArraySymbol = None,
-    ub: None | ArraySymbol = None,
+    b_lb: None | ArraySymbolLike = None,
+    A: None | ArraySymbolLike = None,
+    lb: None | ArraySymbolLike = None,
+    ub: None | ArraySymbolLike = None,
 ) -> LPResult:
     r"""Solve a :term:`linear program`.
 
@@ -1320,13 +1320,25 @@ def linprog(
         :func:`~scipy.optimize.linprog`: :doc:`SciPy <scipy:index>` function
 
     .. versionadded:: 0.6.0
+    .. versionchanged:: 0.7.3
+        Starting in version `0.7.3`, if SciPy is installed then it will be used
+        to calculate the outputs of the linear program.
     """
+    # Handle the A/A_ub alias.
     if A is not None and A_ub is not None:
         raise ValueError("can provide A or A_ub, but not both")
     elif A_ub is not None:
         A = A_ub
 
-    return LPResult(LinearProgram(c, b_lb, A, b_ub, A_eq, b_eq, lb, ub))
+    # Transform array-likes into ArraySymbols
+    inputs = dict(c=c, b_lb=b_lb, A=A, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, lb=lb, ub=ub)
+    inputs = dict((k, v) for (k, v) in inputs.items() if v is not None)  # filter out the Nones
+    keys = list(inputs)
+    values = as_array_symbols(*(inputs[k] for k in keys))  # these should now all be ArraySymbols
+    kwargs = dict(zip(keys, values))
+
+    # Finally, create the symbol and return a structure that's similar to SciPy's OptimizeResult
+    return LPResult(LinearProgram(**kwargs))
 
 
 def log(x: ArraySymbol) -> Log:

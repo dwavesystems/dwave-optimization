@@ -743,6 +743,70 @@ TEST_CASE("LinearProgramNode") {
         }
     }
 
+    GIVEN("A two variable, two row LP, and a user-defined linprog() function") {
+        // min: -x0 + 4x1
+        // such that:
+        //      -3x0 + x1 <= 6
+        //      -x0 - 2x1 >= -4
+        //      x1 >= -3
+
+        ssize_t count = 0;  // the number of times our linprog method has been called
+        auto linprog = [&count](
+                           std::span<const double> c,
+                           std::span<const double> b_lb,
+                           std::span<const double> A,
+                           std::span<const double> b_ub,
+                           std::span<const double> A_eq,
+                           std::span<const double> b_eq,
+                           std::span<const double> lb,
+                           std::span<const double> ub
+                       ) -> std::vector<double> {
+            ++count;
+            return std::vector<double>(c.begin(), c.end());
+        };
+
+        auto graph = Graph();
+
+        // will be c = [-1, 4] once we initialize the state
+        auto c_ptr = graph.emplace_node<IntegerNode>(2, -10, 10);  // we want to vary this
+
+        // A_ub = [[-3, 1], [1, 2]], b_ub = [6, 4]
+        auto A_ub = std::vector<double>{-3, 1, 1, 2};
+        auto A_ub_ptr = graph.emplace_node<ConstantNode>(A_ub.data(), std::vector<ssize_t>{2, 2});
+
+        // b_ub = [6, 4]
+        auto b_ub_ptr = graph.emplace_node<ConstantNode>(std::vector{6, 4});
+
+        // lb = [-inf, -3]
+        auto lb_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{-LinearProgramNode::infinity(), -3.0});
+
+        auto lp_ptr = graph.emplace_node<LinearProgramNode>(
+            c_ptr, nullptr, A_ub_ptr, b_ub_ptr, nullptr, nullptr, lb_ptr, nullptr, linprog
+        );
+
+        auto feas_ptr = graph.emplace_node<LinearProgramFeasibleNode>(lp_ptr);
+        auto obj_ptr = graph.emplace_node<LinearProgramObjectiveValueNode>(lp_ptr);
+        auto sol_ptr = graph.emplace_node<LinearProgramSolutionNode>(lp_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(feas_ptr);
+        graph.emplace_node<ArrayValidationNode>(obj_ptr);
+        graph.emplace_node<ArrayValidationNode>(sol_ptr);
+
+        auto state = graph.empty_state();
+        c_ptr->initialize_state(state, {-1, 4});
+        graph.initialize_state(state);
+
+        CHECK(count == 1);
+        CHECK_THAT(sol_ptr->view(state), RangeEquals(std::vector<double>{-1, 4}));
+
+        c_ptr->set_value(state, 0, 2);
+        graph.propagate(state);
+
+        CHECK(count == 2);
+        CHECK_THAT(sol_ptr->view(state), RangeEquals(std::vector<double>{2, 4}));
+    }
+
     SECTION("equality") {
         auto graph = Graph();
 
