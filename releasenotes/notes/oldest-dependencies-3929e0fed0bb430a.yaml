@@ -1,0 +1,6 @@
+---
+features:
+  - Add ``dependencies-oldest`` and ``dependencies-all-oldest`` dependency groups.
+upgrade:
+  - Require ``Numpy>=2``.
+  - Remove the ``test`` dependency group.

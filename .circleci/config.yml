@@ -92,7 +92,6 @@ jobs:
           name: test with installed package
           command: |
             . env/bin/activate
-            pip install --group test
             cd tests/
             python -Werror -m unittest
 
@@ -154,9 +153,7 @@ jobs:
     parameters:
       python-version:
         type: string
-      dependency-versions:
-        type: string
-      optional-dependency-versions:
+      wheel-tag:
         type: string
 
     docker:
@@ -167,23 +164,49 @@ jobs:
       - attach_workspace:
           at: dist
       - run:
-          name: install package with dependencies
+          name: test with latest required dependencies
           command: |
             python -m venv env
             . env/bin/activate
             pip install pip --upgrade
-            pip install --upgrade --only-binary=:all: \
-              << parameters.dependency-versions >>
-            pip install dwave-optimization --no-index -f dist/ --no-deps --force-reinstall
-      - run: *run-tests
+            pip install dist/dwave*optimization-*-<< parameters.wheel-tag >>-*.whl
+            cd tests/
+            python -Werror -m unittest
+            rm -r ../env
       - run:
-          name: install optional dependencies
+          name: test with latest optional dependencies
           command: |
+            python -m venv env
             . env/bin/activate
-            pip install --upgrade --only-binary=:all: \
-              << parameters.dependency-versions >> \
-              << parameters.optional-dependency-versions >> \
-      - run: *run-tests
+            pip install pip --upgrade
+            pip install "$(echo dist/dwave*optimization-*-<< parameters.wheel-tag >>-*.whl)[all]"
+            cd tests/
+            python -Werror -m unittest
+            rm -r ../env
+      - run:
+          name: test with oldest required dependencies
+          command: |
+            python -m venv env
+            . env/bin/activate
+            pip install pip --upgrade
+            pip install \
+              --group dependencies-oldest \
+              dist/dwave*optimization-*-<< parameters.wheel-tag >>-*.whl
+            cd tests/
+            python -Werror -m unittest
+            rm -r ../env
+      - run:
+          name: test with oldest optional dependencies
+          command: |
+            python -m venv env
+            . env/bin/activate
+            pip install pip --upgrade
+            pip install \
+              --group dependencies-all-oldest \
+              dist/dwave*optimization-*-<< parameters.wheel-tag >>-*.whl
+            cd tests/
+            python -Werror -m unittest
+            rm -r ../env
 
   cpp-gcc:
     parameters:
@@ -377,15 +400,13 @@ workflows:
       - python-dependencies:
           name: python-dependencies-oldest
           python-version: "3.10"
-          dependency-versions: numpy==1.21.3
-          optional-dependency-versions: dimod==0.12.0 scikit-learn==1.6.0
+          wheel-tag: cp310-cp310
           requires:
             - python-linux
       - python-dependencies:
           name: python-dependencies-latest
           python-version: "3.14"
-          dependency-versions: numpy
-          optional-dependency-versions: dimod scikit-learn
+          wheel-tag: cp312-abi3
           requires:
             - python-linux
       - cpp-gcc:
