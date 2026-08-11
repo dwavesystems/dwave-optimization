@@ -621,10 +621,6 @@ void DisjointBitSetsNode::swap_between_sets(
     );
 }
 
-ssize_t DisjointBitSetsNode::get_containing_set_index(State& state, ssize_t element) const {
-    return data_ptr_<DisjointBitSetsNodeData_>(state)->get_containing_set_index(element);
-}
-
 ssize_t DisjointBitSetsNode::get_containing_set_index(const State& state, ssize_t element) const {
     return data_ptr_<DisjointBitSetsNodeData_>(state)->get_containing_set_index(element);
 }

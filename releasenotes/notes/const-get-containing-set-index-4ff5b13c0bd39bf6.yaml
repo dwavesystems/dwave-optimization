@@ -1,6 +1,6 @@
 ---
 features:
   - |
-    Add C++ ``DisjointBitSetsNode::get_containing_set_index()`` overload
-    accepting a ``const State&``. This allows the containing set of an element
-    to be queried when only a const state is available.
+    C++ ``DisjointBitSetsNode::get_containing_set_index()`` now accepts a
+    ``const State&``. This allows the containing set of an element to be
+    queried when only a const state is available.
