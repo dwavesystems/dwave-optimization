@@ -1118,7 +1118,7 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
         return concatenate(arrays, 1)
 
 
-def is_disjoint_cover(subsets: list[ArraySymbol], *, primary_set_size: int|None = None) -> IsDisjointCover:
+def is_disjoint_cover(subsets: list[ArraySymbol], *, primary_set_size: int | None = None) -> IsDisjointCover:
     """Return whether the symbols are disjoint, set-like, and cover a set of integers.
 
     Determines whether a collection of array symbols is disjoint and the union equals a fixed set.

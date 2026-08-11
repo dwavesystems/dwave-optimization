@@ -47,7 +47,7 @@ struct IsDisjointCoverNodeData : public NodeStateData {
     };
 
  public:
-    IsDisjointCoverNodeData(std::vector<ssize_t>& count) : is_disjoint_cover(0, 0.0, 0.0) {
+    IsDisjointCoverNodeData(const std::vector<ssize_t>& count) : is_disjoint_cover(0, 0.0, 0.0) {
         // Record whether the count is not equal to 1 in the count_violations map
         for (ssize_t i = 0, stop = count.size(); i < stop; ++i) {
             if (count[i] != 1) {
@@ -118,13 +118,13 @@ IsDisjointCoverNode::IsDisjointCoverNode(
     ScalarOutputMixin<EqualityMixin<ArrayNode, IsDisjointCoverNode>, false>(),
     primary_set_size_(primary_set_size) {
     for (const auto& node : node_ptrs) {
-        if (!node->integral()) {
+        if (not node->integral()) {
             throw std::invalid_argument("Predecessors of DisjointCoverNode must be integral");
         }
-        if (!(node->max() < primary_set_size)) {
+        if (not (node->max() < primary_set_size)) {
             throw std::invalid_argument("Predecessor exceeds primary set size");
         }
-        if (!(node->min() >= 0)) {
+        if (not (node->min() >= 0)) {
             throw std::invalid_argument("Predecessor exceeds primary set size");
         }
         add_predecessor_(node);
@@ -143,7 +143,7 @@ void IsDisjointCoverNode::initialize_state(State& state) const {
             count[element] += 1;
         }
     }
-    emplace_data_ptr_<IsDisjointCoverNodeData>(state, count);
+    emplace_data_ptr_<IsDisjointCoverNodeData>(state, std::move(count));
 }
 
 void IsDisjointCoverNode::commit(State& state) const {
@@ -157,11 +157,11 @@ void IsDisjointCoverNode::propagate(State& state) const {
     for (const auto& pred : operands_) {
         for (const auto& update : pred->diff(state)) {
             no_update = false;
-            if (!update.placed()) {  // i.e. removed or changed.
+            if (not update.placed()) {  // i.e. removed or changed.
                 auto element = static_cast<ssize_t>(update.old);
                 data->elements_decremented.push_back(element);
             }
-            if (!update.removed()) {  // i.e. placed or changed.
+            if (not update.removed()) {  // i.e. placed or changed.
                 auto element = static_cast<ssize_t>(update.value);
                 data->elements_incremented.push_back(element);
             }

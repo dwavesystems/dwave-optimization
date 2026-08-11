@@ -31,6 +31,8 @@ cdef class IsDisjointCover(ArraySymbol):
     """Tests whether the symbols are disjoint, set-like, and cover a set of integers
 
     See Also:
+        :func:`~dwave.optimization.mathematical.is_disjoint_cover`: Instantiation and usage
+        of this symbol.
 
     .. versionadded:: 0.7.3
     """
