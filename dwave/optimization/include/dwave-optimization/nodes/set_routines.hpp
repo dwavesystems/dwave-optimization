@@ -22,7 +22,8 @@
 
 namespace dwave::optimization {
 
-class IsDisjointCoverNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>, false> {
+class IsDisjointCoverNode
+    : public ScalarOutputMixin<EqualityMixin<ArrayNode, IsDisjointCoverNode>, false> {
  public:
     IsDisjointCoverNode(std::span<ArrayNode*> node_ptrs, ssize_t primary_set_size);
 
@@ -34,6 +35,9 @@ class IsDisjointCoverNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>, f
 
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::equal_to()
+    bool equal_to(const IsDisjointCoverNode& rhs) const override;
 
     /// @copydoc Node::initialize_state()
     void initialize_state(State& state) const override;
@@ -59,6 +63,8 @@ class IsDisjointCoverNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>, f
  private:
     ssize_t primary_set_size_;
     std::vector<Array*> operands_;
+
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
 };
 
 class IsInNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {

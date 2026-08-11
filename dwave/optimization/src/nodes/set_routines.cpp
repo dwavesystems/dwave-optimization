@@ -115,7 +115,8 @@ IsDisjointCoverNode::IsDisjointCoverNode(
     std::span<ArrayNode*> node_ptrs,
     ssize_t primary_set_size
 ) :
-    ScalarOutputMixin<EqualityMixin<ArrayNode>, false>(), primary_set_size_(primary_set_size) {
+    ScalarOutputMixin<EqualityMixin<ArrayNode, IsDisjointCoverNode>, false>(),
+    primary_set_size_(primary_set_size) {
     for (const auto& node : node_ptrs) {
         if (!node->integral()) {
             throw std::invalid_argument("Predecessors of DisjointCoverNode must be integral");
@@ -190,11 +191,27 @@ std::span<const Update> IsDisjointCoverNode::diff(const State& state) const {
     );
 }
 
+bool IsDisjointCoverNode::equal_to(const IsDisjointCoverNode& rhs) const {
+    // Check predecessors AND primary set size
+    return (
+        primary_set_size_ == rhs.primary_set_size_ and  //
+        std::ranges::equal(this->predecessors(), rhs.predecessors())
+    );
+}
+
 bool IsDisjointCoverNode::integral() const { return true; }
 
 double IsDisjointCoverNode::min() const { return 0.0; }
 
 double IsDisjointCoverNode::max() const { return 1.0; }
+
+void IsDisjointCoverNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    assert(0 <= index and static_cast<size_t>(index) < operands_.size());
+    operands_[index] = dynamic_cast<Array*>(node_ptr);
+    assert(operands_[index] != nullptr);
+}
 
 // IsInNode *******************************************************************
 struct IsInNodeSetData {

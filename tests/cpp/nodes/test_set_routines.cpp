@@ -264,11 +264,13 @@ TEST_CASE("IsDisjointCoverNode") {
         Node* a_ptr = graph.emplace_node<IsDisjointCoverNode>(sets01, 8);
         Node* b_ptr = graph.emplace_node<IsDisjointCoverNode>(sets01, 8);
         Node* c_ptr = graph.emplace_node<IsDisjointCoverNode>(sets02, 8);
+        Node* d_ptr = graph.emplace_node<IsDisjointCoverNode>(sets01, 9);
 
         CHECK(a_ptr->equal_to(*a_ptr));
         CHECK(a_ptr->equal_to(*b_ptr));
         CHECK(not a_ptr->equal_to(*c0_ptr));
         CHECK(not a_ptr->equal_to(*c_ptr));
+        CHECK(not a_ptr->equal_to(*d_ptr));
     }
 
     SECTION("predecessor replacement") {
@@ -276,20 +278,23 @@ TEST_CASE("IsDisjointCoverNode") {
 
         auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
         auto* c1_ptr = graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7});
-        auto* c2_ptr = graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7});
-
         std::vector<ArrayNode*> sets01{c0_ptr, c1_ptr};
-
         auto* dc_ptr = graph.emplace_node<IsDisjointCoverNode>(sets01, 8);
 
         CHECK_THAT(dc_ptr->predecessors(), RangeEquals({c0_ptr, c1_ptr}));
 
-        c2_ptr->take_successors(*c1_ptr);
+        auto* c2_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 4});
+        auto* c3_ptr = graph.emplace_node<ConstantNode>(std::vector{3, 5, 6});
 
-        CHECK_THAT(dc_ptr->predecessors(), RangeEquals({c0_ptr, c2_ptr}));
+        c2_ptr->take_successors(*c0_ptr);
+        c3_ptr->take_successors(*c1_ptr);
 
-        auto state = graph.initialize_state();
-        CHECK_THAT(dc_ptr->view(state), RangeEquals({1.0}));
+        CHECK_THAT(dc_ptr->predecessors(), RangeEquals({c2_ptr, c3_ptr}));
+
+        GIVEN("A state") {
+            auto state = graph.initialize_state();
+            CHECK_THAT(dc_ptr->view(state), RangeEquals({0.0}));
+        }
     }
 }
 
