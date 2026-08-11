@@ -34,7 +34,6 @@ from dwave.optimization.mathematical import (
     concatenate,
     exp,
     expit,
-    is_disjoint_cover,
     logical_or,
     maximum,
     minimum,
@@ -378,7 +377,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         The :meth:`~dwave.optimization.model.Model.iter_decisions` method
         obtains the decision variables of the generated model.
 
-        >>> routes = list(model.iter_decisions())
+        >>> routes = next(model.iter_decisions())
 
         To test the solution above, set it in the model as the state of the
         decision variable. **Skip these next lines** if you have submitted your
@@ -386,8 +385,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         nonlinear :term:`solver`.
 
         >>> model.states.resize(1)
-        >>> routes[0].set_state(0, [2., 7., 1., 5.])
-        >>> routes[1].set_state(0, [4., 3., 8., 6., 0.])
+        >>> routes.set_state(0, [[2., 7., 1., 5.], [4., 3., 8., 6., 0.]])
 
         You can use the :meth:`~dwave.optimization.model.Model.iter_constraints`
         method to check feasibility of constructed or returned solutions. Here,
@@ -400,7 +398,7 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         ...     for i in range(model.states.size()):
         ...         if capacity_constraint.state(i):    # Filter on feasibility
         ...             print((f"Objective value #{i} is {model.objective.state(i).round(2)} for routes\n"
-        ...                    f"    {[r.state(i).tolist() for r in routes]}"))
+        ...                    f"    {[r.state(i).tolist() for r in routes.iter_successors()]}"))
         Objective value #0 is 423.8 for routes
             [[2.0, 7.0, 1.0, 5.0], [4.0, 3.0, 8.0, 6.0, 0.0]]
     """
@@ -513,8 +511,10 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     demand = model.constant(customer_demand)
     capacity = model.constant(vehicle_capacity)
 
-    routes = [model.list(num_customers, min_size=0) for _ in range(number_of_vehicles)]
-    model.add_constraint(is_disjoint_cover(routes))
+    # Add the decision variable
+    routes = model.disjoint_lists_symbol(
+        primary_set_size=num_customers,
+        num_disjoint_lists=number_of_vehicles)
 
     # The objective is to minimize the distance traveled.
     # This is calculated by adding the distance from the depot to the 1st customer
@@ -631,7 +631,7 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
         The :meth:`~dwave.optimization.model.Model.iter_decisions` method
         obtains the decision variables of the generated model.
 
-        >>> routes = list(model.iter_decisions())
+        >>> routes = next(model.iter_decisions())
 
         To test the solution above, set it in the model as the state of the
         decision variable. **Skip these next lines** if you have submitted your
@@ -639,8 +639,7 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
         nonlinear :term:`solver`.
 
         >>> model.states.resize(1)
-        >>> routes[0].set_state(0, [0, 2])
-        >>> routes[1].set_state(0, [1])
+        >>> routes.set_state(0, [[0, 2], [1]])
 
         You can use the :meth:`~dwave.optimization.model.Model.iter_constraints`
         method to check feasibility of constructed or returned solutions. Here,
@@ -758,8 +757,9 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
     one = model.constant(1)
 
     # Add the decision variable
-    routes = [model.list(num_customers, min_size=0) for _ in range(number_of_vehicles)]
-    model.add_constraint(is_disjoint_cover(routes))
+    routes = model.disjoint_lists_symbol(
+        primary_set_size=num_customers,
+        num_disjoint_lists=number_of_vehicles)
 
     # Capacity constraint
     capacity_constraints = [(demand[routes[vehicle_idx]].sum() <= capacity)
