@@ -169,15 +169,14 @@ cdef class Constant(ArraySymbol):
         return self.ptr.size() == 1 and self.ptr.ndim() == 0
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef ConstantNode* ptr = dynamic_cast_ptr[ConstantNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef Constant sym = super()._from_ptr(model, capsule)
 
-        cdef Constant constant = Constant.__new__(Constant)
-        constant.ptr = ptr
-        constant.initialize_arraynode(symbol.model, ptr)
-        return constant
+        sym.ptr = dynamic_cast_ptr[ConstantNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a Constant")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):

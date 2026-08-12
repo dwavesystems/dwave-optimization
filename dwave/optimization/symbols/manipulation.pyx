@@ -119,15 +119,14 @@ cdef class Concatenate(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef ConcatenateNode* ptr = dynamic_cast_ptr[ConcatenateNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef Concatenate sym = super()._from_ptr(model, capsule)
 
-        cdef Concatenate m = Concatenate.__new__(Concatenate)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
+        sym.ptr = dynamic_cast_ptr[ConcatenateNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a Concatenate")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -228,15 +227,14 @@ cdef class Reshape(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef ReshapeNode* ptr = dynamic_cast_ptr[ReshapeNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef Reshape sym = super()._from_ptr(model, capsule)
 
-        cdef Reshape m = Reshape.__new__(Reshape)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
+        sym.ptr = dynamic_cast_ptr[ReshapeNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a Reshape")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -291,15 +289,14 @@ cdef class Resize(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef ResizeNode* ptr = dynamic_cast_ptr[ResizeNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef Resize sym = super()._from_ptr(model, capsule)
 
-        cdef Resize m = Resize.__new__(Resize)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
+        sym.ptr = dynamic_cast_ptr[ResizeNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a Resize")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -382,15 +379,14 @@ cdef class Roll(ArraySymbol):
         self.initialize_arraynode(array.model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef RollNode* ptr = dynamic_cast_ptr[RollNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef Roll sym = super()._from_ptr(model, capsule)
 
-        cdef Roll r = Roll.__new__(Roll)
-        r.ptr = ptr
-        r.initialize_arraynode(symbol.model, ptr)
-        return r
+        sym.ptr = dynamic_cast_ptr[RollNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a Roll")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):

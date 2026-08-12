@@ -157,16 +157,14 @@ cdef class AccumulateZip(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef AccumulateZipNode* ptr = dynamic_cast_ptr[AccumulateZipNode](
-            symbol.node_ptr
-        )
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef AccumulateZip x = AccumulateZip.__new__(AccumulateZip)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
+    def _from_ptr(cls, model, capsule):
+        cdef AccumulateZip sym = super()._from_ptr(model, capsule)
+
+        sym.ptr = dynamic_cast_ptr[AccumulateZipNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a AccumulateZip")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):

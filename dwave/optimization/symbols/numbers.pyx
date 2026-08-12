@@ -175,15 +175,14 @@ cdef class BinaryVariable(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef BinaryNode* ptr = dynamic_cast_ptr[BinaryNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef BinaryVariable sym = super()._from_ptr(model, capsule)
 
-        cdef BinaryVariable x = BinaryVariable.__new__(BinaryVariable)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
+        sym.ptr = dynamic_cast_ptr[BinaryNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a BinaryVariable")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -403,15 +402,14 @@ cdef class IntegerVariable(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef IntegerNode* ptr = dynamic_cast_ptr[IntegerNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef IntegerVariable sym = super()._from_ptr(model, capsule)
 
-        cdef IntegerVariable x = IntegerVariable.__new__(IntegerVariable)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
+        sym.ptr = dynamic_cast_ptr[IntegerNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a IntegerVariable")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):

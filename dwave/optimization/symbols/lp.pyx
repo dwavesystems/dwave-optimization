@@ -200,14 +200,14 @@ cdef class LinearProgram(Symbol):
         return x.array_ptr
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef LinearProgramNode* ptr = dynamic_cast_ptr[LinearProgramNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef LinearProgram x = LinearProgram.__new__(LinearProgram)
-        x.ptr = ptr
-        x.initialize_node(symbol.model, ptr)
-        return x
+    def _from_ptr(cls, model, capsule):
+        cdef LinearProgram sym = super()._from_ptr(model, capsule)
+
+        sym.ptr = dynamic_cast_ptr[LinearProgramNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a LinearProgram")
+
+        return sym
 
     def feasible(self, Py_ssize_t index = 0):
         """Return True if the indexed state is a feasible solution.

@@ -123,14 +123,13 @@ cdef class AdvancedIndexing(ArraySymbol):
         return super().__getitem__(index)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef AdvancedIndexingNode* ptr = dynamic_cast_ptr[AdvancedIndexingNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef AdvancedIndexing sym = super()._from_ptr(model, capsule)
 
-        cdef AdvancedIndexing sym = AdvancedIndexing.__new__(AdvancedIndexing)
-        sym.ptr = ptr
-        sym.initialize_arraynode(symbol.model, ptr)
+        sym.ptr = dynamic_cast_ptr[AdvancedIndexingNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a AdvancedIndexing")
+
         return sym
 
     @classmethod
@@ -232,14 +231,13 @@ cdef class BasicIndexing(ArraySymbol):
         return Slice(start, stop, step)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef BasicIndexingNode* ptr = dynamic_cast_ptr[BasicIndexingNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef BasicIndexing sym = super()._from_ptr(model, capsule)
 
-        cdef BasicIndexing sym = BasicIndexing.__new__(BasicIndexing)
-        sym.ptr = ptr
-        sym.initialize_arraynode(symbol.model, ptr)
+        sym.ptr = dynamic_cast_ptr[BasicIndexingNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a BasicIndexing")
+
         return sym
 
     @classmethod

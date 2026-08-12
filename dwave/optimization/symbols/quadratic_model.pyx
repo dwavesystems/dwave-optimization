@@ -160,15 +160,14 @@ cdef class QuadraticModel(ArraySymbol):
         self._init_from_coords(x, (data, coords), ldata)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef QuadraticModelNode* ptr = dynamic_cast_ptr[QuadraticModelNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef QuadraticModel sym = super()._from_ptr(model, capsule)
 
-        cdef QuadraticModel qm = QuadraticModel.__new__(QuadraticModel)
-        qm.ptr = ptr
-        qm.initialize_arraynode(symbol.model, ptr)
-        return qm
+        sym.ptr = dynamic_cast_ptr[QuadraticModelNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a QuadraticModel")
+
+        return sym
 
     def get_linear(self, Py_ssize_t v):
         """Return the linear bias of a variable.

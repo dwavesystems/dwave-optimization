@@ -93,13 +93,13 @@ cdef class ARange(ArraySymbol):
             raise RuntimeError  # shouldn't be possible
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef ARangeNode* ptr = dynamic_cast_ptr[ARangeNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef ARange sym = cls.__new__(cls)
-        sym.ptr = ptr
-        sym.initialize_arraynode(symbol.model, ptr)
+    def _from_ptr(cls, model, capsule):
+        cdef ARange sym = super()._from_ptr(model, capsule)
+
+        sym.ptr = dynamic_cast_ptr[ARangeNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a ARange")
+
         return sym
 
     @classmethod

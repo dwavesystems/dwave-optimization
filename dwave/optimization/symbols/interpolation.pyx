@@ -54,14 +54,14 @@ cdef class BSpline(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef BSplineNode * ptr = dynamic_cast_ptr[BSplineNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef BSpline m = BSpline.__new__(BSpline)
-        m.ptr = ptr
-        m.initialize_arraynode(symbol.model, ptr)
-        return m
+    def _from_ptr(cls, model, capsule):
+        cdef BSpline sym = super()._from_ptr(model, capsule)
+
+        sym.ptr = dynamic_cast_ptr[BSplineNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a BSpline")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):

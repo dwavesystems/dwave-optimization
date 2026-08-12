@@ -26,6 +26,7 @@ import zipfile
 import numpy as np
 
 from cpython cimport Py_buffer
+from cpython.pycapsule cimport PyCapsule_GetPointer, PyCapsule_New
 from cpython.ref cimport PyObject
 from cython.operator cimport dereference as deref, preincrement as inc
 from cython.operator cimport typeid
@@ -91,10 +92,14 @@ cdef object symbol_from_ptr(_Graph model, cppNode* node_ptr):
         # IndexError would be returned by .at()
         raise RuntimeError("given pointer cannot be cast to a known node type") from None
 
-    # In order to get nice polymorphism, it's much easier to pass the dispatch
-    # through Python, so we construct a generic Symbol holding the pointer and then
-    # construct the specific symbol from it.
-    return cls._from_symbol(Symbol.from_ptr(model, node_ptr))
+    # We'll use a PyCapsule to pass a node pointer through the Python layer so
+    # that we can let `cls` determine the type.
+
+    # Even though PyCapsule_New returns a PyObject*, Cython automatically makes
+    # it an object (with appropriate refcounting) so that's nice.
+    cap = PyCapsule_New(node_ptr, 'Node*', NULL)
+
+    return cls._from_ptr(model, cap)
 
 
 cdef class _Graph:
@@ -1195,17 +1200,11 @@ cdef class Symbol:
         return obj
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        # Disallow lateral casts or demotions.
-        # This is to prevent, say, an Add to be constructed from a Subtract
-        # There are ways around it, but this method is private anyway so it
-        # should be enough of a discouragement and for safety.
-        if not issubclass(cls, type(symbol)):
-            raise TypeError(f"cannot construct a {cls.__name__} from a {type(symbol).__name__}")
-
-        cdef Symbol obj = cls.__new__(cls)
-        obj.initialize_node(symbol.model, symbol.node_ptr)
-        return obj
+    def _from_ptr(cls, model, capsule):
+        """Create a Symbol from a Python capsule containing a Node pointer."""
+        cdef Symbol sym = cls.__new__(cls)
+        sym.initialize_node(model, <cppNode*>(PyCapsule_GetPointer(capsule, 'Node*')))
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -1681,23 +1680,14 @@ cdef class ArraySymbol(Symbol):
         self.initialize_node(model, array_ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        """Construct an ArraySymbol from another Symbol."""
-        # Disallow lateral casts or demotions.
-        # This is to prevent, say, an Add to be constructed from a Subtract
-        # There are ways around it, but this method is private anyway so it
-        # should be enough of a discouragement and for safety.
-        if not issubclass(cls, type(symbol)):
-            raise TypeError(f"cannot construct a {cls.__name__} from a {type(symbol).__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef ArraySymbol sym = super()._from_ptr(model, capsule)
 
-        # Now try to "promote" the type and raise an error if that fails.
-        cdef cppArrayNode* ptr = dynamic_cast_ptr[cppArrayNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+        sym.array_ptr = dynamic_cast_ptr[cppArrayNode](sym.node_ptr)
+        if not sym.array_ptr:
+            raise TypeError(f"given pointer cannot construct an ArrayNode")
 
-        cdef ArraySymbol obj = cls.__new__(cls)
-        obj.initialize_arraynode(symbol.model, ptr)
-        return obj
+        return sym
 
     # Opt ArraySymbol out of default interoperability with NumPy ufuncs. We then
     # add explicit support with our various __<op>__() and __r<op>__ methods.
