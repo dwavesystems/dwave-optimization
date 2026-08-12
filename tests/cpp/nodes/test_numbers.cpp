@@ -1719,6 +1719,35 @@ TEST_CASE("BinaryNode") {
                     }
                 }
             }
+
+            AND_WHEN("We create a checkpoint to that state") {
+                auto checkpoint = bnode_ptr->checkpoint(state);
+
+                THEN("We can mutate, then propose, and then assign from that checkpoint") {
+                    // Index 6 falls in slice 1 along axis 0.
+                    bnode_ptr->flip(state, 6, std::vector<ssize_t>{1});  // 1 -> 0
+                    // Index 4 falls in slice 1 along axis 0.
+                    bnode_ptr->flip(state, 4, std::vector<ssize_t>{1});  // 0 -> 1
+                    // Index 11 falls in slice 2 along axis 0.
+                    bnode_ptr->flip(state, 11, std::vector<ssize_t>{2});  // 1 -> 0
+                    // state is now: [0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0]
+                    graph.propose(state);
+
+                    bnode_ptr->assign_from_checkpoint(state, checkpoint);
+                    THEN("Sum constraint sums and tracked indices checkpointed correctly") {
+                        CHECK_THAT(
+                            bnode_ptr->sum_constraints_lhs(state)[0], RangeEquals({1, 2, 4})
+                        );
+                        check_indices<true>(state, bnode_ptr, 0, 0, {1});
+                        check_indices<false>(state, bnode_ptr, 0, 0, {0, 2, 3});
+                        check_indices<true>(state, bnode_ptr, 0, 1, {6, 7});
+                        check_indices<false>(state, bnode_ptr, 0, 1, {4, 5});
+                        check_indices<true>(state, bnode_ptr, 0, 2, {8, 9, 10, 11});
+                        check_indices<false>(state, bnode_ptr, 0, 2, {});
+                        CHECK(bnode_ptr->diff(state).size() == 3);
+                    }
+                }
+            }
         }
     }
     // *********************** Sum Constraint tests *************************
