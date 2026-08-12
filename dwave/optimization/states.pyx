@@ -240,20 +240,14 @@ cdef class States:
         model.states.resize(0)
         model.states.resize(num_states)
 
-        if model.is_locked():
-            # if the model is locked, it makes sense to potentially load intermediate
-            # states
-            itersymbols = model.iter_symbols()
-        else:
-            # otherwise we only both loading the decision
-            itersymbols = model.iter_decisions()
+        for symbol in model.iter_decisions():
+            symbol._states_from_zipfile(
+                zf,
+                num_states=num_states,
+                version=version,
+            )
 
-        for symbol in itersymbols:
-            # we don't load the state of any nodes that uniquely determine
-            # their state from their predecessors
-            if symbol._deterministic_state():
-                continue
-
+        for symbol in model.iter_inputs():
             symbol._states_from_zipfile(
                 zf,
                 num_states=num_states,
@@ -368,8 +362,16 @@ cdef class States:
             The states have the following structure.
 
             Symbols with a state that's uniquely determined by their predecessor's
-            states and :class:`~dwave.optimization.symbols.Constant` symbols do
-            not have their states serialized.
+            states do not have their states serialized.
+
+            .. _dwopt-nondeterministic-state-ref:
+
+            .. note::
+
+                Beginning with ``dwave-optimization`` version 0.8.0, all
+                non-decisions are treated as having a deterministic state.
+                This means any intermediate states in the serialized file are
+                ignored as an implementation detail.
 
             For symbols with a fixed shape and which have all states initialized,
             the states are stored as a ``(num_states, *symbol.shape())`` array.
@@ -405,6 +407,9 @@ cdef class States:
             Added the ``version`` keyword-only argument.
         .. versionchanged:: 0.6.0
             Added support for serialization format version 1.0.
+        .. versionchanged:: 0.8.0
+            Non-decisions no longer serialize their states.
+            See :ref:`Note <dwopt-nondeterministic-state-ref>` above.
         """
         self.resolve()
 
@@ -449,15 +454,22 @@ cdef class States:
 
         model = self._model()  # get a ref-counted model
 
-        for symbol in model.iter_symbols():
-            if symbol._deterministic_state():
-                continue
-
+        for symbol in model.iter_decisions():
             symbol._states_into_zipfile(
                 zf,
                 num_states=num_states,
                 version=version,
             )
+
+        # If the model is not locked then the Inputs definitely won't have
+        # states.
+        if model.is_locked():
+            for symbol in model.iter_inputs():
+                symbol._states_into_zipfile(
+                    zf,
+                    num_states=num_states,
+                    version=version,
+                )
 
     cdef _Graph _model(self):
         """Get a ref-counted Model object."""

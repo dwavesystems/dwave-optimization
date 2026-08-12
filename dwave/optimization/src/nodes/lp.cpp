@@ -215,8 +215,6 @@ LinearProgramNode::LinearProgramNode(
 
 void LinearProgramNode::commit(State& state) const {};
 
-bool LinearProgramNode::deterministic_state() const { return false; }
-
 bool LinearProgramNode::equal_to(const LinearProgramNode& rhs) const {
     return (
         c_ptr_ == rhs.c_ptr_ and        //
