@@ -120,15 +120,14 @@ cdef class Input(ArraySymbol):
         return self.ptr.max()
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef InputNode* ptr = dynamic_cast_ptr[InputNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef Input sym = super()._from_ptr(model, capsule)
 
-        cdef Input inp = Input.__new__(Input)
-        inp.ptr = ptr
-        inp.initialize_arraynode(symbol.model, ptr)
-        return inp
+        sym.ptr = dynamic_cast_ptr[InputNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a Input")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):

@@ -56,14 +56,14 @@ cdef class NaryAdd(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef NaryAddNode* ptr = dynamic_cast_ptr[NaryAddNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef NaryAdd x = NaryAdd.__new__(NaryAdd)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
+    def _from_ptr(cls, model, capsule):
+        cdef NaryAdd sym = super()._from_ptr(model, capsule)
+
+        sym.ptr = dynamic_cast_ptr[NaryAddNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a NaryAdd")
+
+        return sym
 
     def __iadd__(self, rhs):
         if not self.node_ptr.successors().empty():
@@ -169,14 +169,14 @@ cdef class NaryMultiply(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef NaryMultiplyNode* ptr = dynamic_cast_ptr[NaryMultiplyNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef NaryMultiply x = NaryMultiply.__new__(NaryMultiply)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
+    def _from_ptr(cls, model, capsule):
+        cdef NaryMultiply sym = super()._from_ptr(model, capsule)
+
+        sym.ptr = dynamic_cast_ptr[NaryMultiplyNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a NaryMultiply")
+
+        return sym
 
     def __imul__(self, rhs):
         if not self.node_ptr.successors().empty():

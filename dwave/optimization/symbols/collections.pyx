@@ -70,14 +70,14 @@ cdef class DisjointBitSet(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef DisjointBitSetNode* ptr = dynamic_cast_ptr[DisjointBitSetNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef DisjointBitSet x = DisjointBitSet.__new__(DisjointBitSet)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
+    def _from_ptr(cls, model, capsule):
+        cdef DisjointBitSet sym = super()._from_ptr(model, capsule)
+
+        sym.ptr = dynamic_cast_ptr[DisjointBitSetNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a DisjointBitSet")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -169,15 +169,14 @@ cdef class DisjointBitSets(Symbol):
         self.initialize_node(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef DisjointBitSetsNode* ptr = dynamic_cast_ptr[DisjointBitSetsNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef DisjointBitSets sym = super()._from_ptr(model, capsule)
 
-        cdef DisjointBitSets x = DisjointBitSets.__new__(DisjointBitSets)
-        x.ptr = ptr
-        x.initialize_node(symbol.model, ptr)
-        return x
+        sym.ptr = dynamic_cast_ptr[DisjointBitSetsNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a DisjointBitSets")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -375,14 +374,14 @@ cdef class DisjointList(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef DisjointListNode* ptr = dynamic_cast_ptr[DisjointListNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef DisjointList x = DisjointList.__new__(DisjointList)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
+    def _from_ptr(cls, model, capsule):
+        cdef DisjointList sym = super()._from_ptr(model, capsule)
+
+        sym.ptr = dynamic_cast_ptr[DisjointListNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a DisjointList")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -478,14 +477,14 @@ cdef class DisjointLists(Symbol):
         return DisjointList(self, index)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef DisjointListsNode* ptr = dynamic_cast_ptr[DisjointListsNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef DisjointLists x = DisjointLists.__new__(DisjointLists)
-        x.ptr = ptr
-        x.initialize_node(symbol.model, ptr)
-        return x
+    def _from_ptr(cls, model, capsule):
+        cdef DisjointLists sym = super()._from_ptr(model, capsule)
+
+        sym.ptr = dynamic_cast_ptr[DisjointListsNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a DisjointLists")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -682,15 +681,14 @@ cdef class ListVariable(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef ListNode* ptr = dynamic_cast_ptr[ListNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef ListVariable sym = super()._from_ptr(model, capsule)
 
-        cdef ListVariable x = ListVariable.__new__(ListVariable)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
+        sym.ptr = dynamic_cast_ptr[ListNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a ListVariable")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
@@ -781,15 +779,14 @@ cdef class SetVariable(ArraySymbol):
         self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef SetNode* ptr = dynamic_cast_ptr[SetNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
+    def _from_ptr(cls, model, capsule):
+        cdef SetVariable sym = super()._from_ptr(model, capsule)
 
-        cdef SetVariable x = SetVariable.__new__(SetVariable)
-        x.ptr = ptr
-        x.initialize_arraynode(symbol.model, ptr)
-        return x
+        sym.ptr = dynamic_cast_ptr[SetNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a SetVariable")
+
+        return sym
 
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):

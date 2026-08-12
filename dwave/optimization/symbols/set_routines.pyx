@@ -52,18 +52,17 @@ cdef class IsDisjointCover(ArraySymbol):
                 raise ValueError("all predecessors must be from the same model")
             cppinputs.push_back((<ArraySymbol?>symbol).array_ptr)
 
-        self.primary_set_size = n
-        cdef IsDisjointCoverNode* ptr = model._graph.emplace_node[IsDisjointCoverNode](cppinputs, n)
-        self.initialize_arraynode(model, ptr)
+        self.ptr = model._graph.emplace_node[IsDisjointCoverNode](cppinputs, n)
+        self.initialize_arraynode(model, self.ptr)
 
     @classmethod
-    def _from_symbol(cls, Symbol symbol):
-        cdef IsDisjointCoverNode* ptr = dynamic_cast_ptr[IsDisjointCoverNode](symbol.node_ptr)
-        if not ptr:
-            raise TypeError(f"given symbol cannot construct a {cls.__name__}")
-        cdef IsDisjointCover sym = cls.__new__(cls)
-        sym.primary_set_size = ptr.primary_set_size()
-        sym.initialize_arraynode(symbol.model, ptr)
+    def _from_ptr(cls, model, capsule):
+        cdef IsDisjointCover sym = super()._from_ptr(model, capsule)
+
+        sym.ptr = dynamic_cast_ptr[IsDisjointCoverNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a IsDisjointCover")
+
         return sym
 
     @classmethod
@@ -82,7 +81,12 @@ cdef class IsDisjointCover(ArraySymbol):
         args.update(primary_set_size=int(self.primary_set_size))
         zf.writestr(directory + "args.json", encoder.encode(args))
 
-    cdef Py_ssize_t primary_set_size
+    @property
+    def primary_set_size(self):
+        """The size of the set to be covered"""
+        return self.ptr.primary_set_size()
+
+    cdef IsDisjointCoverNode* ptr
 
 _register(IsDisjointCover, typeid(IsDisjointCoverNode))
 
