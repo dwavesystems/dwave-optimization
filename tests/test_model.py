@@ -259,8 +259,8 @@ class TestModel(unittest.TestCase):
         inputs = list(model.iter_inputs())
 
         self.assertEqual(len(inputs), 2)
-        self.assertTrue(i0.equals(inputs[0]))
-        self.assertTrue(i1.equals(inputs[1]))
+        self.assertEqual(i0.id(), inputs[0].id())
+        self.assertEqual(i1.id(), inputs[1].id())
 
     def test_lock(self):
         model = Model()
