@@ -29,6 +29,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: 3 :: Only",
     'Programming Language :: Python :: Implementation :: CPython',
 ]
@@ -40,6 +41,7 @@ dependencies = [ # Keep synced with dependency-groups.dependencies-oldest
 [project.optional-dependencies]
 all = [ # Keep synced with dependency-groups.dependencies-all-oldest
     "dimod>=0.12.16",  # oldest dimod that supports NumPy>=2
+    "networkx>=3.2",  # oldest networkx that supports NumPy>=2
     "scikit-learn>=1.6.0",  # oldest minor that passes tests
     "scipy>=1.13.0",  # oldest SciPy that support NumPy>=2
 ]
@@ -89,6 +91,11 @@ dependencies-all-oldest = [  # Keep synced with project.optional-dependencies
     "dimod==0.12.17; python_version>='3.13' and python_version<'3.14'",
     "dimod==0.12.21; python_version>='3.14' and python_version<'3.15'",
     "dimod; python_version>='3.15'",  # once dimod has a 3.15 release we'll lock this down
+
+    "networkx==3.2; python_version<'3,13'",  # oldest we support
+    "networkx==3.4; python_version>='3.13' and python_version<'3.14'",
+    "networkx==3.6; python_version>='3.14' and python_version<'3.15'",
+    "networkx; python_version>='3.15'",  # once networkx has a 3.15 release we'll lock this down
 
     "scikit-learn==1.6.0; python_version<'3.14'", # oldest we support
     "scikit-learn==1.8.0; python_version>='3.14' and python_version<'3.15'",
