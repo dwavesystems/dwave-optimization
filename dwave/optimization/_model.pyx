@@ -25,11 +25,12 @@ import zipfile
 
 import numpy as np
 
-from cpython cimport Py_buffer
+from cpython.memoryview cimport PyMemoryView_FromBuffer
 from cpython.pycapsule cimport PyCapsule_GetPointer, PyCapsule_New
 from cpython.ref cimport PyObject
 from cython.operator cimport dereference as deref, preincrement as inc
 from cython.operator cimport typeid
+from libc.string cimport memset
 from libcpp cimport bool
 from libcpp.memory cimport make_shared
 from libcpp.span cimport span
@@ -44,7 +45,6 @@ from dwave.optimization.libcpp cimport dynamic_cast_ptr
 from dwave.optimization.libcpp.array cimport Array as cppArray, broadcast_shapes as cppbroadcast_shapes
 from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
 from dwave.optimization.states cimport States
-from dwave.optimization.states import StateView
 from dwave.optimization.utilities import (
     _file_object_arg,
     _lock,
@@ -2495,7 +2495,47 @@ cdef class ArraySymbol(Symbol):
             raise TypeError("the state of an intermediate variable cannot be accessed without "
                             "locking the model first. See model.lock().")
 
-        return np.array(StateView(self, index), copy=copy)
+        # Make sure there is a state to access
+        cdef States states = self.model.states
+        states.resolve()
+        self.model._graph.recursive_initialize(states._states.at(index), self.node_ptr)
+
+        # Create a Py_buffer that we can use to construct our memoryview
+        cdef Py_buffer view
+
+        # Cython makes it hard to set view.obj to NULL, so we do it this way.
+        memset(&view, 0, sizeof(view))
+
+        view.buf = <void*>(self.array_ptr.buff(states._states.at(index)))
+        view.format = <char*>(self.array_ptr.format().c_str())
+        view.internal = NULL
+        view.itemsize = self.array_ptr.itemsize()
+        view.len = self.array_ptr.len(states._states.at(index))
+        view.ndim = self.array_ptr.ndim()
+        # view.obj = NULL  # See above
+        view.readonly = 1
+        view.shape = <Py_ssize_t*>(self.array_ptr.shape(states._states.at(index)).data())
+        view.strides = <Py_ssize_t*>(self.array_ptr.strides().data())
+        view.suboffsets = NULL
+
+        # Sometimes empty arrays have their buffer set to NULL which
+        # PyMemoryView_FromBuffer() does not like. So in that case we just
+        # make an empty array directly.
+        # Also, be aware the the format here is NumPy type string which is not
+        # exactly the same thing as a struct format string. But luckily is the
+        # same for all of the dtypes we care about.
+        if view.buf == NULL:
+            if view.len:
+                raise RuntimeError("Array had an unexpected shape")
+            shape = self.array_ptr.shape(states._states.at(index))
+            return np.empty(tuple(shape[i] for i in range(shape.size())), dtype=view.format)
+
+        # Now create a memoryview object. This, naturally, holds a view to memory
+        # that may be deallocated at any time, so we make a copy before returning.
+        cdef object mv = PyMemoryView_FromBuffer(&view)
+
+        return np.asarray(mv, copy=True)
+
 
     def _states_from_zipfile(self, zf, *, num_states, version):
 
