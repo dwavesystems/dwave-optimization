@@ -16,17 +16,14 @@
 
 from libcpp.vector cimport vector
 
-from dwave.optimization.libcpp.state cimport State as cppState
-from dwave.optimization.model cimport _Graph
+from dwave.optimization.libcpp.state cimport State
 
 
 cdef class States:
-    cdef void attach_states(self, vector[cppState]) noexcept
-    cdef vector[cppState] detach_states(self)
+    cdef void attach_states(self, vector[State]) noexcept
+    cdef vector[State] detach_states(self)
     cpdef resolve(self)
     cpdef Py_ssize_t size(self) except -1
-
-    cdef _Graph _model(self)
 
     # In order to not create a circular reference, we only hold a weakref
     # to the model from the states. This introduces some overhead, but it
@@ -34,13 +31,9 @@ cdef class States:
     cdef readonly object _model_ref
 
     # The state(s) of the model kept as a ragged vector-of-vectors (each
-    # cppState is a vector).
+    # State is a vector).
     # Accessors should check the length of the state when accessing!
-    cdef vector[cppState] _states
-
-    # The number of views into the states that exist. The model cannot
-    # be unlocked while there are unsafe views
-    cdef public Py_ssize_t _view_count
+    cdef vector[State] _states
 
     # Object that contains or will contain the information needed to construct states
     cdef readonly object _future
