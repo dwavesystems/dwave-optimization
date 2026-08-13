@@ -101,5 +101,5 @@ intersphinx_mapping = {
 
 rst_epilog = """
 .. |array-like| replace:: array-like
-.. _array-like: https://numpy.org/devdocs/glossary.html#term-array_like
+.. _array-like: https://numpy.org/doc/stable/glossary.html#term-array_like
 """
