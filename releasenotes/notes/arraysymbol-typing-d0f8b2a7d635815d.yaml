@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Add ``ArraySymbol`` and ``Symbol`` to ``dwave.optimization.typing``.
+    See `#603 <https://github.com/dwavesystems/dwave-optimization/issues/603>`_.
+fixes:
+  - Add ``ShapeLike`` to ``dwave.optimization.typing.__all__``.

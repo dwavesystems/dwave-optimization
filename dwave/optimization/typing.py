@@ -16,15 +16,20 @@ import typing
 
 import numpy.typing
 
-from dwave.optimization._model import ArraySymbol
+from dwave.optimization._model import ArraySymbol, Symbol
 
+# Maintenance note: classes that are imported into this namespace must be
+# added manually to the typing.rst docs.
 __all__ = [
+    "ArraySymbol",
     "ArraySymbolLike",
+    "ShapeLike",
+    "Symbol",
 ]
 
 ArraySymbolLike: typing.TypeAlias = ArraySymbol | numpy.typing.ArrayLike
 """Either a :class:`~dwave.optimization.ArraySymbol` or a NumPy
-`array-like <https://numpy.org/devdocs/glossary.html#term-array_like>`_.
+`array-like <https://numpy.org/doc/stable/glossary.html#term-array_like>`_.
 """
 
 ShapeLike: typing.TypeAlias = int | tuple[int, ...]
