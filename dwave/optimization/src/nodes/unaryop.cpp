@@ -226,9 +226,13 @@ double UnaryOpNode<UnaryOp>::max() const {
 
 template <class UnaryOp>
 void UnaryOpNode<UnaryOp>::propagate(State& state) const {
+    const auto diff = array_ptr_->diff(state);
+    // If there are no updates the handle, return early.
+    if (diff.empty()) return;
+
     auto node_data = data_ptr_<ArrayNodeStateData>(state);
 
-    for (const auto& update : array_ptr_->diff(state)) {
+    for (const auto& update : diff) {
         const auto& [idx, _, value] = update;
 
         if (update.placed()) {

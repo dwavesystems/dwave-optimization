@@ -101,6 +101,10 @@ class QuadraticModelNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>> {
     QuadraticModel* get_quadratic_model();
 
  private:
+    // Redundant, because we could dynamic_cast each time from predecessors(),
+    // but this is more performant
+    const ArrayNode* array_ptr_;
+
     QuadraticModel quadratic_model_;
 };
 

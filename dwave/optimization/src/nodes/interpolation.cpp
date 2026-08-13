@@ -153,10 +153,11 @@ void BSplineNode::initialize_state(State& state) const {
 }
 
 void BSplineNode::propagate(State& state) const {
-    auto node_data_ptr = dynamic_cast<ArrayNode*>(predecessors()[0]);
-    auto diff = node_data_ptr->diff(state);
-    auto state_data = node_data_ptr->view(state);
+    const auto diff = array_ptr_->diff(state);
+    // If there are no updates, return early.
+    if (diff.empty()) return;
 
+    auto state_data = array_ptr_->view(state);
     for (const auto& [index, _, __] : diff) {
         data_ptr_<ArrayNodeStateData>(state)->set(index, compute_value(state_data[index]));
     }

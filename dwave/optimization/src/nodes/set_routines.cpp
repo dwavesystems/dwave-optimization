@@ -121,10 +121,10 @@ IsDisjointCoverNode::IsDisjointCoverNode(
         if (not node->integral()) {
             throw std::invalid_argument("Predecessors of DisjointCoverNode must be integral");
         }
-        if (not (node->max() < primary_set_size)) {
+        if (not(node->max() < primary_set_size)) {
             throw std::invalid_argument("Predecessor exceeds primary set size");
         }
-        if (not (node->min() >= 0)) {
+        if (not(node->min() >= 0)) {
             throw std::invalid_argument("Predecessor exceeds primary set size");
         }
         add_predecessor_(node);
@@ -338,9 +338,8 @@ void IsInNode::propagate(State& state) const {
     const std::span<const Update> test_elements_diff = test_elements_ptr_->diff(state);
     const std::span<const Update> element_diff = element_ptr_->diff(state);
 
-    if (test_elements_diff.empty() && element_diff.empty()) {
-        return;  // Nothing to do
-    }
+    // If no updates, return early.
+    if (test_elements_diff.empty() and element_diff.empty()) return;
 
     IsInNodeData* node_data = data_ptr_<IsInNodeData>(state);
 

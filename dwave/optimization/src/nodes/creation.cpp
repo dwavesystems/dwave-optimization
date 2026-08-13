@@ -374,6 +374,9 @@ void ARangeNode::propagate(State& state) const {
     const auto [stop_old, stop_new] = std::visit(visitor, stop_);
     const auto [step_old, step_new] = std::visit(visitor, step_);
 
+    // If nothing has changed, return early.
+    if (start_old == start_new and stop_old == stop_new and step_old == step_new) return;
+
     ArrayNodeStateData* ptr = data_ptr_<ArrayNodeStateData>(state);
 
     // If the start or the step has changed, we need to change everything

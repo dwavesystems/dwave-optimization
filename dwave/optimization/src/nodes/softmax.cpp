@@ -88,12 +88,13 @@ double SoftMaxNode::min() const { return 0.0; }
 double SoftMaxNode::max() const { return 1.0; }
 
 void SoftMaxNode::propagate(State& state) const {
-    // Store updates to predecessor in vector
-    std::vector<Update> arr_updates(arr_ptr_->diff(state).begin(), arr_ptr_->diff(state).end());
+    const auto diff = arr_ptr_->diff(state);
+    // If there are no updates, return early.
+    if (diff.empty()) return;
 
-    if (arr_updates.empty()) {
-        return;
-    }
+    // Store updates to predecessor in vector
+    std::vector<Update> arr_updates(diff.begin(), diff.end());
+    assert(not arr_updates.empty());
 
     // To update node, we need to compute the new softmax denominator
     auto node_data = data_ptr_<SoftMaxNodeStateData>(state);
