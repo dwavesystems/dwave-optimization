@@ -334,10 +334,10 @@ jobs:
               --only-binary :all:
 
       - run:
-          name: build docs
+          name: build docs with warnings as error
           command: |
             . env/bin/activate
-            make -C docs cpp html
+            make -C docs cpp html SPHINXOPTS=-W
 
       - store_artifacts:
           path: docs/build/html
