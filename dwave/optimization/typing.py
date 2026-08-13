@@ -28,8 +28,7 @@ __all__ = [
 ]
 
 ArraySymbolLike: typing.TypeAlias = ArraySymbol | numpy.typing.ArrayLike
-"""Either a :class:`~dwave.optimization.ArraySymbol` or a NumPy
-`array-like <https://numpy.org/doc/stable/glossary.html#term-array_like>`_.
+"""Either a :class:`~dwave.optimization.ArraySymbol` or a NumPy |array-like|_.
 """
 
 ShapeLike: typing.TypeAlias = int | tuple[int, ...]
