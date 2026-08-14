@@ -18,23 +18,21 @@ from libc.stdint cimport uintptr_t
 from libcpp cimport bool
 from libcpp.memory cimport shared_ptr
 from libcpp.typeinfo cimport type_info
-from libcpp.vector cimport vector
 
-from dwave.optimization.libcpp.graph cimport ArrayNode as cppArrayNode, Node as cppNode
-from dwave.optimization.libcpp.graph cimport Graph as cppGraph
-from dwave.optimization.libcpp.state cimport State as cppState
+from dwave.optimization.libcpp.graph cimport ArrayNode, Graph, Node
+from dwave.optimization.libcpp.state cimport State
 
 __all__ = []
 
 
 cdef void _register(object cls, const type_info& typeinfo)
 
-cdef object symbol_from_ptr(_Graph model, cppNode* ptr)
+cdef object symbol_from_ptr(_Graph model, Node* ptr)
 
 
 cdef class _Graph:
     @staticmethod
-    cdef _Graph from_shared_ptr(shared_ptr[cppGraph])
+    cdef _Graph from_shared_ptr(shared_ptr[Graph])
 
     cpdef bool is_locked(self) noexcept
     cpdef Py_ssize_t num_constraints(self) noexcept
@@ -49,8 +47,8 @@ cdef class _Graph:
     # The lifespan of the C++ Graph is managed by a shared_ptr<Graph>, but
     # we add an additional (redundant) Graph* because Cython knows what to do
     # with that.
-    cdef shared_ptr[cppGraph] _owning_ptr
-    cdef cppGraph* _graph
+    cdef shared_ptr[Graph] _owning_ptr
+    cdef Graph* _graph
 
     # The number of times "lock()" has been called.
     cdef readonly Py_ssize_t _lock_count
@@ -58,7 +56,7 @@ cdef class _Graph:
 
 cdef class Symbol:
     # Inheriting nodes must call this method from their __init__()
-    cdef void initialize_node(self, _Graph model, cppNode* node_ptr) noexcept
+    cdef void initialize_node(self, _Graph model, Node* node_ptr) noexcept
 
     cpdef uintptr_t id(self) noexcept
 
@@ -66,7 +64,7 @@ cdef class Symbol:
     cpdef bool expired(self) noexcept
 
     @staticmethod
-    cdef Symbol from_ptr(_Graph model, cppNode* ptr)
+    cdef Symbol from_ptr(_Graph model, Node* ptr)
 
     # Hold on to a reference to the _Graph, both for access but also, importantly,
     # to ensure that the model doesn't get garbage collected unless all of
@@ -77,7 +75,7 @@ cdef class Symbol:
     # a pointer to their observed node with the correct type. But the cost
     # of a redundant pointer is quite small for these Python objects and it
     # simplifies things quite a bit.
-    cdef cppNode* node_ptr
+    cdef Node* node_ptr
 
     # The node's expired flag. If the node is destructed, the boolean value
     # pointed to by the expired_ptr will be set to True
@@ -89,9 +87,9 @@ cdef class Symbol:
 # also Symbols (probably a fair assumption)
 cdef class ArraySymbol(Symbol):
     # Inheriting symbols must call this method from their __init__()
-    cdef void initialize_arraynode(self, _Graph model, cppArrayNode* array_ptr) noexcept
+    cdef void initialize_arraynode(self, _Graph model, ArrayNode* array_ptr) noexcept
 
     # Hold ArrayNode* pointer. Again this is redundant, because we're also holding
     # a pointer to Node* and we can theoretically dynamic cast each time.
     # But again, it's cheap and it simplifies things.
-    cdef cppArrayNode* array_ptr
+    cdef ArrayNode* array_ptr

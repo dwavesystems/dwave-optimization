@@ -15,11 +15,9 @@
 import collections.abc
 import dataclasses
 import fractions
-import functools
 import itertools
 import json
 import numbers
-import operator
 import struct
 import zipfile
 
@@ -31,7 +29,6 @@ from cpython.ref cimport PyObject
 from cython.operator cimport dereference as deref, preincrement as inc
 from cython.operator cimport typeid
 from libc.string cimport memset
-from libcpp cimport bool
 from libcpp.memory cimport make_shared
 from libcpp.span cimport span
 from libcpp.typeindex cimport type_index
@@ -42,8 +39,7 @@ from libcpp.vector cimport vector
 import dwave.optimization.mathematical
 
 from dwave.optimization.libcpp cimport dynamic_cast_ptr
-from dwave.optimization.libcpp.array cimport Array as cppArray, broadcast_shapes as cppbroadcast_shapes
-from dwave.optimization.libcpp.graph cimport DecisionNode as cppDecisionNode
+from dwave.optimization.libcpp.array cimport broadcast_shapes
 from dwave.optimization.states cimport States
 from dwave.optimization.utilities import (
     _file_object_arg,
@@ -79,7 +75,7 @@ cdef void _register(object cls, const type_info& typeinfo):
     _cpp_type_to_python[type_index(typeinfo)] = <PyObject*>(cls)
 
 
-cdef object symbol_from_ptr(_Graph model, cppNode* node_ptr):
+cdef object symbol_from_ptr(_Graph model, Node* node_ptr):
     """Create a Python/Cython symbol from a C++ Node*."""
 
     # If it's null, either after the cast of just as given, then we can't get a symbol from it
@@ -111,11 +107,11 @@ cdef class _Graph:
     def __cinit__(self):
         self._lock_count = 0
 
-        self._owning_ptr = make_shared[cppGraph]()
+        self._owning_ptr = make_shared[Graph]()
         self._graph = self._owning_ptr.get()
 
     @staticmethod
-    cdef _Graph from_shared_ptr(shared_ptr[cppGraph] ptr):
+    cdef _Graph from_shared_ptr(shared_ptr[Graph] ptr):
         cdef _Graph model = _Graph.__new__(_Graph)
 
         model._owning_ptr = ptr
@@ -1128,7 +1124,7 @@ cdef class Symbol:
         cls = type(self)
         return f"<{cls.__module__}.{cls.__qualname__} at {self.id():#x}>"
 
-    cdef void initialize_node(self, _Graph model, cppNode* node_ptr) noexcept:
+    cdef void initialize_node(self, _Graph model, Node* node_ptr) noexcept:
         self.model = model
 
         self.node_ptr = node_ptr
@@ -1184,7 +1180,7 @@ cdef class Symbol:
         return deref(self.expired_ptr)
 
     @staticmethod
-    cdef Symbol from_ptr(_Graph model, cppNode* ptr):
+    cdef Symbol from_ptr(_Graph model, Node* ptr):
         """Construct a Symbol from a C++ Node pointer.
 
         There are times when a Node* needs to be passed through the Python layer
@@ -1203,7 +1199,7 @@ cdef class Symbol:
     def _from_ptr(cls, model, capsule):
         """Create a Symbol from a Python capsule containing a Node pointer."""
         cdef Symbol sym = cls.__new__(cls)
-        sym.initialize_node(model, <cppNode*>(PyCapsule_GetPointer(capsule, 'Node*')))
+        sym.initialize_node(model, <Node*>(PyCapsule_GetPointer(capsule, 'Node*')))
         return sym
 
     @classmethod
@@ -1367,8 +1363,8 @@ cdef class Symbol:
         See Also:
             :meth:`.iter_successors`
         """
-        cdef vector[cppNode*].const_iterator it = self.node_ptr.predecessors().begin()
-        cdef vector[cppNode*].const_iterator end = self.node_ptr.predecessors().end()
+        cdef vector[Node*].const_iterator it = self.node_ptr.predecessors().begin()
+        cdef vector[Node*].const_iterator end = self.node_ptr.predecessors().end()
         while it != end:
             yield symbol_from_ptr(self.model, deref(it))
             inc(it)
@@ -1402,8 +1398,8 @@ cdef class Symbol:
         See Also:
             :meth:`.iter_predecessors`
         """
-        cdef vector[cppNode.SuccessorView].const_iterator it = self.node_ptr.successors().begin()
-        cdef vector[cppNode.SuccessorView].const_iterator end = self.node_ptr.successors().end()
+        cdef vector[Node.SuccessorView].const_iterator it = self.node_ptr.successors().begin()
+        cdef vector[Node.SuccessorView].const_iterator end = self.node_ptr.successors().end()
         while it != end:
             yield symbol_from_ptr(self.model, deref(it).ptr)
             inc(it)
@@ -1616,7 +1612,7 @@ class ArraySizeInfo:
         sizeinfo = symbol.array_ptr.sizeinfo()
 
         if sizeinfo.array_ptr:
-            symbol = symbol_from_ptr(symbol.model, <cppArrayNode*>sizeinfo.array_ptr)
+            symbol = symbol_from_ptr(symbol.model, <ArrayNode*>sizeinfo.array_ptr)
         else:
             symbol = None
 
@@ -1675,7 +1671,7 @@ cdef class ArraySymbol(Symbol):
         # via their subclasses.
         raise ValueError("ArraySymbols cannot be constructed directly")
 
-    cdef void initialize_arraynode(self, _Graph model, cppArrayNode* array_ptr) noexcept:
+    cdef void initialize_arraynode(self, _Graph model, ArrayNode* array_ptr) noexcept:
         self.array_ptr = array_ptr
         self.initialize_node(model, array_ptr)
 
@@ -1683,7 +1679,7 @@ cdef class ArraySymbol(Symbol):
     def _from_ptr(cls, model, capsule):
         cdef ArraySymbol sym = super()._from_ptr(model, capsule)
 
-        sym.array_ptr = dynamic_cast_ptr[cppArrayNode](sym.node_ptr)
+        sym.array_ptr = dynamic_cast_ptr[ArrayNode](sym.node_ptr)
         if not sym.array_ptr:
             raise TypeError(f"given pointer cannot construct an ArrayNode")
 
@@ -2712,4 +2708,4 @@ cdef class ArraySymbol(Symbol):
 
 def _broadcast_shapes(vector[Py_ssize_t] lhs, vector[Py_ssize_t] rhs):
     """Broadcast the input shapes into a single shape or throw an error if they are incompatible."""
-    return tuple(cppbroadcast_shapes(span[Py_ssize_t](lhs), span[Py_ssize_t](rhs)))
+    return tuple(broadcast_shapes(span[Py_ssize_t](lhs), span[Py_ssize_t](rhs)))
