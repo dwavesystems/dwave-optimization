@@ -955,11 +955,38 @@ ssize_t ReduceNode<BinaryOp>::convert_predecessor_index_(ssize_t index) const {
 
 template <class BinaryOp>
 void ReduceNode<BinaryOp>::propagate(State& state) const {
+    // Edge case is when our predecessor is a dynamic array with size 0 and
+    // we're also dynamic
+    if (this->dynamic() and array_ptr_->size() == 0) {
+        const ssize_t size = this->size(state);
+        const ssize_t new_size = product(drop_axes(array_ptr_->shape(state), axes_));
+
+        auto* const state_ptr = this->template data_ptr_<ReduceNodeData<BinaryOp>>(state);
+        // add/remove the relevant reductions
+        for (ssize_t i = size; i < new_size; ++i) state_ptr->append_reduction(*initial);
+        for (ssize_t i = size; i > new_size; --i) state_ptr->pop_reduction();
+
+        state_ptr->prepare_diff([&](ssize_t index) {
+            assert(false);  // should never be called because our reduction space is empty
+            return this->reduce_(state, index);
+        });
+        return;
+    }
+
+    const auto diff = array_ptr_->diff(state);
+    const ssize_t size_diff = array_ptr_->size_diff(state);
+    // If there are no updates, return early.*
+    // * Cannot do this earlier because of the above edge case.
+    if (diff.empty() and size_diff == 0) return;
+
     auto* const state_ptr = this->template data_ptr_<ReduceNodeData<BinaryOp>>(state);
 
     // We are reducing over all axes, so this is nice and simple
     if (axes_.empty() or axes_.size() == static_cast<std::size_t>(array_ptr_->ndim())) {
-        for (const Update& update : array_ptr_->diff(state)) {
+        // If there are no updates to handle, return early.
+        if (diff.empty()) return;
+
+        for (const Update& update : diff) {
             if (update.placed()) {
                 state_ptr->add_to_reduction(0, update.value);
             } else if (update.removed()) {
@@ -973,29 +1000,9 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
         return;
     }
 
-    // Another edge case is when our predecessor is a dynamic array with size 0
-    // and we're also dynamic
-    if (this->dynamic() and array_ptr_->size() == 0) {
-        const ssize_t size = this->size(state);
-        const ssize_t new_size = product(drop_axes(array_ptr_->shape(state), axes_));
-
-        // add/remove the relevant reductions
-        for (ssize_t i = size; i < new_size; ++i) state_ptr->append_reduction(*initial);
-        for (ssize_t i = size; i > new_size; --i) state_ptr->pop_reduction();
-
-        state_ptr->prepare_diff([&](ssize_t index) {
-            assert(false);  // should never be called because our reduction space is empty
-            return this->reduce_(state, index);
-        });
-        return;
-    }
-
     // Alas, we're in the more complex case where we have several axis to reduce over
 
-    if (this->dynamic() and array_ptr_->size_diff(state) > 0 and initial) {
-        // Make sure we're including the initial values
-        const ssize_t size_diff = array_ptr_->size_diff(state);
-
+    if (this->dynamic() and size_diff > 0 and initial) {
         const auto subspace_shape = keep_axes(array_ptr_->shape(state), axes_);
         const ssize_t subspace_size = std::reduce(
             subspace_shape.begin(), subspace_shape.end(), 1, std::multiplies<ssize_t>()
@@ -1005,7 +1012,7 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
         }
     }
 
-    for (const Update& update : array_ptr_->diff(state)) {
+    for (const Update& update : diff) {
         ssize_t reduction_index = convert_predecessor_index_(update.index);
         assert(
             ravel_multi_index(
@@ -1023,9 +1030,7 @@ void ReduceNode<BinaryOp>::propagate(State& state) const {
         }
     }
 
-    if (this->dynamic() and array_ptr_->size_diff(state) < 0) {
-        const ssize_t size_diff = array_ptr_->size_diff(state);
-
+    if (this->dynamic() and size_diff < 0) {
         const auto subspace_shape = keep_axes(array_ptr_->shape(state), axes_);
         const ssize_t subspace_size = std::reduce(
             subspace_shape.begin(), subspace_shape.end(), 1, std::multiplies<ssize_t>()

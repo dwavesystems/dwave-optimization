@@ -894,6 +894,20 @@ std::pair<ssize_t, ssize_t> get_mapped_index(
 }
 
 void AdvancedIndexingNode::propagate(State& state) const {
+    // Check if there are no updates.
+    if (array_ptr_->diff(state).empty()) {
+        // `array_ptr_` has no updates, suffices to check `indexer` arrays.
+        bool no_updates = true;
+        for (const auto indexer : indices_) {
+            if (!std::holds_alternative<ArrayNode*>(indexer)) continue;
+            if (not std::get<ArrayNode*>(indexer)->diff(state).empty()) {
+                no_updates = false;
+                break;
+            }
+        }
+        if (no_updates) return;  // No updates to process, return early.
+    }
+
     // Pull the data into this namespce
     auto node_data = data_ptr_<AdvancedIndexingNodeData>(state);
     auto& data = node_data->data;
@@ -1622,6 +1636,9 @@ double BasicIndexingNode::min() const { return this->values_info_.min; }
 double BasicIndexingNode::max() const { return this->values_info_.max; }
 
 void BasicIndexingNode::propagate(State& state) const {
+    // If there are no updates, return early.
+    if (array_ptr_->diff(state).empty()) return;
+
     auto node_data = data_ptr_<BasicIndexingNodeData>(state);
     auto& diff = node_data->diff;
     assert(diff.size() == 0 && "calling propagate on an node with pending updates");
@@ -2113,6 +2130,12 @@ void PermutationNode::initialize_state(State& state) const {
 }
 
 void PermutationNode::propagate(State& state) const {
+    assert(array_ptr_->diff(state).empty() and "not implemented yet");  // todo
+
+    const auto order_diff = order_ptr_->diff(state);
+    // If there are no updates, return early.
+    if (order_diff.empty()) return;
+
     auto ptr = data_ptr_<IndexingNodeData>(state);
 
     auto& offsets = ptr->offsets;
@@ -2123,7 +2146,6 @@ void PermutationNode::propagate(State& state) const {
     assert(updates.size() == 0 && "called propagate on a node with pending updates");
 
     // incorporate changes to the order
-    auto order_diff = order_ptr_->diff(state);
     if (order_diff.size()) {
         const ssize_t ndim = this->ndim();
         const ssize_t n = this->shape()[0];
@@ -2158,9 +2180,6 @@ void PermutationNode::propagate(State& state) const {
             step *= n;
         }
     }
-
-    // incorporate changes to the array
-    assert(array_ptr_->diff(state).size() == 0 && "not implemented yet");  // todo
 
     // Only signal successors if we actually have something to propagate
     if (updates.size()) Node::propagate(state);

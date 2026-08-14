@@ -84,10 +84,11 @@ double ArgSortNode::min() const { return minmax_.first; }
 double ArgSortNode::max() const { return minmax_.second; }
 
 void ArgSortNode::propagate(State& state) const {
+    const auto pred_diff = arr_ptr_->diff(state);
+    // If there are no updates, return early.
+    if (pred_diff.empty()) return;
+
     auto node_data = data_ptr_<ArgSortNodeData>(state);
-
-    auto pred_diff = arr_ptr_->diff(state);
-
     // Save a copy of the predecessor's updates so we can use them in case we
     // need to revert the changes to the ordering
     node_data->predecessor_updates.assign(pred_diff.begin(), pred_diff.end());

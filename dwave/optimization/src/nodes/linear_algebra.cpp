@@ -531,7 +531,7 @@ void MatrixMultiplyNode::update_shape_(State& state) const {
 }
 
 void MatrixMultiplyNode::propagate(State& state) const {
-    if (operands_[0]->diff(state).size() == 0 and operands_[1]->diff(state).size() == 0) return;
+    if (operands_[0]->diff(state).empty() and operands_[1]->diff(state).empty()) return;
 
     auto data = data_ptr_<MatrixMultiplyNodeData>(state);
 

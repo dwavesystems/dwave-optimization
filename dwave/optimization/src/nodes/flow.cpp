@@ -99,16 +99,18 @@ double ExtractNode::max() const { return values_info_.max; }
 double ExtractNode::min() const { return values_info_.min; }
 
 void ExtractNode::propagate(State& state) const {
-    auto node_data = data_ptr_<ArrayNodeStateData>(state);
-
+    const auto condition_diff = condition_ptr_->diff(state);
+    const auto array_diff = arr_ptr_->diff(state);
     // Nothing to do in this case
-    if (condition_ptr_->diff(state).empty() && arr_ptr_->diff(state).empty()) return;
+    if (condition_diff.empty() and array_diff.empty()) return;
+
+    auto node_data = data_ptr_<ArrayNodeStateData>(state);
 
     auto get_index = [](const Update& update) { return update.index; };
 
     // Get the minimum changed index
-    auto cond_view = condition_ptr_->diff(state) | std::views::transform(get_index);
-    auto arr_view = arr_ptr_->diff(state) | std::views::transform(get_index);
+    auto cond_view = condition_diff | std::views::transform(get_index);
+    auto arr_view = array_diff | std::views::transform(get_index);
     auto min_cond_it = std::ranges::min_element(cond_view);
     auto min_arr_it = std::ranges::min_element(arr_view);
 
@@ -337,6 +339,12 @@ bool _flipped(std::span<const Update> diff) {
 }
 
 void WhereNode::propagate(State& state) const {
+    auto condition_diff = condition_ptr_->diff(state);
+    auto x_diff = x_ptr_->diff(state);
+    auto y_diff = y_ptr_->diff(state);
+    // If there are no updates, return early.
+    if (condition_diff.empty() and x_diff.empty() and y_diff.empty()) return;
+
     auto node_data = data_ptr_<WhereNodeData>(state);
 
     if (condition_ptr_->size() != 1) {
@@ -344,14 +352,14 @@ void WhereNode::propagate(State& state) const {
 
         node_data->apply_diffs(
             condition_ptr_->view(state),
-            condition_ptr_->diff(state),
+            std::move(condition_diff),
             x_ptr_->view(state),
-            x_ptr_->diff(state),
+            std::move(x_diff),
             y_ptr_->view(state),
-            y_ptr_->diff(state)
+            std::move(y_diff)
         );
 
-    } else if (_flipped(condition_ptr_->diff(state))) {
+    } else if (_flipped(std::move(condition_diff))) {
         // `condition` is a single value and it changed
         // so let's just assume we're updating everything in our buffer
 
@@ -369,10 +377,10 @@ void WhereNode::propagate(State& state) const {
 
         if (condition_ptr_->buff(state)[0]) {
             // we're pointing to x, so update ourselves according to x
-            node_data->update(x_ptr_->diff(state));
+            node_data->update(std::move(x_diff));
         } else {
             // we're pointing to y, so update ourselves according to y
-            node_data->update(y_ptr_->diff(state));
+            node_data->update(std::move(y_diff));
         }
     }
 }

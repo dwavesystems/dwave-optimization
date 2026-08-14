@@ -246,11 +246,10 @@ double BroadcastToNode::max() const { return values_info_.max; }
 ssize_t BroadcastToNode::ndim() const { return ndim_; }
 
 void BroadcastToNode::propagate(State& state) const {
-    BroadcastToNodeData* data_ptr = this->data_ptr_<BroadcastToNodeData>(state);
-
     const auto from_diff = array_ptr_->diff(state);
     if (from_diff.empty()) return;  // exit early if nothing to propagate
 
+    BroadcastToNodeData* data_ptr = this->data_ptr_<BroadcastToNodeData>(state);
     auto& to_diff = data_ptr->diff;
     assert(to_diff.empty());  // should be cleared between propagations
 
@@ -540,6 +539,10 @@ void ConcatenateNode::propagate(State& state) const {
     auto ptr = data_ptr_<ArrayNodeStateData>(state);
 
     for (ssize_t arr_i = 0, stop = array_ptrs_.size(); arr_i < stop; ++arr_i) {
+        const auto diff = array_ptrs_[arr_i]->diff(state);
+        // No updates for given pointer, move to next.
+        if (diff.empty()) continue;
+
         auto view_it = Array::const_iterator(
             ptr->buff() + array_starts_[arr_i],
             this->ndim(),
@@ -547,7 +550,7 @@ void ConcatenateNode::propagate(State& state) const {
             this->strides().data()
         );
 
-        for (auto update : array_ptrs_[arr_i]->diff(state)) {
+        for (const auto update : diff) {
             assert(!update.placed() && !update.removed() && "no dynamic support implemented");
             auto update_it = view_it + update.index;
             ssize_t buffer_index = &*update_it - ptr->buff();
@@ -596,7 +599,11 @@ double CopyNode::min() const { return values_info_.min; }
 double CopyNode::max() const { return values_info_.max; }
 
 void CopyNode::propagate(State& state) const {
-    data_ptr_<ArrayNodeStateData>(state)->update(array_ptr_->diff(state));
+    auto diff = array_ptr_->diff(state);
+    // If there are no updates, return early.
+    if (diff.empty()) return;
+
+    data_ptr_<ArrayNodeStateData>(state)->update(std::move(diff));
 }
 
 void CopyNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
@@ -828,6 +835,12 @@ double PutNode::min() const { return values_info_.min; }
 double PutNode::max() const { return values_info_.max; }
 
 void PutNode::propagate(State& state) const {
+    const auto array_diff = array_ptr_->diff(state);
+    const auto indices_diff = indices_ptr_->diff(state);
+    const auto values_diff = values_ptr_->diff(state);
+    // If there are no updates, return early.
+    if (array_diff.empty() and indices_diff.empty() and values_diff.empty()) return;
+
     auto ptr = data_ptr_<PutNodeState>(state);
 
     // these should always be synced
@@ -840,7 +853,7 @@ void PutNode::propagate(State& state) const {
 
         const ssize_t values_size = values_ptr_->size(state);
 
-        for (const Update& update : indices_ptr_->diff(state)) {
+        for (const Update& update : indices_diff) {
             // if the update is not a placement, that means that we're removing
             // update.old from the list of masked indices and thereby potentially
             // overwriting the value propagated by the PutNode
@@ -881,7 +894,7 @@ void PutNode::propagate(State& state) const {
     {
         auto index_iterator = indices_ptr_->begin(state);
 
-        for (const Update& update : values_ptr_->diff(state)) {
+        for (const Update& update : values_diff) {
             if (update.removed()) continue;  // should have already been handled by the indexer
             assert(is_integer(*(index_iterator + update.index)));
 
@@ -890,7 +903,7 @@ void PutNode::propagate(State& state) const {
     }
 
     // finally incorporate changes from the base array.
-    for (const Update& update : array_ptr_->diff(state)) {
+    for (const Update& update : array_diff) {
         assert(!update.placed() && "base array cannot be dynamic");
         assert(!update.removed() && "base array cannot be dynamic");
         ptr->update_array(update);
@@ -1206,13 +1219,17 @@ double ResizeNode::min() const { return values_info_.min; }
 double ResizeNode::max() const { return values_info_.max; }
 
 void ResizeNode::propagate(State& state) const {
+    const auto diff = array_ptr_->diff(state);
+    // If there are no updates, return early.
+    if (diff.empty()) return;
+
     const ssize_t size = this->size();  // the desired size of our state
     assert(size >= 0);                  // we're never dynamic
 
     auto data_ptr = this->data_ptr_<ArrayNodeStateData>(state);
     assert(data_ptr);  // should never be nullptr
 
-    for (const Update& update : array_ptr_->diff(state)) {
+    for (const Update& update : diff) {
         const auto& [index, _, value] = update;
 
         if (index >= size) continue;  // don't care, it's out of range
@@ -1379,6 +1396,10 @@ void RollNode::propagate(State& state) const {
             // if neither our size nor our shift changed, then we just need to
             // update the individual indices and it is efficient to do so.
 
+            // If there are no updates, return early.
+            auto diff = array_ptr_->diff(state);
+            if (diff.empty()) return;
+
             auto transform = [&shift, &size](Update update) -> Update {
                 update.index = positive_modulus_(update.index + shift, size);
                 return update;
@@ -1391,14 +1412,13 @@ void RollNode::propagate(State& state) const {
                 // deduplicate_diff_view(), but alas some of the old Python images
                 // don't support deduplicate_diff_view with std::ranges::transform.
                 // So we have to do it manually with a copy.
-                auto diff = array_ptr_->diff(state);
                 std::vector<Update> updates(diff.begin(), diff.end());
                 deduplicate_diff(updates);
                 state_ptr->update(updates | std::views::transform(transform));
             } else {
                 // Otherwise we just propagate the diff like normal under the assumption
                 // that our predecessor was efficient (not always true but nice to believe).
-                state_ptr->update(std::ranges::transform_view(array_ptr_->diff(state), transform));
+                state_ptr->update(std::ranges::transform_view(std::move(diff), transform));
             }
         } else {
             // Either our size or our shift has changed, so we might as well re-calculate
@@ -1414,6 +1434,10 @@ void RollNode::propagate(State& state) const {
         const auto [shifts, changed] = shifts_diff_(state);
 
         if (not changed and array_ptr_->size_diff(state) == 0) {
+            // If there are no updates, return early.
+            auto diff = array_ptr_->diff(state);
+            if (diff.empty()) return;
+
             const auto shape = array_ptr_->shape(state);
 
             auto transform = [&shape, &shifts](Update update) -> Update {
@@ -1445,7 +1469,6 @@ void RollNode::propagate(State& state) const {
             // Unlike the flat shift case we always deduplicate because each shift
             // operation is relatively expensive.
             // See note there about the use of deduplicate_diff
-            auto diff = array_ptr_->diff(state);
             std::vector<Update> updates(diff.begin(), diff.end());
             deduplicate_diff(updates);
             state_ptr->update(updates | std::views::transform(transform));
@@ -1616,7 +1639,11 @@ double SizeNode::min() const { return minmax_.first; }
 
 double SizeNode::max() const { return minmax_.second; }
 
-void SizeNode::propagate(State& state) const { set_state(state, array_ptr_->size(state)); }
+void SizeNode::propagate(State& state) const {
+    // If there are no updates, return early.
+    if (array_ptr_->diff(state).empty()) return;
+    set_state(state, array_ptr_->size(state));
+}
 
 void SizeNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
     Node::replace_predecessor_(index, node_ptr);

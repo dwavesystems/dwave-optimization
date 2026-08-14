@@ -262,8 +262,6 @@ template <class BinaryOp>
 void NaryOpNode<BinaryOp>::propagate(State& state) const {
     auto node_data = data_ptr_<NaryOpNodeData>(state);
 
-    auto& iterators = node_data->iterators;
-
     std::vector<ssize_t> recompute_indices;
 
     if constexpr (!InverseOp<BinaryOp>().exists()) {
@@ -298,6 +296,7 @@ void NaryOpNode<BinaryOp>::propagate(State& state) const {
 
     // now fully recompute any needed indices
     if (recompute_indices.size()) {
+        auto& iterators = node_data->iterators;
         iterators.clear();
         for (const Array* node_ptr : operands_) {
             iterators.push_back(node_ptr->begin(state));

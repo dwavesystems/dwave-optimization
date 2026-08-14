@@ -276,9 +276,9 @@ QuadraticModelNode::QuadraticModelNode(
     ArrayNode* state_node_ptr,
     QuadraticModel&& quadratic_model
 ) :
-    quadratic_model_(quadratic_model) {
+    array_ptr_(state_node_ptr), quadratic_model_(quadratic_model) {
     if (!std::ranges::equal(
-            state_node_ptr->shape(), std::vector<ssize_t>{quadratic_model_.num_variables()}
+            array_ptr_->shape(), std::vector<ssize_t>{quadratic_model_.num_variables()}
         )) {
         throw std::invalid_argument(
             "node array must be one dimensional of length same as QuadraticModelNode.shape[0]"
@@ -306,8 +306,7 @@ void QuadraticModelNode::revert(State& state) const {
 }
 
 void QuadraticModelNode::initialize_state(State& state) const {
-    Array* ptr = dynamic_cast<Array*>(predecessors()[0]);
-    std::vector<double> state_copy(ptr->begin(state), ptr->end(state));
+    std::vector<double> state_copy(array_ptr_->begin(state), array_ptr_->end(state));
     double value = quadratic_model_.compute_value(state_copy);
     emplace_data_ptr_<QuadraticModelNodeData>(
         state, value, std::move(state_copy), quadratic_model_.num_variables()
@@ -315,53 +314,52 @@ void QuadraticModelNode::initialize_state(State& state) const {
 }
 
 void QuadraticModelNode::propagate(State& state) const {
-    auto state_node_ptr = dynamic_cast<Array*>(predecessors()[0]);
-    auto diff = state_node_ptr->diff(state);
-    if (diff.size()) {
-        auto node_data_ptr = data_ptr_<QuadraticModelNodeData>(state);
-        auto& previous_state = node_data_ptr->previous_state_;
-        auto& effective_changes = node_data_ptr->effective_changes_;
-        auto& value = node_data_ptr->value;
+    const auto diff = array_ptr_->diff(state);
+    // If there are not updates, return early.
+    if (diff.empty()) return;
 
-        if (state_node_ptr->contiguous()) {
-            auto current_state =
-                std::span(state_node_ptr->buff(state), state_node_ptr->size(state));
-            for (auto& update : diff) {
-                auto index = update.index;
-                auto neo = current_state[index];
-                auto old = previous_state[index];
+    auto node_data_ptr = data_ptr_<QuadraticModelNodeData>(state);
+    auto& previous_state = node_data_ptr->previous_state_;
+    auto& effective_changes = node_data_ptr->effective_changes_;
+    auto& value = node_data_ptr->value;
 
-                // We do not need to process every update, only if there is a difference between the
-                // evolved state and the evolving state.
-                if (neo != old) {
-                    effective_changes.emplace_back(std::make_pair(index, old));
-                    value += (neo - old) *
-                             (quadratic_model_.get_quadratic(index) * (neo + old) +
-                              quadratic_model_.get_effective_linear_bias(index, previous_state));
-                    previous_state[index] = neo;
-                }
-            }
-        } else {
-            auto current_state = state_node_ptr->view(state);
-            for (auto& update : diff) {
-                auto index = update.index;
-                auto neo = current_state[index];
-                auto old = previous_state[index];
+    if (array_ptr_->contiguous()) {
+        auto current_state = std::span(array_ptr_->buff(state), array_ptr_->size(state));
+        for (auto& update : diff) {
+            auto index = update.index;
+            auto neo = current_state[index];
+            auto old = previous_state[index];
 
-                // We do not need to process every update, only if there is a difference between the
-                // evolved state and the evolving state.
-                if (neo != old) {
-                    effective_changes.emplace_back(std::make_pair(index, old));
-                    value += (neo - old) *
-                             (quadratic_model_.get_quadratic(index) * (neo + old) +
-                              quadratic_model_.get_effective_linear_bias(index, previous_state));
-                    previous_state[index] = neo;
-                }
+            // We do not need to process every update, only if there is a difference between the
+            // evolved state and the evolving state.
+            if (neo != old) {
+                effective_changes.emplace_back(std::make_pair(index, old));
+                value += (neo - old) *
+                         (quadratic_model_.get_quadratic(index) * (neo + old) +
+                          quadratic_model_.get_effective_linear_bias(index, previous_state));
+                previous_state[index] = neo;
             }
         }
+    } else {
+        auto current_state = array_ptr_->view(state);
+        for (auto& update : diff) {
+            auto index = update.index;
+            auto neo = current_state[index];
+            auto old = previous_state[index];
 
-        Node::propagate(state);
+            // We do not need to process every update, only if there is a difference between the
+            // evolved state and the evolving state.
+            if (neo != old) {
+                effective_changes.emplace_back(std::make_pair(index, old));
+                value += (neo - old) *
+                         (quadratic_model_.get_quadratic(index) * (neo + old) +
+                          quadratic_model_.get_effective_linear_bias(index, previous_state));
+                previous_state[index] = neo;
+            }
+        }
     }
+
+    Node::propagate(state);
 }
 
 QuadraticModel* QuadraticModelNode::get_quadratic_model() {

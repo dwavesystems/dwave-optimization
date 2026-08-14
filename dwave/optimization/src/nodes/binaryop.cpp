@@ -187,7 +187,9 @@ bool calculate_integral(const Array* lhs_ptr, const Array* rhs_ptr) {
 
 template <class BinaryOp>
 BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr) :
-    ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNode<BinaryOp>>>(broadcast_shapes(a_ptr->shape(), b_ptr->shape())),
+    ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNode<BinaryOp>>>(
+        broadcast_shapes(a_ptr->shape(), b_ptr->shape())
+    ),
     operands_({a_ptr, b_ptr}),
     values_info_(
         calculate_values_minmax<BinaryOp>(operands_[0], operands_[1]),
@@ -315,16 +317,18 @@ double BinaryOpNode<BinaryOp>::min() const {
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::propagate(State& state) const {
-    auto ptr = this->template data_ptr_<ArrayNodeStateData>(state);
-
     const Array* lhs_ptr = operands_[0];
     const Array* rhs_ptr = operands_[1];
+    std::span<const Update> lhs_diff = lhs_ptr->diff(state);
+    std::span<const Update> rhs_diff = rhs_ptr->diff(state);
+
+    // If there are no updates, return early.
+    if (lhs_diff.empty() and rhs_diff.empty()) return;
+
+    auto ptr = this->template data_ptr_<ArrayNodeStateData>(state);
 
     if (std::ranges::equal(lhs_ptr->shape(state), rhs_ptr->shape(state))) {
         // The easy case, just go through both predecessors making updates.
-
-        std::span<const Update> lhs_diff = lhs_ptr->diff(state);
-        std::span<const Update> rhs_diff = rhs_ptr->diff(state);
 
         // Handle the dynamic case by copying and deduplicating both diffs,
         // and then get a span pointing to the copies to use instead of
@@ -334,8 +338,8 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         if (lhs_ptr->dynamic()) {
             assert(rhs_ptr->dynamic());
             // Copy and then deduplicate both diffs
-            lhs_diff_copy.assign(lhs_ptr->diff(state).begin(), lhs_ptr->diff(state).end());
-            rhs_diff_copy.assign(rhs_ptr->diff(state).begin(), rhs_ptr->diff(state).end());
+            lhs_diff_copy.assign(lhs_diff.begin(), lhs_diff.end());
+            rhs_diff_copy.assign(rhs_diff.begin(), rhs_diff.end());
             deduplicate_diff(lhs_diff_copy);
             deduplicate_diff(rhs_diff_copy);
             lhs_diff = std::span<const Update>(lhs_diff_copy.begin(), lhs_diff_copy.end());
@@ -360,11 +364,12 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
                 return !up.removed() && !up.placed();
             };
 
-            ptr->update(lhs_diff | std::views::transform(apply_op));
+            ptr->update(std::move(lhs_diff) | std::views::transform(apply_op));
             // For the RHS, we have already dealt with growing/shrinking the array,
             // so we just ignore all updates that are placements/removals.
             ptr->update(
-                rhs_diff | std::views::filter(is_standard_update) | std::views::transform(apply_op)
+                std::move(rhs_diff) | std::views::filter(is_standard_update) |
+                std::views::transform(apply_op)
             );
         } else if (lhs_diff.size()) {
             // LHS modified, but not RHS
@@ -386,7 +391,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         const double lhs = lhs_ptr->view(state).front();
         auto unary_func = std::bind(op, lhs, std::placeholders::_1);
 
-        if (lhs_ptr->diff(state).size()) {
+        if (lhs_diff.size()) {
             // The lhs has changed, so in this case we're probably changing
             // everything, so just overwrite the state entirely.
             auto rhs_view = rhs_ptr->view(state);
@@ -397,7 +402,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
                 if (!update.removed()) update.value = unary_func(update.value);
                 return update;
             };
-            ptr->update(rhs_ptr->diff(state) | std::views::transform(update_func));
+            ptr->update(std::move(rhs_diff) | std::views::transform(update_func));
         }
     } else if (rhs_ptr->size() == 1) {
         // rhs is a single value being broadcast to the lhs array
@@ -406,7 +411,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         const double rhs = rhs_ptr->view(state).front();
         auto unary_func = std::bind(op, std::placeholders::_1, rhs);
 
-        if (rhs_ptr->diff(state).size()) {
+        if (rhs_diff.size()) {
             // The rhs has changed, so in this case we're probably changing
             // everything, so just overwrite the state entirely.
             auto lhs_view = lhs_ptr->view(state);
@@ -417,7 +422,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
                 if (!update.removed()) update.value = unary_func(update.value);
                 return update;
             };
-            ptr->update(lhs_ptr->diff(state) | std::views::transform(update_func));
+            ptr->update(std::move(lhs_diff) | std::views::transform(update_func));
         }
     } else {
         // this case is complicated we need to "stretch" dimensions into eachother
