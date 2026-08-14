@@ -17,13 +17,9 @@ import tempfile
 import weakref
 import zipfile
 
-cimport cpython.buffer
-
 from libcpp.utility cimport move
 
-from dwave.optimization.libcpp.array cimport Array as cppArray
-from dwave.optimization.model cimport ArraySymbol, _Graph
-from dwave.optimization.model import Model
+from dwave.optimization.model cimport _Graph
 from dwave.optimization.utilities import _file_object_arg
 
 __all__ = ["States"]
@@ -87,15 +83,13 @@ cdef class States:
         :attr:`~dwave.optimization.model.Model.states`
     """
     def __init__(self, model):
-        if not isinstance(model, Model):
-            raise TypeError("model must be an instance of Model")
         self._model_ref = weakref.ref(model)
 
     def __len__(self):
         """The number of model states."""
         return self.size()
 
-    cdef void attach_states(self, vector[cppState] states) noexcept:
+    cdef void attach_states(self, vector[State] states) noexcept:
         """Attach the given states.
 
         Note:
@@ -135,7 +129,7 @@ cdef class States:
         """
         self.detach_states()
 
-    cdef vector[cppState] detach_states(self):
+    cdef vector[State] detach_states(self):
         """Move the current C++ states into a returned vector.
 
         Leaves the model's states empty.
@@ -149,7 +143,7 @@ cdef class States:
         self.resolve()
         # move should impliclty leave the states in a valid state, but
         # just to be super explicit we swap with an empty vector first
-        cdef vector[cppState] states
+        cdef vector[State] states
         self._states.swap(states)
         return move(states)
 
@@ -459,7 +453,7 @@ cdef class States:
                 version=version,
             )
 
-    cdef _Graph _model(self):
+    def _model(self):
         """Get a ref-counted Model object."""
         cdef _Graph m = self._model_ref()
         if m is None:
