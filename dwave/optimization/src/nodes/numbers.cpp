@@ -323,52 +323,38 @@ void NumberNodeStateData::update_(
     std::optional<std::vector<ssize_t>> optional_slices
 ) {
     const auto& sum_constraints = node_.sum_constraints();
-    assert(sum_constraints.size() != 0);  // Should only call where applicable.
-    assert(difference != 0);              // Should not call when no change occurs.
+    const ssize_t num_sum_constraints = sum_constraints.size();
+    assert(num_sum_constraints != 0);  // Should only call where applicable.
+    assert(difference != 0);           // Should not call when no change occurs.
     assert(sum_constraints.size() == sum_constraints_lhs.size());
+    std::vector<ssize_t> slices;
 
-    // Dev note: there is a tonne of deduplication one could do here. Keeping this
-    // as-is to minimize changes in the current PR. This needs another pass in the
-    // future.
     if (optional_slices) {
-        std::vector<ssize_t> slices = std::move(*optional_slices);
-
-        assert(sum_constraints.size() == slices.size());
-        // For each sum constraint.
-        for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
-            // Sanity check that the user provided slices for `index` are correct.
-            assert(([&]() {
-                const std::optional<const ssize_t> axis = sum_constraints[i].axis();
-                /// Determine the "slice" that index lies on given the sum constraint.
-                /// If `axis == std::nullopt`, the array is treated as a flat array with a
-                /// single slice. Otherwise, the slice is defined by unravel_index().
-                if (!axis.has_value()) return slices[i] == 0;
-                return slices[i] == unravel_index(index, node_.shape())[*axis];
-            })());
-            sum_constraints_lhs[i][slices[i]] += difference;  // Offset slice sum.
-        }
-        slice_cache_.emplace_back(std::move(slices));  // Cache the slices.
+        slices = std::move(*optional_slices);
     } else {
-        std::vector<ssize_t> cache_entry;  // Initialize the slice cache.
-        cache_entry.reserve(sum_constraints.size());
-        // Get multidimensional indices for `index` so we can identify the slices
-        // `index` lies on per sum constraint.
-        const std::vector<ssize_t> multi_index = unravel_index(index, node_.shape());
-        assert(sum_constraints.size() <= multi_index.size());
-        // For each sum constraint.
-        for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
-            const std::optional<const ssize_t> axis = sum_constraints[i].axis();
-            /// Determine the "slice" that index lies on given the sum constraint.
-            /// If `axis == std::nullopt`, the array is treated as a flat array with a
-            /// single slice. Otherwise, the slice is defined by multi_index.
-            assert(!axis.has_value() || *axis < static_cast<ssize_t>(multi_index.size()));
-            const ssize_t slice = axis.has_value() ? multi_index[*axis] : 0;
-            assert(0 <= slice && slice < static_cast<ssize_t>(sum_constraints_lhs[i].size()));
-            sum_constraints_lhs[i][slice] += difference;  // Offset slice sum.
-            cache_entry.push_back(slice);                 // Record the slice in the cache.
+        slices.reserve(num_sum_constraints);
+        for (ssize_t i = 0; i < num_sum_constraints; ++i) {
+            const auto axis = sum_constraints[i].axis();
+            // *NOTE*: If `axis` is defined, get appropriate slice. Otherwise,
+            // array is treated as a flat array with one slice.
+            slices.emplace_back((axis) ? unravel_index(index, node_.shape())[*axis] : 0);
         }
-        slice_cache_.emplace_back(std::move(cache_entry));  // Cache the slices.
     }
+    assert(sum_constraints.size() == slices.size());
+    assert([&] {  // Check `slices`. See *NOTE*.
+        for (ssize_t i = 0; i < num_sum_constraints; ++i) {
+            const auto axis = sum_constraints[i].axis();
+            if (slices[i] != (axis ? unravel_index(index, node_.shape())[*axis] : 0)) return false;
+        }
+        return true;
+    }());
+
+    for (ssize_t i = 0; i < num_sum_constraints; ++i) {
+        const ssize_t slice = slices[i];
+        sum_constraints_lhs[i][slice] += difference;  // Update slice sum
+    }
+
+    slice_cache_.emplace_back(std::move(slices));  // Cache the slices.
 }
 
 void NumberNode::assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const {
@@ -1500,65 +1486,44 @@ void BinaryNodeStateData::update_(
     std::optional<std::vector<ssize_t>> optional_slices
 ) {
     const auto& sum_constraints = node_.sum_constraints();
-    assert(sum_constraints.size() != 0);  // Should only call where applicable.
-    assert(difference == 1 || difference == -1);
+    const ssize_t num_sum_constraints = sum_constraints.size();
+    assert(num_sum_constraints != 0);  // Should only call where applicable.
+    assert(difference != 0);           // Should not call when no change occurs.
     assert(sum_constraints.size() == sum_constraints_lhs.size());
-    assert(sum_constraints.size() == slice_indices.size());
+    std::vector<ssize_t> slices;
 
-    // Dev note: there is a tonne of deduplication one could do here. Keeping this
-    // as-is to minimize changes in the current PR. This needs another pass in the
-    // future.
     if (optional_slices) {
-        std::vector<ssize_t> slices = std::move(*optional_slices);
-
-        assert(sum_constraints.size() == slices.size());
-        // For each sum constraint.
-        for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
-            // Sanity check that the user provided slices for `index` are correct.
-            assert(([&]() {
-                const std::optional<const ssize_t> axis = sum_constraints[i].axis();
-                /// Determine the "slice" that index lies on given the sum constraint.
-                /// If `axis == std::nullopt`, the array is treated as a flat array with a
-                /// single slice. Otherwise, the slice is defined by multi_index.
-                if (!axis.has_value()) return slices[i] == 0;
-                return slices[i] == unravel_index(index, node_.shape())[*axis];
-            })());
-            sum_constraints_lhs[i][slices[i]] += difference;  // Offset slice sum.
-            // Update tracked indices.
-            if (difference == 1.0) {
-                slice_indices[i].update_true(index, slices[i]);
-            } else {
-                slice_indices[i].update_false(index, slices[i]);
-            }
-        }
-        slice_cache_.emplace_back(std::move(slices));  // Cache the slices.
+        slices = std::move(*optional_slices);
     } else {
-        std::vector<ssize_t> cache_entry;  // Initialize the slice cache.
-        cache_entry.reserve(sum_constraints.size());
-        // Get multidimensional indices for `index` so we can identify the slices
-        // `index` lies on per sum constraint.
-        const std::vector<ssize_t> multi_index = unravel_index(index, node_.shape());
-        assert(sum_constraints.size() <= multi_index.size());
-        // For each sum constraint.
-        for (ssize_t i = 0, stop = static_cast<ssize_t>(sum_constraints.size()); i < stop; ++i) {
-            const std::optional<const ssize_t> axis = sum_constraints[i].axis();
-            /// Determine the "slice" that index lies on given the sum constraint.
-            /// If `axis == std::nullopt`, the array is treated as a flat array with a
-            /// single slice. Otherwise, the slice is defined by multi_index.
-            assert(!axis.has_value() || *axis < static_cast<ssize_t>(multi_index.size()));
-            const ssize_t slice = axis.has_value() ? multi_index[*axis] : 0;
-            assert(0 <= slice && slice < static_cast<ssize_t>(sum_constraints_lhs[i].size()));
-            sum_constraints_lhs[i][slice] += difference;  // Offset slice sum.
-            // Update tracked indices.
-            if (difference == 1.0) {
-                slice_indices[i].update_true(index, slice);
-            } else {
-                slice_indices[i].update_false(index, slice);
-            }
-            cache_entry.push_back(slice);  // Record the slice in the cache.
+        slices.reserve(num_sum_constraints);
+        for (ssize_t i = 0; i < num_sum_constraints; ++i) {
+            const auto axis = sum_constraints[i].axis();
+            // *NOTE*: If `axis` is defined, get appropriate slice. Otherwise,
+            // array is treated as a flat array with one slice.
+            slices.emplace_back((axis) ? unravel_index(index, node_.shape())[*axis] : 0);
         }
-        slice_cache_.emplace_back(std::move(cache_entry));  // Cache the slices.
     }
+    assert(sum_constraints.size() == slices.size());
+    assert([&] {  // Check `slices`. See *NOTE*.
+        for (ssize_t i = 0; i < num_sum_constraints; ++i) {
+            const auto axis = sum_constraints[i].axis();
+            if (slices[i] != (axis ? unravel_index(index, node_.shape())[*axis] : 0)) return false;
+        }
+        return true;
+    }());
+
+    for (ssize_t i = 0; i < num_sum_constraints; ++i) {
+        // Update slice sum and tracked indices.
+        const ssize_t slice = slices[i];
+        sum_constraints_lhs[i][slice] += difference;
+        if (difference == 1.0) {
+            slice_indices[i].update_true(index, slice);
+        } else {
+            slice_indices[i].update_false(index, slice);
+        }
+    }
+
+    slice_cache_.emplace_back(std::move(slices));  // Cache the slices.
 }
 
 void BinaryNodeStateData::compute_slice_indices_(const BinaryNode& node) {
@@ -1623,7 +1588,8 @@ void BinaryNode::initialize_state(State& state, std::vector<double>&& number_dat
         }
 
         emplace_data_ptr_<BinaryNodeStateData>(
-            state, *this, std::move(number_data), std::move(sum_constraints_lhs));
+            state, *this, std::move(number_data), std::move(sum_constraints_lhs)
+        );
     }
 }
 
