@@ -184,11 +184,19 @@ class Graph {
     /// * It is not a decision.
     /// * It is not an ancestor of the objective.
     /// * It is not an ancestor of a constraint.
+    /// * It is not in the ``keep`` list provided as an argument.
     /// * It has no "listeners" on its expired_ptr. Set ``ignore_listeners`` to
     ///   ``true`` to disable this condition.
     ///
     /// Returns the number of nodes removed from the graph.
     ssize_t remove_unused_nodes(bool ignore_listeners = false);
+    ssize_t remove_unused_nodes(std::span<Node*> keep, bool ignore_listeners = false);
+    ssize_t remove_unused_nodes(
+        std::ranges::contiguous_range auto&& keep,
+        bool ignore_listeners = false
+    ) {
+        return remove_unused_nodes(std::span<Node*>(keep), ignore_listeners);
+    }
 
     /// Call revert on every `Node` in the `Graph`.
     void revert(State& state) const;
@@ -355,7 +363,7 @@ class Node {
     template <class NodeType, class... Args>
     friend NodeType* Graph::emplace_node(Args&&...);
     friend ssize_t Graph::remove_redundant_nodes(bool, double);
-    friend ssize_t Graph::remove_unused_nodes(bool);
+    friend ssize_t Graph::remove_unused_nodes(std::span<Node*>, bool);
     friend void Graph::reset_topological_sort();
     friend void Graph::swap_decisions(DecisionNode* x_ptr, DecisionNode* y_ptr);
     friend void Graph::topological_sort();
