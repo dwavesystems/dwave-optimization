@@ -5,7 +5,7 @@ Philosophy
 ==========
 
 `dwave-optimization` and
-the `Leap <https://cloud.dwavesys.com/leap/>`_\ |TM| service's quantum-classical
+the `Leap™ <https://cloud.dwavesys.com/leap/>`_ service's quantum-classical
 hybrid nonlinear solver
 incorporate features and design principles from each of the following areas:
 
