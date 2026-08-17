@@ -493,7 +493,8 @@ TEST_CASE("Graph::remove_unused_nodes()") {
         }
 
         WHEN("We add two successors that are not used in a constraint") {
-            graph.emplace_node<LogicalNode>(graph.emplace_node<AbsoluteNode>(i_ptr));
+            auto* abs_ptr = graph.emplace_node<AbsoluteNode>(i_ptr);
+            auto* logical_ptr = graph.emplace_node<LogicalNode>(abs_ptr);
 
             THEN("remove_unused_nodes() removes them") {
                 ssize_t num_removed = graph.remove_unused_nodes();
@@ -501,6 +502,38 @@ TEST_CASE("Graph::remove_unused_nodes()") {
                 CHECK(graph.num_nodes() == 1);
                 CHECK(i_ptr->topological_index() == 0);
                 CHECK(i_ptr->successors().size() == 0);
+            }
+
+            THEN("remove_unused_nodes({logical_ptr}) keeps both") {
+                auto keep = std::vector<Node*>{logical_ptr};
+
+                WHEN("keep is given as an rvalue") {
+                    ssize_t num_removed = graph.remove_unused_nodes(std::move(keep));
+                    CHECK(num_removed == 0);
+                    CHECK(graph.num_nodes() == 3);
+                }
+
+                WHEN("keep is given as an lvalue") {
+                    ssize_t num_removed = graph.remove_unused_nodes(keep);
+                    CHECK(num_removed == 0);
+                    CHECK(graph.num_nodes() == 3);
+                }
+            }
+
+            THEN("remove_unused_nodes({abs_ptr}) keeps one") {
+                auto keep = std::vector<Node*>{abs_ptr};
+
+                WHEN("keep is given as an rvalue") {
+                    ssize_t num_removed = graph.remove_unused_nodes(std::move(keep));
+                    CHECK(num_removed == 1);
+                    CHECK(graph.num_nodes() == 2);
+                }
+
+                WHEN("keep is given as an lvalue") {
+                    ssize_t num_removed = graph.remove_unused_nodes(keep);
+                    CHECK(num_removed == 1);
+                    CHECK(graph.num_nodes() == 2);
+                }
             }
         }
 
