@@ -57,6 +57,9 @@ class Graph {
     /// Add a constraint node.
     void add_constraint(ArrayNode* constraint_ptr);
 
+    /// Remove all constraints. Does not remove the nodes that encode those constraints.
+    void clear_constraints();
+
     /// Call commit on every `Node` in the `Graph`.
     void commit(State& state) const;
 
