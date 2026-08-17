@@ -3,4 +3,4 @@ features:
   - |
     Add C++ ``IsDisjointCoverNode`` node/symbol, which computes whether
     a collection of lists are disjoint and cover some primary set.
-  - Add ``IsDisjointCover`` symbol and `is_disjoint_cover` function.
+  - Add ``IsDisjointCover`` symbol and ``is_disjoint_cover`` function.
