@@ -316,6 +316,7 @@ TEST_CASE("Graph::clear_constraints()") {
     graph.clear_constraints();
 
     CHECK(graph.constraints().size() == 0);
+    CHECK(graph.num_constraints() == 0);
     // the nodes are still there
     CHECK(graph.nodes()[0].get() == x_ptr);
     CHECK(graph.nodes()[1].get() == y_ptr);
