@@ -48,6 +48,8 @@ void Graph::add_constraint(ArrayNode* constraint_ptr) {
     constraints_.emplace_back(constraint_ptr);
 }
 
+void Graph::clear_constraints() { constraints_.clear(); }
+
 void Graph::commit(State& state) const {
     std::ranges::for_each(nodes(), [&state](const auto& ptr) { ptr->commit(state); });
 }

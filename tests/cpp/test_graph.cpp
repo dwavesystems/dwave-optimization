@@ -297,6 +297,31 @@ TEST_CASE("Graph::commit(), Graph::descendants(), Graph::propagate(), and Graph:
     }
 }
 
+TEST_CASE("Graph::clear_constraints()") {
+    auto graph = Graph();
+
+    ArrayNode* x_ptr = graph.emplace_node<BinaryNode>();
+    ArrayNode* y_ptr = graph.emplace_node<IntegerNode>();
+    ArrayNode* z_ptr = graph.emplace_node<LogicalNode>(y_ptr);
+
+    graph.add_constraint(x_ptr);
+    graph.add_constraint(z_ptr);
+
+    CHECK_THAT(graph.constraints(), RangeEquals({x_ptr, z_ptr}));
+    // we have not topologically sorted yet
+    CHECK(graph.nodes()[0].get() == x_ptr);
+    CHECK(graph.nodes()[1].get() == y_ptr);
+    CHECK(graph.nodes()[2].get() == z_ptr);
+
+    graph.clear_constraints();
+
+    CHECK(graph.constraints().size() == 0);
+    // the nodes are still there
+    CHECK(graph.nodes()[0].get() == x_ptr);
+    CHECK(graph.nodes()[1].get() == y_ptr);
+    CHECK(graph.nodes()[2].get() == z_ptr);
+}
+
 TEST_CASE("Graph::objective()") {
     GIVEN("A graph") {
         auto graph = Graph();
