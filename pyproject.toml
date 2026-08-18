@@ -1,9 +1,9 @@
 [build-system]
 requires = [
-    # Same as dependency-groups.build, last refreshed April 2026
+    # Same as dependency-groups.build, last refreshed August 2026
     "cython~=3.2.0",
-    "meson~=1.11.0",
-    "meson-python~=0.19.0",
+    "meson~=1.12.0",
+    "meson-python~=0.20.0",
     "ninja~=1.13.0",
 ]
 build-backend = 'mesonpy'
@@ -57,14 +57,14 @@ Documentation = "https://docs.dwavequantum.com"
 
 [dependency-groups]
 blas = [
-    # Optional build requirement, last refreshed April 2026
-    "scipy_openblas64==0.3.31.188.0",
+    # Optional build requirement, last refreshed August 2026
+    "scipy_openblas64==0.3.34.106.0",
 ]
 build = [
-    # Same as build-system.requires, last refreshed April 2026
+    # Same as build-system.requires
     "cython~=3.2.0",
-    "meson~=1.11.0",
-    "meson-python~=0.19.0",
+    "meson~=1.12.0",
+    "meson-python~=0.20.0",
     "ninja~=1.13.0",
 ]
 blas-build = [
