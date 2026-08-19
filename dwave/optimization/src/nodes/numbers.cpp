@@ -502,7 +502,7 @@ bool satisfies_sum_constraint(
                     break;
                 default:
                     assert(false && "Unexpected operator type.");
-                    unreachable();
+                    std::unreachable();
             }
         }
     }
@@ -593,7 +593,7 @@ double sum_constraint_delta(
             return (lhs < bound) ? (bound - lhs) : 0.0;
         default:
             assert(false && "Unexpected operator type.");
-            unreachable();
+            std::unreachable();
     }
 }
 
@@ -717,7 +717,7 @@ void NumberNode::initialize_state(State& state) const {
         initialize_state(state, std::move(values));
     } else {
         assert(false && "Multiple sum constraints not yet supported.");
-        unreachable();
+        std::unreachable();
     }
 }
 
@@ -1608,7 +1608,7 @@ void BinaryNode::initialize_state(State& state) const {
         initialize_state(state, std::move(values));
     } else {
         assert(false && "Multiple sum constraints not yet supported.");
-        unreachable();
+        std::unreachable();
     }
 }
 

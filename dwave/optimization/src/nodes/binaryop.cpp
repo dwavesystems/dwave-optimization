@@ -19,6 +19,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "_state.hpp"
@@ -151,7 +152,7 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
     }
 
     assert(false && "not implemeted yet");
-    unreachable();
+    std::unreachable();
 }
 
 template <class BinaryOp>
@@ -182,7 +183,7 @@ bool calculate_integral(const Array* lhs_ptr, const Array* rhs_ptr) {
     }
 
     assert(false && "not implemeted yet");
-    unreachable();
+    std::unreachable();
 }
 
 template <class BinaryOp>
@@ -294,7 +295,7 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
     } else {
         // this case is complicated we need to "stretch" dimensions into each other
         assert(false && "not yet implemented");
-        unreachable();
+        std::unreachable();
     }
 
     this->template emplace_data_ptr_<ArrayNodeStateData>(state, std::move(values));
@@ -427,7 +428,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
     } else {
         // this case is complicated we need to "stretch" dimensions into eachother
         assert(false && "not yet implemented");
-        unreachable();
+        std::unreachable();
     }
 
     if (ptr->diff().size()) Node::propagate(state);
@@ -512,7 +513,7 @@ SizeInfo binaryop_calculate_sizeinfo(
 
     // not possible for us to be dynamic and none of our predecessors to be
     assert(false && "not implemeted");
-    unreachable();
+    std::unreachable();
 }
 
 template <class BinaryOp>

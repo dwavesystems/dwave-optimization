@@ -19,6 +19,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 
 #include "_state.hpp"
 
@@ -83,7 +84,7 @@ bool calculate_integral(const std::vector<Array*>& operands) {
     }
 
     assert(false && "not implemeted yet");
-    unreachable();
+    std::unreachable();
 }
 
 template <class BinaryOp>
@@ -142,7 +143,7 @@ ValuesInfo calculate_values_info(const std::vector<Array*>& operands) {
     }
 
     assert(false && "not implemeted yet");
-    unreachable();
+    std::unreachable();
 }
 
 template <class BinaryOp>

@@ -32,16 +32,3 @@ typedef std::int64_t ssize_t;
 #include <sys/types.h>  // for ssize_t
 
 #endif
-
-namespace dwave::optimization {
-
-// backport unreachable from c++23
-[[noreturn]] inline void unreachable() {
-#if defined(_MSC_VER) && !defined(__clang__)  // MSVC
-    __assume(false);
-#else  // GCC, Clang
-    __builtin_unreachable();
-#endif
-}
-
-}  // namespace dwave::optimization

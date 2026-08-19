@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <ranges>
 #include <unordered_set>
+#include <utility>
 #include <variant>
 
 #include "_state.hpp"
@@ -781,7 +782,7 @@ void AdvancedIndexingNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
     }
 
     assert(false and "should not be able to get here");
-    unreachable();
+    std::unreachable();
 }
 
 void AdvancedIndexingNode::revert(State& state) const {
@@ -1405,13 +1406,13 @@ SizeInfo basicindexing_calculate_sizeinfo(
         } else if (start < 0 && stop >= 0) {
             // -start:stop:step - imposes a nonlinear maximum size
             assert(false && "not linear, handled above");
-            unreachable();
+            std::unreachable();
         } else if (start < 0 && stop < 0) {
             // -start:-stop:step - imposes a maximum size
             sizeinfo.max = num_per_row * (std::max<ssize_t>(stop - start, 0) + step - 1) / step;
         } else {
             assert(false && "shouldn't be reachable");
-            unreachable();
+            std::unreachable();
         }
     }
 

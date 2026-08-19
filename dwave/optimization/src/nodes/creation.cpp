@@ -14,6 +14,7 @@
 
 #include "dwave-optimization/nodes/creation.hpp"
 
+#include <utility>
 #include <variant>
 
 #include "_state.hpp"
@@ -109,7 +110,7 @@ std::vector<double> arange(const ssize_t start, const ssize_t stop, const ssize_
         }
     } else {
         assert(false && "0 step not allowed");
-        unreachable();
+        std::unreachable();
     }
 
     return arange;
@@ -178,7 +179,7 @@ std::pair<double, double> calculate_values_minmax(
     }
 
     assert(false && "zero step not allowed");
-    unreachable();
+    std::unreachable();
 }
 
 const SizeInfo calculate_arange_sizeinfo(
@@ -226,7 +227,7 @@ const SizeInfo calculate_arange_sizeinfo(
         );
     } else {
         assert(false && "unreachable");
-        unreachable();
+        std::unreachable();
     }
 
     // Handles all cases EXCEPT the following: "Exactly one predecessor, it
@@ -423,7 +424,7 @@ void ARangeNode::propagate(State& state) const {
         }
     } else {
         assert(false && "zero step not allowed");
-        unreachable();
+        std::unreachable();
     }
 
     if (ptr->diff().size()) Node::propagate(state);

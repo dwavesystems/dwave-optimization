@@ -15,6 +15,7 @@
 #include "dwave-optimization/nodes/lp.hpp"
 
 #include <string>
+#include <utility>
 
 #include "../simplex.hpp"
 #include "_state.hpp"
@@ -433,7 +434,7 @@ void LinearProgramNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
     if (check_and_replace(lb_ptr_)) return;
     if (check_and_replace(ub_ptr_)) return;
 
-    unreachable();
+    std::unreachable();
     assert(false and "should never get here");
 }
 

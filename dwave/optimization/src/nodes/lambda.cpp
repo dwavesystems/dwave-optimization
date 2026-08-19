@@ -14,6 +14,8 @@
 
 #include "dwave-optimization/nodes/lambda.hpp"
 
+#include <utility>
+
 #include "_state.hpp"
 #include "dwave-optimization/array.hpp"
 #include "dwave-optimization/graph.hpp"
@@ -352,7 +354,7 @@ void AccumulateZipNode::propagate(State& state) const {
             data->emplace_back(val);
         } else {
             assert(false && "index is too large for current buffer");
-            unreachable();
+            std::unreachable();
         }
     }
 
