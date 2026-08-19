@@ -1,3 +1,5 @@
 ---
+features:
+  - Compile C++ library with C++23.
 other:
   - Build Windows wheels with LLVM rather than MSVC.
