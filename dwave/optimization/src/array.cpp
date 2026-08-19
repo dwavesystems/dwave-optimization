@@ -241,8 +241,6 @@ std::vector<ssize_t> broadcast_shapes(
     std::vector<ssize_t> shape(std::max(lhs.size(), rhs.size()));
 
     // Walk backwards through the shapes, checking for dimension compatibility.
-    // Technically span::rbegin() etc are c++23 features but it seems to work on
-    // all the compilers we care about. Whereas the c++20 ranges::rbegin() etc do not.
     auto lit = lhs.rbegin();
     const auto lend = lhs.rend();
     auto rit = rhs.rbegin();

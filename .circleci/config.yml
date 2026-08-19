@@ -412,7 +412,7 @@ workflows:
           name: cpp-gcc-<< matrix.gcc-version >>
           matrix:
             parameters:
-              gcc-version: ["12", "latest"]
+              gcc-version: ["14", "latest"]
       - cpp-macOS
       - serialization:
           requires:

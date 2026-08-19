@@ -1193,14 +1193,7 @@ void ResizeNode::initialize_state(State& state) const {
     const ssize_t size = this->size();  // the desired size of our state
     assert(size >= 0);                  // we're never dynamic
 
-    std::vector<double> values;
-    values.reserve(size);
-
-    // Fill in from our predecessor, up to our size.
-    // In c++23 we could use append_range(...) which would be nicer.
-    for (const auto& v : array_ptr_->view(state) | std::views::take(size)) {
-        values.emplace_back(v);
-    }
+    auto values = std::ranges::to<std::vector>(array_ptr_->view(state) | std::views::take(size));
 
     // Now fill in everything else with our fill value
     assert(

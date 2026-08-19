@@ -301,13 +301,8 @@ void WhereNode::initialize_state(State& state) const {
         std::vector<double> values;
         values.reserve(condition.size());
 
-        // zip would be very nice here...
-        for (
-            auto cit = condition.begin(), xit = x.begin(), yit = y.begin();
-            cit != std::default_sentinel;
-            ++cit, ++xit, ++yit
-        ) {
-            values.emplace_back((*cit) ? *xit : *yit);
+        for (const auto& [ci, xi, yi] : std::views::zip(condition, x, y)) {
+            values.emplace_back(ci ? xi : yi);
         }
 
         emplace_data_ptr_<WhereNodeData>(state, std::move(values));

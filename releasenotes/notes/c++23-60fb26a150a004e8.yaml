@@ -1,5 +1,7 @@
 ---
 features:
   - Compile C++ library with C++23.
+upgrade:
+  - Drop support for GCC<14.
 other:
   - Build Windows wheels with LLVM rather than MSVC.
