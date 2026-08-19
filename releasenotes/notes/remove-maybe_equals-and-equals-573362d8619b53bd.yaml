@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    Remove ``Symbol.equals()`` and ``Symbol.maybe_equals()`` methods.
+    Use ``Symbol.id()`` to test whether two symbols are identical.

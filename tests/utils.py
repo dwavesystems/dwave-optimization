@@ -164,22 +164,6 @@ class SymbolTests(abc.ABC, unittest.TestCase):
         The symbols must all be unique from eachother.
         """
 
-    def test_equality(self):
-        DEFINITELY = 2
-        for x in self.generate_symbols():
-            self.assertEqual(DEFINITELY, x.maybe_equals(x))
-            self.assertTrue(x.equals(x))
-
-        for x, y in zip(self.generate_symbols(), self.generate_symbols()):
-            self.assertTrue(DEFINITELY, x.maybe_equals(y))
-            self.assertTrue(x.equals(y))
-
-    def test_inequality(self):
-        MAYBE = 1
-        for x, y in itertools.combinations(self.generate_symbols(), 2):
-            self.assertLessEqual(x.maybe_equals(y), MAYBE)
-            self.assertFalse(x.equals(y))
-
     def test_iter_symbols(self):
         for x in self.generate_symbols():
             model = x.model
@@ -190,7 +174,7 @@ class SymbolTests(abc.ABC, unittest.TestCase):
 
             self.assertTrue(x.shares_memory(y))
             self.assertIs(type(x), type(y))
-            self.assertTrue(x.equals(y))
+            self.assertEqual(x.id(), y.id())
 
     def test_namespace(self):
         x = next(self.generate_symbols())
@@ -213,7 +197,6 @@ class SymbolTests(abc.ABC, unittest.TestCase):
 
                     self.assertFalse(x.shares_memory(y))
                     self.assertIs(type(x), type(y))
-                    self.assertTrue(x.equals(y))
 
     def test_state_serialization(self):
         for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:

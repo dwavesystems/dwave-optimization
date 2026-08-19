@@ -422,32 +422,6 @@ cdef class Roll(ArraySymbol):
             axes.append(cppaxes[i])
         zf.writestr(directory + "axis.json", encoder.encode(axes))
 
-    def maybe_equals(self, other):
-        # inherit docstring from ArraySymbol
-        cdef Py_ssize_t NOT = 0
-        cdef Py_ssize_t MAYBE = 1
-        cdef Py_ssize_t DEFINITELY = 2
-
-        equality = super().maybe_equals(other)
-        if (equality != MAYBE):
-            return equality
-
-        if not isinstance(other, Roll):
-            return NOT
-
-        # check the axis parameter
-        if not equal(self.ptr.axes().begin(), self.ptr.axes().end(), (<Roll>other).ptr.axes().begin()):
-            return NOT
-
-        # check the shift
-        # if we have two predecessors than so must other (based on the super() check earlier)
-        # and the predecessor equality will be checked later.
-        if self.node_ptr.predecessors().size() != 2:
-            if self.ptr.shift() != (<Roll>other).ptr.shift():
-                return NOT
-
-        return MAYBE
-
     cdef RollNode* ptr
 
 _register(Roll, typeid(RollNode))

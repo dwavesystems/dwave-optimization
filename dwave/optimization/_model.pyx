@@ -1136,46 +1136,6 @@ cdef class Symbol:
         """
         return self.node_ptr.deterministic_state()
 
-    def equals(self, other):
-        """Compare whether two symbols are identical.
-
-        Equal symbols represent the same quantity in the model.
-
-        Args:
-            other (:class:`.Symbol`): A symbol for comparison.
-
-        Returns:
-            bool: True if the symbols are identical.
-
-        Note that comparing symbols across models is expensive.
-
-        Examples:
-            This example creates two symbols that are the sum of the same two
-            :class:`~dwave.optimization.symbols.IntegerVariable` symbols
-            and a third that is the difference between them, and checks
-            equality.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(3)
-            >>> j = model.integer(3)
-            >>> a = i + j
-            >>> b = i + j
-            >>> c = i - j
-            >>> print(a.equals(a), a.equals(b), a.equals(c))
-            True True False
-
-        See Also:
-            :meth:`~Symbol.maybe_equals`: A faster alternative for equality
-            testing but that can return false positives.
-        """
-        cdef Py_ssize_t maybe = self.maybe_equals(other)
-        if maybe != 1:
-            return True if maybe else False
-
-        # todo: caching
-        return all(p.equals(q) for p, q in zip(self.iter_predecessors(), other.iter_predecessors()))
-
     cpdef bool expired(self) noexcept:
         return deref(self.expired_ptr)
 
@@ -1302,9 +1262,6 @@ cdef class Symbol:
         See Also:
             *   :meth:`.shares_memory`: ``a.shares_memory(b)`` is equivalent to
                 ``a.id() == b.id()``.
-            *   :meth:`.equals`: ``a.equals(b)`` returns ``True`` if
-                ``a.id() == b.id()``; the inverse is not necessarily true.
-            *   :meth:`~Symbol.maybe_equals`
 
         """
         # We refer to the node_ptr, which is not necessarily the address of the
@@ -1348,7 +1305,7 @@ cdef class Symbol:
             >>> c = model.constant([[21, 11], [10, 4]])
             >>> a = c * i
             >>> b = a.sum()
-            >>> a.equals(next(b.iter_predecessors()))
+            >>> a.id() == next(b.iter_predecessors()).id()
             True
 
             .. figure:: /_images/optimization/iter_predecessors.svg
@@ -1383,7 +1340,7 @@ cdef class Symbol:
             >>> model = Model()
             >>> x = model.binary()
             >>> y = x + 5
-            >>> y.equals(next(x.iter_successors()))
+            >>> y.id() == next(x.iter_successors()).id()
             True
 
             .. figure:: /_images/optimization/iter_successors.svg
@@ -1403,73 +1360,6 @@ cdef class Symbol:
         while it != end:
             yield symbol_from_ptr(self.model, deref(it).ptr)
             inc(it)
-
-    def maybe_equals(self, other):
-        """Compare to another symbol.
-
-        This method exists because a complete equality test can be expensive.
-
-        Args:
-            other (:class:`.Symbol`): Another symbol in the model's
-                :term:`directed acyclic graph`.
-
-        Returns:
-            int: Supported return values are the following.
-
-            *   ``0``---Not equal (with certainty)
-            *   ``1``---Might be equal (no guarantees); a complete equality test
-                is necessary
-            *   ``2``---Are equal (with certainty)
-
-        Examples:
-            This example compares
-            :class:`~dwave.optimization.symbols.IntegerVariable` symbols
-            of different sizes.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(3, lower_bound=0, upper_bound=20)
-            >>> j = model.integer(3, lower_bound=-10, upper_bound=10)
-            >>> k = model.integer(5, upper_bound=55)
-            >>> i.maybe_equals(j)
-            1
-            >>> i.maybe_equals(k)
-            0
-
-        See Also:
-            :meth:`.equals`: A guaranteed but more expensive equality test.
-        """
-        cdef Py_ssize_t NOT = 0
-        cdef Py_ssize_t MAYBE = 1
-        cdef Py_ssize_t DEFINITELY = 2
-
-        # If we're the same object, then we're equal
-        if self is other:
-            return DEFINITELY
-
-        if not isinstance(other, Symbol):
-            return NOT
-
-        # Should we require identical types?
-        if not isinstance(self, type(other)) and not isinstance(other, type(self)):
-            return NOT
-
-        cdef Symbol rhs = other
-
-        if self.shares_memory(rhs):
-            return DEFINITELY
-
-        # Check is that we have the right number of predecessors
-        if self.node_ptr.predecessors().size() != rhs.node_ptr.predecessors().size():
-            return NOT
-
-        # Finally, out prdecessors should have the same types in the same order
-        for p, q in zip(self.iter_predecessors(), rhs.iter_predecessors()):
-            # Should we require identical types?
-            if not isinstance(p, type(q)) and not isinstance(q, type(p)):
-                return NOT
-
-        return MAYBE
 
     def reset_state(self, Py_ssize_t index):
         """Reset the state of a symbol and any successor symbols.
@@ -2130,26 +2020,6 @@ cdef class ArraySymbol(Symbol):
         """
         from dwave.optimization.symbols import Max  # avoid circular import
         return Max(self, axis=axis, initial=initial)
-
-    def maybe_equals(self, other):
-        # note: docstring inherited from Symbol.maybe_equal()
-        cdef Py_ssize_t maybe = super().maybe_equals(other)
-        cdef Py_ssize_t NOT = 0
-        cdef Py_ssize_t MAYBE = 1
-        cdef Py_ssize_t DEFINITELY = 2
-
-        if maybe != 1:
-            return DEFINITELY if maybe else NOT
-
-        if not isinstance(other, ArraySymbol):
-            return NOT
-
-        if self.shape() != other.shape():
-            return NOT
-
-        # I guess we don't care about strides
-
-        return MAYBE
 
     def min(self, *, axis=None, initial=_NoValue):
         r"""Create a symbol that returns the minimum value of the array.

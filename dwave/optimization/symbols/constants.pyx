@@ -228,19 +228,6 @@ cdef class Constant(ArraySymbol):
             # any noticeable impact on performance (numpy==1.26.3).
             np.save(f, np.asarray(self), allow_pickle=False)
 
-    def maybe_equals(self, other):
-        cdef Py_ssize_t maybe = super().maybe_equals(other)
-        cdef Py_ssize_t NOT = 0
-        cdef Py_ssize_t MAYBE = 1
-        cdef Py_ssize_t DEFINITELY = 2
-        if maybe != MAYBE:
-            return DEFINITELY if maybe else NOT
-
-        # avoid NumPy deprecation warning by casting to bool. But also
-        # `bool` in this namespace is a C++ class so we do an explicit if else
-        equal = (np.asarray(self) == np.asarray(other)).all()
-        return DEFINITELY if equal else NOT
-
     def state(self, Py_ssize_t index=0, *, bool copy = True):
         """Return the state of the symbol.
 

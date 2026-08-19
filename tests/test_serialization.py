@@ -45,7 +45,7 @@ class TestSerialization(unittest.TestCase):
 
             # All nodes in the model need to match, and to have the same states
             for ls, rs in zip(lhs.iter_symbols(), rhs.iter_symbols()):
-                self.assertTrue(ls.maybe_equals(rs))
+                self.assertIs(type(ls), type(rs))
 
                 # If the nodes have states, check that they are all equal
                 # If all are maybe_equal then this amounts to a full equality
