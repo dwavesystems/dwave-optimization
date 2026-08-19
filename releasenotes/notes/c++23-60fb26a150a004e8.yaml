@@ -1,0 +1,3 @@
+---
+other:
+  - Build Windows wheels with LLVM rather than MSVC.

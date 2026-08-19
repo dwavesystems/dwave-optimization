@@ -19,11 +19,13 @@ project(
     ).stdout(),
 )
 
-# We want some debugging symbols
-add_project_arguments(['-g1'], language: ['cpp'])
-
 cpp = meson.get_compiler('cpp')
 py = import('python').find_installation(pure: false)
+
+# We want some debugging symbols
+if cpp.has_argument('-g1')
+  add_project_arguments('-g1', language: 'cpp')
+endif
 
 dwave_optimization_include = include_directories('dwave/optimization/include/')
 dwave_optimization_src = [
