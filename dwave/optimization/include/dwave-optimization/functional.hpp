@@ -23,54 +23,54 @@ namespace dwave::optimization::functional {
 
 template <class T>
 struct abs {
-    constexpr T operator()(const T& x) const { return std::abs(x); }
+    static constexpr T operator()(const T& x) { return std::abs(x); }
 };
 
 template <class T>
 struct cos {
-    auto operator()(const T& num) const { return std::cos(num); }
+    static auto operator()(const T& num) { return std::cos(num); }
 };
 
 template <class T>
 struct exp {
-    constexpr auto operator()(const T& x) const { return std::exp(x); }
+    static constexpr auto operator()(const T& x) { return std::exp(x); }
 };
 
 template <class T>
 struct expit {
-    constexpr double operator()(const T& x) const { return 1.0 / (1.0 + std::exp(-1. * x)); }
+    static constexpr double operator()(const T& x) { return 1.0 / (1.0 + std::exp(-1. * x)); }
 };
 
 template <class T>
 struct log {
-    constexpr auto operator()(const T& x) const { return std::log(x); }
+    static constexpr auto operator()(const T& x) { return std::log(x); }
 };
 
 template <class T>
 struct logical {
-    constexpr bool operator()(const T& x) const { return x; }
+    static constexpr bool operator()(const T& x) { return x; }
 };
 
 template <class T>
 struct logical_xor {
-    constexpr bool operator()(const T& x, const T& y) const {
+    static constexpr bool operator()(const T& x, const T& y) {
         return static_cast<bool>(x) != static_cast<bool>(y);
     }
 };
 
 template <class T>
 struct max {
-    constexpr T operator()(const T& x, const T& y) const { return std::max(x, y); }
+    static constexpr T operator()(const T& x, const T& y) { return std::max(x, y); }
 };
 
 template <class T>
 struct min {
-    constexpr T operator()(const T& x, const T& y) const { return std::min(x, y); }
+    static constexpr T operator()(const T& x, const T& y) { return std::min(x, y); }
 };
 
 template <class T>
 struct modulus {
-    constexpr T operator()(const T& x, const T& y) const {
+    static constexpr T operator()(const T& x, const T& y) {
         // Copy numpy behavior and return 0 for `x % 0`
         if (y == 0) return 0;
 
@@ -92,12 +92,12 @@ struct modulus {
 
 template <class T>
 struct rint {
-    constexpr auto operator()(const T& x) const { return std::rint(x); }
+    static constexpr auto operator()(const T& x) { return std::rint(x); }
 };
 
 template <class T>
 struct safe_divides {
-    constexpr T operator()(const T& lhs, const T& rhs) const {
+    static constexpr T operator()(const T& lhs, const T& rhs) {
         if (!rhs) return 0;
         return lhs / rhs;
     }
@@ -105,22 +105,22 @@ struct safe_divides {
 
 template <class T>
 struct sin {
-    auto operator()(const T& num) const { return std::sin(num); }
+    static auto operator()(const T& num) { return std::sin(num); }
 };
 
 template <class T>
 struct square {
-    constexpr T operator()(const T& x) const { return x * x; }
+    static constexpr T operator()(const T& x) { return x * x; }
 };
 
 template <class T>
 struct square_root {
-    constexpr auto operator()(const T& x) const { return std::sqrt(x); }
+    static constexpr auto operator()(const T& x) { return std::sqrt(x); }
 };
 
 template <class T>
 struct tanh {
-    auto operator()(const T& num) const { return std::tanh(num); }
+    static auto operator()(const T& num) { return std::tanh(num); }
 };
 
 }  // namespace dwave::optimization::functional
