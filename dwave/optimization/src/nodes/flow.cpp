@@ -178,11 +178,12 @@ SizeInfo ExtractNode::sizeinfo() const { return this->sizeinfo_; }
 
 struct WhereNodeData : ArrayNodeStateData {
     // Initialize the state with the values given
-    explicit WhereNodeData(const std::ranges::view auto& values) noexcept :
-        ArrayNodeStateData(std::vector<double>(values.begin(), values.begin() + values.size())) {}
-
     explicit WhereNodeData(std::vector<double>&& values) noexcept :
         ArrayNodeStateData(std::move(values)) {}
+
+    template<std::ranges::range R>
+    explicit WhereNodeData(R&& values) noexcept :
+        ArrayNodeStateData(std::ranges::to<std::vector<double>>(std::forward<R>(values))) {}
 
     // Update the buffer according to the given diffs
     void apply_diffs(

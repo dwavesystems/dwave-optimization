@@ -35,9 +35,9 @@ class ArrayStateData {
     explicit ArrayStateData(std::vector<double>&& values) noexcept :
         buffer(std::move(values)), size_(buffer.size()), previous_size_(buffer.size()) {}
 
-    template <std::ranges::range Range>
-    explicit ArrayStateData(Range&& values) noexcept :
-        ArrayStateData(std::vector<double>(values.begin(), values.end())) {}
+    template <std::ranges::range R>
+    explicit ArrayStateData(R&& values) noexcept :
+        ArrayStateData(std::ranges::to<std::vector<double>>(std::forward<R>(values))) {}
 
     // Assign new values to the state starting from an offset, tracking the changes from the
     // previous state to the new. If the original buffer extends past the new range of values,
@@ -272,9 +272,9 @@ class ArrayNodeStateData : public ArrayStateData, public NodeStateData {
     explicit ArrayNodeStateData(std::vector<double>&& values) noexcept :
         ArrayStateData(std::move(values)), NodeStateData() {}
 
-    template <std::ranges::random_access_range Range>
-    explicit ArrayNodeStateData(Range&& values) noexcept :
-        ArrayNodeStateData(std::vector<double>(values.begin(), values.begin() + values.size())) {}
+    template <std::ranges::range R>
+    explicit ArrayNodeStateData(R&& values) noexcept :
+        ArrayNodeStateData(std::ranges::to<std::vector<double>>(std::forward<R>(values))) {}
 
     std::unique_ptr<NodeStateData> copy() const override {
         return std::make_unique<ArrayNodeStateData>(*this);
