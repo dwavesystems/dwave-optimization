@@ -35,20 +35,12 @@ class Matrix {
     Matrix(std::span<const double> data, ssize_t n, ssize_t m) :
         Matrix(std::vector<double>(data.begin(), data.end()), n, m) {}
 
-    double& operator()(ssize_t i, ssize_t j) {
-        if (i < 0) i += n_;
-        if (j < 0) j += m_;
-        assert(i >= 0 && i < n_);
-        assert(j >= 0 && j < m_);
-        return buffer_[i * m_ + j];
-    }
-
-    const double& operator()(ssize_t i, ssize_t j) const {
-        if (i < 0) i += n_;
-        if (j < 0) j += m_;
-        assert(i >= 0 && i < n_);
-        assert(j >= 0 && j < m_);
-        return buffer_[i * m_ + j];
+    auto&& operator[](this auto&& self, ssize_t i, ssize_t j) {
+        if (i < 0) i += self.n_;
+        if (j < 0) j += self.m_;
+        assert(i >= 0 && i < self.n_);
+        assert(j >= 0 && j < self.m_);
+        return self.buffer_[i * self.m_ + j];
     }
 
     ssize_t n() const { return n_; }
@@ -67,7 +59,7 @@ ssize_t _pivot_col(Matrix& T, double tolerance, bool bland) {
     double min_val = std::numeric_limits<double>::infinity();
     ssize_t col = -1;
     for (ssize_t j = 0; j < T.m() - 1; j++) {
-        double val = T(-1, j);
+        double val = T[-1, j];
         if (val < -tolerance) {
             // Bland's rule: return the first index with negative value
             if (bland) return j;
@@ -95,9 +87,9 @@ ssize_t _pivot_row(
     double min_q = std::numeric_limits<double>::infinity();
     std::vector<ssize_t> min_rows;
     for (ssize_t i = 0; i < T.n() - k; i++) {
-        if (T(i, pivcol) <= tolerance) continue;
+        if (T[i, pivcol] <= tolerance) continue;
 
-        double q = T(i, -1) / T(i, pivcol);
+        double q = T[i, -1] / T[i, pivcol];
         if (q < min_q) {
             min_rows.clear();
             min_rows.push_back(i);
@@ -132,18 +124,18 @@ void _apply_pivot(
 ) {
     basis[pivrow] = pivcol;
 
-    double pivval = T(pivrow, pivcol);
+    double pivval = T[pivrow, pivcol];
 
     for (ssize_t j = 0; j < T.m(); j++) {
-        T(pivrow, j) /= pivval;
+        T[pivrow, j] /= pivval;
     }
 
     for (ssize_t irow = 0; irow < T.n(); irow++) {
         if (irow == pivrow) continue;
 
-        double val = T(irow, pivcol);
+        double val = T[irow, pivcol];
         for (ssize_t j = 0; j < T.m(); j++) {
-            T(irow, j) -= T(pivrow, j) * val;
+            T[irow, j] -= T[pivrow, j] * val;
         }
     }
 }
@@ -167,7 +159,7 @@ SolveResult _solve_simplex(
             if (basis[pivrow] <= T.m() - 2) continue;
 
             for (ssize_t col = 0; col < T.m() - 1; col++) {
-                if (std::abs(T(pivrow, col)) > tolerance) {
+                if (std::abs(T[pivrow, col]) > tolerance) {
                     _apply_pivot(T, basis, pivrow, col, tolerance);
                     status.num_iterations++;
                     break;
@@ -225,31 +217,31 @@ Matrix construct_T(
     // Copy in A to T[:n, :m] and b.T to T[:, -1]
     for (ssize_t i = 0; i < A.n(); i++) {
         double sign = b[i] < 0 ? -1.0 : 1.0;
-        T(i, -1) = sign * b[i];
+        T[i, -1] = sign * b[i];
         for (ssize_t j = 0; j < A.m(); j++) {
-            T(i, j) = sign * A(i, j);
+            T[i, j] = sign * A[i, j];
         }
     }
 
     // T[:, m:m+n] = I
     for (ssize_t i = 0; i < A.n(); i++) {
-        T(i, A.m() + i) = 1;
+        T[i, A.m() + i] = 1;
     }
 
     // Row objective
     for (ssize_t i = 0; i < A.m(); i++) {
-        T(A.n(), i) = c[i];
+        T[A.n(), i] = c[i];
     }
-    T(A.n(), -1) = c0;
+    T[A.n(), -1] = c0;
 
     // Row pseudo objective
     for (ssize_t j = 0; j < A.m(); j++) {
         for (ssize_t i = 0; i < A.n(); i++) {
-            T(A.n() + 1, j) -= T(i, j);
+            T[A.n() + 1, j] -= T[i, j];
         }
     }
     for (ssize_t i = 0; i < A.n(); i++) {
-        T(-1, -1) -= T(i, -1);
+        T[-1, -1] -= T[i, -1];
     }
 
     return T;
@@ -277,18 +269,18 @@ SolveResult _linprog_simplex(
     SolveResult status =
         _solve_simplex(T, A.n(), basis, max_iterations, tolerance, phase, bland, 0);
 
-    if (std::abs(T(-1, -1)) < tolerance) {
+    if (std::abs(T[-1, -1]) < tolerance) {
         Matrix newT(A.n() + 1, A.m() + 1);
 
         // newT[:, :m] = T[:-1, :m]
         for (ssize_t i = 0; i < newT.n(); i++) {
             for (ssize_t j = 0; j < A.m(); j++) {
-                newT(i, j) = T(i, j);
+                newT[i, j] = T[i, j];
             }
         }
         // newT[:, -1] = T[:, -1]
         for (ssize_t i = 0; i < newT.n(); i++) {
-            newT(i, -1) = T(i, -1);
+            newT[i, -1] = T[i, -1];
         }
 
         std::swap(T, newT);
@@ -311,7 +303,7 @@ SolveResult _linprog_simplex(
     std::vector<double> solution(A.m(), 0.0);
     for (ssize_t i = 0; i < A.n(); i++) {
         if (basis[i] < A.m()) {
-            solution[basis[i]] = T(i, -1);
+            solution[basis[i]] = T[i, -1];
         }
     }
     result.set_partial_solution(std::move(solution));
@@ -415,7 +407,7 @@ LP translate_LP_to_simple(
         if (!lb_is_unbounded(b_lb[i])) {
             // Copy the flipped constraint
             for (ssize_t j = 0; j < A.m(); j++) {
-                A_(A_row, j) = -A(i, j);
+                A_[A_row, j] = -A[i, j];
             }
             // Copy the flipped bound
             b[A_row] = -b_lb[i];
@@ -425,7 +417,7 @@ LP translate_LP_to_simple(
         if (!ub_is_unbounded(b_ub[i])) {
             // Copy the constraint
             for (ssize_t j = 0; j < A.m(); j++) {
-                A_(A_row, j) = A(i, j);
+                A_[A_row, j] = A[i, j];
             }
             // Copy the bound
             b[A_row] = b_ub[i];
@@ -437,7 +429,7 @@ LP translate_LP_to_simple(
     for (ssize_t i = 0; i < A_eq.n(); i++) {
         ssize_t A_row = i + A_constraint_count + upper_bounded_var_count;
         for (ssize_t j = 0; j < A_eq.m(); j++) {
-            A_(A_row, j) = A_eq(i, j);
+            A_[A_row, j] = A_eq[i, j];
         }
         b[A_row] = b_eq[i];
     }
@@ -449,7 +441,7 @@ LP translate_LP_to_simple(
         if (lb_is_unbounded(lb_[j]) && ub_is_unbounded(ub_[j])) {
             // Free variable, substitute xi = xi+ - xi-
             for (ssize_t i = 0; i < A_.n(); i++) {
-                A_(i, free_variable_index) = -A_(i, j);
+                A_[i, free_variable_index] = -A_[i, j];
             }
             c_[free_variable_index] = -c[j];
             free_variable_index++;
@@ -461,12 +453,12 @@ LP translate_LP_to_simple(
             c_[j] = -c_[j];
 
             for (ssize_t i = 0; i < A_.n(); i++) {
-                A_(i, j) *= -1;
+                A_[i, j] *= -1;
             }
         }
 
         if (!ub_is_unbounded(ub_[j])) {
-            A_(A_row, j) = 1;
+            A_[A_row, j] = 1;
             b[A_row] = ub_[j];
             A_row++;
         }
@@ -477,7 +469,7 @@ LP translate_LP_to_simple(
 
     // Add slack variables for inequalities
     for (ssize_t i = 0; i < slack_var_count; i++) {
-        A_(i, free_variable_index + i) = 1;
+        A_[i, free_variable_index + i] = 1;
     }
 
     // Substitute the lower bounds
@@ -487,7 +479,7 @@ LP translate_LP_to_simple(
             c0 += lb_[j] * c[j];
 
             for (ssize_t i = 0; i < A_.n(); i++) {
-                b[i] -= A_(i, j) * lb_[j];
+                b[i] -= A_[i, j] * lb_[j];
             }
         }
     }
