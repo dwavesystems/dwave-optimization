@@ -257,7 +257,7 @@ void BroadcastToNode::propagate(State& state) const {
 
     ssize_t size_diff = 0;
     if (this->size() != 0) {
-        for (Update update : deduplicate_diff_view(from_diff)) {
+        for (Update update : from_diff | views::deduplicate_diff) {
             // we need to convert from our predecessor's index to ours
             const ssize_t index = convert_predecessor_index_(update.index);
             assert(
@@ -1401,13 +1401,7 @@ void RollNode::propagate(State& state) const {
             if (array_ptr_->dynamic()) {
                 // One last case we need to worry about. If the array may have grown and then
                 // shrunk, we need to deduplicate the diff.
-                // We'd really like to use some of the nice C++20 range stuff and
-                // deduplicate_diff_view(), but alas some of the old Python images
-                // don't support deduplicate_diff_view with std::ranges::transform.
-                // So we have to do it manually with a copy.
-                std::vector<Update> updates(diff.begin(), diff.end());
-                deduplicate_diff(updates);
-                state_ptr->update(updates | std::views::transform(transform));
+                state_ptr->update(diff | views::deduplicate_diff | std::views::transform(transform));
             } else {
                 // Otherwise we just propagate the diff like normal under the assumption
                 // that our predecessor was efficient (not always true but nice to believe).
@@ -1461,10 +1455,7 @@ void RollNode::propagate(State& state) const {
 
             // Unlike the flat shift case we always deduplicate because each shift
             // operation is relatively expensive.
-            // See note there about the use of deduplicate_diff
-            std::vector<Update> updates(diff.begin(), diff.end());
-            deduplicate_diff(updates);
-            state_ptr->update(updates | std::views::transform(transform));
+            state_ptr->update(diff | views::deduplicate_diff | std::views::transform(transform));
         } else {
             // Either our size or our shifts have changed, so we might as well re-calculate
             // the whole thing.

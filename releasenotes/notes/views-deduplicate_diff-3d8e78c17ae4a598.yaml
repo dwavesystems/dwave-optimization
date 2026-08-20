@@ -1,0 +1,5 @@
+---
+features:
+  - Add C++ ``views::deduplicate_diff`` range adaptor closure.
+upgrade:
+  - Remove C++ ``deduplicate_diff_view()`` class.
