@@ -268,10 +268,8 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
         // This is the easy case - all we need to do is iterate over both as flat arrays
         values.reserve(lhs_ptr->size(state));
 
-        auto it = lhs_ptr->begin(state);
-        for (const double val : rhs_ptr->view(state)) {
-            values.emplace_back(op(*it, val));  // order is important
-            ++it;
+        for (const auto& [x, y] : std::views::zip(lhs_ptr->view(state), rhs_ptr->view(state))) {
+            values.emplace_back(op(x, y));
         }
 
     } else if (lhs_ptr->size() == 1) {
