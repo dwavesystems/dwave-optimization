@@ -14,6 +14,8 @@
 
 #include "dwave-optimization/nodes/unaryop.hpp"
 
+#include <utility>
+
 #include "_state.hpp"
 
 namespace dwave::optimization {
@@ -58,7 +60,7 @@ std::pair<double, double> calculate_values_minmax(const Array* array_ptr) {
             return std::make_pair(low, high);
         } else if (low >= 0) {
             assert(false && "min > max");
-            unreachable();
+            std::unreachable();
         } else if (high >= 0) {
             return std::pair<double, double>(0.0, std::max<double>(-low, high));
         } else {
@@ -99,7 +101,7 @@ std::pair<double, double> calculate_values_minmax(const Array* array_ptr) {
     }
 
     assert(false && "not implemeted yet");
-    unreachable();
+    std::unreachable();
 }
 
 template <class UnaryOp>

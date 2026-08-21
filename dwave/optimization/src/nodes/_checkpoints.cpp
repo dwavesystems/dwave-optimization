@@ -80,7 +80,7 @@ void DiffCheckpoint::revert_updates(std::vector<Update> updates) {
 
     // We want to track the updates that would revert the changes from the
     // current state.
-    // In C++23 we could use assign_range() which would be nicer
+    // We'd like to use append_range(), but unfortunately gcc14 doesn't support it.
     auto relevant = std::move(updates) | std::views::take(drop_) | std::views::reverse |
                     std::views::transform([](const Update& up) { return up.inverse(); });
     updates_.emplace_back(relevant.begin(), relevant.end());

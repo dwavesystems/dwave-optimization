@@ -532,7 +532,7 @@ struct DisjointBitSetsNodeData_ : CheckpointableState, NodeStateData {
         }
 
         assert(false and "disjoint set elements must be in exactly one bit-set once");
-        unreachable();
+        std::unreachable();
     }
 
     void commit() {

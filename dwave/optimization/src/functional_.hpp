@@ -107,7 +107,7 @@ struct Add : BinaryFunctionMixin<Add<double>> {
     ///
     /// The `rhs` may be `result_type`. Some binary operations might support
     /// additional types.
-    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
+    static result_type operator()(const DType auto& lhs, const DType auto& rhs) noexcept {
         return lhs + rhs;
     }
 
@@ -199,10 +199,10 @@ struct LogicalAnd : BinaryFunctionMixin<LogicalAnd> {
 
     /// @brief Return the logical and of `lhs` and `rhs`.
     /// @copydetails Add::operator()
-    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
+    static result_type operator()(const DType auto& lhs, const DType auto& rhs) noexcept {
         return lhs and rhs;
     }
-    reduction_type operator()(reduction_type lhs, const DType auto& rhs) const noexcept {
+    static reduction_type operator()(reduction_type lhs, const DType auto& rhs) noexcept {
         if (rhs == 0) lhs.num_falsy_ += 1;
         return lhs;
     }
@@ -263,10 +263,10 @@ struct LogicalOr : BinaryFunctionMixin<LogicalOr> {
 
     /// @brief Return the logical or of `lhs` and `rhs`.
     /// @copydetails Add::operator()
-    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
+    static result_type operator()(const DType auto& lhs, const DType auto& rhs) noexcept {
         return lhs or rhs;
     }
-    reduction_type operator()(reduction_type lhs, const DType auto& rhs) const noexcept {
+    static reduction_type operator()(reduction_type lhs, const DType auto& rhs) noexcept {
         lhs.num_truthy_ += (rhs != 0);
         return lhs;
     }
@@ -315,7 +315,7 @@ struct Maximum : BinaryFunctionMixin<Maximum<T>> {
 
     /// @brief Return the max of `lhs` and `rhs`.
     /// @copydetails Add::operator()
-    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
+    static result_type operator()(const DType auto& lhs, const DType auto& rhs) noexcept {
         return std::max<result_type>(lhs, rhs);
     }
 
@@ -359,7 +359,7 @@ struct Minimum : BinaryFunctionMixin<Minimum<T>> {
 
     /// @brief Return the min of `lhs` and `rhs`.
     /// @copydetails Add::operator()
-    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
+    static result_type operator()(const DType auto& lhs, const DType auto& rhs) noexcept {
         return std::min<result_type>(lhs, rhs);
     }
 
@@ -419,10 +419,10 @@ struct Multiply : BinaryFunctionMixin<Multiply<T>> {
 
     /// @brief Return the product of `lhs` and `rhs`.
     /// @copydetails Add::operator()
-    result_type operator()(const DType auto& lhs, const DType auto& rhs) const noexcept {
+    static result_type operator()(const DType auto& lhs, const DType auto& rhs) noexcept {
         return lhs * rhs;
     }
-    reduction_type operator()(reduction_type lhs, const DType auto& rhs) const noexcept {
+    static reduction_type operator()(reduction_type lhs, const DType auto& rhs) noexcept {
         if (rhs == 0) {
             lhs.num_zero_ += 1;
         } else {

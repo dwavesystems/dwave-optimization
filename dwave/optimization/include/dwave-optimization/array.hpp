@@ -326,29 +326,23 @@ struct Update {
     friend std::ostream& operator<<(std::ostream& os, const Update& update);
 
     // Whether the given index was placed when the state was grown
-    bool placed() const {
-        // We'd like to constexpr this, but std::isnan is not constexpr in C++20
-        return std::isnan(old);
-    }
+    constexpr bool placed() const { return std::isnan(old); }
 
     // Whether the given index was removed when the state was resized
-    bool removed() const {
-        // We'd like to constexpr this, but std::isnan is not constexpr in C++20
-        return std::isnan(value);
-    }
+    constexpr bool removed() const { return std::isnan(value); }
 
     // Returns true if the Update's goes from nothing to nothing (index can be anything)
-    bool null() const { return std::isnan(old) && std::isnan(value); }
+    constexpr bool null() const { return std::isnan(old) && std::isnan(value); }
 
-    double old_or(double val) const { return std::isnan(old) ? val : old; }
+    constexpr double old_or(double val) const { return std::isnan(old) ? val : old; }
 
-    double value_or(double val) const { return std::isnan(value) ? val : value; }
+    constexpr double value_or(double val) const { return std::isnan(value) ? val : value; }
 
     // Return true if the update does nothing - that is old and value are the same.
-    bool identity() const { return null() || old == value; }
+    constexpr bool identity() const { return null() || old == value; }
 
     // Return the update that would undo the current update
-    Update inverse() const { return Update(index, value, old); }
+    constexpr Update inverse() const { return Update(index, value, old); }
 
     // Use NaN to represent the "nothing" value used in placements/removals
     static constexpr double nothing = std::numeric_limits<double>::signaling_NaN();

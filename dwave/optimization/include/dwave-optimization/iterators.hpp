@@ -19,6 +19,7 @@
 #include <concepts>
 #include <memory>
 #include <span>
+#include <utility>
 
 #include "dwave-optimization/common.hpp"  // for ssize_t
 #include "dwave-optimization/typing.hpp"
@@ -461,7 +462,7 @@ requires(
                 case FormatCharacter::signedlonglong_:
                     return *static_cast<const signed long long*>(ptr);
             }
-            unreachable();
+            std::unreachable();
         }
     }
 

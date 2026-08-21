@@ -112,8 +112,10 @@ class NumberNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     // Initialize a state from an existing container, making a copy.
     template <std::ranges::range R>
-    void initialize_state(State& state, const R& values) const {
-        return initialize_state(state, std::vector<double>(values.begin(), values.end()));
+    void initialize_state(State& state, R&& values) const {
+        return initialize_state(
+            state, std::ranges::to<std::vector<double>>(std::forward<R>(values))
+        );
     }
 
     /// @copydoc Node::propagate()
@@ -410,8 +412,10 @@ class BinaryNode : public IntegerNode {
 
     /// Initialize a state from an existing container, making a copy.
     template <std::ranges::range R>
-    void initialize_state(State& state, const R& values) const {
-        return initialize_state(state, std::vector<double>(values.begin(), values.end()));
+    void initialize_state(State& state, R&& values) const {
+        return initialize_state(
+            state, std::ranges::to<std::vector<double>>(std::forward<R>(values))
+        );
     }
 
     /// ************************** BinaryNode methods **************************

@@ -16,6 +16,7 @@
 
 #include <optional>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
@@ -113,18 +114,18 @@ class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decis
         checkpoint_type& checkpoint
     ) const override {
         assert(false and "not implemented");
-        unreachable();
+        std::unreachable();
     }
     [[noreturn]] void assign_from_checkpoint(
         State& state,
         checkpoint_type&& checkpoint
     ) const override {
         assert(false and "not implemented");
-        unreachable();
+        std::unreachable();
     }
     [[noreturn]] virtual checkpoint_type checkpoint(State& state) const override {
         assert(false and "not implemented");
-        unreachable();
+        std::unreachable();
     }
 
     // State mutation methods *************************************************
@@ -185,7 +186,7 @@ class DynamicArrayTestingNode : public ArrayOutputMixin<ArrayNode>, public Decis
             case 2:
                 return set(state, rng);
             default:
-                unreachable();
+                std::unreachable();
         }
     }
 

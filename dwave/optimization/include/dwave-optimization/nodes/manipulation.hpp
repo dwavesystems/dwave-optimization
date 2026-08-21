@@ -270,9 +270,9 @@ class ReshapeNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ReshapeNode
     ///
     /// @param array_ptr The array to be reshaped.
     /// @param shape The new shape. Must have the same size as the original shape.
-    template <std::ranges::range Range>
-    ReshapeNode(ArrayNode* node_ptr, Range&& shape) :
-        ReshapeNode(node_ptr, std::vector<ssize_t>(shape.begin(), shape.end())) {}
+    template <std::ranges::range R>
+    ReshapeNode(ArrayNode* node_ptr, R&& shape) :
+        ReshapeNode(node_ptr, std::ranges::to<std::vector<ssize_t>>(std::forward<R>(shape))) {}
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
@@ -348,9 +348,13 @@ class ResizeNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ResizeNode>>
     /// @param array_ptr The array to be resized.
     /// @param shape The new shape. Must not be dynamic.
     /// @param fill_value The value to use for missing values.
-    template <std::ranges::range Range>
-    ResizeNode(ArrayNode* node_ptr, Range&& shape, double fill_value = 0) :
-        ResizeNode(node_ptr, std::vector<ssize_t>(shape.begin(), shape.end()), fill_value) {}
+    template <std::ranges::range R>
+    ResizeNode(ArrayNode* node_ptr, R&& shape, double fill_value = 0) :
+        ResizeNode(
+            node_ptr,
+            std::ranges::to<std::vector<ssize_t>>(std::forward<R>(shape)),
+            fill_value
+        ) {}
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override;
