@@ -531,11 +531,6 @@ TEST_CASE("Test broadcast_shapes()") {
 }
 
 TEST_CASE("Test deduplicate_diff") {
-    SECTION("static asserts") {
-        static_assert(std::ranges::sized_range<deduplicate_diff_view>);
-        static_assert(std::ranges::viewable_range<deduplicate_diff_view>);
-    }
-
     GIVEN("An empty vector of updates") {
         std::vector<Update> updates;
 
@@ -545,10 +540,10 @@ TEST_CASE("Test deduplicate_diff") {
         }
 
         THEN("Iteration over it with a view does nothing") {
-            for ([[maybe_unused]] const Update& v : deduplicate_diff_view(updates)) {
+            for ([[maybe_unused]] const Update& v : updates | views::deduplicate_diff) {
                 CHECK(false);  // shouldn't get here
             }
-            for ([[maybe_unused]] const Update& v : deduplicate_diff_view(std::span(updates))) {
+            for ([[maybe_unused]] const Update& v : std::span(updates) | views::deduplicate_diff) {
                 CHECK(false);  // shouldn't get here
             }
         }
@@ -564,7 +559,7 @@ TEST_CASE("Test deduplicate_diff") {
 
         THEN("We can use deduplicate_diff_view in a for-loop") {
             std::vector<Update> deduped;
-            for (const auto& u : deduplicate_diff_view(updates)) {
+            for (const auto& u : updates | views::deduplicate_diff) {
                 deduped.emplace_back(u);
             }
             CHECK_THAT(deduped, RangeEquals({Update(2, 1, 0), Update(3, 0, 1), Update(5, 0, -1)}));
@@ -578,7 +573,7 @@ TEST_CASE("Test deduplicate_diff") {
                 return update;
             };
 
-            for (const auto& u : deduplicate_diff_view(updates) | std::views::transform(shift)) {
+            for (const auto& u : updates | views::deduplicate_diff | std::views::transform(shift)) {
                 deduped_and_shifted.emplace_back(u);
             }
             CHECK_THAT(

@@ -708,23 +708,25 @@ std::vector<ssize_t> broadcast_shapes(
     std::initializer_list<ssize_t> rhs
 );
 
+/// Sort and deduplicate the given vector of updates in-place.
 void deduplicate_diff(std::vector<Update>& diff);
 
-class deduplicate_diff_view {
- public:
+// dev note: this class isn't private per se, but it's really intended to be used via
+// views::deduplicate_diff
+struct deduplicate_diff_adaptor : std::ranges::range_adaptor_closure<deduplicate_diff_adaptor> {
     template <std::ranges::range R>
-    deduplicate_diff_view(R&& diff) : diff_(std::ranges::begin(diff), std::ranges::end(diff)) {
-        deduplicate_diff(diff_);
+    auto operator()(R&& diff) const {
+        // put them into a vector we can use
+        auto updates = std::ranges::to<std::vector<Update>>(std::forward<R>(diff));
+        deduplicate_diff(updates);
+        return updates;
     }
-
-    auto begin() const { return diff_.begin(); }
-    auto end() const { return diff_.end(); }
-
- private:
-    std::vector<Update> diff_;
 };
-// todo: In C++23 once we have std::ranges::range_adaptor_closure, we should
-// make this work with a range adaptor.
+
+namespace views {
+/// A range adaptor version of deduplicate_diff
+inline constexpr deduplicate_diff_adaptor deduplicate_diff{};
+}  // namespace views
 
 // Determine whether a given shape/strides define a contiguous array or not.
 bool is_contiguous(const ssize_t ndim, const ssize_t* shape, const ssize_t* strides);

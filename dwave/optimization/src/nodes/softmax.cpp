@@ -93,15 +93,15 @@ void SoftMaxNode::propagate(State& state) const {
     if (diff.empty()) return;
 
     // Store updates to predecessor in vector
-    std::vector<Update> arr_updates(diff.begin(), diff.end());
+    // Deduplicate because we only want to compute an exponential once per index
+    std::vector<Update> arr_updates = diff | views::deduplicate_diff;
     assert(not arr_updates.empty());
 
     // To update node, we need to compute the new softmax denominator
     auto node_data = data_ptr_<SoftMaxNodeStateData>(state);
     const double prior_denominator = node_data->denominator;
     double new_denominator = prior_denominator;
-    // We only want to compute an exponential once per index
-    deduplicate_diff(arr_updates);
+
     // Record for which indices we need to recompute the exponential
     node_data->index_changed.resize(arr_ptr_->size(state), false);
 

@@ -336,13 +336,10 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         std::vector<Update> rhs_diff_copy;
         if (lhs_ptr->dynamic()) {
             assert(rhs_ptr->dynamic());
-            // Copy and then deduplicate both diffs
-            lhs_diff_copy.assign(lhs_diff.begin(), lhs_diff.end());
-            rhs_diff_copy.assign(rhs_diff.begin(), rhs_diff.end());
-            deduplicate_diff(lhs_diff_copy);
-            deduplicate_diff(rhs_diff_copy);
-            lhs_diff = std::span<const Update>(lhs_diff_copy.begin(), lhs_diff_copy.end());
-            rhs_diff = std::span<const Update>(rhs_diff_copy.begin(), rhs_diff_copy.end());
+            lhs_diff_copy = lhs_diff | views::deduplicate_diff;
+            rhs_diff_copy = rhs_diff | views::deduplicate_diff;
+            lhs_diff = std::span(lhs_diff_copy);
+            rhs_diff = std::span(rhs_diff_copy);
         }
 
         if (lhs_diff.size() && rhs_diff.size()) {
