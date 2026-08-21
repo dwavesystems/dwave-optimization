@@ -269,7 +269,7 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
         values.reserve(lhs_ptr->size(state));
 
         for (const auto& [x, y] : std::views::zip(lhs_ptr->view(state), rhs_ptr->view(state))) {
-            values.emplace_back(op(x, y));
+            values.emplace_back(op(x, y));  // order is important
         }
 
     } else if (lhs_ptr->size() == 1) {
