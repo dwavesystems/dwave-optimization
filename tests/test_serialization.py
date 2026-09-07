@@ -88,7 +88,7 @@ class TestSerialization(unittest.TestCase):
                 print(f"no {fname} found")  # could add a verbose flag to toggle
                 continue
 
-            print("loading", name)  # could add a verbose flag to toggle
+            print(f"loading with version {dwave.optimization.__version__}:", name)  # could add a verbose flag to toggle
             self.assertModelEqual(Model.from_file(fname), base_model)
 
             # test states equality
@@ -103,7 +103,8 @@ class TestSerialization(unittest.TestCase):
         os.makedirs(os.path.join(directory, "states"), exist_ok=True)
 
         for name in self.iter_names():
-            print("saving", name)  # could add a verbose flag to toggle
+            print(f"saving with version {dwave.optimization.__version__}:", name)  # could add a verbose flag to toggle
+
             model = getattr(self, "make_" + name)()
             with open(os.path.join(directory, "model", name + ".nl"), "wb") as f:
                 model.into_file(f, version=version, max_num_states=100)
