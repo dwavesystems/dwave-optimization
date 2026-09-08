@@ -82,18 +82,18 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     const SizeInfo sizeinfo_;
 };
 
-using AbsoluteNode = UnaryOpNode<functional::abs<double>>;
-using CosNode = UnaryOpNode<functional::cos<double>>;
-using ExpitNode = UnaryOpNode<functional::expit<double>>;
-using ExpNode = UnaryOpNode<functional::exp<double>>;
-using LogNode = UnaryOpNode<functional::log<double>>;
-using LogicalNode = UnaryOpNode<functional::logical<double>>;
-using NegativeNode = UnaryOpNode<std::negate<double>>;
-using NotNode = UnaryOpNode<std::logical_not<double>>;
-using RintNode = UnaryOpNode<functional::rint<double>>;
-using SinNode = UnaryOpNode<functional::sin<double>>;
-using SquareNode = UnaryOpNode<functional::square<double>>;
-using SquareRootNode = UnaryOpNode<functional::square_root<double>>;
-using TanhNode = UnaryOpNode<functional::tanh<double>>;
+using AbsoluteNode = UnaryOpNode<functional::absolute>;
+using CosNode = UnaryOpNode<functional::cos>;
+using ExpitNode = UnaryOpNode<functional::expit>;
+using ExpNode = UnaryOpNode<functional::exp>;
+using LogNode = UnaryOpNode<functional::log>;
+using LogicalNode = UnaryOpNode<functional::logical>;
+using NegativeNode = UnaryOpNode<functional::negative>;
+using NotNode = UnaryOpNode<functional::logical_not>;
+using RintNode = UnaryOpNode<functional::rint>;
+using SinNode = UnaryOpNode<functional::sin>;
+using SquareNode = UnaryOpNode<functional::square>;
+using SquareRootNode = UnaryOpNode<functional::square_root>;
+using TanhNode = UnaryOpNode<functional::tanh>;
 
 }  // namespace dwave::optimization

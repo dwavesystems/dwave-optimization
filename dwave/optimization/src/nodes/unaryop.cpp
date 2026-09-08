@@ -23,11 +23,11 @@ namespace dwave::optimization {
 template <class UnaryOp>
 std::pair<double, double> calculate_values_minmax(const Array* array_ptr) {
     // Do some checks to make sure the resulting domain/range will be valid
-    if constexpr (std::is_same<UnaryOp, functional::square_root<double>>::value) {
+    if constexpr (std::is_same<UnaryOp, functional::square_root>::value) {
         if (array_ptr->min() < 0) {
             throw std::invalid_argument("SquareRoot's predecessors cannot take a negative value");
         }
-    } else if constexpr (std::is_same<UnaryOp, functional::log<double>>::value) {
+    } else if constexpr (std::is_same<UnaryOp, functional::log>::value) {
         if (array_ptr->min() <= 0) {
             throw std::invalid_argument("Log's predecessors cannot take a negative or zero value");
         }
@@ -42,9 +42,9 @@ std::pair<double, double> calculate_values_minmax(const Array* array_ptr) {
     // Likewise for sin/cos/tanh the minmax is -1/+1. We could tighten it if the domain
     // of our predecessor is smaller than 2pi, but let's keep it simple for now
     if constexpr (
-        std::same_as<UnaryOp, functional::cos<double>> ||
-        std::same_as<UnaryOp, functional::sin<double>> ||
-        std::same_as<UnaryOp, functional::tanh<double>>
+        std::same_as<UnaryOp, functional::cos> ||
+        std::same_as<UnaryOp, functional::sin> ||
+        std::same_as<UnaryOp, functional::tanh>
     ) {
         return {-1, +1};
     }
@@ -55,7 +55,7 @@ std::pair<double, double> calculate_values_minmax(const Array* array_ptr) {
     auto high = array_ptr->max();
     assert(low <= high);
 
-    if constexpr (std::same_as<UnaryOp, functional::abs<double>>) {
+    if constexpr (std::same_as<UnaryOp, functional::absolute>) {
         if (low >= 0 && high >= 0) {
             return std::make_pair(low, high);
         } else if (low >= 0) {
@@ -67,22 +67,22 @@ std::pair<double, double> calculate_values_minmax(const Array* array_ptr) {
             return std::make_pair(-high, -low);
         }
     }
-    if constexpr (std::same_as<UnaryOp, functional::exp<double>>) {
+    if constexpr (std::same_as<UnaryOp, functional::exp>) {
         return std::make_pair(std::exp(low), std::exp(high));
     }
-    if constexpr (std::same_as<UnaryOp, functional::expit<double>>) {
+    if constexpr (std::same_as<UnaryOp, functional::expit>) {
         double expit_low = 1.0 / (1.0 + std::exp(-low));
         double expit_high = 1.0 / (1.0 + std::exp(-high));
         return std::make_pair(expit_low, expit_high);
     }
-    if constexpr (std::same_as<UnaryOp, functional::log<double>>) {
+    if constexpr (std::same_as<UnaryOp, functional::log>) {
         assert(low > 0);  // checked by constructor
         return std::make_pair(std::log(low), std::log(high));
     }
-    if constexpr (std::same_as<UnaryOp, functional::rint<double>>) {
+    if constexpr (std::same_as<UnaryOp, functional::rint>) {
         return std::make_pair(std::rint(low), std::rint(high));
     }
-    if constexpr (std::same_as<UnaryOp, functional::square<double>>) {
+    if constexpr (std::same_as<UnaryOp, functional::square>) {
         const auto highest = std::numeric_limits<double>::max();
         return std::make_pair(
             std::min({low * low, high * high, highest}),
@@ -92,11 +92,11 @@ std::pair<double, double> calculate_values_minmax(const Array* array_ptr) {
             )
         );  // prevent inf
     }
-    if constexpr (std::same_as<UnaryOp, functional::square_root<double>>) {
+    if constexpr (std::same_as<UnaryOp, functional::square_root>) {
         assert(low >= 0);  // checked by constructor
         return std::make_pair(std::sqrt(low), std::sqrt(high));
     }
-    if constexpr (std::same_as<UnaryOp, std::negate<double>>) {
+    if constexpr (std::same_as<UnaryOp, functional::negative>) {
         return std::make_pair(-high, -low);
     }
 
@@ -111,52 +111,52 @@ bool calculate_integral(const Array*) {
 }
 
 template <>
-bool calculate_integral<functional::abs<double>>(const Array* array_ptr) {
+bool calculate_integral<functional::absolute>(const Array* array_ptr) {
     return array_ptr->integral();
 }
 
 template <>
-bool calculate_integral<functional::cos<double>>(const Array*) {
+bool calculate_integral<functional::cos>(const Array*) {
     return false;
 }
 
 template <>
-bool calculate_integral<functional::exp<double>>(const Array*) {
+bool calculate_integral<functional::exp>(const Array*) {
     return false;
 }
 
 template <>
-bool calculate_integral<functional::expit<double>>(const Array*) {
+bool calculate_integral<functional::expit>(const Array*) {
     return false;
 }
 
 template <>
-bool calculate_integral<functional::log<double>>(const Array*) {
+bool calculate_integral<functional::log>(const Array*) {
     return false;
 }
 
 template <>
-bool calculate_integral<std::negate<double>>(const Array* array_ptr) {
+bool calculate_integral<functional::negative>(const Array* array_ptr) {
     return array_ptr->integral();
 }
 
 template <>
-bool calculate_integral<functional::rint<double>>(const Array*) {
+bool calculate_integral<functional::rint>(const Array*) {
     return true;
 }
 
 template <>
-bool calculate_integral<functional::sin<double>>(const Array*) {
+bool calculate_integral<functional::sin>(const Array*) {
     return false;
 }
 
 template <>
-bool calculate_integral<functional::square<double>>(const Array* array_ptr) {
+bool calculate_integral<functional::square>(const Array* array_ptr) {
     return array_ptr->integral();
 }
 
 template <>
-bool calculate_integral<functional::tanh<double>>(const Array*) {
+bool calculate_integral<functional::tanh>(const Array*) {
     return false;
 }
 
@@ -283,18 +283,18 @@ SizeInfo UnaryOpNode<UnaryOp>::sizeinfo() const {
     return this->sizeinfo_;
 }
 
-template class UnaryOpNode<functional::abs<double>>;
-template class UnaryOpNode<functional::cos<double>>;
-template class UnaryOpNode<functional::exp<double>>;
-template class UnaryOpNode<functional::expit<double>>;
-template class UnaryOpNode<functional::log<double>>;
-template class UnaryOpNode<functional::logical<double>>;
-template class UnaryOpNode<functional::rint<double>>;
-template class UnaryOpNode<functional::sin<double>>;
-template class UnaryOpNode<functional::square<double>>;
-template class UnaryOpNode<functional::square_root<double>>;
-template class UnaryOpNode<functional::tanh<double>>;
-template class UnaryOpNode<std::negate<double>>;
-template class UnaryOpNode<std::logical_not<double>>;
+template class UnaryOpNode<functional::absolute>;
+template class UnaryOpNode<functional::cos>;
+template class UnaryOpNode<functional::exp>;
+template class UnaryOpNode<functional::expit>;
+template class UnaryOpNode<functional::log>;
+template class UnaryOpNode<functional::logical>;
+template class UnaryOpNode<functional::logical_not>;
+template class UnaryOpNode<functional::negative>;
+template class UnaryOpNode<functional::rint>;
+template class UnaryOpNode<functional::sin>;
+template class UnaryOpNode<functional::square>;
+template class UnaryOpNode<functional::square_root>;
+template class UnaryOpNode<functional::tanh>;
 
 }  // namespace dwave::optimization
