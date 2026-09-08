@@ -33,17 +33,17 @@ namespace dwave::optimization {
 TEMPLATE_TEST_CASE(
     "UnaryOpNode",
     "",
-    functional::abs<double>,
-    functional::cos<double>,
-    functional::exp<double>,
-    functional::expit<double>,
-    functional::logical<double>,
-    functional::rint<double>,
-    functional::sin<double>,
-    functional::square<double>,
-    functional::tanh<double>,
-    std::negate<double>,
-    std::logical_not<double>
+    functional::absolute,
+    functional::cos,
+    functional::exp,
+    functional::expit,
+    functional::logical,
+    functional::logical_not,
+    functional::negative,
+    functional::rint,
+    functional::sin,
+    functional::square,
+    functional::tanh
 ) {
     auto graph = Graph();
 
