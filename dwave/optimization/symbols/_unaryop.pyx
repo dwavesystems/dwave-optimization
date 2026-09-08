@@ -30,7 +30,7 @@ from dwave.optimization.libcpp.nodes.unaryop cimport (
     RintNode,
     SinNode,
     SquareNode,
-    SquareRootNode,
+    SqrtNode,
     TanhNode,
 )
 
@@ -77,7 +77,7 @@ class _UnaryOpSymbol(ArraySymbol):
         elif node_type is _UnaryOpNodeType.Square:
             _register(cls, typeid(SquareNode))
         elif node_type is _UnaryOpNodeType.SquareRoot:
-            _register(cls, typeid(SquareRootNode))
+            _register(cls, typeid(SqrtNode))
         elif node_type is _UnaryOpNodeType.Tanh:
             _register(cls, typeid(TanhNode))
         else:
@@ -114,7 +114,7 @@ class _UnaryOpSymbol(ArraySymbol):
         elif node_type is _UnaryOpNodeType.Square:
             ptr = model._graph.emplace_node[SquareNode](x.array_ptr)
         elif node_type is _UnaryOpNodeType.SquareRoot:
-            ptr = model._graph.emplace_node[SquareRootNode](x.array_ptr)
+            ptr = model._graph.emplace_node[SqrtNode](x.array_ptr)
         elif node_type is _UnaryOpNodeType.Tanh:
             ptr = model._graph.emplace_node[TanhNode](x.array_ptr)
         else:
