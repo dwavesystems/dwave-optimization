@@ -70,9 +70,6 @@ class InputNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Node::commit()
     void commit(State& state) const noexcept override;
 
-    /// InputNode's state is not deterministic unlike most other non-decision nodes
-    bool deterministic_state() const override { return false; }
-
     /// @copydoc Array::diff()
     std::span<const Update> diff(const State& state) const noexcept override;
 

@@ -131,9 +131,6 @@ class LinearProgramNode : public EqualityMixin<LinearProgramNodeBase, LinearProg
     /// @copydoc Node::commit()
     void commit(State& state) const override;
 
-    /// The LP node's state is potentially degenerate, and therefore not deterministic.
-    bool deterministic_state() const override;
-
     /// @copydoc Node::equal_to()
     bool equal_to(const LinearProgramNode& rhs) const override;
 

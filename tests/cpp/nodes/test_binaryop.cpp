@@ -66,8 +66,6 @@ TEMPLATE_TEST_CASE(
             CHECK(static_cast<Array*>(p_ptr->operands()[0]) == static_cast<Array*>(a_ptr));
         }
 
-        THEN("The state is deterministic") { CHECK(p_ptr->deterministic_state()); }
-
         THEN("The shape is also a scalar") {
             CHECK(p_ptr->ndim() == 0);
             CHECK(p_ptr->size() == 1);

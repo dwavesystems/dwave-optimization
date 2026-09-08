@@ -21,8 +21,8 @@ version that only supported serialization version 0.1
 
 from __future__ import annotations
 
+import functools
 import os.path
-import tempfile
 import typing
 import unittest
 
@@ -30,6 +30,18 @@ import numpy as np
 
 import dwave.optimization
 from dwave.optimization import Model
+
+
+def requires_version(version: tuple[int, int]):
+    """Replace a method with None if the dwave.optimization.__version__ < version"""
+    major, minor, *_ = dwave.optimization.__version__.split(".")
+    if ((int(major), int(minor)) < version):
+        def wrapper(method):
+            return None
+    else:
+        def wrapper(method):
+            return method
+    return wrapper
 
 
 class TestSerialization(unittest.TestCase):
@@ -61,23 +73,26 @@ class TestSerialization(unittest.TestCase):
         """Iterate over the model names."""
         for method_name in dir(cls):
             if method_name.startswith("make_"):
+                # handle the ones disabled by requires_version
+                if getattr(cls, method_name) is None:
+                    continue
                 yield method_name.removeprefix("make_")
 
     def load(self, directory: str):
         """Load & test all models in the given directory"""
         for name in self.iter_names():
-            print("loading", name)  # could add a verbose flag to toggle
-
             base_model = getattr(self, "make_" + name)()
 
-            # test model equality
-            self.assertModelEqual(
-                Model.from_file(os.path.join(directory, "model", name + ".nl")),
-                base_model
-                )
+            fname = os.path.join(directory, "model", name + ".nl")
+            if not os.path.exists(fname):
+                print(f"no {fname} found")  # could add a verbose flag to toggle
+                continue
+
+            print(f"loading with version {dwave.optimization.__version__}:", name)  # could add a verbose flag to toggle
+            self.assertModelEqual(Model.from_file(fname), base_model)
 
             # test states equality
-            test_model = getattr(self, "make_" + name)()
+            test_model: Model = getattr(self, "make_" + name)()
             test_model.states.clear()
             test_model.states.from_file(os.path.join(directory, "states", name + ".nl"))
             self.assertModelEqual(base_model, test_model)
@@ -88,7 +103,8 @@ class TestSerialization(unittest.TestCase):
         os.makedirs(os.path.join(directory, "states"), exist_ok=True)
 
         for name in self.iter_names():
-            print("saving", name)  # could add a verbose flag to toggle
+            print(f"saving with version {dwave.optimization.__version__}:", name)  # could add a verbose flag to toggle
+
             model = getattr(self, "make_" + name)()
             with open(os.path.join(directory, "model", name + ".nl"), "wb") as f:
                 model.into_file(f, version=version, max_num_states=100)
@@ -167,6 +183,30 @@ class TestSerialization(unittest.TestCase):
         x.set_state(2, [0, 0, 0, 1, 1])
         x.set_state(3, [0, 0, 1, 1, 1])
         x.set_state(4, [0, 1, 1, 1, 1])
+
+        return model
+
+    @requires_version((0, 6))  # LP node was introduced in 0.6.0
+    def make_lp(self) -> Model:
+        model = Model()
+
+        c = model.integer(3)
+
+        A = model.constant([[1, 1, 1]])
+        b = model.constant([1])
+
+        res = dwave.optimization.linprog(c, A_eq=A, b_eq=b)
+
+        model.minimize(res.fun)
+        model.add_constraint(res.success)
+
+        model.states.resize(3)
+
+        c.set_state(0, [0, 0, 0])
+        # no state
+        c.set_state(2, [0, 1, 0])
+
+        model.lock()
 
         return model
 

@@ -25,7 +25,6 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
     cdef cppclass Node:
         struct SuccessorView:
             Node* ptr
-        bool deterministic_state() const
         shared_ptr[const bool] expired_ptr() const
         const vector[Node*]& predecessors() const
         const vector[SuccessorView]& successors() const

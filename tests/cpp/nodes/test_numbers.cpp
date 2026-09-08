@@ -190,8 +190,6 @@ TEST_CASE("BinaryNode") {
     GIVEN("A Binary Node representing an 1d array of 10 elements") {
         auto ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{10});
 
-        THEN("The state is not deterministic") { CHECK(!ptr->deterministic_state()); }
-
         THEN("The shape is fixed") {
             CHECK(ptr->ndim() == 1);
             CHECK(ptr->size() == 10);
@@ -1776,8 +1774,6 @@ TEST_CASE("IntegerNode") {
         "integral"
     ) {
         IntegerNode inode({1});
-
-        THEN("The state is not deterministic") { CHECK(!inode.deterministic_state()); }
 
         THEN("The function to check valid integers works") {
             CHECK(inode.max() == 2000000000);

@@ -2727,66 +2727,6 @@ class TestLinearProgram(utils.SymbolTests):
         self.assertEqual(feas.state(), False)
         self.assertEqual(feas.state(), lp.feasible())
 
-    def test_serialization_with_states(self):
-        # min:
-        #   -x0 - x1
-        # such that:
-        #   x0 + x1 <= 1
-        #       -x0 <= 0
-        #       -x1 <= 0
-        model = Model()
-
-        c = model.constant([-1, -1])
-        A = model.constant([[1, 1], [0, -1], [-1, 0]])
-        b = model.constant([1, 0, 0])
-        res = dwave.optimization.linprog(c, A=A, b_ub=b)
-
-        lp = res.lp
-
-        model.states.resize(4)
-        model.lock()
-
-        lp._set_state(0, [0, 1])
-        lp._set_state(1, [1, 0])
-        # no states for 2
-        lp._set_state(3, [1, 1])
-
-        with self.subTest("model; lock=False"):
-            with model.to_file(max_num_states=float("inf")) as f:
-                copy = Model.from_file(f)  # lock=False by default
-
-            _, _, _, lp_copy = copy.iter_symbols()
-
-            self.assertFalse(copy.is_locked())
-            with copy.lock():
-                # these are all freshly calculated
-                self.assertEqual(lp_copy.state(0).sum(), 1)
-                self.assertEqual(lp_copy.state(1).sum(), 1)
-                self.assertEqual(lp_copy.state(2).sum(), 1)
-                self.assertEqual(lp_copy.state(3).sum(), 1)
-
-        with self.subTest("model; lock=True"):
-            with model.to_file(max_num_states=float("inf")) as f:
-                copy = Model.from_file(f, lock=True)
-
-            _, _, _, lp_copy = copy.iter_symbols()
-
-            self.assertTrue(copy.is_locked())
-            np.testing.assert_array_equal(lp_copy.state(0), [0, 1])
-            np.testing.assert_array_equal(lp_copy.state(1), [1, 0])
-            self.assertFalse(lp_copy.has_state(2))
-            np.testing.assert_array_equal(lp_copy.state(3), [1, 1])
-
-        with self.subTest("states"):
-            with model.states.to_file() as f:
-                model.states.clear()
-                model.states.from_file(f)
-
-            np.testing.assert_array_equal(lp.state(0), [0, 1])
-            np.testing.assert_array_equal(lp.state(1), [1, 0])
-            self.assertFalse(lp.has_state(2))
-            np.testing.assert_array_equal(lp.state(3), [1, 1])
-
     def test_fallback(self):
         expected_c = np.asarray([1, 2, 3])
         expected_A_eq = np.asarray([[4, 5, 6], [7, 8, 9]])

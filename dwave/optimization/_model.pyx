@@ -1130,12 +1130,6 @@ cdef class Symbol:
         self.node_ptr = node_ptr
         self.expired_ptr = node_ptr.expired_ptr()
 
-    def _deterministic_state(self):
-        """Return ``True`` if the symbol's state is uniquely determined by its
-        predecessors.
-        """
-        return self.node_ptr.deterministic_state()
-
     cpdef bool expired(self) noexcept:
         return deref(self.expired_ptr)
 
