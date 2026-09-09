@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add ``promote_types`` and ``can_cast`` to ``dwave-optimization/typing.hpp``
+    for NumPy-style type promotions.
