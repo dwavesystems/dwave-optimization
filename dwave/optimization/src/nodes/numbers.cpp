@@ -643,6 +643,21 @@ void construct_state_given_exactly_one_sum_constraint(
     }
 
     assert(axis.has_value() && 0 <= *axis && *axis < ndim);
+
+    // handle the special case that our array is empty
+    if (node.size() == 0) {
+        assert(values.size() == 0);
+
+        double delta = sum_constraint_delta(0, constraint.op(0), constraint.bound(0));
+        if (delta) {
+            throw std::invalid_argument("Infeasible sum constraint.");
+        }
+
+        return;  // we've trivially satisfied the constraint
+    }
+
+    assert(node_shape[*axis] > 0);  // otherwise we should have handled it above
+
     // We need a way to iterate over each slice along the constrainted axis and
     // adjust its values until they satisfy the constraint. We do this by
     // defining an iterator of `values` that traverses each slice one after
@@ -1324,6 +1339,7 @@ struct BinaryNodeStateData : public NumberNodeStateData {
             num_true(num_sets, 0),   // Initialize # true in each dense sets to 0.
             sparse(num_indices, -1)  // Initialize all look-up values to -1.
         {
+            if (not num_sets) return;
             // All indices are distributed equally between the dense sets.
             assert(num_indices % num_sets == 0);
             const ssize_t set_size = num_indices / num_sets;
