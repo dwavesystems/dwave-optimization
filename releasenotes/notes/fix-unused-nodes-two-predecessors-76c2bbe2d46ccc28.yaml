@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Remove a C++ assertion that would erroneously fire when ``Graph::remove_redundant_nodes()``
+    tries to remove structures like ``add(x, x)``.

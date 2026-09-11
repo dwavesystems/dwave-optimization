@@ -510,10 +510,7 @@ ssize_t Graph::remove_unused_nodes(std::span<Node*> keep, bool ignore_listeners)
 
         // Remove the node from its predecessor's successor vectors.
         // This leaves the node in an invalid state, until we delete it later.
-        for (auto* pred_ptr : uptr->predecessors_) {
-            [[maybe_unused]] ssize_t num_removed = pred_ptr->remove_successor_(uptr.get());
-            assert(num_removed > 0);
-        }
+        for (auto* pred_ptr : uptr->predecessors_) pred_ptr->remove_successor_(uptr.get());
 
         uptr->topological_index_ = DROP;
     }

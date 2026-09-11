@@ -606,6 +606,12 @@ TEST_CASE("Graph::remove_unused_nodes()") {
                 CHECK(!*d_expired);  // d wasn't removed because it has a listener
             }
         }
+
+        WHEN("They are both predecessors to the same node") {
+            graph.emplace_node<AddNode>(i_ptr, i_ptr);
+            ssize_t num_removed = graph.remove_unused_nodes();
+            CHECK(num_removed == 1);  // the add node is removed
+        }
     }
 }
 
