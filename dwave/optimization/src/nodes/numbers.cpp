@@ -648,9 +648,11 @@ void construct_state_given_exactly_one_sum_constraint(
     if (node.size() == 0) {
         assert(values.size() == 0);
 
-        double delta = sum_constraint_delta(0, constraint.op(0), constraint.bound(0));
-        if (delta) {
-            throw std::invalid_argument("Infeasible sum constraint.");
+        for (ssize_t i = 0, stop = std::max<ssize_t>(1, node_shape[*axis]); i < stop; ++i) {
+            const double delta = sum_constraint_delta(0, constraint.op(i), constraint.bound(i));
+            if (delta) {
+                throw std::invalid_argument("Infeasible sum constraint.");
+            }
         }
 
         return;  // we've trivially satisfied the constraint
