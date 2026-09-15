@@ -143,4 +143,8 @@ TEMPLATE_LIST_TEST_CASE("interval", "", DTypes) {
     }
 }
 
+TEST_CASE("interval") {
+    STATIC_REQUIRE(interval<double>(interval<float>(0, 5)) == interval<double>(0, 5));
+}
+
 }  // namespace dwave::optimization

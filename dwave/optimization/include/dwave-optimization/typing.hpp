@@ -95,4 +95,50 @@ constexpr FormatCharacter format_of() {
     if constexpr (std::same_as<U, signed long long>) return FormatCharacter::signedlonglong_;
 }
 
+/// NumPy's type promotion doesn't match the behavior of C++'s numeric promotions
+/// This class is meant to mimic the behavior of the `numpy.promote_types()`
+/// function.
+template <DTypeLike T, DTypeLike U>
+class promote_types {
+ private:
+    consteval static auto promote_types_() {
+        using T_ = std::remove_cvref_t<T>;
+        using U_ = std::remove_cvref_t<U>;
+
+        if constexpr (std::same_as<T_, bool>) {
+            // bool doesn't promote any other types
+            return U_();
+        } else if constexpr (std::same_as<U_, bool>) {
+            // bool doesn't promote any other types
+            return T_();
+        } else if constexpr (std::integral<T_> and std::integral<U_>) {
+            // If both are integers, promote to the larger type
+            return std::conditional_t<sizeof(T_) >= sizeof(U_), T_, U_>();
+        } else if constexpr (std::floating_point<T_> and std::floating_point<U_>) {
+            // If both are floating point, promote to the larger type
+            return std::conditional_t<sizeof(T_) >= sizeof(U_), T_, U_>();
+        } else if constexpr (std::integral<T_>) {
+            // T_ is an integer and U_ is a floating point, so make sure we return
+            // a large enough type
+            return std::conditional_t<sizeof(T_) <= 2, U_, double>();
+        } else {
+            // T_ is a floating point and U_ is an integer, so make sure we return
+            // a large enough type
+            return std::conditional_t<sizeof(U_) <= 2, T_, double>();
+        }
+    }
+
+ public:
+    using type = decltype(promote_types_());
+};
+
+template <DTypeLike T, DTypeLike U>
+using promote_types_t = typename promote_types<T, U>::type;
+
+/// Test whether `From` can be safely cast to `To` according to NumPy's promotion
+/// rules.
+/// Note that `np.can_cast(int64, float64, "safe")` is `True` according to NumPy.
+template <typename From, typename To>
+concept can_cast = DType<From> and DType<To> and std::same_as<promote_types_t<From, To>, To>;
+
 }  // namespace dwave::optimization

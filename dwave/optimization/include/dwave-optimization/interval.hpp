@@ -39,12 +39,10 @@ struct interval {
     /// Copy constructor.
     interval(const interval&) = default;
 
-    /// Create an ``interval<double>`` from another interval.
-    template <DType U>
-    requires(std::same_as<T, double>)
-    interval(const interval<U>& other) noexcept : interval(other.infimum, other.supremum) {}
-    // dev note: we could expand this. E.g., we could support all promotions
-    // allowed by NumPy promotion.
+    /// Create an one interval from another, allowing for safe type promotions
+    template <can_cast<T> U>
+    constexpr interval(const interval<U>& other) noexcept :
+        interval(other.infimum, other.supremum) {}
 
     /// Move constructor.
     interval(interval&&) = default;
