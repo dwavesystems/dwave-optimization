@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Rework C++ ops in ``dwave::optimization::functional`` to provide additional
+    information about the functions.
+upgrade:
+  - Rename C++ ``dwave::optimization::functional::abs()`` function to ``dwave::optimization::functional::absolute()``.
+  - Rename C++ ``dwave::optimization::functional::negate()`` function to ``dwave::optimization::functional::negative()``.
