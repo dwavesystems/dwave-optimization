@@ -574,6 +574,93 @@ TEST_CASE("BinaryNode") {
     }
 
     // *********************** Sum Constraint tests *************************
+    GIVEN("A (0,)-BinaryNode with a valid sum constraint over the entire array") {
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {0}}};
+        auto* ptr = graph.emplace_node<BinaryNode>(0, std::nullopt, std::nullopt, sum_constraints);
+        auto state = graph.initialize_state();
+        CHECK_THAT(ptr->view(state), RangeEquals(std::vector<double>{}));
+    }
+
+    GIVEN("A (0,)-BinaryNode with an invalid sum constraint over the entire array") {
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {1}}};
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<BinaryNode>(0, std::nullopt, std::nullopt, sum_constraints),
+            "Infeasible sum constraint."
+        );
+    }
+
+    GIVEN("A (0,)-BinaryNode with a valid sum constraint on axis 0") {
+        std::vector<SumConstraint> sum_constraints{{0, {GreaterEqual}, {0}}};
+        auto* ptr = graph.emplace_node<BinaryNode>(0, std::nullopt, std::nullopt, sum_constraints);
+        auto state = graph.initialize_state();
+        CHECK_THAT(ptr->view(state), RangeEquals(std::vector<double>{}));
+    }
+
+    GIVEN("A (0,)-BinaryNode with an invalid sum constraint on axis 0") {
+        std::vector<SumConstraint> sum_constraints{{0, {GreaterEqual}, {1}}};
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<BinaryNode>(0, std::nullopt, std::nullopt, sum_constraints),
+            "Infeasible sum constraint."
+        );
+    }
+
+    GIVEN("A (4,0)-BinaryNode with a valid sum constraint over the entire array") {
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {0}}};
+        auto* ptr = graph.emplace_node<BinaryNode>(
+            std::vector<ssize_t>{4, 0}, std::nullopt, std::nullopt, sum_constraints
+        );
+        auto state = graph.initialize_state();
+        CHECK_THAT(ptr->view(state), RangeEquals(std::vector<double>{}));
+    }
+
+    GIVEN("A (4,0)-BinaryNode with an invalid sum constraint over the entire array") {
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {1}}};
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<BinaryNode>(
+                std::vector<ssize_t>{4, 0}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Infeasible sum constraint."
+        );
+    }
+
+    GIVEN("A (4,0)-BinaryNode with a valid sum constraint on axis 0") {
+        std::vector<SumConstraint> sum_constraints{{0, {GreaterEqual}, {0}}};
+        auto* ptr = graph.emplace_node<BinaryNode>(
+            std::vector<ssize_t>{4, 0}, std::nullopt, std::nullopt, sum_constraints
+        );
+        auto state = graph.initialize_state();
+        CHECK_THAT(ptr->view(state), RangeEquals(std::vector<double>{}));
+    }
+
+    GIVEN("A (4,0)-BinaryNode with an invalid sum constraint on axis 0") {
+        std::vector<SumConstraint> sum_constraints{{0, {GreaterEqual}, {1}}};
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<BinaryNode>(
+                std::vector<ssize_t>{4, 0}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Infeasible sum constraint."
+        );
+    }
+
+    GIVEN("A (4,0)-BinaryNode with valid sum constraints on axis 0") {
+        std::vector<SumConstraint> sum_constraints{{0, {GreaterEqual}, {0}}};
+        auto* ptr = graph.emplace_node<BinaryNode>(
+            std::vector<ssize_t>{4, 0}, std::nullopt, std::nullopt, sum_constraints
+        );
+        auto state = graph.initialize_state();
+        CHECK_THAT(ptr->view(state), RangeEquals(std::vector<double>{}));
+    }
+
+    GIVEN("A (4,0)-BinaryNode with invalid sum constraints on axis 0") {
+        std::vector<SumConstraint> sum_constraints{{0, {GreaterEqual, Equal, Equal, Equal}, {0, 1, 0, 1}}};
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<BinaryNode>(
+                std::vector<ssize_t>{4, 0}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Infeasible sum constraint."
+        );
+    }
+
     GIVEN("(2x3)-BinaryNode with a sum constraint on the invalid axis -1") {
         std::vector<SumConstraint> sum_constraints{{-1, {Equal}, {1.0}}};
 
@@ -2085,6 +2172,74 @@ TEST_CASE("IntegerNode") {
     }
 
     // *********************** Sum Constraint tests *************************
+    GIVEN("A (0,)-IntegerNode with a valid sum constraint over the entire array") {
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {0}}};
+        auto* ptr = graph.emplace_node<IntegerNode>(0, std::nullopt, std::nullopt, sum_constraints);
+        auto state = graph.initialize_state();
+        CHECK_THAT(ptr->view(state), RangeEquals(std::vector<double>{}));
+    }
+
+    GIVEN("A (0,)-IntegerNode with an invalid sum constraint over the entire array") {
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {1}}};
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<IntegerNode>(0, std::nullopt, std::nullopt, sum_constraints),
+            "Infeasible sum constraint."
+        );
+    }
+
+    GIVEN("A (0,)-IntegerNode with a valid sum constraint on axis 0") {
+        std::vector<SumConstraint> sum_constraints{{0, {GreaterEqual}, {0}}};
+        auto* ptr = graph.emplace_node<IntegerNode>(0, std::nullopt, std::nullopt, sum_constraints);
+        auto state = graph.initialize_state();
+        CHECK_THAT(ptr->view(state), RangeEquals(std::vector<double>{}));
+    }
+
+    GIVEN("A (0,)-IntegerNode with an invalid sum constraint on axis 0") {
+        std::vector<SumConstraint> sum_constraints{{0, {GreaterEqual}, {1}}};
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<IntegerNode>(0, std::nullopt, std::nullopt, sum_constraints),
+            "Infeasible sum constraint."
+        );
+    }
+
+    GIVEN("A (4,0)-IntegerNode with a valid sum constraint over the entire array") {
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {0}}};
+        auto* ptr = graph.emplace_node<IntegerNode>(
+            std::vector<ssize_t>{4, 0}, std::nullopt, std::nullopt, sum_constraints
+        );
+        auto state = graph.initialize_state();
+        CHECK_THAT(ptr->view(state), RangeEquals(std::vector<double>{}));
+    }
+
+    GIVEN("A (4,0)-IntegerNode with an invalid sum constraint over the entire array") {
+        std::vector<SumConstraint> sum_constraints{{std::nullopt, {GreaterEqual}, {1}}};
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<IntegerNode>(
+                std::vector<ssize_t>{4, 0}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Infeasible sum constraint."
+        );
+    }
+
+    GIVEN("A (4,0)-IntegerNode with a valid sum constraint on axis 0") {
+        std::vector<SumConstraint> sum_constraints{{0, {GreaterEqual}, {0}}};
+        auto* ptr = graph.emplace_node<IntegerNode>(
+            std::vector<ssize_t>{4, 0}, std::nullopt, std::nullopt, sum_constraints
+        );
+        auto state = graph.initialize_state();
+        CHECK_THAT(ptr->view(state), RangeEquals(std::vector<double>{}));
+    }
+
+    GIVEN("A (4,0)-IntegerNode with an invalid sum constraint on axis 0") {
+        std::vector<SumConstraint> sum_constraints{{0, {GreaterEqual}, {1}}};
+        REQUIRE_THROWS_WITH(
+            graph.emplace_node<IntegerNode>(
+                std::vector<ssize_t>{4, 0}, std::nullopt, std::nullopt, sum_constraints
+            ),
+            "Infeasible sum constraint."
+        );
+    }
+
     GIVEN("(2x3)-IntegerNode with a sum constraint on the invalid axis -2") {
         std::vector<SumConstraint> sum_constraints{{-2, {Equal}, {20.0}}};
 

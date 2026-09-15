@@ -1,0 +1,3 @@
+---
+fixes:
+  - Fix the behavior of empty number symbols with axis bounds. See `#635 <https://github.com/dwavesystems/dwave-optimization/issues/635>`_.

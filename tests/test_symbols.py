@@ -730,6 +730,18 @@ class TestBinaryVariable(utils.SymbolTests):
 
         model.binary([10])
 
+    def test_empty_with_axis_bounds(self):
+        # https://github.com/dwavesystems/dwave-optimization/issues/635
+        model = Model()
+        model.states.resize(1)
+
+        with self.assertRaises(ValueError):
+            model.binary(shape=0, axes_sums_subject_to=[(0, ">=", 1)])
+
+        b = model.binary(shape=0, axes_sums_subject_to=[(0, "<=", 1)])
+        with model.lock():
+            np.testing.assert_array_equal(b.state(0), [])
+
     def test_index_wise_bounds(self):
         model = Model()
         x = model.binary(lower_bound=0, upper_bound=1)
