@@ -93,7 +93,7 @@ using NotNode = UnaryOpNode<functional::logical_not>;
 using RintNode = UnaryOpNode<functional::rint>;
 using SinNode = UnaryOpNode<functional::sin>;
 using SquareNode = UnaryOpNode<functional::square>;
-using SquareRootNode = UnaryOpNode<functional::square_root>;
+using SquareRootNode = UnaryOpNode<functional::sqrt>;
 using TanhNode = UnaryOpNode<functional::tanh>;
 
 }  // namespace dwave::optimization

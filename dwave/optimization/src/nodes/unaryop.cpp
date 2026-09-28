@@ -23,7 +23,7 @@ namespace dwave::optimization {
 template <class UnaryOp>
 std::pair<double, double> calculate_values_minmax(const Array* array_ptr) {
     // Do some checks to make sure the resulting domain/range will be valid
-    if constexpr (std::is_same<UnaryOp, functional::square_root>::value) {
+    if constexpr (std::is_same<UnaryOp, functional::sqrt>::value) {
         if (array_ptr->min() < 0) {
             throw std::invalid_argument("SquareRoot's predecessors cannot take a negative value");
         }
@@ -92,7 +92,7 @@ std::pair<double, double> calculate_values_minmax(const Array* array_ptr) {
             )
         );  // prevent inf
     }
-    if constexpr (std::same_as<UnaryOp, functional::square_root>) {
+    if constexpr (std::same_as<UnaryOp, functional::sqrt>) {
         assert(low >= 0);  // checked by constructor
         return std::make_pair(std::sqrt(low), std::sqrt(high));
     }
@@ -294,7 +294,7 @@ template class UnaryOpNode<functional::negative>;
 template class UnaryOpNode<functional::rint>;
 template class UnaryOpNode<functional::sin>;
 template class UnaryOpNode<functional::square>;
-template class UnaryOpNode<functional::square_root>;
+template class UnaryOpNode<functional::sqrt>;
 template class UnaryOpNode<functional::tanh>;
 
 }  // namespace dwave::optimization
