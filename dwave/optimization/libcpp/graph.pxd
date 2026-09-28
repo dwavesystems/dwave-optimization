@@ -71,3 +71,11 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         void add_constraint(ArrayNode*) except+
         void topological_sort()
         bool topologically_sorted() const
+
+# This isn't an include, but a sanity check that we need to put *somewhere* and
+# this is a place that's guaranteed to be executed. 
+cdef extern from *:
+    """
+    static_assert(std::same_as<Py_ssize_t, dwave::optimization::ssize_t>);
+    """
+    pass

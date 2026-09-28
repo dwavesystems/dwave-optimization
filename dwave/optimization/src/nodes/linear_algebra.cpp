@@ -18,12 +18,12 @@
 #include <ranges>
 #include <vector>
 
+#include "dwave-optimization/config.hpp"  // for DWOPT_HAS_BLAS
 #include "dwave-optimization/graph.hpp"
 
-#if __has_include(<openblas_config.h>) and __has_include(<cblas.h>)
+#if DWOPT_HAS_BLAS
 #include <cblas.h>
-#define HAS_BLAS_
-#endif
+#endif  
 
 #include "_state.hpp"
 #include "dwave-optimization/array.hpp"
@@ -72,7 +72,7 @@ void gemm(
     }
 }
 
-#ifdef HAS_BLAS_
+#if DWOPT_HAS_BLAS
 
 // Given a strided 2D array, dump it to a contiguous vector.
 std::vector<double> make_contiguous(
@@ -582,7 +582,7 @@ ssize_t MatrixMultiplyNode::size_diff(const State& state) const {
 
 SizeInfo MatrixMultiplyNode::sizeinfo() const { return sizeinfo_; }
 
-#ifdef HAS_BLAS_
+#if DWOPT_HAS_BLAS
 std::string MatrixMultiplyNode::implementation = "blas";
 #else
 std::string MatrixMultiplyNode::implementation = "fallback";

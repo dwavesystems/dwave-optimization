@@ -22,14 +22,14 @@
 #include <stdexcept>
 #include <utility>
 
-#if defined(__has_include) and __has_include(<cxxabi.h>)
-#define _HAS_CXXABI
-#include <cxxabi.h>
-#endif
-
 #include "dwave-optimization/array.hpp"
+#include "dwave-optimization/config.hpp"  // for DWOPT_CXXABI_HAS_DEMANGLE
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/inputs.hpp"
+
+#if DWOPT_CXXABI_HAS_DEMANGLE
+#include <cxxabi.h>
+#endif
 
 namespace dwave::optimization {
 
@@ -704,7 +704,7 @@ std::string Node::classname() const {
     // get the compiler-specific name
     const char* compiler_name = typeid(*this).name();
 
-#if defined(_HAS_CXXABI)
+#if DWOPT_CXXABI_HAS_DEMANGLE
     // if cxxabi.h is available, we can demangle
     std::string name;
 

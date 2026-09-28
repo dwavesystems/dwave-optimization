@@ -12,23 +12,34 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-/// Support for different compilers and backports from future C++ versions
-
 #pragma once
 
-#if defined(_MSC_VER) && defined(_WIN64) && (_MSC_VER > 1400) || defined(__MINGW32__) || \
-    defined(__MINGW64__)  // Not POSIX
+#include "dwave-optimization/config.hpp"
 
-#include <cstdint>  // for int64_t
+// We want to use ssize_t (to match Python's Py_ssize_t) in a lot of places
+// but it's not always available.
 
-// We use ssize_t everywhere to match Python's Py_ssize_t.
-// However ssize_t is only defined for posix, so we define it in windows.
-namespace dwave::optimization {
-typedef std::int64_t ssize_t;
-}  // namespace dwave::optimization
+#if DWOPT_SYS_TYPES_HAS_SSIZE_T
 
-#else  // Not Windows
+// If ssize_t is available (via <sys/types.hp>) then we use it.
 
 #include <sys/types.h>  // for ssize_t
+
+namespace dwave::optimization {
+using ::ssize_t;  // so dwave::optimization::ssize_t works everywhere
+}  // namespace dwave::optimization
+
+#else
+
+// We try to match Windows
+// https://github.com/python/cpython/blob/333071231/PC/pyconfig.h#L222-L230
+// though using std::ptrdiff_t is more convenient to match Win32/Win64 and
+// we assert the match in Cython.
+
+#include <cstddef>  // for std::ptrdiff_t
+
+namespace dwave::optimization {
+using ssize_t = std::ptrdiff_t;
+}  // namespace dwave::optimization
 
 #endif

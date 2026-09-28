@@ -63,6 +63,7 @@ dwave_optimization_dependencies = []
 
 # Set up BLAS. _find_openblas.py will return the include directory, the library
 # directory and the library name.
+has_blas = false
 if not get_option('blas').disabled()
     blasinfo = run_command(
         ['dwave/optimization/_build/_find_openblas.py'],
@@ -82,6 +83,8 @@ if not get_option('blas').disabled()
                 include_directories: blasinfo[0],
             )
         ]
+
+        has_blas = true
     elif get_option('blas').enabled()
         error(
             'No BLAS available.' +
@@ -89,6 +92,9 @@ if not get_option('blas').disabled()
         )
     endif
 endif
+
+# Generate config.hpp
+subdir('dwave/optimization/include/dwave-optimization')
 
 if host_machine.system() == 'windows'
     # Shared libraries don't work so well on windows, so we build from a static
