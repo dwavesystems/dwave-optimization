@@ -693,6 +693,36 @@ TEST_CASE("Test deduplicate_diff") {
             }
         }
     }
+
+    GIVEN("A list of updates with multiple removals") {
+        std::vector<Update> updates = {
+            Update(2, 2, -2),
+            Update(3, 1, 5),
+            Update::removal(5, 5),
+            Update::removal(4, 4),
+            Update(3, 5, 3),
+            Update::removal(3, 3),
+            Update(1, 1, -1),
+        };
+
+        WHEN("We call deduplicate_diff") {
+            deduplicate_diff(updates);
+            THEN("deduplicate_diff() trims the diff properly") {
+                CHECK(
+                    std::ranges::equal(
+                        updates,
+                        std::vector<Update>{
+                            Update(1, 1, -1),
+                            Update(2, 2, -2),
+                            Update::removal(5, 5),
+                            Update::removal(4, 4),
+                            Update::removal(3, 1)
+                        }
+                    )
+                );
+            }
+        }
+    }
 }
 
 // Adapted from NumPy
