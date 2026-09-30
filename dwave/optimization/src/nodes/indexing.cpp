@@ -1019,19 +1019,15 @@ void AdvancedIndexingNode::propagate(State& state) const {
                     state, offset_update.value, data, offset_update.index, diff
                 );
             } else if (offset_update.removed()) {
-                break;
+                fill_subspace<false, true>(
+                    state, offset_update.value, data, offset_update.index, diff
+                );
             } else {
                 fill_subspace<false, false>(
                     state, offset_update.value, data, offset_update.index, diff
                 );
             }
             if (parent_array_changed) offset_idxs_updated.insert(offset_update.index);
-        }
-
-        // Handle the removals
-        for (const auto& offset_update : offsets_diff | std::views::reverse) {
-            if (!offset_update.removed()) break;
-            fill_subspace<false, true>(state, offset_update.value, data, offset_update.index, diff);
         }
 
         // Handle any updates to the parent array that weren't already pulled in by

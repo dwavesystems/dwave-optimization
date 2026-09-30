@@ -287,6 +287,33 @@ TEMPLATE_TEST_CASE(
                     CHECK(p_ptr->diff(state).size() == 2);  // we did some deduplication
                 }
             }
+
+            AND_WHEN("We grow and shrink the arrays multiple times") {
+                dyn_ptr->grow(state, {1, 2, 3, 4, 5, 6});
+                graph.propagate(state);
+                graph.commit(state);
+
+                dyn_ptr->shrink(state);
+                dyn_ptr->shrink(state);
+                dyn_ptr->grow(state, {7, 8});
+                dyn_ptr->shrink(state);
+
+                graph.propagate(state);
+
+                THEN("The output has the values we expect") {
+                    CHECK(p_ptr->size(state) == 1);
+                    CHECK(p_ptr->shape(state).size() == 1);
+
+                    for (int i = 0; i < p_ptr->size(state); ++i) {
+                        CHECK(
+                            p_ptr->view(state)[i] ==
+                            func(a_ptr->view(state)[i], b_ptr->view(state)[i])
+                        );
+                    }
+
+                    CHECK(p_ptr->diff(state).size() == 2);  // we did some deduplication
+                }
+            }
         }
     }
 

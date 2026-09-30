@@ -316,20 +316,37 @@ void deduplicate_diff(std::vector<Update>& diff) {
         new_index = 0;
     }
 
+    // For tracking the possible section at the end of removals (which will be
+    // present IFF the array is overall shrinking)
+    ssize_t removal_section_start = -1;
+
     if (new_index >= 0) {
         for (size_t i = start; i < diff.size(); ++i) {
+            // If the next update is at the same index, "collapse" it into the current one
             if (diff[i].index == diff[new_index].index) {
                 diff[new_index].value = diff[i].value;
-            } else if (diff[new_index].null()) {
-                // We have finished processing the update at that index, but both the
+                continue;
+            }
+
+            // Now we do the final processing for the current update.
+            if (diff[new_index].null()) {
+                // We have finished processing the current update, but both the
                 // old and new value are NaN which means it was added and then deleted,
                 // and should be discarded.
                 // At this point we are done because all updates at following indices
                 // should also have been added and deleted.
                 new_index--;
                 break;
-            } else if (!diff[i].identity()) {
-                // Move to the next update only if the final state of the update is not a noop
+            }
+
+            // Move to the next update only if the final state of the update is not a noop
+            if (not diff[i].identity()) {
+                // The update at `new_index` is now finalized. Check and note if it is a removal
+                if (removal_section_start == -1 and diff[new_index].removed()) {
+                    removal_section_start = new_index;
+                }
+
+                // Move on to the next update in the original diff
                 new_index++;
                 diff[new_index] = diff[i];
             }
@@ -348,6 +365,16 @@ void deduplicate_diff(std::vector<Update>& diff) {
     // the value passed to resize doesn't matter (just to avoid implementing a
     // construct_at method for Update)
     diff.resize(new_index + 1, Update::placement(-666, 666));
+
+    if (removal_section_start >= 0) {
+        assert([&]() {
+            for (const auto& u : diff | std::views::drop(removal_section_start)) {
+                if (not u.removed()) return false;
+            }
+            return true;
+        }() and "removal section was found, but not all updates in section are removals");
+        std::reverse(diff.begin() + removal_section_start, diff.end());
+    }
 }
 
 bool is_contiguous(const ssize_t ndim, const ssize_t* shape, const ssize_t* strides) {
