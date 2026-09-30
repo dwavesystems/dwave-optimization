@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Fix an issue with ``deduplicate_diff()``, a helper method used by several
+    nodes to compress the diffs produced and recieved by array nodes, that
+    caused multiple (net) removals to be processed in the incorrect order. This
+    issue affected all ``BinaryOpNode`` subclasses and related symbols (e.g.
+    ``Add``, ``Multiply``) as well as the ``Roll``, ``BroadcastTo``, and
+    ``SoftMax`` node/symbols.
