@@ -238,6 +238,53 @@ TEST_CASE("AdvancedIndexingNode") {
                     }
                 }
             }
+
+            AND_WHEN("We grow and shrink the SetNode multiple times") {
+                s_ptr->grow(state);
+                s_ptr->grow(state);
+                s_ptr->grow(state);
+                graph.propagate(state);
+                graph.commit(state);
+
+                s_ptr->shrink(state);
+                s_ptr->shrink(state);
+                graph.propagate(state);
+
+                THEN("The state is updated and the updates are signalled") {
+                    CHECK(std::ranges::equal(B_ptr->shape(state), s_ptr->shape(state)));
+                    CHECK(B_ptr->size(state) == s_ptr->size(state));
+
+                    CHECK_THAT(B_ptr->view(state), RangeEquals({4}));
+
+                    CHECK(B_ptr->size_diff(state) == -2);  // shrank by two
+                }
+
+                AND_WHEN("We commit") {
+                    graph.commit(state, graph.descendants(state, {s_ptr}));
+
+                    THEN("The values stick, and the diff is cleared") {
+                        CHECK(std::ranges::equal(B_ptr->shape(state), s_ptr->shape(state)));
+                        CHECK(B_ptr->size(state) == s_ptr->size(state));
+                        CHECK_THAT(B_ptr->view(state), RangeEquals({4}));
+
+                        CHECK(B_ptr->size_diff(state) == 0);
+                        CHECK(B_ptr->diff(state).size() == 0);
+                    }
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state, graph.descendants(state, {s_ptr}));
+
+                    THEN("We're back to where we started") {
+                        CHECK(std::ranges::equal(B_ptr->shape(state), s_ptr->shape(state)));
+                        CHECK(B_ptr->size(state) == s_ptr->size(state));
+                        CHECK_THAT(B_ptr->view(state), RangeEquals({4, 3, 2}));
+
+                        CHECK(B_ptr->size_diff(state) == 0);
+                        CHECK(B_ptr->diff(state).size() == 0);
+                    }
+                }
+            }
         }
     }
 
