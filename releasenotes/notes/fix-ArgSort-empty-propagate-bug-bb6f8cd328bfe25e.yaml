@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Fix an issue with ``ArgSortNode`` where propagation of an empty diff after
+    a previous (non-empty) commit resulted in incorrect internal data
+    structures, causing subsequent output to be incorrect.
