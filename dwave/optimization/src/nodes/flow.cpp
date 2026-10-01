@@ -67,16 +67,11 @@ double const* ExtractNode::buff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
 
-void ExtractNode::commit(State& state) const { data_ptr_<ArrayNodeStateData>(state)->commit(); }
-
-std::span<const Update> ExtractNode::diff(const State& state) const {
-    return data_ptr_<ArrayNodeStateData>(state)->diff();
-}
-
-void ExtractNode::initialize_state(State& state) const {
-    const std::ranges::view auto condition = condition_ptr_->view(state);
-    const std::ranges::view auto arr = arr_ptr_->view(state);
-
+std::vector<double> extract(
+    const State& state,
+    const std::ranges::view auto condition,
+    const std::ranges::view auto arr
+) {
     std::vector<double> values;
     values.reserve(condition.size());
 
@@ -88,8 +83,26 @@ void ExtractNode::initialize_state(State& state) const {
             values.emplace_back(*arrit);
         }
     }
+    return values;
+}
 
-    emplace_data_ptr_<ArrayNodeStateData>(state, std::move(values));
+void ExtractNode::commit(State& state) const {
+    data_ptr_<ArrayNodeStateData>(state)->commit();
+    assert(([&]() {
+        const std::ranges::view auto condition = condition_ptr_->view(state);
+        const std::ranges::view auto arr = arr_ptr_->view(state);
+        return std::ranges::equal(extract(state, condition, arr), view(state));
+    })());
+}
+
+std::span<const Update> ExtractNode::diff(const State& state) const {
+    return data_ptr_<ArrayNodeStateData>(state)->diff();
+}
+
+void ExtractNode::initialize_state(State& state) const {
+    emplace_data_ptr_<ArrayNodeStateData>(
+        state, extract(state, condition_ptr_->view(state), arr_ptr_->view(state))
+    );
 }
 
 bool ExtractNode::integral() const { return values_info_.integral; }
@@ -143,6 +156,8 @@ void ExtractNode::propagate(State& state) const {
     }
 
     node_data->assign(std::move(new_values), count);
+
+    assert(std::ranges::equal(extract(state, condition, arr), view(state)));
 }
 
 void ExtractNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
@@ -158,7 +173,13 @@ void ExtractNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
     }
 }
 
-void ExtractNode::revert(State& state) const { data_ptr_<ArrayNodeStateData>(state)->revert(); }
+void ExtractNode::revert(State& state) const {
+    data_ptr_<ArrayNodeStateData>(state)->revert();
+    assert(([&]() {
+        const std::ranges::view auto condition = condition_ptr_->view(state);
+        return std::ranges::equal(extract(state, condition, arr_ptr_->view(state)), view(state));
+    })());
+}
 
 std::span<const ssize_t> ExtractNode::shape(const State& state) const {
     return std::span(&data_ptr_<ArrayNodeStateData>(state)->size(), 1);
@@ -181,7 +202,7 @@ struct WhereNodeData : ArrayNodeStateData {
     explicit WhereNodeData(std::vector<double>&& values) noexcept :
         ArrayNodeStateData(std::move(values)) {}
 
-    template<std::ranges::range R>
+    template <std::ranges::range R>
     explicit WhereNodeData(R&& values) noexcept :
         ArrayNodeStateData(std::ranges::to<std::vector<double>>(std::forward<R>(values))) {}
 
