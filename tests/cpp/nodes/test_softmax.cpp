@@ -30,8 +30,8 @@ TEST_CASE("SoftMaxNode") {
     auto graph = Graph();
 
     GIVEN("A constant node and a softmax node") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1.0, 0.0, 3.0, 5.0});
-        auto softmax_ptr = graph.emplace_node<SoftMaxNode>(a_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1.0, 0.0, 3.0, 5.0});
+        auto* softmax_ptr = graph.emplace_node<SoftMaxNode>(a_ptr);
         graph.emplace_node<ArrayValidationNode>(softmax_ptr);
 
         WHEN("We initialize a state") {
@@ -48,8 +48,8 @@ TEST_CASE("SoftMaxNode") {
     }
 
     GIVEN("An integer node and a softmax node") {
-        auto i_ptr = graph.emplace_node<IntegerNode>(2);
-        auto softmax_ptr = graph.emplace_node<SoftMaxNode>(i_ptr);
+        auto* i_ptr = graph.emplace_node<IntegerNode>(2);
+        auto* softmax_ptr = graph.emplace_node<SoftMaxNode>(i_ptr);
         graph.emplace_node<ArrayValidationNode>(softmax_ptr);
 
         WHEN("We initialize a state") {
@@ -62,6 +62,7 @@ TEST_CASE("SoftMaxNode") {
                 CHECK_THAT(softmax_ptr->view(state)[1], WithinRel(0.95257412682243, 1e-9));
                 CHECK(softmax_ptr->size() == 2);
             }
+
             AND_WHEN("We make changes to integer node and propagate") {
                 i_ptr->set_value(state, 1, 1.0);
                 // i_ptr should be [2.0, 1.0]
@@ -71,8 +72,27 @@ TEST_CASE("SoftMaxNode") {
                     CHECK_THAT(softmax_ptr->view(state)[0], WithinRel(0.73105857863, 1e-9));
                     CHECK_THAT(softmax_ptr->view(state)[1], WithinRel(0.26894142137, 1e-9));
                 }
+
                 AND_WHEN("We commit state, make changes to integer node, and propagate") {
                     graph.commit(state);
+                    i_ptr->set_value(state, 0, 4.0);
+                    // i_ptr should now be [4.0, 1.0]
+                    graph.propagate(state);
+
+                    THEN("The softmax state is correct") {
+                        CHECK_THAT(softmax_ptr->view(state)[0], WithinRel(0.95257412682243, 1e-9));
+                        CHECK_THAT(softmax_ptr->view(state)[1], WithinRel(0.04742587317757, 1e-9));
+                    }
+                }
+
+                AND_WHEN(
+                    "We commit state, perform an empty propagate and revert, then make changes to "
+                    "integer node and propagate"
+                ) {
+                    graph.commit(state);
+                    graph.propagate(state);
+                    graph.revert(state);
+
                     i_ptr->set_value(state, 0, 4.0);
                     // i_ptr should now be [4.0, 1.0]
                     graph.propagate(state);
@@ -111,11 +131,12 @@ TEST_CASE("SoftMaxNode") {
             }
         }
     }
+
     GIVEN("A dynamic array node and a softmax node") {
-        auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+        auto* dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
             std::initializer_list<ssize_t>{-1}, -10.0, 10.0, false
         );
-        auto softmax_ptr = graph.emplace_node<SoftMaxNode>(dyn_ptr);
+        auto* softmax_ptr = graph.emplace_node<SoftMaxNode>(dyn_ptr);
 
         graph.emplace_node<ArrayValidationNode>(softmax_ptr);
 
