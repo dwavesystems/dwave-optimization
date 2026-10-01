@@ -1,0 +1,3 @@
+---
+features:
+  - Add ``force-fallback`` Meson build option.
