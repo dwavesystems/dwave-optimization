@@ -67,7 +67,10 @@ double const* SoftMaxNode::buff(const State& state) const {
 }
 
 void SoftMaxNode::commit(State& state) const {
-    return data_ptr_<SoftMaxNodeStateData>(state)->commit();
+    auto node_data = data_ptr_<SoftMaxNodeStateData>(state);
+    node_data->commit();
+    // Manually reset prior denominator
+    node_data->prior_denominator = node_data->denominator;
 }
 
 std::span<const Update> SoftMaxNode::diff(const State& state) const {
