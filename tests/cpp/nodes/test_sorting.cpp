@@ -74,6 +74,20 @@ TEST_CASE("ArgSortNode") {
                 THEN("The argsort state is correct") {
                     CHECK_THAT(argsort_ptr->view(state), RangeEquals({1, 0, 3, 2, 4}));
                 }
+
+                AND_WHEN("We commit, propagate, revert, mutate, and propagate again") {
+                    graph.commit(state);
+                    graph.propagate(state);  // No changes
+                    graph.revert(state);
+
+                    i_ptr->set_value(state, 0, 8.0);
+                    // i_ptr should now be [8.0, 0.0, 4.0, 2.0, 7.0]
+                    graph.propagate(state);
+
+                    THEN("The argsort state is correct") {
+                        CHECK_THAT(argsort_ptr->view(state), RangeEquals({1, 3, 2, 4, 0}));
+                    }
+                }
             }
         }
 
