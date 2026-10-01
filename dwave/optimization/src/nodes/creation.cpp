@@ -14,6 +14,7 @@
 
 #include "dwave-optimization/nodes/creation.hpp"
 
+#include <ranges>
 #include <utility>
 #include <variant>
 
@@ -349,7 +350,10 @@ double const* ARangeNode::buff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->buff();
 }
 
-void ARangeNode::commit(State& state) const { data_ptr_<ArrayNodeStateData>(state)->commit(); }
+void ARangeNode::commit(State& state) const {
+    data_ptr_<ArrayNodeStateData>(state)->commit();
+    assert(std::ranges::equal(arange(state, start_, stop_, step_), view(state)));
+}
 
 std::span<const Update> ARangeNode::diff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->diff();
@@ -375,9 +379,6 @@ void ARangeNode::propagate(State& state) const {
     const auto [stop_old, stop_new] = std::visit(visitor, stop_);
     const auto [step_old, step_new] = std::visit(visitor, step_);
 
-    // If nothing has changed, return early.
-    if (start_old == start_new and stop_old == stop_new and step_old == step_new) return;
-
     ArrayNodeStateData* ptr = data_ptr_<ArrayNodeStateData>(state);
 
     // If the start or the step has changed, we need to change everything
@@ -388,6 +389,8 @@ void ARangeNode::propagate(State& state) const {
         if (ptr->diff().size()) Node::propagate(state);
         return;
     }
+    assert(start_old == start_new);
+    assert(step_old == step_new);
 
     // if the stop has also not changed, then nothing to do
     if (stop_old == stop_new) return;
@@ -428,6 +431,8 @@ void ARangeNode::propagate(State& state) const {
     }
 
     if (ptr->diff().size()) Node::propagate(state);
+
+    assert(std::ranges::equal(arange(state, start_, stop_, step_), view(state)));
 }
 
 void ARangeNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
@@ -469,7 +474,10 @@ void ARangeNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
     step_ = array_ptr;
 }
 
-void ARangeNode::revert(State& state) const { data_ptr_<ArrayNodeStateData>(state)->revert(); }
+void ARangeNode::revert(State& state) const {
+    data_ptr_<ArrayNodeStateData>(state)->revert();
+    assert(std::ranges::equal(arange(state, start_, stop_, step_), view(state)));
+}
 
 std::span<const ssize_t> ARangeNode::shape(const State& state) const {
     return std::span<const ssize_t>(&(data_ptr_<ArrayNodeStateData>(state)->size()), 1);
