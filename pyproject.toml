@@ -160,16 +160,6 @@ select = "cp31[!01]-*"  # uses fnmatch, will fail for 3.20+ but good enough for 
 build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=true", "--no-isolation"] }
 
 [[tool.cibuildwheel.overrides]]
-select = "*-????linux_*"
-inherit.repair-wheel-command = "prepend"
-repair-wheel-command = "python /project/dwave/optimization/_build/_fix_rpath.py {wheel}"
-
-[[tool.cibuildwheel.overrides]]
-select = "*-macosx_*"
-inherit.repair-wheel-command = "prepend"
-repair-wheel-command = "python ./dwave/optimization/_build/_fix_rpath.py {wheel}"
-
-[[tool.cibuildwheel.overrides]]
 # We need a universal build of scipy_openblas so we need to make one on the fly
 select = "*-macosx_*"
 before-build = [
