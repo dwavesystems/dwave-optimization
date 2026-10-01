@@ -65,7 +65,18 @@ double const* ArgSortNode::buff(const State& state) const {
     return data_ptr_<ArgSortNodeData>(state)->buff();
 }
 
-void ArgSortNode::commit(State& state) const { data_ptr_<ArgSortNodeData>(state)->commit(); }
+void ArgSortNode::commit(State& state) const {
+    auto node_data = data_ptr_<ArgSortNodeData>(state);
+    node_data->predecessor_updates.clear();
+    node_data->commit();
+
+    assert([&]() {
+        for (const auto& t : node_data->order) {
+            if (arr_ptr_->view(state)[t.second] != t.first) return false;
+        }
+        return true;
+    }() and "output buffer is not consistent with internal `order`");
+}
 
 std::span<const Update> ArgSortNode::diff(const State& state) const {
     return data_ptr_<ArgSortNodeData>(state)->diff();
@@ -84,11 +95,17 @@ double ArgSortNode::min() const { return minmax_.first; }
 double ArgSortNode::max() const { return minmax_.second; }
 
 void ArgSortNode::propagate(State& state) const {
+    assert(
+        data_ptr_<ArgSortNodeData>(state)->predecessor_updates.empty() and
+        "cached predecessor updates not cleared properly before propagate"
+    );
+
     const auto pred_diff = arr_ptr_->diff(state);
     // If there are no updates, return early.
     if (pred_diff.empty()) return;
 
     auto node_data = data_ptr_<ArgSortNodeData>(state);
+
     // Save a copy of the predecessor's updates so we can use them in case we
     // need to revert the changes to the ordering
     node_data->predecessor_updates.assign(pred_diff.begin(), pred_diff.end());
@@ -111,6 +128,13 @@ void ArgSortNode::propagate(State& state) const {
         node_data->order |
         std::views::transform([](const std::pair<double, ssize_t>& p) { return p.second; })
     );
+
+    assert([&]() {
+        for (const auto& t : node_data->order) {
+            if (arr_ptr_->view(state)[t.second] != t.first) return false;
+        }
+        return true;
+    }() and "output buffer is not consistent with internal `order`");
 }
 
 void ArgSortNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
@@ -139,6 +163,13 @@ void ArgSortNode::revert(State& state) const {
 
     node_data->predecessor_updates.clear();
     node_data->revert();
+
+    assert([&]() {
+        for (const auto& t : node_data->order) {
+            if (arr_ptr_->view(state)[t.second] != t.first) return false;
+        }
+        return true;
+    }() and "output buffer is not consistent with internal `order`");
 }
 
 std::span<const ssize_t> ArgSortNode::shape(const State& state) const {
