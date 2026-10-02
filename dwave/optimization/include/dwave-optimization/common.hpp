@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-/// Support for different compilers and backports from future C++ versions
+/// Support for different compilers
 
 #pragma once
 

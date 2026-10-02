@@ -15,6 +15,7 @@
 #pragma once
 
 #include <cassert>
+#include <cmath>
 #include <compare>
 #include <concepts>
 #include <iosfwd>
@@ -31,6 +32,9 @@ template <DType T>
 struct interval {
     /// Construct an empty interval.
     constexpr interval() = default;
+
+    /// Construct an interval containing only value.
+    explicit constexpr interval(T value) noexcept : infimum(value), supremum(value) {}
 
     /// Construct an interval of values between inf and sup (inclusive).
     /// When ``sup < inf`` the interval is treated as empty.
@@ -176,9 +180,19 @@ struct interval {
     static consteval interval nonnegative() {
         using limits = std::numeric_limits<T>;
         if constexpr (limits::has_infinity) {
-            return interval(0, limits::infinity());
+            return interval(0.0, limits::infinity());
         } else {
             return interval(0, limits::max());
+        }
+    }
+
+    /// All expressible non-positive values.
+    static consteval interval nonpositive() {
+        using limits = std::numeric_limits<T>;
+        if constexpr (limits::has_infinity) {
+            return interval(-limits::infinity(), -0.0);
+        } else {
+            return interval(limits::lowest(), 0);
         }
     }
 

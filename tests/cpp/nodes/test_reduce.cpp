@@ -33,8 +33,8 @@ namespace dwave::optimization {
 TEMPLATE_TEST_CASE(
     "ReduceNode",
     "",  //
-    functional::max<double>,
-    functional::min<double>,  //
+    functional::maximum,
+    functional::minimum,
     std::logical_and<double>,
     std::logical_or<double>,  //
     std::multiplies<double>,  //

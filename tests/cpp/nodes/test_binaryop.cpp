@@ -34,18 +34,18 @@ TEMPLATE_TEST_CASE(
     "BinaryOpNode",
     "",
     // std::divides<double>,
-    std::equal_to<double>,
-    std::less_equal<double>,
-    std::plus<double>,
-    std::minus<double>,
-    functional::modulus<double>,
-    std::multiplies<double>,
-    functional::max<double>,
-    functional::min<double>,
-    std::logical_and<double>,
-    std::logical_or<double>,
-    functional::logical_xor<double>,
-    functional::safe_divides<double>
+    functional::equal,
+    functional::less_equal,
+    functional::add,
+    functional::subtract,
+    functional::remainder,
+    functional::multiply,
+    functional::maximum,
+    functional::minimum,
+    functional::logical_and,
+    functional::logical_or,
+    functional::logical_xor,
+    functional::divide
 ) {
     auto graph = Graph();
 
@@ -77,7 +77,7 @@ TEMPLATE_TEST_CASE(
             THEN("The output has the value and shape we expect") {
                 CHECK(p_ptr->size(state) == 1);
                 CHECK(p_ptr->shape(state).size() == 0);
-                CHECK(p_ptr->view(state)[0] == func(5, 6));
+                CHECK(p_ptr->view(state)[0] == func(5.0, 6.0));
             }
         }
     }

@@ -77,7 +77,7 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
     // that case we should update these as well.
     if constexpr (
         std::same_as<BinaryOp, std::divides<double>> ||
-        std::same_as<BinaryOp, std::multiplies<double>>
+        std::same_as<BinaryOp, functional::multiply>
     ) {
         // The constructor should prevent us from getting here, but just in case...
         assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_low != 0));
@@ -93,7 +93,7 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
 
         return std::make_pair(std::ranges::min(combos), std::ranges::max(combos));
     }
-    if constexpr (std::same_as<BinaryOp, functional::safe_divides<double>>) {
+    if constexpr (std::same_as<BinaryOp, functional::divide>) {
         // safe_divide is, well, safe. So we start by calculating all combos.
         // Though there are some possible other values depending on our rhs.
         std::vector<double> combos = {
@@ -105,15 +105,15 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
 
         if (rhs_ptr->integral()) {
             if (rhs_low < 0 && 0 < rhs_high) {
-                combos.emplace_back(op(1, 0));
+                combos.emplace_back(op(1.0, 0.0));
             }
             if (rhs_low < -1 && -1 < rhs_high) {
-                combos.emplace_back(op(lhs_low, -1));
-                combos.emplace_back(op(lhs_high, -1));
+                combos.emplace_back(op(lhs_low, -1.0));
+                combos.emplace_back(op(lhs_high, -1.0));
             }
             if (rhs_low < 1 && 1 < rhs_high) {
-                combos.emplace_back(op(lhs_low, 1));
-                combos.emplace_back(op(lhs_high, 1));
+                combos.emplace_back(op(lhs_low, 1.0));
+                combos.emplace_back(op(lhs_high, 1.0));
             }
         } else {
             if (rhs_low < 0 && 0 < rhs_high) {
@@ -136,15 +136,15 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
         return std::make_pair(std::ranges::min(combos), std::ranges::max(combos));
     }
     if constexpr (
-        std::same_as<BinaryOp, functional::max<double>> ||
-        std::same_as<BinaryOp, functional::min<double>> || std::same_as<BinaryOp, std::plus<double>>
+        std::same_as<BinaryOp, functional::maximum> ||
+        std::same_as<BinaryOp, functional::minimum> || std::same_as<BinaryOp, functional::add>
     ) {
         return std::make_pair(op(lhs_low, rhs_low), op(lhs_high, rhs_high));
     }
-    if constexpr (std::same_as<BinaryOp, std::minus<double>>) {
+    if constexpr (std::same_as<BinaryOp, functional::subtract>) {
         return std::make_pair(lhs_low - rhs_high, lhs_high - rhs_low);
     }
-    if constexpr (std::same_as<BinaryOp, functional::modulus<double>>) {
+    if constexpr (std::same_as<BinaryOp, functional::remainder>) {
         // Lower bound is the smallest negative absolute value
         return std::make_pair(
             -rhs_high < rhs_low ? -rhs_high : rhs_low, -rhs_low > rhs_high ? -rhs_low : rhs_high
@@ -167,17 +167,17 @@ bool calculate_integral(const Array* lhs_ptr, const Array* rhs_ptr) {
 
     if constexpr (
         std::is_same<BinaryOp, std::divides<double>>::value ||
-        std::is_same<BinaryOp, functional::safe_divides<double>>::value
+        std::is_same<BinaryOp, functional::divide>::value
     ) {
         return false;
     }
     if constexpr (
-        std::is_same<BinaryOp, functional::max<double>>::value ||
-        std::is_same<BinaryOp, functional::min<double>>::value ||
-        std::is_same<BinaryOp, std::minus<double>>::value ||
-        std::is_same<BinaryOp, functional::modulus<double>>::value ||
-        std::is_same<BinaryOp, std::multiplies<double>>::value ||
-        std::is_same<BinaryOp, std::plus<double>>::value
+        std::is_same<BinaryOp, functional::maximum>::value ||
+        std::is_same<BinaryOp, functional::minimum>::value ||
+        std::is_same<BinaryOp, functional::subtract>::value ||
+        std::is_same<BinaryOp, functional::remainder>::value ||
+        std::is_same<BinaryOp, functional::multiply>::value ||
+        std::is_same<BinaryOp, functional::add>::value
     ) {
         return lhs_ptr->integral() && rhs_ptr->integral();
     }
@@ -517,18 +517,18 @@ SizeInfo BinaryOpNode<BinaryOp>::sizeinfo() const {
 }
 
 // Uncommented are the tested specializations
-template class BinaryOpNode<std::plus<double>>;
-template class BinaryOpNode<std::minus<double>>;
-template class BinaryOpNode<std::multiplies<double>>;
+template class BinaryOpNode<functional::add>;
+template class BinaryOpNode<functional::subtract>;
+template class BinaryOpNode<functional::multiply>;
 template class BinaryOpNode<std::divides<double>>;
-template class BinaryOpNode<functional::modulus<double>>;
-template class BinaryOpNode<std::equal_to<double>>;
-template class BinaryOpNode<std::less_equal<double>>;
-template class BinaryOpNode<std::logical_and<double>>;
-template class BinaryOpNode<std::logical_or<double>>;
-template class BinaryOpNode<functional::logical_xor<double>>;
-template class BinaryOpNode<functional::max<double>>;
-template class BinaryOpNode<functional::min<double>>;
-template class BinaryOpNode<functional::safe_divides<double>>;
+template class BinaryOpNode<functional::remainder>;
+template class BinaryOpNode<functional::equal>;
+template class BinaryOpNode<functional::less_equal>;
+template class BinaryOpNode<functional::logical_and>;
+template class BinaryOpNode<functional::logical_or>;
+template class BinaryOpNode<functional::logical_xor>;
+template class BinaryOpNode<functional::maximum>;
+template class BinaryOpNode<functional::minimum>;
+template class BinaryOpNode<functional::divide>;
 
 }  // namespace dwave::optimization

@@ -92,18 +92,18 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
 // We follow NumPy naming convention rather than C++ to distinguish between
 // binary operations and reduce operations.
 // https://numpy.org/doc/stable/reference/routines.math.html
-using AddNode = BinaryOpNode<std::plus<double>>;
-using AndNode = BinaryOpNode<std::logical_and<double>>;
+using AddNode = BinaryOpNode<functional::add>;
+using AndNode = BinaryOpNode<functional::logical_and>;
 using DivideNode = BinaryOpNode<std::divides<double>>;
-using EqualNode = BinaryOpNode<std::equal_to<double>>;
-using LessEqualNode = BinaryOpNode<std::less_equal<double>>;
-using MaximumNode = BinaryOpNode<functional::max<double>>;
-using MinimumNode = BinaryOpNode<functional::min<double>>;
-using ModulusNode = BinaryOpNode<functional::modulus<double>>;
-using MultiplyNode = BinaryOpNode<std::multiplies<double>>;
-using OrNode = BinaryOpNode<std::logical_or<double>>;
-using SafeDivideNode = BinaryOpNode<functional::safe_divides<double>>;
-using SubtractNode = BinaryOpNode<std::minus<double>>;
-using XorNode = BinaryOpNode<functional::logical_xor<double>>;
+using EqualNode = BinaryOpNode<functional::equal>;
+using LessEqualNode = BinaryOpNode<functional::less_equal>;
+using MaximumNode = BinaryOpNode<functional::maximum>;
+using MinimumNode = BinaryOpNode<functional::minimum>;
+using ModulusNode = BinaryOpNode<functional::remainder>;
+using MultiplyNode = BinaryOpNode<functional::multiply>;
+using OrNode = BinaryOpNode<functional::logical_or>;
+using SafeDivideNode = BinaryOpNode<functional::divide>;
+using SubtractNode = BinaryOpNode<functional::subtract>;
+using XorNode = BinaryOpNode<functional::logical_xor>;
 
 }  // namespace dwave::optimization
