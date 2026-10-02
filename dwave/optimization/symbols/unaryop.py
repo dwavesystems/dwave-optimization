@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.symbols._unaryop import _UnaryOpSymbol, _UnaryOpNodeType
+from dwave.optimization.symbols._unaryop import _UnaryOpNodeType, _UnaryOpSymbol
 
 
 class Absolute(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Absolute):
@@ -22,7 +22,6 @@ class Absolute(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Absolute):
         :func:`~dwave.optimization.mathematical.absolute`: Instantiation and
         usage of this symbol.
     """
-    pass
 
 
 class Cos(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Cos):
@@ -36,7 +35,6 @@ class Cos(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Cos):
 
     .. versionadded:: 0.6.5
     """
-    pass
 
 
 class Exp(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Exp):
@@ -51,7 +49,6 @@ class Exp(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Exp):
 
     .. versionadded:: 0.6.2
     """
-    pass
 
 
 class Expit(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Expit):
@@ -66,7 +63,6 @@ class Expit(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Expit):
 
     .. versionadded:: 0.5.2
     """
-    pass
 
 
 class Log(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Log):
@@ -81,7 +77,6 @@ class Log(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Log):
 
     .. versionadded:: 0.5.2
     """
-    pass
 
 
 class Logical(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Logical):
@@ -95,7 +90,6 @@ class Logical(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Logical):
         :class:`~dwave.optimization.symbols.Or`,
         :class:`~dwave.optimization.symbols.Xor`
     """
-    pass
 
 
 class Negative(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Negative):
@@ -111,7 +105,6 @@ class Negative(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Negative):
         >>> type(j)
         <class 'dwave.optimization.symbols.unaryop.Negative'>
     """
-    pass
 
 
 class Not(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Not):
@@ -125,7 +118,6 @@ class Not(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Not):
         :class:`~dwave.optimization.symbols.Or`,
         :class:`~dwave.optimization.symbols.Xor`
     """
-    pass
 
 
 class Rint(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Rint):
@@ -135,7 +127,6 @@ class Rint(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Rint):
         *   :func:`~dwave.optimization.mathematical.rint`: Instantiation and
             usage of this symbol.
     """
-    pass
 
 
 class Sin(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Sin):
@@ -149,7 +140,6 @@ class Sin(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Sin):
 
     .. versionadded:: 0.6.5
     """
-    pass
 
 
 class Square(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Square):
@@ -169,7 +159,6 @@ class Square(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Square):
     See Also:
         :class:`.SquareRoot`
     """
-    pass
 
 
 class SquareRoot(_UnaryOpSymbol, node_type=_UnaryOpNodeType.SquareRoot):
@@ -181,7 +170,6 @@ class SquareRoot(_UnaryOpSymbol, node_type=_UnaryOpNodeType.SquareRoot):
 
         :class:`Square`
     """
-    pass
 
 
 class Tanh(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Tanh):
@@ -195,4 +183,3 @@ class Tanh(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Tanh):
 
     .. versionadded:: 0.6.11
     """
-    pass

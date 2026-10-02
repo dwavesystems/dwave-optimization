@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.symbols._reduce import _ReduceSymbol, _ReduceNodeType
+from dwave.optimization.symbols._reduce import _ReduceNodeType, _ReduceSymbol
 
 
 class All(_ReduceSymbol, node_type=_ReduceNodeType.All, default_initial=True):
@@ -24,7 +24,6 @@ class All(_ReduceSymbol, node_type=_ReduceNodeType.All, default_initial=True):
 
         :class:`.Any`
     """
-    pass
 
 
 class Any(_ReduceSymbol, node_type=_ReduceNodeType.Any, default_initial=False):
@@ -36,7 +35,6 @@ class Any(_ReduceSymbol, node_type=_ReduceNodeType.Any, default_initial=False):
 
         :class:`.All`
     """
-    pass
 
 
 class Max(_ReduceSymbol, node_type=_ReduceNodeType.Max):
@@ -50,7 +48,6 @@ class Max(_ReduceSymbol, node_type=_ReduceNodeType.Max):
 
         :class:`.Min`, :class:`.Prod`, :class:`.Sum`
     """
-    pass
 
 
 class Min(_ReduceSymbol, node_type=_ReduceNodeType.Min):
@@ -64,7 +61,6 @@ class Min(_ReduceSymbol, node_type=_ReduceNodeType.Min):
 
         :class:`.Max`, :class:`.Prod`, :class:`.Sum`
     """
-    pass
 
 
 class Prod(_ReduceSymbol, node_type=_ReduceNodeType.Prod, default_initial=1):
@@ -79,7 +75,6 @@ class Prod(_ReduceSymbol, node_type=_ReduceNodeType.Prod, default_initial=1):
 
         :class:`.Max`, :class:`.Min`, :class:`.Sum`
     """
-    pass
 
 
 class Sum(_ReduceSymbol, node_type=_ReduceNodeType.Sum, default_initial=0):
@@ -91,7 +86,6 @@ class Sum(_ReduceSymbol, node_type=_ReduceNodeType.Sum, default_initial=0):
 
         :class:`.Max`, :class:`.Min`, :class:`.Prod`
     """
-    pass
 
 
 # Two deprecated aliases
