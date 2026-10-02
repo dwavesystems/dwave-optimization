@@ -409,7 +409,6 @@ TEMPLATE_LIST_TEST_CASE("rint", "", DTypes) {
     }
 
     SECTION("rint(interval)") {
-        // CHECK(not op(interval<TestType>()));  // op(empty) -> empty
         CHECK(op(interval<TestType>(0, 1)) == interval(op(TestType{0}), op(TestType{1})));
         if constexpr (not std::same_as<bool, TestType>) {
             CHECK(op(interval<TestType>(-3, 4)) == interval(op(TestType{-3}), op(TestType{4})));
@@ -503,8 +502,6 @@ TEMPLATE_LIST_TEST_CASE("square", "", DTypes) {
             // saturating
             STATIC_REQUIRE(op(limits::max()) == limits::max());
             STATIC_REQUIRE(op(limits::min()) == limits::max());
-
-            // just short of saturating
 
         } else if constexpr (std::floating_point<TestType>) {
             STATIC_REQUIRE(op(TestType{2.5}) == 6.25);
