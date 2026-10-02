@@ -18,3 +18,11 @@ option(
         'When set to disabled, the build will never use BLAS.' +
         'When set to auto (default), the build will use BLAS if it is available.'
 )
+option(
+    'force-fallback',
+    type: 'boolean',
+    value: false,
+    description:
+        'In some places we make use of compiler-specific functionality for performance. ' +
+        'When set to true, we instead always make use of std-only fallbacks.'
+)

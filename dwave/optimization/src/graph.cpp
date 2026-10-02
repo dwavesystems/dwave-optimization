@@ -22,9 +22,11 @@
 #include <stdexcept>
 #include <utility>
 
-#if defined(__has_include) and __has_include(<cxxabi.h>)
+#if !defined(DWOPT__FORCE_FALLBACK) && defined(__has_include)
+#if __has_include(<cxxabi.h>)
 #define _HAS_CXXABI
 #include <cxxabi.h>
+#endif
 #endif
 
 #include "dwave-optimization/array.hpp"

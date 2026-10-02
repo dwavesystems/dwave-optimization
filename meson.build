@@ -27,6 +27,11 @@ if cpp.has_argument('-g1')
   add_project_arguments('-g1', language: 'cpp')
 endif
 
+# Also, set the fallback flag if we have it
+if get_option('force-fallback')
+    add_project_arguments('-DDWOPT__FORCE_FALLBACK', language: 'cpp')
+endif
+
 dwave_optimization_include = include_directories('dwave/optimization/include/')
 dwave_optimization_src = [
     'dwave/optimization/src/nodes/_checkpoints.cpp',
@@ -63,7 +68,7 @@ dwave_optimization_dependencies = []
 
 # Set up BLAS. _find_openblas.py will return the include directory, the library
 # directory and the library name.
-if not get_option('blas').disabled()
+if not get_option('blas').disabled() and not get_option('force-fallback')
     blasinfo = run_command(
         ['dwave/optimization/_build/_find_openblas.py'],
         capture: true,
