@@ -87,12 +87,11 @@ struct absolute : mixins::UnaryOpMixin<absolute> {
             // NumPy defines `absolute(INT_MIN) := INT_MIN` whereas we define
             // `absolute(INT_MIN) := INT_MAX` in order to preserve the sign.
             if (x == std::numeric_limits<T>::min()) return std::numeric_limits<T>::max();
-
-            // Avoid widening the type by casting back to our starting type
+            // std::abs() will widen int8_t or int16_t, so we add a static cast
             return static_cast<T>(std::abs(x));
         } else if constexpr (std::floating_point<T>) {
             assert(not std::isnan(x) and "x cannot be nan");
-
+            // std::abs() will not widen any of the floating point we care about
             return std::abs(x);
         } else {
             static_assert(false, "unexpected dtype");
@@ -136,7 +135,7 @@ struct cos : mixins::UnaryOpMixin<cos> {
         if constexpr (std::floating_point<T>) {
             assert(not std::isnan(x) and "x cannot be nan");
 
-            if (std::isinf(x)) return T(0);
+            if (std::isinf(x)) return T{0};
         }
 
         // NumPy uses the smallest floating point it can and we follow.
@@ -188,7 +187,7 @@ struct expit : mixins::UnaryOpMixin<expit> {
     static constexpr auto operator()(T x) {
         // Inherit our promotion rules from exp to match SciPy's behavior
         if constexpr (std::same_as<T, bool>) return operator()(static_cast<signed char>(x));
-        const auto y = exp{}(T(-x));
+        const auto y = exp{}(static_cast<T>(-x));
         return static_cast<decltype(y)>(1 / (1 + y));
     }
     using UnaryOpMixin::operator();
@@ -202,7 +201,7 @@ struct log : mixins::UnaryOpMixin<log> {
     // this approach and it's a bit more future-proof.
 
     template <DType T>
-    static constexpr auto operator()(const T& x) {
+    static constexpr auto operator()(T x) {
         assert((std::integral<T> or not std::isnan(x)) and "x cannot be nan");
         assert(domain<T>[0].contains(x) and "x must be non-negative");
 
@@ -224,7 +223,8 @@ struct log : mixins::UnaryOpMixin<log> {
 };
 
 struct logical : mixins::UnaryOpMixin<logical> {
-    static constexpr bool operator()(const DType auto x) {
+    template <DType T>
+    static constexpr bool operator()(T x) {
         assert((std::integral<decltype(x)> or not std::isnan(x)) and "x cannot be nan");
         return static_cast<bool>(x);
     }
@@ -251,14 +251,17 @@ struct logical : mixins::UnaryOpMixin<logical> {
 };
 
 struct logical_not : mixins::UnaryOpMixin<logical_not> {
-    static constexpr bool operator()(const DType auto& x) { return not x; }
+    template <DType T>
+    static constexpr bool operator()(T x) {
+        return not logical{}(x);
+    }
 
     template <DType T>
     static constexpr interval<bool> operator()(const interval<T>& x_enclosure) {
         assert(static_cast<bool>(x_enclosure) and "x's enclosure cannot be empty");
         if constexpr (std::same_as<T, bool>) {
             // The main path. Simplify negate the interval
-            return interval(not x_enclosure.supremum, not x_enclosure.infimum);
+            return interval<bool>(not x_enclosure.supremum, not x_enclosure.infimum);
         } else {
             // Otherwise get the boolean value associate with our enclosure and then
             // go through the main path
@@ -307,9 +310,9 @@ struct modulus {
 };
 
 struct negative : mixins::UnaryOpMixin<negative> {
-    template <class T>
-    requires(DType<T> and not std::same_as<T, bool>)  // not defined for bool
-    static constexpr auto operator()(const T& x) {
+    template <DType T>
+    requires(not std::same_as<T, bool>)  // not defined for bool
+    static constexpr auto operator()(T x) {
         // We define -INT_MIN to equal INT_MAX under the reasoning that it's more
         // important to us to preserve the sign than to preseve the correct value.
         if constexpr (std::signed_integral<T>) {
@@ -324,8 +327,12 @@ struct negative : mixins::UnaryOpMixin<negative> {
 };
 
 struct rint : mixins::UnaryOpMixin<rint> {
+    // dev note: these are marked constexpr even though std::rint() isn't
+    // actually constexpr in any C++ std as of 2026.
+    // Luckily everything works fine with this approach and it's a bit more future-proof.
+
     template <DType T>
-    static auto operator()(T x) {
+    static constexpr auto operator()(T x) {
         // NumPy uses the smallest floating point it can and we follow.
         if constexpr (can_cast<T, float>) {
             return std::rintf(x);
@@ -383,7 +390,7 @@ struct sqrt : mixins::UnaryOpMixin<sqrt> {
     // this approach and it's a bit more future-proof.
 
     template <DType T>
-    static auto operator()(const T& x) {
+    static constexpr auto operator()(T x) {
         assert(domain<T>[0].contains(x) and "x must be non-negative");
 
         // NumPy uses the smallest floating point it can and we follow.
@@ -459,7 +466,7 @@ struct tanh : mixins::UnaryOpMixin<tanh> {
     // this approach and it's a bit more future-proof.
 
     template <DType T>
-    static auto operator()(T x) {
+    static constexpr auto operator()(T x) {
         // NumPy uses the smallest floating point it can and we follow.
         if constexpr (can_cast<T, float>) {
             return std::tanhf(x);
