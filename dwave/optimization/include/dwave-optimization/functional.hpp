@@ -438,26 +438,27 @@ struct square : mixins::UnaryOpMixin<square> {
     }
 
     template <DType T>
-    static interval<T> operator()(const interval<T>& domain) {
-        if (not static_cast<bool>(domain)) return {};  // op(empty domain) -> empty domain
+    static interval<T> operator()(const interval<T>& x_enclosure) {
+        assert(static_cast<bool>(x_enclosure) and "x's enclosure cannot be empty");
+        if constexpr (std::same_as<T, bool>) {
+            // square is just identity for boolean types
+            return x_enclosure;
+        } else {
+            constexpr square op{};
+            T inf_squared = op(x_enclosure.infimum);
+            T sup_squared = op(x_enclosure.supremum);
 
-        assert(domain.infimum <= domain.supremum);  // implied by non-empty
+            // Non-negative domain: square is increasing
+            if (0 <= x_enclosure.infimum) return interval<T>(inf_squared, sup_squared);
 
-        square op{};
-        T inf_squared = op(domain.infimum);
-        T sup_squared = op(domain.supremum);
+            // Non-positive domain: square is decreasing
+            if (x_enclosure.supremum <= 0) return interval<T>(sup_squared, inf_squared);
 
-        // Non-negative domain: square is increasing
-        if (0 <= domain.infimum) return interval<T>(inf_squared, sup_squared);
-
-        // Non-positive domain: square is decreasing
-        if (domain.supremum <= 0) return interval<T>(sup_squared, inf_squared);
-
-        // Otherwise the domain straddles 0: minimum is 0, maximum is the larger squared endpoint.
-
-        return interval<T>(0, inf_squared < sup_squared ? sup_squared : inf_squared);
+            // Otherwise the domain straddles 0: minimum is 0, maximum is the larger squared
+            // endpoint.
+            return interval<T>(0, inf_squared < sup_squared ? sup_squared : inf_squared);
+        }
     }
-    static interval<bool> operator()(const interval<bool>& domain) { return domain; }
 };
 
 struct tanh : mixins::UnaryOpMixin<tanh> {
