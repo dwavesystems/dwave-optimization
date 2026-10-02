@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.symbols._binaryop import _BinaryOpSymbol, _BinaryOpNodeType
+from dwave.optimization.symbols._binaryop import _BinaryOpNodeType, _BinaryOpSymbol
 
 
 class Add(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Add):
@@ -27,7 +27,6 @@ class Add(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Add):
         :class:`.Divide`, :class:`.Modulus`, :class:`.Multiply`,
         :class:`.SafeDivide`, :class:`.Subtract`
     """
-    pass
 
 
 class And(_BinaryOpSymbol, node_type=_BinaryOpNodeType.And):
@@ -41,7 +40,6 @@ class And(_BinaryOpSymbol, node_type=_BinaryOpNodeType.And):
         :class:`~dwave.optimization.symbols.Not`,
         :class:`.Or`, :class:`.Xor`
     """
-    pass
 
 
 class Divide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Divide):
@@ -54,7 +52,6 @@ class Divide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Divide):
         :class:`.Add`, :class:`.Modulus`, :class:`.Multiply`,
         :class:`.SafeDivide`, :class:`.Subtract`
     """
-    pass
 
 
 class Equal(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Equal):
@@ -66,7 +63,6 @@ class Equal(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Equal):
 
         :class:`.LessEqual`
     """
-    pass
 
 
 class LessEqual(_BinaryOpSymbol, node_type=_BinaryOpNodeType.LessEqual):
@@ -78,7 +74,6 @@ class LessEqual(_BinaryOpSymbol, node_type=_BinaryOpNodeType.LessEqual):
 
         :class:`.Equal`
     """
-    pass
 
 
 class Maximum(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Maximum):
@@ -91,7 +86,6 @@ class Maximum(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Maximum):
         :class:`~dwave.optimization.symbols.Max`,
         :class:`~dwave.optimization.symbols.NaryMaximum`
     """
-    pass
 
 
 class Minimum(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Minimum):
@@ -104,7 +98,6 @@ class Minimum(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Minimum):
         :class:`~dwave.optimization.symbols.Min`,
         :class:`~dwave.optimization.symbols.NaryMinimum`
     """
-    pass
 
 
 class Modulus(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Modulus):
@@ -117,7 +110,6 @@ class Modulus(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Modulus):
         :class:`.Add`, :class:`.Divide`, :class:`.Multiply`,
         :class:`.SafeDivide`, :class:`.Subtract`
     """
-    pass
 
 
 class Multiply(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Multiply):
@@ -135,7 +127,6 @@ class Multiply(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Multiply):
 
         :class:`~dwave.optimization.symbols.NaryMultiply`
     """
-    pass
 
 
 class Or(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Or):
@@ -148,7 +139,6 @@ class Or(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Or):
         :class:`.And`, :class:`~dwave.optimization.symbols.Logical`,
         :class:`~dwave.optimization.symbols.Not`, :class:`.Xor`
     """
-    pass
 
 
 class SafeDivide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.SafeDivide):
@@ -163,7 +153,6 @@ class SafeDivide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.SafeDivide):
 
     .. versionadded:: 0.6.2
     """
-    pass
 
 
 class Subtract(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Subtract):
@@ -176,7 +165,6 @@ class Subtract(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Subtract):
         :class:`.Add`, :class:`.Divide`, :class:`.Modulus`, :class:`.Multiply`,
         :class:`.SafeDivide`,
     """
-    pass
 
 
 class Xor(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Xor):
@@ -191,4 +179,3 @@ class Xor(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Xor):
 
     .. versionadded:: 0.4.1
     """
-    pass

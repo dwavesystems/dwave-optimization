@@ -27,10 +27,9 @@ class _ReduceSymbol(_ArraySymbol):
     def __init_subclass__(
         cls,
         /,
-        node_type: _ReduceNodeType,
-        default_initial: None | float,
+        node_type: int,
+        default_initial: None | float = None,
     ): ...
-
     def __init__(
         self,
         array: _ArraySymbol,
@@ -38,8 +37,6 @@ class _ReduceSymbol(_ArraySymbol):
         axis: None | int | tuple[int, ...],
         initial: None | _NoValueType | float,
     ): ...
-
     @property
     def initial(self) -> None | float: ...
-
     def axes(self) -> tuple[int, ...]: ...
