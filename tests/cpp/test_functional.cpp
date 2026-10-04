@@ -245,6 +245,8 @@ TEMPLATE_LIST_TEST_CASE("log", "", DTypes) {
 TEMPLATE_LIST_TEST_CASE("logical", "", DTypes) {
     constexpr logical op{};
 
+    using limits = std::numeric_limits<TestType>;
+
     SECTION("logical(<scalar>)") {
         STATIC_REQUIRE(op(TestType{0}) == 0);
 
@@ -257,6 +259,9 @@ TEMPLATE_LIST_TEST_CASE("logical", "", DTypes) {
         } else if constexpr (std::floating_point<TestType>) {
             STATIC_REQUIRE(op(TestType{-.000001}) == 1);
             STATIC_REQUIRE(op(TestType{.000001}) == 1);
+
+            STATIC_REQUIRE(op(-limits::infinity()));
+            STATIC_REQUIRE(op(+limits::infinity()));
         } else {
             static_assert(false, "unexpected type");
         }
@@ -294,6 +299,8 @@ TEMPLATE_LIST_TEST_CASE("logical", "", DTypes) {
 TEMPLATE_LIST_TEST_CASE("logical_not", "", DTypes) {
     constexpr logical_not op{};
 
+    using limits = std::numeric_limits<TestType>;
+
     SECTION("logical_not(<scalar>)") {
         STATIC_REQUIRE(op(TestType{0}) == 1);
 
@@ -306,6 +313,9 @@ TEMPLATE_LIST_TEST_CASE("logical_not", "", DTypes) {
         } else if constexpr (std::floating_point<TestType>) {
             STATIC_REQUIRE(op(TestType{-.000001}) == 0);
             STATIC_REQUIRE(op(TestType{.000001}) == 0);
+
+            STATIC_REQUIRE(not op(-limits::infinity()));
+            STATIC_REQUIRE(not op(+limits::infinity()));
         } else {
             static_assert(false, "unexpected type");
         }
@@ -358,6 +368,9 @@ TEMPLATE_LIST_TEST_CASE("modulus", "", DTypes) {
 
 TEMPLATE_LIST_TEST_CASE("negative", "", DTypes) {
     constexpr negative op{};
+
+    using limits = std::numeric_limits<TestType>;
+
     if constexpr (not std::same_as<TestType, bool>) {
         SECTION("op(scalar)") {
             STATIC_REQUIRE(op(TestType{0}) == 0);
@@ -368,6 +381,9 @@ TEMPLATE_LIST_TEST_CASE("negative", "", DTypes) {
             } else {  // floating
                 STATIC_REQUIRE(op(TestType{1.5}) == -1.5);
                 STATIC_REQUIRE(op(TestType{-1.5}) == 1.5);
+
+                STATIC_REQUIRE(op(-limits::infinity()) == +limits::infinity());
+                STATIC_REQUIRE(op(+limits::infinity()) == -limits::infinity());
             }
         }
 
@@ -421,6 +437,8 @@ TEMPLATE_LIST_TEST_CASE("sin", "", DTypes) {
 
     constexpr sin op{};
 
+    using limits = std::numeric_limits<TestType>;
+
     SECTION("op(scalar)") {
         // Following NumPy, if can be cast to float it will be, otherwise it'll be a double
         if constexpr (can_cast<TestType, float>) {
@@ -440,6 +458,11 @@ TEMPLATE_LIST_TEST_CASE("sin", "", DTypes) {
         }
 
         CHECK(op(TestType{0}) == TestType{0});  // sin(0) == 0 exactly
+
+        if constexpr (std::floating_point<TestType>) {
+            STATIC_REQUIRE(op(-limits::infinity()) == 0);
+            STATIC_REQUIRE(op(+limits::infinity()) == 0);
+        }
     }
 
     SECTION("op(interval)") {
@@ -462,6 +485,8 @@ TEMPLATE_LIST_TEST_CASE("sqrt", "", DTypes) {
 
     constexpr sqrt op{};
 
+    using limits = std::numeric_limits<TestType>;
+
     SECTION("op(scalar)") {
         CHECK(op(TestType{0}) == 0);
         CHECK(op(TestType{1}) == 1);
@@ -470,6 +495,8 @@ TEMPLATE_LIST_TEST_CASE("sqrt", "", DTypes) {
             CHECK(op(TestType{9}) == 3);
             if constexpr (std::floating_point<TestType>) {
                 CHECK(op(TestType{2.0}) == std::sqrt(TestType{2.0}));
+
+                CHECK(op(limits::infinity()) == limits::infinity());
             }
         }
     }
@@ -531,6 +558,8 @@ TEMPLATE_LIST_TEST_CASE("tanh", "", DTypes) {
 
     constexpr tanh op{};
 
+    using limits = std::numeric_limits<TestType>;
+
     SECTION("tanh(scalar)") {
         CHECK(op(TestType{0}) == 0);  // tanh(0) == 0 exactly
         if constexpr (not std::same_as<bool, TestType>) {
@@ -541,6 +570,11 @@ TEMPLATE_LIST_TEST_CASE("tanh", "", DTypes) {
                 CHECK(op(TestType{1}) == std::tanh(TestType{1}));
                 CHECK(op(TestType{-2}) == std::tanh(TestType{-2}));
             }
+        }
+
+        if constexpr (std::floating_point<TestType>) {
+            CHECK(op(-limits::infinity()) == -1);
+            CHECK(op(+limits::infinity()) == +1);
         }
     }
 

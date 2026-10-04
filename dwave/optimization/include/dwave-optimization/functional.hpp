@@ -134,7 +134,6 @@ struct cos : mixins::UnaryOpMixin<cos> {
     static constexpr auto operator()(T x) {
         if constexpr (std::floating_point<T>) {
             assert(not std::isnan(x) and "x cannot be nan");
-
             if (std::isinf(x)) return T{0};
         }
 
@@ -361,8 +360,14 @@ struct sin : mixins::UnaryOpMixin<sin> {
     // this approach and it's a bit more future-proof.
 
     /// Calculate the sine of `x`.
+    /// We want to disallow `nan`s so we define `sin(+/-inf) := +0.0`.
     template <DType T>
     static constexpr auto operator()(T x) {
+        if constexpr (std::floating_point<T>) {
+            assert(not std::isnan(x) and "x cannot be nan");
+            if (std::isinf(x)) return T{0};
+        }
+
         // NumPy uses the smallest floating point it can and we follow.
         if constexpr (can_cast<T, float>) {
             return std::sinf(x);
