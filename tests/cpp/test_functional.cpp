@@ -197,7 +197,6 @@ TEMPLATE_LIST_TEST_CASE("expit", "", DTypes) {
     }
 
     SECTION("op(interval)") {
-        // CHECK(not op(interval<TestType>()));  // op(empty) -> empty
         CHECK(op(interval<TestType>(0, 1)) == interval(op(TestType{0}), op(TestType{1})));
         if constexpr (not std::same_as<bool, TestType>) {
             CHECK(op(interval<TestType>(-2, 3)) == interval(op(TestType{-2}), op(TestType{3})));
