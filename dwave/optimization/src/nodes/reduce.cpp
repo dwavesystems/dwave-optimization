@@ -1117,8 +1117,8 @@ ssize_t ReduceNode<BinaryOp>::size_diff(const State& state) const {
     return this->template data_ptr_<ReduceNodeData<BinaryOp>>(state)->size_diff();
 }
 
-template class ReduceNode<functional::max<double>>;
-template class ReduceNode<functional::min<double>>;
+template class ReduceNode<functional::maximum>;
+template class ReduceNode<functional::minimum>;
 template class ReduceNode<std::logical_and<double>>;
 template class ReduceNode<std::logical_or<double>>;
 template class ReduceNode<std::multiplies<double>>;

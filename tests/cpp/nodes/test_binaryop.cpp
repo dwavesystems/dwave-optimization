@@ -38,14 +38,14 @@ TEMPLATE_TEST_CASE(
     std::less_equal<double>,
     std::plus<double>,
     std::minus<double>,
-    functional::modulus<double>,
+    functional::remainder,
     std::multiplies<double>,
-    functional::max<double>,
-    functional::min<double>,
+    functional::maximum,
+    functional::minimum,
     std::logical_and<double>,
     std::logical_or<double>,
-    functional::logical_xor<double>,
-    functional::safe_divides<double>
+    functional::logical_xor,
+    functional::divide
 ) {
     auto graph = Graph();
 

@@ -132,6 +132,20 @@ struct interval {
         return *this;
     }
 
+    /// Union with [rhs, rhs].
+    constexpr interval& operator|=(const T& rhs) {
+        if (not static_cast<bool>(*this)) {
+            infimum = rhs;
+            supremum = rhs;
+        } else if (rhs < infimum) {
+            infimum = rhs;
+        } else if (supremum < rhs) {
+            supremum = rhs;
+        }
+
+        return *this;
+    }
+
     /// Union with ``rhs``.
     constexpr interval& operator|=(const interval& rhs) {
         // If rhs is an empty interval, then taking the union with it does nothing
@@ -176,9 +190,19 @@ struct interval {
     static consteval interval nonnegative() {
         using limits = std::numeric_limits<T>;
         if constexpr (limits::has_infinity) {
-            return interval(0, limits::infinity());
+            return interval(T{0}, limits::infinity());
         } else {
-            return interval(0, limits::max());
+            return interval(T{0}, limits::max());
+        }
+    }
+
+    /// All expressible non-positive values.
+    static consteval interval nonpositive() {
+        using limits = std::numeric_limits<T>;
+        if constexpr (limits::has_infinity) {
+            return interval(-limits::infinity(), -T{0});
+        } else {
+            return interval(limits::lowest(), T{0});
         }
     }
 
