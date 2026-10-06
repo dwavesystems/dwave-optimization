@@ -270,43 +270,43 @@ TEMPLATE_LIST_TEST_CASE("divide", "", DTypes) {
             STATIC_REQUIRE(op(TestType{1}, TestType{2}) == 0.5);
             STATIC_REQUIRE(op(TestType{6}, TestType{3}) == 2);
 
-            STATIC_REQUIRE(op(TestType{-1}, TestType{2}) == TestType(-0.5));
-            STATIC_REQUIRE(op(TestType{1}, TestType{-2}) == TestType(-0.5));
-            STATIC_REQUIRE(op(TestType{-1}, TestType{-2}) == TestType(0.5));
+            STATIC_REQUIRE(op(TestType{-1}, TestType{2}) == TestType{-0.5});
+            STATIC_REQUIRE(op(TestType{1}, TestType{-2}) == TestType{-0.5});
+            STATIC_REQUIRE(op(TestType{-1}, TestType{-2}) == TestType{0.5});
             STATIC_REQUIRE(op(TestType{-6}, TestType{-3}) == TestType{2});
             // x / 0 := 0, including for -0.0 since -0.0 == 0.0
             STATIC_REQUIRE(op(TestType{0}, TestType{0}) == TestType{0});
             STATIC_REQUIRE(op(TestType{5}, TestType{0}) == TestType{0});
             STATIC_REQUIRE(op(TestType{-5}, TestType{0}) == TestType{0});
-            STATIC_REQUIRE(op(TestType{5}, TestType(-0.0)) == TestType{0});
-            STATIC_REQUIRE(op(TestType{-5}, TestType(-0.0)) == TestType{0});
+            STATIC_REQUIRE(op(TestType{5}, TestType{-0.0}) == TestType{0});
+            STATIC_REQUIRE(op(TestType{-5}, TestType{-0.0}) == TestType{0});
             STATIC_REQUIRE(op(limits::max(), TestType{0}) == TestType{0});
             STATIC_REQUIRE(op(inf, TestType{0}) == TestType{0});
             STATIC_REQUIRE(op(-inf, TestType{0}) == TestType{0});
 
             // safe division keeps the usual sign rule"
-            STATIC_REQUIRE(not std::signbit(op(TestType{5}, TestType(0.0))));
-            STATIC_REQUIRE(std::signbit(op(TestType{5}, TestType(-0.0))));
-            STATIC_REQUIRE(std::signbit(op(TestType{-5}, TestType(0.0))));
-            STATIC_REQUIRE(not std::signbit(op(TestType{-5}, TestType(-0.0))));
+            STATIC_REQUIRE(not std::signbit(op(TestType{5}, TestType{0.0})));
+            STATIC_REQUIRE(std::signbit(op(TestType{5}, TestType{-0.0})));
+            STATIC_REQUIRE(std::signbit(op(TestType{-5}, TestType{0.0})));
+            STATIC_REQUIRE(not std::signbit(op(TestType{-5}, TestType{-0.0})));
 
             // both operands zero
-            STATIC_REQUIRE(not std::signbit(op(TestType(0.0), TestType(0.0))));
-            STATIC_REQUIRE(std::signbit(op(TestType(-0.0), TestType(0.0))));
-            STATIC_REQUIRE(std::signbit(op(TestType(0.0), TestType(-0.0))));
-            STATIC_REQUIRE(not std::signbit(op(TestType(-0.0), TestType(-0.0))));
+            STATIC_REQUIRE(not std::signbit(op(TestType{0.0}, TestType{0.0})));
+            STATIC_REQUIRE(std::signbit(op(TestType{-0.0}, TestType{0.0})));
+            STATIC_REQUIRE(std::signbit(op(TestType{0.0}, TestType{-0.0})));
+            STATIC_REQUIRE(not std::signbit(op(TestType{-0.0}, TestType{-0.0})));
 
             // an infinite numerator over zero
-            STATIC_REQUIRE(not std::signbit(op(inf, TestType(0.0))));
-            STATIC_REQUIRE(std::signbit(op(inf, TestType(-0.0))));
-            STATIC_REQUIRE(std::signbit(op(-inf, TestType(0.0))));
-            STATIC_REQUIRE(not std::signbit(op(-inf, TestType(-0.0))));
+            STATIC_REQUIRE(not std::signbit(op(inf, TestType{0.0})));
+            STATIC_REQUIRE(std::signbit(op(inf, TestType{-0.0})));
+            STATIC_REQUIRE(std::signbit(op(-inf, TestType{0.0})));
+            STATIC_REQUIRE(not std::signbit(op(-inf, TestType{-0.0})));
 
             // signed zero results from ordinary division
-            STATIC_REQUIRE(not std::signbit(op(TestType(0.0), TestType{1})));
-            STATIC_REQUIRE(std::signbit(op(TestType(-0.0), TestType{1})));
-            STATIC_REQUIRE(std::signbit(op(TestType(0.0), TestType{-1})));
-            STATIC_REQUIRE(not std::signbit(op(TestType(-0.0), TestType{-1})));
+            STATIC_REQUIRE(not std::signbit(op(TestType{0.0}, TestType{1})));
+            STATIC_REQUIRE(std::signbit(op(TestType{-0.0}, TestType{1})));
+            STATIC_REQUIRE(std::signbit(op(TestType{0.0}, TestType{-1})));
+            STATIC_REQUIRE(not std::signbit(op(TestType{-0.0}, TestType{-1})));
 
             STATIC_REQUIRE(not std::signbit(op(TestType{1}, inf)));
             STATIC_REQUIRE(std::signbit(op(TestType{1}, -inf)));
@@ -334,7 +334,7 @@ TEMPLATE_LIST_TEST_CASE("divide", "", DTypes) {
 
             // overflows to infinity -- the overflow flag makes these non-constexpr on
             // GCC even though clang accepts them
-            CHECK(op(limits::max(), TestType(0.5)) == inf);
+            CHECK(op(limits::max(), TestType{0.5}) == inf);
             CHECK(op(limits::max(), limits::denorm_min()) == inf);
 
         } else {
@@ -690,8 +690,8 @@ TEMPLATE_LIST_TEST_CASE("logical_and", "", DTypes) {
             STATIC_REQUIRE(op(TestType{-1}, TestType{14}));
         }
         if constexpr (std::floating_point<TestType>) {
-            STATIC_REQUIRE(not op(TestType(-0.0), TestType(0.0)));
-            STATIC_REQUIRE(op(TestType(.0000001), TestType(.0000001)));
+            STATIC_REQUIRE(not op(TestType{-0.0}, TestType{0.0}));
+            STATIC_REQUIRE(op(TestType{.0000001}, TestType{.0000001}));
 
             constexpr TestType inf = std::numeric_limits<TestType>::infinity();
 
@@ -825,8 +825,8 @@ TEMPLATE_LIST_TEST_CASE("logical_or", "", DTypes) {
             STATIC_REQUIRE(op(TestType{-1}, TestType{14}));
         }
         if constexpr (std::floating_point<TestType>) {
-            STATIC_REQUIRE(not op(TestType(-0.0), TestType(0.0)));
-            STATIC_REQUIRE(op(TestType(.0000001), TestType(.0000001)));
+            STATIC_REQUIRE(not op(TestType{-0.0}, TestType{0.0}));
+            STATIC_REQUIRE(op(TestType{.0000001}, TestType{.0000001}));
 
             constexpr TestType inf = std::numeric_limits<TestType>::infinity();
 
@@ -906,8 +906,8 @@ TEMPLATE_LIST_TEST_CASE("logical_xor", "", DTypes) {
             STATIC_REQUIRE(not op(TestType{-1}, TestType{14}));
         }
         if constexpr (std::floating_point<TestType>) {
-            STATIC_REQUIRE(not op(TestType(-0.0), TestType(0.0)));
-            STATIC_REQUIRE(not op(TestType(.0000001), TestType(.0000001)));
+            STATIC_REQUIRE(not op(TestType{-0.0}, TestType{0.0}));
+            STATIC_REQUIRE(not op(TestType{.0000001}, TestType{.0000001}));
 
             constexpr TestType inf = std::numeric_limits<TestType>::infinity();
 
@@ -1182,7 +1182,7 @@ TEMPLATE_LIST_TEST_CASE("multiply", "", DTypes) {
             STATIC_REQUIRE(op(-inf, -inf) == inf);
 
             // underflows to zero, which raises no flag that blocks constant evaluation
-            STATIC_REQUIRE(op(limits::denorm_min(), TestType(0.5)) == TestType{0});
+            STATIC_REQUIRE(op(limits::denorm_min(), TestType{0.5}) == TestType{0});
 
             // overflows to infinity -- the overflow flag makes these non-constexpr on
             // GCC even though clang accepts them
@@ -1192,23 +1192,23 @@ TEMPLATE_LIST_TEST_CASE("multiply", "", DTypes) {
         }
 
         SECTION("signed zeros") {
-            STATIC_REQUIRE(not std::signbit(op(TestType(0.0), TestType(0.0))));
-            STATIC_REQUIRE(std::signbit(op(TestType(-0.0), TestType(0.0))));
-            STATIC_REQUIRE(std::signbit(op(TestType(0.0), TestType(-0.0))));
-            STATIC_REQUIRE(not std::signbit(op(TestType(-0.0), TestType(-0.0))));
+            STATIC_REQUIRE(not std::signbit(op(TestType{0.0}, TestType{0.0})));
+            STATIC_REQUIRE(std::signbit(op(TestType{-0.0}, TestType{0.0})));
+            STATIC_REQUIRE(std::signbit(op(TestType{0.0}, TestType{-0.0})));
+            STATIC_REQUIRE(not std::signbit(op(TestType{-0.0}, TestType{-0.0})));
 
-            STATIC_REQUIRE(std::signbit(op(TestType{-1}, TestType(0.0))));
-            STATIC_REQUIRE(std::signbit(op(TestType{1}, TestType(-0.0))));
-            STATIC_REQUIRE(not std::signbit(op(TestType{-1}, TestType(-0.0))));
+            STATIC_REQUIRE(std::signbit(op(TestType{-1}, TestType{0.0})));
+            STATIC_REQUIRE(std::signbit(op(TestType{1}, TestType{-0.0})));
+            STATIC_REQUIRE(not std::signbit(op(TestType{-1}, TestType{-0.0})));
         }
 
         SECTION("zero times infinity") {
             STATIC_REQUIRE(op(TestType{0}, inf) == TestType{0});
             STATIC_REQUIRE(op(inf, TestType{0}) == TestType{0});
-            STATIC_REQUIRE(not std::signbit(op(TestType(0.0), inf)));
-            STATIC_REQUIRE(std::signbit(op(TestType(-0.0), inf)));
-            STATIC_REQUIRE(std::signbit(op(TestType(0.0), -inf)));
-            STATIC_REQUIRE(not std::signbit(op(TestType(-0.0), -inf)));
+            STATIC_REQUIRE(not std::signbit(op(TestType{0.0}, inf)));
+            STATIC_REQUIRE(std::signbit(op(TestType{-0.0}, inf)));
+            STATIC_REQUIRE(std::signbit(op(TestType{0.0}, -inf)));
+            STATIC_REQUIRE(not std::signbit(op(TestType{-0.0}, -inf)));
         }
     }
 
@@ -1342,26 +1342,26 @@ TEMPLATE_LIST_TEST_CASE("remainder", "", DTypes) {
         }
 
         if constexpr (std::floating_point<TestType>) {
-            CHECK(op(TestType(-5.5), TestType{-4}) == -1.5);
-            CHECK(op(TestType(-5.5), TestType{4}) == 2.5);
-            CHECK(op(TestType(5.5), TestType{-4}) == -2.5);
-            CHECK(op(TestType(5.5), TestType{4}) == 1.5);
+            CHECK(op(TestType{-5.5}, TestType{-4}) == -1.5);
+            CHECK(op(TestType{-5.5}, TestType{4}) == 2.5);
+            CHECK(op(TestType{5.5}, TestType{-4}) == -2.5);
+            CHECK(op(TestType{5.5}, TestType{4}) == 1.5);
 
-            CHECK(std::signbit(op(TestType(-0.0), TestType(-0.0))));
-            CHECK(std::signbit(op(TestType(0.0), TestType(-0.0))));
-            CHECK(not std::signbit(op(TestType(-0.0), TestType(0.0))));
-            CHECK(not std::signbit(op(TestType(0.0), TestType(0.0))));
+            CHECK(std::signbit(op(TestType{-0.0}, TestType{-0.0})));
+            CHECK(std::signbit(op(TestType{0.0}, TestType{-0.0})));
+            CHECK(not std::signbit(op(TestType{-0.0}, TestType{0.0})));
+            CHECK(not std::signbit(op(TestType{0.0}, TestType{0.0})));
 
-            CHECK(not std::signbit(op(TestType(-5.0), TestType(5.0))));
-            CHECK(std::signbit(op(TestType(5.0), TestType(-5.0))));
-            CHECK(not std::signbit(op(TestType(-0.0), TestType(5.0))));
+            CHECK(not std::signbit(op(TestType{-5.0}, TestType{5.0})));
+            CHECK(std::signbit(op(TestType{5.0}, TestType{-5.0})));
+            CHECK(not std::signbit(op(TestType{-0.0}, TestType{5.0})));
 
             constexpr TestType inf = std::numeric_limits<TestType>::infinity();
 
-            CHECK(op(TestType(-5.5), -inf) == -5.5);
-            CHECK(op(TestType(-5.5), +inf) == +inf);
-            CHECK(op(TestType(+5.5), -inf) == -inf);
-            CHECK(op(TestType(+5.5), +inf) == TestType(5.5));
+            CHECK(op(TestType{-5.5}, -inf) == -5.5);
+            CHECK(op(TestType{-5.5}, +inf) == +inf);
+            CHECK(op(TestType{+5.5}, -inf) == -inf);
+            CHECK(op(TestType{+5.5}, +inf) == TestType{5.5});
 
             CHECK(op(+inf, TestType{0}) == 0);
             CHECK(op(-inf, TestType{0}) == 0);
@@ -1376,17 +1376,17 @@ TEMPLATE_LIST_TEST_CASE("remainder", "", DTypes) {
             CHECK(op(-inf, +inf) == 0);
             CHECK(op(+inf, +inf) == 0);
 
-            CHECK(std::signbit(op(-inf, TestType(-0.0))));
-            CHECK(std::signbit(op(-inf, TestType(-5.0))));
+            CHECK(std::signbit(op(-inf, TestType{-0.0})));
+            CHECK(std::signbit(op(-inf, TestType{-5.0})));
 
-            CHECK(std::signbit(op(+inf, TestType(-0.0))));
-            CHECK(std::signbit(op(+inf, TestType(-5.0))));
+            CHECK(std::signbit(op(+inf, TestType{-0.0})));
+            CHECK(std::signbit(op(+inf, TestType{-5.0})));
 
-            CHECK(not std::signbit(op(-inf, TestType(+0.0))));
-            CHECK(not std::signbit(op(-inf, TestType(+5.0))));
+            CHECK(not std::signbit(op(-inf, TestType{+0.0})));
+            CHECK(not std::signbit(op(-inf, TestType{+5.0})));
 
-            CHECK(not std::signbit(op(+inf, TestType(+0.0))));
-            CHECK(not std::signbit(op(+inf, TestType(+5.0))));
+            CHECK(not std::signbit(op(+inf, TestType{+0.0})));
+            CHECK(not std::signbit(op(+inf, TestType{+5.0})));
         }
     }
 
@@ -1646,10 +1646,10 @@ TEMPLATE_LIST_TEST_CASE("subtract", "", DTypes) {
                 CHECK(op(limits::max(), limits::lowest()) == inf);
                 CHECK(op(limits::lowest(), limits::max()) == -inf);
 
-                STATIC_REQUIRE(not std::signbit(op(TestType(0.0), TestType(0.0))));
-                STATIC_REQUIRE(not std::signbit(op(TestType(0.0), TestType(-0.0))));
-                STATIC_REQUIRE(std::signbit(op(TestType(-0.0), TestType(0.0))));
-                STATIC_REQUIRE(not std::signbit(op(TestType(-0.0), TestType(-0.0))));
+                STATIC_REQUIRE(not std::signbit(op(TestType{0.0}, TestType{0.0})));
+                STATIC_REQUIRE(not std::signbit(op(TestType{0.0}, TestType{-0.0})));
+                STATIC_REQUIRE(std::signbit(op(TestType{-0.0}, TestType{0.0})));
+                STATIC_REQUIRE(not std::signbit(op(TestType{-0.0}, TestType{-0.0})));
             }
         }
 

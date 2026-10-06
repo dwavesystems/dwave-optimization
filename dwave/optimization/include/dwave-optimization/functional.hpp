@@ -14,7 +14,6 @@
 
 #pragma once
 
-#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <concepts>
@@ -130,7 +129,8 @@ struct BinaryOpMixin {
     // Note: because we use intervals to encode the domain, this is technically the bounding
     // box rather than the domain.
 
-    // Binary ops are assumed not to be monotonic unless they tell us otherwise.
+    /// The montonicity of the operator. `monotonicity[n]` is the monotonicity of the nth argument.
+    /// Binary ops are assumed not to be monotonic unless they tell us otherwise.
     static constexpr std::array<Monotonicity, 2> monotonicity{
         Monotonicity::None,
         Monotonicity::None
@@ -191,8 +191,8 @@ struct add : mixins::BinaryOpMixin<add> {
         using limits = std::numeric_limits<T>;
 
         if constexpr (std::same_as<T, bool>) {
-            // NumPy treats addition over booleans as logical or
-            // bitwise operator is vectorizable
+            // NumPy treats addition over booleans as logical or.
+            // We use bitwise or because it is vectorizable.
             return lhs | rhs;
         } else if constexpr (std::signed_integral<T>) {
             // For integers we do saturating addition.
@@ -200,7 +200,7 @@ struct add : mixins::BinaryOpMixin<add> {
 
 #if !defined(DWOPT__FORCE_FALLBACK) && defined(__has_builtin)
 #if __has_builtin(__builtin_add_overflow)  // needs its own line
-            // We really want C++26 std::saturating_mul, but while we're on C++23
+            // We really want C++26 std::__builtin_add_overflow, but while we're on C++23
             // we use the __builtin_add_overflow (GCC and Clang) if it's available.
             if (T out; not __builtin_add_overflow(lhs, rhs, &out)) return out;
             if (lhs < 0) {
@@ -658,6 +658,7 @@ struct multiply : mixins::BinaryOpMixin<multiply> {
                 if (rhs > 0) {
                     if (lhs < limits::lowest() / rhs) return limits::lowest();
                 } else if (lhs != 0 and rhs < limits::max() / lhs)
+                    // TODO: are we testing this?
                     return limits::max();
             }
 
@@ -769,7 +770,7 @@ struct remainder : mixins::BinaryOpMixin<remainder> {
             // always 0
             return interval<T>(false, false);
         } else {
-            // Whatever our output is, is needs to include 0.
+            // Whatever our output is, it needs to include 0.
             interval<T> bounds = rhs_enclosure | interval<T>(0, 0);
 
             // If we're integral, we don't want to include the endpoints (nor for floating but
