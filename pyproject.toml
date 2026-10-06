@@ -207,4 +207,8 @@ ignore = [
 
     # We are OK with dict/tuple/list/etc literals e.g., dict() rather than {}
     "C408",  # unnecessary-collection-call
+
+    # Agree that we should put them on the same line, but sometimes we want to
+    # add comments etc so we permit nested.
+    "SIM117",  # multiple-with-statements
 ]
