@@ -73,9 +73,6 @@ blas-build = [
 changelog = [
     "reno==4.1.0",
 ]
-clang-format = [
-    "clang-format~=22.0",  # latest as of April 2026, we require >=22
-]
 dependencies-oldest = [ # Keep synced with project.dependencies
     "numpy==2.0.0; python_version<'3.13'",  # oldest we support
     "numpy==2.1.0; python_version>='3.13' and python_version<'3.14'",
@@ -108,14 +105,24 @@ dependencies-all-oldest = [  # Keep synced with project.optional-dependencies
 dev = [
     {include-group = "build"},
     {include-group = "changelog"},
-    {include-group = "clang-format"},
     {include-group = "dependencies-oldest"},
+    {include-group = "format"},
 ]
 docs = [
     # Matches dwave-ocean-sdk as of Dec 2025
     "pydata-sphinx-theme==0.16.1",
     "sphinx==8.2.3",
     "sphinx-design==0.6.1",
+]
+format = [
+    # Must match the version in .pre-commit-config.yaml because pre-commit doesn't support
+    # pyproject.toml.
+    "clang-format~=22.0",  # latest as of April 2026, we require >=22. Not yet in pre-commit
+    "ruff==0.16.10",  # latest as of October 2026
+]
+pre-commit = [
+    "pre-commit~=4.6.0",
+    {include-group = "format"},
 ]
 
 [tool.cibuildwheel]

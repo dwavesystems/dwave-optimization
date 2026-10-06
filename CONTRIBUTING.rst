@@ -6,8 +6,18 @@ Ocean's `contributing guide <https://docs.dwavequantum.com/en/latest/ocean/contr
 has guidelines for contributing to Ocean packages. With the following changes
 
 * ``dwave-optimization`` uses C++20.
-* ``dwave-optimization`` includes some formatting customization in the
-  `.clang-format <.clang-format>`_ file.
+
+pre-commit
+==========
+
+All changes must be formatted and checked by [ruff](https://docs.astral.sh/ruff/).
+
+To make this as easy as possible, you can setup [pre-commit](https://pre-commit.com/):
+
+```bash
+pip install --group pre-commit
+pre-commit install
+```
 
 Release Notes
 =============

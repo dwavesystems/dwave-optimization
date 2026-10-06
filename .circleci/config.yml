@@ -213,6 +213,20 @@ jobs:
             python -Werror -m unittest
             rm -r ../env
 
+  check-formatting:
+    docker:
+      - image: python:3.14
+
+    steps:
+      - checkout
+      - run:
+          name: run pre-commit
+          command: |
+            python -m venv env
+            . env/bin/activate
+            pip install --group pre-commit
+            pre-commit run --all-files --show-diff-on-failure
+
   cpp-gcc:
     parameters:
       gcc-version:
@@ -441,6 +455,7 @@ workflows:
           wheel-tag: cp312-abi3
           requires:
             - python-linux
+      - check-formatting
       - cpp-gcc:
           name: cpp-gcc-<< matrix.gcc-version >>
           matrix:
