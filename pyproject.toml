@@ -206,6 +206,7 @@ ignore = [
     "C402",  # unnecessary-generator-dict
 
     # We are OK with dict/tuple/list/etc literals e.g., dict() rather than {}
+    "C405",  # unnecessary-literal-set
     "C408",  # unnecessary-collection-call
 
     # Agree that we should put them on the same line, but sometimes we want to
