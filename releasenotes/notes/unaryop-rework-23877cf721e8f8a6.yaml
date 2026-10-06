@@ -1,0 +1,5 @@
+---
+features:
+  - Make ``UnaryOpNode`` header-only.
+upgrade:
+  - Rename C++ ``SquareRootNode`` to ``SqrtNode`` for consistency with NumPy.
