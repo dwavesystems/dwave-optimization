@@ -31,6 +31,7 @@ class _NoValueType:
 
     Specifically useful to distinguish from ``None``.
     """
+
     __instance = None
 
     def __new__(cls):
@@ -54,6 +55,7 @@ def _file_object_arg(mode: str):
     This method assumes that the file argument is the first one. We could
     generalize if we need to.
     """
+
     def decorator(method):
         @functools.wraps(method)
         def _method(cls_or_self, file, *args, **kwargs):
@@ -62,12 +64,15 @@ def _file_object_arg(mode: str):
                     return method(cls_or_self, fobj, *args, **kwargs)
             else:
                 return method(cls_or_self, file, *args, **kwargs)
+
         return _method
+
     return decorator
 
 
 def _lock(method):
     """Decorator for Model methods that lock the model for the duration."""
+
     @functools.wraps(method)
     def _method(obj, *args, **kwargs):
         if not obj.is_locked():
@@ -75,12 +80,13 @@ def _lock(method):
                 return method(obj, *args, **kwargs)
         else:
             return method(obj, *args, **kwargs)
+
     return _method
 
 
 def _split_indices(
     shape: tuple[int, ...],
-    index: tuple[int | slice | None | types.EllipsisType | object, ...],
+    index: tuple[int | slice | types.EllipsisType | object | None, ...],
 ):
     """Given a combined indexing operation, split into several steps.
 
@@ -110,8 +116,8 @@ def _split_indices(
         # we hit the correct length
 
         # First, find where the ellipses is
-        for loc, index in enumerate(indices):
-            if index is ...:
+        for loc, idx in enumerate(indices):
+            if idx is ...:
                 break
         else:
             raise RuntimeError  # shouldn't be able to get here
@@ -127,39 +133,41 @@ def _split_indices(
     newaxes: list[int] = []
     basic: list[slice | int] = []
     advanced: list[slice | object] = []
-    for i, index in enumerate(indices):
-        if index is None:
+    for i, idx in enumerate(indices):
+        if idx is None:
             # We'll insert the new axis before calling basid/advanced indexing
             newaxes.append(i)
             basic.append(slice(None))
             advanced.append(slice(None))
-        elif isinstance(index, numbers.Integral):
+        elif isinstance(idx, numbers.Integral):
             # Only basic handles numeric indices and it removes the axis so
             # only basic gets the index
-            basic.append(index)
-        elif isinstance(index, slice) and index == slice(None):
+            basic.append(int(idx))
+        elif isinstance(idx, slice) and idx == slice(None):
             # Empty slices are handled by both basic and advanced indexing
             basic.append(slice(None))
             advanced.append(slice(None))
-        elif isinstance(index, slice):
+        elif isinstance(idx, slice):
             # Non-empty slice are only handled by basic indexing
-            basic.append(index)
+            basic.append(idx)
             advanced.append(slice(None))
         else:
             # For anything else, we defer to advanced indexing for the type
             # checking
             basic.append(slice(None))
-            advanced.append(index)
+            advanced.append(idx)
 
     return tuple(newaxes), tuple(basic), tuple(advanced)
 
 
 def _TypeError_to_NotImplemented(f):
     """Convert any TypeErrors raised by the given function into NotImplemented"""
+
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         try:
             return f(*args, **kwargs)
         except TypeError:
             return NotImplemented
+
     return wrapper
