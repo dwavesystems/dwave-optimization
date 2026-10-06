@@ -15,8 +15,7 @@
 import unittest
 
 import dwave.optimization.symbols
-
-from dwave.optimization import Model, expression
+from dwave.optimization import expression
 
 
 class TestExpression(unittest.TestCase):
@@ -24,6 +23,7 @@ class TestExpression(unittest.TestCase):
         @expression
         def func(a, b, c):
             return (a + b) * c
+
         self.assertEqual(func._model.num_inputs(), 3)
         self.assertIsInstance(func._model.objective, dwave.optimization.symbols.Multiply)
 
@@ -38,8 +38,8 @@ class TestExpression(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "100 is not a callable object"):
             expression(100)
         with self.assertRaisesRegex(
-                TypeError,
-                r"expression\(\) takes 0 or 1 positional arguments but 3 were given",
+            TypeError,
+            r"expression\(\) takes 0 or 1 positional arguments but 3 were given",
         ):
             expression(lambda a: a, lambda b: b, lambda c: c)
 
@@ -54,7 +54,7 @@ class TestExpression(unittest.TestCase):
 
     def test_lambda_with_bounds(self):
         identity = expression(lambda a: a, a=dict(lower_bound=0, upper_bound=10))
-        a, = identity._model.iter_inputs()
+        (a,) = identity._model.iter_inputs()
         self.assertEqual(a.lower_bound(), 0)
         self.assertEqual(a.upper_bound(), 10)
         self.assertEqual(a.integral(), False)  # default
