@@ -7,45 +7,45 @@
 
 extensions = [
     # extensions provided by sphinx
-    'sphinx.ext.autosummary',
-    'sphinx.ext.autodoc',
-    'sphinx.ext.coverage',
-    'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.todo',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.ifconfig',
-
+    "sphinx.ext.autosummary",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.coverage",
+    "sphinx.ext.doctest",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.todo",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.ifconfig",
     # other extensions
-    'sphinx_design',
+    "sphinx_design",
 ]
 
 autosummary_generate = True
 
-source_suffix = ['.rst']
+source_suffix = [".rst"]
 
-master_doc = 'index'
+master_doc = "index"
 
-language = 'en'
+language = "en"
 
 add_module_names = False
 
-exclude_patterns = ['build', 'Thumbs.db', '.DS_Store', 'README.rst']
+exclude_patterns = ["build", "Thumbs.db", ".DS_Store", "README.rst"]
 
 linkcheck_retries = 2
 linkcheck_anchors = False
-linkcheck_ignore = [r'https://cloud.dwavesys.com/leap',  # redirects, many checks
-                    r'.clang-format',
-                    r'setup.cfg',
-                    ]
+linkcheck_ignore = [
+    r"https://cloud.dwavesys.com/leap",  # redirects, many checks
+    r".clang-format",
+    r"setup.cfg",
+]
 
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 todo_include_todos = True
 
-modindex_common_prefix = ['dwave.optimization.']
+modindex_common_prefix = ["dwave.optimization."]
 
 doctest_global_setup = """
 
@@ -58,12 +58,11 @@ numpy.set_printoptions(legacy='1.25')
 """
 
 autodoc_type_aliases = {
-    'ArrayLike': 'numpy.typing.ArrayLike',
-    'np.typing.ArrayLike': 'numpy.typing.ArrayLike',
-    'numpy.typing.ArrayLike': 'numpy.typing.ArrayLike',
-
-    'ArraySymbolLike': 'ArraySymbol | numpy.typing.ArrayLike',
-    'dwave.optimization.typing.ArraySymbolLike': 'ArraySymbol | numpy.typing.ArrayLike',
+    "ArrayLike": "numpy.typing.ArrayLike",
+    "np.typing.ArrayLike": "numpy.typing.ArrayLike",
+    "numpy.typing.ArrayLike": "numpy.typing.ArrayLike",
+    "ArraySymbolLike": "ArraySymbol | numpy.typing.ArrayLike",
+    "dwave.optimization.typing.ArraySymbolLike": "ArraySymbol | numpy.typing.ArrayLike",
 }
 
 # -- Options for HTML output ----------------------------------------------
@@ -77,12 +76,12 @@ html_theme_options = {
 html_sidebars = {"**": ["search-field", "sidebar-nav-bs"]}  # remove ads
 
 intersphinx_mapping = {
-    'dwave': ('https://docs.dwavequantum.com/en/latest/', None),
-    'networkx': ('https://networkx.org/documentation/stable/', None),
-    'numpy': ('https://numpy.org/doc/stable/', None),
-    'python': ('https://docs.python.org/3', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy', None),
-    'sklearn': ('https://scikit-learn.org/stable/', None),
+    "dwave": ("https://docs.dwavequantum.com/en/latest/", None),
+    "networkx": ("https://networkx.org/documentation/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "python": ("https://docs.python.org/3", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "sklearn": ("https://scikit-learn.org/stable/", None),
 }
 
 rst_epilog = """
