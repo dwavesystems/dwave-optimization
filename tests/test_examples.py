@@ -13,11 +13,11 @@
 #    limitations under the License.
 
 import unittest
-
 from functools import reduce
+
 import numpy as np
 
-from dwave.optimization import Model, add, logical_or, logical_and, maximum
+from dwave.optimization import Model, logical_and
 
 
 class TestNurseScheduling(unittest.TestCase):
@@ -39,32 +39,24 @@ class TestNurseScheduling(unittest.TestCase):
         model = Model()
 
         minutes_per_shift = [
-            model.constant(np.repeat(minutes, num_nurses))
-            for minutes in minutes_per_shift_data
+            model.constant(np.repeat(minutes, num_nurses)) for minutes in minutes_per_shift_data
         ]
 
-        bit_sets = [
-            model.disjoint_bit_sets(num_nurses, num_shifts + 1)
-            for _ in range(num_days)
-        ]
+        bit_sets = [model.disjoint_bit_sets(num_nurses, num_shifts + 1) for _ in range(num_days)]
         shifts = [a for _, a in bit_sets]
 
         def smart_reduce(f, items):
             assert len(items) > 1
             return reduce(f, items[1:], items[0])
 
-        is_working_day = [
-            smart_reduce(logical_and, day_shifts[:-1])
-            for day_shifts in shifts
-        ]
+        is_working_day = [smart_reduce(logical_and, day_shifts[:-1]) for day_shifts in shifts]
 
         zero = model.constant(0)
 
         # Constraints that enforce max shifts in a row
         for day in range(num_days - max_shifts_in_a_row):
             working_more_than_max_shifts = smart_reduce(
-                logical_and,
-                is_working_day[day:day + max_shifts_in_a_row + 1]
+                logical_and, is_working_day[day : day + max_shifts_in_a_row + 1]
             )
             for nurse in range(num_nurses):
                 model.add_constraint(working_more_than_max_shifts[nurse] == zero)
@@ -72,8 +64,7 @@ class TestNurseScheduling(unittest.TestCase):
         # Constraints that enforce min two shifts in a row
         for day in range(num_days - 3):
             not_working_min_shifts = logical_and(
-                logical_and(shifts[day][-1], is_working_day[day + 1]),
-                shifts[day + 2][-1]
+                logical_and(shifts[day][-1], is_working_day[day + 1]), shifts[day + 2][-1]
             )
             for nurse in range(num_nurses):
                 model.add_constraint(not_working_min_shifts[nurse] == zero)
@@ -82,13 +73,14 @@ class TestNurseScheduling(unittest.TestCase):
         total_minutes_worked = None
         for shift in range(num_shifts):
             total_shifts_worked = smart_reduce(
-                lambda x, y: x + y,
-                [shifts[day][shift] for day in range(num_days)]
+                lambda x, y: x + y, [shifts[day][shift] for day in range(num_days)]
             )
             minutes_worked = total_shifts_worked * minutes_per_shift[shift]
-            total_minutes_worked = (total_minutes_worked + minutes_worked
-                                    if total_minutes_worked is not None
-                                    else minutes_worked)
+            total_minutes_worked = (
+                total_minutes_worked + minutes_worked
+                if total_minutes_worked is not None
+                else minutes_worked
+            )
 
         min_minutes = model.constant(min_minutes_per_week)
         max_minutes = model.constant(max_minutes_per_week)
