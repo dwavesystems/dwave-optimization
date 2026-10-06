@@ -4,7 +4,7 @@
 Symbols
 =======
 
-.. currentmodule:: dwave.optimization.model
+.. currentmodule:: dwave.optimization._model
 
 Symbols are a model's decision variables, intermediate variables, constants,
 and mathematical operations.

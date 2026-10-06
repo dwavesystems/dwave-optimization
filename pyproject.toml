@@ -196,3 +196,11 @@ exclude_lines = [
 # way to get it to work, see https://github.com/mesonbuild/meson-python/issues/787
 [tool.meson-python]
 limited-api = true
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+ignore = [
+    "C408",  # We are OK with dict literals e.g., dict() rather than {}
+]

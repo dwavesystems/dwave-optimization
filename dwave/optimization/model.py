@@ -25,24 +25,21 @@ packed.
 
 from __future__ import annotations
 
-import collections
 import contextlib
 import functools
 import hashlib
-import numpy as np
 import tempfile
 import typing
 import warnings
 
-from dwave.optimization._model import ArraySymbol, _Graph, Symbol
+import numpy as np
+
+from dwave.optimization._model import ArraySymbol, _Graph
 from dwave.optimization.states import States
+from dwave.optimization.typing import ShapeLike
 
 if typing.TYPE_CHECKING:
-    import numpy.typing
-
     from dwave.optimization.symbols import *
-
-    _ShapeLike: typing.TypeAlias = typing.Union[int, collections.abc.Sequence[int]]
 
 __all__ = ["Model"]
 
@@ -80,7 +77,7 @@ class _ConstantCache:
         self.model = model
         self.constant_cache: dict[bytes, Constant] = dict()
 
-    def __call__(self, array_like: numpy.typing.ArrayLike):
+    def __call__(self, array_like: np.typing.ArrayLike):
         r"""Create a constant symbol.
 
         See :meth:`~Model.constant`.
@@ -190,7 +187,7 @@ class Model(_Graph):
         self.states = States(self)
 
     @property
-    def objective(self) -> None | ArraySymbol:
+    def objective(self) -> ArraySymbol | None:
         """Objective to be minimized.
 
         Created when you use the :meth:`.minimize` method and associated with
@@ -231,12 +228,14 @@ class Model(_Graph):
     def objective(self, value: ArraySymbol):
         self.minimize(value)
 
-    def binary(self, shape: None | _ShapeLike = None,
-               lower_bound: None | np.typing.ArrayLike = None,
-               upper_bound: None | np.typing.ArrayLike = None,
-               sum_subject_to: None | list[tuple[str, float]] = None,
-               axes_sums_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None
-               ) -> BinaryVariable:
+    def binary(
+        self,
+        shape: ShapeLike | None = None,
+        lower_bound: np.typing.ArrayLike | None = None,
+        upper_bound: np.typing.ArrayLike | None = None,
+        sum_subject_to: list[tuple[str, float]] | None = None,
+        axes_sums_subject_to: list[tuple[int, str | list[str], float | list[float]]] | None = None,
+    ) -> BinaryVariable:
         r"""Add a binary decision variable to the model.
 
         A binary symbol is an array of True/False values assigned as a solution
@@ -343,9 +342,12 @@ class Model(_Graph):
             supported.
         """
         from dwave.optimization.symbols import BinaryVariable  # avoid circular import
-        return BinaryVariable(self, shape, lower_bound, upper_bound, sum_subject_to, axes_sums_subject_to)
 
-    def constant(self, array_like: numpy.typing.ArrayLike) -> Constant:
+        return BinaryVariable(
+            self, shape, lower_bound, upper_bound, sum_subject_to, axes_sums_subject_to
+        )
+
+    def constant(self, array_like: np.typing.ArrayLike) -> Constant:
         r"""Add a constant to the model.
 
         A constant symbol is an array of floats used in the model's formulation.
@@ -392,10 +394,10 @@ class Model(_Graph):
     constant.clear_cache = functools.update_wrapper(lambda: None, _ConstantCache.clear_cache)
 
     def disjoint_bit_sets(
-            self,
-            primary_set_size: int,
-            num_disjoint_sets: int,
-            ) -> tuple[DisjointBitSets, tuple[DisjointBitSet, ...]]:
+        self,
+        primary_set_size: int,
+        num_disjoint_sets: int,
+    ) -> tuple[DisjointBitSets, tuple[DisjointBitSet, ...]]:
         """Add a disjoint-sets decision variable to the model.
 
         A disjoint-sets symbol divides a set of elements into ordered
@@ -460,17 +462,17 @@ class Model(_Graph):
             :meth:`.iter_decisions`, :meth:`.iter_successors`
         """
         # avoid circular import
-        from dwave.optimization.symbols import DisjointBitSets, DisjointBitSet
+        from dwave.optimization.symbols import DisjointBitSet, DisjointBitSets
 
         main = DisjointBitSets(self, primary_set_size, num_disjoint_sets)
         sets = tuple(DisjointBitSet(main, i) for i in range(num_disjoint_sets))
         return main, sets
 
     def disjoint_lists(
-            self,
-            primary_set_size: int,
-            num_disjoint_lists: int,
-            ) -> tuple[DisjointLists, tuple[DisjointList, ...]]:
+        self,
+        primary_set_size: int,
+        num_disjoint_lists: int,
+    ) -> tuple[DisjointLists, tuple[DisjointList, ...]]:
         """Add a disjoint-lists decision variable to the model.
 
         .. deprecated:: 0.6.7
@@ -523,16 +525,14 @@ class Model(_Graph):
             DeprecationWarning,
         )
 
-        disjoint_lists = self.disjoint_lists_symbol(
-            primary_set_size, num_disjoint_lists
-        )
-        return disjoint_lists, list(disjoint_lists)
+        disjoint_lists = self.disjoint_lists_symbol(primary_set_size, num_disjoint_lists)
+        return disjoint_lists, tuple(disjoint_lists)
 
     def disjoint_lists_symbol(
-            self,
-            primary_set_size: int,
-            num_disjoint_lists: int,
-            ) -> DisjointLists:
+        self,
+        primary_set_size: int,
+        num_disjoint_lists: int,
+    ) -> DisjointLists:
         """Create a disjoint-lists symbol as a decision variable.
 
         A disjoint-lists symbol divides a set of the elements of
@@ -591,7 +591,8 @@ class Model(_Graph):
 
             :meth:`.iter_decisions`, :meth:`.iter_successors`
         """
-        from dwave.optimization.symbols import DisjointLists, DisjointList  # avoid circular import
+        from dwave.optimization.symbols import DisjointList, DisjointLists  # avoid circular import
+
         disjoint_lists = DisjointLists(self, primary_set_size, num_disjoint_lists)
 
         # create the DisjointList symbols, which will create the successor nodes, even
@@ -637,9 +638,9 @@ class Model(_Graph):
     def input(
         self,
         shape: tuple[int, ...] = (),
-        lower_bound: None | float = -float("inf"),
-        upper_bound: None | float = float("inf"),
-        integral: None | bool = None,
+        lower_bound: float | None = -float("inf"),
+        upper_bound: float | None = +float("inf"),
+        integral: bool | None = None,
     ) -> Input:
         """Add an input symbol as a placeholder for a decision variable.
 
@@ -694,21 +695,17 @@ class Model(_Graph):
         from dwave.optimization.symbols import Input
 
         return Input(
-            self,
-            shape=shape,
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
-            integral=integral
+            self, shape=shape, lower_bound=lower_bound, upper_bound=upper_bound, integral=integral
         )
 
     def integer(
-            self,
-            shape: None | _ShapeLike = None,
-            lower_bound: None | numpy.typing.ArrayLike = None,
-            upper_bound: None | numpy.typing.ArrayLike = None,
-            sum_subject_to: None | list[tuple[str, float]] = None,
-            axes_sums_subject_to: None | list[tuple[int, str | list[str], float | list[float]]] = None
-               ) -> IntegerVariable:
+        self,
+        shape: ShapeLike | None = None,
+        lower_bound: np.typing.ArrayLike | None = None,
+        upper_bound: np.typing.ArrayLike | None = None,
+        sum_subject_to: list[tuple[str, float]] | None = None,
+        axes_sums_subject_to: list[tuple[int, str | list[str], float | list[float]]] | None = None,
+    ) -> IntegerVariable:
         r"""Add an integer decision variable to the model.
 
         An integer symbol is an array of integer values assigned as a solution
@@ -825,13 +822,17 @@ class Model(_Graph):
             supported.
         """
         from dwave.optimization.symbols import IntegerVariable  # avoid circular import
-        return IntegerVariable(self, shape, lower_bound, upper_bound, sum_subject_to, axes_sums_subject_to)
 
-    def list(self,
-            n: int,
-            min_size: None | int = None,
-            max_size: None | int = None,
-            ) -> ListVariable:
+        return IntegerVariable(
+            self, shape, lower_bound, upper_bound, sum_subject_to, axes_sums_subject_to
+        )
+
+    def list(
+        self,
+        n: int,
+        min_size: int | None = None,
+        max_size: int | None = None,
+    ) -> ListVariable:
         """Add a list decision variable to the model.
 
         A list symbol is a list containing a permutation of the values in
@@ -987,13 +988,15 @@ class Model(_Graph):
             symbol
         """
         from dwave.optimization.symbols import QuadraticModel
+
         return QuadraticModel(x, quadratic, linear)
 
-    def set(self,
-            n: int,
-            min_size: int = 0,
-            max_size: None | int = None,
-            ) -> SetVariable:
+    def set(
+        self,
+        n: int,
+        min_size: int = 0,
+        max_size: int | None = None,
+    ) -> SetVariable:
         """Add a set decision variable to the model.
 
         A set symbol is an unordered collection of values in :math:`[0, n-1]`,
@@ -1031,6 +1034,7 @@ class Model(_Graph):
             :meth:`.iter_decisions`
         """
         from dwave.optimization.symbols import SetVariable  # avoid circular import
+
         return SetVariable(self, n, min_size, n if max_size is None else max_size)
 
     def to_file(self, **kwargs) -> typing.BinaryIO:
@@ -1066,7 +1070,7 @@ class Model(_Graph):
             :meth:`~dwave.optimization.states.States.to_file` Saves states to a
             file
         """
-        file = tempfile.TemporaryFile(mode="w+b")
+        file = tempfile.TemporaryFile(mode="w+b")  # noqa: SIM115
 
         # into_file can raise an exception, in which case we close off the
         # tempfile before returning

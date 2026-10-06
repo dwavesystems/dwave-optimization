@@ -676,7 +676,7 @@ class TestModelSerialization(unittest.TestCase):
 
 class TestSymbol(unittest.TestCase):
     def test_abstract(self):
-        from dwave.optimization.model import Symbol
+        from dwave.optimization._model import Symbol
         with self.assertRaisesRegex(ValueError, "Symbols cannot be constructed directly"):
             Symbol()
 
