@@ -122,7 +122,6 @@ format = [
 ]
 pre-commit = [
     "pre-commit~=4.6.0",
-    {include-group = "format"},
 ]
 
 [tool.cibuildwheel]
