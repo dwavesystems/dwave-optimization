@@ -137,7 +137,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
             }
         }
 
-        if (ndim()) state_ptr->shape[0] = array_ptr_->shape(state)[0];
+        if (dynamic()) state_ptr->shape[0] = array_ptr_->shape(state)[0];
 
         if (not diff.empty()) Node::propagate(state);
     }
@@ -206,11 +206,9 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         UnaryOpState_(R&& values, std::span<const ssize_t> shape) :
             buffer(std::ranges::to<std::vector<double>>(std::forward<R>(values))),
             previous_size(buffer.size()),
-            shape(shape.size() ? std::make_unique<ssize_t[]>(shape.size()) : nullptr),
+            shape(shape.empty() ? nullptr : std::make_unique<ssize_t[]>(shape.size())),
             diff() {
-            for (ssize_t i = 0, ndim = shape.size(); i < ndim; ++i) {
-                this->shape[i] = shape[i];
-            }
+            std::copy(shape.begin(), shape.end(), this->shape.get());
         }
 
         std::vector<double> buffer;
@@ -222,7 +220,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     };
 
     // Calculate the min/max of the op applied to array_ptr
-    static interval<double> calculate_domain_(Array* array_ptr) {
+    static interval<double> calculate_domain_(const Array* array_ptr) {
         interval<double> array_domain = interval<double>(array_ptr->min(), array_ptr->max());
 
         if constexpr (std::same_as<UnaryOp, functional::sqrt>) {
@@ -246,7 +244,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     // Determine whether the op applied to array_ptr will always result in an
     // integral output.
     static bool calculate_integral_(const Array* array_ptr) {
-        // rint() actually always returns a floating point. But it is an intergral
+        // rint() actually always returns a floating point. But it is an integral
         // floating point. This is a place where having proper dtypes would be
         // very very nice.
         if constexpr (std::same_as<UnaryOp, functional::rint>) return true;
