@@ -202,5 +202,9 @@ line-length = 100
 
 [tool.ruff.lint]
 ignore = [
-    "C408",  # We are OK with dict literals e.g., dict() rather than {}
+    # In some cases it's more readable to use generator syntax
+    "C402",  # unnecessary-generator-dict
+
+    # We are OK with dict/tuple/list/etc literals e.g., dict() rather than {}
+    "C408",  # unnecessary-collection-call
 ]
