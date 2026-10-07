@@ -305,7 +305,6 @@ class IntegerNode : public NumberNode {
     // @copydoc NumberNode::is_valid()
     bool is_valid(ssize_t index, double value) const override;
 
-
  protected:
     // Overloads needed by the Node ABC ***************************************
 

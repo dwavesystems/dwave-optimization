@@ -108,7 +108,7 @@ class DiffCheckpoint : public LinkedListCheckpoint {
     // The current "drop". The drop is used when a checkpoint is created while
     // a node has some mutations already applied. This tells the checkpoint
     // how to handle the diff associated with those mutations, i.e., the ones
-    // the checkpoint shouldn't be tracking. 
+    // the checkpoint shouldn't be tracking.
     ssize_t& drop() { return drop_; }
 
     // Add updates associated with a revert to the checkpoint. The checkpoint

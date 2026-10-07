@@ -497,7 +497,7 @@ class DecisionNode : public Decision, public virtual Node {
 
 /// Provide an implementation of equal_to() that defers to a type-specific
 /// implementation.
-template<std::derived_from<Node> Base, typename Derived = void>
+template <std::derived_from<Node> Base, typename Derived = void>
 struct EqualityMixin : Base {
     /// @copydoc Node::equal_to()
     bool equal_to(const Node& rhs) const final {
@@ -520,7 +520,7 @@ struct EqualityMixin : Base {
 /// Overload for EqualityMixin that does not require a class-specific equal_to()
 /// method overload. This simply checks that they have the same type and same
 /// predecessors.
-template<std::derived_from<Node> Base>
+template <std::derived_from<Node> Base>
 struct EqualityMixin<Base, void> : Base {
     /// @copydoc Node::equal_to()
     bool equal_to(const Node& rhs) const final {

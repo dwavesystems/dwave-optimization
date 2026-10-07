@@ -325,7 +325,7 @@ ssize_t Graph::remove_redundant_nodes(bool ignore_listeners, double time_limit_s
 
         // Go through our "special" nodes and drop anything
         assert(std::ranges::none_of(decisions_, dropped));  // should never be dropped
-        assert(std::ranges::none_of(inputs_, dropped));  // should never be dropped
+        assert(std::ranges::none_of(inputs_, dropped));     // should never be dropped
         std::erase_if(constants_, dropped);
 
         std::erase_if(constraints_, dropped);
@@ -344,7 +344,6 @@ ssize_t Graph::remove_redundant_nodes(bool ignore_listeners, double time_limit_s
 
             // And then reset the pointer, thereby dellocating the node
             uptr.reset();
-
         }
         // Finally, remove the nullptrs from the nodelist
         std::erase_if(nodes_, [](const auto& uptr) { return not uptr; });
@@ -454,7 +453,6 @@ ssize_t Graph::remove_redundant_nodes(bool ignore_listeners, double time_limit_s
     return cleanup();
 }
 
-
 ssize_t Graph::remove_unused_nodes(bool ignore_listeners) {
     return remove_unused_nodes({}, ignore_listeners);
 }
@@ -505,7 +503,7 @@ ssize_t Graph::remove_unused_nodes(std::span<Node*> keep, bool ignore_listeners)
 
     for (auto& uptr : nodes_ | std::views::reverse) {
         if (uptr->topological_index_ == KEEP) continue;  // we marked these to keep
-        if (uptr->successors().size() > 0) continue;  // this node is used by other nodes
+        if (uptr->successors().size() > 0) continue;     // this node is used by other nodes
 
         // We have a node with no successors and that we haven't marked it as important.
         // So let's mark it to be dropped later.
@@ -598,7 +596,7 @@ void Graph::swap_decisions(DecisionNode* x_ptr, DecisionNode* y_ptr) {
 
     if (x_ptr == y_ptr) return;  // nothing to do
 
-    ssize_t& x_idx = x_ptr->topological_index_; 
+    ssize_t& x_idx = x_ptr->topological_index_;
     ssize_t& y_idx = y_ptr->topological_index_;
 
     assert(0 <= x_idx and static_cast<size_t>(x_idx) < decisions_.size());

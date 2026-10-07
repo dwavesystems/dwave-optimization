@@ -189,6 +189,5 @@ TEST_CASE("MeanNode") {
         auto state = graph.initialize_state();
         CHECK_THAT(mean_ptr->view(state), RangeEquals({5.5}));
     }
-
 }
 }  // namespace dwave::optimization

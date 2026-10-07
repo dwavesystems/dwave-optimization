@@ -473,7 +473,7 @@ TEST_CASE("IsInNode") {
             REQUIRE_THAT(isin_ptr->view(state), RangeEquals({1.0, 0.0}));
 
             AND_WHEN("We make some changes to element integer node and propagate") {
-                i1_ptr->exchange(state, 0, 1); // should be [3, 1] now
+                i1_ptr->exchange(state, 0, 1);  // should be [3, 1] now
                 REQUIRE(i1_ptr->view(state)[0] == 3.0);
                 REQUIRE(i1_ptr->view(state)[1] == 1.0);
                 graph.propagate(state);
@@ -485,7 +485,7 @@ TEST_CASE("IsInNode") {
                     graph.revert(state);
 
                     AND_WHEN("We make some changes to element integer node and propagate") {
-                        i1_ptr->set_value(state, 0, 1); // should be [1, 1] now
+                        i1_ptr->set_value(state, 0, 1);  // should be [1, 1] now
                         REQUIRE(i1_ptr->view(state)[0] == 1.0);
                         REQUIRE(i1_ptr->view(state)[1] == 1.0);
 

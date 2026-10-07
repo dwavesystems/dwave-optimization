@@ -169,7 +169,6 @@ TEMPLATE_TEST_CASE(
 
                 CHECK_THAT(p_ptr->view(state), RangeEquals({func(17)}));
 
-
                 AND_WHEN("We commit") {
                     graph.commit(state);
 
@@ -270,7 +269,6 @@ TEMPLATE_TEST_CASE(
         CHECK_THAT(unaryop_ptr->predecessors(), RangeEquals({c1_ptr}));
         CHECK_THAT(unaryop_ptr->operands(), RangeEquals({c1_ptr}));
     }
-
 }
 
 TEST_CASE("UnaryOpNode - AbsoluteNode") {

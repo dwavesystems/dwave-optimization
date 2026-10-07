@@ -549,16 +549,13 @@ TEST_CASE("MatrixMultiplyNode") {
     }
 
     SECTION("equality") {
-        auto* x0_ptr = graph.emplace_node<ConstantNode>(
-            std::vector{1, 2, 3, 4}, std::vector<ssize_t>{2, 2}
-        );
-        auto* x1_ptr = graph.emplace_node<ConstantNode>(
-            std::vector{6, 5, 4, 3}, std::vector<ssize_t>{2, 2}
-        );
+        auto* x0_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{1, 2, 3, 4}, std::vector<ssize_t>{2, 2});
+        auto* x1_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{6, 5, 4, 3}, std::vector<ssize_t>{2, 2});
 
-        auto* y0_ptr = graph.emplace_node<ConstantNode>(
-            std::vector{7, 8, 9, 10}, std::vector<ssize_t>{2, 2}
-        );
+        auto* y0_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{7, 8, 9, 10}, std::vector<ssize_t>{2, 2});
         auto* y1_ptr = graph.emplace_node<ConstantNode>(
             std::vector{12, 11, 10, 9}, std::vector<ssize_t>{2, 2}
         );

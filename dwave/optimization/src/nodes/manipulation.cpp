@@ -1401,7 +1401,9 @@ void RollNode::propagate(State& state) const {
             if (array_ptr_->dynamic()) {
                 // One last case we need to worry about. If the array may have grown and then
                 // shrunk, we need to deduplicate the diff.
-                state_ptr->update(diff | views::deduplicate_diff | std::views::transform(transform));
+                state_ptr->update(
+                    diff | views::deduplicate_diff | std::views::transform(transform)
+                );
             } else {
                 // Otherwise we just propagate the diff like normal under the assumption
                 // that our predecessor was efficient (not always true but nice to believe).
