@@ -12,11 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import dwave.optimization.generators
-
+import dwave.optimization.generators  # noqa: F401
 from dwave.optimization.expression import *
-from dwave.optimization.model import Model
 from dwave.optimization.mathematical import *
+from dwave.optimization.model import Model  # noqa: F401
 
 __version__ = "0.8.0.dev"
 
@@ -24,13 +23,15 @@ __version__ = "0.8.0.dev"
 def get_include() -> str:
     """Return the directory with dwave-optimization's header files."""
     import os.path
-    return os.path.join(os.path.dirname(__file__), 'include')
+
+    return os.path.join(os.path.dirname(__file__), "include")
 
 
 def get_library_dir() -> str:
     """Return a list of all of the source files."""
     import os.path
     import platform
+
     if platform.system() == "Windows":
         raise RuntimeError("dwave-optimization does not distribute a library on Windows")
     return os.path.dirname(__file__)
@@ -39,6 +40,7 @@ def get_library_dir() -> str:
 def get_library() -> str:
     """Return the shared library name."""
     import platform
+
     if platform.system() == "Windows":
         raise RuntimeError("dwave-optimization does not distribute a library on Windows")
     return "dwave-optimization"

@@ -15,12 +15,10 @@
 from __future__ import annotations
 
 import collections.abc
-import functools
 import inspect
 import typing
 
 from dwave.optimization.model import Model
-
 
 __all__ = ["expression"]
 
@@ -66,12 +64,15 @@ class Expression:
 
     .. versionadded:: 0.6.4
     """
+
     _function: collections.abc.Callable  # todo: better typing?
     _model: Model
 
     def __init__(self):
-        raise ValueError("Expression cannot be constructed directly. "
-                         "Use the expression() function/decorator instead.")
+        raise ValueError(
+            "Expression cannot be constructed directly. "
+            "Use the expression() function/decorator instead."
+        )
 
     def __str__(self) -> str:
         return f"expression({self._function!r})"
@@ -109,24 +110,26 @@ def expression(*args, **kwargs):
     .. versionadded:: 0.6.4
     """
     if len(args) == 0:
+
         def _decorator(function):
             return expression(function, **kwargs)
+
         return _decorator
     elif len(args) == 1:
-        function, = args
+        (function,) = args
     else:
         raise TypeError(
             f"expression() takes 0 or 1 positional arguments but {len(args)} were given",
         )
 
     if not callable(function):
-        raise TypeError(f'{function!r} is not a callable object')
+        raise TypeError(f"{function!r} is not a callable object")
 
     model = Model()
 
     # Create the inputs. By default we loosen the values to -inf/+inf, but we also
     # allow the user to overwrite that default.
-    default_kwargs = dict(lower_bound=-float('inf'), upper_bound=float('inf'))
+    default_kwargs = dict(lower_bound=-float("inf"), upper_bound=float("inf"))
     inputs = []
     for parameter in inspect.signature(function).parameters:
         input_kwargs = default_kwargs | kwargs.get(parameter, dict())

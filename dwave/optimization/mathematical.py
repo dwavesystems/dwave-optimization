@@ -131,7 +131,9 @@ def _binaryop(
     binaryop: type,
     naryop: type | None = None,
 ) -> collections.abc.Callable[..., collections.abc.Callable[..., ArraySymbol]]:
-    def decorator(f: collections.abc.Callable[..., ArraySymbol]) -> collections.abc.Callable[..., ArraySymbol]:
+    def decorator(
+        f: collections.abc.Callable[..., ArraySymbol],
+    ) -> collections.abc.Callable[..., ArraySymbol]:
         @functools.wraps(f)
         def wrapper(*args: ArraySymbol, **kwargs: ArraySymbol) -> ArraySymbol:
             # First let's make sure we have the correct number of arguments for our function
@@ -149,7 +151,8 @@ def _binaryop(
             # We also force float64 because that's the underlying type we use, but if we
             # eventually support multiple dtypes we'll want to be more general.
             arrays: tuple[np.typing.NDArray | ArraySymbol] = tuple(
-                arg if isinstance(arg, ArraySymbol) else np.asarray(arg, dtype=np.float64) for arg in args
+                arg if isinstance(arg, ArraySymbol) else np.asarray(arg, dtype=np.float64)
+                for arg in args
             )
 
             # Now get the shape we'd be broadcasting to
@@ -176,6 +179,7 @@ def _binaryop(
             return naryop(*broadcast_symbols(*array_symbols), **kwargs)
 
         return wrapper
+
     return decorator
 
 
@@ -1118,7 +1122,9 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
         return concatenate(arrays, 1)
 
 
-def is_disjoint_cover(subsets: list[ArraySymbol], *, primary_set_size: int | None = None) -> IsDisjointCover:
+def is_disjoint_cover(
+    subsets: list[ArraySymbol], *, primary_set_size: int | None = None
+) -> IsDisjointCover:
     """Return whether the symbols are disjoint, set-like, and cover a set of integers.
 
     Determines whether a collection of array symbols is disjoint and the union equals a fixed set.
@@ -1288,15 +1294,15 @@ def less_equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> LessEqual:
 
 def linprog(
     c: ArraySymbol,
-    A_ub: None | ArraySymbolLike = None,  # alias for A
-    b_ub: None | ArraySymbolLike = None,
-    A_eq: None | ArraySymbolLike = None,
-    b_eq: None | ArraySymbolLike = None,
+    A_ub: ArraySymbolLike | None = None,  # alias for A
+    b_ub: ArraySymbolLike | None = None,
+    A_eq: ArraySymbolLike | None = None,
+    b_eq: ArraySymbolLike | None = None,
     *,  # the args up until here match SciPy's linprog() which accepts them positionally
-    b_lb: None | ArraySymbolLike = None,
-    A: None | ArraySymbolLike = None,
-    lb: None | ArraySymbolLike = None,
-    ub: None | ArraySymbolLike = None,
+    b_lb: ArraySymbolLike | None = None,
+    A: ArraySymbolLike | None = None,
+    lb: ArraySymbolLike | None = None,
+    ub: ArraySymbolLike | None = None,
 ) -> LPResult:
     r"""Solve a :term:`linear program`.
 
@@ -1668,8 +1674,12 @@ def matmul(x: ArraySymbolLike, y: ArraySymbolLike) -> MatrixMultiply:
         # The shapes don't match, but it may be possible to do a broadcast. The
         # vector broadcast case is handled by MatrixMultiplyNode, so we need to
         # handle all the other cases by adding one or two BroadcastNodes.
-        x_shape = [1,] * (y.ndim() - x.ndim()) + list(x.shape())
-        y_shape = [1,] * (x.ndim() - y.ndim()) + list(y.shape())
+        x_shape = [
+            1,
+        ] * (y.ndim() - x.ndim()) + list(x.shape())
+        y_shape = [
+            1,
+        ] * (x.ndim() - y.ndim()) + list(y.shape())
 
         for i in range(len(x_shape) - 2):
             if x_shape[i] == 1:
@@ -2004,7 +2014,7 @@ def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
 def resize(
     array: ArraySymbol,
     shape: ShapeLike,
-    fill_value: None | float = None,
+    fill_value: float | None = None,
 ) -> Resize:
     """Resize a symbol to a specified shape.
 
@@ -2083,7 +2093,7 @@ def rint(x: ArraySymbol) -> Rint:
 def roll(
     array: ArraySymbol,
     shift: ArraySymbol | ShapeLike,
-    axis: None | ShapeLike = None,
+    axis: ShapeLike | None = None,
 ) -> Roll:
     """Roll an array symbol's elements along an axis.
 
@@ -2360,8 +2370,9 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
 
     .. versionadded:: 0.5.0
     """
-    if (not isinstance(arrays, collections.abc.Sequence) or
-            not all(isinstance(arr, ArraySymbol) for arr in arrays)):
+    if not isinstance(arrays, collections.abc.Sequence) or not all(
+        isinstance(arr, ArraySymbol) for arr in arrays
+    ):
         raise TypeError("stack() takes a sequence of array symbols of the same shape")
 
     if len(arrays) == 0:
@@ -2373,8 +2384,7 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
         raise ValueError("all input array symbols must have the same shape")
 
     if not 0 <= axis <= len(shape):
-        raise ValueError(f'axis {axis} is out of bounds for array'
-                         f' of dimension {len(shape) + 1}')
+        raise ValueError(f"axis {axis} is out of bounds for array of dimension {len(shape) + 1}")
 
     new_shape = tuple(shape[:axis]) + (1,) + (shape[axis:])  # add the axis and then concatenate
     return concatenate([arr.reshape(new_shape) for arr in arrays], axis)

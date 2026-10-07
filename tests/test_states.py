@@ -17,13 +17,11 @@ import io
 import os.path
 import tempfile
 import threading
-import sys
 import unittest
 
 import numpy as np
 
 import dwave.optimization
-
 from dwave.optimization import Model
 
 

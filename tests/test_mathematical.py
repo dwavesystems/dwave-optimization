@@ -21,7 +21,6 @@ import unittest
 import numpy as np
 
 import dwave.optimization
-
 from dwave.optimization import Model
 
 
@@ -202,22 +201,24 @@ class TestStack(unittest.TestCase):
         with model.lock():
             model.states.resize(1)
             self.assertIsInstance(s, dwave.optimization.model.ArraySymbol)
-            self.assertEqual(s.shape(), (3, ))
+            self.assertEqual(s.shape(), (3,))
             self.assertEqual(s.ndim(), 1)
             np.testing.assert_array_equal(s.state(0), np.arange(1, 4))
 
     def test_1d_arrays(self):
         model = Model()
-        A = model.constant(np.arange(3).reshape((3, )))
-        B = model.constant(np.arange(3, 6).reshape((3, )))
+        A = model.constant(np.arange(3).reshape((3,)))
+        B = model.constant(np.arange(3, 6).reshape((3,)))
         s0 = dwave.optimization.stack((A, B), axis=0)
         s1 = dwave.optimization.stack((A, B), axis=1)
         with model.lock():
             model.states.resize(1)
             np.testing.assert_array_equal(
-                s0.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=0))
+                s0.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=0)
+            )
             np.testing.assert_array_equal(
-                s1.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=1))
+                s1.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=1)
+            )
 
     def test_2d_arrays(self):
         model = Model()
@@ -229,28 +230,32 @@ class TestStack(unittest.TestCase):
         with model.lock():
             model.states.resize(1)
             np.testing.assert_array_equal(
-                s0.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=0))
+                s0.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=0)
+            )
             np.testing.assert_array_equal(
-                s1.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=1))
+                s1.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=1)
+            )
             np.testing.assert_array_equal(
-                s2.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=2))
+                s2.state(0), np.stack((np.asarray(A), np.asarray(B)), axis=2)
+            )
 
     def test_nd_arrays(self):
         rng = np.random.default_rng(1)
         dims = rng.integers(0, 5)
         shape = tuple(rng.integers(1, 4) for _ in range(dims + 1))
         model = Model()
-        A = np.random.randint(0, 10, shape)
-        B = np.random.randint(0, 10, shape)
-        C = np.random.randint(0, 10, shape)
+        rng = np.random.default_rng(42)
+        A = rng.integers(0, 10, shape)
+        B = rng.integers(0, 10, shape)
+        C = rng.integers(0, 10, shape)
         symbols = [model.constant(A), model.constant(B), model.constant(C)]
-        for axis in range(dims+1):
+        for axis in range(dims + 1):
             s = dwave.optimization.stack(symbols, axis)
             with model.lock():
                 model.states.resize(1)
                 np.testing.assert_array_equal(
-                    s.state(0),
-                    np.stack((np.asarray(A), np.asarray(B), np.asarray(C)), axis))
+                    s.state(0), np.stack((np.asarray(A), np.asarray(B), np.asarray(C)), axis)
+                )
 
     def test_errors(self):
         with self.subTest("axis out of bounds"):
@@ -258,8 +263,7 @@ class TestStack(unittest.TestCase):
             A = model.constant(np.arange(9).reshape((3, 1, 3)))
             B = model.constant(np.arange(9).reshape((3, 1, 3)))
             with self.assertRaisesRegex(
-                ValueError,
-                (r"axis 4 is out of bounds for array of dimension 4")
+                ValueError, (r"axis 4 is out of bounds for array of dimension 4")
             ):
                 dwave.optimization.stack((A, B), axis=4)
 
@@ -268,8 +272,7 @@ class TestStack(unittest.TestCase):
             A = model.constant(np.arange(4).reshape((2, 2)))
             B = model.constant(np.arange(8).reshape((4, 2)))
             with self.assertRaisesRegex(
-                ValueError,
-                (r"all input array symbols must have the same shape")
+                ValueError, (r"all input array symbols must have the same shape")
             ):
                 dwave.optimization.stack((A, B))
 
@@ -278,17 +281,13 @@ class TestStack(unittest.TestCase):
             A = model.constant(np.arange(4).reshape((2, 2)))
             B = model.constant(np.arange(4).reshape((2, 1, 2)))
             with self.assertRaisesRegex(
-                ValueError,
-                (r"all input array symbols must have the same shape")
+                ValueError, (r"all input array symbols must have the same shape")
             ):
                 dwave.optimization.stack((A, B))
 
         with self.subTest("at least one input array is required"):
             model = Model()
-            with self.assertRaisesRegex(
-                ValueError,
-                (r"need at least one array symbol to stack")
-            ):
+            with self.assertRaisesRegex(ValueError, (r"need at least one array symbol to stack")):
                 dwave.optimization.stack([])
 
     def test_single_array_symbol(self):
@@ -303,7 +302,7 @@ class TestStack(unittest.TestCase):
     def test_single_array(self):
         model = Model()
         A = model.constant(np.arange(4).reshape((2, 2)))
-        s = dwave.optimization.stack((A, ))
+        s = dwave.optimization.stack((A,))
         with model.lock():
             model.states.resize(1)
             self.assertEqual(s.shape(), (1, 2, 2))

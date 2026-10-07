@@ -35,8 +35,12 @@ class Test_split_indices(unittest.TestCase):
         def __getitem__(self, index):
             if not isinstance(index, tuple):
                 return self[(index,)]
-            dims, basic, advanced = dwave.optimization.utilities._split_indices(self.array.shape, index)
-            np.testing.assert_array_equal(self.array[index], np.expand_dims(self.array, dims)[basic][advanced])
+            dims, basic, advanced = dwave.optimization.utilities._split_indices(
+                self.array.shape, index
+            )
+            np.testing.assert_array_equal(
+                self.array[index], np.expand_dims(self.array, dims)[basic][advanced]
+            )
 
     def test_equivalence(self):
         a1d = np.arange(5)

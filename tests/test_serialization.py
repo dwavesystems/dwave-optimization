@@ -21,7 +21,6 @@ version that only supported serialization version 0.1
 
 from __future__ import annotations
 
-import functools
 import os.path
 import typing
 import unittest
@@ -35,17 +34,21 @@ from dwave.optimization import Model
 def requires_version(version: tuple[int, int]):
     """Replace a method with None if the dwave.optimization.__version__ < version"""
     major, minor, *_ = dwave.optimization.__version__.split(".")
-    if ((int(major), int(minor)) < version):
+    if (int(major), int(minor)) < version:
+
         def wrapper(method):
             return None
     else:
+
         def wrapper(method):
             return method
+
     return wrapper
 
 
 class TestSerialization(unittest.TestCase):
     """For each model to be tested we expect a ``make_<model>()`` method."""
+
     def assertModelEqual(self, lhs: Model, rhs: Model):
         """Assert two models are the same."""
         with lhs.lock(), rhs.lock():
@@ -88,7 +91,9 @@ class TestSerialization(unittest.TestCase):
                 print(f"no {fname} found")  # could add a verbose flag to toggle
                 continue
 
-            print(f"loading with version {dwave.optimization.__version__}:", name)  # could add a verbose flag to toggle
+            print(
+                f"loading with version {dwave.optimization.__version__}:", name
+            )  # could add a verbose flag to toggle
             self.assertModelEqual(Model.from_file(fname), base_model)
 
             # test states equality
@@ -97,13 +102,15 @@ class TestSerialization(unittest.TestCase):
             test_model.states.from_file(os.path.join(directory, "states", name + ".nl"))
             self.assertModelEqual(base_model, test_model)
 
-    def save(self, directory: str, version: None | tuple[int, int]):
+    def save(self, directory: str, version: tuple[int, int] | None):
         """Save all models to the given directory with the given serialization version."""
         os.makedirs(os.path.join(directory, "model"), exist_ok=True)
         os.makedirs(os.path.join(directory, "states"), exist_ok=True)
 
         for name in self.iter_names():
-            print(f"saving with version {dwave.optimization.__version__}:", name)  # could add a verbose flag to toggle
+            print(
+                f"saving with version {dwave.optimization.__version__}:", name
+            )  # could add a verbose flag to toggle
 
             model = getattr(self, "make_" + name)()
             with open(os.path.join(directory, "model", name + ".nl"), "wb") as f:
@@ -125,7 +132,7 @@ class TestSerialization(unittest.TestCase):
         """For all models, test the serializing and deserializing results in the same states."""
         for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
             for name in self.iter_names():
-                make = getattr(self, "make_" + name)
+                _ = getattr(self, "make_" + name)
 
                 with self.subTest(version=version, model=name):
                     base_model = getattr(self, "make_" + name)()
@@ -138,7 +145,7 @@ class TestSerialization(unittest.TestCase):
                     self.assertModelEqual(base_model, test_model)
 
     def make_binary_and_integer(self) -> Model:
-        """ A model with binary and integer variables"""
+        """A model with binary and integer variables"""
         model = Model()
 
         model.binary()
@@ -146,7 +153,7 @@ class TestSerialization(unittest.TestCase):
         model.binary(2)
 
         model.integer()
-        model.integer((3,2))
+        model.integer((3, 2))
         model.integer(3, upper_bound=5)
 
         return model
@@ -222,7 +229,7 @@ if __name__ == "__main__":
     def as_version(version: str) -> tuple[int, int]:
         return tuple(map(int, version.split(".")))
 
-    parser = argparse.ArgumentParser(description='Save/load models for testing')
+    parser = argparse.ArgumentParser(description="Save/load models for testing")
 
     parser.add_argument(
         "saveload",

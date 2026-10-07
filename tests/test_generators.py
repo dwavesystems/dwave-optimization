@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import functools
 import unittest
 import warnings
 
@@ -93,10 +92,10 @@ class TestBinPacking(unittest.TestCase):
         model.states.resize(2)
         items.set_state(0, [[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 0, 0], [0, 0, 0, 0]])
         items.set_state(1, [[1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
-        self.assertEqual(model.objective.state(0), 2.)
-        self.assertEqual(capacity_constraint.state(0), 1.)
-        self.assertEqual(model.objective.state(1), 1.)
-        self.assertEqual(capacity_constraint.state(1), 0.)
+        self.assertEqual(model.objective.state(0), 2.0)
+        self.assertEqual(capacity_constraint.state(0), 1.0)
+        self.assertEqual(model.objective.state(1), 1.0)
+        self.assertEqual(capacity_constraint.state(1), 0.0)
 
     def test_serialization(self):
         weights = [30, 20, 10, 20]
@@ -128,7 +127,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
                 locations_x=x,
-                locations_y=x)
+                locations_y=x,
+            )
 
         with self.assertRaises(ValueError):
             dwave.optimization.generators.capacitated_vehicle_routing(
@@ -136,14 +136,16 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
                 locations_x=[],
-                locations_y=[])
+                locations_y=[],
+            )
 
         with self.assertRaises(ValueError):
             dwave.optimization.generators.capacitated_vehicle_routing(
                 demand=demand,
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
-                distances=[])
+                distances=[],
+            )
 
         # Negative-value arrays
         with self.assertRaises(ValueError):
@@ -151,7 +153,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 demand=demand,
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
-                distances=[[1, -1], [2, 8]])
+                distances=[[1, -1], [2, 8]],
+            )
 
         # Unequal-length arrays
         with self.assertRaises(ValueError):
@@ -160,14 +163,16 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
                 locations_x=[1, 2, 3, 4],
-                locations_y=x)
+                locations_y=x,
+            )
 
         with self.assertRaises(ValueError):
             dwave.optimization.generators.capacitated_vehicle_routing(
                 demand=demand,
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
-                distances=[[1, 6], [2, 8]])
+                distances=[[1, 6], [2, 8]],
+            )
 
         # Not enough vehicles
         with self.assertRaises(ValueError):
@@ -176,7 +181,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 number_of_vehicles=0,
                 vehicle_capacity=capacity,
                 locations_x=x,
-                locations_y=x)
+                locations_y=x,
+            )
 
         # No capacity per vehicle
         with self.assertRaises(ValueError):
@@ -185,7 +191,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=0,
                 locations_x=x,
-                locations_y=x)
+                locations_y=x,
+            )
 
         # Not enough total capacity for total demand
         with self.assertRaises(ValueError):
@@ -194,7 +201,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 number_of_vehicles=3,
                 vehicle_capacity=30,
                 locations_x=x,
-                locations_y=x)
+                locations_y=x,
+            )
 
         # No customers when depot in demand vector
         with self.assertRaises(ValueError):
@@ -203,14 +211,16 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
                 locations_x=[11],
-                locations_y=[22])
+                locations_y=[22],
+            )
 
         with self.assertRaises(ValueError):
             dwave.optimization.generators.capacitated_vehicle_routing(
                 demand=[0],
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
-                distances=[6])
+                distances=[6],
+            )
 
         # Depot location in both demand vector and argument
         with self.assertRaises(ValueError):
@@ -220,7 +230,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 vehicle_capacity=capacity,
                 locations_x=x,
                 locations_y=x,
-                depot_x_y=depot_x_y)
+                depot_x_y=depot_x_y,
+            )
 
         # Depot location with distances array
         with self.assertRaises(ValueError):
@@ -229,7 +240,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
                 distances=[[1, 6, 3], [2, 2, 8], [4, 6, 7]],
-                depot_x_y=depot_x_y)
+                depot_x_y=depot_x_y,
+            )
 
         # Demand vector has zero for depot and customer
         with self.assertRaises(ValueError):
@@ -238,7 +250,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
                 locations_x=x,
-                locations_y=x)
+                locations_y=x,
+            )
 
         # Demand vector has zero for customer
         with self.assertRaises(ValueError):
@@ -247,7 +260,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
                 locations_x=x,
-                locations_y=x)
+                locations_y=x,
+            )
 
         # Demand vector first element is not zero for distances array
         with self.assertRaises(ValueError):
@@ -255,7 +269,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
                 demand=demand,
                 number_of_vehicles=num_vehicles,
                 vehicle_capacity=capacity,
-                distances=[[1, 6, 3], [2, 2, 8], [4, 6, 7]], )
+                distances=[[1, 6, 3], [2, 2, 8], [4, 6, 7]],
+            )
 
     def test_basics(self):
         num_vehicles = 2
@@ -267,7 +282,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
             vehicle_capacity=10,
             locations_x=[0, 3],
             locations_y=[2, 0],
-            depot_x_y=[0, 0])
+            depot_x_y=[0, 0],
+        )
 
         self.assertEqual(model.num_decisions(), 1)
         self.assertEqual(model.num_constraints(), num_vehicles)
@@ -287,7 +303,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
             number_of_vehicles=num_vehicles,
             vehicle_capacity=10,
             locations_x=[0, 3],
-            locations_y=[1.5, 1.5])
+            locations_y=[1.5, 1.5],
+        )
 
         model.states.resize(1)
         route = next(model.iter_decisions())
@@ -302,7 +319,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
             vehicle_capacity=10,
             locations_x=[3, 6],
             locations_y=[4, 2],
-            depot_x_y=[3, 2])
+            depot_x_y=[3, 2],
+        )
 
         model.states.resize(1)
         route = next(model.iter_decisions())
@@ -315,7 +333,8 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
             demand=[0, 10, 10],
             number_of_vehicles=num_vehicles,
             vehicle_capacity=10,
-            distances=[[0, 1, 3], [2, 0, np.sqrt(17)], [4, np.sqrt(13), 0]])
+            distances=[[0, 1, 3], [2, 0, np.sqrt(17)], [4, np.sqrt(13), 0]],
+        )
 
         model.states.resize(1)
         route = next(model.iter_decisions())
@@ -326,27 +345,114 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
     def test_cvrplib_P_n19_k2(self):
         # http://vrp.atd-lab.inf.puc-rio.br/media/com_vrp/instances/P/P-n19-k2.vrp
         model = dwave.optimization.generators.capacitated_vehicle_routing(
-            locations_x=[30, 37, 49, 52, 31, 52, 42, 52, 57, 62, 42, 27, 43, 58, 37, 61, 62, 63, 45],
-            locations_y=[40, 52, 43, 64, 62, 33, 41, 41, 58, 42, 57, 68, 67, 27, 69, 33, 63, 69, 35],
+            locations_x=[
+                30,
+                37,
+                49,
+                52,
+                31,
+                52,
+                42,
+                52,
+                57,
+                62,
+                42,
+                27,
+                43,
+                58,
+                37,
+                61,
+                62,
+                63,
+                45,
+            ],
+            locations_y=[
+                40,
+                52,
+                43,
+                64,
+                62,
+                33,
+                41,
+                41,
+                58,
+                42,
+                57,
+                68,
+                67,
+                27,
+                69,
+                33,
+                63,
+                69,
+                35,
+            ],
             demand=[0, 19, 30, 16, 23, 11, 31, 15, 28, 14, 8, 7, 14, 19, 11, 26, 17, 6, 15],
             number_of_vehicles=2,
-            vehicle_capacity=160)
+            vehicle_capacity=160,
+        )
 
         model.states.resize(1)
         route = next(model.iter_decisions())
-        route.set_state(0, [[i - 1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]],
-                            [i - 1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]]])
+        route.set_state(
+            0,
+            [
+                [i - 1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]],
+                [i - 1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]],
+            ],
+        )
         self.assertGreater(model.objective.state(0), 212)
         self.assertLess(model.objective.state(0), 213)
 
     def test_serialization(self):
         # http://vrp.atd-lab.inf.puc-rio.br/media/com_vrp/instances/P/P-n19-k2.vrp
         model = dwave.optimization.generators.capacitated_vehicle_routing(
-            locations_x=[30, 37, 49, 52, 31, 52, 42, 52, 57, 62, 42, 27, 43, 58, 37, 61, 62, 63, 45],
-            locations_y=[40, 52, 43, 64, 62, 33, 41, 41, 58, 42, 57, 68, 67, 27, 69, 33, 63, 69, 35],
+            locations_x=[
+                30,
+                37,
+                49,
+                52,
+                31,
+                52,
+                42,
+                52,
+                57,
+                62,
+                42,
+                27,
+                43,
+                58,
+                37,
+                61,
+                62,
+                63,
+                45,
+            ],
+            locations_y=[
+                40,
+                52,
+                43,
+                64,
+                62,
+                33,
+                41,
+                41,
+                58,
+                42,
+                57,
+                68,
+                67,
+                27,
+                69,
+                33,
+                63,
+                69,
+                35,
+            ],
             demand=[0, 19, 30, 16, 23, 11, 31, 15, 28, 14, 8, 7, 14, 19, 11, 26, 17, 6, 15],
             number_of_vehicles=2,
-            vehicle_capacity=160)
+            vehicle_capacity=160,
+        )
 
         with model.to_file() as f:
             copy = dwave.optimization.Model.from_file(f)
@@ -358,18 +464,64 @@ class TestCapacitatedVehicleRouting(unittest.TestCase):
     def test_state_serialization(self):
         # http://vrp.atd-lab.inf.puc-rio.br/media/com_vrp/instances/P/P-n19-k2.vrp
         model = dwave.optimization.generators.capacitated_vehicle_routing(
-            locations_x=[30, 37, 49, 52, 31, 52, 42, 52, 57, 62, 42, 27, 43, 58, 37, 61, 62, 63, 45],
-            locations_y=[40, 52, 43, 64, 62, 33, 41, 41, 58, 42, 57, 68, 67, 27, 69, 33, 63, 69, 35],
+            locations_x=[
+                30,
+                37,
+                49,
+                52,
+                31,
+                52,
+                42,
+                52,
+                57,
+                62,
+                42,
+                27,
+                43,
+                58,
+                37,
+                61,
+                62,
+                63,
+                45,
+            ],
+            locations_y=[
+                40,
+                52,
+                43,
+                64,
+                62,
+                33,
+                41,
+                41,
+                58,
+                42,
+                57,
+                68,
+                67,
+                27,
+                69,
+                33,
+                63,
+                69,
+                35,
+            ],
             demand=[0, 19, 30, 16, 23, 11, 31, 15, 28, 14, 8, 7, 14, 19, 11, 26, 17, 6, 15],
             number_of_vehicles=2,
-            vehicle_capacity=160)
+            vehicle_capacity=160,
+        )
 
         model.states.resize(1)
 
-        routes, = model.iter_decisions()
+        (routes,) = model.iter_decisions()
 
-        routes.set_state(0, [[i - 1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]],
-                             [i - 1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]]])
+        routes.set_state(
+            0,
+            [
+                [i - 1 for i in [4, 11, 14, 12, 3, 17, 16, 8, 6]],
+                [i - 1 for i in [18, 5, 13, 15, 9, 7, 2, 10, 1]],
+            ],
+        )
 
         # just smoke test
         with model.states.to_file() as f:
@@ -398,7 +550,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                 time_distances=time_distances,
                 time_window_open=time_window_open,
                 time_window_close=time_window_close,
-                service_time=service_time
+                service_time=service_time,
             )
 
         with self.assertRaises(ValueError):
@@ -409,7 +561,8 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                 time_distances=[],
                 time_window_open=time_window_open,
                 time_window_close=time_window_close,
-                service_time=service_time)
+                service_time=service_time,
+            )
 
         # Negative-value arrays
         with self.assertRaises(ValueError):
@@ -420,7 +573,8 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                 time_distances=[[1, 2, 3], [1, 2, 3], [1, 2, -3]],
                 time_window_open=time_window_open,
                 time_window_close=time_window_close,
-                service_time=service_time)
+                service_time=service_time,
+            )
 
         # Unequal-length arrays
         with self.assertRaises(ValueError):
@@ -433,7 +587,8 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                     time_distances=[[1, 2, 3], [1, 2], [1, 2, 3]],
                     time_window_open=time_window_open,
                     time_window_close=time_window_close,
-                    service_time=service_time)
+                    service_time=service_time,
+                )
 
         with self.assertRaises(ValueError):
             dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
@@ -443,7 +598,8 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                 time_distances=[[1, 6], [2, 8]],
                 time_window_open=time_window_open,
                 time_window_close=time_window_close,
-                service_time=service_time)
+                service_time=service_time,
+            )
 
         # Not enough vehicles
         with self.assertRaises(ValueError):
@@ -454,7 +610,8 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                 time_distances=time_distances,
                 time_window_open=time_window_open,
                 time_window_close=time_window_close,
-                service_time=service_time)
+                service_time=service_time,
+            )
 
         # No capacity per vehicle
         with self.assertRaises(ValueError):
@@ -465,7 +622,8 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                 time_distances=time_distances,
                 time_window_open=time_window_open,
                 time_window_close=time_window_close,
-                service_time=service_time)
+                service_time=service_time,
+            )
 
         # Not enough total capacity for total demand
         with self.assertRaises(ValueError):
@@ -476,7 +634,8 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                 time_distances=time_distances,
                 time_window_open=time_window_open,
                 time_window_close=time_window_close,
-                service_time=service_time)
+                service_time=service_time,
+            )
 
         # Non-zero depot demand
         with self.assertRaises(ValueError):
@@ -487,7 +646,8 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                 time_distances=time_distances,
                 time_window_open=time_window_open,
                 time_window_close=time_window_close,
-                service_time=service_time)
+                service_time=service_time,
+            )
 
         # Demand vector has zero for depot and customer
         with self.assertRaises(ValueError):
@@ -498,7 +658,8 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                 time_distances=time_distances,
                 time_window_open=time_window_open,
                 time_window_close=time_window_close,
-                service_time=service_time)
+                service_time=service_time,
+            )
 
         # Demand vector has zero for customer
         with self.assertRaises(ValueError):
@@ -509,7 +670,8 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
                 time_distances=time_distances,
                 time_window_open=time_window_open,
                 time_window_close=time_window_close,
-                service_time=service_time)
+                service_time=service_time,
+            )
 
     def test_basics(self):
         num_vehicles = 2
@@ -523,11 +685,12 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
             time_distances=[[1, 6, 3], [2, 2, 8], [4, 6, 7]],
             time_window_open=[0, 0, 0],
             time_window_close=[20, 20, 20],
-            service_time=[0, 0, 0])
+            service_time=[0, 0, 0],
+        )
 
         min_expected_number_of_constraints = num_vehicles * 2 + n_time_windows + n_customers
         self.assertEqual(model.num_decisions(), 1)
-        self.assertGreaterEqual(model.num_constraints(),min_expected_number_of_constraints)
+        self.assertGreaterEqual(model.num_constraints(), min_expected_number_of_constraints)
         self.assertEqual(model.is_locked(), True)
 
         model.states.resize(1)
@@ -544,7 +707,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
             time_distances=[[0, 1, 3], [2, 0, np.sqrt(17)], [4, np.sqrt(13), 0]],
             time_window_open=[0, 0, 0],
             time_window_close=[0, 100, 100],
-            service_time=[0, 0, 0]
+            service_time=[0, 0, 0],
         )
 
         model.states.resize(1)
@@ -555,16 +718,13 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
 
     def test_serialization(self):
         model = dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
-            time_distances=[[0, 14, 19, 32],
-                            [14, 0, 15, 19],
-                            [19, 15, 0, 21],
-                            [32, 19, 21, 0]],
+            time_distances=[[0, 14, 19, 32], [14, 0, 15, 19], [19, 15, 0, 21], [32, 19, 21, 0]],
             demand=[0, 19, 30, 16],
             number_of_vehicles=2,
             vehicle_capacity=40,
             time_window_open=[0, 0, 0, 0],
             time_window_close=[0, 100, 100, 100],
-            service_time=[0, 0, 0, 0]
+            service_time=[0, 0, 0, 0],
         )
 
         with model.to_file() as f:
@@ -575,7 +735,7 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
         self.assertEqual(model.state_size(), copy.state_size())
 
     def test_only_one_vehicle_required(self):
-        problem = dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
+        dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
             demand=[0, 1],
             number_of_vehicles=5,
             vehicle_capacity=100,
@@ -584,26 +744,23 @@ class TestCapacitatedVehicleRoutingTimeWindow(unittest.TestCase):
             time_window_close=[10, 10],
             service_time=[0, 1],
         )
+
     def test_state_serialization(self):
         model = dwave.optimization.generators.capacitated_vehicle_routing_with_time_windows(
-            time_distances=[[0, 14, 19, 32],
-                            [14, 0, 15, 19],
-                            [19, 15, 0, 21],
-                            [32, 19, 21, 0]],
+            time_distances=[[0, 14, 19, 32], [14, 0, 15, 19], [19, 15, 0, 21], [32, 19, 21, 0]],
             demand=[0, 19, 30, 16],
             number_of_vehicles=2,
             vehicle_capacity=40,
             time_window_open=[0, 0, 0, 0],
             time_window_close=[0, 100, 100, 100],
-            service_time=[0, 2, 2, 2]
+            service_time=[0, 2, 2, 2],
         )
 
         model.states.resize(1)
 
-        routes, = model.iter_decisions()
+        (routes,) = model.iter_decisions()
 
-        routes.set_state(0, [[i-1 for i in [1, 2]],
-                             [i-1 for i in [3]]])
+        routes.set_state(0, [[i - 1 for i in [1, 2]], [i - 1 for i in [3]]])
 
         # just smoke test
         with model.states.to_file() as f:
@@ -624,7 +781,9 @@ class TestFlowShopScheduling(unittest.TestCase):
     def test_basics(self):
         processing_times = [[10, 5, 7], [20, 10, 15]]
 
-        model = dwave.optimization.generators.flow_shop_scheduling(processing_times=processing_times)
+        model = dwave.optimization.generators.flow_shop_scheduling(
+            processing_times=processing_times
+        )
 
         self.assertEqual(model.num_decisions(), 1)
         self.assertEqual(model.num_constraints(), 0)
@@ -641,7 +800,9 @@ class TestFlowShopScheduling(unittest.TestCase):
     def test_non_integer_processing_times(self):
         processing_times = np.asarray([[10, 5, 7], [20, 10, 15]], dtype=float) / 2
 
-        model = dwave.optimization.generators.flow_shop_scheduling(processing_times=processing_times)
+        model = dwave.optimization.generators.flow_shop_scheduling(
+            processing_times=processing_times
+        )
 
         self.assertEqual(model.num_decisions(), 1)
         self.assertEqual(model.num_constraints(), 0)
@@ -657,7 +818,9 @@ class TestFlowShopScheduling(unittest.TestCase):
 
     def test_serialization(self):
         processing_times = [[10, 5, 7], [20, 10, 15]]
-        model = dwave.optimization.generators.flow_shop_scheduling(processing_times=processing_times)
+        model = dwave.optimization.generators.flow_shop_scheduling(
+            processing_times=processing_times
+        )
 
         with model.to_file() as f:
             copy = dwave.optimization.Model.from_file(f)
@@ -689,8 +852,8 @@ class TestJobShopScheduling(unittest.TestCase):
             self.assertEqual(model.objective.state(0), 10)
 
     def test_single_machine(self):
-        times = np.ones((3,1))
-        machines = np.array([[0],[0],[0]])
+        times = np.ones((3, 1))
+        machines = np.array([[0], [0], [0]])
 
         model = dwave.optimization.generators.job_shop_scheduling(times, machines)
 
@@ -698,18 +861,10 @@ class TestJobShopScheduling(unittest.TestCase):
 
         order = next(model.iter_decisions())
 
-        for order_state in [
-            [2,1,0],
-            [2,0,1],
-            [1,2,0],
-            [1,0,2],
-            [0,2,1],
-            [0,1,2]
-        ]:
+        for order_state in [[2, 1, 0], [2, 0, 1], [1, 2, 0], [1, 0, 2], [0, 2, 1], [0, 1, 2]]:
             order.set_state(0, order_state)
             self.assertTrue(np.all(model.get_global_task_ordering(0) == order_state))
-            self.assertEqual(model.objective.state(0),3)
-
+            self.assertEqual(model.objective.state(0), 3)
 
     def test_3x10(self):
         times = np.arange(30).reshape((3, 10))
@@ -728,15 +883,76 @@ class TestJobShopScheduling(unittest.TestCase):
 
         order.set_state(
             0,
-            [0, 15, 8, 25, 19, 12, 6, 4, 24, 3, 2, 13, 5, 11, 14, 7, 16, 29, 17,
-            23, 22, 18, 26, 20, 28, 9, 27, 21, 1, 10],
+            [
+                0,
+                15,
+                8,
+                25,
+                19,
+                12,
+                6,
+                4,
+                24,
+                3,
+                2,
+                13,
+                5,
+                11,
+                14,
+                7,
+                16,
+                29,
+                17,
+                23,
+                22,
+                18,
+                26,
+                20,
+                28,
+                9,
+                27,
+                21,
+                1,
+                10,
+            ],
         )
 
-        self.assertTrue(np.all(
-            model.get_global_task_ordering(0)
-            == np.array(
-                [0, 10, 1, 20, 11, 12, 2, 3, 21, 4, 5, 13, 6, 14, 15, 7, 16, 22,
-                17, 23, 24, 18, 25, 26, 27, 8, 28, 29, 9, 19]
+        self.assertTrue(
+            np.all(
+                model.get_global_task_ordering(0)
+                == np.array(
+                    [
+                        0,
+                        10,
+                        1,
+                        20,
+                        11,
+                        12,
+                        2,
+                        3,
+                        21,
+                        4,
+                        5,
+                        13,
+                        6,
+                        14,
+                        15,
+                        7,
+                        16,
+                        22,
+                        17,
+                        23,
+                        24,
+                        18,
+                        25,
+                        26,
+                        27,
+                        8,
+                        28,
+                        29,
+                        9,
+                        19,
+                    ]
                 )
             )
         )
@@ -744,14 +960,75 @@ class TestJobShopScheduling(unittest.TestCase):
 
         order.set_state(
             0,
-            [4, 29, 8, 2, 16, 23, 18, 27, 22, 7, 6, 3, 25, 20, 13, 5, 17, 12, 1,
-            10, 21, 26, 9, 14, 15, 28, 19, 24, 0, 11],
+            [
+                4,
+                29,
+                8,
+                2,
+                16,
+                23,
+                18,
+                27,
+                22,
+                7,
+                6,
+                3,
+                25,
+                20,
+                13,
+                5,
+                17,
+                12,
+                1,
+                10,
+                21,
+                26,
+                9,
+                14,
+                15,
+                28,
+                19,
+                24,
+                0,
+                11,
+            ],
         )
-        self.assertTrue(np.all(
-            model.get_global_task_ordering(0)
-            == np.array(
-                [0, 20, 1, 2, 10, 21, 11, 22, 23, 3, 4, 5, 24, 25, 12, 6, 13, 14,
-                7, 15, 26, 27, 8, 16, 17, 28, 18, 29, 9, 19]
+        self.assertTrue(
+            np.all(
+                model.get_global_task_ordering(0)
+                == np.array(
+                    [
+                        0,
+                        20,
+                        1,
+                        2,
+                        10,
+                        21,
+                        11,
+                        22,
+                        23,
+                        3,
+                        4,
+                        5,
+                        24,
+                        25,
+                        12,
+                        6,
+                        13,
+                        14,
+                        7,
+                        15,
+                        26,
+                        27,
+                        8,
+                        16,
+                        17,
+                        28,
+                        18,
+                        29,
+                        9,
+                        19,
+                    ]
                 )
             )
         )
@@ -771,22 +1048,14 @@ class TestJobShopScheduling(unittest.TestCase):
             dwave.optimization.generators.job_shop_scheduling([[[0]]], [[[0]]])
 
         # not permutation
-        times = [[2, 1, 3],
-                 [4, 1, 2],
-                 [1, 1, 2]]
-        machines = [[0, 1, 1],
-                    [2, 0, 1],
-                    [2, 1, 0]]
+        times = [[2, 1, 3], [4, 1, 2], [1, 1, 2]]
+        machines = [[0, 1, 1], [2, 0, 1], [2, 1, 0]]
         with self.assertRaises(ValueError):
             dwave.optimization.generators.job_shop_scheduling(times, machines)
 
     def test_serialization(self):
-        times = [[2, 1, 3],
-                 [4, 1, 2],
-                 [1, 1, 2]]
-        machines = [[0, 1, 2],
-                    [2, 0, 1],
-                    [2, 1, 0]]
+        times = [[2, 1, 3], [4, 1, 2], [1, 1, 2]]
+        machines = [[0, 1, 2], [2, 0, 1], [2, 1, 0]]
 
         model = dwave.optimization.generators.job_shop_scheduling(times, machines)
 
@@ -815,10 +1084,10 @@ class TestKnapsack(unittest.TestCase):
         model.states.resize(2)
         items.set_state(0, [3])
         items.set_state(1, [0, 1, 2])
-        self.assertEqual(model.objective.state(0), -40.)
-        self.assertEqual(capacity_constraint.state(0), 1.)
-        self.assertEqual(model.objective.state(1), -60.)
-        self.assertEqual(capacity_constraint.state(1), 0.)
+        self.assertEqual(model.objective.state(0), -40.0)
+        self.assertEqual(capacity_constraint.state(0), 1.0)
+        self.assertEqual(model.objective.state(1), -60.0)
+        self.assertEqual(capacity_constraint.state(1), 0.0)
 
     def test_serialization(self):
         weights = [30, 10, 40, 20]
@@ -871,7 +1140,7 @@ class TestPredict(unittest.TestCase):
                 n_features=X_shape[1],
                 random_state=seed,
             ),
-            test_size=.25,
+            test_size=0.25,
             random_state=seed,
         )
 
@@ -901,7 +1170,7 @@ class TestPredict(unittest.TestCase):
                 n_features=X_shape[1],
                 random_state=seed,
             ),
-            test_size=.25,
+            test_size=0.25,
             random_state=seed,
         )
 
@@ -922,12 +1191,16 @@ class TestPredict(unittest.TestCase):
         # exposed with a public method
         for activation in ("identity", "logistic", "tanh", "relu"):
             with self.subTest(estimator="classifier", activation=activation):
-                clf, X_test = self.classifier((50, 4), activation=activation, seed=hash(activation) % 1000)
+                clf, X_test = self.classifier(
+                    (50, 4), activation=activation, seed=hash(activation) % 1000
+                )
                 self.check_predict(clf, X_test)
 
         for activation in ("identity", "logistic", "tanh", "relu"):
             with self.subTest(estimator="regressor", activation=activation):
-                regr, X_test = self.regressor((50, 4), activation=activation, seed=hash(activation) % 1000)
+                regr, X_test = self.regressor(
+                    (50, 4), activation=activation, seed=hash(activation) % 1000
+                )
                 self.check_predict(regr, X_test)
 
     def test_doctest(self):
@@ -940,10 +1213,10 @@ class TestPredict(unittest.TestCase):
             import itertools
 
             import numpy as np
+            from sklearn.neural_network import MLPRegressor
 
             from dwave.optimization import Model
             from dwave.optimization.generators import predict
-            from sklearn.neural_network import MLPRegressor
 
             # The values are know exactly
             weights = np.asarray([12, 1, 1, 2, 4])
@@ -956,7 +1229,7 @@ class TestPredict(unittest.TestCase):
                 rng = np.random.default_rng(42)
                 X = rng.integers(low=0, high=2, size=(20, 5))
 
-                y = X @ secret_values + rng.normal(scale=.5, size=20)
+                y = X @ secret_values + rng.normal(scale=0.5, size=20)
 
                 return X, y
 
@@ -992,7 +1265,7 @@ class TestPredict(unittest.TestCase):
 
     def test_exceptions(self):
         with self.subTest("wrong number of features"):
-            clf, X_test = self.classifier((10, 5))
+            clf, _ = self.classifier((10, 5))
             model = dwave.optimization.Model()
             X_symbol = model.input((3, 6))  # wrong number of features
             with self.assertRaises(ValueError):
@@ -1002,7 +1275,9 @@ class TestPredict(unittest.TestCase):
             model = dwave.optimization.Model()
             X_symbol = model.input((3, 6))
             with self.assertRaises(sklearn.exceptions.NotFittedError):
-                dwave.optimization.generators.predict(sklearn.neural_network.MLPClassifier(), X_symbol)
+                dwave.optimization.generators.predict(
+                    sklearn.neural_network.MLPClassifier(), X_symbol
+                )
 
     def test_multiclassifier(self):
         # Multi-classifiers are not (yet) supported
@@ -1015,23 +1290,12 @@ class TestPredict(unittest.TestCase):
 
 class TestQuadraticAssignment(unittest.TestCase):
     def test_input_validations(self):
-        distance_matrix0 = [[0, 5, 3],
-                            [5, 0, 2],
-                            [3, 2, 0]]
-        flow_matrix0 = [[0, 1, 3],
-                        [4, 0, 2],
-                        [1, 1, 0]]
+        distance_matrix0 = [[0, 5, 3], [5, 0, 2], [3, 2, 0]]
+        flow_matrix0 = [[0, 1, 3], [4, 0, 2], [1, 1, 0]]
 
-        distance_matrix1 = [[0, 5, 3],
-                            [-5, 0, 2],
-                            [3, 2, 0]]
-        flow_matrix1 = [[0, 1, 3],
-                        [4, 0, -2],
-                        [1, 1, 0]]
+        distance_matrix1 = [[0, 5, 3], [-5, 0, 2], [3, 2, 0]]
+        flow_matrix1 = [[0, 1, 3], [4, 0, -2], [1, 1, 0]]
 
-        distance_matrix2 = [[0, 5, 3],
-                            [5, 0, 2],
-                            [3, 2]]
         flow_matrix2 = [[0, 1, 3]]
 
         # Zero-length matrix
@@ -1061,12 +1325,8 @@ class TestQuadraticAssignment(unittest.TestCase):
         #     dwave.optimization.generators.quadratic_assignment(distance_matrix2, flow_matrix0)
 
     def test_basics(self):
-        distance_matrix = [[0, 5, 3],
-                           [5, 0, 2],
-                           [3, 2, 0]]
-        flow_matrix = [[0, 1, 3],
-                       [4, 0, 2],
-                       [1, 1, 0]]
+        distance_matrix = [[0, 5, 3], [5, 0, 2], [3, 2, 0]]
+        flow_matrix = [[0, 1, 3], [4, 0, 2], [1, 1, 0]]
 
         model = dwave.optimization.generators.quadratic_assignment(distance_matrix, flow_matrix)
 
@@ -1083,12 +1343,8 @@ class TestQuadraticAssignment(unittest.TestCase):
         self.assertEqual(model.objective.state(0), 43)
 
     def test_serialization(self):
-        distance_matrix = [[0, 5, 3],
-                           [5, 0, 2],
-                           [3, 2, 0]]
-        flow_matrix = [[0, 1, 3],
-                       [4, 0, 2],
-                       [1, 1, 0]]
+        distance_matrix = [[0, 5, 3], [5, 0, 2], [3, 2, 0]]
+        flow_matrix = [[0, 1, 3], [4, 0, 2], [1, 1, 0]]
 
         model = dwave.optimization.generators.quadratic_assignment(distance_matrix, flow_matrix)
 
@@ -1106,7 +1362,7 @@ class TestTravelingSalesperson(unittest.TestCase):
         D = [[0, 3, 1], [1, 0, 3], [3, 1, 0]]
 
         tsp = dwave.optimization.generators.traveling_salesperson(D)
-        route, = tsp.iter_decisions()
+        (route,) = tsp.iter_decisions()
 
         tsp.states.resize(2)
 
@@ -1126,7 +1382,7 @@ class TestTravelingSalesperson(unittest.TestCase):
         D = [[1, 3, 1], [1, 2, 3], [3, 1, 3]]
 
         tsp = dwave.optimization.generators.traveling_salesperson(D)
-        route, = tsp.iter_decisions()
+        (route,) = tsp.iter_decisions()
 
         tsp.states.resize(1)
 
@@ -1137,7 +1393,7 @@ class TestTravelingSalesperson(unittest.TestCase):
     def test_scalar(self):
         # this is silly, but valid
         tsp = dwave.optimization.generators.traveling_salesperson(0)
-        route, = tsp.iter_decisions()
+        (route,) = tsp.iter_decisions()
 
         tsp.states.resize(1)
 
@@ -1145,11 +1401,7 @@ class TestTravelingSalesperson(unittest.TestCase):
         self.assertEqual(tsp.objective.state(0), 0)
 
     def test_serialization(self):
-        D = [[0, 1, 2, 3, 4],
-             [1, 0, 5, 6, 7],
-             [2, 5, 0, 8, 9],
-             [3, 6, 8, 0, 10],
-             [4, 7, 9, 10, 0]]
+        D = [[0, 1, 2, 3, 4], [1, 0, 5, 6, 7], [2, 5, 0, 8, 9], [3, 6, 8, 0, 10], [4, 7, 9, 10, 0]]
 
         tsp = dwave.optimization.generators.traveling_salesperson(D)
 

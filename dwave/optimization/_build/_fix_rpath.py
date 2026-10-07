@@ -63,7 +63,7 @@ if __name__ == "__main__":
             zf.extractall(zipdir)
 
         # Get the path to libdwave-optimization. The extension differs for linux/osx
-        lib, = zipdir.glob(
+        (lib,) = zipdir.glob(
             f"dwave/optimization/libdwave-optimization.{'so' if platform == 'linux' else 'dylib'}",
         )
 
@@ -72,7 +72,6 @@ if __name__ == "__main__":
         # for now
         # In this case the extensions are always .so, whether linux or osx
         for nested_so in zipdir.glob("dwave/optimization/*/*.so"):
-
             if platform == "linux":
                 command = f"patchelf --set-rpath '$ORIGIN/../' {nested_so}"
             else:

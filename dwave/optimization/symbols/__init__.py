@@ -95,7 +95,7 @@ from dwave.optimization.symbols.set_routines import IsDisjointCover, IsIn
 from dwave.optimization.symbols.softmax import SoftMax
 from dwave.optimization.symbols.sorting import ArgSort
 from dwave.optimization.symbols.statistics import Mean
-from dwave.optimization.symbols.testing import _ArrayValidation
+from dwave.optimization.symbols.testing import _ArrayValidation  # noqa: F401
 from dwave.optimization.symbols.unaryop import (
     Absolute,
     Cos,
@@ -112,8 +112,8 @@ from dwave.optimization.symbols.unaryop import (
     Tanh,
 )
 
-
 __all__ = [
+    "ARange",
     "Absolute",
     "AccumulateZip",
     "Add",
@@ -121,12 +121,11 @@ __all__ = [
     "All",
     "And",
     "Any",
-    "ARange",
     "ArgSort",
+    "BSpline",
     "BasicIndexing",
     "BinaryVariable",
     "BroadcastTo",
-    "BSpline",
     "Concatenate",
     "Constant",
     "Copy",

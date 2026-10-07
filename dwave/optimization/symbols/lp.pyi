@@ -14,7 +14,7 @@
 
 import numpy
 
-from dwave.optimization.model import ArraySymbol, Symbol
+from dwave.optimization._model import ArraySymbol, Symbol
 
 class LinearProgram(Symbol):
     def feasible(self, index: int = 0) -> bool: ...

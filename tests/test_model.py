@@ -28,6 +28,7 @@ from dwave.optimization import Model
 class TestArraySymbol(unittest.TestCase):
     def test_abstract(self):
         from dwave.optimization.model import ArraySymbol
+
         with self.assertRaisesRegex(ValueError, "ArraySymbols cannot be constructed directly"):
             ArraySymbol()
 
@@ -114,7 +115,7 @@ class TestArraySymbol(unittest.TestCase):
         x = model.binary()
         y = model.binary()
 
-        class UnknownType():
+        class UnknownType:
             pass
 
         operators = [
@@ -165,12 +166,12 @@ class TestArraySymbol(unittest.TestCase):
         # The operators that don't fit as neatly into the above
 
         with self.subTest("__pow__"):
-            self.assertIsInstance(x ** 1, type(x))
-            self.assertIsInstance(x ** 1, dwave.optimization.model.ArraySymbol)
-            self.assertIsInstance(x ** 2, dwave.optimization.symbols.Square)
-            self.assertIsInstance(x ** 3, dwave.optimization.symbols.NaryMultiply)
-            self.assertIsInstance(x ** 4, dwave.optimization.symbols.NaryMultiply)
-            self.assertIsInstance(x ** 5, dwave.optimization.symbols.NaryMultiply)
+            self.assertIsInstance(x**1, type(x))
+            self.assertIsInstance(x**1, dwave.optimization.model.ArraySymbol)
+            self.assertIsInstance(x**2, dwave.optimization.symbols.Square)
+            self.assertIsInstance(x**3, dwave.optimization.symbols.NaryMultiply)
+            self.assertIsInstance(x**4, dwave.optimization.symbols.NaryMultiply)
+            self.assertIsInstance(x**5, dwave.optimization.symbols.NaryMultiply)
             self.assertIs(x.__pow__(UnknownType()), NotImplemented)
 
         with self.subTest("__truediv__"):
@@ -189,15 +190,15 @@ class TestArraySymbol(unittest.TestCase):
 
 class TestModel(unittest.TestCase):
     def test(self):
-        model = Model()
+        Model()
 
     def test_add_constraint(self):
         model = Model()
         x = model.binary(5)
 
-        with self.assertRaisesRegex(ValueError,
-                                    "The truth value of an array with "
-                                    "more than one element is ambiguous"):
+        with self.assertRaisesRegex(
+            ValueError, "The truth value of an array with more than one element is ambiguous"
+        ):
             model.add_constraint(x)
 
         c_direct = model.add_constraint(x.all())
@@ -205,7 +206,7 @@ class TestModel(unittest.TestCase):
         model.states.resize(1)
         model.lock()
 
-        c_iter, = model.iter_constraints()
+        (c_iter,) = model.iter_constraints()
 
         self.assertEqual(x.state(0).all(), c_iter.state(0))
         self.assertEqual(x.state(0).all(), c_direct.state(0))
@@ -357,7 +358,7 @@ class TestModel(unittest.TestCase):
             # only the decision is kept
             self.assertEqual(num_removed, 2)
             self.assertEqual(model.num_symbols(), 1)
-            x, = model.iter_symbols()
+            (x,) = model.iter_symbols()
             self.assertIsInstance(x, dwave.optimization.symbols.IntegerVariable)
 
         with self.subTest("all used in objective"):
@@ -394,7 +395,6 @@ class TestModel(unittest.TestCase):
             # only the decision is kept
             self.assertEqual(num_removed, 2)
             self.assertEqual(model.num_symbols(), 1)
-
 
         with self.subTest("disjoint lists"):
             model = Model()
@@ -476,7 +476,7 @@ class TestModel(unittest.TestCase):
 
     def test_to_networkx_objective_and_constraints(self):
         try:
-            import networkx as nx
+            import networkx  # noqa: F401
         except ImportError:
             return self.skipTest("NetworkX is not installed")
 
@@ -652,7 +652,7 @@ class TestModelSerialization(unittest.TestCase):
                 with model.to_file(max_num_states=model.states.size()) as f:
                     new = Model.from_file(f)
 
-                a, = new.iter_symbols()
+                (a,) = new.iter_symbols()
                 self.assertEqual(new.states.size(), 3)
                 np.testing.assert_array_equal(a.state(0), x.state(0))
                 self.assertFalse(a.has_state(1))
@@ -676,14 +676,15 @@ class TestModelSerialization(unittest.TestCase):
 
 class TestSymbol(unittest.TestCase):
     def test_abstract(self):
-        from dwave.optimization.model import Symbol
+        from dwave.optimization._model import Symbol
+
         with self.assertRaisesRegex(ValueError, "Symbols cannot be constructed directly"):
             Symbol()
 
     def test_id(self):
         model = Model()
         c0 = model.constant(5)
-        c1, = model.iter_symbols()
+        (c1,) = model.iter_symbols()
         c2 = model.constant(6)
 
         self.assertIsInstance(c0.id(), int)
@@ -693,7 +694,7 @@ class TestSymbol(unittest.TestCase):
     def test_repr(self):
         model = Model()
         c0 = model.constant(5)
-        c1, = model.iter_symbols()
+        (c1,) = model.iter_symbols()
         c2 = model.constant(6)
 
         # the specific form is an implementation detail, but different symbols

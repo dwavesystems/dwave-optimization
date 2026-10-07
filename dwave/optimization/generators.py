@@ -23,7 +23,6 @@ more detailed usage.
 from __future__ import annotations
 
 import functools
-import itertools
 import typing
 
 import numpy as np
@@ -31,16 +30,14 @@ import numpy.typing
 
 from dwave.optimization.mathematical import (
     add,
-    concatenate,
     exp,
     expit,
-    logical_or,
     maximum,
     minimum,
     put,
     softmax,
     tanh,
-    where
+    where,
 )
 from dwave.optimization.model import ArraySymbol, Model
 from dwave.optimization.symbols import AccumulateZip
@@ -58,15 +55,16 @@ __all__ = [
 ]
 
 
-def _require(argname: str,
-             array_like: numpy.typing.ArrayLike,
-             *,
-             dtype: numpy.typing.DTypeLike = None,
-             ndim: None | int = None,
-             nonnegative: bool = False,
-             positive: bool = False,
-             square: bool = False
-             ) -> numpy.typing.NDArray[typing.Any]:
+def _require(
+    argname: str,
+    array_like: numpy.typing.ArrayLike,
+    *,
+    dtype: numpy.typing.DTypeLike = None,
+    ndim: int | None = None,
+    nonnegative: bool = False,
+    positive: bool = False,
+    square: bool = False,
+) -> numpy.typing.NDArray[typing.Any]:
     """Coerce the given array-like into the form we want and raise a consistent
     error message if it cannot be coerced.
     """
@@ -170,9 +168,7 @@ def _from_constrained_quadratic_model(cqm) -> Model:
     return model
 
 
-def bin_packing(weights: numpy.typing.ArrayLike,
-                capacity: float
-                ) -> Model:
+def bin_packing(weights: numpy.typing.ArrayLike, capacity: float) -> Model:
     r"""Generate a model encoding a bin packing problem.
 
     The bin packing problem,
@@ -267,7 +263,7 @@ def bin_packing(weights: numpy.typing.ArrayLike,
 
     # Create disjoint bit sets to represent bins
     max_bins = num_items
-    main, bins = model.disjoint_bit_sets(num_items, max_bins)
+    _, bins = model.disjoint_bit_sets(num_items, max_bins)
 
     # Ensure that the weight for each bin does not exceed capacity
     for i in range(max_bins):
@@ -278,7 +274,7 @@ def bin_packing(weights: numpy.typing.ArrayLike,
     constant_one = model.constant(1)
     obj_val = model.constant(0)
     for i in range(max_bins):
-        obj_val += (bins[i].sum() >= constant_one)
+        obj_val += bins[i].sum() >= constant_one
 
     model.minimize(obj_val)
 
@@ -286,14 +282,15 @@ def bin_packing(weights: numpy.typing.ArrayLike,
     return model
 
 
-def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
-                                number_of_vehicles: int,
-                                vehicle_capacity: float,
-                                distances: None | numpy.typing.ArrayLike = None,
-                                locations_x: None | numpy.typing.ArrayLike = None,
-                                locations_y: None | numpy.typing.ArrayLike = None,
-                                depot_x_y: None | numpy.typing.ArrayLike = None
-                                ) -> Model:
+def capacitated_vehicle_routing(
+    demand: numpy.typing.ArrayLike,
+    number_of_vehicles: int,
+    vehicle_capacity: float,
+    distances: numpy.typing.ArrayLike | None = None,
+    locations_x: numpy.typing.ArrayLike | None = None,
+    locations_y: numpy.typing.ArrayLike | None = None,
+    depot_x_y: numpy.typing.ArrayLike | None = None,
+) -> Model:
     r"""Generate a model encoding a capacitated vehicle routing problem.
 
     The capacitated vehicle routing problem,
@@ -404,41 +401,46 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     """
 
     if not isinstance(number_of_vehicles, int):
-        raise ValueError("`number_of_vehicles` must be an integer.")
+        raise TypeError("`number_of_vehicles` must be an integer.")
 
     if number_of_vehicles < 1:
-        raise ValueError("`number_of_vehicles` must be at least 1."
-                         f" Got {number_of_vehicles}.")
+        raise ValueError(f"`number_of_vehicles` must be at least 1. Got {number_of_vehicles}.")
 
     if vehicle_capacity <= 0:
-        raise ValueError("`vehicle_capacity` must be a positive number."
-                         f" Got {vehicle_capacity}.")
+        raise ValueError(f"`vehicle_capacity` must be a positive number. Got {vehicle_capacity}.")
 
     if distances is not None and (locations_x is not None or locations_y is not None):
-        raise ValueError("Either `locations_x` and `locations_y` or `distances`"
-                         " can be specified. Got both input formats.")
+        raise ValueError(
+            "Either `locations_x` and `locations_y` or `distances`"
+            " can be specified. Got both input formats."
+        )
 
     demand = _require("demand", demand, dtype=float, ndim=1, nonnegative=True)
 
     if demand.sum() > number_of_vehicles * vehicle_capacity:
-        raise ValueError(f"Total demand, {demand.sum()}, exceeds the "
-                         f"total capacity, {number_of_vehicles * vehicle_capacity}.")
+        raise ValueError(
+            f"Total demand, {demand.sum()}, exceeds the "
+            f"total capacity, {number_of_vehicles * vehicle_capacity}."
+        )
 
     if distances is not None:
-
         if depot_x_y is not None:
             raise ValueError("`depot_x_y` and `distances` cannot be specified together.")
 
         distances_array = _require("distances", distances, ndim=2, nonnegative=True, square=True)
 
         if distances_array.shape[0] < 2:
-            raise ValueError("Number of rows in `distances` must be at least 2."
-                             f" Got {distances_array.shape[0]} rows.")
+            raise ValueError(
+                "Number of rows in `distances` must be at least 2."
+                f" Got {distances_array.shape[0]} rows."
+            )
 
         if distances_array.shape[0] != len(demand):
-            raise ValueError("Number of rows in `distances` and length of `demand` must be equal."
-                             f" Got {distances_array.shape[0]} and"
-                             f" {len(demand)}, respectively.")
+            raise ValueError(
+                "Number of rows in `distances` and length of `demand` must be equal."
+                f" Got {distances_array.shape[0]} and"
+                f" {len(demand)}, respectively."
+            )
 
         if demand[0] != 0:
             raise ValueError("`demand[0]` must be zero when `distances` is specified.")
@@ -453,33 +455,39 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         y = _require("locations_x", locations_y, ndim=1, dtype=float)
 
         if not len(x) == len(y) == len(demand):
-            raise ValueError("Lengths of `locations_x`, `locations_y`, and `demand`"
-                             f" must be equal. Got lengths {len(x)}, {len(y)}, and"
-                             f" {len(demand)}, respectively.")
+            raise ValueError(
+                "Lengths of `locations_x`, `locations_y`, and `demand`"
+                f" must be equal. Got lengths {len(x)}, {len(y)}, and"
+                f" {len(demand)}, respectively."
+            )
         if len(x) < 1:
-            raise ValueError("Lengths of `locations_x`, `locations_y`, and `demand`"
-                             " must be at least 1. Got length zero.")
+            raise ValueError(
+                "Lengths of `locations_x`, `locations_y`, and `demand`"
+                " must be at least 1. Got length zero."
+            )
 
         if demand[0] == 0:
             if len(x) < 2:
-                raise ValueError("Lengths of `locations_x` and `locations_y` must"
-                                 " be at least 2 when `demand[0]=0`.")
+                raise ValueError(
+                    "Lengths of `locations_x` and `locations_y` must"
+                    " be at least 2 when `demand[0]=0`."
+                )
 
             customer_demand = demand[1:]
             customer_locations_x = locations_x[1:]
             customer_locations_y = locations_y[1:]
 
             if depot_x_y is not None:
-                raise ValueError("`depot_x_y` cannot be provided when "
-                                 "`demand[0]` is zero.")
+                raise ValueError("`depot_x_y` cannot be provided when `demand[0]` is zero.")
 
             depot_x_y = np.asarray([locations_x[0], locations_y[0]])
 
         else:
-
             if depot_x_y is None:
-                raise ValueError("`depot_x_y` must be provided when `demand[0]` is not"
-                                 " 0 and `locations_x` and `locations_y` are specified.")
+                raise ValueError(
+                    "`depot_x_y` must be provided when `demand[0]` is not"
+                    " 0 and `locations_x` and `locations_y` are specified."
+                )
             customer_demand = demand
             customer_locations_x = locations_x
             customer_locations_y = locations_y
@@ -493,11 +501,14 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
         distance_matrix = np.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
 
         depot_distance_vector = depot_distance_vector_return = np.sqrt(
-            customer_locations_x ** 2 + customer_locations_y ** 2)
+            customer_locations_x**2 + customer_locations_y**2
+        )
 
     if (customer_demand == 0).any():
-        raise ValueError("Only the first element of `demand` can be zero."
-                         f" Got zeros for indices {list(np.where(demand == 0)[0])}.")
+        raise ValueError(
+            "Only the first element of `demand` can be zero."
+            f" Got zeros for indices {list(np.where(demand == 0)[0])}."
+        )
 
     num_customers = len(customer_demand)
 
@@ -513,8 +524,8 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
 
     # Add the decision variable
     routes = model.disjoint_lists_symbol(
-        primary_set_size=num_customers,
-        num_disjoint_lists=number_of_vehicles)
+        primary_set_size=num_customers, num_disjoint_lists=number_of_vehicles
+    )
 
     # The objective is to minimize the distance traveled.
     # This is calculated by adding the distance from the depot to the 1st customer
@@ -541,14 +552,15 @@ def capacitated_vehicle_routing(demand: numpy.typing.ArrayLike,
     return model
 
 
-def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike,
-                                                  number_of_vehicles: int,
-                                                  vehicle_capacity: float,
-                                                  time_distances: numpy.typing.ArrayLike,
-                                                  time_window_open: numpy.typing.ArrayLike,
-                                                  time_window_close: numpy.typing.ArrayLike,
-                                                  service_time: numpy.typing.ArrayLike
-                                                  ) -> Model:
+def capacitated_vehicle_routing_with_time_windows(
+    demand: numpy.typing.ArrayLike,
+    number_of_vehicles: int,
+    vehicle_capacity: float,
+    time_distances: numpy.typing.ArrayLike,
+    time_window_open: numpy.typing.ArrayLike,
+    time_window_close: numpy.typing.ArrayLike,
+    service_time: numpy.typing.ArrayLike,
+) -> Model:
     r"""Generate a model encoding a capacitated vehicle routing problem with time windows.
 
     The capacitated vehicle routing problem with time windows,
@@ -657,51 +669,67 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
     """
 
     if not isinstance(number_of_vehicles, int):
-        raise ValueError("`number_of_vehicles` must be an integer.")
+        raise TypeError("`number_of_vehicles` must be an integer.")
 
     if number_of_vehicles < 1:
-        raise ValueError("`number_of_vehicles` must be at least 1."
-                         f" Got {number_of_vehicles}.")
+        raise ValueError(f"`number_of_vehicles` must be at least 1. Got {number_of_vehicles}.")
 
     if vehicle_capacity <= 0:
-        raise ValueError("`vehicle_capacity` must be a positive number."
-                         f" Got {vehicle_capacity}.")
+        raise ValueError(f"`vehicle_capacity` must be a positive number. Got {vehicle_capacity}.")
 
     demand = _require("demand", demand, dtype=float, ndim=1, nonnegative=True)
 
     if demand.sum() > number_of_vehicles * vehicle_capacity:
-        raise ValueError(f"Total demand, {demand.sum()}, exceeds the "
-                         f"total capacity, {number_of_vehicles * vehicle_capacity}.")
+        raise ValueError(
+            f"Total demand, {demand.sum()}, exceeds the "
+            f"total capacity, {number_of_vehicles * vehicle_capacity}."
+        )
 
-    time_distances_array = _require("time_distances", time_distances, ndim=2, nonnegative=True, square=True)
+    time_distances_array = _require(
+        "time_distances", time_distances, ndim=2, nonnegative=True, square=True
+    )
 
-    time_window_open = _require("time_window_open", time_window_open, dtype=float, ndim=1, nonnegative=True)
-    time_window_close = _require("time_window_close", time_window_close, dtype=float, ndim=1, nonnegative=True)
+    time_window_open = _require(
+        "time_window_open", time_window_open, dtype=float, ndim=1, nonnegative=True
+    )
+    time_window_close = _require(
+        "time_window_close", time_window_close, dtype=float, ndim=1, nonnegative=True
+    )
     service_time = _require("service_time", service_time, dtype=float, ndim=1, nonnegative=True)
 
     if time_distances_array.shape[0] < 2:
-        raise ValueError("Number of rows in `time_distances` must be at least 2."
-                         f" Got {time_distances_array.shape[0]} rows.")
+        raise ValueError(
+            "Number of rows in `time_distances` must be at least 2."
+            f" Got {time_distances_array.shape[0]} rows."
+        )
 
     if time_distances_array.shape[0] != len(demand):
-        raise ValueError("Number of rows in `time_distances` and length of `demand` must be equal."
-                         f" Got {time_distances_array.shape[0]} and"
-                         f" {len(demand)}, respectively.")
+        raise ValueError(
+            "Number of rows in `time_distances` and length of `demand` must be equal."
+            f" Got {time_distances_array.shape[0]} and"
+            f" {len(demand)}, respectively."
+        )
 
     if time_distances_array.shape[0] != len(time_window_open):
-        raise ValueError("Number of rows in `time_distances` and length of `time_window_open` must be equal."
-                         f" Got {time_distances_array.shape[0]} and"
-                         f" {len(time_window_open)}, respectively.")
+        raise ValueError(
+            "Number of rows in `time_distances` and length of `time_window_open` must be equal."
+            f" Got {time_distances_array.shape[0]} and"
+            f" {len(time_window_open)}, respectively."
+        )
 
     if time_distances_array.shape[0] != len(time_window_close):
-        raise ValueError("Number of rows in `time_distances` and length of `time_window_close` must be equal."
-                         f" Got {time_distances_array.shape[0]} and"
-                         f" {len(time_window_close)}, respectively.")
+        raise ValueError(
+            "Number of rows in `time_distances` and length of `time_window_close` must be equal."
+            f" Got {time_distances_array.shape[0]} and"
+            f" {len(time_window_close)}, respectively."
+        )
 
     if time_distances_array.shape[0] != len(service_time):
-        raise ValueError("Number of rows in `time_distances` and length of `service_time` must be equal."
-                         f" Got  {time_distances_array.shape[0]} and"
-                         f" {len(service_time)}, respectively.")
+        raise ValueError(
+            "Number of rows in `time_distances` and length of `service_time` must be equal."
+            f" Got  {time_distances_array.shape[0]} and"
+            f" {len(service_time)}, respectively."
+        )
 
     if demand[0] != 0:
         raise ValueError("`demand[0]` must be zero.")
@@ -709,8 +737,10 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
     customer_demand = demand[1:]
 
     if (customer_demand == 0).any():
-        raise ValueError("Only the first element of `demand` can be zero."
-                         f" Got zeros for indices {list(np.where(demand == 0)[0])}.")
+        raise ValueError(
+            "Only the first element of `demand` can be zero."
+            f" Got zeros for indices {list(np.where(demand == 0)[0])}."
+        )
 
     num_customers = len(customer_demand)
 
@@ -758,13 +788,13 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
 
     # Add the decision variable
     routes = model.disjoint_lists_symbol(
-        primary_set_size=num_customers,
-        num_disjoint_lists=number_of_vehicles)
+        primary_set_size=num_customers, num_disjoint_lists=number_of_vehicles
+    )
 
     # Capacity constraint
-    capacity_constraints = [(demand[routes[vehicle_idx]].sum() <= capacity)
-                            for vehicle_idx in range(number_of_vehicles)
-                            ]
+    capacity_constraints = [
+        (demand[routes[vehicle_idx]].sum() <= capacity) for vehicle_idx in range(number_of_vehicles)
+    ]
     for c in capacity_constraints:
         model.add_constraint(c)
 
@@ -774,15 +804,17 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
     # this is number of clients each vehicle visits
     num_clients_in_route = {}
     for i in range(number_of_vehicles):
-        num_clients_in_route[f'route{i}'] = routes[i].size()
+        num_clients_in_route[f"route{i}"] = routes[i].size()
 
     # Constrain the number of locations per route
     # approximation to restrict solution space
     max_loc_per_route_constant = model.constant(
         min(num_customers, max(10, 3 * int(num_customers / number_of_vehicles)))
     )
-    max_loc_per_route_constraints = [(num_clients_in_route[f'route{v}'] <= max_loc_per_route_constant)
-                                     for v in range(number_of_vehicles)]
+    max_loc_per_route_constraints = [
+        (num_clients_in_route[f"route{v}"] <= max_loc_per_route_constant)
+        for v in range(number_of_vehicles)
+    ]
     for mlpr in max_loc_per_route_constraints:
         model.add_constraint(mlpr)
 
@@ -799,10 +831,11 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
         this_t_serving_time = []
 
         for client_idx in range(max_loc_per_route_constant):
-
             # the condition here allows us to choose whether to choose a used index or to fall back to the last one
             # that points to a zero in the extended array
-            condition = (num_clients_in_route[f'route{vehicle_idx}'] >= range_helper[client_idx] + one)
+            condition = (
+                num_clients_in_route[f"route{vehicle_idx}"] >= range_helper[client_idx] + one
+            )
 
             if client_idx == 0:
                 # index of the first customer visited, if length of the route is zero,
@@ -813,18 +846,28 @@ def capacitated_vehicle_routing_with_time_windows(demand: numpy.typing.ArrayLike
 
             else:
                 # index of the previous customer visited
-                previous_idx = where(condition, routes[vehicle_idx][client_idx - 1:client_idx].sum(), range_helper[-1])
+                previous_idx = where(
+                    condition,
+                    routes[vehicle_idx][client_idx - 1 : client_idx].sum(),
+                    range_helper[-1],
+                )
 
                 # index of the current customer visited
-                idx = where(condition, routes[vehicle_idx][client_idx:client_idx + 1].sum(), range_helper[-1])
+                idx = where(
+                    condition,
+                    routes[vehicle_idx][client_idx : client_idx + 1].sum(),
+                    range_helper[-1],
+                )
 
-                this_t_serving_time.append(maximum(this_t_leaving[-1] + t_cust[previous_idx, idx], t_open[idx]))
+                this_t_serving_time.append(
+                    maximum(this_t_leaving[-1] + t_cust[previous_idx, idx], t_open[idx])
+                )
                 this_t_leaving.append(this_t_serving_time[-1] + t_service[idx])
 
             # adding constraint that there is enough time for servicing the client
             this_t_windows_c.append(this_t_leaving[-1] <= t_close[idx])
 
-        condition = (num_clients_in_route[f'route{vehicle_idx}'] >= one)
+        condition = num_clients_in_route[f"route{vehicle_idx}"] >= one
         last_cust_idx = where(condition, routes[vehicle_idx][-1:].sum(), range_helper[-1])
 
         times_back.append(this_t_leaving[-1] + t_to_depo[last_cust_idx])
@@ -939,8 +982,7 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
 
             Visualization of the solution.
     """
-    processing_times = _require("processing_times", processing_times,
-                                ndim=2, nonnegative=True)
+    processing_times = _require("processing_times", processing_times, ndim=2, nonnegative=True)
 
     if not processing_times.size:
         raise ValueError("`processing_times` must not be empty")
@@ -957,10 +999,8 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
 
     end_times = []
     for machine_m in range(num_machines):
-
         machine_m_times = []
         if machine_m == 0:
-
             for job_j in range(num_jobs):
                 if job_j == 0:
                     machine_m_times.append(times[machine_m, :][order[job_j]])
@@ -970,7 +1010,6 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
                     machine_m_times.append(end_job_j)
 
         else:
-
             for job_j in range(num_jobs):
                 if job_j == 0:
                     end_job_j = end_times[machine_m - 1][job_j]
@@ -993,10 +1032,12 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
     return model
 
 
-def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.ArrayLike,
-                        *,
-                        upper_bound: None | int = None,
-                        ) -> Model:
+def job_shop_scheduling(
+    times: numpy.typing.ArrayLike,
+    machines: numpy.typing.ArrayLike,
+    *,
+    upper_bound: int | None = None,
+) -> Model:
     r"""Generate a model encoding a job-shop scheduling problem.
 
     There are many variants of
@@ -1143,7 +1184,7 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
         You can use the methods :meth:`~model.get_start_times` and
         :meth:`~model.get_end_times` to obtain the corresponding start and end
         times of all tasks.
-        
+
         >>> start_times = model.get_start_times(0)
         >>> end_times = model.get_end_times(0)
 
@@ -1194,8 +1235,10 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     arange = np.arange(num_machines)
     for row in machines:
         if (np.sort(row) != arange).any():
-            raise ValueError("each row of `machines` must be a permutation of "
-                             "`range(num_machines)` or of `range(1, num_machines + 1)`")
+            raise ValueError(
+                "each row of `machines` must be a permutation of "
+                "`range(num_machines)` or of `range(1, num_machines + 1)`"
+            )
 
     # Get the upper bound on the makespan. There are more clever ways to do this
     # but for now let's just take the loosest bound, which is the sum of all of
@@ -1223,8 +1266,8 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
 
     def task_index(job, machine):
         return job * num_machines + machine
-    
-    # Construct an array containing the previous task for each index 
+
+    # Construct an array containing the previous task for each index
     previous_tasks = [0] * num_tasks
     for job in range(num_jobs):
         previous_tasks[task_index(job, 0)] = NO_TASK
@@ -1241,23 +1284,21 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
 
     # Determine a feasible ordering of tasks based on the global ordering
     from dwave.optimization.expression import expression
-    
+
     offsets = []
     for job_idx in range(num_jobs):
         base_task = job_idx * num_machines
 
         @expression(task_index=dict(integral=True), next_base_task=dict(integral=True))
         def increase_task_index(task_index, next_base_task):
-            return task_index + (next_base_task == base_task)
+            return task_index + (next_base_task == base_task)  # noqa: B023
 
         job_offset = AccumulateZip(increase_task_index, (mo,), initial=-1)
         offsets.append(where(mo == model.constant(base_task), job_offset, zero_n_))
 
-    final_order = minimum(
-        maximum(add(mo, *offsets), zero_), model.constant(num_tasks - 1)
-    )
+    final_order = minimum(maximum(add(mo, *offsets), zero_), model.constant(num_tasks - 1))
 
-    # Determine the end time of the last job on each machine 
+    # Determine the end time of the last job on each machine
     current_machine_time = model.constant([0] * num_machines)
 
     task_end_times = model.constant([0] * num_tasks)
@@ -1275,9 +1316,7 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
         task_start_time = maximum(prev_task_end_time, selected_machine_time)
         task_end_time = task_start_time + task_durations_[task]
         task_end_time = task_end_time.reshape(1)
-        current_machine_time = put(
-            current_machine_time, machine_index.reshape(1), task_end_time
-        )
+        current_machine_time = put(current_machine_time, machine_index.reshape(1), task_end_time)
 
         task_end_times = put(task_end_times, task.reshape(1), task_end_time)
 
@@ -1300,10 +1339,11 @@ def job_shop_scheduling(times: numpy.typing.ArrayLike, machines: numpy.typing.Ar
     return model
 
 
-def knapsack(values: numpy.typing.ArrayLike,
-             weights: numpy.typing.ArrayLike,
-             capacity: float,
-             ) -> Model:
+def knapsack(
+    values: numpy.typing.ArrayLike,
+    weights: numpy.typing.ArrayLike,
+    capacity: float,
+) -> Model:
     r"""Generate a model encoding a knapsack problem.
 
     The
@@ -1516,6 +1556,7 @@ try:
 except ImportError:
     pass
 else:
+
     @predict.register
     def _mlp_classifier_predict(clf: MLPClassifier, X: ArraySymbol) -> ArraySymbol:
         # MLPClassifier and MLPRegressor share a base type, and the predict
@@ -1529,9 +1570,7 @@ else:
         if clf._label_binarizer.y_type_ == "binary":
             activation = activation >= 0.5
         else:
-            raise NotImplementedError(
-                f"unsupported binarizer: {clf._label_binarizer.y_type_}"
-            )
+            raise NotImplementedError(f"unsupported binarizer: {clf._label_binarizer.y_type_}")
 
         return activation
 
@@ -1564,16 +1603,12 @@ else:
         try:
             hidden_activation = ACTIVATIONS[regr.activation]
         except KeyError:
-            raise NotImplementedError(
-                f"unsupported activation: {regr.activation}"
-            )
+            raise NotImplementedError(f"unsupported activation: {regr.activation}")
 
         try:
             output_activation = ACTIVATIONS[regr.out_activation_]
         except KeyError:
-            raise NotImplementedError(
-                f"unsupported output activation: {regr.out_activation_}"
-            )
+            raise NotImplementedError(f"unsupported output activation: {regr.out_activation_}")
 
         for i in range(regr.n_layers_ - 1):
             activation = activation @ regr.coefs_[i] + regr.intercepts_[i]
@@ -1586,9 +1621,10 @@ else:
         return activation.reshape(-1)
 
 
-def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
-                         flow_matrix: numpy.typing.ArrayLike,
-                         ) -> Model:
+def quadratic_assignment(
+    distance_matrix: numpy.typing.ArrayLike,
+    flow_matrix: numpy.typing.ArrayLike,
+) -> Model:
     r"""Generate a model encoding a quadratic assignment problem.
 
     The
@@ -1737,10 +1773,12 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
         allow the model to represent all possible pairings of facilities and
         locations and the cost for each.
     """
-    distance_matrix = _require("distance_matrix", distance_matrix,
-                               dtype=float, ndim=2, nonnegative=True, square=True)
-    flow_matrix = _require("flow_matrix", flow_matrix,
-                           dtype=float, ndim=2, nonnegative=True, square=True)
+    distance_matrix = _require(
+        "distance_matrix", distance_matrix, dtype=float, ndim=2, nonnegative=True, square=True
+    )
+    flow_matrix = _require(
+        "flow_matrix", flow_matrix, dtype=float, ndim=2, nonnegative=True, square=True
+    )
 
     if distance_matrix.shape != flow_matrix.shape:
         raise ValueError("'distance_matrix' and 'flow_matrix' must have the same shape")
@@ -1758,17 +1796,16 @@ def quadratic_assignment(distance_matrix: numpy.typing.ArrayLike,
 
     # Minimize the sum of distances multiplied by the flows.
     qap_model.minimize(
-        (
-                FLOW_MATRIX * DISTANCE_MATRIX[ordered_facilities, :][:, ordered_facilities]
-        ).sum()
+        (FLOW_MATRIX * DISTANCE_MATRIX[ordered_facilities, :][:, ordered_facilities]).sum()
     )
 
     qap_model.lock()
     return qap_model
 
 
-def traveling_salesperson(distance_matrix: numpy.typing.ArrayLike,
-                          ) -> Model:
+def traveling_salesperson(
+    distance_matrix: numpy.typing.ArrayLike,
+) -> Model:
     r"""Generate a model encoding a traveling-salesperson problem.
 
     The
@@ -1865,8 +1902,9 @@ def traveling_salesperson(distance_matrix: numpy.typing.ArrayLike,
             return to the city of origin (first element of the list) from the
             last city visited (the last element of the list).
     """
-    distance_matrix = _require("distance_matrix", distance_matrix,
-                               dtype=float, ndim=2, nonnegative=True, square=True)
+    distance_matrix = _require(
+        "distance_matrix", distance_matrix, dtype=float, ndim=2, nonnegative=True, square=True
+    )
 
     # Construct the model
     tsp_model = Model()

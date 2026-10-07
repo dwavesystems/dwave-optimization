@@ -36,7 +36,7 @@ def iter_invalid_lp_kwargs() -> typing.Iterator[tuple[str, dict[str, ArraySymbol
     scalar = model.constant(5)
     oneD = model.constant(np.arange(N))
     oneD_wrong = model.constant(np.arange(N + 1))
-    twoD = model.constant(np.arange(N*N).reshape(N, N))
+    twoD = model.constant(np.arange(N * N).reshape(N, N))
     dynamic = model.set(N)
 
     # C correctness
@@ -50,66 +50,66 @@ def iter_invalid_lp_kwargs() -> typing.Iterator[tuple[str, dict[str, ArraySymbol
         "A wrong shape",
         dict(c=oneD, A=oneD, b_ub=oneD),
         "A must have exactly two dimensions",
-        )
+    )
     yield (
         "missing b_lb, b_ub",
         dict(c=oneD, A=twoD),
         "if A is given then b_lb and/or b_ub must also be given and vice versa",
-        )
+    )
     yield (
         "b_lb given, missing A",
         dict(c=oneD, b_lb=oneD),
         "if A is given then b_lb and/or b_ub must also be given and vice versa",
-        )
+    )
     yield (
         "b_ub given, missing A",
         dict(c=oneD, b_ub=oneD),
         "if A is given then b_lb and/or b_ub must also be given and vice versa",
-        )
+    )
 
     # A_eq/b_eq correctness
     yield (
         "A_eq wrong shape",
         dict(c=oneD, A_eq=oneD, b_eq=oneD),
         "A_eq must have exactly two dimensions",
-        )
+    )
     yield (
         "b_eq given, missing A_eq",
         dict(c=oneD, b_eq=oneD),
         "if A_eq is given then b_eq must also be given and vice versa",
-        )
+    )
     yield (
         "A_eq given, missing b_eq",
         dict(c=oneD, A_eq=oneD),
         "if A_eq is given then b_eq must also be given and vice versa",
-        )
+    )
     yield (
         "A_eq given, b_eq wrong length",
         dict(c=oneD, A_eq=twoD, b_eq=oneD_wrong),
         "b_eq must be a 1D array and the number of rows in A_eq",
-        )
+    )
 
     # lb/ub correctness
     yield (
         "2D lb",
         dict(c=oneD, lb=twoD),
         "lb must be a scalar or a 1D array with a number of values equal to the size of c",
-        )
+    )
     yield (
         "lb wrong length",
         dict(c=oneD, lb=oneD_wrong),
         "lb must be a scalar or a 1D array with a number of values equal to the size of c",
-        )
+    )
     yield (
         "2D ub",
         dict(c=oneD, ub=twoD),
         "ub must be a scalar or a 1D array with a number of values equal to the size of c",
-        )
+    )
     yield (
         "ub wrong length",
         dict(c=oneD, ub=oneD_wrong),
         "ub must be a scalar or a 1D array with a number of values equal to the size of c",
-        )
+    )
 
 
 def iter_valid_lp_kwargs() -> typing.Iterator[tuple[str, dict[str, ArraySymbol]]]:
@@ -170,7 +170,7 @@ class SymbolTests(abc.ABC, unittest.TestCase):
             index = x.topological_index()
 
             # Get the symbol back
-            y, = itertools.islice(model.iter_symbols(), index, index+1)
+            (y,) = itertools.islice(model.iter_symbols(), index, index + 1)
 
             self.assertTrue(x.shares_memory(y))
             self.assertIs(type(x), type(y))
@@ -193,7 +193,7 @@ class SymbolTests(abc.ABC, unittest.TestCase):
                         new = Model.from_file(f)
 
                     # Get the symbol back
-                    y, = itertools.islice(new.iter_symbols(), index, index+1)
+                    (y,) = itertools.islice(new.iter_symbols(), index, index + 1)
 
                     self.assertFalse(x.shares_memory(y))
                     self.assertIs(type(x), type(y))
@@ -383,8 +383,7 @@ class NaryOpTests(SymbolTests):
         z.set_state(0, data_z)
 
         np.testing.assert_equal(
-            op_xyz.state(0),
-            [self.op(*vs) for vs in zip(data_x, data_y, data_z)]
+            op_xyz.state(0), [self.op(*vs) for vs in zip(data_x, data_y, data_z)]
         )
 
 
@@ -414,7 +413,7 @@ class ReduceTests(SymbolTests):
     def test_initial(self):
         model = Model()
         model.states.resize(1)
-        
+
         arr = model.constant([0, 1])
         empty = model.constant([])
         dynamic = model.set(5)
@@ -493,8 +492,7 @@ class UnaryOpTests(SymbolTests):
         yield op_a
 
     def test_scalar_input(self):
-        for scalar in [-5, -.5, 0, 1, 1.5]:
-
+        for scalar in [-5, -0.5, 0, 1, 1.5]:
             with self.subTest(f"a = {scalar}"):
                 model = Model()
                 a = model.constant(scalar)
@@ -513,7 +511,6 @@ class UnaryOpTests(SymbolTests):
                 # discrepencies that occasionally result in rounding
                 # differences
                 self.assertAlmostEqual(op_a.state(0), self.op(scalar), 12)
-
 
     def test_1d_input(self):
         model = Model()

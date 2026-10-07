@@ -19,9 +19,6 @@ if __name__ == "__main__":
     import re
 
     pck_root = os.path.dirname(os.path.dirname(__file__))
-    with open(os.path.join(pck_root, '__init__.py')) as f:
-        m = re.search(
-            r"__version__ = \"([0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?)\"",
-            f.read()
-            )
+    with open(os.path.join(pck_root, "__init__.py")) as f:
+        m = re.search(r"__version__ = \"([0-9]+(\.[0-9]+)*((\.dev|rc)([0-9]+)?)?)\"", f.read())
     print(m.group(1))
