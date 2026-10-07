@@ -82,8 +82,8 @@ class NaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
 };
 
 using NaryAddNode = NaryOpNode<std::plus<double>>;
-using NaryMaximumNode = NaryOpNode<functional::max<double>>;
-using NaryMinimumNode = NaryOpNode<functional::min<double>>;
+using NaryMaximumNode = NaryOpNode<functional::maximum>;
+using NaryMinimumNode = NaryOpNode<functional::minimum>;
 using NaryMultiplyNode = NaryOpNode<std::multiplies<double>>;
 
 }  // namespace dwave::optimization

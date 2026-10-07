@@ -97,13 +97,13 @@ using AndNode = BinaryOpNode<std::logical_and<double>>;
 using DivideNode = BinaryOpNode<std::divides<double>>;
 using EqualNode = BinaryOpNode<std::equal_to<double>>;
 using LessEqualNode = BinaryOpNode<std::less_equal<double>>;
-using MaximumNode = BinaryOpNode<functional::max<double>>;
-using MinimumNode = BinaryOpNode<functional::min<double>>;
-using ModulusNode = BinaryOpNode<functional::modulus<double>>;
+using MaximumNode = BinaryOpNode<functional::maximum>;
+using MinimumNode = BinaryOpNode<functional::minimum>;
+using ModulusNode = BinaryOpNode<functional::remainder>;
 using MultiplyNode = BinaryOpNode<std::multiplies<double>>;
 using OrNode = BinaryOpNode<std::logical_or<double>>;
-using SafeDivideNode = BinaryOpNode<functional::safe_divides<double>>;
+using SafeDivideNode = BinaryOpNode<functional::divide>;
 using SubtractNode = BinaryOpNode<std::minus<double>>;
-using XorNode = BinaryOpNode<functional::logical_xor<double>>;
+using XorNode = BinaryOpNode<functional::logical_xor>;
 
 }  // namespace dwave::optimization

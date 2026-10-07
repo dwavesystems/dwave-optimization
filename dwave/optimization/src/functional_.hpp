@@ -503,11 +503,11 @@ struct Multiply : BinaryFunctionMixin<Multiply<T>> {
 template <class BinaryOp>
 struct std_to_ufunc {};
 template <>
-struct std_to_ufunc<functional::max<double>> {
+struct std_to_ufunc<functional::maximum> {
     using type = Maximum<double>;
 };
 template <>
-struct std_to_ufunc<functional::min<double>> {
+struct std_to_ufunc<functional::minimum> {
     using type = Minimum<double>;
 };
 template <>

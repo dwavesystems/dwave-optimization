@@ -136,8 +136,8 @@ class ReduceNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ReduceNode<B
 
 using AllNode = ReduceNode<std::logical_and<double>>;
 using AnyNode = ReduceNode<std::logical_or<double>>;
-using MaxNode = ReduceNode<functional::max<double>>;
-using MinNode = ReduceNode<functional::min<double>>;
+using MaxNode = ReduceNode<functional::maximum>;
+using MinNode = ReduceNode<functional::minimum>;
 using ProdNode = ReduceNode<std::multiplies<double>>;
 using SumNode = ReduceNode<std::plus<double>>;
 
