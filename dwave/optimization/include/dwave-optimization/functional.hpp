@@ -657,9 +657,9 @@ struct multiply : mixins::BinaryOpMixin<multiply> {
             } else {
                 if (rhs > 0) {
                     if (lhs < limits::lowest() / rhs) return limits::lowest();
-                } else if (lhs != 0 and rhs < limits::max() / lhs)
-                    // TODO: are we testing this?
+                } else if (lhs != 0 and rhs < limits::max() / lhs) {
                     return limits::max();
+                }
             }
 
             return lhs * rhs;
@@ -671,7 +671,7 @@ struct multiply : mixins::BinaryOpMixin<multiply> {
 
             // inf * 0 is Nan so we define inf * 0 := 0
             if ((lhs == T{0} and std::isinf(rhs)) or (std::isinf(lhs) and rhs == T{0})) {
-                if (std::signbit(lhs) ^ std::signbit(rhs)) {
+                if (std::signbit(lhs) xor std::signbit(rhs)) {
                     return -T{0};
                 } else {
                     return +T{0};
