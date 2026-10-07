@@ -73,21 +73,24 @@ struct type_list_union<type_list_x, type_list_y> {
         using value = std::conditional_t<
             sizeof...(remaining_indices) == 0,
             added,
-            typename union_<added, type_tuple, std::index_sequence<remaining_indices...>>::value>;
+            typename union_<added, type_tuple, std::index_sequence<remaining_indices...>>::value
+        >;
     };
 
  public:
     using value = union_<
         type_list_x,
         typename type_list_y::template to<std::tuple>,
-        std::make_index_sequence<type_list_y::size()>>::value;
+        std::make_index_sequence<type_list_y::size()>
+    >::value;
 };
 
 template <typename type_list_x, typename type_list_y, typename... remaining_type_lists>
 struct type_list_union {
     using value = type_list_union<
         typename type_list_union<type_list_x, type_list_y>::value,
-        remaining_type_lists...>::value;
+        remaining_type_lists...
+    >::value;
 };
 }  // Anonymous namespace
 
