@@ -48,9 +48,7 @@ TEST_CASE("PermutationNode") {
 
             THEN("We see the predecessors we expect") {
                 CHECK(
-                    std::ranges::equal(
-                        out_ptr->predecessors(), std::vector<Node*>{arr_ptr, i_ptr}
-                    )
+                    std::ranges::equal(out_ptr->predecessors(), std::vector<Node*>{arr_ptr, i_ptr})
                 );
             }
 
@@ -90,9 +88,7 @@ TEST_CASE("PermutationNode") {
 
             THEN("We see the predecessors we expect") {
                 CHECK(
-                    std::ranges::equal(
-                        out_ptr->predecessors(), std::vector<Node*>{arr_ptr, i_ptr}
-                    )
+                    std::ranges::equal(out_ptr->predecessors(), std::vector<Node*>{arr_ptr, i_ptr})
                 );
             }
 

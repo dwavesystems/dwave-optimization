@@ -29,13 +29,14 @@ namespace dwave::optimization {
 
 /// Supported dtypes as a type_list
 using DTypes = type_list<
-    float,          // np.float32
-    double,         // np.float64
-    bool,           // np.bool_
-    std::int8_t,    // np.int8
-    std::int16_t,   // np.int16
-    std::int32_t,   // np.int32
-    std::int64_t>;  // np.int64
+    float,         // np.float32
+    double,        // np.float64
+    bool,          // np.bool_
+    std::int8_t,   // np.int8
+    std::int16_t,  // np.int16
+    std::int32_t,  // np.int32
+    std::int64_t   // np.int64
+>;
 
 /// The `DType<T>` concept is satisfied if and only if `T` is one of the
 /// supported dtypes.

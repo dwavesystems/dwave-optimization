@@ -29,7 +29,7 @@ template <class BinaryOp>
 struct InverseOp {
     static bool constexpr exists() { return false; }
 
-    double op [[noreturn]] (const double& x, const double& y) {
+    double op [[noreturn]](const double& x, const double& y) {
         assert(false && "op has no inverse");
         throw std::logic_error("op has no inverse");
     }

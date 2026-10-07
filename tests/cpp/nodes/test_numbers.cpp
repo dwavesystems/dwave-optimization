@@ -652,7 +652,9 @@ TEST_CASE("BinaryNode") {
     }
 
     GIVEN("A (4,0)-BinaryNode with invalid sum constraints on axis 0") {
-        std::vector<SumConstraint> sum_constraints{{0, {GreaterEqual, Equal, Equal, Equal}, {0, 1, 0, 1}}};
+        std::vector<SumConstraint> sum_constraints{
+            {0, {GreaterEqual, Equal, Equal, Equal}, {0, 1, 0, 1}}
+        };
         REQUIRE_THROWS_WITH(
             graph.emplace_node<BinaryNode>(
                 std::vector<ssize_t>{4, 0}, std::nullopt, std::nullopt, sum_constraints

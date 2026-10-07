@@ -346,7 +346,7 @@ TEST_CASE("BroadcastToNode") {
         Node* b_ptr = graph.emplace_node<BroadcastToNode>(arr0_ptr, std::vector<ssize_t>{2, 3});
         Node* c_ptr = graph.emplace_node<BroadcastToNode>(arr1_ptr, std::vector<ssize_t>{2, 3});
         Node* d_ptr = graph.emplace_node<BroadcastToNode>(arr0_ptr, std::vector<ssize_t>{5, 3});
-    
+
         CHECK(a_ptr->equal_to(*a_ptr));
         CHECK(a_ptr->equal_to(*b_ptr));
 
@@ -860,7 +860,7 @@ TEST_CASE("CopyNode") {
 
         auto* x0_ptr = graph.emplace_node<SetNode>(6);
         auto* x1_ptr = graph.emplace_node<SetNode>(6);
-        
+
         Node* a_ptr = graph.emplace_node<CopyNode>(x0_ptr);
         Node* b_ptr = graph.emplace_node<CopyNode>(x0_ptr);
         Node* c_ptr = graph.emplace_node<CopyNode>(x1_ptr);
@@ -877,7 +877,7 @@ TEST_CASE("CopyNode") {
 
         auto* x0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2});
         auto* x1_ptr = graph.emplace_node<ConstantNode>(std::vector{3, 4, 5});
-        
+
         auto* copy_ptr = graph.emplace_node<CopyNode>(x0_ptr);
 
         x1_ptr->take_successors(*x0_ptr);
@@ -1185,7 +1185,7 @@ TEST_CASE("PutNode") {
 
         auto* i0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 2});
         auto* i1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1});
-    
+
         auto* v0_ptr = graph.emplace_node<ConstantNode>(std::vector{-44, -55});
         auto* v1_ptr = graph.emplace_node<ConstantNode>(std::vector{44, 55});
 
@@ -1212,7 +1212,7 @@ TEST_CASE("PutNode") {
 
         auto* i0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 2});
         auto* i1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1});
-    
+
         auto* v0_ptr = graph.emplace_node<ConstantNode>(std::vector{-44, -55});
         auto* v1_ptr = graph.emplace_node<ConstantNode>(std::vector{44, 55});
 
@@ -1405,7 +1405,7 @@ TEST_CASE("ReshapeNode") {
         auto* arr1_ptr = graph.emplace_node<ConstantNode>(std::vector{2, 3, 4, 5});
 
         auto* reshape_ptr = graph.emplace_node<ReshapeNode>(arr0_ptr, std::array<ssize_t, 2>{2, 2});
-    
+
         arr1_ptr->take_successors(*arr0_ptr);
 
         CHECK_THAT(reshape_ptr->predecessors(), RangeEquals({arr1_ptr}));
@@ -1743,8 +1743,10 @@ TEST_CASE("RollNode") {
     SECTION("equality") {
         auto graph = Graph();
 
-        auto* arr0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3}, std::array<ssize_t, 2>{2, 2});
-        auto* arr1_ptr = graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7}, std::array<ssize_t, 2>{2, 2});
+        auto* arr0_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3}, std::array<ssize_t, 2>{2, 2});
+        auto* arr1_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7}, std::array<ssize_t, 2>{2, 2});
 
         auto* shift0_ptr = graph.emplace_node<ConstantNode>(2);
         auto* shift1_ptr = graph.emplace_node<ConstantNode>(3);

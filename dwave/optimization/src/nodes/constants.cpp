@@ -68,7 +68,7 @@ ConstantNode::ConstantNode(OwningDataSource&& data_source, const std::span<const
 bool ConstantNode::equal_to(const ConstantNode& rhs) const {
     return this->ndim() == rhs.ndim() and                      // same ndim
            std::ranges::equal(this->shape(), rhs.shape()) and  // same shape
-           std::ranges::equal(this->data(), rhs.data());      // same content
+           std::ranges::equal(this->data(), rhs.data());       // same content
 }
 
 bool ConstantNode::integral() const { return this->values_info_.integral; }

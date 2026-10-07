@@ -57,7 +57,8 @@ class AccumulateZipNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, Accum
         NegativeNode,
         OrNode,
         SubtractNode,
-        XorNode>;
+        XorNode
+    >;
 
     AccumulateZipNode(
         std::shared_ptr<Graph> expression_ptr,

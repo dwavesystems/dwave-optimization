@@ -10,7 +10,8 @@ has guidelines for contributing to Ocean packages. With the following changes
 pre-commit
 ==========
 
-All changes must be formatted and checked by [ruff](https://docs.astral.sh/ruff/).
+All changes must be formatted and checked by [ruff](https://docs.astral.sh/ruff/)
+and [clang-format](https://clang.llvm.org/docs/ClangFormat.html).
 
 To make this as easy as possible, you can setup [pre-commit](https://pre-commit.com/):
 

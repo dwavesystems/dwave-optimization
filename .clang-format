@@ -24,6 +24,7 @@ BreakBeforeCloseBracketBracedList: true
 BreakBeforeCloseBracketFunction: true
 BreakBeforeCloseBracketIf: true
 BreakBeforeCloseBracketLoop: true
+BreakBeforeTemplateCloser: true
 BreakConstructorInitializers: AfterColon
 RequiresClausePosition: SingleLine
 
