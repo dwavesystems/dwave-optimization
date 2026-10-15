@@ -2,27 +2,17 @@ option(
     'build-tests',
     type: 'feature',
     value: 'auto',
-    description:
-        'Whether to build the C++ tests.' +
-        'When set to enabled, the tests are always built.' +
-        'When set to disabled, the tests are never built.' +
-        'When set to auto (default), the tests are built when buildtype != release.',
+    description: 'Whether to build the C++ tests. When set to enabled, the tests are always built. When set to disabled, the tests are never built. When set to auto (default), the tests are built when buildtype != release.',
 )
 option(
     'blas',
     type: 'feature',
     value: 'auto',
-    description:
-        'Whether to use BLAS when building.' +
-        'When set to enabled, the build will fail if BLAS is not available.' +
-        'When set to disabled, the build will never use BLAS.' +
-        'When set to auto (default), the build will use BLAS if it is available.'
+    description: 'Whether to use BLAS when building. When set to enabled, the build will fail if BLAS is not available. When set to disabled, the build will never use BLAS. When set to auto (default), the build will use BLAS if it is available.',
 )
 option(
     'force-fallback',
     type: 'boolean',
     value: false,
-    description:
-        'In some places we make use of compiler-specific functionality for performance. ' +
-        'When set to true, we instead always make use of std-only fallbacks.'
+    description: 'In some places we make use of compiler-specific functionality for performance. When set to true, we instead always make use of std-only fallbacks.',
 )
