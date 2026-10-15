@@ -31,6 +31,7 @@ from dwave.optimization import (
     bspline,
     exp,
     expit,
+    is_disjoint_cover,
     log,
     logical,
     logical_and,
@@ -1574,6 +1575,37 @@ class TestDisjointCover(utils.SymbolTests):
         cover = dwave.optimization.symbols.IsDisjointCover(sets, 5)
         with model.lock():
             expected = np.array([0.0])
+            np.testing.assert_array_almost_equal(cover.state(0), expected)
+
+    def test_lists(self):
+        """One intended use is to replace disjoint_lists_symbol"""
+        model = Model()
+        x = model.list(4, 0, 4)
+        y = model.list(4, 0, 4)
+        cover = is_disjoint_cover([x, y])
+        self.assertEqual(cover.primary_set_size, 4)
+        model.states.resize(1)
+        with model.lock():
+            x.set_state(0, [0, 1])
+            y.set_state(0, [2, 3])
+            expected = np.array([1.0])
+            np.testing.assert_array_almost_equal(cover.state(0), expected)
+
+            x.set_state(0, [0])
+            y.set_state(0, [2, 3])
+            expected = np.array([0.0])
+            np.testing.assert_array_almost_equal(cover.state(0), expected)
+
+    def test_lists_empty(self):
+        """An edge case that we should handle for backwards compatibility"""
+        # model.disjoint_lists_symbol(0, 1) is valid and does not intrinsically make model infeasible
+        model = Model()
+        x = model.list(0, 0, 0)
+        cover = is_disjoint_cover([x], primary_set_size=0)
+        model.states.resize(1)
+        with model.lock():
+            x.set_state(0, [])
+            expected = np.array([1.0])
             np.testing.assert_array_almost_equal(cover.state(0), expected)
 
 
