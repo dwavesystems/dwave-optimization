@@ -699,7 +699,7 @@ cdef class ListVariable(ArraySymbol):
             shape_info = json.load(f)
 
         return ListVariable(model,
-                            n=shape_info.get("max_value"),
+                            n=shape_info.get("primary_set_size"),
                             min_size=shape_info.get("min_size"),
                             max_size=shape_info.get("max_size")
                             )
@@ -709,7 +709,7 @@ cdef class ListVariable(ArraySymbol):
         cdef SizeInfo sizeinfo = self.ptr.sizeinfo()
 
         shape_info = dict(
-            max_value = int(self.ptr.max()) + 1 if self.array_ptr.size() else 0,
+            primary_set_size = int(self.ptr.primary_set_size()),
             min_size = sizeinfo.min.value(),
             max_size = sizeinfo.max.value(),
             )
@@ -797,7 +797,7 @@ cdef class SetVariable(ArraySymbol):
             shape_info = json.load(f)
 
         return SetVariable(model,
-                           n=shape_info.get("max_value"),
+                           n=shape_info.get("primary_set_size"),
                            min_size=shape_info.get("min_size"),
                            max_size=shape_info.get("max_size"),
                            )
@@ -808,7 +808,7 @@ cdef class SetVariable(ArraySymbol):
         cdef SizeInfo sizeinfo = self.ptr.sizeinfo()
 
         shape_info = dict(
-            max_value = int(self.ptr.max()) + 1 if self.array_ptr.size() else 0,
+            primary_set_size = int(self.ptr.primary_set_size()),
             min_size = sizeinfo.min.value(),
             max_size = sizeinfo.max.value(),
             )
