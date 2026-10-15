@@ -64,6 +64,9 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
 
     double min() const override;
 
+    /// The size of the primary set that this collection draws values from
+    ssize_t primary_set_size() const;
+
     void revert(State&) const override;
 
     // Rotate the elements between src_idx and dest_idx with dest_idx getting the value of src_idx.
@@ -85,10 +88,10 @@ class CollectionNode : public ArrayOutputMixin<ArrayNode>, public DecisionNode {
     SizeInfo sizeinfo() const override;
 
  protected:
-    CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size);
+    CollectionNode(ssize_t primary_set_size, ssize_t min_size, ssize_t max_size);
 
-    // The collection draws its values from [0, max_value_)
-    const ssize_t max_value_;
+    // The collection draws its values from [0, primary_set_size_)
+    const ssize_t primary_set_size_;
 
     // min_size_ <= |collection| <= max_size_
     const ssize_t min_size_;
