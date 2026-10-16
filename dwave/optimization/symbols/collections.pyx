@@ -709,7 +709,7 @@ cdef class ListVariable(ArraySymbol):
         cdef SizeInfo sizeinfo = self.ptr.sizeinfo()
 
         shape_info = dict(
-            max_value = int(self.ptr.max()) + 1 if self.array_ptr.size() else 0,
+            max_value = int(self.ptr.primary_set_size()),
             min_size = sizeinfo.min.value(),
             max_size = sizeinfo.max.value(),
             )
@@ -808,7 +808,7 @@ cdef class SetVariable(ArraySymbol):
         cdef SizeInfo sizeinfo = self.ptr.sizeinfo()
 
         shape_info = dict(
-            max_value = int(self.ptr.max()) + 1 if self.array_ptr.size() else 0,
+            max_value = int(self.ptr.primary_set_size()),
             min_size = sizeinfo.min.value(),
             max_size = sizeinfo.max.value(),
             )

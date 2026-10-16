@@ -308,9 +308,9 @@ class CollectionStateData_ : public NodeStateData, public CheckpointableState {
 CollectionCheckpoint_::CollectionCheckpoint_(CollectionStateData_& state) :
     DiffCheckpoint(state, state.all_updates_), size_(state.size()) {}
 
-CollectionNode::CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_size) :
+CollectionNode::CollectionNode(ssize_t primary_set_size, ssize_t min_size, ssize_t max_size) :
     ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),
-    max_value_(max_value),
+    primary_set_size_(primary_set_size),
     min_size_(min_size),
     max_size_(max_size) {
     if (min_size < 0 or max_size < 0) {
@@ -319,8 +319,8 @@ CollectionNode::CollectionNode(ssize_t max_value, ssize_t min_size, ssize_t max_
     if (min_size > max_size) {
         throw std::invalid_argument("min_size cannot be greater than max_size");
     }
-    if (max_size > max_value) {
-        throw std::invalid_argument("a collection cannot be larger than its maximum value");
+    if (max_size > primary_set_size) {
+        throw std::invalid_argument("a collection cannot be larger than its primary set size");
     }
 }
 
@@ -330,9 +330,9 @@ void CollectionNode::assign(State& state, std::vector<double> values) const {
     if (size > max_size_) throw std::invalid_argument("values contains too many values");
 
     // Check that the values are a proper subset and fill out the invisible part
-    auto augemented = augment_collection_(std::move(values), max_value_);
+    auto augmented = augment_collection_(std::move(values), primary_set_size_);
 
-    data_ptr_<CollectionStateData_>(state)->assign(std::move(augemented), size);
+    data_ptr_<CollectionStateData_>(state)->assign(std::move(augmented), size);
 }
 
 void CollectionNode::assign_from_checkpoint(
@@ -387,9 +387,9 @@ void CollectionNode::initialize_state(State& state, std::vector<double> values) 
     if (size > max_size_) throw std::invalid_argument("values contains too many values");
 
     // Check that the values are a proper subset and fill out the invisible part
-    auto augemented = augment_collection_(std::move(values), max_value_);
+    auto augmented = augment_collection_(std::move(values), primary_set_size_);
 
-    emplace_data_ptr_<CollectionStateData_>(state, std::move(augemented), size);
+    emplace_data_ptr_<CollectionStateData_>(state, std::move(augmented), size);
 }
 
 bool CollectionNode::integral() const { return true; }
@@ -397,9 +397,11 @@ bool CollectionNode::integral() const { return true; }
 double CollectionNode::min() const { return 0; }
 
 double CollectionNode::max() const {
-    if (max_value_ == 0) return 0;
-    return max_value_ - 1;
+    if (primary_set_size_ == 0) return 0;
+    return primary_set_size_ - 1;
 }
+
+ssize_t CollectionNode::primary_set_size() const { return primary_set_size_; }
 
 void CollectionNode::revert(State& state) const {
     data_ptr_<CollectionStateData_>(state)->revert();
@@ -1081,11 +1083,11 @@ ssize_t DisjointListNode::size_diff(const State& state) const {
 }
 
 void ListNode::initialize_state(State& state) const {
-    emplace_data_ptr_<CollectionStateData_>(state, max_value_, min_size_);
+    emplace_data_ptr_<CollectionStateData_>(state, primary_set_size_, min_size_);
 }
 
 void SetNode::initialize_state(State& state) const {
-    emplace_data_ptr_<CollectionStateData_>(state, max_value_, min_size_);
+    emplace_data_ptr_<CollectionStateData_>(state, primary_set_size_, min_size_);
 }
 
 }  // namespace dwave::optimization

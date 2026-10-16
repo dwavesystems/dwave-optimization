@@ -450,6 +450,7 @@ TEST_CASE("ListNode") {
 
         THEN("We already know a lot about the size etc") {
             CHECK(ptr->size() == 5);
+            CHECK(ptr->primary_set_size() == 5);
             CHECK_THAT(ptr->shape(), RangeEquals({5}));
             CHECK_THAT(ptr->strides(), RangeEquals({sizeof(double)}));
 
@@ -528,6 +529,8 @@ TEST_CASE("ListNode") {
     GIVEN("A list(5, min_size=0, max_size=2)") {
         auto list_ptr = graph.emplace_node<ListNode>(5, 0, 2);
 
+        CHECK(list_ptr->primary_set_size() == 5);
+
         // the min/max are derived from the set, not the size
         CHECK(list_ptr->max() == 4);
         CHECK(list_ptr->min() == 0);
@@ -541,6 +544,7 @@ TEST_CASE("ListNode") {
         auto list_ptr = graph.emplace_node<ListNode>(0);
 
         CHECK(list_ptr->size() == 0);
+        CHECK(list_ptr->primary_set_size() == 0);
 
         // the min/max are derived from the set, not the size
         CHECK(list_ptr->max() == 0);
@@ -553,6 +557,8 @@ TEST_CASE("ListNode") {
 
     GIVEN("A list(10, min_size=2, max_size=5)") {
         auto l_ptr = graph.emplace_node<ListNode>(10, 2, 5);
+
+        CHECK(l_ptr->primary_set_size() == 10);
 
         // Add a validation node
         graph.emplace_node<ArrayValidationNode>(l_ptr);
@@ -619,6 +625,8 @@ TEST_CASE("SetNode") {
 
     GIVEN("A set(10) initialized to {0, 1, 2}") {
         auto set_ptr = graph.emplace_node<SetNode>(10);
+        CHECK(set_ptr->primary_set_size() == 10);
+
         graph.emplace_node<ArrayValidationNode>(set_ptr);
 
         auto state = graph.empty_state();
@@ -635,6 +643,7 @@ TEST_CASE("SetNode") {
 
     GIVEN("A set(5, min_size=0, max_size=2)") {
         auto set_ptr = graph.emplace_node<SetNode>(5, 0, 2);
+        CHECK(set_ptr->primary_set_size() == 5);
 
         // the min/max are derived from the set, not the size
         CHECK(set_ptr->max() == 4);
@@ -647,6 +656,7 @@ TEST_CASE("SetNode") {
 
     GIVEN("A set(0)") {
         auto set_ptr = graph.emplace_node<SetNode>(0);
+        CHECK(set_ptr->primary_set_size() == 0);
 
         CHECK(set_ptr->size() == 0);
 

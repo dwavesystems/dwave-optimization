@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Adds method to CollectionNode to directly get the "primary set size" that the 
+    collection draws its values from.
