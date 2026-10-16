@@ -1,6 +1,7 @@
 project(
     'dwave-optimization',
-    'c', 'cpp', 'cython',
+    'cpp',
+    'cython',
     default_options: [
         'cpp_std=c++23',
         'buildtype=release',
@@ -10,7 +11,7 @@ project(
         'warning_level=1',  # equivalent to -Wall. We should consider cranking it up to 3
         'python.allow_limited_api=false',  # Our build system can then opt-in for Python 3.12+
     ],
-    meson_version: '>= 1.3.0',
+    meson_version: '>=1.11.0',
     # As of August 2024, there is no nicer way that I know of to dynamically get the version
     version: run_command(
         ['dwave/optimization/_build/_version.py'],
@@ -24,7 +25,7 @@ py = import('python').find_installation(pure: false)
 
 # We want some debugging symbols
 if cpp.has_argument('-g1')
-  add_project_arguments('-g1', language: 'cpp')
+    add_project_arguments('-g1', language: 'cpp')
 endif
 
 # Also, set the fallback flag if we have it
@@ -72,10 +73,13 @@ if not get_option('blas').disabled() and not get_option('force-fallback')
     blasinfo = run_command(
         ['dwave/optimization/_build/_find_openblas.py'],
         capture: true,
-        check: true
+        check: true,
     ).stdout().splitlines()
     if blasinfo.length() != 0
-        assert(blasinfo.length() == 3, '_find_openblas.py returned an unexpected value')
+        assert(
+            blasinfo.length() == 3,
+            '_find_openblas.py returned an unexpected value',
+        )
 
         dwave_optimization_dependencies += [
             declare_dependency(
@@ -85,12 +89,11 @@ if not get_option('blas').disabled() and not get_option('force-fallback')
                     required: true,
                 ),
                 include_directories: blasinfo[0],
-            )
+            ),
         ]
     elif get_option('blas').enabled()
         error(
-            'No BLAS available.' +
-            'Install scipy_openblas64 into the build environment or disable the blas user option'
+            'No BLAS available. Install scipy_openblas64 into the build environment or disable the blas user option',
         )
     endif
 endif
@@ -105,7 +108,7 @@ if host_machine.system() == 'windows'
             include_directories: dwave_optimization_include,
             dependencies: dwave_optimization_dependencies,
         ),
-        include_directories: dwave_optimization_include
+        include_directories: dwave_optimization_include,
     )
 else
     # On unix we build/distribute a shared library
@@ -118,7 +121,7 @@ else
             install_dir: py.get_install_dir(pure: false) / 'dwave/optimization/',
             dependencies: dwave_optimization_dependencies,
         ),
-        include_directories: dwave_optimization_include
+        include_directories: dwave_optimization_include,
     )
 endif
 
@@ -131,7 +134,7 @@ endif
 if py.version().version_compare('>=3.12')
     limited_api = '3.12'
 else
-    limited_api = ''  # i.e. no limited api
+    limited_api = ''    # i.e. no limited api
 endif
 
 foreach name : [
@@ -165,8 +168,8 @@ foreach name : [
         gnu_symbol_visibility: 'default',
         install: true,
         install_rpath: '$ORIGIN/..',
-        override_options : ['cython_language=cpp'],
-        cython_args : ['-Xfreethreading_compatible=True'],
+        override_options: ['cython_language=cpp'],
+        cython_args: ['-Xfreethreading_compatible=True'],
         subdir: 'dwave/optimization/symbols/',
         limited_api: limited_api,
     )
@@ -179,8 +182,8 @@ py.extension_module(
     gnu_symbol_visibility: 'default',
     install: true,
     install_rpath: '$ORIGIN',
-    override_options : ['cython_language=cpp'],
-    cython_args : ['-Xfreethreading_compatible=True'],
+    override_options: ['cython_language=cpp'],
+    cython_args: ['-Xfreethreading_compatible=True'],
     subdir: 'dwave/optimization/',
     limited_api: limited_api,
 )
@@ -192,8 +195,8 @@ py.extension_module(
     gnu_symbol_visibility: 'default',
     install: true,
     install_rpath: '$ORIGIN',
-    override_options : ['cython_language=cpp'],
-    cython_args : ['-Xfreethreading_compatible=True'],
+    override_options: ['cython_language=cpp'],
+    cython_args: ['-Xfreethreading_compatible=True'],
     subdir: 'dwave/optimization/',
     limited_api: limited_api,
 )
@@ -204,16 +207,22 @@ py.extension_module(
     gnu_symbol_visibility: 'default',
     install: true,
     install_rpath: '$ORIGIN',
-    override_options : ['cython_language=cpp'],
-    cython_args : ['-Xfreethreading_compatible=True'],
+    override_options: ['cython_language=cpp'],
+    cython_args: ['-Xfreethreading_compatible=True'],
     subdir: 'dwave/optimization/',
     limited_api: limited_api,
 )
 
-install_subdir('dwave/optimization', install_dir: py.get_install_dir(pure: false) / 'dwave')
+install_subdir(
+    'dwave/optimization',
+    install_dir: py.get_install_dir(pure: false) / 'dwave',
+)
 
 # meson doesn't disable tests by default, so we let the user decide via the build-tests
 # option. If set to 'auto', then we build the tests for non-release builds.
-if get_option('build-tests').enabled() or (get_option('build-tests').auto() and get_option('buildtype') != 'release')
+if get_option('build-tests').enabled() or (
+    get_option('build-tests').auto()
+    and (get_option('buildtype') != 'release')
+)
     subdir('tests/cpp/')
 endif
