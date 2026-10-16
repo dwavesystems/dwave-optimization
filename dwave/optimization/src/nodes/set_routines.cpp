@@ -121,12 +121,17 @@ IsDisjointCoverNode::IsDisjointCoverNode(
         if (not node->integral()) {
             throw std::invalid_argument("Predecessors of DisjointCoverNode must be integral");
         }
-        if (not(node->max() < primary_set_size)) {
-            throw std::invalid_argument("Predecessor exceeds primary set size");
+        if (node->sizeinfo().max.value_or(1) > 0) {
+            // If the array has no max size info, or if the max size is nonzero, we need to check
+            // the range of values the array can take
+            if (not(node->max() < primary_set_size)) {
+                throw std::invalid_argument("Predecessor exceeds primary set size");
+            }
+            if (not(node->min() >= 0)) {
+                throw std::invalid_argument("Predecessor exceeds primary set size");
+            }
         }
-        if (not(node->min() >= 0)) {
-            throw std::invalid_argument("Predecessor exceeds primary set size");
-        }
+        // else, this array is empty; it's sizing trivially satisfies the constraints
         add_predecessor_(node);
         operands_.push_back(node);
     }
@@ -135,8 +140,7 @@ IsDisjointCoverNode::IsDisjointCoverNode(
 void IsDisjointCoverNode::initialize_state(State& state) const {
     std::vector<ssize_t> count(primary_set_size_, 0);
     for (const auto& node : operands_) {
-        for (const auto& value : node->view(state)) {
-            ssize_t element = static_cast<ssize_t>(value);
+        for (const ssize_t element : node->view(state)) {
             // Should not be possible because of checks in constructor
             assert(element < primary_set_size_);
             assert(element >= 0);
@@ -152,6 +156,8 @@ void IsDisjointCoverNode::commit(State& state) const {
 
 void IsDisjointCoverNode::propagate(State& state) const {
     IsDisjointCoverNodeData* data = data_ptr_<IsDisjointCoverNodeData>(state);
+    assert(data->elements_decremented.empty() and "Data not empty");
+    assert(data->elements_incremented.empty() and "Data not empty");
 
     bool no_update = true;
     for (const auto& pred : operands_) {

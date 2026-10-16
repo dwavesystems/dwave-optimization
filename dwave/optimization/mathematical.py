@@ -1161,12 +1161,14 @@ def is_disjoint_cover(
     .. versionadded:: 0.7.3
     """
     if primary_set_size is None:
+        # Note: if all subsets are empty (e.g. `list(0,0,0)`) we may infer primary_set_size = 1,
+        # in which case the IsDisjointCover symbol is always False
         primary_set_size = int(subsets[0].info().max) + 1
-        if not np.isfinite(primary_set_size) or primary_set_size <= 0:
-            raise ValueError("Cannot infer primary set size from subsets")
         for subset in subsets[1:]:
             if int(subset.info().max) != primary_set_size - 1:
                 raise ValueError("Cannot infer primary set size from subsets")
+    if not np.isfinite(primary_set_size) or primary_set_size < 0:
+        raise ValueError("Cannot infer primary set size from subsets")
     return IsDisjointCover(subsets, primary_set_size)
 
 
