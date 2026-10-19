@@ -356,6 +356,37 @@ struct divide : mixins::BinaryOpMixin<divide> {
     }
 };
 
+struct equal : mixins::BinaryOpMixin<equal> {
+    template <DType T>
+    static constexpr bool operator()(T lhs, T rhs) {
+        assert((std::integral<T> or not std::isnan(lhs)) and "lhs cannot be nan");
+        assert((std::integral<T> or not std::isnan(rhs)) and "rhs cannot be nan");
+
+        return lhs == rhs;
+    }
+
+    template <DType T>
+    static constexpr interval<bool> operator()(
+        const interval<T>& lhs_enclosure,
+        const interval<T>& rhs_enclosure
+    ) {
+        assert(static_cast<bool>(lhs_enclosure) and "lhs's enclosure cannot be empty");
+        assert(static_cast<bool>(rhs_enclosure) and "rhs's enclosure cannot be empty");
+
+        // If the intervals do not overlap, then we're never equal
+        if (not static_cast<bool>(lhs_enclosure & rhs_enclosure)) return {false, false};
+
+        // The only way we're always equal is if both intervals are singletons and they are equal
+        if (lhs_enclosure.infimum == lhs_enclosure.supremum and
+            lhs_enclosure.infimum == rhs_enclosure.infimum and
+            lhs_enclosure.supremum == rhs_enclosure.supremum) {
+            return {true, true};
+        }
+
+        return {false, true};
+    }
+};
+
 struct exp : mixins::UnaryOpMixin<exp> {
     // dev note: these are marked constexpr even though std::exp() isn't
     // actually constexpr until C++26. Luckily everything works fine with

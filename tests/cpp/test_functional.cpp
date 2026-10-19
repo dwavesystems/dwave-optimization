@@ -424,6 +424,42 @@ TEMPLATE_LIST_TEST_CASE("divide", "", DTypes) {
     }
 }
 
+TEMPLATE_LIST_TEST_CASE("equal", "", DTypes) {
+    constexpr equal op{};
+
+    using limits = std::numeric_limits<TestType>;
+
+    SECTION("op(scalar, scalar)") {
+        STATIC_REQUIRE(op(TestType{0}, TestType{0}));
+        STATIC_REQUIRE(not op(TestType{0}, TestType{1}));
+        STATIC_REQUIRE(not op(TestType{1}, TestType{0}));
+        STATIC_REQUIRE(op(TestType{1}, TestType{1}));
+
+        if constexpr (limits::has_infinity) {
+            STATIC_REQUIRE(op(-limits::infinity(), -limits::infinity()));
+            STATIC_REQUIRE(not op(-limits::infinity(), +limits::infinity()));
+            STATIC_REQUIRE(not op(+limits::infinity(), -limits::infinity()));
+            STATIC_REQUIRE(op(+limits::infinity(), +limits::infinity()));
+
+            STATIC_REQUIRE(not op(TestType{1}, -limits::infinity()));
+            STATIC_REQUIRE(not op(TestType{1}, +limits::infinity()));
+            STATIC_REQUIRE(not op(+limits::infinity(), TestType{1}));
+            STATIC_REQUIRE(not op(+limits::infinity(), TestType{1}));
+        }
+    }
+
+    SECTION("op(interval, interval)") {
+        constexpr interval<TestType> zero(0, 0);
+        constexpr interval<TestType> one(1, 1);
+        constexpr interval<TestType> both(0, 1);
+
+        STATIC_REQUIRE(op(zero, zero) == one);
+        STATIC_REQUIRE(op(one, one) == one);
+        STATIC_REQUIRE(op(one, both) == both);
+        STATIC_REQUIRE(op(one, zero) == zero);
+    }
+}
+
 TEMPLATE_LIST_TEST_CASE("exp", "", DTypes) {
     // dev note: std::exp() isn't constexpr until C++26 so we need to use CHECK().
 
