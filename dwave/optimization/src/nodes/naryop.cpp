@@ -75,8 +75,7 @@ bool calculate_integral(const std::vector<Array*>& operands) {
         return true;
     }
     if constexpr (
-        std::is_same<BinaryOp, functional::maximum>::value ||
-        std::is_same<BinaryOp, functional::minimum>::value ||
+        std::is_same<BinaryOp, op::maximum>::value || std::is_same<BinaryOp, op::minimum>::value ||
         std::is_same<BinaryOp, std::multiplies<double>>::value ||
         std::is_same<BinaryOp, std::plus<double>>::value
     ) {
@@ -104,8 +103,8 @@ ValuesInfo calculate_values_info(const std::vector<Array*>& operands) {
     // these can result in inf. If we update propagation/initialization to handle
     // that case we should update these as well.
     if constexpr (
-        std::same_as<BinaryOp, functional::maximum> ||
-        std::same_as<BinaryOp, functional::minimum> || std::same_as<BinaryOp, std::plus<double>>
+        std::same_as<BinaryOp, op::maximum> || std::same_as<BinaryOp, op::minimum> ||
+        std::same_as<BinaryOp, std::plus<double>>
     ) {
         assert(operands.size() >= 1);  // checked by constructor
 
@@ -327,8 +326,8 @@ void NaryOpNode<BinaryOp>::replace_predecessor_(ssize_t index, Node* node_ptr) {
     operands_[index] = array_ptr;
 }
 
-template class NaryOpNode<functional::maximum>;
-template class NaryOpNode<functional::minimum>;
+template class NaryOpNode<op::maximum>;
+template class NaryOpNode<op::minimum>;
 template class NaryOpNode<std::multiplies<double>>;
 template class NaryOpNode<std::plus<double>>;
 

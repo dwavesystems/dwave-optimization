@@ -19,11 +19,11 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "dwave-optimization/functional.hpp"
 #include "dwave-optimization/interval.hpp"
+#include "dwave-optimization/operator.hpp"
 #include "dwave-optimization/typing.hpp"
 
-namespace dwave::optimization::functional {
+namespace dwave::optimization::op {
 
 namespace mixins {
 namespace {
@@ -1776,4 +1776,4 @@ TEMPLATE_LIST_TEST_CASE("tanh", "", DTypes) {
     }
 }
 
-}  // namespace dwave::optimization::functional
+}  // namespace dwave::optimization::op

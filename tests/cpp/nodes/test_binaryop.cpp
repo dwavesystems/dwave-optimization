@@ -34,18 +34,18 @@ TEMPLATE_TEST_CASE(
     "BinaryOpNode",
     "",
     // std::divides<double>,
-    std::equal_to<double>,
-    std::less_equal<double>,
-    std::plus<double>,
-    std::minus<double>,
-    functional::remainder,
-    std::multiplies<double>,
-    functional::maximum,
-    functional::minimum,
-    std::logical_and<double>,
-    std::logical_or<double>,
-    functional::logical_xor,
-    functional::divide
+    op::equal,
+    op::less_equal,
+    op::add,
+    op::subtract,
+    op::remainder,
+    op::multiply,
+    op::maximum,
+    op::minimum,
+    op::logical_and,
+    op::logical_or,
+    op::logical_xor,
+    op::divide
 ) {
     auto graph = Graph();
 

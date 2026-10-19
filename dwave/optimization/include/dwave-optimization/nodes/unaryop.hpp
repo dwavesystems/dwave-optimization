@@ -24,9 +24,9 @@
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
-#include "dwave-optimization/functional.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/interval.hpp"
+#include "dwave-optimization/operator.hpp"
 #include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {
@@ -223,12 +223,12 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     static interval<double> calculate_domain_(const Array* array_ptr) {
         interval<double> array_domain = interval<double>(array_ptr->min(), array_ptr->max());
 
-        if constexpr (std::same_as<UnaryOp, functional::sqrt>) {
+        if constexpr (std::same_as<UnaryOp, op::sqrt>) {
             if (not(array_domain <= UnaryOp::template domain<double>[0])) {
                 throw std::invalid_argument("SquareRoot's predecessors must be non-negative");
             }
         }
-        if constexpr (std::same_as<UnaryOp, functional::log>) {
+        if constexpr (std::same_as<UnaryOp, op::log>) {
             if (not(array_domain <= UnaryOp::template domain<double>[0])) {
                 throw std::invalid_argument("Log's predecessors must be non-negative");
             }
@@ -247,7 +247,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         // rint() actually always returns a floating point. But it is an integral
         // floating point. This is a place where having proper dtypes would be
         // very very nice.
-        if constexpr (std::same_as<UnaryOp, functional::rint>) return true;
+        if constexpr (std::same_as<UnaryOp, op::rint>) return true;
 
         // Otherwise, we ask our op what an integer input would result in.
         if (array_ptr->integral()) {
@@ -275,43 +275,43 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     const SizeInfo sizeinfo_;
 };
 
-using AbsoluteNode = UnaryOpNode<functional::absolute>;
-extern template class UnaryOpNode<functional::absolute>;
+using AbsoluteNode = UnaryOpNode<op::absolute>;
+extern template class UnaryOpNode<op::absolute>;
 
-using CosNode = UnaryOpNode<functional::cos>;
-extern template class UnaryOpNode<functional::cos>;
+using CosNode = UnaryOpNode<op::cos>;
+extern template class UnaryOpNode<op::cos>;
 
-using ExpNode = UnaryOpNode<functional::exp>;
-extern template class UnaryOpNode<functional::exp>;
+using ExpNode = UnaryOpNode<op::exp>;
+extern template class UnaryOpNode<op::exp>;
 
-using ExpitNode = UnaryOpNode<functional::expit>;
-extern template class UnaryOpNode<functional::expit>;
+using ExpitNode = UnaryOpNode<op::expit>;
+extern template class UnaryOpNode<op::expit>;
 
-using LogNode = UnaryOpNode<functional::log>;
-extern template class UnaryOpNode<functional::log>;
+using LogNode = UnaryOpNode<op::log>;
+extern template class UnaryOpNode<op::log>;
 
-using LogicalNode = UnaryOpNode<functional::logical>;
-extern template class UnaryOpNode<functional::logical>;
+using LogicalNode = UnaryOpNode<op::logical>;
+extern template class UnaryOpNode<op::logical>;
 
-using NegativeNode = UnaryOpNode<functional::negative>;
-extern template class UnaryOpNode<functional::negative>;
+using NegativeNode = UnaryOpNode<op::negative>;
+extern template class UnaryOpNode<op::negative>;
 
-using NotNode = UnaryOpNode<functional::logical_not>;
-extern template class UnaryOpNode<functional::logical_not>;
+using NotNode = UnaryOpNode<op::logical_not>;
+extern template class UnaryOpNode<op::logical_not>;
 
-using RintNode = UnaryOpNode<functional::rint>;
-extern template class UnaryOpNode<functional::rint>;
+using RintNode = UnaryOpNode<op::rint>;
+extern template class UnaryOpNode<op::rint>;
 
-using SinNode = UnaryOpNode<functional::sin>;
-extern template class UnaryOpNode<functional::sin>;
+using SinNode = UnaryOpNode<op::sin>;
+extern template class UnaryOpNode<op::sin>;
 
-using SqrtNode = UnaryOpNode<functional::sqrt>;
-extern template class UnaryOpNode<functional::sqrt>;
+using SqrtNode = UnaryOpNode<op::sqrt>;
+extern template class UnaryOpNode<op::sqrt>;
 
-using SquareNode = UnaryOpNode<functional::square>;
-extern template class UnaryOpNode<functional::square>;
+using SquareNode = UnaryOpNode<op::square>;
+extern template class UnaryOpNode<op::square>;
 
-using TanhNode = UnaryOpNode<functional::tanh>;
-extern template class UnaryOpNode<functional::tanh>;
+using TanhNode = UnaryOpNode<op::tanh>;
+extern template class UnaryOpNode<op::tanh>;
 
 }  // namespace dwave::optimization

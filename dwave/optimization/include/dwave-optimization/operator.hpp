@@ -23,9 +23,9 @@
 #include "dwave-optimization/interval.hpp"
 #include "dwave-optimization/typing.hpp"
 
-namespace dwave::optimization::functional {
+namespace dwave::optimization::op {
 
-enum class Monotonicity { Decreasing = -1, None = 0, Increasing = 1 };
+enum class Monotonicity { Decreasing = -1, None = 0, Increasing = +1 };
 
 namespace mixins {
 
@@ -1025,4 +1025,4 @@ struct tanh : mixins::UnaryOpMixin<tanh> {
     static constexpr std::array<Monotonicity, 1> monotonicity{Monotonicity::Increasing};
 };
 
-}  // namespace dwave::optimization::functional
+}  // namespace dwave::optimization::op
