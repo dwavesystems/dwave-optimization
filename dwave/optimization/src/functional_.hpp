@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-/// These are intended to replace the current public functional.hpp but need
+/// These are intended to replace the current public operator.hpp but need
 /// more thought. So for now we keep them private.
 /// These classes are obviously heavily inspired by NumPy's universal functions
 /// (ufunc). With the key difference that we wish to do operations like removing
@@ -25,7 +25,7 @@
 #pragma once
 
 #include "dwave-optimization/array.hpp"
-#include "dwave-optimization/functional.hpp"
+#include "dwave-optimization/operator.hpp"
 #include "dwave-optimization/typing.hpp"
 
 namespace dwave::optimization::functional_ {
@@ -503,11 +503,11 @@ struct Multiply : BinaryFunctionMixin<Multiply<T>> {
 template <class BinaryOp>
 struct std_to_ufunc {};
 template <>
-struct std_to_ufunc<functional::maximum> {
+struct std_to_ufunc<op::maximum> {
     using type = Maximum<double>;
 };
 template <>
-struct std_to_ufunc<functional::minimum> {
+struct std_to_ufunc<op::minimum> {
     using type = Minimum<double>;
 };
 template <>

@@ -19,11 +19,11 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "dwave-optimization/functional.hpp"
 #include "dwave-optimization/interval.hpp"
+#include "dwave-optimization/operator.hpp"
 #include "dwave-optimization/typing.hpp"
 
-namespace dwave::optimization::functional {
+namespace dwave::optimization::op {
 
 namespace mixins {
 namespace {
@@ -421,6 +421,42 @@ TEMPLATE_LIST_TEST_CASE("divide", "", DTypes) {
                 interval<TestType>::all()
             );
         }
+    }
+}
+
+TEMPLATE_LIST_TEST_CASE("equal", "", DTypes) {
+    constexpr equal op{};
+
+    using limits = std::numeric_limits<TestType>;
+
+    SECTION("op(scalar, scalar)") {
+        STATIC_REQUIRE(op(TestType{0}, TestType{0}));
+        STATIC_REQUIRE(not op(TestType{0}, TestType{1}));
+        STATIC_REQUIRE(not op(TestType{1}, TestType{0}));
+        STATIC_REQUIRE(op(TestType{1}, TestType{1}));
+
+        if constexpr (limits::has_infinity) {
+            STATIC_REQUIRE(op(-limits::infinity(), -limits::infinity()));
+            STATIC_REQUIRE(not op(-limits::infinity(), +limits::infinity()));
+            STATIC_REQUIRE(not op(+limits::infinity(), -limits::infinity()));
+            STATIC_REQUIRE(op(+limits::infinity(), +limits::infinity()));
+
+            STATIC_REQUIRE(not op(TestType{1}, -limits::infinity()));
+            STATIC_REQUIRE(not op(TestType{1}, +limits::infinity()));
+            STATIC_REQUIRE(not op(+limits::infinity(), TestType{1}));
+            STATIC_REQUIRE(not op(+limits::infinity(), TestType{1}));
+        }
+    }
+
+    SECTION("op(interval, interval)") {
+        constexpr interval<TestType> zero(0, 0);
+        constexpr interval<TestType> one(1, 1);
+        constexpr interval<TestType> both(0, 1);
+
+        STATIC_REQUIRE(op(zero, zero) == one);
+        STATIC_REQUIRE(op(one, one) == one);
+        STATIC_REQUIRE(op(one, both) == both);
+        STATIC_REQUIRE(op(one, zero) == zero);
     }
 }
 
@@ -1740,4 +1776,4 @@ TEMPLATE_LIST_TEST_CASE("tanh", "", DTypes) {
     }
 }
 
-}  // namespace dwave::optimization::functional
+}  // namespace dwave::optimization::op

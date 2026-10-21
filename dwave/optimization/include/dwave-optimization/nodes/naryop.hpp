@@ -23,8 +23,8 @@
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
-#include "dwave-optimization/functional.hpp"
 #include "dwave-optimization/graph.hpp"
+#include "dwave-optimization/operator.hpp"
 #include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {
@@ -82,8 +82,8 @@ class NaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
 };
 
 using NaryAddNode = NaryOpNode<std::plus<double>>;
-using NaryMaximumNode = NaryOpNode<functional::maximum>;
-using NaryMinimumNode = NaryOpNode<functional::minimum>;
+using NaryMaximumNode = NaryOpNode<op::maximum>;
+using NaryMinimumNode = NaryOpNode<op::minimum>;
 using NaryMultiplyNode = NaryOpNode<std::multiplies<double>>;
 
 }  // namespace dwave::optimization

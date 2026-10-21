@@ -22,8 +22,8 @@
 #include <vector>
 
 #include "dwave-optimization/array.hpp"
-#include "dwave-optimization/functional.hpp"
 #include "dwave-optimization/graph.hpp"
+#include "dwave-optimization/operator.hpp"
 #include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {
@@ -136,8 +136,8 @@ class ReduceNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, ReduceNode<B
 
 using AllNode = ReduceNode<std::logical_and<double>>;
 using AnyNode = ReduceNode<std::logical_or<double>>;
-using MaxNode = ReduceNode<functional::maximum>;
-using MinNode = ReduceNode<functional::minimum>;
+using MaxNode = ReduceNode<op::maximum>;
+using MinNode = ReduceNode<op::minimum>;
 using ProdNode = ReduceNode<std::multiplies<double>>;
 using SumNode = ReduceNode<std::plus<double>>;
 

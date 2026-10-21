@@ -23,9 +23,9 @@
 #include "dwave-optimization/interval.hpp"
 #include "dwave-optimization/typing.hpp"
 
-namespace dwave::optimization::functional {
+namespace dwave::optimization::op {
 
-enum class Monotonicity { Decreasing = -1, None = 0, Increasing = 1 };
+enum class Monotonicity { Decreasing = -1, None = 0, Increasing = +1 };
 
 namespace mixins {
 
@@ -353,6 +353,37 @@ struct divide : mixins::BinaryOpMixin<divide> {
             out |= divide{}(lhs_supremum, rhs_supremum);
             return out;
         }
+    }
+};
+
+struct equal : mixins::BinaryOpMixin<equal> {
+    template <DType T>
+    static constexpr bool operator()(T lhs, T rhs) {
+        assert((std::integral<T> or not std::isnan(lhs)) and "lhs cannot be nan");
+        assert((std::integral<T> or not std::isnan(rhs)) and "rhs cannot be nan");
+
+        return lhs == rhs;
+    }
+
+    template <DType T>
+    static constexpr interval<bool> operator()(
+        const interval<T>& lhs_enclosure,
+        const interval<T>& rhs_enclosure
+    ) {
+        assert(static_cast<bool>(lhs_enclosure) and "lhs's enclosure cannot be empty");
+        assert(static_cast<bool>(rhs_enclosure) and "rhs's enclosure cannot be empty");
+
+        // If the intervals do not overlap, then we're never equal
+        if (not static_cast<bool>(lhs_enclosure & rhs_enclosure)) return {false, false};
+
+        // The only way we're always equal is if both intervals are singletons and they are equal
+        if (lhs_enclosure.infimum == lhs_enclosure.supremum and
+            lhs_enclosure.infimum == rhs_enclosure.infimum and
+            lhs_enclosure.supremum == rhs_enclosure.supremum) {
+            return {true, true};
+        }
+
+        return {false, true};
     }
 };
 
@@ -994,4 +1025,4 @@ struct tanh : mixins::UnaryOpMixin<tanh> {
     static constexpr std::array<Monotonicity, 1> monotonicity{Monotonicity::Increasing};
 };
 
-}  // namespace dwave::optimization::functional
+}  // namespace dwave::optimization::op

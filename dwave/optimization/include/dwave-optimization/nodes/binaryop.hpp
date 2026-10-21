@@ -22,8 +22,8 @@
 #include <utility>
 
 #include "dwave-optimization/array.hpp"
-#include "dwave-optimization/functional.hpp"
 #include "dwave-optimization/graph.hpp"
+#include "dwave-optimization/operator.hpp"
 #include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {
@@ -92,18 +92,18 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
 // We follow NumPy naming convention rather than C++ to distinguish between
 // binary operations and reduce operations.
 // https://numpy.org/doc/stable/reference/routines.math.html
-using AddNode = BinaryOpNode<std::plus<double>>;
-using AndNode = BinaryOpNode<std::logical_and<double>>;
+using AddNode = BinaryOpNode<op::add>;
+using AndNode = BinaryOpNode<op::logical_and>;
 using DivideNode = BinaryOpNode<std::divides<double>>;
-using EqualNode = BinaryOpNode<std::equal_to<double>>;
-using LessEqualNode = BinaryOpNode<std::less_equal<double>>;
-using MaximumNode = BinaryOpNode<functional::maximum>;
-using MinimumNode = BinaryOpNode<functional::minimum>;
-using ModulusNode = BinaryOpNode<functional::remainder>;
-using MultiplyNode = BinaryOpNode<std::multiplies<double>>;
-using OrNode = BinaryOpNode<std::logical_or<double>>;
-using SafeDivideNode = BinaryOpNode<functional::divide>;
-using SubtractNode = BinaryOpNode<std::minus<double>>;
-using XorNode = BinaryOpNode<functional::logical_xor>;
+using EqualNode = BinaryOpNode<op::equal>;
+using LessEqualNode = BinaryOpNode<op::less_equal>;
+using MaximumNode = BinaryOpNode<op::maximum>;
+using MinimumNode = BinaryOpNode<op::minimum>;
+using ModulusNode = BinaryOpNode<op::remainder>;
+using MultiplyNode = BinaryOpNode<op::multiply>;
+using OrNode = BinaryOpNode<op::logical_or>;
+using SafeDivideNode = BinaryOpNode<op::divide>;
+using SubtractNode = BinaryOpNode<op::subtract>;
+using XorNode = BinaryOpNode<op::logical_xor>;
 
 }  // namespace dwave::optimization

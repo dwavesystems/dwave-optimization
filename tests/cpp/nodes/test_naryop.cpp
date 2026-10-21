@@ -32,8 +32,8 @@ namespace dwave::optimization {
 TEMPLATE_TEST_CASE(
     "NaryOpNode",
     "",
-    functional::maximum,
-    functional::minimum,
+    op::maximum,
+    op::minimum,
     std::plus<double>,
     std::multiplies<double>
 ) {
