@@ -1,8 +1,8 @@
 version: 2.1
 
 orbs:
-  win: circleci/windows@5.1  # latest as of April 2026
-  macos: circleci/macos@2.5  # latest as of April 2026
+  win: circleci/windows@5  # latest as of October 2026
+  macos: circleci/macos@3  # latest as of October 2026
 
 commands:
   run-cibuildwheel:
@@ -12,7 +12,7 @@ commands:
         default: ""
       cibw-version:
         type: string
-        default: 4.2.0  # latest as of August 2026
+        default: 4.3.4  # latest as of October 2026
     steps:
       - run:
           name: run cibuildwheel
@@ -100,7 +100,7 @@ jobs:
 
   python-macOS:
     macos:
-      xcode: 26.4.1  # latest as of April 2026
+      xcode: 27.2  # latest as of October 2026
 
     parameters:
       cibw-arch:
@@ -276,7 +276,7 @@ jobs:
 
   cpp-macOS:
     macos:
-      xcode: 26.4.1  # latest as of April 2026
+      xcode: 27.2  # latest as of October 2026
 
     steps:
       - checkout
@@ -357,7 +357,7 @@ jobs:
 
   docs:
     docker:
-      - image: cimg/python:3.13  # As of April 2026, the dwave-ocean-sdk uses 3.13
+      - image: cimg/python:3.13  # As of October 2026, the dwave-ocean-sdk uses 3.13
 
     steps:
       - checkout
@@ -451,7 +451,7 @@ workflows:
             - python-linux
       - python-dependencies:
           name: python-dependencies-latest
-          python-version: "3.14"  # As of August 11 2026, dimod, sklearn, scipy don't have 3.15 wheels
+          python-version: "3.15"
           wheel-tag: cp312-abi3
           requires:
             - python-linux
