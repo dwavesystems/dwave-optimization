@@ -100,7 +100,7 @@ jobs:
 
   python-macOS:
     macos:
-      xcode: 26.6  # latest 26.x as of October 2026
+      xcode: 26.6  # latest 26.x as of October 2026; scipy_openblas64==0.3.34.237.2 doesn't work on 27.x
 
     parameters:
       cibw-arch:
@@ -276,7 +276,7 @@ jobs:
 
   cpp-macOS:
     macos:
-      xcode: 26.6  # latest 26.x as of October 2026
+      xcode: 26.6  # latest 26.x as of October 2026; scipy_openblas64==0.3.34.237.2 doesn't work on 27.x
 
     steps:
       - checkout
