@@ -1,7 +1,7 @@
 [build-system]
 requires = [
-    # Same as dependency-groups.build, last refreshed August 2026
-    "cython~=3.2.0",
+    # Same as dependency-groups.build, last refreshed October 2026
+    "cython~=3.3.0",
     "meson~=1.12.0",
     "meson-python~=0.20.0",
     "ninja~=1.13.0",
@@ -56,12 +56,12 @@ Documentation = "https://docs.dwavequantum.com"
 
 [dependency-groups]
 blas = [
-    # Optional build requirement, last refreshed August 2026
-    "scipy_openblas64==0.3.34.106.0",
+    # Optional build requirement, last refreshed October 2026
+    "scipy_openblas64==0.3.34.237.2",
 ]
 build = [
     # Same as build-system.requires
-    "cython~=3.2.0",
+    "cython~=3.3.0",
     "meson~=1.12.0",  # keep synced with .pre-commit-config.yaml
     "meson-python~=0.20.0",
     "ninja~=1.13.0",
@@ -86,21 +86,25 @@ dependencies-all-oldest = [  # Keep synced with project.optional-dependencies
     "dimod==0.12.16; python_version<'3.13'", # oldest we support
     "dimod==0.12.17; python_version>='3.13' and python_version<'3.14'",
     "dimod==0.12.21; python_version>='3.14' and python_version<'3.15'",
-    "dimod; python_version>='3.15'",  # once dimod has a 3.15 release we'll lock this down
+    "dimod==0.12.23; python_version>='3.15' and python_version<'3.16'",
+    "dimod; python_version>='3.16'",  # once 3.16 releases we'll lock this down
 
     "networkx==3.2; python_version<'3,13'",  # oldest we support
     "networkx==3.4; python_version>='3.13' and python_version<'3.14'",
     "networkx==3.6; python_version>='3.14' and python_version<'3.15'",
-    "networkx; python_version>='3.15'",  # once networkx has a 3.15 release we'll lock this down
+    "networkx==3.7; python_version>='3.15' and python_version<'3.16'",
+    "networkx; python_version>='3.16'",  # once 3.16 releases we'll lock this down
 
     "scikit-learn==1.6.0; python_version<'3.14'", # oldest we support
     "scikit-learn==1.8.0; python_version>='3.14' and python_version<'3.15'",
-    "scikit-learn; python_version>='3.15'",  # once scikit-learn has a 3.15 release we'll lock this down
+    "scikit-learn==1.9.1; python_version>='3.15' and python_version<'3.16'",
+    "scikit-learn; python_version>='3.16'",  # once 3.16 releases we'll lock this down
 
     "scipy==1.13.0; python_version<'3.13'", # first that supports NumPy 2
     "scipy==1.14.1; python_version>='3.13' and python_version<'3.14'",
     "scipy==1.16.3; python_version>='3.14' and python_version<'3.15'",
-    "scipy; python_version>='3.15'",  # once scipy has a 3.15 release we'll lock this down
+    "scipy==1.18.1; python_version>='3.15' and python_version<'3.16'",
+    "scipy; python_version>='3.16'",  # once 3.16 releases we'll lock this down
 ]
 dev = [
     {include-group = "build"},
