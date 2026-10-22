@@ -100,7 +100,7 @@ jobs:
 
   python-macOS:
     macos:
-      xcode: 27.2  # latest as of October 2026
+      xcode: 26.6  # latest 26.x as of October 2026
 
     parameters:
       cibw-arch:
@@ -276,7 +276,7 @@ jobs:
 
   cpp-macOS:
     macos:
-      xcode: 27.2  # latest as of October 2026
+      xcode: 26.6  # latest 26.x as of October 2026
 
     steps:
       - checkout
