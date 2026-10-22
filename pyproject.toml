@@ -56,8 +56,8 @@ Documentation = "https://docs.dwavequantum.com"
 
 [dependency-groups]
 blas = [
-    # Optional build requirement, last refreshed October 2026
-    "scipy_openblas64==0.3.34.237.2",
+    # Optional build requirement, last refreshed August 2026
+    "scipy_openblas64==0.3.34.106.0",
 ]
 build = [
     # Same as build-system.requires
