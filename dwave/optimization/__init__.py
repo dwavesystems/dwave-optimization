@@ -17,7 +17,7 @@ from dwave.optimization.expression import *
 from dwave.optimization.mathematical import *
 from dwave.optimization.model import Model  # noqa: F401
 
-__version__ = "0.8.0.dev"
+__version__ = "0.8.0"
 
 
 def get_include() -> str:
