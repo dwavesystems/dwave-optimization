@@ -25,8 +25,6 @@ namespace dwave::optimization {
 ///
 /// Only values that can be safely cast to `T` are accepted (see `can_cast`),
 /// because precision lost before an addition cannot be compensated for.
-///
-/// Note: relies on strict IEEE semantics, so it does not work with `-ffast-math`.
 template <std::floating_point T>
 class kahan {
  public:

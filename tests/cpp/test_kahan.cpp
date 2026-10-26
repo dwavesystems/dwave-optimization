@@ -39,15 +39,15 @@ TEMPLATE_TEST_CASE("kahan", "", float, double) {
     GIVEN("An uninitialized struct for compensated sum") {
         kahan<TestType> a;
 
-        CHECK(a == TestType(0));
+        CHECK(a == TestType{0});
         CHECK(a.value() == 0);
         CHECK(a.compensator() == 0);
 
         WHEN("We assign a value to it") {
-            a = TestType(10.5);
+            a = TestType{10.5};
 
             THEN("We can read it properly") {
-                CHECK(a == TestType(10.5));
+                CHECK(a == TestType{10.5});
                 CHECK(a.value() == 10.5);
                 CHECK(a.compensator() == 0);
                 CHECK(static_cast<TestType>(a) == 10.5);
@@ -59,10 +59,10 @@ TEMPLATE_TEST_CASE("kahan", "", float, double) {
         TestType d = 0;
         kahan<TestType> d_k;
         for (int i = 0; i < 1000000; i++) {
-            d += TestType(0.0001);
-            d -= TestType(0.00005);
-            d_k += TestType(0.0001);
-            d_k -= TestType(0.00005);
+            d += TestType{0.0001};
+            d -= TestType{0.00005};
+            d_k += TestType{0.0001};
+            d_k -= TestType{0.00005};
         }
 
         THEN("The compensated accumulator is more accurate than the non-compensated one") {
@@ -80,7 +80,7 @@ TEMPLATE_TEST_CASE("kahan", "", float, double) {
         }
 
         AND_WHEN("When we copy-construct another kahan") {
-            kahan<TestType> a(d_k);
+            kahan<TestType> a{d_k};
 
             THEN("The compensator is preserved") {
                 CHECK(a == d_k);
@@ -89,26 +89,26 @@ TEMPLATE_TEST_CASE("kahan", "", float, double) {
         }
     }
 
-    STATIC_REQUIRE(kahan<TestType>(TestType(5)) == kahan<TestType>(TestType(5)));
-    STATIC_REQUIRE(kahan<TestType>(TestType(5)) == TestType(5));
-    STATIC_REQUIRE(kahan<TestType>(TestType(5)) != kahan<TestType>(TestType(6)));
-    STATIC_REQUIRE(kahan<TestType>(TestType(5)) != TestType(6));
+    STATIC_REQUIRE(kahan<TestType>{TestType{5}} == kahan<TestType>{TestType{5}});
+    STATIC_REQUIRE(kahan<TestType>{TestType{5}} == TestType{5});
+    STATIC_REQUIRE(kahan<TestType>{TestType{5}} != kahan<TestType>{TestType{6}});
+    STATIC_REQUIRE(kahan<TestType>{TestType{5}} != TestType{6});
 
-    STATIC_REQUIRE(TestType(5) == kahan<TestType>(TestType(5)));
-    STATIC_REQUIRE(TestType(6) != kahan<TestType>(TestType(5)));
+    STATIC_REQUIRE(TestType{5} == kahan<TestType>{TestType{5}});
+    STATIC_REQUIRE(TestType{6} != kahan<TestType>{TestType{5}});
 }
 
 TEST_CASE("kahan only accepts values that can be safely cast to its type") {
     // Expected values follow NumPy, e.g. np.can_cast(np.int32, np.float32) is False
 
     SECTION("kahan<double> accepts float and integers") {
-        STATIC_REQUIRE(kahan<double>(5) == kahan<double>(5));
-        STATIC_REQUIRE(kahan<double>(5) == 5.0);
-        STATIC_REQUIRE(kahan<double>(5) == 5.0f);
-        STATIC_REQUIRE(kahan<double>(5) == 5);
-        STATIC_REQUIRE(kahan<double>(5) != 6);
-        STATIC_REQUIRE(5 == kahan<double>(5));
-        STATIC_REQUIRE(6 != kahan<double>(5));
+        STATIC_REQUIRE(kahan<double>{5} == kahan<double>{5});
+        STATIC_REQUIRE(kahan<double>{5} == 5.0);
+        STATIC_REQUIRE(kahan<double>{5} == 5.0f);
+        STATIC_REQUIRE(kahan<double>{5} == 5);
+        STATIC_REQUIRE(kahan<double>{5} != 6);
+        STATIC_REQUIRE(5 == kahan<double>{5});
+        STATIC_REQUIRE(6 != kahan<double>{5});
 
         STATIC_REQUIRE(addable<kahan<double>, float>);
         STATIC_REQUIRE(addable<kahan<double>, std::int64_t>);
@@ -116,7 +116,7 @@ TEST_CASE("kahan only accepts values that can be safely cast to its type") {
     }
 
     SECTION("kahan<float> accepts small integers") {
-        STATIC_REQUIRE(kahan<float>(std::int16_t(5)) == std::int16_t(5));
+        STATIC_REQUIRE(kahan<float>{std::int16_t{5}} == std::int16_t{5});
         STATIC_REQUIRE(addable<kahan<float>, std::int16_t>);
         STATIC_REQUIRE(subtractable<kahan<float>, std::int8_t>);
     }
