@@ -60,8 +60,8 @@ struct QuadraticModelNodeData : public NodeStateData {
         effective_changes_.clear();
     }
 
-    double_kahan value_old;
-    double_kahan value;
+    kahan<double> value_old;
+    kahan<double> value;
     mutable Update update;
 
     // This will evolve to current state during propagation.

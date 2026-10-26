@@ -12,50 +12,65 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <cmath>
+#include <concepts>
+#include <cstdint>
+
+#include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_all.hpp>
 
 #include "kahan.hpp"
 
-using Catch::Matchers::RangeEquals;
-
 namespace dwave::optimization {
 
-TEST_CASE("double_kahan") {
-    GIVEN("An uninitialized struct for compensated sum") {
-        double_kahan a;
+namespace {
 
-        CHECK(a == 0);
+// Test whether `k += u`, `k -= u` and `k == u` compile.
+template <typename K, typename U>
+concept addable = requires(K k, U u) { k += u; };
+template <typename K, typename U>
+concept subtractable = requires(K k, U u) { k -= u; };
+template <typename K, typename U>
+concept comparable = requires(K k, U u) { k == u; };
+
+}  // namespace
+
+TEMPLATE_TEST_CASE("kahan", "", float, double) {
+    GIVEN("An uninitialized struct for compensated sum") {
+        kahan<TestType> a;
+
+        CHECK(a == TestType(0));
         CHECK(a.value() == 0);
         CHECK(a.compensator() == 0);
 
         WHEN("We assign a value to it") {
-            a = 10.5;
+            a = TestType(10.5);
 
             THEN("We can read it properly") {
-                CHECK(a == 10.5);
+                CHECK(a == TestType(10.5));
                 CHECK(a.value() == 10.5);
                 CHECK(a.compensator() == 0);
+                CHECK(static_cast<TestType>(a) == 10.5);
             }
         }
     }
 
     WHEN("We run a loop with predefined additions and subtractions") {
-        double d = 0;
-        double_kahan d_k = 0;
+        TestType d = 0;
+        kahan<TestType> d_k;
         for (int i = 0; i < 1000000; i++) {
-            d += 0.0001;
-            d -= 0.00005;
-            d_k += 0.0001;
-            d_k -= 0.00005;
+            d += TestType(0.0001);
+            d -= TestType(0.00005);
+            d_k += TestType(0.0001);
+            d_k -= TestType(0.00005);
         }
 
         THEN("The compensated accumulator is more accurate than the non-compensated one") {
-            CHECK(std::abs(d_k.value() - 5000.0) < std::abs(d - 5000.0));
+            CHECK(std::abs(d_k.value() - 50) < std::abs(d - 50));
         }
 
-        AND_WHEN("When we copy-assign another double_kahan") {
-            double_kahan a;
+        AND_WHEN("When we copy-assign another kahan") {
+            kahan<TestType> a;
             a = d_k;
 
             THEN("The compensator is preserved") {
@@ -64,8 +79,8 @@ TEST_CASE("double_kahan") {
             }
         }
 
-        AND_WHEN("When we copy-construct another double_kahan") {
-            double_kahan a(d_k);
+        AND_WHEN("When we copy-construct another kahan") {
+            kahan<TestType> a(d_k);
 
             THEN("The compensator is preserved") {
                 CHECK(a == d_k);
@@ -74,17 +89,48 @@ TEST_CASE("double_kahan") {
         }
     }
 
-    STATIC_REQUIRE(double_kahan(5) == double_kahan(5));
-    STATIC_REQUIRE(double_kahan(5) == 5.0);
-    STATIC_REQUIRE(double_kahan(5) == 5);
-    STATIC_REQUIRE(double_kahan(5) != double_kahan(6));
-    STATIC_REQUIRE(double_kahan(5) != 6.0);
-    STATIC_REQUIRE(double_kahan(5) != 6);
+    STATIC_REQUIRE(kahan<TestType>(TestType(5)) == kahan<TestType>(TestType(5)));
+    STATIC_REQUIRE(kahan<TestType>(TestType(5)) == TestType(5));
+    STATIC_REQUIRE(kahan<TestType>(TestType(5)) != kahan<TestType>(TestType(6)));
+    STATIC_REQUIRE(kahan<TestType>(TestType(5)) != TestType(6));
 
-    STATIC_REQUIRE(5.0 == double_kahan(5));
-    STATIC_REQUIRE(5 == double_kahan(5));
-    STATIC_REQUIRE(6.0 != double_kahan(5));
-    STATIC_REQUIRE(6 != double_kahan(5));
+    STATIC_REQUIRE(TestType(5) == kahan<TestType>(TestType(5)));
+    STATIC_REQUIRE(TestType(6) != kahan<TestType>(TestType(5)));
+}
+
+TEST_CASE("kahan only accepts values that can be safely cast to its type") {
+    // Expected values follow NumPy, e.g. np.can_cast(np.int32, np.float32) is False
+
+    SECTION("kahan<double> accepts float and integers") {
+        STATIC_REQUIRE(kahan<double>(5) == kahan<double>(5));
+        STATIC_REQUIRE(kahan<double>(5) == 5.0);
+        STATIC_REQUIRE(kahan<double>(5) == 5.0f);
+        STATIC_REQUIRE(kahan<double>(5) == 5);
+        STATIC_REQUIRE(kahan<double>(5) != 6);
+        STATIC_REQUIRE(5 == kahan<double>(5));
+        STATIC_REQUIRE(6 != kahan<double>(5));
+
+        STATIC_REQUIRE(addable<kahan<double>, float>);
+        STATIC_REQUIRE(addable<kahan<double>, std::int64_t>);
+        STATIC_REQUIRE(subtractable<kahan<double>, std::int64_t>);
+    }
+
+    SECTION("kahan<float> accepts small integers") {
+        STATIC_REQUIRE(kahan<float>(std::int16_t(5)) == std::int16_t(5));
+        STATIC_REQUIRE(addable<kahan<float>, std::int16_t>);
+        STATIC_REQUIRE(subtractable<kahan<float>, std::int8_t>);
+    }
+
+    SECTION("kahan<float> rejects double and larger integers") {
+        STATIC_REQUIRE(not std::constructible_from<kahan<float>, double>);
+        STATIC_REQUIRE(not addable<kahan<float>, double>);
+        STATIC_REQUIRE(not subtractable<kahan<float>, double>);
+        STATIC_REQUIRE(not comparable<kahan<float>, double>);
+
+        STATIC_REQUIRE(not std::constructible_from<kahan<float>, std::int32_t>);
+        STATIC_REQUIRE(not addable<kahan<float>, std::int32_t>);
+        STATIC_REQUIRE(not comparable<kahan<float>, std::int32_t>);
+    }
 }
 
 }  // namespace dwave::optimization
