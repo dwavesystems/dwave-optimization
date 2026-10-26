@@ -28,6 +28,11 @@ if cpp.has_argument('-g1')
     add_project_arguments('-g1', language: 'cpp')
 endif
 
+# We also want to use ssize_t to match Py_ssize_t if our compiler has it
+if cpp.has_type('ssize_t', prefix: '#include <sys/types.h>')
+    add_project_arguments('-DDWOPT__SYS_TYPES_HAS_SSIZE_T', language: 'cpp')
+endif
+
 # Also, set the fallback flag if we have it
 if get_option('force-fallback')
     add_project_arguments('-DDWOPT__FORCE_FALLBACK', language: 'cpp')

@@ -20,39 +20,22 @@
 // but it's not always available.
 // We will assert the match between ssize_t and Py_ssize_t in the Cython code.
 
-#if defined(__has_include)
-#if __has_include(<sys/types.h>)
+#if defined(DWOPT__SYS_TYPES_HAS_SSIZE_T)
 
-// Ok, we have sys/types.h which on POSIX systems has ssize_t.
-// However, Windows also has sys/types.h but does not have ssize_t.
-// POSIX systems are required to have SSIZE_MAX in limits.h so we use that
-// to distinguish these cases.
-// In theory there could be some weird compiler chain that passes all of these
-// but doesn't have ssize_t, but I think we're reasonably safe.
-
-#include <climits>
-
-#if defined(SSIZE_MAX)
+// Meson did a compiler probe and set the DWOPT__SYS_TYPES_HAS_SSIZE_T flag,
+// or the user set it explicitly.
+// We add it to the dwave::optimization namespace so that
+// dwave::optimization::ssize_t works everywhere.
 
 #include <sys/types.h>
-
-// Ok, we (probably) have ssize_t!
-// We do add it to the dwave::optimization namespace so that
-// dwave::optimization::ssize_t works everywhere.
 
 namespace dwave::optimization {
 using ::ssize_t;
 }  // namespace dwave::optimization
 
-#define DWOPT__SYS_TYPES_HAS_SSIZE_T
+#else
 
-#endif
-#endif
-#endif
-
-#if !defined(DWOPT__SYS_TYPES_HAS_SSIZE_T)
-
-// Fallback to using std::ptrdiff_t because that supports Win32/Win64 equally well
+// Fallback to using std::ptrdiff_t because that supports Win32/Win64 equally well.
 
 #include <cstddef>
 
