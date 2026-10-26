@@ -14,7 +14,7 @@
 
 #include "dwave-optimization/nodes/quadratic_model.hpp"
 
-#include "../double_kahan.hpp"
+#include "../kahan.hpp"
 
 namespace dwave::optimization {
 using index_type = int;
