@@ -279,7 +279,7 @@ TEST_CASE("SoftMaxNode") {
     SECTION("predecessor replacement") {
         auto graph = Graph();
 
-        auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
+        auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 1, 2});
         auto* c1_ptr = graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7});
 
         auto* softmax_ptr = graph.emplace_node<SoftMaxNode>(c0_ptr);
