@@ -14,10 +14,15 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cassert>
-#include <cmath>
+#include <compare>
 #include <concepts>
+#include <cstdlib>
+#include <initializer_list>
+#include <iterator>
 #include <memory>
+#include <ranges>
 #include <span>
 #include <utility>
 
@@ -79,7 +84,13 @@ requires(
     }
 
     /// Move constructor
-    BufferIterator(BufferIterator&&) = default;
+    BufferIterator(BufferIterator&& other) noexcept :
+        ptr_(std::exchange(other.ptr_, nullptr)),
+        format_(std::exchange(other.format_, FormatCharacter::double_)),
+        ndim_(std::exchange(other.ndim_, 0)),
+        shape_(std::exchange(other.shape_, nullptr)),
+        strides_(std::exchange(other.strides_, nullptr)),
+        loc_(std::move(other.loc_)) {}
 
     /// Construct a `BufferIterator` from a pointer, shape, and strides.
     ///
@@ -158,7 +169,15 @@ requires(
     }
 
     /// Move assignment
-    BufferIterator& operator=(BufferIterator&&) = default;
+    BufferIterator& operator=(BufferIterator&& other) noexcept {
+        ptr_ = std::exchange(other.ptr_, nullptr);
+        format_ = std::exchange(other.format_, FormatCharacter::double_);
+        ndim_ = std::exchange(other.ndim_, 0);
+        shape_ = std::exchange(other.shape_, nullptr);
+        strides_ = std::exchange(other.strides_, nullptr);
+        loc_ = std::move(other.loc_);
+        return *this;
+    }
 
     /// Destructor
     ~BufferIterator() = default;
@@ -278,10 +297,16 @@ requires(
     }
 
     /// Return an iterator pointing to the location `rhs` steps from `lhs`.
-    friend BufferIterator operator+(BufferIterator lhs, difference_type rhs) { return lhs += rhs; }
+    friend BufferIterator operator+(BufferIterator lhs, difference_type rhs) {
+        lhs += rhs;
+        return lhs;
+    }
 
     /// Return an iterator pointing to the location `lhs` steps from `rhs`.
-    friend BufferIterator operator+(difference_type lhs, BufferIterator rhs) { return rhs += lhs; }
+    friend BufferIterator operator+(difference_type lhs, BufferIterator rhs) {
+        rhs += lhs;
+        return rhs;
+    }
 
     /// Return an iterator pointing to the location `rhs` steps from `lhs`, where `rhs` is
     /// a multi-index. Note that this does not roll over!
@@ -291,7 +316,10 @@ requires(
     }
 
     /// Return an iterator pointing to the location `rhs` steps before `lhs`.
-    friend BufferIterator operator-(BufferIterator lhs, difference_type rhs) { return lhs -= rhs; }
+    friend BufferIterator operator-(BufferIterator lhs, difference_type rhs) {
+        lhs -= rhs;
+        return lhs;
+    }
 
     /// Return the number of times we would need to increment `rhs` in order to reach `lhs`.
     friend difference_type operator-(const BufferIterator& lhs, const BufferIterator& rhs) {
@@ -341,7 +369,9 @@ requires(
 
     /// Return the location in the shaped array that the iterator currently
     /// points to.
-    std::span<const ssize_t> location() const { return std::span<ssize_t>(loc_.get(), ndim_); }
+    std::span<const ssize_t> location() const {
+        return std::span<const ssize_t>(loc_.get(), ndim_);
+    }
 
  private:
     void increment_multi_(shape_like auto&& multi_increment) {
@@ -392,7 +422,9 @@ requires(
         // current location in the struct returned by it.
         // Unfortunately std::div() is not templated, but overloaded,
         // so we use decltype instead.
-        decltype(std::div(ssize_t(), ssize_t())) qr{.quot = n, .rem = 0};
+        decltype(std::div(ssize_t(), ssize_t())) qr;
+        qr.quot = n;
+        qr.rem = 0;
 
         for (ssize_t axis = ndim_ - 1; axis >= 1; --axis) {
             // A bit of sanity checking on our location
