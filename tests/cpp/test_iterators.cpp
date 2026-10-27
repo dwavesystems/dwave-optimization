@@ -15,19 +15,16 @@
 #include <array>
 #include <cstdint>
 #include <numeric>
-#include <random>
 #include <vector>
 
 #include <catch2/benchmark/catch_benchmark_all.hpp>
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
-#include <catch2/generators/catch_generators_random.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
 
 #include "dwave-optimization/iterators.hpp"
 
-using Catch::Generators::RandomIntegerGenerator;
 using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
@@ -195,6 +192,33 @@ TEMPLATE_LIST_TEST_CASE("BufferIterator", "", DTypes) {
 }
 
 TEST_CASE("BufferIterator") {
+    SECTION("Move semantics") {
+        const auto values = std::array<double, 2>{1, 2};
+        const auto shape = std::array<ssize_t, 1>{2};
+        const auto strides = std::array<ssize_t, 1>{sizeof(double)};
+
+        auto it1 = BufferIterator<const double, const double>();
+        auto it2 = BufferIterator<const double>(values.data(), shape, strides);
+
+        CHECK_THAT(it1.location(), RangeEquals(std::vector<ssize_t>{}));
+        CHECK_THAT(it2.location(), RangeEquals(std::vector<ssize_t>{0}));
+
+        SECTION("Move construction") {
+            auto it3 = BufferIterator<const double, const double>(std::move(it2));
+
+            CHECK_THAT(it1.location(), RangeEquals(std::vector<ssize_t>{}));
+            CHECK_THAT(it2.location(), RangeEquals(std::vector<ssize_t>{}));
+            CHECK_THAT(it3.location(), RangeEquals(std::vector<ssize_t>{0}));
+        }
+
+        SECTION("Move assignment") {
+            it1 = std::move(it2);
+
+            CHECK_THAT(it1.location(), RangeEquals(std::vector<ssize_t>{0}));
+            CHECK_THAT(it2.location(), RangeEquals(std::vector<ssize_t>{}));
+        }
+    }
+
     GIVEN("A buffer encoding 2d array [[0, 1, 2], [3, 4, 5]]") {
         auto values = std::array<double, 6>{0, 1, 2, 3, 4, 5};
         auto shape = std::array<ssize_t, 2>{2, 3};

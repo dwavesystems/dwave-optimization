@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Fix C++ ``BufferIterator`` move constructor and assignment operator.
+    Previously the moved-from iterator was left in an invalid state and therefore
+    subsequent interactions with it could crash.
