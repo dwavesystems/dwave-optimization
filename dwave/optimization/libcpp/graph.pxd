@@ -71,3 +71,15 @@ cdef extern from "dwave-optimization/graph.hpp" namespace "dwave::optimization" 
         void add_constraint(ArrayNode*) except+
         void topological_sort()
         bool topologically_sorted() const
+
+
+# We want to assert that Py_ssize_t is the same thing as the ssize_t that we
+# use at the C++ level. By putting it in an `cdef extern from *` declaration
+# this static_assert() gets put in the files that cimport from this one.
+# It's overkill but the easiest way to get the static_assert put somewhere that
+# has both `dwave-optimization/common.hpp` and `Python.h`.
+cdef extern from *:
+    """
+    static_assert(std::same_as<Py_ssize_t, dwave::optimization::ssize_t>);
+    """
+    pass

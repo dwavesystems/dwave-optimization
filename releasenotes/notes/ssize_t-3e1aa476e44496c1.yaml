@@ -1,0 +1,3 @@
+---
+features:
+  - Ensure that ``dwave::optimization::ssize_t`` works on all compiler chains.
