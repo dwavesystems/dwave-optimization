@@ -65,8 +65,9 @@ def _require(
     positive: bool = False,
     square: bool = False,
 ) -> numpy.typing.NDArray[typing.Any]:
-    """Coerce the given array-like into the form we want and raise a consistent
-    error message if it cannot be coerced.
+    """Coerce the given array-like into the form we want.
+
+    Raise a consistent error message if it cannot be coerced.
     """
     try:
         array = np.asarray(array_like, order="C", dtype=dtype)
@@ -110,7 +111,6 @@ def _require(
 # set of features we'd eventually like
 def _from_constrained_quadratic_model(cqm) -> Model:
     """Construct a NL model from a :class:`dimod.ConstrainedQuadraticModel`."""
-
     for v in cqm.variables:
         if cqm.vartype(v).name != "BINARY":
             raise ValueError("CQM must only have binary variables")
@@ -240,7 +240,6 @@ def bin_packing(weights: numpy.typing.ArrayLike, capacity: float) -> Model:
         Objective value #0 is 2.0 for packing
             [[0.0, 1.0, 0.0, 0.0], [1.0, 0.0, 1.0, 1.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]]
     """
-
     weights = _require("weights", weights, dtype=float, nonnegative=True, ndim=1)
 
     if weights.shape[0] == 0:
@@ -399,7 +398,6 @@ def capacitated_vehicle_routing(
         Objective value #0 is 423.8 for routes
             [[2.0, 7.0, 1.0, 5.0], [4.0, 3.0, 8.0, 6.0, 0.0]]
     """
-
     if not isinstance(number_of_vehicles, int):
         raise TypeError("`number_of_vehicles` must be an integer.")
 
@@ -667,7 +665,6 @@ def capacitated_vehicle_routing_with_time_windows(
         Objective value #0 is 103.0 for routes
             [[0.0, 2.0], [1.0]]
     """
-
     if not isinstance(number_of_vehicles, int):
         raise TypeError("`number_of_vehicles` must be an integer.")
 
@@ -931,7 +928,6 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
         integer values representing various job orderings.
 
     Examples:
-
         This example creates a model for a flow-shop-scheduling problem
         with three jobs on two machines. For example, the first job
         requires processing for 20 time units on the second machine in
@@ -1127,7 +1123,6 @@ def job_shop_scheduling(
         array.
 
     Examples:
-
         This example creates a model for a job-shop-scheduling problem
         with three jobs on three machines. For example, the first job
         requires processing for 2 time units on the first machine, then 1 time
@@ -1375,7 +1370,6 @@ def knapsack(
         set representing possible items included in the knapsack.
 
     Examples:
-
         This example creates a model for a knapsack problem
         with four items.
 
@@ -1656,7 +1650,6 @@ def quadratic_assignment(
         list representing assignments of facilities to locations.
 
     Examples:
-
         This example creates a model for a quadratic-assignment problem
         that has three facilites to place in three locations.
 
@@ -1834,7 +1827,6 @@ def traveling_salesperson(
         representing possible itineraries through the required cities.\ [#]_
 
     Examples:
-
         This example creates a model for a traveling-salesperson problem
         that visits three cities, where the distance depends on the direction of
         travel.

@@ -84,7 +84,7 @@ def expression(function: collections.abc.Callable, **kwargs) -> Expression: ...
 def expression(**kwargs) -> collections.abc.Callable: ...
 
 
-def expression(*args, **kwargs):
+def expression(*args, **kwargs):  # noqa: D417
     """Transform a function into an :class:`Expression`.
 
     Such expressions are used as input by some symbols.
