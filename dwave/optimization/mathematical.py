@@ -1915,9 +1915,9 @@ def multiply(
     Equivalently, you can use the ``*`` operator (e.g., :code:`i * j`).
 
     Args:
-        x1: Operand array symbol or |array-like|_ to be multiplied.
-        x2: Operand array symbol or |array-like|_ to be multiplied.
-        *xi: Additional array symbol or |array-like|_ to be multiplied.
+        x1: Operand array symbol or |array-like|_.
+        x2: Operand array symbol or |array-like|_.
+        *xi: Additional array symbol or |array-like|_.
 
     Returns:
         Successor symbol that multiplies the predecessor symbols (and/or arrays)
