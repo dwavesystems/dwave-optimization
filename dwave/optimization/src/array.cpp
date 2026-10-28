@@ -14,8 +14,17 @@
 
 #include "dwave-optimization/array.hpp"
 
+#include <algorithm>
 #include <array>
+#include <cassert>
+#include <cstddef>
 #include <ranges>
+#include <span>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include "dwave-optimization/common.hpp"
 
 namespace dwave::optimization {
 
@@ -286,11 +295,90 @@ std::vector<ssize_t> broadcast_shapes(
 
     return shape;
 }
-std::vector<ssize_t> broadcast_shapes(
-    std::initializer_list<ssize_t> lhs,
-    std::initializer_list<ssize_t> rhs
+
+std::vector<ssize_t> broadcast_strides_to(
+    std::span<const ssize_t> from_shape,
+    std::span<const ssize_t> from_strides,
+    std::span<const ssize_t> to_shape
 ) {
-    return broadcast_shapes(std::span(lhs), std::span(rhs));
+    auto error_msg = [&]() -> std::string {
+        return "cannot broadcast shape " + shape_to_string(from_shape) + " to " +
+               shape_to_string(to_shape);
+    };
+
+    // First check for consistency between the two from_ arguments.
+    if (from_shape.size() != from_strides.size()) {
+        throw std::invalid_argument("from_shape and from_strides have different sizes");
+    }
+
+    // Next handle the (trivial) case where from_ corresponds to a scalar.
+    // In that case all of our strides are 0.
+    if (from_shape.empty()) return std::vector<ssize_t>(to_shape.size(), 0);
+
+    if (from_shape.size() > to_shape.size()) {
+        throw std::invalid_argument(
+            error_msg() + "; cannot broadcast to a smaller number of dimensions"
+        );
+    }
+
+    assert(to_shape.size() > 0 and from_shape.size() > 0);  // we just checked this
+    if (from_shape[0] < 0) {
+        // if from_ is dynamic, then to_ must also be dynamic and have the same number of dimensions
+        // because otherwise we'd end up with the dynamic axis not in the first position
+        if (to_shape[0] >= 0) {
+            throw std::invalid_argument(
+                error_msg() + "; cannot broadcast a dynamic shape to a fixed shape"
+            );
+        }
+        if (from_shape.size() != to_shape.size()) {
+            throw std::invalid_argument(
+                error_msg() +
+                "; cannot broadcast dynamic shapes with a different number of dimensions"
+            );
+        }
+    } else if (to_shape[0] < 0 and from_shape[0] != 1) {
+        throw std::invalid_argument(
+            error_msg() + "; cannot broadcast a fixed shape to a dynamic shape"
+        );
+    }
+
+    // Check that our shapes don't have any negative-sized dimensions (aside from the first)
+    if (std::ranges::any_of(from_shape | std::views::drop(1), [](const ssize_t s) {
+            return s < 0;
+        })) {
+        throw std::invalid_argument(error_msg() + "; negative axis size for axis > 0");
+    }
+    if (std::ranges::any_of(to_shape | std::views::drop(1), [](const ssize_t s) {
+            return s < 0;
+        })) {
+        throw std::invalid_argument(error_msg() + "; negative axis size for axis > 0");
+    }
+
+    const ssize_t offset = to_shape.size() - from_shape.size();
+
+    std::vector<ssize_t> to_strides;
+
+    for (ssize_t axis = 0, ndim = to_shape.size(); axis < ndim; ++axis) {
+        if (axis < offset) {
+            // leading dimensions are all stride 0
+            to_strides.emplace_back(0);
+        } else if (from_shape[axis - offset] == to_shape[axis]) {
+            // to_ and from_ match, so the strides are preserved
+            to_strides.emplace_back(from_strides[axis - offset]);
+        } else if (from_shape[axis - offset] == 1) {
+            // from_ axis has size 1, so we stretch it to match to_
+            to_strides.emplace_back(0);
+        } else {
+            // not compatible!
+            throw std::invalid_argument(
+                error_msg() + "; cannot broadcast size " +
+                std::to_string(from_shape[axis - offset]) + " axis to " +
+                std::to_string(to_shape[axis])
+            );
+        }
+    }
+
+    return to_strides;
 }
 
 void deduplicate_diff(std::vector<Update>& diff) {

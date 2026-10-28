@@ -13,11 +13,14 @@
 //    limitations under the License.
 
 #include <sstream>
+#include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
 
 #include "dwave-optimization/array.hpp"
+#include "dwave-optimization/common.hpp"
 #include "dwave-optimization/state.hpp"
 
 using Catch::Matchers::RangeEquals;
@@ -463,69 +466,189 @@ TEST_CASE("Update") {
 
 TEST_CASE("Test broadcast_shapes()") {
     SECTION("(256,256,3) x (3,) -> (256,256,3)") {
-        CHECK_THAT(broadcast_shapes({256, 256, 3}, {3}), RangeEquals({256, 256, 3}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{256, 256, 3}, std::vector<ssize_t>{3}),
+            RangeEquals({256, 256, 3})
+        );
     }
     SECTION("(8,1,6,1) x (7,1,5) -> (8,7,6,5)") {
-        CHECK_THAT(broadcast_shapes({8, 1, 6, 1}, {7, 1, 5}), RangeEquals({8, 7, 6, 5}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{8, 1, 6, 1}, std::vector<ssize_t>{7, 1, 5}),
+            RangeEquals({8, 7, 6, 5})
+        );
     }
     SECTION("(7,1,5) x (8,1,6,1) -> (8,7,6,5)") {
-        CHECK_THAT(broadcast_shapes({7, 1, 5}, {8, 1, 6, 1}), RangeEquals({8, 7, 6, 5}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{7, 1, 5}, std::vector<ssize_t>{8, 1, 6, 1}),
+            RangeEquals({8, 7, 6, 5})
+        );
     }
     SECTION("(5,4) x (1,) -> (5, 4)") {
-        CHECK_THAT(broadcast_shapes({5, 4}, {1}), RangeEquals({5, 4}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{5, 4}, std::vector<ssize_t>{1}),
+            RangeEquals({5, 4})
+        );
     }
     SECTION("(5,4) x (4,) -> (5, 4)") {
-        CHECK_THAT(broadcast_shapes({5, 4}, {4}), RangeEquals({5, 4}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{5, 4}, std::vector<ssize_t>{4}),
+            RangeEquals({5, 4})
+        );
     }
     SECTION("(15,3,5) x (15,1,5) -> (15,3,5)") {
-        CHECK_THAT(broadcast_shapes({15, 3, 5}, {15, 1, 5}), RangeEquals({15, 3, 5}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{15, 3, 5}, std::vector<ssize_t>{15, 1, 5}),
+            RangeEquals({15, 3, 5})
+        );
     }
     SECTION("(15,3,5) x (3,5) -> (15,3,5)") {
-        CHECK_THAT(broadcast_shapes({15, 3, 5}, {3, 5}), RangeEquals({15, 3, 5}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{15, 3, 5}, std::vector<ssize_t>{3, 5}),
+            RangeEquals({15, 3, 5})
+        );
     }
     SECTION("(15,3,5) x (3,1) -> (15,3,5)") {
-        CHECK_THAT(broadcast_shapes({15, 3, 5}, {3, 1}), RangeEquals({15, 3, 5}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{15, 3, 5}, std::vector<ssize_t>{3, 1}),
+            RangeEquals({15, 3, 5})
+        );
     }
-    SECTION("(-1,) x (1,) -> (-1,)") { CHECK_THAT(broadcast_shapes({-1}, {1}), RangeEquals({-1})); }
-    SECTION("(1,) x (-1,) -> (-1,)") { CHECK_THAT(broadcast_shapes({1}, {-1}), RangeEquals({-1})); }
+    SECTION("(-1,) x (1,) -> (-1,)") {
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{-1}, std::vector<ssize_t>{1}), RangeEquals({-1})
+        );
+    }
+    SECTION("(1,) x (-1,) -> (-1,)") {
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{1}, std::vector<ssize_t>{-1}), RangeEquals({-1})
+        );
+    }
     SECTION("(1,2) x (-1,1) -> (-1,2)") {
-        CHECK_THAT(broadcast_shapes({1, 2}, {-1, 1}), RangeEquals({-1, 2}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{1, 2}, std::vector<ssize_t>{-1, 1}),
+            RangeEquals({-1, 2})
+        );
     }
-    SECTION("() x (0,) -> (0,)") { CHECK_THAT(broadcast_shapes({}, {0}), RangeEquals({0})); }
-    SECTION("(-1,1) x (1,0) -> (3,0)") {
-        CHECK_THAT(broadcast_shapes({-1, 1}, {1, 0}), RangeEquals({-1, 0}));
+    SECTION("() x (0,) -> (0,)") {
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{}, std::vector<ssize_t>{0}), RangeEquals({0})
+        );
+    }
+    SECTION("(-1,1) x (1,0) -> (-1,0)") {
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{-1, 1}, std::vector<ssize_t>{1, 0}),
+            RangeEquals({-1, 0})
+        );
     }
     SECTION("(3,1) x (1,0) -> (3,0)") {
-        CHECK_THAT(broadcast_shapes({3, 1}, {1, 0}), RangeEquals({3, 0}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{3, 1}, std::vector<ssize_t>{1, 0}),
+            RangeEquals({3, 0})
+        );
     }
     SECTION("(3,1) x (0,1,0) -> (0,3,0)") {
-        CHECK_THAT(broadcast_shapes({3, 1}, {0, 1, 0}), RangeEquals({0, 3, 0}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{3, 1}, std::vector<ssize_t>{0, 1, 0}),
+            RangeEquals({0, 3, 0})
+        );
     }
     SECTION("(-1,2) x (-1,1) -> (-1,2)") {
-        CHECK_THAT(broadcast_shapes({-1, 2}, {-1, 1}), RangeEquals({-1, 2}));
+        CHECK_THAT(
+            broadcast_shapes(std::vector<ssize_t>{-1, 2}, std::vector<ssize_t>{-1, 1}),
+            RangeEquals({-1, 2})
+        );
     }
     SECTION("(1,1) x (-1,) -> invalid") {
         CHECK_THROWS_WITH(
-            broadcast_shapes({1, 1}, {-1}),
+            broadcast_shapes(std::vector<ssize_t>{1, 1}, std::vector<ssize_t>{-1}),
             "operands could not be broadcast together with shapes (1, 1) (-1,)"
         );
     }
     SECTION("(3,) x (4,)") {
         CHECK_THROWS_WITH(
-            broadcast_shapes({3}, {4}),
+            broadcast_shapes(std::vector<ssize_t>{3}, std::vector<ssize_t>{4}),
             "operands could not be broadcast together with shapes (3,) (4,)"
         );
     }
     SECTION("(2,1) x (8,4,3)") {
         CHECK_THROWS_WITH(
-            broadcast_shapes({2, 1}, {8, 4, 3}),
+            broadcast_shapes(std::vector<ssize_t>{2, 1}, std::vector<ssize_t>{8, 4, 3}),
             "operands could not be broadcast together with shapes (2, 1) (8, 4, 3)"
         );
     }
     SECTION("(-1,3) x (8,4,3)") {
         CHECK_THROWS_WITH(
-            broadcast_shapes({-1, 3}, {8, 4, 3}),
+            broadcast_shapes(std::vector<ssize_t>{-1, 3}, std::vector<ssize_t>{8, 4, 3}),
             "operands could not be broadcast together with shapes (-1, 3) (8, 4, 3)"
+        );
+    }
+}
+
+TEST_CASE("broadcast_strides_to()") {
+    SECTION("() -> (2,2)") {
+        CHECK_THAT(
+            broadcast_strides_to(
+                std::vector<ssize_t>{}, std::vector<ssize_t>{}, std::vector<ssize_t>{2, 2}
+            ),
+            RangeEquals({0, 0})
+        );
+    }
+    SECTION("(3,) -> (256,256,3)") {
+        CHECK_THAT(
+            broadcast_strides_to(
+                std::vector<ssize_t>{3}, std::vector<ssize_t>{8}, std::vector<ssize_t>{256, 256, 3}
+            ),
+            RangeEquals({0, 0, 8})
+        );
+    }
+    SECTION("(7,1,5) -> (8,7,6,5)") {
+        CHECK_THAT(
+            broadcast_strides_to(
+                std::vector<ssize_t>{7, 1, 5},
+                std::vector<ssize_t>{280, 40, 8},
+                std::vector<ssize_t>{8, 7, 6, 5}
+            ),
+            RangeEquals({0, 280, 0, 8})
+        );
+    }
+    SECTION("(1,) -> (5,4)") {
+        CHECK_THAT(
+            broadcast_strides_to(
+                std::vector<ssize_t>{1}, std::vector<ssize_t>{16}, std::vector<ssize_t>{5, 4}
+            ),
+            RangeEquals({0, 0})
+        );
+    }
+    SECTION("(4,) -> (5,4)") {
+        CHECK_THAT(
+            broadcast_strides_to(
+                std::vector<ssize_t>{4}, std::vector<ssize_t>{16}, std::vector<ssize_t>{5, 4}
+            ),
+            RangeEquals({0, 16})
+        );
+    }
+    SECTION("(1,) -> (-1,)") {
+        CHECK_THAT(
+            broadcast_strides_to(
+                std::vector<ssize_t>{1}, std::vector<ssize_t>{-8}, std::vector<ssize_t>{-1}
+            ),
+            RangeEquals({0})
+        );
+    }
+    SECTION("(1,-1) -> (1,1)") {
+        CHECK_THROWS_WITH(
+            broadcast_strides_to(
+                std::vector<ssize_t>{1, -1}, std::vector<ssize_t>{8, 8}, std::vector<ssize_t>{1, 1}
+            ),
+            "cannot broadcast shape (1, -1) to (1, 1); negative axis size for axis > 0"
+        );
+    }
+    SECTION("(1,) -> (1,-1)") {
+        CHECK_THROWS_WITH(
+            broadcast_strides_to(
+                std::vector<ssize_t>{1}, std::vector<ssize_t>{8}, std::vector<ssize_t>{1, -1}
+            ),
+            "cannot broadcast shape (1,) to (1, -1); negative axis size for axis > 0"
         );
     }
 }

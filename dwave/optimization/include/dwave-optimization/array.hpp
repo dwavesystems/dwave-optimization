@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <concepts>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -699,13 +700,25 @@ bool array_shape_equal(const std::span<const Array* const> array_ptrs);
 /// Get the shape induced by broadcasting two arrays together.
 /// See https://numpy.org/doc/stable/user/basics.broadcasting.html.
 /// Raises an exception if the two arrays cannot be broadcast together
-std::vector<ssize_t> broadcast_shapes(
-    const std::span<const ssize_t> lhs,
-    const std::span<const ssize_t> rhs
-);
-std::vector<ssize_t> broadcast_shapes(
-    std::initializer_list<ssize_t> lhs,
-    std::initializer_list<ssize_t> rhs
+std::vector<ssize_t> broadcast_shapes(std::span<const ssize_t> lhs, std::span<const ssize_t> rhs);
+template <std::convertible_to<std::span<const ssize_t>>... Shapes>
+std::vector<ssize_t> broadcast_shapes(std::span<const ssize_t> shape, Shapes... shapes) {
+    std::vector<ssize_t> out = std::ranges::to<std::vector<ssize_t>>(shape);
+
+    if constexpr (sizeof...(shapes) > 0) {
+        ((out = broadcast_shapes(out, std::span<const ssize_t>(shapes))), ...);
+    }
+
+    return out;
+}
+
+/// Get the strides that would broadcast an array with ``from_shape`` and ``from_strides``
+/// to an array with shape ``to_shape``.
+/// Raises an exception if ``from_shape`` cannot be broadcast to ``to_shape``.
+std::vector<ssize_t> broadcast_strides_to(
+    std::span<const ssize_t> from_shape,
+    std::span<const ssize_t> from_strides,
+    std::span<const ssize_t> to_shape
 );
 
 /// Sort and deduplicate the given vector of updates in-place.

@@ -1008,27 +1008,43 @@ class TestBroadcastTo(utils.SymbolTests):
     def test_exceptions(self):
         model = Model()
         x = model.integer(5)
+        y = model.integer((5, 3))
+        z = model.set(5)
+
         with self.assertRaisesRegex(
             ValueError,
-            r"array of shape \(5,\) could not be broadcast to \(3,\)",
+            r"cannot broadcast shape \(5,\) to \(3,\)",
         ):
             broadcast_to(x, 3)
+
         with self.assertRaisesRegex(
             ValueError,
-            r"array of shape \(5,\) could not be broadcast to \(5, 1\)",
+            r"cannot broadcast shape \(5, 3\) to \(3,\); cannot broadcast to a smaller number of dimensions",
+        ):
+            broadcast_to(y, (3,))
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"cannot broadcast shape \(-1,\) to \(1,\); cannot broadcast a dynamic shape to a fixed shape",
+        ):
+            broadcast_to(z, (1,))
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"cannot broadcast shape \(5,\) to \(5, 1\)",
         ):
             broadcast_to(x, (5, 1))
 
         with self.assertRaisesRegex(
             ValueError,
-            r"cannot broadcast an array with a fixed shape \(5,\) to a dynamic shape \(-1, 5\)",
+            r"cannot broadcast shape \(5,\) to \(-1, 5\); cannot broadcast a fixed shape to a dynamic shape",
         ):
             broadcast_to(x, (-1, 5))
 
         with self.assertRaises(ValueError):
             broadcast_to(x, "hello")
 
-        self.assertEqual(model.num_symbols(), 1)  # no side effects
+        self.assertEqual(model.num_symbols(), 3)  # no side effects
 
     def test_state_size(self):
         for symbol in self.generate_symbols():

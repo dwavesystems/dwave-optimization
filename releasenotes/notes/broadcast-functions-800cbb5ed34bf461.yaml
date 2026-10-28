@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Make C++ ``broadcast_shapes()`` a variadic function so that it can broadcast
+    an arbitrary number of shapes together.
+  - |
+    Add C++ ``broadcast_strides_to()`` function to calculate the strides
+    that provide a view when broadcasting one array to another shape.
+upgrade:
+  - Remove C++ ``broadcast_shapes()`` overload for ``std::initializer_list``.
