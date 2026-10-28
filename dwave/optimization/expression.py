@@ -78,13 +78,18 @@ class Expression:
         return f"expression({self._function!r})"
 
 
-@typing.overload
-def expression(function: collections.abc.Callable, **kwargs) -> Expression: ...
-@typing.overload
-def expression(**kwargs) -> collections.abc.Callable: ...
+_InputSpecs: typing.TypeAlias = dict[
+    typing.Literal["lower_bound", "upper_bound", "integral"], float | int | bool
+]
 
 
-def expression(*args, **kwargs):  # noqa: D417
+@typing.overload
+def expression(function: typing.Callable, **input_specifications: _InputSpecs) -> Expression: ...
+@typing.overload
+def expression(**input_specifications: _InputSpecs) -> collections.abc.Callable: ...
+
+
+def expression(*function, **input_specifications):
     """Transform a function into an :class:`Expression`.
 
     Such expressions are used as input by some symbols.
@@ -92,6 +97,7 @@ def expression(*args, **kwargs):  # noqa: D417
     Args:
         function: Callable function that is executed once to generate the
             :class:`Expression`.
+        input_specifications: Specifications for the input values.
 
     Examples:
         >>> from dwave.optimization import expression
@@ -109,21 +115,21 @@ def expression(*args, **kwargs):  # noqa: D417
 
     .. versionadded:: 0.6.4
     """
-    if len(args) == 0:
+    if len(function) == 0:
 
-        def _decorator(function):
-            return expression(function, **kwargs)
+        def _decorator(func):
+            return expression(func, **input_specifications)
 
         return _decorator
-    elif len(args) == 1:
-        (function,) = args
+    elif len(function) == 1:
+        (func,) = function
     else:
         raise TypeError(
-            f"expression() takes 0 or 1 positional arguments but {len(args)} were given",
+            f"expression() takes 0 or 1 positional arguments but {len(function)} were given",
         )
 
-    if not callable(function):
-        raise TypeError(f"{function!r} is not a callable object")
+    if not callable(func):
+        raise TypeError(f"{func!r} is not a callable object")
 
     model = Model()
 
@@ -131,19 +137,19 @@ def expression(*args, **kwargs):  # noqa: D417
     # allow the user to overwrite that default.
     default_kwargs = dict(lower_bound=-float("inf"), upper_bound=float("inf"))
     inputs = []
-    for parameter in inspect.signature(function).parameters:
-        input_kwargs = default_kwargs | kwargs.get(parameter, dict())
+    for parameter in inspect.signature(func).parameters:
+        input_kwargs = default_kwargs | input_specifications.get(parameter, dict())
         inputs.append(model.input(**input_kwargs))
     if len(inputs) < 1:
         raise ValueError("function must accept at least one argument")
 
     # Use function to construct the symbols and/or raise any exceptions
-    model.minimize(function(*inputs))
+    model.minimize(func(*inputs))
     model.lock()
 
     # Finally create an Expression object to hold the model and return it to
     # the user.
     expr = Expression.__new__(Expression)
-    expr._function = function
+    expr._function = func
     expr._model = model
     return expr

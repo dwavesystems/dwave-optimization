@@ -211,9 +211,6 @@ limited-api = true
 line-length = 100
 
 [tool.ruff.lint]
-extend-per-file-ignores = {
-    "tests/*.py" = ["D"],  # We don't doctest our tests/ directory
-}
 extend-select = [
     "D",   # pydocstyle
 ]
@@ -234,3 +231,6 @@ ignore = [
     "SIM117",  # multiple-with-statements
 ]
 pydocstyle.convention = "google"
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*.py" = ["D"]  # We don't doctest our tests/ directory
