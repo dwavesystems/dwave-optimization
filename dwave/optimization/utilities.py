@@ -161,7 +161,7 @@ def _split_indices(
 
 
 def _TypeError_to_NotImplemented(f):
-    """Convert any TypeErrors raised by the given function into NotImplemented"""
+    """Convert any TypeErrors raised by the given function into NotImplemented."""
 
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
