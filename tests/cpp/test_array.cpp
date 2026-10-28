@@ -534,7 +534,7 @@ TEST_CASE("Test broadcast_shapes()") {
             broadcast_shapes(std::vector<ssize_t>{}, std::vector<ssize_t>{0}), RangeEquals({0})
         );
     }
-    SECTION("(-1,1) x (1,0) -> (3,0)") {
+    SECTION("(-1,1) x (1,0) -> (-1,0)") {
         CHECK_THAT(
             broadcast_shapes(std::vector<ssize_t>{-1, 1}, std::vector<ssize_t>{1, 0}),
             RangeEquals({-1, 0})
