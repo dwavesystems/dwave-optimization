@@ -126,66 +126,19 @@ BroadcastToNode::BroadcastToNode(ArrayNode* array_ptr, std::span<const ssize_t> 
     std::copy(shape.begin(), shape.end(), shape_.get());
     const std::span<const ssize_t> target_shape(shape_.get(), ndim_);
 
-    // Make our strides locally accessible as a span.
-    std::span<ssize_t> target_strides(strides_.get(), ndim_);
+    auto target_strides =
+        broadcast_strides_to(array_ptr_->shape(), array_ptr->strides(), target_shape);
+    std::copy(target_strides.begin(), target_strides.end(), strides_.get());
 
-    // Finally get our source shape and strides
-    const auto source_shape = array_ptr_->shape();
-    const auto source_strides = array_ptr_->strides();
-
-    // Alright, let's check that our source and target shapes are compatible
-    // and at the same time fill in our strides
-
-    if (source_shape.size() > target_shape.size()) {
-        throw std::invalid_argument(
-            "array has more dimensions (" + std::to_string(source_shape.size()) +
-            ") than can be broadast to " + shape_to_string(target_shape)
-        );
-    }
-
-    if (array_ptr_->dynamic() &&
-        (source_shape.size() != target_shape.size() || target_shape[0] >= 0)) {
-        throw std::invalid_argument(
-            "dynamic arrays can only be broadcast to another dynamic shape with the same "
-            "number of dimensions"
-        );
-    }
-
+    // We mostly rely on broadcast_strides_to() for our input checking, but
+    // here we are slightly more strict. We put this after broadcast_strides_to()
+    // so we inherit those error messages first.
+    // In the future we could support (1,) x (-1, ...) shapes
     if (target_shape.size() and target_shape[0] < 0 and not array_ptr_->dynamic()) {
         throw std::invalid_argument(
             "cannot broadcast an array with a fixed shape " + shape_to_string(array_ptr_->shape()) +
             " to a dynamic shape " + shape_to_string(target_shape)
         );
-    }
-
-    // Walk backwards through all four arrays. Zip would be nice here...
-    auto rit_sshape = source_shape.rbegin();
-    auto rit_sstrides = source_strides.rbegin();
-    auto rit_tshape = target_shape.rbegin();
-    auto rit_tstrides = target_strides.rbegin();
-    for (
-        const auto stop = source_shape.rend(); rit_sshape != stop;
-        ++rit_tshape, ++rit_tstrides, ++rit_sshape, ++rit_sstrides
-    ) {
-        if (*rit_sshape == *rit_tshape) {
-            // source and target match in dimension size, strides are therefore
-            // preserved
-            *rit_tstrides = *rit_sstrides;
-        } else if (*rit_sshape == 1) {
-            // source dimension size is 1, so we can stretch it out
-            *rit_tstrides = 0;  // stretched
-        } else {
-            // not compatible!
-            throw std::invalid_argument(
-                "array of shape " + shape_to_string(source_shape) + " could not be broadcast to " +
-                shape_to_string(target_shape)
-            );
-        }
-    }
-
-    // All of the dimensions we're adding at the "front" get 0 strides
-    for (auto stop = target_shape.rend(); rit_tshape != stop; ++rit_tshape, ++rit_tstrides) {
-        *rit_tstrides = 0;
     }
 
     // Track whether we're contiguous
