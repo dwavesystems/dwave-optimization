@@ -115,6 +115,14 @@ cdef vector[double] _linprog(
     )
 
     cdef vector[double] x  # output
+    if res.x is None:
+        # scipy's linprog may return the state as `None` if the solve was not
+        # successful. We simply use the lower bound as a placeholder that is
+        # guaranteed to be within the valid output range of the
+        # `LinearProgramSolutionNode`.
+        x.assign(lb.begin(), lb.end())
+        return x
+
     for x_i in res.x:
         x.push_back(<double?>x_i)
 

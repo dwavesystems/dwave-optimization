@@ -2833,6 +2833,15 @@ class TestLinearProgram(utils.SymbolTests):
 
         self.assertIs(dwave.optimization.symbols.lp.linprog, scipy.optimize.linprog)
 
+    def test_infeasible_lp(self):
+        model = dwave.optimization.Model()
+        c = model.integer(2, lower_bound=-10, upper_bound=10)
+        res = dwave.optimization.linprog(c, lb=[1, 1], ub=[0, 0])
+        success = res.success  # ensure the LinearProgramFeasibleNode is added
+        model.lock()
+        model.states.resize(1)
+        self.assertFalse(success.state())
+
 
 class TestMatrixMultiply(utils.SymbolTests):
     def generate_symbols(self):

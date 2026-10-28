@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fix an issue with the ``LinearProgram`` symbol where a ``TypeError`` was
+    raised when trying to access the state or feasibility of an infeasible LP.
