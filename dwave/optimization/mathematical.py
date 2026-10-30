@@ -28,6 +28,7 @@ from dwave.optimization.symbols import (
     And,
     ARange,
     ArgSort,
+    BinCount,
     BroadcastTo,
     BSpline,
     Concatenate,
@@ -82,6 +83,7 @@ __all__ = [
     "as_array_symbols",
     "atleast_1d",
     "atleast_2d",
+    "bincount",
     "broadcast_shapes",
     "broadcast_symbols",
     "broadcast_to",
@@ -555,6 +557,42 @@ def atleast_2d(*arrays):
     if len(result) == 1:
         return result[0]
     return tuple(result)
+
+
+def bincount(array: ArraySymbol) -> BinCount:
+    r"""Counting number of occurences of the elements of a symbol with integer values.
+
+    Args:
+        array: Array symbol. Can either be a constant node with integer values or an
+            integer node. In both cases the lower bound should be non-negative.
+
+    Returns:
+        Successor symbol that is the occurence counts of its predecessor symbol's
+        integer array elements. If the predecessor symbol is empty, returns an empty
+        array. Output size will be m + 1, where m is the largest value of the input
+        layer.
+
+    Examples:
+        >>> from dwave.optimization import Model
+        >>> from dwave.optimization.mathematical import bincount
+        ...
+        >>> model = Model()
+        >>> i = model.integer(7)
+        >>> bc = bincount(i)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [0, 0, 0, 1, 3, 3, 5])
+        ...     print(bc.state(0))
+        [3. 1. 0. 2. 0. 1.]
+
+    See Also:
+        :class:`~dwave.optimization.symbols.BinCount`: Generated symbol
+
+        :func:`~numpy.bincount`: :doc:`NumPy <numpy:index>` function
+
+    .. versionadded:: 0.8.1
+    """
+    return BinCount(array)
 
 
 def broadcast_shapes(*shapes: ShapeLike) -> tuple[int, ...]:

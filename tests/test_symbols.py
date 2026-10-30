@@ -4151,6 +4151,44 @@ class TestSoftMax(utils.SymbolTests):
             np.testing.assert_array_almost_equal(sm.state(0), expected)
 
 
+class TestBinCount(utils.SymbolTests):
+    def generate_symbols(self):
+        model = Model()
+        c = model.constant([1.0, 1.0, 4.0, 6.0])
+        bc = dwave.optimization.symbols.BinCount(c)
+
+        with model.lock():
+            yield bc
+
+    def test(self):
+        from dwave.optimization.symbols import BinCount
+
+        model = Model()
+        c = model.constant([1.0, 1.0, 4.0, 6.0])
+        bc = dwave.optimization.bincount(c)
+
+        self.assertIsInstance(bc, BinCount)
+
+    def test_state_constant(self):
+        model = Model()
+        c = model.constant([1.0, 1.0, 4.0, 6.0])
+        bc = dwave.optimization.symbols.BinCount(c)
+        model.states.resize(1)
+        with model.lock():
+            expected = np.array([0.0, 2.0, 0.0, 0.0, 1.0, 0.0, 1.0])
+            np.testing.assert_array_almost_equal(bc.state(0), expected)
+
+    def test_state_integer(self):
+        model = Model()
+        i = model.integer(4)
+        bc = dwave.optimization.symbols.BinCount(i)
+        with model.lock():
+            model.states.resize(1)
+            i.set_state(0, [1.0, 1.0, 4.0, 6.0])
+            expected = np.array([0.0, 2.0, 0.0, 0.0, 1.0, 0.0, 1.0])
+            np.testing.assert_array_almost_equal(bc.state(0), expected)
+
+
 class TestSquare(utils.UnaryOpTests):
     def op(self, x):
         return x**2
