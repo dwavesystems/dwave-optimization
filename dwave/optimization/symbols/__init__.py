@@ -94,7 +94,7 @@ from dwave.optimization.symbols.reduce import (
 from dwave.optimization.symbols.set_routines import IsDisjointCover, IsIn
 from dwave.optimization.symbols.softmax import SoftMax
 from dwave.optimization.symbols.sorting import ArgSort
-from dwave.optimization.symbols.statistics import Mean
+from dwave.optimization.symbols.statistics import BinCount, Mean
 from dwave.optimization.symbols.testing import _ArrayValidation  # noqa: F401
 from dwave.optimization.symbols.unaryop import (
     Absolute,
@@ -124,6 +124,7 @@ __all__ = [
     "ArgSort",
     "BSpline",
     "BasicIndexing",
+    "BinCount",
     "BinaryVariable",
     "BroadcastTo",
     "Concatenate",

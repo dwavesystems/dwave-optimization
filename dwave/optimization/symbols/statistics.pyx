@@ -17,8 +17,25 @@
 from cython.operator cimport typeid
 
 from dwave.optimization._model cimport _Graph, _register, ArraySymbol
-from dwave.optimization.libcpp.nodes.statistics cimport MeanNode
+from dwave.optimization.libcpp.nodes.statistics cimport BinCountNode, MeanNode
 
+
+cdef class BinCount(ArraySymbol):
+    """Counting number of occurences of the elements of a symbol with integer values.
+
+    See Also:
+        :meth:`~dwave.optimization.mathematical.bincount`: Instantiation and
+        usage of this symbol.
+
+    .. versionadded:: 0.8.1
+    """
+    def __init__(self, ArraySymbol arr):
+        cdef _Graph model = arr.model
+
+        cdef BinCountNode* ptr = model._graph.emplace_node[BinCountNode](arr.array_ptr)
+        self.initialize_arraynode(model, ptr)
+
+_register(BinCount, typeid(BinCountNode))
 
 cdef class Mean(ArraySymbol):
     """Mean value of the elements of a symbol.
