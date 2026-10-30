@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    Added ``BinCount`` symbol/node which returns the softmax of its predecessor.
