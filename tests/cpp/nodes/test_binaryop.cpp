@@ -23,6 +23,7 @@
 #include "dwave-optimization/nodes/indexing.hpp"
 #include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
+#include "dwave-optimization/nodes/operator.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
 
 using Catch::Matchers::RangeEquals;
@@ -55,7 +56,7 @@ TEMPLATE_TEST_CASE(
         auto a_ptr = graph.emplace_node<ConstantNode>(5);
         auto b_ptr = graph.emplace_node<ConstantNode>(6);
 
-        auto p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
+        auto p_ptr = graph.emplace_node<OperatorNode<TestType>>(a_ptr, b_ptr);
 
         graph.emplace_node<ArrayValidationNode>(p_ptr);
 
