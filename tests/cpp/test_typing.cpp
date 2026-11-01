@@ -12,15 +12,67 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <concepts>
+#include <cstdint>
 #include <utility>
 
+#include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include "dwave-optimization/common.hpp"
 #include "dwave-optimization/typing.hpp"
 
 namespace dwave::optimization {
 
+TEST_CASE("DType") {
+    STATIC_REQUIRE(DType<float>);
+    STATIC_REQUIRE(DType<double>);
+    STATIC_REQUIRE(DType<bool>);
+    STATIC_REQUIRE(DType<signed char>);
+    STATIC_REQUIRE(DType<short>);
+    STATIC_REQUIRE(DType<int>);
+    STATIC_REQUIRE(DType<long>);
+    STATIC_REQUIRE(DType<long long>);
+
+    // Even though DType is defined over the builtin types, we expect/encourage
+    // users to use the fixed-width types. So let's make sure all are covered
+    // here.
+    STATIC_REQUIRE(DType<std::int8_t>);
+    STATIC_REQUIRE(DType<std::int16_t>);
+    STATIC_REQUIRE(DType<std::int32_t>);
+    STATIC_REQUIRE(DType<std::int64_t>);
+
+    // We also want ssize_t to be a valid dtype
+    STATIC_REQUIRE(DType<ssize_t>);
+}
+
+TEST_CASE("DTypes") {
+    STATIC_REQUIRE(DTypes::contains<float>());
+    STATIC_REQUIRE(DTypes::contains<double>());
+    STATIC_REQUIRE(DTypes::contains<bool>());
+    STATIC_REQUIRE(DTypes::contains<signed char>());
+    STATIC_REQUIRE(DTypes::contains<short>());
+    STATIC_REQUIRE(DTypes::contains<int>());
+    STATIC_REQUIRE(DTypes::contains<long>());
+    STATIC_REQUIRE(DTypes::contains<long long>());
+
+    // Even though DType is defined over the builtin types, we expect/encourage
+    // users to use the fixed-width types. So let's make sure all are covered
+    // here.
+    STATIC_REQUIRE(DTypes::contains<std::int8_t>());
+    STATIC_REQUIRE(DTypes::contains<std::int16_t>());
+    STATIC_REQUIRE(DTypes::contains<std::int32_t>());
+    STATIC_REQUIRE(DTypes::contains<std::int64_t>());
+
+    // We also want ssize_t to be a valid dtype
+    STATIC_REQUIRE(DTypes::contains<ssize_t>());
+}
+
+namespace {
+
 void forwarding_reference_func(DTypeLike auto&&) {}
+
+}  // namespace
 
 TEST_CASE("DTypeLike") {
     int a = 1;
@@ -102,6 +154,24 @@ TEST_CASE("can_cast") {
     STATIC_REQUIRE(not can_cast<std::int64_t, std::int16_t>);
     STATIC_REQUIRE(not can_cast<std::int64_t, std::int32_t>);
     STATIC_REQUIRE(can_cast<std::int64_t, std::int64_t>);
+
+    // Also check that our more ambiguous builtins behave as expected
+    STATIC_REQUIRE(can_cast<long, long>);
+    STATIC_REQUIRE(can_cast<long long, long long>);
+
+    STATIC_REQUIRE(can_cast<int, long>);
+    STATIC_REQUIRE(can_cast<long, long long>);
+
+    // sizeof(int) == sizeof(long) <=> can_cast<long, int>
+    STATIC_REQUIRE((sizeof(int) == sizeof(long)) == can_cast<long, int>);
+
+    // sizeof(long) == sizeof(long long) <=> can_cast<long long, long>
+    STATIC_REQUIRE((sizeof(long) == sizeof(long long)) == can_cast<long long, long>);
+}
+
+TEMPLATE_LIST_TEST_CASE("format_of", "", DTypes) {
+    // Smoke test to ensure that format_of handled all DTypes
+    [[maybe_unused]] volatile auto a = format_of<TestType>();
 }
 
 TEST_CASE("promote_types") {
@@ -174,6 +244,16 @@ TEST_CASE("promote_types") {
     STATIC_REQUIRE(std::same_as<promote_types<std::int64_t, std::int16_t>::type, std::int64_t>);
     STATIC_REQUIRE(std::same_as<promote_types<std::int64_t, std::int32_t>::type, std::int64_t>);
     STATIC_REQUIRE(std::same_as<promote_types<std::int64_t, std::int64_t>::type, std::int64_t>);
+
+    // Also check that our ambiguous dtypes behave correctly.
+    // NumPy says that `promote_types(np.long, np.longlong) is np.dtype(np.longlong)`
+    STATIC_REQUIRE(std::same_as<promote_types<long, long>::type, long>);
+    STATIC_REQUIRE(std::same_as<promote_types<long long, long long>::type, long long>);
+
+    STATIC_REQUIRE(std::same_as<promote_types<int, long>::type, long>);
+    STATIC_REQUIRE(std::same_as<promote_types<long, int>::type, long>);
+    STATIC_REQUIRE(std::same_as<promote_types<long, long long>::type, long long>);
+    STATIC_REQUIRE(std::same_as<promote_types<long long, long>::type, long long>);
 }
 
 }  // namespace dwave::optimization

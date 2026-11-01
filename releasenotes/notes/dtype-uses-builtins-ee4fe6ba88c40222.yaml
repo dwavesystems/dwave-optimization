@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    Define C++ `DType` via builtins rather than fixed-width integer types.
+    Any code that requires implementing all `DTypes` now needs to implement
+    one additional type.
+fixes:
+  - |
+    Ensure that C++ `DType` and `DTypes` support `long` and `longlong` on all platforms.
+    Previously it was only defined for fixed-width integer types, which means
+    that one of `int`, `long`, or `long long` was left unsupported.
