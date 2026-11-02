@@ -13,9 +13,11 @@
 #    limitations under the License.
 
 import collections.abc
+import dataclasses
 import itertools
 import math
 import operator
+import os.path
 import sys
 import unittest
 import unittest.mock
@@ -1814,6 +1816,73 @@ class TestDivide(utils.BinaryOpTests):
 
     def symbol_op(self, lhs, rhs):
         return safe_divide(lhs, rhs)
+
+    def test_serialization_backward(self):
+        """
+        Given a model generated with 0.8.0 (before we made safe division default)
+
+        .. code-block: python
+
+            model = Model()
+
+            x = model.integer(lower_bound=-10, upper_bound=+10)
+
+            pos = model.constant(+0.0000000001)
+            neg = model.constant(-0.0000000001)
+            span = model.constant([-0.0000000001, +0.0000000001])
+
+            dwave.optimization.mathematical.divide(x, pos)
+            dwave.optimization.mathematical.divide(x, neg)
+
+            dwave.optimization.mathematical.safe_divide(x, pos)
+            dwave.optimization.mathematical.safe_divide(x, neg)
+            dwave.optimization.mathematical.safe_divide(x, span)
+
+            model.into_file(...)
+
+        Make sure we can correctly deserialize it
+        """
+
+        fname = os.path.join(
+            os.path.dirname(__file__),
+            "data",
+            "test_symbols-TestDivide-test_serialization_backward.nl",
+        )
+
+        model = Model.from_file(fname)
+
+        _, _, _, _, a, b, q, r, s = model.iter_symbols()
+
+        self.assertIsInstance(a, dwave.optimization.symbols.Divide)
+        self.assertEqual(
+            dataclasses.asdict(a.info()),
+            dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
+        )
+
+        self.assertIsInstance(b, dwave.optimization.symbols.Divide)
+        self.assertEqual(
+            dataclasses.asdict(b.info()),
+            dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
+        )
+
+        self.assertIsInstance(q, dwave.optimization.symbols.Divide)
+        self.assertEqual(
+            dataclasses.asdict(q.info()),
+            dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
+        )
+
+        self.assertIsInstance(r, dwave.optimization.symbols.Divide)
+        self.assertEqual(
+            dataclasses.asdict(r.info()),
+            dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
+        )
+
+        self.assertIsInstance(s, dwave.optimization.symbols.Divide)
+        s_info = s.info()
+        self.assertLessEqual(np.finfo(np.float64).max, s_info.max)
+        self.assertGreaterEqual(np.finfo(np.float64).min, s_info.min)
+        self.assertFalse(s_info.integral)
+        self.assertEqual(s_info.size, 2)
 
     def test_doc_example(self):
         model = Model()
