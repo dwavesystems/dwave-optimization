@@ -12,8 +12,11 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Nonlinear models are especially suited for use with decision variables that
+"""Non-linear Model implementation.
+
+Nonlinear models are especially suited for use with decision variables that
 represent a common logic, such as subsets of choices or permutations of ordering.
+
 For example, in a
 `traveling salesperson problem <https://en.wikipedia.org/wiki/Travelling_salesman_problem>`_
 permutations of the variables representing cities can signify the order of the
@@ -183,6 +186,7 @@ class Model(_Graph):
     """
 
     def __init__(self):
+        """Initialize a Model."""
         self._objective = None
         self.states = States(self)
 
@@ -516,7 +520,6 @@ class Model(_Graph):
 
             :meth:`.iter_decisions`, :meth:`.iter_successors`
         """
-
         warnings.warn(
             "The return behavior of Model.disjoint_lists() is deprecated "
             "since dwave.optimization 0.6.7 and will be changed to the "
@@ -746,6 +749,7 @@ class Model(_Graph):
                 specified axis must satisfy the corresponding operator–bound pair.
                 Note 1: At most one sum constraint may be provided.
                 Note 2: If provided, sum_subject_to must None.
+
         Returns:
             An integer symbol at the root of the :term:`directed acyclic graph`
             for the model.
@@ -926,7 +930,7 @@ class Model(_Graph):
             >>> model.is_locked()
             False
 
-        See also:
+        See Also:
             :meth:`.is_locked`, :meth:`.unlock`
 
         """
@@ -934,7 +938,32 @@ class Model(_Graph):
         return locked(self)
 
     def minimize(self, value: ArraySymbol):
-        # inherit the docstring from _Graph
+        """Set the objective value to minimize.
+
+        Optimization problems have an :term:`objective` and/or
+        :term:`constraints <constraint>`. The objective expresses one or more
+        aspects of the problem that should be minimized (equivalent to
+        maximization when multiplied by a minus sign). For example, an optimized
+        itinerary might minimize the value of distance traveled or cost of
+        transportation or travel time.
+
+        Args:
+            value: Value of the cost function to minimize.
+
+        Examples:
+            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
+            within bounds.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(lower_bound=-5, upper_bound=5)
+            >>> c = model.constant(4)
+            >>> y = i*i - c*i
+            >>> model.minimize(y)
+
+        See Also:
+            :meth:`.feasible`, :meth:`.objective`
+        """
         super().minimize(value)
         self._objective = value
 
@@ -1064,7 +1093,7 @@ class Model(_Graph):
                 with open("my_file.bin", "wb") as f:
                     shutil.copyfileobj(my_file, f)
 
-        See also:
+        See Also:
             :meth:`.into_file`, :meth:`.from_file`
 
             :meth:`~dwave.optimization.states.States.to_file` Saves states to a
@@ -1156,7 +1185,26 @@ class Model(_Graph):
         return G
 
     def unlock(self):
-        # inherit the docstring from _Graph
+        """Release a lock and decrement the lock count.
+
+        Symbols can be added to unlocked models only. Unlocked models do not
+        allow access to methods such as
+        :meth:`~dwave.optimization.model.ArraySymbol.state` and
+        :meth:`~dwave.optimization.model.Symbol.topological_index` for
+        successor (non-decision) variables.
+
+        Examples:
+            This example checks the status of a model.
+
+            >>> from dwave.optimization.model import Model
+            >>> model = Model()
+            >>> i = model.integer(20, upper_bound=100)
+            >>> model.is_locked()
+            False
+
+        See Also:
+            :meth:`.is_locked`, :meth:`.lock`
+        """
         if not self.is_locked():
             return
 

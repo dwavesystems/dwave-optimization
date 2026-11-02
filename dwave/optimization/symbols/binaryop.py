@@ -144,7 +144,7 @@ class Or(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Or):
 class SafeDivide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.SafeDivide):
     """Safe division element-wise between two symbols.
 
-    See also:
+    See Also:
         :func:`~dwave.optimization.mathematical.safe_divide`: Instantiation and
         usage of this symbol.
 

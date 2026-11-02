@@ -227,7 +227,8 @@ def add(x1: ArraySymbolLike, x2: ArraySymbolLike, *xi: ArraySymbolLike) -> Array
     Equivalently, you can use the ``+`` operator (e.g., :code:`i + j`).
 
     Args:
-        x1, x2: Operand array symbol or |array-like|_ to be added.
+        x1: Operand array symbol or |array-like|_.
+        x2: Operand array symbol or |array-like|_.
         *xi: Additional array symbols or |array-like|_ to be added.
 
     Returns:
@@ -313,7 +314,6 @@ def arange(
 
     .. versionadded:: 0.5.2
     """
-
     if stop is None and step is None:
         # then start is actually stop
         start, stop = None, start
@@ -455,6 +455,7 @@ def atleast_1d(*arrays):
 
     Args:
         arrays: One or more array symbols.
+
     Returns:
         Successor array symbol, or a tuple of successor array symbols, with at
         least one dimension.
@@ -510,6 +511,7 @@ def atleast_2d(*arrays):
 
     Args:
         arrays: One or more array symbols.
+
     Returns:
         Successor array symbol, or a tuple of successor array symbols, with at
         least two dimensions.
@@ -918,7 +920,8 @@ def equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Equal:
     Equivalently, you can use the ``==`` operator (e.g., :code:`i == j`).
 
     Args:
-        x1, x2: Array symbol or |array-like|_.
+        x1: Operand array symbol or |array-like|_.
+        x2: Operand array symbol or |array-like|_.
 
     Returns:
         Successor symbol that is the element-wise equality of its predecessor
@@ -1078,7 +1081,6 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
         Successor symbol that concatenates its predecessor array symbols.
 
     Examples:
-
         >>> from dwave.optimization import hstack, Model
 
         >>> model = Model()
@@ -1262,7 +1264,8 @@ def less_equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> LessEqual:
     r"""Return element-wise less than or equal between two symbols (or arrays).
 
     Args:
-        x1, x2: Operand array symbol or |array-like|_.
+        x1: Operand array symbol or |array-like|_.
+        x2: Operand array symbol or |array-like|_.
 
     Returns:
         Successor symbol that is the element-wise less than or equal
@@ -1467,7 +1470,8 @@ def logical_and(x1: ArraySymbolLike, x2: ArraySymbolLike) -> And:
     r"""Calculate element-wise the logical AND of two symbols (or arrays).
 
     Args:
-        x1, x2: Operand array symbol or |array-like|_.
+        x1: Operand array symbol or |array-like|_.
+        x2: Operand array symbol or |array-like|_.
 
     Returns:
         Successor symbol that is the element-wise AND of the array elements of
@@ -1539,7 +1543,8 @@ def logical_or(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Or:
     r"""Calculate element-wise the logical OR of two symbols (or arrays).
 
     Args:
-        x1, x2: Operand array symbol or |array-like|_.
+        x1: Operand array symbol or |array-like|_.
+        x2: Operand array symbol or |array-like|_.
 
     Returns:
         Successor symbol that is the element-wise OR of the array elements of
@@ -1578,7 +1583,8 @@ def logical_xor(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Xor:
     r"""Calculate element-wise logical XOR of two symbols (or arrays).
 
     Args:
-        x1, x2: Operand array symbol or |array-like|_.
+        x1: Operand array symbol or |array-like|_.
+        x2: Operand array symbol or |array-like|_.
 
     Returns:
         Successor symbol that is the element-wise XOR of the array elements of
@@ -1618,7 +1624,8 @@ def matmul(x: ArraySymbolLike, y: ArraySymbolLike) -> MatrixMultiply:
     r"""Compute the matrix product of two array symbols (or arrays).
 
     Args:
-        x, y: Operand array symbol or |array-like|_.
+        x: Operand array symbol or |array-like|_.
+        y: Operand array symbol or |array-like|_.
 
     The size of the last axis of ``x`` must be equal to the size of the
     second-to-last axis of ``y``. If either ``x`` or ``y`` is one-dimensional,
@@ -1710,7 +1717,8 @@ def maximum(
     r"""Return an element-wise maximum of two or more symbols and arrays.
 
     Args:
-        x1, x2: Operand array symbol or |array-like|_.
+        x1: Operand array symbol or |array-like|_.
+        x2: Operand array symbol or |array-like|_.
         *xi: Additional array symbols or |array-like|_.
 
     Returns:
@@ -1796,7 +1804,8 @@ def minimum(
     r"""Return an element-wise minimum of two or more symbols and arrays.
 
     Args:
-        x1, x2: Operand array symbol or |array-like|_.
+        x1: Operand array symbol or |array-like|_.
+        x2: Operand array symbol or |array-like|_.
         *xi: Additional array symbols or |array-like|_.
 
     Returns:
@@ -1906,8 +1915,9 @@ def multiply(
     Equivalently, you can use the ``*`` operator (e.g., :code:`i * j`).
 
     Args:
-        x1, x2: Operand array symbol or |array-like|_ to be multiplied.
-        *xi: Additional array symbol or |array-like|_ to be multiplied.
+        x1: Operand array symbol or |array-like|_.
+        x2: Operand array symbol or |array-like|_.
+        *xi: Additional array symbol or |array-like|_.
 
     Returns:
         Successor symbol that multiplies the predecessor symbols (and/or arrays)
@@ -2044,7 +2054,7 @@ def resize(
         [[ 0.  1.]
          [ 2. -1.]]
 
-    See also:
+    See Also:
         :class:`~dwave.optimization.symbols.Resize`: Generated symbol
 
         :func:`~numpy.resize`: :doc:`NumPy <numpy:index>` function
@@ -2151,8 +2161,7 @@ def roll(
 
 @_binaryop(SafeDivide)
 def safe_divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> SafeDivide:
-    r"""Divide element-wise two symbols but return 0 where the denominator
-    is 0.
+    r"""Divide element-wise two symbols but return 0 where the denominator is 0.
 
     This function is not strictly mathematical division. Rather it encodes
     the following function:
@@ -2318,6 +2327,7 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
 
     Args:
         arrays: Sequence of array symbols to join.
+        axis: The axis along which to stack.
 
     Returns:
         Successor symbol that joins its predecessor array symbols on an axis.
@@ -2399,7 +2409,8 @@ def subtract(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Subtract:
     Equivalently, you can use the ``-`` operator (e.g., :code:`i - j`).
 
     Args:
-        x1, x2: Operand array symbol or |array-like|_ to subtract.
+        x1: Operand array symbol or |array-like|_.
+        x2: Operand array symbol or |array-like|_.
 
     Returns:
         Successor symbol that subtracts the predecessor symbols (or arrays)
@@ -2568,7 +2579,6 @@ def vstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
         Successor array symbol that concatenates its predecessor array symbols.
 
     Examples:
-
         >>> from dwave.optimization import vstack, Model
 
         >>> model = Model()
@@ -2620,8 +2630,8 @@ def where(condition: ArraySymbol, x: ArraySymbol, y: ArraySymbol) -> Where:
             false from ``y``. If ``x`` and ``y`` are
             :ref:`dynamically sized <optimization_philosophy_tensor_programming_dynamic>`,
             ``condition`` must be a single value.
-        x, y:
-            Array symbol from which to choose values.
+        x: Array symbol from which to choose values where ``condition`` is true.
+        y: Array symbol from which to choose values where ``condition`` is false.
 
     Returns:
         Successor symbol with element values from predecessor symbol ``x`` where

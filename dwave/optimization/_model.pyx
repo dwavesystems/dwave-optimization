@@ -740,32 +740,7 @@ cdef class _Graph:
         # We do it lazily for performance
 
     def minimize(self, ArraySymbol value):
-        """Set the objective value to minimize.
-
-        Optimization problems have an :term:`objective` and/or
-        :term:`constraints <constraint>`. The objective expresses one or more
-        aspects of the problem that should be minimized (equivalent to
-        maximization when multiplied by a minus sign). For example, an optimized
-        itinerary might minimize the value of distance traveled or cost of
-        transportation or travel time.
-
-        Args:
-            value: Value of the cost function to minimize.
-
-        Examples:
-            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
-            within bounds.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(lower_bound=-5, upper_bound=5)
-            >>> c = model.constant(4)
-            >>> y = i*i - c*i
-            >>> model.minimize(y)
-
-        See Also:
-            :meth:`.feasible`, :meth:`.objective`
-        """
+        """Set the objective value to minimize."""
         if value is None:
             raise ValueError("value cannot be None")
         if value.size() < 1:
@@ -1071,26 +1046,7 @@ cdef class _Graph:
         return sum(sym.state_size() for sym in self.iter_symbols())
 
     def unlock(self):
-        """Release a lock and decrement the lock count.
-
-        Symbols can be added to unlocked models only. Unlocked models do not
-        allow access to methods such as
-        :meth:`~dwave.optimization.model.ArraySymbol.state` and
-        :meth:`~dwave.optimization.model.Symbol.topological_index` for
-        successor (non-decision) variables.
-
-        Examples:
-            This example checks the status of a model.
-
-            >>> from dwave.optimization.model import Model
-            >>> model = Model()
-            >>> i = model.integer(20, upper_bound=100)
-            >>> model.is_locked()
-            False
-
-        See also:
-            :meth:`.is_locked`, :meth:`.lock`
-        """
+        """Release a lock and decrement the lock count."""
         if self._lock_count < 1:
             return  # already unlocked, nothing to do
 

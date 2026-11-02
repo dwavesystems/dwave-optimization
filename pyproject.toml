@@ -211,6 +211,9 @@ limited-api = true
 line-length = 100
 
 [tool.ruff.lint]
+extend-select = [
+    "D",   # pydocstyle
+]
 ignore = [
     # In some cases it's more readable to use generator syntax
     "C402",  # unnecessary-generator-dict
@@ -219,7 +222,15 @@ ignore = [
     "C405",  # unnecessary-literal-set
     "C408",  # unnecessary-collection-call
 
+    # We do not require all public modules/subpackages to have a docstring
+    "D100",  # undocumented-public-module
+    "D104",  # undocumented-public-package
+
     # Agree that we should put them on the same line, but sometimes we want to
     # add comments etc so we permit nested.
     "SIM117",  # multiple-with-statements
 ]
+pydocstyle.convention = "google"
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*.py" = ["D"]  # We don't doctest our tests/ directory
