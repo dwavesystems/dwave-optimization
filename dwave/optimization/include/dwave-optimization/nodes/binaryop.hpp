@@ -94,7 +94,7 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
 // https://numpy.org/doc/stable/reference/routines.math.html
 using AddNode = BinaryOpNode<op::add>;
 using AndNode = BinaryOpNode<op::logical_and>;
-using DivideNode = BinaryOpNode<std::divides<double>>;
+using DivideNode = BinaryOpNode<op::divide>;
 using EqualNode = BinaryOpNode<op::equal>;
 using LessEqualNode = BinaryOpNode<op::less_equal>;
 using MaximumNode = BinaryOpNode<op::maximum>;
@@ -102,7 +102,6 @@ using MinimumNode = BinaryOpNode<op::minimum>;
 using ModulusNode = BinaryOpNode<op::remainder>;
 using MultiplyNode = BinaryOpNode<op::multiply>;
 using OrNode = BinaryOpNode<op::logical_or>;
-using SafeDivideNode = BinaryOpNode<op::divide>;
 using SubtractNode = BinaryOpNode<op::subtract>;
 using XorNode = BinaryOpNode<op::logical_xor>;
 

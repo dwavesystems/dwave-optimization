@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Change ``Divide`` symbol to do safe division rather than mathematical division.
+    That is, we define ``x / 0 := 0`` for all ``x``.
+    Consequently, ``SafeDivide`` is now an alias of ``Divide`` and
+    ``safe_divide()`` is now an alias of ``divide()``.
+upgrade:
+  - Remove C++ ``SafeDivideNode``.

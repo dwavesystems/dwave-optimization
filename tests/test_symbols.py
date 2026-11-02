@@ -1791,17 +1791,29 @@ class TestDisjointListsVariable(utils.SymbolTests):
         np.testing.assert_array_equal(d2.state(1), [3, 4])
 
 
-# NOTE: Inheriting from BinaryOpTests causes runtime errors so just inheritting from SymbolTests
-class TestDivide(utils.SymbolTests):
+class TestDivide(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
-        a = model.constant(5)
-        b = model.constant(7)
-        ab = a / b
-        ba = b / a
-        model.lock()
-        yield ab
-        yield ba
+
+        a = model.constant(1)
+        b = model.constant(2)
+        zero = model.constant(0)
+
+        # all of these syntax encode the same operation
+        w = a / b
+        x = b / a
+
+        y = dwave.optimization.divide(a, zero)
+        z = dwave.optimization.safe_divide(zero, a)  # deprecated alias
+
+        with model.lock():
+            yield from (w, x, y, z)
+
+    def op(self, lhs, rhs):
+        return np.divide(lhs, rhs, out=None, where=(rhs != 0))
+
+    def symbol_op(self, lhs, rhs):
+        return safe_divide(lhs, rhs)
 
     def test_doc_example(self):
         model = Model()
@@ -1813,6 +1825,16 @@ class TestDivide(utils.SymbolTests):
             i.set_state(0, [21, 10])
             j.set_state(0, [7, 2])
             self.assertListEqual([3.0, 5.0], list(k.state(0)))
+
+    def test_mixed(self):
+        model = Model()
+        a = model.constant([-1, 0, 1, 2])
+        b = model.constant([2, 1, 0, -1])
+        x = a / b
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(x.state(), [-0.5, 0, 0, -2])
 
     def test_simple_division(self):
         model = Model()
@@ -1835,15 +1857,6 @@ class TestDivide(utils.SymbolTests):
 
         a = model.constant(np.zeros((5, 5)))
         b = model.constant(np.zeros((6, 4)))
-
-        with self.assertRaises(ValueError):
-            a / b
-
-    def test_division_by_zero(self):
-        model = Model()
-
-        a = model.constant(5)
-        b = model.constant(0)
 
         with self.assertRaises(ValueError):
             a / b
@@ -4081,38 +4094,6 @@ class TestRoll(utils.SymbolTests):
         # Out of bound axis
         with self.assertRaises(ValueError):
             roll(x, shift=1, axis=[1])
-
-
-class TestSafeDivide(utils.BinaryOpTests):
-    def generate_symbols(self):
-        model = Model()
-
-        a = model.constant(1)
-        b = model.constant(2)
-        zero = model.constant(0)
-
-        w = safe_divide(a, b)
-        x = safe_divide(b, a)
-        y = safe_divide(a, zero)
-        z = safe_divide(zero, a)
-        with model.lock():
-            yield from (w, x, y, z)
-
-    def op(self, lhs, rhs):
-        return np.divide(lhs, rhs, out=None, where=(rhs != 0))
-
-    def symbol_op(self, lhs, rhs):
-        return safe_divide(lhs, rhs)
-
-    def test(self):
-        model = Model()
-        a = model.constant([-1, 0, 1, 2])
-        b = model.constant([2, 1, 0, -1])
-        x = safe_divide(a, b)
-
-        model.states.resize(1)
-        with model.lock():
-            np.testing.assert_array_equal(x.state(), [-0.5, 0, 0, -2])
 
 
 class TestSin(utils.UnaryOpTests):

@@ -33,7 +33,6 @@ namespace dwave::optimization {
 TEMPLATE_TEST_CASE(
     "BinaryOpNode",
     "",
-    // std::divides<double>,
     op::equal,
     op::less_equal,
     op::add,
@@ -445,10 +444,9 @@ TEMPLATE_TEST_CASE(
         } else {
             // not commutative
             static_assert(
-                std::same_as<BinaryOpNode<TestType>, DivideNode> or
                 std::same_as<BinaryOpNode<TestType>, LessEqualNode> or
                 std::same_as<BinaryOpNode<TestType>, ModulusNode> or
-                std::same_as<BinaryOpNode<TestType>, SafeDivideNode> or
+                std::same_as<BinaryOpNode<TestType>, DivideNode> or
                 std::same_as<BinaryOpNode<TestType>, SubtractNode>
             );
 
@@ -728,30 +726,7 @@ TEST_CASE("BinaryOpNode - DivideNode") {
             CHECK_FALSE(y_ptr->integral());
         }
     }
-    GIVEN("x = IntegerNode(-5, 5), a = 0, y = x / a") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
-        auto a_ptr = graph.emplace_node<ConstantNode>(0);
 
-        THEN("Check division-by-zero") {
-            CHECK_THROWS(graph.emplace_node<DivideNode>(x_ptr, a_ptr));
-        }
-    }
-    GIVEN("x = IntegerNode(-5, 5), a = IntegerNode(-5, 0), y = x / a") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
-        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 0);
-
-        THEN("Check division-by-zero") {
-            CHECK_THROWS(graph.emplace_node<DivideNode>(x_ptr, a_ptr));
-        }
-    }
-    GIVEN("x = IntegerNode(-5, 5), a = IntegerNode(0, 5), y = x / a") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
-        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 5);
-
-        THEN("Check division-by-zero") {
-            CHECK_THROWS(graph.emplace_node<DivideNode>(x_ptr, a_ptr));
-        }
-    }
     GIVEN("a = [-1, 1, 1], b = [.00000001, .00000001, +1]") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, 1, 1});
         auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{.00000001, .00000001, 1.});
@@ -777,15 +752,11 @@ TEST_CASE("BinaryOpNode - DivideNode") {
         // this triggers a check of the values
         auto state = graph.initialize_state();
     }
-}
-
-TEST_CASE("BinaryOpNode - SafeDivideNode") {
-    auto graph = Graph();
 
     GIVEN("a in {-1, +1}, b in {0, 1}, y = a / b") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
         auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1});
-        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());
@@ -797,7 +768,7 @@ TEST_CASE("BinaryOpNode - SafeDivideNode") {
     GIVEN("a in {1}, b in {1, 2}, y = a / b") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
         auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 2});
-        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());
@@ -809,7 +780,7 @@ TEST_CASE("BinaryOpNode - SafeDivideNode") {
     GIVEN("a in {-1, +1}, b in [0, .5], y = a / b") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
         auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{0., .5});
-        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         // Here we're exploiting our own inability to introspect b for the
         // purpose of the test.
@@ -826,7 +797,7 @@ TEST_CASE("BinaryOpNode - SafeDivideNode") {
     GIVEN("a in {-1, +1}, b in {-1, 0}, y = a / b") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
         auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, 0});
-        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());
@@ -838,7 +809,7 @@ TEST_CASE("BinaryOpNode - SafeDivideNode") {
     GIVEN("a in {1}, b in {-2, -1}, y = a / b") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
         auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-2, -1});
-        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());
@@ -850,7 +821,7 @@ TEST_CASE("BinaryOpNode - SafeDivideNode") {
     GIVEN("a in {-1, +1}, b in [-.5, 0], y = a / b") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
         auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-.5, 0.});
-        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         // Here we're exploiting our own inability to introspect b for the
         // purpose of the test.
@@ -867,7 +838,7 @@ TEST_CASE("BinaryOpNode - SafeDivideNode") {
     GIVEN("a = [-1, -1, 1, 1], b = [-1, .00000001, .00000001, +1]") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, -1, 1, 1});
         auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1., .00000001, .00000001, 1.});
-        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
         REQUIRE(a_ptr->integral());
@@ -880,7 +851,7 @@ TEST_CASE("BinaryOpNode - SafeDivideNode") {
     GIVEN("a in {-1, +1}, b in {-1, +1}, y = a / b") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
         auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
-        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());
@@ -892,7 +863,7 @@ TEST_CASE("BinaryOpNode - SafeDivideNode") {
     GIVEN("a in {1}, b in {-2, 2}, y = a / b") {
         auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
         auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-2, 2});
-        auto y_ptr = graph.emplace_node<SafeDivideNode>(a_ptr, b_ptr);
+        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());

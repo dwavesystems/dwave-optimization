@@ -47,17 +47,6 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
         throw std::invalid_argument("arrays must have the same shape or one must be a scalar");
     }
 
-    if constexpr (std::is_same<BinaryOp, std::divides<double>>::value) {
-        bool strictly_negative = rhs_ptr->min() < 0 && rhs_ptr->max() < 0;
-        bool strictly_positive = rhs_ptr->min() > 0 && rhs_ptr->max() > 0;
-        if (!strictly_negative && !strictly_positive) {
-            throw std::invalid_argument(
-                "Divide's denominator predecessor must be either strictly positive or strictly "
-                "negative"
-            );
-        }
-    }
-
     // If the output of the operation is boolean, then min/max is simple
     using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
     if constexpr (std::same_as<result_type, bool>) {
@@ -75,13 +64,7 @@ std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Ar
 
     // these can result in inf. If we update propagation/initialization to handle
     // that case we should update these as well.
-    if constexpr (
-        std::same_as<BinaryOp, std::divides<double>> || std::same_as<BinaryOp, op::multiply>
-    ) {
-        // The constructor should prevent us from getting here, but just in case...
-        assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_low != 0));
-        assert((!std::same_as<BinaryOp, std::divides<double>> || rhs_high != 0));
-
+    if constexpr (std::same_as<BinaryOp, op::multiply>) {
         // just get all possible combinations of values
         std::array<double, 4> combos{
             op(lhs_low, rhs_low),
@@ -164,10 +147,7 @@ bool calculate_integral(const Array* lhs_ptr, const Array* rhs_ptr) {
 
     // The mathematical operations require a bit more fiddling.
 
-    if constexpr (
-        std::is_same<BinaryOp, std::divides<double>>::value ||
-        std::is_same<BinaryOp, op::divide>::value
-    ) {
+    if constexpr (std::is_same<BinaryOp, op::divide>::value) {
         return false;
     }
     if constexpr (
@@ -243,10 +223,9 @@ bool BinaryOpNode<BinaryOp>::equal_to(const BinaryOpNode& rhs) const {
     } else {
         // not commutative
         static_assert(
-            std::same_as<BinaryOpNode, DivideNode> or      //
-            std::same_as<BinaryOpNode, LessEqualNode> or   //
-            std::same_as<BinaryOpNode, ModulusNode> or     //
-            std::same_as<BinaryOpNode, SafeDivideNode> or  //
+            std::same_as<BinaryOpNode, DivideNode> or     //
+            std::same_as<BinaryOpNode, LessEqualNode> or  //
+            std::same_as<BinaryOpNode, ModulusNode> or    //
             std::same_as<BinaryOpNode, SubtractNode>
         );
     }
@@ -517,7 +496,7 @@ SizeInfo BinaryOpNode<BinaryOp>::sizeinfo() const {
 template class BinaryOpNode<op::add>;
 template class BinaryOpNode<op::subtract>;
 template class BinaryOpNode<op::multiply>;
-template class BinaryOpNode<std::divides<double>>;
+template class BinaryOpNode<op::divide>;
 template class BinaryOpNode<op::remainder>;
 template class BinaryOpNode<op::equal>;
 template class BinaryOpNode<op::less_equal>;
@@ -526,6 +505,5 @@ template class BinaryOpNode<op::logical_or>;
 template class BinaryOpNode<op::logical_xor>;
 template class BinaryOpNode<op::maximum>;
 template class BinaryOpNode<op::minimum>;
-template class BinaryOpNode<op::divide>;
 
 }  // namespace dwave::optimization
