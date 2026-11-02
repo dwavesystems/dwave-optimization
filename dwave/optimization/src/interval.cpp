@@ -41,9 +41,10 @@ std::ostream& operator<<(std::ostream& os, const interval<T>& in) {
 template std::ostream& operator<<(std::ostream&, const interval<float>&);
 template std::ostream& operator<<(std::ostream&, const interval<double>&);
 template std::ostream& operator<<(std::ostream&, const interval<bool>&);
-template std::ostream& operator<<(std::ostream&, const interval<std::int8_t>&);
-template std::ostream& operator<<(std::ostream&, const interval<std::int16_t>&);
-template std::ostream& operator<<(std::ostream&, const interval<std::int32_t>&);
-template std::ostream& operator<<(std::ostream&, const interval<std::int64_t>&);
+template std::ostream& operator<<(std::ostream&, const interval<signed char>&);
+template std::ostream& operator<<(std::ostream&, const interval<short>&);
+template std::ostream& operator<<(std::ostream&, const interval<int>&);
+template std::ostream& operator<<(std::ostream&, const interval<long>&);
+template std::ostream& operator<<(std::ostream&, const interval<long long>&);
 
 }  // namespace dwave::optimization

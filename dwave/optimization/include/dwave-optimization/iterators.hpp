@@ -483,15 +483,15 @@ requires(
                     return *static_cast<const double*>(ptr);
                 case FormatCharacter::bool_:
                     return *static_cast<const bool*>(ptr);
-                case FormatCharacter::int_:
-                    return *static_cast<const int*>(ptr);
                 case FormatCharacter::signedchar_:
                     return *static_cast<const signed char*>(ptr);
-                case FormatCharacter::signedshort_:
+                case FormatCharacter::int_:
+                    return *static_cast<const int*>(ptr);
+                case FormatCharacter::short_:
                     return *static_cast<const signed short*>(ptr);
-                case FormatCharacter::signedlong_:
+                case FormatCharacter::long_:
                     return *static_cast<const signed long*>(ptr);
-                case FormatCharacter::signedlonglong_:
+                case FormatCharacter::longlong_:
                     return *static_cast<const signed long long*>(ptr);
             }
             std::unreachable();

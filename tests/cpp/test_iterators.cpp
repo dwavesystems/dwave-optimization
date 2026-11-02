@@ -13,7 +13,6 @@
 //    limitations under the License.
 
 #include <array>
-#include <cstdint>
 #include <numeric>
 #include <vector>
 
@@ -33,34 +32,38 @@ TEMPLATE_PRODUCT_TEST_CASE(
     "BufferIterator",
     "",
     BufferIterator,
-    ((const float, const void),                 //
-     (const double, const void),                //
-     (const bool, const void),                  //
-     (const std::int8_t, const void),           //
-     (const std::int16_t, const void),          //
-     (const std::int32_t, const void),          //
-     (const std::int64_t, const void),          //
-     (float, float),                            //
-     (double, double),                          //
-     (bool, bool),                              //
-     (std::int8_t, std::int8_t),                //
-     (std::int16_t, std::int16_t),              //
-     (std::int32_t, std::int32_t),              //
-     (std::int64_t, std::int64_t),              //
-     (const float, float),                      //
-     (const double, double),                    //
-     (const bool, bool),                        //
-     (const std::int8_t, std::int8_t),          //
-     (const std::int16_t, std::int16_t),        //
-     (const std::int32_t, std::int32_t),        //
-     (const std::int64_t, std::int64_t),        //
-     (const float, const float),                //
-     (const double, const double),              //
-     (const bool, const bool),                  //
-     (const std::int8_t, const std::int8_t),    //
-     (const std::int16_t, const std::int16_t),  //
-     (const std::int32_t, const std::int32_t),  //
-     (const std::int64_t, const std::int64_t))
+    ((const float, const void),
+     (const double, const void),
+     (const bool, const void),
+     (const signed char, const void),
+     (const short, const void),
+     (const int, const void),
+     (const long, const void),
+     (const long long, const void),
+     (float, float),
+     (double, double),
+     (bool, bool),
+     (signed char, signed char),
+     (short, short),
+     (int, int),
+     (long, long),
+     (long long, long long),
+     (const float, float),
+     (const double, double),
+     (const bool, bool),
+     (const signed char, signed char),
+     (const short, short),
+     (const int, int),
+     (const long, long),
+     (const long long, long long),
+     (const float, const float),
+     (const double, const double),
+     (const bool, const bool),
+     (const signed char, const signed char),
+     (const short, const short),
+     (const int, const int),
+     (const long, const long),
+     (const long long, const long long))
 ) {
     using To = TestType::value_type;
 
@@ -409,18 +412,18 @@ TEST_CASE("BufferIterator") {
     }
 
     GIVEN("A buffer of int32 each separated by 3 pad bytes") {
-        std::vector<std::uint8_t> bytes(7 * 10);
-        std::uint8_t* ptr = bytes.data();
+        std::vector<unsigned char> bytes(7 * 10);
+        unsigned char* ptr = bytes.data();
         for (ssize_t i = 0; i < 10; ++i, ptr += 7) {
-            *(reinterpret_cast<std::int32_t*>(ptr)) = i;
+            *(reinterpret_cast<int*>(ptr)) = i;
         }
 
         WHEN("We iterate through the buffer as a 1d array") {
             std::array<ssize_t, 1> shape{10};
             std::array<ssize_t, 1> strides{7};
 
-            auto it = BufferIterator<const double, const std::int32_t>(
-                reinterpret_cast<std::int32_t*>(bytes.data()), shape, strides
+            auto it = BufferIterator<const double, const int>(
+                reinterpret_cast<int*>(bytes.data()), shape, strides
             );
 
             CHECK_THAT(
@@ -433,8 +436,8 @@ TEST_CASE("BufferIterator") {
             std::array<ssize_t, 1> shape{5};
             std::array<ssize_t, 1> strides{2 * 7};
 
-            auto it = BufferIterator<const double, const std::int32_t>(
-                reinterpret_cast<std::int32_t*>(bytes.data()), shape, strides
+            auto it = BufferIterator<const double, const int>(
+                reinterpret_cast<int*>(bytes.data()), shape, strides
             );
 
             CHECK_THAT(
