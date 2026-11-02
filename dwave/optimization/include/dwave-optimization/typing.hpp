@@ -76,11 +76,11 @@ enum class FormatCharacter : char {
     float_ = 'f',
     double_ = 'd',
     bool_ = '?',
-    int_ = 'i',
     signedchar_ = 'b',
-    signedshort_ = 'h',
-    signedlong_ = 'l',
-    signedlonglong_ = 'q',
+    int_ = 'i',
+    short_ = 'h',
+    long_ = 'l',
+    longlong_ = 'q',
 };
 
 /// Get the format character associated with a supported DType.
@@ -93,16 +93,16 @@ constexpr FormatCharacter format_of() {
         return FormatCharacter::double_;
     } else if constexpr (std::same_as<U, bool>) {
         return FormatCharacter::bool_;
-    } else if constexpr (std::same_as<U, int>) {
-        return FormatCharacter::int_;
     } else if constexpr (std::same_as<U, signed char>) {
         return FormatCharacter::signedchar_;
-    } else if constexpr (std::same_as<U, signed short>) {
-        return FormatCharacter::signedshort_;
-    } else if constexpr (std::same_as<U, signed long>) {
-        return FormatCharacter::signedlong_;
-    } else if constexpr (std::same_as<U, signed long long>) {
-        return FormatCharacter::signedlonglong_;
+    } else if constexpr (std::same_as<U, int>) {
+        return FormatCharacter::int_;
+    } else if constexpr (std::same_as<U, short>) {
+        return FormatCharacter::short_;
+    } else if constexpr (std::same_as<U, long>) {
+        return FormatCharacter::long_;
+    } else if constexpr (std::same_as<U, long long>) {
+        return FormatCharacter::longlong_;
     } else {
         static_assert(false, "unexpected dtype");
     }
