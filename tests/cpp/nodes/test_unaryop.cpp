@@ -28,10 +28,12 @@ using Catch::Matchers::RangeEquals;
 
 namespace dwave::optimization {
 
+// TODO: test empty unaryop with dynamic size
+
 // NOTE: sqrt and log should also be included but the templated tests need to be updated
 // first.
 TEMPLATE_TEST_CASE(
-    "UnaryOpNode",
+    "OperatorNode",
     "",
     op::absolute,
     op::cos,
@@ -52,7 +54,7 @@ TEMPLATE_TEST_CASE(
     GIVEN("A constant scalar input") {
         auto* a_ptr = graph.emplace_node<ConstantNode>(-5);
 
-        auto* p_ptr = graph.emplace_node<UnaryOpNode<TestType>>(a_ptr);
+        auto* p_ptr = graph.emplace_node<OperatorNode<TestType>>(a_ptr);
 
         THEN("The shape is also a scalar") {
             CHECK(p_ptr->ndim() == 0);
@@ -79,7 +81,7 @@ TEMPLATE_TEST_CASE(
     GIVEN("A dynamic array input") {
         auto* a_ptr = graph.emplace_node<ListNode>(5, 0, 5);
 
-        auto* p_ptr = graph.emplace_node<UnaryOpNode<TestType>>(a_ptr);
+        auto* p_ptr = graph.emplace_node<OperatorNode<TestType>>(a_ptr);
 
         graph.emplace_node<ArrayValidationNode>(p_ptr);
 
@@ -145,7 +147,7 @@ TEMPLATE_TEST_CASE(
             100
         );  // Scalar output
 
-        auto* p_ptr = graph.emplace_node<UnaryOpNode<TestType>>(a_ptr);
+        auto* p_ptr = graph.emplace_node<OperatorNode<TestType>>(a_ptr);
 
         graph.emplace_node<ArrayValidationNode>(p_ptr);
 
@@ -193,7 +195,7 @@ TEMPLATE_TEST_CASE(
             100
         );  // Scalar output
 
-        auto* p_ptr = graph.emplace_node<UnaryOpNode<TestType>>(a_ptr);
+        auto* p_ptr = graph.emplace_node<OperatorNode<TestType>>(a_ptr);
 
         THEN("The integers node is the operand") {
             CHECK(p_ptr->operands().size() == p_ptr->predecessors().size());
@@ -246,9 +248,9 @@ TEMPLATE_TEST_CASE(
         auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
         auto* c1_ptr = graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7});
 
-        Node* a_ptr = graph.emplace_node<UnaryOpNode<TestType>>(c0_ptr);
-        Node* b_ptr = graph.emplace_node<UnaryOpNode<TestType>>(c0_ptr);
-        Node* c_ptr = graph.emplace_node<UnaryOpNode<TestType>>(c1_ptr);
+        Node* a_ptr = graph.emplace_node<OperatorNode<TestType>>(c0_ptr);
+        Node* b_ptr = graph.emplace_node<OperatorNode<TestType>>(c0_ptr);
+        Node* c_ptr = graph.emplace_node<OperatorNode<TestType>>(c1_ptr);
 
         CHECK(a_ptr->equal_to(*a_ptr));
         CHECK(a_ptr->equal_to(*b_ptr));
@@ -262,7 +264,7 @@ TEMPLATE_TEST_CASE(
         auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
         auto* c1_ptr = graph.emplace_node<ConstantNode>(std::vector{7, 6, 5, 4});
 
-        auto* unaryop_ptr = graph.emplace_node<UnaryOpNode<TestType>>(c0_ptr);
+        auto* unaryop_ptr = graph.emplace_node<OperatorNode<TestType>>(c0_ptr);
 
         c1_ptr->take_successors(*c0_ptr);
 
@@ -271,7 +273,7 @@ TEMPLATE_TEST_CASE(
     }
 }
 
-TEST_CASE("UnaryOpNode - AbsoluteNode") {
+TEST_CASE("OperatorNode - AbsoluteNode") {
     auto graph = Graph();
 
     GIVEN("An integer variable with domain [-3, 2]") {
@@ -298,7 +300,7 @@ TEST_CASE("UnaryOpNode - AbsoluteNode") {
     }
 }
 
-TEST_CASE("UnaryOpNode - CosNode, SinNode, and TanhNode") {
+TEST_CASE("OperatorNode - CosNode, SinNode, and TanhNode") {
     auto graph = Graph();
 
     GIVEN("x with min/max of -100/+100, y = cos(x), z = sin(x), a = tanh(x)") {
@@ -319,7 +321,7 @@ TEST_CASE("UnaryOpNode - CosNode, SinNode, and TanhNode") {
     }
 }
 
-TEST_CASE("UnaryOpNode - ExpitNode") {
+TEST_CASE("OperatorNode - ExpitNode") {
     auto graph = Graph();
     GIVEN("An arbitrary number") {
         double c = 3.0;
@@ -362,7 +364,7 @@ TEST_CASE("UnaryOpNode - ExpitNode") {
     }
 }
 
-TEST_CASE("UnaryOpNode - ExpNode") {
+TEST_CASE("OperatorNode - ExpNode") {
     auto graph = Graph();
     GIVEN("An arbitrary number") {
         double c = 3.0;
@@ -405,7 +407,7 @@ TEST_CASE("UnaryOpNode - ExpNode") {
     }
 }
 
-TEST_CASE("UnaryOpNode - LogNode") {
+TEST_CASE("OperatorNode - LogNode") {
     auto graph = Graph();
     GIVEN("A constant 1d array of doubles") {
         auto* c_ptr = graph.emplace_node<ConstantNode>(std::vector{6.0, 0.3, 1.0, 1.2, 5.6});
@@ -432,7 +434,7 @@ TEST_CASE("UnaryOpNode - LogNode") {
     }
 }
 
-TEST_CASE("UnaryOpNode - LogicalNode") {
+TEST_CASE("OperatorNode - LogicalNode") {
     auto graph = Graph();
     GIVEN("A constant of mixed doubles and a negation of it") {
         auto* c_ptr = graph.emplace_node<ConstantNode>(std::vector{-2., -1., 0., 1., 2., -.5, .5});
@@ -454,7 +456,7 @@ TEST_CASE("UnaryOpNode - LogicalNode") {
     }
 }
 
-TEST_CASE("UnaryOpNode - NegativeNode") {
+TEST_CASE("OperatorNode - NegativeNode") {
     auto graph = Graph();
     GIVEN("An integer array and an asymmetric domain") {
         auto* i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{5}, -3, 8);
@@ -471,7 +473,7 @@ TEST_CASE("UnaryOpNode - NegativeNode") {
     }
 }
 
-TEST_CASE("UnaryOpNode - NotNode") {
+TEST_CASE("OperatorNode - NotNode") {
     auto graph = Graph();
     GIVEN("A constant of mixed doubles and a negation of it") {
         auto* c_ptr = graph.emplace_node<ConstantNode>(std::vector{-2., -1., 0., 1., 2., -.5, .5});
@@ -493,7 +495,7 @@ TEST_CASE("UnaryOpNode - NotNode") {
     }
 }
 
-TEST_CASE("UnaryOpNode - RintNode") {
+TEST_CASE("OperatorNode - RintNode") {
     auto graph = Graph();
     GIVEN("An arbitrary number") {
         double c = 10.3;
@@ -548,7 +550,7 @@ TEST_CASE("UnaryOpNode - RintNode") {
     }
 }
 
-TEST_CASE("UnaryOpNode - SquareNode") {
+TEST_CASE("OperatorNode - SquareNode") {
     auto graph = Graph();
     GIVEN("An integer with max domain") {
         auto* i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
@@ -565,7 +567,7 @@ TEST_CASE("UnaryOpNode - SquareNode") {
     }
 }
 
-TEST_CASE("UnaryOpNode - SquareRootNode") {
+TEST_CASE("OperatorNode - SquareRootNode") {
     auto graph = Graph();
     GIVEN("An integer with max domain") {
         auto i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
