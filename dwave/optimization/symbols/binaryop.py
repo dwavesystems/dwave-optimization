@@ -25,7 +25,7 @@ class Add(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Add):
         :class:`~dwave.optimization.symbols.NaryAdd`
 
         :class:`.Divide`, :class:`.Modulus`, :class:`.Multiply`,
-        :class:`.SafeDivide`, :class:`.Subtract`
+        :class:`.Subtract`
     """
 
 
@@ -49,9 +49,17 @@ class Divide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Divide):
         :func:`~dwave.optimization.mathematical.divide`: Instantiation and
         usage of this symbol.
 
-        :class:`.Add`, :class:`.Modulus`, :class:`.Multiply`,
-        :class:`.SafeDivide`, :class:`.Subtract`
+        :class:`.Add`, :class:`.Modulus`, :class:`.Multiply`, :class:`.Subtract`
+
+    .. versionadded:: 0.4.3
+
+    .. versionchanged:: 0.8.1
+
+        Starting in version 0.8.1, ``Divide`` does safe division.
     """
+
+
+SafeDivide = Divide  # alias for backwards compatibility
 
 
 class Equal(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Equal):
@@ -108,7 +116,7 @@ class Modulus(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Modulus):
         usage of this symbol.
 
         :class:`.Add`, :class:`.Divide`, :class:`.Multiply`,
-        :class:`.SafeDivide`, :class:`.Subtract`
+        :class:`.Subtract`
     """
 
 
@@ -123,7 +131,7 @@ class Multiply(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Multiply):
         :class:`~dwave.optimization.symbols.Prod`
 
         :class:`.Add`, :class:`.Divide`, :class:`.Modulus`,
-        :class:`.SafeDivide`, :class:`.Subtract`
+        :class:`.Subtract`
 
         :class:`~dwave.optimization.symbols.NaryMultiply`
     """
@@ -141,20 +149,6 @@ class Or(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Or):
     """
 
 
-class SafeDivide(_BinaryOpSymbol, node_type=_BinaryOpNodeType.SafeDivide):
-    """Safe division element-wise between two symbols.
-
-    See Also:
-        :func:`~dwave.optimization.mathematical.safe_divide`: Instantiation and
-        usage of this symbol.
-
-        :class:`.Add`, :class:`.Divide`, :class:`.Modulus`, :class:`.Multiply`,
-        :class:`.Subtract`
-
-    .. versionadded:: 0.6.2
-    """
-
-
 class Subtract(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Subtract):
     """Subtraction element-wise of two symbols.
 
@@ -162,8 +156,7 @@ class Subtract(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Subtract):
         :func:`~dwave.optimization.mathematical.subtract`: Instantiation and
         usage of this symbol.
 
-        :class:`.Add`, :class:`.Divide`, :class:`.Modulus`, :class:`.Multiply`,
-        :class:`.SafeDivide`,
+        :class:`.Add`, :class:`.Divide`, :class:`.Modulus`, :class:`.Multiply`
     """
 
 

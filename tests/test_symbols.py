@@ -13,9 +13,11 @@
 #    limitations under the License.
 
 import collections.abc
+import dataclasses
 import itertools
 import math
 import operator
+import os.path
 import sys
 import unittest
 import unittest.mock
@@ -1791,17 +1793,96 @@ class TestDisjointListsVariable(utils.SymbolTests):
         np.testing.assert_array_equal(d2.state(1), [3, 4])
 
 
-# NOTE: Inheriting from BinaryOpTests causes runtime errors so just inheritting from SymbolTests
-class TestDivide(utils.SymbolTests):
+class TestDivide(utils.BinaryOpTests):
     def generate_symbols(self):
         model = Model()
-        a = model.constant(5)
-        b = model.constant(7)
-        ab = a / b
-        ba = b / a
-        model.lock()
-        yield ab
-        yield ba
+
+        a = model.constant(1)
+        b = model.constant(2)
+        zero = model.constant(0)
+
+        # all of these syntax encode the same operation
+        w = a / b
+        x = b / a
+
+        y = dwave.optimization.divide(a, zero)
+        z = dwave.optimization.safe_divide(zero, a)  # deprecated alias
+
+        with model.lock():
+            yield from (w, x, y, z)
+
+    def op(self, lhs, rhs):
+        return np.divide(lhs, rhs, out=None, where=(rhs != 0))
+
+    def symbol_op(self, lhs, rhs):
+        return safe_divide(lhs, rhs)
+
+    def test_serialization_backward(self):
+        """
+        Given a model generated with 0.8.0 (before we made safe division default)
+
+        .. code-block: python
+
+            model = Model()
+
+            x = model.integer(lower_bound=-10, upper_bound=+10)
+
+            pos = model.constant(+0.0000000001)
+            neg = model.constant(-0.0000000001)
+            span = model.constant([-0.0000000001, +0.0000000001])
+
+            dwave.optimization.mathematical.divide(x, pos)
+            dwave.optimization.mathematical.divide(x, neg)
+
+            dwave.optimization.mathematical.safe_divide(x, pos)
+            dwave.optimization.mathematical.safe_divide(x, neg)
+            dwave.optimization.mathematical.safe_divide(x, span)
+
+            model.into_file(...)
+
+        Make sure we can correctly deserialize it
+        """
+
+        fname = os.path.join(
+            os.path.dirname(__file__),
+            "data",
+            "test_symbols-TestDivide-test_serialization_backward.nl",
+        )
+
+        model = Model.from_file(fname)
+
+        _, _, _, _, a, b, q, r, s = model.iter_symbols()
+
+        self.assertIsInstance(a, dwave.optimization.symbols.Divide)
+        self.assertEqual(
+            dataclasses.asdict(a.info()),
+            dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
+        )
+
+        self.assertIsInstance(b, dwave.optimization.symbols.Divide)
+        self.assertEqual(
+            dataclasses.asdict(b.info()),
+            dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
+        )
+
+        self.assertIsInstance(q, dwave.optimization.symbols.Divide)
+        self.assertEqual(
+            dataclasses.asdict(q.info()),
+            dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
+        )
+
+        self.assertIsInstance(r, dwave.optimization.symbols.Divide)
+        self.assertEqual(
+            dataclasses.asdict(r.info()),
+            dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
+        )
+
+        self.assertIsInstance(s, dwave.optimization.symbols.Divide)
+        s_info = s.info()
+        self.assertLessEqual(np.finfo(np.float64).max, s_info.max)
+        self.assertGreaterEqual(np.finfo(np.float64).min, s_info.min)
+        self.assertFalse(s_info.integral)
+        self.assertEqual(s_info.size, 2)
 
     def test_doc_example(self):
         model = Model()
@@ -1813,6 +1894,16 @@ class TestDivide(utils.SymbolTests):
             i.set_state(0, [21, 10])
             j.set_state(0, [7, 2])
             self.assertListEqual([3.0, 5.0], list(k.state(0)))
+
+    def test_mixed(self):
+        model = Model()
+        a = model.constant([-1, 0, 1, 2])
+        b = model.constant([2, 1, 0, -1])
+        x = a / b
+
+        model.states.resize(1)
+        with model.lock():
+            np.testing.assert_array_equal(x.state(), [-0.5, 0, 0, -2])
 
     def test_simple_division(self):
         model = Model()
@@ -1835,15 +1926,6 @@ class TestDivide(utils.SymbolTests):
 
         a = model.constant(np.zeros((5, 5)))
         b = model.constant(np.zeros((6, 4)))
-
-        with self.assertRaises(ValueError):
-            a / b
-
-    def test_division_by_zero(self):
-        model = Model()
-
-        a = model.constant(5)
-        b = model.constant(0)
 
         with self.assertRaises(ValueError):
             a / b
@@ -4081,38 +4163,6 @@ class TestRoll(utils.SymbolTests):
         # Out of bound axis
         with self.assertRaises(ValueError):
             roll(x, shift=1, axis=[1])
-
-
-class TestSafeDivide(utils.BinaryOpTests):
-    def generate_symbols(self):
-        model = Model()
-
-        a = model.constant(1)
-        b = model.constant(2)
-        zero = model.constant(0)
-
-        w = safe_divide(a, b)
-        x = safe_divide(b, a)
-        y = safe_divide(a, zero)
-        z = safe_divide(zero, a)
-        with model.lock():
-            yield from (w, x, y, z)
-
-    def op(self, lhs, rhs):
-        return np.divide(lhs, rhs, out=None, where=(rhs != 0))
-
-    def symbol_op(self, lhs, rhs):
-        return safe_divide(lhs, rhs)
-
-    def test(self):
-        model = Model()
-        a = model.constant([-1, 0, 1, 2])
-        b = model.constant([2, 1, 0, -1])
-        x = safe_divide(a, b)
-
-        model.states.resize(1)
-        with model.lock():
-            np.testing.assert_array_equal(x.state(), [-0.5, 0, 0, -2])
 
 
 class TestSin(utils.UnaryOpTests):

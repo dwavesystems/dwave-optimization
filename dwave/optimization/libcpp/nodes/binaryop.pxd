@@ -46,9 +46,6 @@ cdef extern from "dwave-optimization/nodes/binaryop.hpp" namespace "dwave::optim
     cdef cppclass OrNode(ArrayNode):
         pass
 
-    cdef cppclass SafeDivideNode(ArrayNode):
-        pass
-
     cdef cppclass SubtractNode(ArrayNode):
         pass
 

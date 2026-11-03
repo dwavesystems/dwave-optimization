@@ -25,7 +25,6 @@ class _BinaryOpNodeType:
     Modulus: int
     Multiply: int
     Or: int
-    SafeDivide: int
     Subtract: int
     Xor: int
 

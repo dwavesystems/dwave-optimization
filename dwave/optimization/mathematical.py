@@ -62,7 +62,6 @@ from dwave.optimization.symbols import (
     Resize,
     Rint,
     Roll,
-    SafeDivide,
     Sin,
     SoftMax,
     SquareRoot,
@@ -266,8 +265,7 @@ def add(x1: ArraySymbolLike, x2: ArraySymbolLike, *xi: ArraySymbolLike) -> Array
 
         :data:`~numpy.add`: :doc:`NumPy <numpy:index>` function
 
-        :func:`.divide`, :func:`.mod`, :func:`.multiply`,
-        :func:`.safe_divide`, :func:`.subtract`
+        :func:`.divide`, :func:`.mod`, :func:`.multiply`, :func:`.subtract`
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
@@ -862,9 +860,28 @@ def cos(x: ArraySymbol) -> Cos:
 
 @_binaryop(Divide)
 def divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Divide:
-    r"""Divide element-wise two symbols (or arrays).
+    r"""Divide element-wise two symbols but return 0 where the denominator is 0.
 
     Equivalently, you can use the ``/`` operator (e.g., :code:`i / j`).
+
+    This function is not strictly mathematical division. Rather it encodes
+    the following function:
+
+    .. math::
+        f(a, b) = \begin{cases}
+            a / b & \text{for } b \neq 0 \\
+            0 & \text{for } b = 0
+        \end{cases}
+
+    Such a definition is useful [#buzzard]_ in cases where ``x2`` is non-zero by
+    construction, or otherwise enforced to be non-zero, because you can create a
+    model with division using a symbol that might otherwise have zero values.
+
+
+    .. [#buzzard] Buzzard, Kevin (5 Jul 2020),
+       `"Division by zero in type theory: a FAQ" <xena_>`_,
+       Xena Project (Blog), retrieved 2025-05-20
+    .. _xena: https://xenaproject.wordpress.com/2020/07/05/division-by-zero-in-type-theory-a-faq/
 
     Args:
         x1: Numerator array symbol or |array-like|_.
@@ -874,43 +891,47 @@ def divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Divide:
         Successor symbol that divides the predecessor symbols (or arrays)
         element-wise.
 
-    Raises:
-        ValueError: If a denominator element is zero. See also the
-            :func:`.safe_divide` function.
-
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import divide
-
-        Divide two symbols.
-
+        ...
         >>> model = Model()
-        >>> i = model.integer(2, lower_bound=1)
-        >>> j = model.integer(2, lower_bound=1)
-        >>> k = divide(i, j)   # alternatively: k = i / j
+        >>> a = model.constant([-1, 0, 1, 2])
+        >>> b = model.constant([2, 1, 0, -1])
+        >>> x = divide(a, b)  # equivalently: x = a / b
+        >>> model.states.resize(1)
         >>> with model.lock():
-        ...     model.states.resize(1)
-        ...     i.set_state(0, [21, 10])
-        ...     j.set_state(0, [7, 2])
-        ...     print(k.state(0))
-        [3. 5.]
-
-        Divide a symbol and array.
-
-        >>> model = Model()
-        >>> i = model.integer(2, lower_bound=1)
-        >>> l = i / [2, 0.5] # equivalently: l = divide(i, [2, 0.5])
-
+        ...     print(x.state())
+        [-0.5  0.   0.  -2. ]
 
     See Also:
         :class:`~dwave.optimization.symbols.Divide`: Generated symbol
 
         :data:`~numpy.divide`: :doc:`NumPy <numpy:index>` function
 
-        :func:`.add`, :func:`.mod`, :func:`.multiply`,
-        :func:`.safe_divide`, :func:`.subtract`
+        :func:`.add`, :func:`.mod`, :func:`.multiply`, :func:`.subtract`
+
+    .. versionadded:: 0.4.3
+
+    .. versionchanged:: 0.8.1
+
+        Prior to version 0.8.1, ``divide()`` would raise an error if the
+        denominator could be or contain a zero.
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
+
+
+safe_divide = divide
+"""
+Alias for :func:`divide`.
+
+.. versionadded:: 0.6.2
+
+.. versionchanged:: 0.8.1
+
+    Starting in version 0.8.1, :func:`.divide` does safe division.
+    ``safe_divide()`` became an alias for :func:`.divide`.
+"""
 
 
 @_binaryop(Equal)
@@ -1898,8 +1919,7 @@ def mod(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Modulus:
 
         :data:`~numpy.mod`: :doc:`NumPy <numpy:index>` function
 
-        :func:`.add`, :func:`.divide`, :func:`.multiply`,
-        :func:`.safe_divide`, :func:`.subtract`
+        :func:`.add`, :func:`.divide`, :func:`.multiply`, :func:`.subtract`
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
@@ -1956,8 +1976,7 @@ def multiply(
 
         :data:`~numpy.multiply`: :doc:`NumPy <numpy:index>` function
 
-        :func:`.add`, :func:`.divide`, :func:`.mod`, :func:`.safe_divide`,
-        :func:`.subtract`
+        :func:`.add`, :func:`.divide`, :func:`.mod`, :func:`.subtract`
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
@@ -2157,62 +2176,6 @@ def roll(
     .. versionadded:: 0.6.9
     """
     return Roll(array, shift=shift, axis=axis)
-
-
-@_binaryop(SafeDivide)
-def safe_divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> SafeDivide:
-    r"""Divide element-wise two symbols but return 0 where the denominator is 0.
-
-    This function is not strictly mathematical division. Rather it encodes
-    the following function:
-
-    .. math::
-        f(a, b) = \begin{cases}
-            a / b & \text{for } b \neq 0 \\
-            0 & \text{for } b = 0
-        \end{cases}
-
-    Such a definition is useful [#buzzard]_ in cases where ``x2`` is non-zero by
-    construction, or otherwise enforced to be non-zero, because you can create a
-    model with division using a symbol that might otherwise have zero values.
-
-    .. [#buzzard] Buzzard, Kevin (5 Jul 2020),
-       `"Division by zero in type theory: a FAQ" <xena_>`_,
-       Xena Project (Blog), retrieved 2025-05-20
-    .. _xena: https://xenaproject.wordpress.com/2020/07/05/division-by-zero-in-type-theory-a-faq/
-
-    Args:
-        x1: Numerator array symbol or |array-like|_.
-        x2: Denominator array symbol or |array-like|_.
-
-    Returns:
-        Successor symbol that divides the predecessor symbols (or arrays)
-        element-wise.
-
-    Examples:
-        >>> from dwave.optimization import Model
-        >>> from dwave.optimization.mathematical import safe_divide
-        ...
-        >>> model = Model()
-        >>> a = model.constant([-1, 0, 1, 2])
-        >>> b = model.constant([2, 1, 0, -1])
-        >>> x = safe_divide(a, b)
-        >>> model.states.resize(1)
-        >>> with model.lock():
-        ...     print(x.state())
-        [-0.5  0.   0.  -2. ]
-
-    See Also:
-        :class:`~dwave.optimization.symbols.SafeDivide`: Generated symbol
-
-        :data:`~numpy.divide`: :doc:`NumPy <numpy:index>` function
-
-        :func:`.add`, :func:`.divide`, :func:`.mod`, :func:`.multiply`,
-        :func:`.subtract`
-
-    .. versionadded:: 0.6.2
-    """
-    raise RuntimeError("implemented by the _binaryop() decorator")
 
 
 def sin(x: ArraySymbol) -> Sin:
@@ -2444,8 +2407,7 @@ def subtract(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Subtract:
 
         :data:`~numpy.subtract`: :doc:`NumPy <numpy:index>` function
 
-        :func:`.add`, :func:`.divide`, :func:`.mod`, :func:`.multiply`,
-        :func:`.safe_divide`
+        :func:`.add`, :func:`.divide`, :func:`.mod`, :func:`.multiply`
     """
     raise RuntimeError("implemented by the _binaryop() decorator")
 
