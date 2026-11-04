@@ -190,4 +190,241 @@ TEST_CASE("MeanNode") {
         CHECK_THAT(mean_ptr->view(state), RangeEquals({5.5}));
     }
 }
+
+TEST_CASE("BinCount") {
+    auto graph = Graph();
+
+    GIVEN("An empty integer node with upper/lower bounds above zero and a c node") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(0, 0, 10);
+        auto bincount_ptr = graph.emplace_node<BinCountNode>(i_ptr);
+        graph.emplace_node<ArrayValidationNode>(bincount_ptr);
+
+        WHEN("We initialize a state") {
+            auto state = graph.initialize_state();
+
+            // bincount should return empty for an empty input
+            THEN("The initial bincount is correct") {
+                CHECK(bincount_ptr->view(state).size() == 11);
+                CHECK(bincount_ptr->view(state)[0] == 0);
+                CHECK(bincount_ptr->view(state)[10] == 0);
+            }
+        }
+    }
+
+    GIVEN("An non-empty integer node with upper/lower bounds above zero and a bincount node") {
+        auto i_ptr = graph.emplace_node<IntegerNode>(7, 0, 10);
+        auto bincount_ptr = graph.emplace_node<BinCountNode>(i_ptr);
+        graph.emplace_node<ArrayValidationNode>(bincount_ptr);
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            i_ptr->initialize_state(state, {0.0, 0.0, 0.0, 2.0, 3.0, 3.0, 5.0});
+            graph.initialize_state(state);
+
+            // Size of bincount array should be 11
+            THEN("The initial bincount is correct") {
+                CHECK(bincount_ptr->view(state).size() == 11);
+                std::vector<double> bincount_test = {
+                    3.0, 0.0, 1.0, 2.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0
+                };
+
+                CHECK_THAT(bincount_ptr->view(state), RangeEquals(bincount_test));
+            }
+
+            AND_WHEN("We make changes to integer node and propagate") {
+                i_ptr->set_value(state, 1, 1.0);
+                // i_ptr should be [0.0, 1.0, 0.0, 2.0, 3.0, 3.0, 5.0]
+                graph.propagate(state);
+
+                THEN("The bincount state is correct") {
+                    CHECK(bincount_ptr->view(state)[0] == 2.0);
+                    CHECK(bincount_ptr->view(state)[1] == 1.0);
+                }
+
+                AND_WHEN("We commit state, make changes to integer node, and propagate") {
+                    graph.commit(state);
+                    i_ptr->set_value(state, 0, 7.0);
+                    // i_ptr should now be [7.0, 1.0, 0.0, 2.0, 3.0, 3.0, 5.0]
+                    graph.propagate(state);
+
+                    THEN("The bincount state is correct") {
+                        CHECK(bincount_ptr->view(state)[0] == 1.0);
+                        CHECK(bincount_ptr->view(state)[7] == 1.0);
+                    }
+                    AND_WHEN("We revert to get the previous state") {
+                        graph.revert(state);
+                        // i_ptr should now be [0.0, 1.0, 0.0, 2.0, 3.0, 3.0, 5.0]
+
+                        THEN("The bincount state is correct") {
+                            CHECK(bincount_ptr->size(state) == 11);
+                            CHECK(bincount_ptr->view(state)[0] == 2.0);
+                            CHECK(bincount_ptr->view(state)[1] == 1.0);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("An non-empty constant node with integer values") {
+        auto* i_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{0.0, 0.0, 0.0, 2.0, 3.0, 3.0, 5.0});
+        auto bincount_ptr = graph.emplace_node<BinCountNode>(i_ptr);
+        graph.emplace_node<ArrayValidationNode>(bincount_ptr);
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            graph.initialize_state(state);
+
+            // Size of bincount array should be 6
+            THEN("The initial bincount state is correct") {
+                CHECK(bincount_ptr->size(state) == 6);
+                CHECK(bincount_ptr->size() == 6);
+                std::vector<double> bincount_test = {3.0, 0.0, 1.0, 2.0, 0.0, 1.0};
+                CHECK_THAT(bincount_ptr->view(state), RangeEquals(bincount_test));
+            }
+        }
+    }
+
+    GIVEN("An non-empty constant node with non-integer value") {
+        auto* arr_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{0.0, 0.0, 0.0, 2.3, 3.0, 3.0, 5.0});
+        THEN("BinCount node should throw error") {
+            CHECK_THROWS_WITH(
+                graph.emplace_node<BinCountNode>(arr_ptr), "array values must be integer"
+            );
+        }
+    }
+
+    GIVEN("An non-empty constant node with negative value") {
+        auto* arr_ptr =
+            graph.emplace_node<ConstantNode>(std::vector{0.0, 0.0, 0.0, -2.0, 3.0, 3.0, 5.0});
+        THEN("BinCount node should throw error") {
+            CHECK_THROWS_WITH(
+                graph.emplace_node<BinCountNode>(arr_ptr), "array values must be non-negative"
+            );
+        }
+    }
+
+    GIVEN("A dynamic array node and a bincount node") {
+        auto* dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+            std::initializer_list<ssize_t>{-1}, 0.0, 10.0, true
+        );
+        auto* bincount_ptr = graph.emplace_node<BinCountNode>(dyn_ptr);
+
+        graph.emplace_node<ArrayValidationNode>(bincount_ptr);
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            dyn_ptr->initialize_state(state, {3.0, 3.0, 8.0});
+            // array should be [3.0, 3.0, 8.0]
+            graph.initialize_state(state);
+
+            THEN("The initial bincount state and size is correct") {
+                std::vector<double> bincount_test = {
+                    0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0
+                };
+                CHECK_THAT(bincount_ptr->view(state), RangeEquals(bincount_test));
+                CHECK(bincount_ptr->size() == 11);
+                CHECK(bincount_ptr->size(state) == 11);
+            }
+
+            AND_WHEN("We change array values, shrink and grow array, and then propagate") {
+                dyn_ptr->set(state, 0, 9.0);
+                dyn_ptr->shrink(state);
+                dyn_ptr->grow(state, {1.0, 9.0});
+                // array should be [9.0, 3.0, 1.0, 9.0]
+                graph.propagate(state);
+
+                THEN("The bincount state and size is correct") {
+                    CHECK(bincount_ptr->view(state)[1] == 1);
+                    CHECK(bincount_ptr->view(state)[3] == 1);
+                    CHECK(bincount_ptr->view(state)[8] == 0);
+                    CHECK(bincount_ptr->view(state)[9] == 2);
+                    CHECK(bincount_ptr->size(state) == 11);
+                }
+
+                AND_WHEN("We revert") {
+                    graph.revert(state, graph.descendants(state, {dyn_ptr}));
+                    // array should be back to [3.0, 3.0, 8.0]
+
+                    THEN("The bincount state and size are correct") {
+                        CHECK(bincount_ptr->view(state)[1] == 0);
+                        CHECK(bincount_ptr->view(state)[3] == 2);
+                        CHECK(bincount_ptr->view(state)[8] == 1);
+                        CHECK(bincount_ptr->size(state) == 11);
+                    }
+                }
+            }
+        }
+    }
+
+    GIVEN("A non-integer dynamic array node") {
+        auto* dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+            std::initializer_list<ssize_t>{-1}, 0.0, 10.0, false
+        );
+        THEN("BinCount node should throw error") {
+            CHECK_THROWS_WITH(
+                graph.emplace_node<BinCountNode>(dyn_ptr), "array values must be integer"
+            );
+        }
+    }
+
+    GIVEN("A dynamic array node with a negative lower bound") {
+        auto* dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+            std::initializer_list<ssize_t>{-1}, -10.0, 30000.0, true
+        );
+
+        THEN("BinCount node should throw error") {
+            CHECK_THROWS_WITH(
+                graph.emplace_node<BinCountNode>(dyn_ptr), "array values must be non-negative"
+            );
+        }
+    }
+
+    GIVEN("A dynamic array node with a large upper bound") {
+        auto* dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+            std::initializer_list<ssize_t>{-1}, 0.0, 30000.0, true
+        );
+
+        THEN("BinCount node should throw error") {
+            CHECK_THROWS_WITH(
+                graph.emplace_node<BinCountNode>(dyn_ptr), "array values must be less than 10000"
+            );
+        }
+    }
+
+    SECTION("equality") {
+        auto graph = Graph();
+
+        auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 2, 3});
+        auto* c1_ptr = graph.emplace_node<ConstantNode>(std::vector{4, 5, 6, 7});
+
+        Node* a_ptr = graph.emplace_node<BinCountNode>(c0_ptr);
+        Node* b_ptr = graph.emplace_node<BinCountNode>(c0_ptr);
+        Node* c_ptr = graph.emplace_node<BinCountNode>(c1_ptr);
+
+        CHECK(a_ptr->equal_to(*a_ptr));
+        CHECK(a_ptr->equal_to(*b_ptr));
+        CHECK(not a_ptr->equal_to(*c0_ptr));
+        CHECK(not a_ptr->equal_to(*c_ptr));
+    }
+
+    SECTION("predecessor replacement") {
+        auto graph = Graph();
+
+        auto* c0_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 0, 0, 1});
+        auto* c1_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1, 1, 3});
+
+        auto* bincount_ptr = graph.emplace_node<BinCountNode>(c0_ptr);
+
+        c1_ptr->take_successors(*c0_ptr);
+
+        CHECK_THAT(bincount_ptr->predecessors(), RangeEquals({c1_ptr}));
+
+        auto state = graph.initialize_state();
+        CHECK(bincount_ptr->view(state)[0] == 1.0);
+    }
+}
+
 }  // namespace dwave::optimization

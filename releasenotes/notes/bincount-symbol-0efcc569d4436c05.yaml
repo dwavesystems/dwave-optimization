@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Added ``BinCount`` symbol/node which returns the value counts of its predecessor.
+    
+    Predecessor values be non-negative integers with values less than or equal to 10000.
+
+    Output dimensions is be equal to the predecessor upper bound plus one.

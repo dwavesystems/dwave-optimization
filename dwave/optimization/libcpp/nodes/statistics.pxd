@@ -16,5 +16,8 @@ from dwave.optimization.libcpp.graph cimport ArrayNode
 
 
 cdef extern from "dwave-optimization/nodes/statistics.hpp" namespace "dwave::optimization" nogil:
+    cdef cppclass BinCountNode(ArrayNode):
+        pass
+
     cdef cppclass MeanNode(ArrayNode):
         pass
