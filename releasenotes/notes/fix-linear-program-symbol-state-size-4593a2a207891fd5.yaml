@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Define `state_size` method for the LinearProgram symbol that returns the sum of the inputs' state size.
