@@ -28,54 +28,6 @@
 
 namespace dwave::optimization {
 
-// Return the linear offsets that need to be applied to each update when broadcasting from
-// `from_shape` to `to_shape`.
-std::vector<ssize_t> diff_offsets(
-    std::span<const ssize_t> from_shape,
-    std::span<const ssize_t> to_shape
-) {
-    std::vector<ssize_t> offsets{0};  // for an identity broadcast there is only one offset
-
-    auto expand = [](const std::vector<ssize_t>& offsets, ssize_t size, ssize_t multiplier) {
-        assert(size >= 0);
-        assert(multiplier > 0);
-        std::vector<ssize_t> new_offsets;
-        for (const ssize_t& offset : offsets) {
-            for (ssize_t i = 0; i < size; ++i) {
-                new_offsets.emplace_back(offset + i * multiplier);
-            }
-        }
-
-        return new_offsets;
-    };
-
-    assert(from_shape.size() <= to_shape.size());
-
-    auto from_it = from_shape.rbegin();
-    auto to_it = to_shape.rbegin();
-    ssize_t multiplier = 1;
-    for (const auto stop = from_shape.rend(); from_it != stop; ++from_it, ++to_it) {
-        if (*from_it != *to_it) {
-            assert(*from_it == 1);  // should be checked in constructor
-            offsets = expand(offsets, *to_it, multiplier);
-        }
-
-        multiplier *= *to_it;
-    }
-
-    // all of the dimensions we're prepending need offsets
-    for (auto stop = to_shape.rend(); to_it != stop; ++to_it) {
-        offsets = expand(offsets, *to_it, multiplier);
-        multiplier *= *to_it;
-    }
-
-    // We need it to be sorted in order to potentially support dynamic nodes
-    // Also it's more convenient to debug.
-    std::ranges::sort(offsets);
-
-    return offsets;
-}
-
 class BroadcastToNodeData : public NodeStateData {
  public:
     BroadcastToNodeData(std::vector<ssize_t>&& diff_offsets) :
@@ -164,7 +116,7 @@ bool BroadcastToNode::equal_to(const BroadcastToNode& rhs) const {
 }
 
 void BroadcastToNode::initialize_state(State& state) const {
-    std::vector<ssize_t> offsets = diff_offsets(array_ptr_->shape(), this->shape());
+    std::vector<ssize_t> offsets = broadcast_index_to(array_ptr_->shape(), this->shape());
 
     // If and only if we're broadcasting to an array with size 0, then our offset
     // should likewise be an empty list.

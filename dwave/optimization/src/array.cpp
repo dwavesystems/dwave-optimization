@@ -18,6 +18,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <iterator>
 #include <ranges>
 #include <span>
 #include <stdexcept>
@@ -239,6 +240,83 @@ bool array_shape_equal(const Array* lhs_ptr, const Array* rhs_ptr) {
 }
 
 bool array_shape_equal(const Array& lhs, const Array& rhs) { return array_shape_equal(&lhs, &rhs); }
+
+std::vector<ssize_t> broadcast_index_to(
+    std::span<const ssize_t> from_shape,
+    std::span<const ssize_t> to_shape
+) {
+    // Check that it's valid to broadcast from_shape to to_shape. This is expensive
+    // so if we wanted to throw rather than assert we should use a less blunt check.
+    assert(std::ranges::equal(broadcast_shapes(from_shape, to_shape), to_shape));
+
+    // If we're broadcasting to a size 0 array, then we just return an empty
+    // vector because there are no indices to broadcast
+    if (std::ranges::contains(to_shape, 0)) return {};
+
+    // The number of dimensions we are inserting.
+    // They are all treated as having size 1
+    const ssize_t num_leading = std::ssize(to_shape) - std::ssize(from_shape);
+
+    std::vector<ssize_t> offsets{0};
+
+    // We want to avoid many reallocations, so let's do a quick pass to determine
+    // the final number of offsets and allocate our vector accordingly
+    {
+        ssize_t num_offsets = 1;
+        for (ssize_t i = 0; i < num_leading; ++i) {
+            num_offsets *= to_shape[i];
+        }
+        for (
+            const auto& [from, to] :
+            std::views::zip(from_shape, to_shape | std::views::drop(num_leading))
+        ) {
+            if (to != from) {
+                assert(from == 1 and "invalid broadcast");
+                num_offsets *= to;
+            }
+        }
+        offsets.reserve(num_offsets);
+    }
+
+    ssize_t multiplier = 1;  // the number of indices we need to increment the current row
+
+    // We'd like to use std::views::enumerate() here but as of Nov 2026, still no support
+    // in Apple Clang.
+    const auto axes = std::views::iota(ssize_t{0}, std::ssize(to_shape));
+    for (const auto& [axis, to] : std::views::zip(axes, to_shape) | std::views::reverse) {
+        // missing dimensions are treated as having size 1
+        const ssize_t from = axis >= num_leading ? from_shape[axis - num_leading] : 1;
+
+        if (from != to) {
+            assert(from == 1 and "invalid broadcast");
+
+            // At each step we're multiplying the size of the array by `to`
+            const ssize_t current_size = std::ssize(offsets);
+
+            // We could .reserve() to try to avoid the default-initialization, but
+            // that slows down transform() lower down so eat that cost.
+            offsets.resize(current_size * to);
+
+            // This part stays the same and we use it as the basis for our expansion.
+            // Because we alreay did the reserve above, we don't need to worry about
+            // a reallocation breaking the view.
+            std::span<const ssize_t> head = std::span(offsets).first(current_size);
+
+            for (ssize_t i = 1; i < to; ++i) {
+                std::ranges::transform(
+                    head,
+                    offsets.begin() + i * current_size,
+                    [delta = i * multiplier](ssize_t offset) { return offset + delta; }
+                );
+            }
+        }
+
+        multiplier *= to;
+    }
+
+    assert(std::ranges::is_sorted(offsets));
+    return offsets;
+}
 
 // We follow NumPy's broadcasting rules
 // See https://numpy.org/doc/stable/user/basics.broadcasting.html

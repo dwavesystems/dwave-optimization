@@ -464,6 +464,35 @@ TEST_CASE("Update") {
     }
 }
 
+TEST_CASE("broadcast_index_to()") {
+    SECTION("() x (5,)") {
+        CHECK_THAT(
+            broadcast_index_to(std::vector<ssize_t>{}, std::vector<ssize_t>{5}),
+            RangeEquals({0, 1, 2, 3, 4})
+        );
+    }
+
+    SECTION("(5,) x (5,)") {
+        CHECK_THAT(
+            broadcast_index_to(std::vector<ssize_t>{5}, std::vector<ssize_t>{5}), RangeEquals({0})
+        );
+    }
+
+    SECTION("(3,) x (2,3)") {
+        CHECK_THAT(
+            broadcast_index_to(std::vector<ssize_t>{3}, std::vector<ssize_t>{2, 3}),
+            RangeEquals({0, 3})
+        );
+    }
+
+    SECTION("(0,) x (5,0)") {
+        CHECK_THAT(
+            broadcast_index_to(std::vector<ssize_t>{0}, std::vector<ssize_t>{5, 0}),
+            RangeEquals(std::vector<ssize_t>{})
+        );
+    }
+}
+
 TEST_CASE("Test broadcast_shapes()") {
     SECTION("(256,256,3) x (3,) -> (256,256,3)") {
         CHECK_THAT(

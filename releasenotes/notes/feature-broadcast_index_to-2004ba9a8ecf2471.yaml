@@ -1,0 +1,3 @@
+---
+features:
+  - Add C++ ``broadcast_index_to()`` function.
