@@ -259,6 +259,25 @@ std::vector<ssize_t> broadcast_index_to(
 
     std::vector<ssize_t> offsets{0};
 
+    // We want to avoid many reallocations, so let's do a quick pass to determine
+    // the final number of offsets and allocate our vector accordingly
+    {
+        ssize_t num_offsets = 1;
+        for (ssize_t i = 0; i < num_leading; ++i) {
+            num_offsets *= to_shape[i];
+        }
+        for (
+            const auto& [from, to] :
+            std::views::zip(from_shape, to_shape | std::views::drop(num_leading))
+        ) {
+            if (to != from) {
+                assert(from == 1 and "invalid broadcast");
+                num_offsets *= to;
+            }
+        }
+        offsets.reserve(num_offsets);
+    }
+
     ssize_t multiplier = 1;  // the number of indices we need to increment the current row
 
     // We'd like to use std::views::enumerate() here but as of Nov 2026, still no support
