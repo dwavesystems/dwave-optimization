@@ -697,6 +697,12 @@ bool array_shape_equal(const Array& lhs, const Array& rhs);
 // Test whether multiple arrays all have the same shape.
 bool array_shape_equal(const std::span<const Array* const> array_ptrs);
 
+/// Get the offsets that broadcast each flat index in `from` to flat indices in `to`.
+std::vector<ssize_t> broadcast_index_to(
+    std::span<const ssize_t> from_shape,
+    std::span<const ssize_t> to_shape
+);
+
 /// Get the shape induced by broadcasting two arrays together.
 /// See https://numpy.org/doc/stable/user/basics.broadcasting.html.
 /// Raises an exception if the two arrays cannot be broadcast together
