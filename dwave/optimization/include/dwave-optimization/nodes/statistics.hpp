@@ -20,6 +20,52 @@
 
 namespace dwave::optimization {
 
+class BinCountNode : public ArrayOutputMixin<EqualityMixin<ArrayNode>> {
+ public:
+    BinCountNode(ArrayNode* arr_ptr);
+    BinCountNode(ArrayNode* arr_ptr, ssize_t size);
+
+    /// @copydoc Array::buff()
+    double const* buff(const State& state) const override;
+
+    /// @copydoc Node::commit()
+    void commit(State& state) const override;
+
+    /// @copydoc Array::diff()
+    std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::initialize_state()
+    void initialize_state(State& state) const override;
+
+    /// @copydoc Array::integral()
+    bool integral() const override;
+
+    /// @copydoc Array::min()
+    double min() const override;
+
+    /// @copydoc Array::max()
+    double max() const override;
+
+    /// @copydoc Node::propagate()
+    void propagate(State& state) const override;
+
+    /// @copydoc Node::revert()
+    void revert(State& state) const override;
+
+    /// @copydoc Array::sizeinfo()
+    SizeInfo sizeinfo() const override;
+
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
+ private:
+    // pointer to input (predecessor) array
+    const Array* arr_ptr_;
+
+    // Needed as BinCount output is always dynamic
+    ssize_t size_;
+};
+
 class MeanNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>, true> {
  public:
     MeanNode(ArrayNode* arr_ptr);
