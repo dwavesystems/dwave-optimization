@@ -210,6 +210,9 @@ limited-api = true
 [tool.ruff]
 line-length = 100
 
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.ruff.lint]
 extend-select = [
     "D",   # pydocstyle
