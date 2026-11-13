@@ -247,7 +247,7 @@ def add(x1: ArraySymbolLike, x2: ArraySymbolLike, *xi: ArraySymbolLike) -> Array
         >>> model = Model()
         >>> i = model.integer(2)
         >>> j = model.integer(2)
-        >>> i_plus_j = add(i, j)    # alternatively: i_plus_j = i + j
+        >>> i_plus_j = add(i, j)  # alternatively: i_plus_j = i + j
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     i.set_state(0, [3, 5])
@@ -355,16 +355,16 @@ def argsort(array: ArraySymbol) -> ArgSort:
         >>> indices.shape()
         (6,)
         >>> with model.lock():
-        ...    model.states.resize(1)
-        ...    print(indices.state())
+        ...     model.states.resize(1)
+        ...     print(indices.state())
         [5. 1. 3. 0. 2. 4.]
         >>> a = model.constant([[5, 2, 7], [4, 9, 1]])
         >>> indices = argsort(a)
         >>> indices.shape()
         (2, 3)
         >>> with model.lock():
-        ...    model.states.resize(1)
-        ...    print(indices.state())
+        ...     model.states.resize(1)
+        ...     print(indices.state())
         [[5. 1. 3.]
          [0. 2. 4.]]
 
@@ -399,15 +399,11 @@ def as_array_symbols(
         >>> from dwave.optimization.mathematical import as_array_symbols
         >>>
         >>> model = Model()
-        >>> c = as_array_symbols(np.random.randint(
-        ...     low=-3,
-        ...     high=5,
-        ...     size=(15, 25)),
-        ...     model=model)
+        >>> c = as_array_symbols(np.random.randint(low=-3, high=5, size=(15, 25)), model=model)
         >>> min_c = c[0].min()
         >>> with model.lock():
-        ...    model.states.resize(1)
-        ...    print(min_c.state(0) >= -3)
+        ...     model.states.resize(1)
+        ...     print(min_c.state(0) >= -3)
         True
 
     See Also:
@@ -835,9 +831,9 @@ def concatenate(
         >>> from dwave.optimization.mathematical import concatenate
         >>>
         >>> model = Model()
-        >>> a = model.constant([[0,1], [2,3]])
-        >>> b = model.constant([[4,5]])
-        >>> a_b = concatenate((a,b), axis=0)
+        >>> a = model.constant([[0, 1], [2, 3]])
+        >>> b = model.constant([[4, 5]])
+        >>> a_b = concatenate((a, b), axis=0)
         >>> a_b.shape()
         (3, 2)
         >>> with model.lock():
@@ -995,7 +991,7 @@ def equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Equal:
         >>> model = Model()
         >>> i = model.integer(3, lower_bound=1)
         >>> c = model.constant([[1, 3, 5], [2, 4, 6]])
-        >>> i_c = equal(i, c[0, :])     # Alternatively, i_c = i == c[0, :]
+        >>> i_c = equal(i, c[0, :])  # Alternatively, i_c = i == c[0, :]
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     i.set_state(0, [1, 3, 7])
@@ -1006,7 +1002,7 @@ def equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Equal:
 
         >>> model = Model()
         >>> i = model.integer(3, lower_bound=1)
-        >>> i_array = i == [2, 6, 8] # equivalently: i_array = equal(i, [2, 6, 8])
+        >>> i_array = i == [2, 6, 8]  # equivalently: i_array = equal(i, [2, 6, 8])
 
     See Also:
         :class:`~dwave.optimization.symbols.Equal`: Generated symbol
@@ -1337,14 +1333,14 @@ def less_equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> LessEqual:
         >>> model = Model()
         >>> i = model.integer(3, lower_bound=1)
         >>> c = model.constant([[1, 3, 5], [2, 4, 6]])
-        >>> i_c = less_equal(i, c[0, :])     # Alternatively, i_c = i <= c[0, :]
+        >>> i_c = less_equal(i, c[0, :])  # Alternatively, i_c = i <= c[0, :]
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     i.set_state(0, [1, 2, 7])
         ...     print(i_c.state(0))
         [1. 1. 0.]
         >>> # Testing equality between a symbol and an array
-        >>> i_array = i <= [2, 1, 8] # equivalently: i_array = less_equal(i, [2, 1, 8])
+        >>> i_array = i <= [2, 1, 8]  # equivalently: i_array = less_equal(i, [2, 1, 8])
 
     See Also:
         :class:`~dwave.optimization.symbols.LessEqual`: Generated symbol
@@ -1508,7 +1504,7 @@ def logical(x: ArraySymbol) -> Logical:
         >>> from dwave.optimization.mathematical import logical
         >>>
         >>> model = Model()
-        >>> x = model.constant([0, 1, -2, .5])
+        >>> x = model.constant([0, 1, -2, 0.5])
         >>> logical_x = logical(x)
         >>> model.states.resize(1)
         >>> with model.lock():
@@ -1579,7 +1575,7 @@ def logical_not(x: ArraySymbol) -> Not:
         >>> from dwave.optimization.mathematical import logical_not
         >>>
         >>> model = Model()
-        >>> x = model.constant([0, 1, -2, .5])
+        >>> x = model.constant([0, 1, -2, 0.5])
         >>> not_x = logical_not(x)
         >>> model.states.resize(1)
         >>> with model.lock():
@@ -1932,7 +1928,7 @@ def mod(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Modulus:
         >>> model = Model()
         >>> i = model.integer(4, lower_bound=-5)
         >>> j = model.integer(4, lower_bound=-3)
-        >>> k = mod(i, j) # alternatively: k = i % j
+        >>> k = mod(i, j)  # alternatively: k = i % j
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     i.set_state(0, [5, -5, 5, -5])
@@ -1944,7 +1940,7 @@ def mod(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Modulus:
 
         >>> model = Model()
         >>> j = model.binary(2)
-        >>> k = 0.33 % j # equivalently: k = mod(0.33, j)
+        >>> k = 0.33 % j  # equivalently: k = mod(0.33, j)
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     j.set_state(0, [0, 1])
@@ -1993,7 +1989,7 @@ def multiply(
         >>> model = Model()
         >>> i = model.integer(2)
         >>> j = model.integer(2)
-        >>> k = multiply(i, j)   # alternatively: k = i * j
+        >>> k = multiply(i, j)  # alternatively: k = i * j
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     i.set_state(0, [3, 5])
@@ -2005,7 +2001,7 @@ def multiply(
 
         >>> model = Model()
         >>> i = model.integer(2)
-        >>> k_array = i * [8, 4] # equivalently: k_array = multiply(i, [8, 4])
+        >>> k_array = i * [8, 4]  # equivalently: k_array = multiply(i, [8, 4])
 
     See Also:
         See Also:
@@ -2353,13 +2349,13 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
         >>> from dwave.optimization import Model, stack
         >>>
         >>> model = Model()
-        >>> a = model.constant([1,2])
-        >>> b = model.constant([3,4])
-        >>> c = model.constant([5,6])
-        >>> s0 = stack((a,b,c), axis=0)
+        >>> a = model.constant([1, 2])
+        >>> b = model.constant([3, 4])
+        >>> c = model.constant([5, 6])
+        >>> s0 = stack((a, b, c), axis=0)
         >>> s0.shape()
         (3, 2)
-        >>> s1 = stack((a,b,c), axis=1)
+        >>> s1 = stack((a, b, c), axis=1)
         >>> s1.shape()
         (2, 3)
         >>> with model.lock():
@@ -2426,19 +2422,19 @@ def subtract(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Subtract:
         >>> model = Model()
         >>> i = model.integer(2, lower_bound=3)
         >>> j = model.integer(2, upper_bound=20)
-        >>> k = subtract(i, j)   # alternatively: k = i - j
+        >>> k = subtract(i, j)  # alternatively: k = i - j
         >>> with model.lock():
-        ...    model.states.resize(1)
-        ...    i.set_state(0, [21, 10])
-        ...    j.set_state(0, [7, 2])
-        ...    print(k.state(0))
+        ...     model.states.resize(1)
+        ...     i.set_state(0, [21, 10])
+        ...     j.set_state(0, [7, 2])
+        ...     print(k.state(0))
         [14.  8.]
 
         Subtract an array from a symbol.
 
         >>> model = Model()
         >>> i = model.integer(2, lower_bound=3)
-        >>> l = i - [2, 2] # equivalently: l = subtract(i, [2, 2])
+        >>> l = i - [2, 2]  # equivalently: l = subtract(i, [2, 2])
 
     See Also:
         :class:`~dwave.optimization.symbols.Subtract`: Generated symbol
@@ -2645,8 +2641,8 @@ def where(condition: ArraySymbol, x: ArraySymbol, y: ArraySymbol) -> Where:
 
         >>> model = Model()
         >>> condition = model.binary(3)
-        >>> x = model.constant([1., 2., 3.])
-        >>> y = model.constant([4., 5., 6.])
+        >>> x = model.constant([1.0, 2.0, 3.0])
+        >>> y = model.constant([4.0, 5.0, 6.0])
         >>> a = where(condition, x, y)
         >>> with model.lock():
         ...     model.states.resize(1)
@@ -2664,7 +2660,7 @@ def where(condition: ArraySymbol, x: ArraySymbol, y: ArraySymbol) -> Where:
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     condition.set_state(0, True)
-        ...     x.set_state(0, [0., 2., 3.])
+        ...     x.set_state(0, [0.0, 2.0, 3.0])
         ...     y.set_state(0, [1])
         ...     print(a.state())
         [0. 2. 3.]

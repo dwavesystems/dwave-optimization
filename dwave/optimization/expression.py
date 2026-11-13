@@ -49,13 +49,13 @@ class Expression:
         >>>
         >>> @expression(v1=dict(lower_bound=-10, upper_bound=20))
         ... def func(v0, v1):
-        ...     return 2*(v1 + 1) + v0
+        ...     return 2 * (v1 + 1) + v0
         >>>
-        >>> j = AccumulateZip(func, (i1, ), initial=2)
+        >>> j = AccumulateZip(func, (i1,), initial=2)
         >>>
         >>> with model.lock():
         ...     model.states.resize(1)
-        ...     i1.set_state(0,[1, 1, 0, 1])
+        ...     i1.set_state(0, [1, 1, 0, 1])
         ...     print(j.state(0))
         [ 6. 10. 12. 16.]
 

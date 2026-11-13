@@ -348,14 +348,25 @@ def capacitated_vehicle_routing(
         >>> from dwave.optimization.generators import capacitated_vehicle_routing
         >>>
         >>> demand = [0, 34, 12, 65, 10, 43, 27, 55, 61, 22]
-        >>> sites = [(15, 38), (23, -19), (44, 62), (3, 12), (-56, -21), (-53, 2),
-        ...          (33, 63), (14, -33), (42, 41), (13, -62)]
+        >>> sites = [
+        ...     (15, 38),
+        ...     (23, -19),
+        ...     (44, 62),
+        ...     (3, 12),
+        ...     (-56, -21),
+        ...     (-53, 2),
+        ...     (33, 63),
+        ...     (14, -33),
+        ...     (42, 41),
+        ...     (13, -62),
+        ... ]
         >>> model = capacitated_vehicle_routing(
         ...     demand=demand,
         ...     number_of_vehicles=2,
         ...     vehicle_capacity=200,
-        ...     locations_x=[x for x,y in sites],
-        ...     locations_y=[y for x,y in sites])
+        ...     locations_x=[x for x, y in sites],
+        ...     locations_y=[y for x, y in sites],
+        ... )
 
         The :ref:`opt_example_nl_cvrp` example demonstrates the use of the
         `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid` nonlinear
@@ -381,7 +392,7 @@ def capacitated_vehicle_routing(
         nonlinear :term:`solver`.
 
         >>> model.states.resize(1)
-        >>> routes.set_state(0, [[2., 7., 1., 5.], [4., 3., 8., 6., 0.]])
+        >>> routes.set_state(0, [[2.0, 7.0, 1.0, 5.0], [4.0, 3.0, 8.0, 6.0, 0.0]])
 
         You can use the :meth:`~dwave.optimization.model.Model.iter_constraints`
         method to check feasibility of constructed or returned solutions. Here,
@@ -392,9 +403,11 @@ def capacitated_vehicle_routing(
         >>> with model.lock():
         ...     capacity_constraint = next(model.iter_constraints())
         ...     for i in range(model.states.size()):
-        ...         if capacity_constraint.state(i):    # Filter on feasibility
-        ...             print((f"Objective value #{i} is {model.objective.state(i).round(2)} for routes\n"
-        ...                    f"    {[r.state(i).tolist() for r in routes.iter_successors()]}"))
+        ...         if capacity_constraint.state(i):  # Filter on feasibility
+        ...             print(
+        ...                 f"Objective value #{i} is {model.objective.state(i).round(2)} for routes\n"
+        ...                 f"    {[r.state(i).tolist() for r in routes.iter_successors()]}"
+        ...             )
         Objective value #0 is 423.8 for routes
             [[2.0, 7.0, 1.0, 5.0], [4.0, 3.0, 8.0, 6.0, 0.0]]
     """
@@ -612,10 +625,12 @@ def capacitated_vehicle_routing_with_time_windows(
 
         >>> from dwave.optimization.generators import capacitated_vehicle_routing_with_time_windows
         >>>
-        >>> time_distances=[[0, 14, 19, 32],
-        ...                 [14, 0, 15, 19],
-        ...                 [19, 15, 0, 21],
-        ...                 [32, 19, 21, 0]]
+        >>> time_distances = [
+        ...     [0, 14, 19, 32],
+        ...     [14, 0, 15, 19],
+        ...     [19, 15, 0, 21],
+        ...     [32, 19, 21, 0],
+        ... ]
         >>> model = capacitated_vehicle_routing_with_time_windows(
         ...     demand=[0, 19, 30, 16],
         ...     number_of_vehicles=2,
@@ -623,7 +638,8 @@ def capacitated_vehicle_routing_with_time_windows(
         ...     time_distances=time_distances,
         ...     time_window_open=[0, 0, 10, 5],
         ...     time_window_close=[100, 90, 50, 90],
-        ...     service_time=[0, 10, 5, 5])
+        ...     service_time=[0, 10, 5, 5],
+        ... )
 
         The :ref:`opt_example_nl_cvrp` example demonstrates the use of the
         `Leap <https://cloud.dwavesys.com/leap/>`_ :term:`hybrid` nonlinear
@@ -659,9 +675,11 @@ def capacitated_vehicle_routing_with_time_windows(
 
         >>> with model.lock():
         ...     for i in range(model.states.size()):
-        ...         if all(sym.state(i) for sym in model.iter_constraints()): # Filter feasibility
-        ...             print((f"Objective value #{i} is {model.objective.state(i).round(2)} for routes\n"
-        ...                    f"    {[r.state(i).tolist() for r in routes]}"))
+        ...         if all(sym.state(i) for sym in model.iter_constraints()):  # Filter feasibility
+        ...             print(
+        ...                 f"Objective value #{i} is {model.objective.state(i).round(2)} for routes\n"
+        ...                 f"    {[r.state(i).tolist() for r in routes]}"
+        ...             )
         Objective value #0 is 103.0 for routes
             [[0.0, 2.0], [1.0]]
     """
@@ -963,8 +981,10 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
 
         >>> with model.lock():
         ...     for i in range(model.states.size()):
-        ...         print((f"Order #{i} is {order.state(i).tolist()} with makespan "
-        ...                f"{model.objective.state(i).round(2)}"))
+        ...         print(
+        ...             f"Order #{i} is {order.state(i).tolist()} with makespan "
+        ...             f"{model.objective.state(i).round(2)}"
+        ...         )
         Order #0 is [1.0, 0.0, 2.0] with makespan 50.0
 
         This solution is shown in the figure below.
@@ -1130,13 +1150,17 @@ def job_shop_scheduling(
 
         >>> from dwave.optimization.generators import job_shop_scheduling
         >>>
-        >>> times = [[2, 1, 3],
-        ...          [4, 1, 2],
-        ...          [1, 1, 2]]
-        >>> machines = [[0, 1, 2],
-        ...             [2, 0, 1],
-        ...             [2, 1, 0]]
-        >>> model = job_shop_scheduling(times, machines)
+        >>> times = [
+        ...     [2, 1, 3],
+        ...     [4, 1, 2],
+        ...     [1, 1, 2],
+        ... ]
+        >>> machines = [
+        ...     [0, 1, 2],
+        ...     [2, 0, 1],
+        ...     [2, 1, 0],
+        ... ]
+        >>> model = job_shop_scheduling(times, machines, 1)
 
         In the global task ordering, the index for the :math:`j` th task for the
         :math:`i` th job is equal to :math:`n*i + j`. An example solution for the final
@@ -1404,8 +1428,10 @@ def knapsack(
 
         >>> with model.lock():
         ...     for i in range(model.states.size()):
-        ...         print((f"Items in solution #{i} are {items.state(i)} with value "
-        ...                f"{-model.objective.state(i)}"))
+        ...         print(
+        ...             f"Items in solution #{i} are {items.state(i)} with value "
+        ...             f"{-model.objective.state(i)}"
+        ...         )
         Items in solution #0 are [1. 3.] with value 60.0
     """
     weights = _require("weights", weights, dtype=float, nonnegative=True, ndim=1)
@@ -1489,6 +1515,7 @@ def predict(estimator, X: ArraySymbol) -> ArraySymbol:
             # The weights are known exactly
             weights = np.asarray([12, 1, 1, 2, 4])
 
+
             # But the values, rather than being known directly, are given only
             # through noisy observations
             def observations():
@@ -1497,9 +1524,10 @@ def predict(estimator, X: ArraySymbol) -> ArraySymbol:
                 rng = np.random.default_rng(42)
                 X = rng.integers(low=0, high=2, size=(20, 5))
 
-                y = X @ secret_values + rng.normal(scale=.5, size=20)
+                y = X @ secret_values + rng.normal(scale=0.5, size=20)
 
                 return X, y
+
 
             X, y = observations()
 
@@ -1655,12 +1683,16 @@ def quadratic_assignment(
 
         >>> from dwave.optimization.generators import quadratic_assignment
         >>>
-        >>> distance_matrix = [[0, 5, 3],
-        ...                    [5, 0, 2],
-        ...                    [3, 2, 0]]
-        >>> flow_matrix = [[0, 1, 3],
-        ...                [4, 0, 2],
-        ...                [1, 1, 0]]
+        >>> distance_matrix = [
+        ...     [0, 5, 3],
+        ...     [5, 0, 2],
+        ...     [3, 2, 0],
+        ... ]
+        >>> flow_matrix = [
+        ...     [0, 1, 3],
+        ...     [4, 0, 2],
+        ...     [1, 1, 0],
+        ... ]
         >>> model = quadratic_assignment(distance_matrix=distance_matrix, flow_matrix=flow_matrix)
 
         An example feasible solution might be :math:`[2, 1, 0]`, meaning that
@@ -1689,8 +1721,10 @@ def quadratic_assignment(
 
         >>> with model.lock():
         ...     for i in range(model.states.size()):
-        ...         print((f"Locations for solution #{i} are {locations.state(i)} with objective "
-        ...                f"value of {model.objective.state(i)}"))
+        ...         print(
+        ...             f"Locations for solution #{i} are {locations.state(i)} with objective "
+        ...             f"value of {model.objective.state(i)}"
+        ...         )
         Locations for solution #0 are [2. 1. 0.] with objective value of 37.0
 
         This solution is shown in the figure below.
@@ -1836,7 +1870,8 @@ def traveling_salesperson(
         >>> distance_matrix = [
         ...     [0, 3, 1],
         ...     [1, 0, 3],
-        ...     [3, 1, 0]]
+        ...     [3, 1, 0],
+        ... ]
         >>> model = traveling_salesperson(distance_matrix=distance_matrix)
 
         Example solutions might be :math:`[0, 1, 2]` and :math:`[2, 1, 0]`,
@@ -1866,8 +1901,10 @@ def traveling_salesperson(
 
         >>> with model.lock():
         ...     for i in range(model.states.size()):
-        ...         print((f"Itinerary #{i} is {itinerary.state(i)} with objective "
-        ...                f"value of {model.objective.state(i)}"))
+        ...         print(
+        ...             f"Itinerary #{i} is {itinerary.state(i)} with objective "
+        ...             f"value of {model.objective.state(i)}"
+        ...         )
         Itinerary #0 is [2. 1. 0.] with objective value of 3.0
         Itinerary #1 is [0. 1. 2.] with objective value of 9.0
 
