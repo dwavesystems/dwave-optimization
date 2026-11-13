@@ -59,7 +59,7 @@ def locked(model: _Graph):
         variable, and prints a successor symbol.
 
         >>> from dwave.optimization import Model
-        ...
+        >>>
         >>> model = Model()
         >>> i = model.integer(lower_bound=-5, upper_bound=5)
         >>> j = i**2
@@ -117,7 +117,7 @@ class _ConstantCache:
 
         Examples:
             >>> from dwave.optimization import Model
-            ...
+            >>>
             >>> model = Model()
             >>> a = model.constant(4)
             >>> b = model.constant(4)
@@ -154,7 +154,7 @@ class Model(_Graph):
         problem with two jobs on three machines.
 
         >>> from dwave.optimization.generators import flow_shop_scheduling
-        ...
+        >>>
         >>> processing_times = [[10, 5, 7], [20, 10, 15]]
         >>> model = flow_shop_scheduling(processing_times=processing_times)
     """
@@ -207,7 +207,7 @@ class Model(_Graph):
             state with value :math:`i=2.0`.
 
             >>> from dwave.optimization import Model
-            ...
+            >>>
             >>> model = Model()
             >>> i = model.integer(lower_bound=-5, upper_bound=5)
             >>> c = model.constant(4)
@@ -760,7 +760,7 @@ class Model(_Graph):
 
             >>> from dwave.optimization.model import Model
             >>> from dwave.optimization.mathematical import log
-            ...
+            >>>
             >>> model = Model()
             >>> i = model.integer(5, lower_bound=1, upper_bound=10)
             >>> i.shape()
@@ -1005,7 +1005,7 @@ class Model(_Graph):
             >>> quad = {(0, 1): 1, (0, 2): 2, (1, 2): 3}
             >>> lin = {0: 0.5, 1: 1.2, 2: 2.0}
             >>> qm = model.quadratic_model(i, quadratic=quad, linear=lin)
-            ...
+            >>>
             >>> with model.lock():
             ...    model.states.resize(1)
             ...    i.set_state(0, [1, 3, 0])
@@ -1048,7 +1048,7 @@ class Model(_Graph):
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> destinations = model.set(100, max_size=4)
-            ...
+            >>>
             >>> with model.lock():
             ...    model.states.resize(1)
             ...    destinations.set_state(0, [0, 22, 58])
@@ -1075,10 +1075,10 @@ class Model(_Graph):
             object.
 
             >>> from dwave.optimization.generators import flow_shop_scheduling
-            ...
+            >>>
             >>> processing_times = [[10, 5, 7], [20, 10, 15]]
             >>> model = flow_shop_scheduling(processing_times=processing_times)
-            ...
+            >>>
             >>> my_file = model.to_file()
 
             The temporary file created above can be saved to disk, for example,

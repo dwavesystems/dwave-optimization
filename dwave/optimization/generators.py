@@ -346,7 +346,7 @@ def capacitated_vehicle_routing(
         depot to nine sites with maximum vehicle capacity 200.
 
         >>> from dwave.optimization.generators import capacitated_vehicle_routing
-        ...
+        >>>
         >>> demand = [0, 34, 12, 65, 10, 43, 27, 55, 61, 22]
         >>> sites = [(15, 38), (23, -19), (44, 62), (3, 12), (-56, -21), (-53, 2),
         ...          (33, 63), (14, -33), (42, 41), (13, -62)]
@@ -611,7 +611,7 @@ def capacitated_vehicle_routing_with_time_windows(
         opening,closing, and service times.
 
         >>> from dwave.optimization.generators import capacitated_vehicle_routing_with_time_windows
-        ...
+        >>>
         >>> time_distances=[[0, 14, 19, 32],
         ...                 [14, 0, 15, 19],
         ...                 [19, 15, 0, 21],
@@ -934,7 +934,7 @@ def flow_shop_scheduling(processing_times: numpy.typing.ArrayLike) -> Model:
         the flow of operations.
 
         >>> from dwave.optimization.generators import flow_shop_scheduling
-        ...
+        >>>
         >>> processing_times = [[10, 5, 7], [20, 10, 15]]
         >>> model = flow_shop_scheduling(processing_times=processing_times)
 
@@ -1129,7 +1129,7 @@ def job_shop_scheduling(
         unit on the second machine, then 3 time units on the third machine.
 
         >>> from dwave.optimization.generators import job_shop_scheduling
-        ...
+        >>>
         >>> times = [[2, 1, 3],
         ...          [4, 1, 2],
         ...          [1, 1, 2]]
@@ -1374,7 +1374,7 @@ def knapsack(
         with four items.
 
         >>> from dwave.optimization.generators import knapsack
-        ...
+        >>>
         >>> weights = [30, 10, 40, 20]
         >>> values = [10, 20, 30, 40]
         >>> model = knapsack(values=values, weights=weights, capacity=30)
@@ -1654,7 +1654,7 @@ def quadratic_assignment(
         that has three facilites to place in three locations.
 
         >>> from dwave.optimization.generators import quadratic_assignment
-        ...
+        >>>
         >>> distance_matrix = [[0, 5, 3],
         ...                    [5, 0, 2],
         ...                    [3, 2, 0]]
@@ -1832,7 +1832,7 @@ def traveling_salesperson(
         travel.
 
         >>> from dwave.optimization.generators import traveling_salesperson
-        ...
+        >>>
         >>> distance_matrix = [
         ...     [0, 3, 1],
         ...     [1, 0, 3],

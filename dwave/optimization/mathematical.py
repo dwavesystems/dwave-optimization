@@ -201,7 +201,7 @@ Examples:
 
     >>> from dwave.optimization.model import Model
     >>> from dwave.optimization.mathematical import absolute
-    ...
+    >>>
     >>> model = Model()
     >>> i = model.integer((3, 3), lower_bound=-10)
     >>> j = absolute(i).min()
@@ -295,7 +295,7 @@ def arange(
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import arange
-        ...
+        >>>
         >>> i = model.integer(1, lower_bound=-5)
         >>> points = arange(i, 4, 2)
         >>> with model.lock():
@@ -348,7 +348,7 @@ def argsort(array: ArraySymbol) -> ArgSort:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import argsort
-        ...
+        >>>
         >>> model = Model()
         >>> a = model.constant([5, 2, 7, 4, 9, 1])
         >>> indices = argsort(a)
@@ -397,7 +397,7 @@ def as_array_symbols(
         >>> import numpy as np
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import as_array_symbols
-        ...
+        >>>
         >>> model = Model()
         >>> c = as_array_symbols(np.random.randint(
         ...     low=-3,
@@ -462,7 +462,7 @@ def atleast_1d(*arrays):
 
     Examples:
         >>> from dwave.optimization import atleast_1d, Model
-        ...
+        >>>
         >>> model = Model()
         >>> a = model.constant(1)
         >>> b = model.constant([2])
@@ -518,7 +518,7 @@ def atleast_2d(*arrays):
 
     Examples:
         >>> from dwave.optimization import atleast_2d, Model
-        ...
+        >>>
         >>> model = Model()
         >>> a = model.constant(1)
         >>> b = model.constant([[2]])
@@ -575,7 +575,7 @@ def bincount(array: ArraySymbol) -> BinCount:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import bincount
-        ...
+        >>>
         >>> model = Model()
         >>> i = model.integer(7, 0, 5)
         >>> bc = bincount(i)
@@ -664,7 +664,7 @@ def broadcast_symbols(*args: ArraySymbol) -> tuple[ArraySymbol, ...]:
 
     Examples:
         >>> from dwave.optimization import broadcast_symbols, broadcast_to, Model
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.integer(3)  # shape = (3,)
         >>> y = model.constant([[0], [1]])  # shape = (2, 1)
@@ -728,7 +728,7 @@ def broadcast_to(x: ArraySymbol, shape: ShapeLike) -> ArraySymbol:
 
     Examples:
         >>> from dwave.optimization import broadcast_to, Model
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant([0, 1, 2, 3, 4])
         >>> x.shape()
@@ -793,7 +793,7 @@ def bspline(
 
     Examples:
         >>> from dwave.optimization import bspline, Model
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.integer(3, lower_bound=2, upper_bound=4)
         >>> bs = bspline(x, k=2, t=[0, 1, 2, 3, 4, 5, 6], c=[-1, 2, 0, -1])
@@ -833,7 +833,7 @@ def concatenate(
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import concatenate
-        ...
+        >>>
         >>> model = Model()
         >>> a = model.constant([[0,1], [2,3]])
         >>> b = model.constant([[4,5]])
@@ -874,11 +874,11 @@ def cos(x: ArraySymbol) -> Cos:
     Examples:
         >>> import numpy as np
         >>> from dwave.optimization import Model, cos
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant([0, np.pi / 2])
         >>> y = cos(x)
-        ...
+        >>>
         >>> model.states.resize(1)
         >>> with model.lock():
         ...     print(y.state())
@@ -932,7 +932,7 @@ def divide(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Divide:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import divide
-        ...
+        >>>
         >>> model = Model()
         >>> a = model.constant([-1, 0, 1, 2])
         >>> b = model.constant([2, 1, 0, -1])
@@ -1031,7 +1031,7 @@ def exp(x: ArraySymbol) -> Exp:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import exp
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant(1.0)
         >>> exp_x = exp(x)
@@ -1065,7 +1065,7 @@ def expit(x: ArraySymbol) -> Expit:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import expit
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant(1.0)
         >>> expit_x = expit(x)
@@ -1103,7 +1103,7 @@ def extract(condition: ArraySymbol, arr: ArraySymbol) -> Extract:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import extract
-        ...
+        >>>
         >>> model = Model()
         >>> condition = model.binary(3)
         >>> arr = model.constant([4, 5, 6])
@@ -1144,7 +1144,7 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
 
         >>> model = Model()
         >>> model.states.resize(1)
-        ...
+        >>>
         >>> a = model.constant([0])
         >>> b = model.constant([1, 2, 3])
         >>> h = hstack((a, b))
@@ -1154,7 +1154,7 @@ def hstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
 
         >>> model = Model()
         >>> model.states.resize(1)
-        ...
+        >>>
         >>> a = model.constant([[0], [3]])
         >>> b = model.constant([[1, 2], [4, 5]])
         >>> h = hstack((a, b))
@@ -1202,7 +1202,7 @@ def is_disjoint_cover(
     Examples:
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.mathematical import is_disjoint_cover
-        ...
+        >>>
         >>> model = Model()
         >>> model.states.resize(1)
         >>> subsets = []
@@ -1252,7 +1252,7 @@ def isin(element: ArraySymbol, test_elements: ArraySymbol) -> IsIn:
     Examples:
         >>> from dwave.optimization.model import Model
         >>> from dwave.optimization.mathematical import isin
-        ...
+        >>>
         >>> model = Model()
         >>> model.states.resize(1)
         >>> element = model.constant([1.3, -1.0, 3.0])
@@ -1333,7 +1333,7 @@ def less_equal(x1: ArraySymbolLike, x2: ArraySymbolLike) -> LessEqual:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import less_equal
-        ...
+        >>>
         >>> model = Model()
         >>> i = model.integer(3, lower_bound=1)
         >>> c = model.constant([[1, 3, 5], [2, 4, 6]])
@@ -1414,14 +1414,14 @@ def linprog(
             \text{subject to: } & x_0 + x_1 <= 1
 
         >>> from dwave.optimization import linprog, Model
-        ...
+        >>>
         >>> model = Model()
         >>> c = model.constant([-1, -2])
         >>> A_ub = model.constant([[1, 1]])
         >>> b_ub = model.constant([1])
         >>> res = linprog(c, A_ub=A_ub, b_ub=b_ub)
         >>> _ = model.add_constraint(res.success)  # tell the model you want feasible solutions
-        ...
+        >>>
         >>> model.states.resize(1)
         >>> x = res.x
         >>> with model.lock():
@@ -1472,7 +1472,7 @@ def log(x: ArraySymbol) -> Log:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import log
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant(1.0)
         >>> log_x = log(x)
@@ -1506,7 +1506,7 @@ def logical(x: ArraySymbol) -> Logical:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant([0, 1, -2, .5])
         >>> logical_x = logical(x)
@@ -1539,7 +1539,7 @@ def logical_and(x1: ArraySymbolLike, x2: ArraySymbolLike) -> And:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical_and
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.binary(3)
         >>> y = model.binary(3)
@@ -1577,7 +1577,7 @@ def logical_not(x: ArraySymbol) -> Not:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical_not
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant([0, 1, -2, .5])
         >>> not_x = logical_not(x)
@@ -1612,7 +1612,7 @@ def logical_or(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Or:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical_or
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.binary(3)
         >>> y = model.binary(3)
@@ -1652,7 +1652,7 @@ def logical_xor(x1: ArraySymbolLike, x2: ArraySymbolLike) -> Xor:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import logical_xor
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.binary(3)
         >>> y = model.binary(3)
@@ -1711,7 +1711,7 @@ def matmul(x: ArraySymbolLike, y: ArraySymbolLike) -> MatrixMultiply:
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import matmul
-        ...
+        >>>
         >>> model = Model()
         >>> i = model.integer(3)
         >>> j = model.integer(3)
@@ -1834,7 +1834,7 @@ def mean(array: ArraySymbol) -> Mean:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import mean
-        ...
+        >>>
         >>> model = Model()
         >>> i = model.integer(3)
         >>> m = mean(i)
@@ -2052,14 +2052,14 @@ def put(array: ArraySymbol, indices: ArraySymbol, values: ArraySymbol) -> Put:
         >>> import numpy as np
         >>> from dwave.optimization import Model
         >>> from dwave.optimization import put
-        ...
+        >>>
         >>> model = Model()
-        ...
+        >>>
         >>> array = model.constant(np.zeros((3, 3)))
         >>> indices = model.constant([0, 1, 2])
         >>> values = model.integer(3)
         >>> array = put(array, indices, values)  # replace values in array
-        ...
+        >>>
         >>> model.states.resize(1)
         >>> with model.lock():
         ...     values.set_state(0, [10, 20, 30])
@@ -2099,11 +2099,11 @@ def resize(
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import resize
-        ...
+        >>>
         >>> model = Model()
         >>> s = model.set(10)  # subsets of range(10)
         >>> s_2x2 = resize(s, (2, 2), fill_value=-1)
-        ...
+        >>>
         >>> model.states.resize(1)
         >>> with model.lock():
         ...     s.set_state(0, [0, 1, 2])
@@ -2144,7 +2144,7 @@ def rint(x: ArraySymbol) -> Rint:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import rint
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant(1.3)
         >>> rint_x = rint(x)
@@ -2179,14 +2179,14 @@ def roll(
 
     Examples:
         >>> from dwave.optimization import Model, roll
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant(range(10))
         >>> r0 = roll(x, 2)
         >>> r1 = roll(x, -2)
         >>> r2 = roll(x.reshape(2, 5), shift=1, axis=0)
         >>> r3 = roll(x.reshape(2, 5), shift=[1, 2], axis=[1, 0])
-        ...
+        >>>
         >>> model.states.resize(1)
         >>> with model.lock():
         ...     print(r0.state())
@@ -2229,11 +2229,11 @@ def sin(x: ArraySymbol) -> Sin:
     Examples:
         >>> import numpy as np
         >>> from dwave.optimization import Model, sin
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant([0, np.pi / 2])
         >>> y = sin(x)
-        ...
+        >>>
         >>> model.states.resize(1)
         >>> with model.lock():
         ...     print(y.state())
@@ -2270,7 +2270,7 @@ def softmax(array: ArraySymbol) -> SoftMax:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import softmax
         >>> import numpy as np
-        ...
+        >>>
         >>> model = Model()
         >>> i = model.integer(3)
         >>> sm = softmax(i)
@@ -2306,7 +2306,7 @@ def sqrt(x: ArraySymbol) -> SquareRoot:
     Examples:
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import sqrt
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant(16)
         >>> sqrt_x = sqrt(x)
@@ -2337,7 +2337,7 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
         This example stacks three scalars on axis 0.
 
         >>> from dwave.optimization import Model, stack
-        ...
+        >>>
         >>> model = Model()
         >>> x = [model.constant(1), model.constant(2), model.constant(3)]
         >>> s = stack(x)
@@ -2351,7 +2351,7 @@ def stack(arrays: collections.abc.Sequence[ArraySymbol], axis: int = 0) -> Array
         This example stacks three 1D arrays on axis 0 and 1.
 
         >>> from dwave.optimization import Model, stack
-        ...
+        >>>
         >>> model = Model()
         >>> a = model.constant([1,2])
         >>> b = model.constant([3,4])
@@ -2463,11 +2463,11 @@ def tanh(x: ArraySymbol) -> Tanh:
     Examples:
         >>> import numpy as np
         >>> from dwave.optimization import Model, tanh
-        ...
+        >>>
         >>> model = Model()
         >>> x = model.constant([0, np.pi / 2])
         >>> y = tanh(x)
-        ...
+        >>>
         >>> model.states.resize(1)
         >>> with model.lock():
         ...     print(y.state())
@@ -2505,7 +2505,7 @@ def transpose(array: ArraySymbol) -> Transpose:
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import transpose
-        ...
+        >>>
         >>> model = Model()
         >>> array = model.constant([0, 1, 2, 3, 4])
         >>> transpose = transpose(array)
@@ -2519,7 +2519,7 @@ def transpose(array: ArraySymbol) -> Transpose:
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import transpose
-        ...
+        >>>
         >>> model = Model()
         >>> array = model.constant([[0, 1, 2], [3, 4, 5]])
         >>> transpose = transpose(array)
@@ -2535,7 +2535,7 @@ def transpose(array: ArraySymbol) -> Transpose:
 
         >>> from dwave.optimization import Model
         >>> from dwave.optimization.mathematical import transpose
-        ...
+        >>>
         >>> model = Model()
         >>> array = model.constant([[[0, 1], [2, 3], [4, 5]], [[6, 7], [8, 9], [10, 11]]])
         >>> transpose = transpose(array)
@@ -2583,7 +2583,7 @@ def vstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
 
         >>> model = Model()
         >>> model.states.resize(1)
-        ...
+        >>>
         >>> a = model.constant([0])
         >>> b = model.constant([1])
         >>> h = stack((a, b))
@@ -2594,7 +2594,7 @@ def vstack(arrays: collections.abc.Sequence[ArraySymbol]) -> ArraySymbol:
 
         >>> model = Model()
         >>> model.states.resize(1)
-        ...
+        >>>
         >>> a = model.constant([0, 1, 2])
         >>> b = model.constant([[3, 4, 5], [6, 7, 8]])
         >>> h = vstack((a, b))

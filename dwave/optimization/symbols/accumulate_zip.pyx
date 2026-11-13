@@ -88,7 +88,7 @@ cdef class AccumulateZip(ArraySymbol):
 
         >>> from dwave.optimization import expression, Model
         >>> from dwave.optimization.symbols import AccumulateZip
-        ...
+        >>>
         >>> model = Model()
         >>> i1 = model.integer(5, lower_bound=-10, upper_bound=15)
         >>> i2 = model.integer(5, upper_bound=10)
