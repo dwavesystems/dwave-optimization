@@ -1160,7 +1160,7 @@ def job_shop_scheduling(
         ...     [2, 0, 1],
         ...     [2, 1, 0],
         ... ]
-        >>> model = job_shop_scheduling(times, machines, 1)
+        >>> model = job_shop_scheduling(times, machines)
 
         In the global task ordering, the index for the :math:`j` th task for the
         :math:`i` th job is equal to :math:`n*i + j`. An example solution for the final
