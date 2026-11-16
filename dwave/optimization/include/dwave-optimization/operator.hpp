@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <concepts>
@@ -62,6 +63,9 @@ struct UnaryOpMixin {
         }
     }
 
+    /// Unary ops are marked a commutative for consistency
+    static constexpr bool commutative = true;
+
     /// The domain of the operator. `domain[n]` is the nth factor of the domain.
     /// Unary ops are assumed to be defined for all possible inputs unless they tell us otherwise.
     template <DType T>
@@ -72,6 +76,12 @@ struct UnaryOpMixin {
     /// The montonicity of the operator. `monotonicity[n]` is the monotonicity of the nth argument.
     /// Unary ops are assumed not to be monotonic unless they tell us otherwise.
     static constexpr std::array<Monotonicity, 1> monotonicity{Monotonicity::None};
+
+    /// The number of inputs.
+    static constexpr ssize_t nin = 1;
+
+    /// The number of ouputs;
+    static constexpr ssize_t nout = 1;
 };
 
 template <typename BinaryOp>
@@ -135,6 +145,12 @@ struct BinaryOpMixin {
         Monotonicity::None,
         Monotonicity::None
     };
+
+    /// The number of inputs.
+    static constexpr ssize_t nin = 2;
+
+    /// The number of ouputs;
+    static constexpr ssize_t nout = 1;
 };
 
 }  // namespace mixins
@@ -241,6 +257,8 @@ struct add : mixins::BinaryOpMixin<add> {
         }
     }
     using BinaryOpMixin::operator();
+
+    static constexpr bool commutative = true;
 
     static constexpr std::array<Monotonicity, 2> monotonicity{
         Monotonicity::Increasing,
@@ -354,6 +372,8 @@ struct divide : mixins::BinaryOpMixin<divide> {
             return out;
         }
     }
+
+    static constexpr bool commutative = false;
 };
 
 struct equal : mixins::BinaryOpMixin<equal> {
@@ -385,6 +405,8 @@ struct equal : mixins::BinaryOpMixin<equal> {
 
         return {false, true};
     }
+
+    static constexpr bool commutative = true;
 };
 
 struct exp : mixins::UnaryOpMixin<exp> {
@@ -437,6 +459,8 @@ struct less_equal : mixins::BinaryOpMixin<less_equal> {
         Monotonicity::Decreasing,
         Monotonicity::Increasing
     };
+
+    static constexpr bool commutative = false;
 };
 
 struct log : mixins::UnaryOpMixin<log> {
@@ -527,6 +551,8 @@ struct logical_and : mixins::BinaryOpMixin<logical_and> {
         // Otherwise we can output either true or false
         return {false, true};
     }
+
+    static constexpr bool commutative = true;
 };
 
 struct logical_not : mixins::UnaryOpMixin<logical_not> {
@@ -579,6 +605,8 @@ struct logical_or : mixins::BinaryOpMixin<logical_or> {
         // Otherwise we can output either true or false
         return {false, true};
     }
+
+    static constexpr bool commutative = true;
 };
 
 struct logical_xor : mixins::BinaryOpMixin<logical_xor> {
@@ -611,6 +639,8 @@ struct logical_xor : mixins::BinaryOpMixin<logical_xor> {
         const bool res = not lhs_enclosure.contains(0) xor not rhs_enclosure.contains(0);
         return {res, res};
     }
+
+    static constexpr bool commutative = true;
 };
 
 struct maximum : mixins::BinaryOpMixin<maximum> {
@@ -630,6 +660,8 @@ struct maximum : mixins::BinaryOpMixin<maximum> {
         Monotonicity::Increasing,
         Monotonicity::Increasing
     };
+
+    static constexpr bool commutative = true;
 };
 
 struct minimum : mixins::BinaryOpMixin<minimum> {
@@ -649,6 +681,8 @@ struct minimum : mixins::BinaryOpMixin<minimum> {
         Monotonicity::Increasing,
         Monotonicity::Increasing
     };
+
+    static constexpr bool commutative = true;
 };
 
 struct multiply : mixins::BinaryOpMixin<multiply> {
@@ -731,6 +765,8 @@ struct multiply : mixins::BinaryOpMixin<multiply> {
         out |= multiply{}(lhs_enclosure.supremum, rhs_enclosure.supremum);
         return out;
     }
+
+    static constexpr bool commutative = true;
 };
 
 struct negative : mixins::UnaryOpMixin<negative> {
@@ -814,6 +850,8 @@ struct remainder : mixins::BinaryOpMixin<remainder> {
             return bounds;
         }
     }
+
+    static constexpr bool commutative = false;
 };
 
 struct rint : mixins::UnaryOpMixin<rint> {
@@ -1002,6 +1040,8 @@ struct subtract : mixins::BinaryOpMixin<subtract> {
         Monotonicity::Increasing,
         Monotonicity::Decreasing
     };
+
+    static constexpr bool commutative = false;
 };
 
 struct tanh : mixins::UnaryOpMixin<tanh> {

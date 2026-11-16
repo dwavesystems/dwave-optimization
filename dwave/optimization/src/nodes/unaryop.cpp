@@ -16,18 +16,18 @@
 
 namespace dwave::optimization {
 
-template class UnaryOpNode<op::absolute>;
-template class UnaryOpNode<op::cos>;
-template class UnaryOpNode<op::exp>;
-template class UnaryOpNode<op::expit>;
-template class UnaryOpNode<op::log>;
-template class UnaryOpNode<op::logical>;
-template class UnaryOpNode<op::logical_not>;
-template class UnaryOpNode<op::negative>;
-template class UnaryOpNode<op::rint>;
-template class UnaryOpNode<op::sin>;
-template class UnaryOpNode<op::square>;
-template class UnaryOpNode<op::sqrt>;
-template class UnaryOpNode<op::tanh>;
+template class OperatorNode<op::absolute>;
+template class OperatorNode<op::cos>;
+template class OperatorNode<op::exp>;
+template class OperatorNode<op::expit>;
+template class OperatorNode<op::log>;
+template class OperatorNode<op::logical>;
+template class OperatorNode<op::logical_not>;
+template class OperatorNode<op::negative>;
+template class OperatorNode<op::rint>;
+template class OperatorNode<op::sin>;
+template class OperatorNode<op::square>;
+template class OperatorNode<op::sqrt>;
+template class OperatorNode<op::tanh>;
 
 }  // namespace dwave::optimization

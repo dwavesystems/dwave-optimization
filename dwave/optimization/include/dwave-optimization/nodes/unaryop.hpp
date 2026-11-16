@@ -14,304 +14,48 @@
 
 #pragma once
 
-#include <cassert>
-#include <concepts>
-#include <memory>
-#include <ranges>
-#include <span>
-#include <stdexcept>
-#include <utility>
-#include <vector>
-
-#include "dwave-optimization/array.hpp"
-#include "dwave-optimization/graph.hpp"
-#include "dwave-optimization/interval.hpp"
+#include "dwave-optimization/nodes/operator.hpp"
 #include "dwave-optimization/operator.hpp"
-#include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {
 
-/// Apply a unary function to the predecessor node.
-template <class UnaryOp>
-class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
- public:
-    template <class... Args>
-    explicit UnaryOpNode(ArrayNode* node_ptr, Args&&... args) :
-        ArrayOutputMixin(node_ptr->shape()),
-        op(std::forward<Args>(args)...),
-        array_ptr_(node_ptr),
-        domain_(calculate_domain_(node_ptr)),
-        integral_(calculate_integral_(node_ptr)),
-        sizeinfo_(array_ptr_->sizeinfo()) {
-        add_predecessor_(node_ptr);
-    }
+using AbsoluteNode = OperatorNode<op::absolute>;
+extern template class OperatorNode<op::absolute>;
 
-    /// @copydoc Array::buff()
-    double const* buff(const State& state) const override {
-        return data_ptr_<UnaryOpState_>(state)->buffer.data();
-    }
+using CosNode = OperatorNode<op::cos>;
+extern template class OperatorNode<op::cos>;
 
-    /// @copydoc Node::commit()
-    void commit(State& state) const override {
-        auto* state_ptr = data_ptr_<UnaryOpState_>(state);
-        state_ptr->diff.clear();
-        state_ptr->previous_size = state_ptr->buffer.size();
-    }
+using ExpNode = OperatorNode<op::exp>;
+extern template class OperatorNode<op::exp>;
 
-    /// @copydoc Array::diff()
-    std::span<const Update> diff(const State& state) const override {
-        return data_ptr_<UnaryOpState_>(state)->diff;
-    }
+using ExpitNode = OperatorNode<op::expit>;
+extern template class OperatorNode<op::expit>;
 
-    /// @copydoc Node::equal_to()
-    bool equal_to(const Node& rhs) const override {
-        const UnaryOpNode* rhs_ptr = dynamic_cast<const UnaryOpNode*>(&rhs);
-        if (rhs_ptr == nullptr) return false;  // not same type so not equal
-        return this->equal_to(*rhs_ptr);       // use the equal_to(const UnaryOpNode&) overload
-    }
-    bool equal_to(const UnaryOpNode& rhs) const {
-        // If we're the same type, then we just need to check we have the same predecessor
-        return this->array_ptr_ == rhs.array_ptr_;
-    }
+using LogNode = OperatorNode<op::log>;
+extern template class OperatorNode<op::log>;
 
-    /// @copydoc Node::initialize_state()
-    void initialize_state(State& state) const override {
-        emplace_data_ptr_<UnaryOpState_>(
-            state, array_ptr_->view(state) | std::views::transform(op), array_ptr_->shape(state)
-        );
-    }
+using LogicalNode = OperatorNode<op::logical>;
+extern template class OperatorNode<op::logical>;
 
-    /// @copydoc Array::integral()
-    bool integral() const override { return integral_; }
+using NegativeNode = OperatorNode<op::negative>;
+extern template class OperatorNode<op::negative>;
 
-    /// @copydoc Array::max()
-    double max() const override { return domain_.supremum; }
+using NotNode = OperatorNode<op::logical_not>;
+extern template class OperatorNode<op::logical_not>;
 
-    /// @copydoc Array::min()
-    double min() const override { return domain_.infimum; }
+using RintNode = OperatorNode<op::rint>;
+extern template class OperatorNode<op::rint>;
 
-    /// The predecessor of the operation
-    std::span<ArrayNode* const> operands() {
-        assert(predecessors().size() == 1);
-        return std::span<ArrayNode* const, 1>(&array_ptr_, 1);
-    }
-    std::span<const ArrayNode* const> operands() const {
-        assert(predecessors().size() == 1);
-        return std::span<const ArrayNode* const, 1>(&array_ptr_, 1);
-    }
+using SinNode = OperatorNode<op::sin>;
+extern template class OperatorNode<op::sin>;
 
-    /// @copydoc Node::propagate()
-    void propagate(State& state) const override {
-        const auto array_diff = array_ptr_->diff(state);
+using SqrtNode = OperatorNode<op::sqrt>;
+extern template class OperatorNode<op::sqrt>;
 
-        // If there are no updates the handle, return early.
-        if (array_diff.empty()) return;
+using SquareNode = OperatorNode<op::square>;
+extern template class OperatorNode<op::square>;
 
-        auto* state_ptr = data_ptr_<UnaryOpState_>(state);
-        auto& buffer = state_ptr->buffer;
-        auto& diff = state_ptr->diff;
-
-        for (const auto& update : array_diff) {
-            assert(0 <= update.index);
-
-            if (update.removed()) {
-                assert(static_cast<size_t>(update.index) + 1 == buffer.size());
-
-                diff.emplace_back(Update::removal(update.index, buffer[update.index]));
-                buffer.pop_back();
-            } else if (update.placed()) {
-                assert(static_cast<size_t>(update.index) == buffer.size());
-
-                buffer.emplace_back(op(update.value));
-                diff.emplace_back(Update::placement(update.index, buffer.back()));
-            } else {
-                assert(static_cast<size_t>(update.index) < buffer.size());
-
-                double& old = buffer[update.index];
-                double value = op(update.value);
-
-                if (old == value) continue;  // no change to update
-
-                diff.emplace_back(update.index, old, value);
-                old = value;
-            }
-        }
-
-        if (dynamic()) state_ptr->shape[0] = array_ptr_->shape(state)[0];
-
-        if (not diff.empty()) Node::propagate(state);
-    }
-
-    /// @copydoc Node::revert()
-    void revert(State& state) const override {
-        auto* state_ptr = data_ptr_<UnaryOpState_>(state);
-        std::vector<double>& buffer = state_ptr->buffer;
-        const ssize_t size = state_ptr->previous_size;
-        std::vector<Update>& diff = state_ptr->diff;
-        ssize_t* shape = state_ptr->shape.get();
-
-        const ssize_t propagated_size = buffer.size();
-
-        buffer.resize(size);
-        for (const auto& [index, old, _] : diff | std::views::reverse) {
-            assert(0 <= index);
-            if (size <= index) continue;
-            buffer[index] = old;
-        }
-        diff.clear();
-
-        // Adjust our shape back to what it should be, while avoiding reading our
-        // predecessor.
-        if (size != propagated_size) {
-            assert(0 < this->ndim());  // if our size changed this must be true
-            shape[0] = buffer.size();
-
-            // we could cache the divisor, but that feels like overkill in the context
-            // of a revert
-            for (ssize_t i = 1, ndim = this->ndim(); i < ndim; ++i) shape[0] /= shape[i];
-        }
-    }
-
-    /// @copydoc Array::shape()
-    std::span<const ssize_t> shape(const State& state) const override {
-        return std::span<const ssize_t>(data_ptr_<UnaryOpState_>(state)->shape.get(), ndim());
-    }
-    using ArrayOutputMixin::shape;
-
-    /// @copydoc Array::size()
-    ssize_t size(const State& state) const override {
-        return data_ptr_<UnaryOpState_>(state)->buffer.size();
-    }
-    using ArrayOutputMixin::size;
-
-    /// @copydoc Array::size_diff()
-    ssize_t size_diff(const State& state) const override {
-        const auto* state_ptr = data_ptr_<UnaryOpState_>(state);
-        return state_ptr->buffer.size() - state_ptr->previous_size;
-    }
-
-    /// @copydoc Array::sizeinfo()
-    SizeInfo sizeinfo() const override { return this->sizeinfo_; }
-
- private:
-    // It would be more convenient to use ArrayStateData from _state.hpp
-    // but we don't currently have that in a public header.
-    // If that changes in the future, or we add default state support
-    // https://github.com/dwavesystems/dwave-optimization/issues/629 then
-    // we should use that.
-    struct UnaryOpState_ : NodeStateData {
-        UnaryOpState_() = delete;
-
-        template <std::ranges::range R>
-        UnaryOpState_(R&& values, std::span<const ssize_t> shape) :
-            buffer(std::ranges::to<std::vector<double>>(std::forward<R>(values))),
-            previous_size(buffer.size()),
-            shape(shape.empty() ? nullptr : std::make_unique<ssize_t[]>(shape.size())),
-            diff() {
-            std::copy(shape.begin(), shape.end(), this->shape.get());
-        }
-
-        std::vector<double> buffer;
-        ssize_t previous_size;
-
-        std::unique_ptr<ssize_t[]> shape;
-
-        std::vector<Update> diff;
-    };
-
-    // Calculate the min/max of the op applied to array_ptr
-    static interval<double> calculate_domain_(const Array* array_ptr) {
-        interval<double> array_domain = interval<double>(array_ptr->min(), array_ptr->max());
-
-        if constexpr (std::same_as<UnaryOp, op::sqrt>) {
-            if (not(array_domain <= UnaryOp::template domain<double>[0])) {
-                throw std::invalid_argument("SquareRoot's predecessors must be non-negative");
-            }
-        }
-        if constexpr (std::same_as<UnaryOp, op::log>) {
-            if (not(array_domain <= UnaryOp::template domain<double>[0])) {
-                throw std::invalid_argument("Log's predecessors must be non-negative");
-            }
-        }
-
-        // All the other ufuncs should have unbounded domains but as a sanity check...
-        assert(array_domain <= UnaryOp::template domain<double>[0]);
-
-        // The range of our UnaryOp, i.e. the output min/max of our UnaryOpNode
-        return UnaryOp{}(array_domain);
-    }
-
-    // Determine whether the op applied to array_ptr will always result in an
-    // integral output.
-    static bool calculate_integral_(const Array* array_ptr) {
-        // rint() actually always returns a floating point. But it is an integral
-        // floating point. This is a place where having proper dtypes would be
-        // very very nice.
-        if constexpr (std::same_as<UnaryOp, op::rint>) return true;
-
-        // Otherwise, we ask our op what an integer input would result in.
-        if (array_ptr->integral()) {
-            return std::integral<decltype(UnaryOp{}(int()))>;
-        } else {
-            return std::integral<decltype(UnaryOp{}(double()))>;
-        }
-    }
-
-    void replace_predecessor_(ssize_t index, Node* node_ptr) override {
-        Node::replace_predecessor_(index, node_ptr);
-        array_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
-        assert(array_ptr_ != nullptr);
-    }
-
-    UnaryOp op;
-
-    // This is redundant, because we could dynamic_cast each time from
-    // predecessors(), but this is more performant
-    ArrayNode* array_ptr_;
-
-    interval<double> domain_;  // the range of possible output values
-    bool integral_;            // whether the node will always output integral values
-
-    const SizeInfo sizeinfo_;
-};
-
-using AbsoluteNode = UnaryOpNode<op::absolute>;
-extern template class UnaryOpNode<op::absolute>;
-
-using CosNode = UnaryOpNode<op::cos>;
-extern template class UnaryOpNode<op::cos>;
-
-using ExpNode = UnaryOpNode<op::exp>;
-extern template class UnaryOpNode<op::exp>;
-
-using ExpitNode = UnaryOpNode<op::expit>;
-extern template class UnaryOpNode<op::expit>;
-
-using LogNode = UnaryOpNode<op::log>;
-extern template class UnaryOpNode<op::log>;
-
-using LogicalNode = UnaryOpNode<op::logical>;
-extern template class UnaryOpNode<op::logical>;
-
-using NegativeNode = UnaryOpNode<op::negative>;
-extern template class UnaryOpNode<op::negative>;
-
-using NotNode = UnaryOpNode<op::logical_not>;
-extern template class UnaryOpNode<op::logical_not>;
-
-using RintNode = UnaryOpNode<op::rint>;
-extern template class UnaryOpNode<op::rint>;
-
-using SinNode = UnaryOpNode<op::sin>;
-extern template class UnaryOpNode<op::sin>;
-
-using SqrtNode = UnaryOpNode<op::sqrt>;
-extern template class UnaryOpNode<op::sqrt>;
-
-using SquareNode = UnaryOpNode<op::square>;
-extern template class UnaryOpNode<op::square>;
-
-using TanhNode = UnaryOpNode<op::tanh>;
-extern template class UnaryOpNode<op::tanh>;
+using TanhNode = OperatorNode<op::tanh>;
+extern template class OperatorNode<op::tanh>;
 
 }  // namespace dwave::optimization
