@@ -46,7 +46,7 @@ cdef class States:
         states to test that it behaves as expected.
 
         >>> from dwave.optimization import Model
-        ...
+        >>>
         >>> model = Model()
         >>> i = model.integer(5, lower_bound=-10, upper_bound=10) # Array of 5 int elements
         >>> j = model.integer(lower_bound=-4, upper_bound=6)      # scalar integer
@@ -178,7 +178,7 @@ cdef class States:
             >>> model = Model()
             >>> i = model.integer(5, lower_bound=-10, upper_bound=10)
             >>> j = i**2 + 1
-            ...
+            >>>
             >>> with model.lock():
             ...     model.states.resize(2)
             ...     i.set_state(0, [-10, -5, 0, 5, 10])
@@ -319,7 +319,7 @@ cdef class States:
             >>> model = Model()
             >>> i = model.integer(5, lower_bound=-10, upper_bound=10)
             >>> j = i**2 + 1
-            ...
+            >>>
             >>> with model.lock():
             ...     model.states.resize(2)
             ...     i.set_state(0, [-10, -5, 0, 5, 10])
@@ -569,7 +569,7 @@ cdef class States:
             >>> model = Model()
             >>> i = model.integer(5, lower_bound=-10, upper_bound=10)
             >>> j = i**2 + 1
-            ...
+            >>>
             >>> with model.lock():
             ...     model.states.resize(2)
             ...     i.set_state(0, [-10, -5, 0, 5, 10])

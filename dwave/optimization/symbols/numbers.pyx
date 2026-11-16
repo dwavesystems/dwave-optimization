@@ -286,7 +286,7 @@ cdef class BinaryVariable(ArraySymbol):
 
             >>> from dwave.optimization.model import Model
             >>> import numpy as np
-            ...
+            >>>
             >>> model = Model()
             >>> x = model.binary((2, 3))
             >>> model.states.resize(2)
@@ -520,7 +520,7 @@ cdef class IntegerVariable(ArraySymbol):
 
             >>> from dwave.optimization.model import Model
             >>> import numpy as np
-            ...
+            >>>
             >>> model = Model()
             >>> x = model.integer((2, 2), lower_bound=2, upper_bound=[[3,4], [2, 5]])
             >>> model.states.resize(1)

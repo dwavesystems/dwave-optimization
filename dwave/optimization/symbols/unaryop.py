@@ -101,7 +101,7 @@ class Negative(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Negative):
     Examples:
         >>> from dwave.optimization import Model
         >>> i = model.integer(3)
-        >>> j = - i
+        >>> j = -i
         >>> type(j)
         <class 'dwave.optimization.symbols.unaryop.Negative'>
     """

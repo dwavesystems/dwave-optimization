@@ -248,11 +248,11 @@ cdef class _Graph:
             object, then creates a new model from that object.
 
             >>> from dwave.optimization.generators import flow_shop_scheduling
-            ...
+            >>>
             >>> processing_times = [[10, 5, 7], [20, 10, 15]]
             >>> model = flow_shop_scheduling(processing_times=processing_times)
             >>> my_file = model.to_file()
-            ...
+            >>>
             >>> from dwave.optimization import Model
             >>> new_model = Model.from_file(my_file)
 
@@ -1878,7 +1878,7 @@ cdef class ArraySymbol(Symbol):
 
             >>> import numpy as np
             >>> from dwave.optimization import Model
-            ...
+            >>>
             >>> model = Model()
             >>> c = model.constant(np.linspace(0, 4.5, num=10))
             >>> c.info()
@@ -2119,7 +2119,7 @@ cdef class ArraySymbol(Symbol):
             This example reshapes a dynamic 2D array symbol.
 
             >>> import numpy as np
-            ...
+            >>>
             >>> model = Model()
             >>> a = model.constant(np.ones((10, 4)))[model.set(10), :]
             >>> a.shape()
@@ -2184,11 +2184,11 @@ cdef class ArraySymbol(Symbol):
 
         Examples:
             >>> from dwave.optimization import Model
-            ...
+            >>>
             >>> model = Model()
             >>> s = model.set(10)  # subsets of range(10)
             >>> s_2x2 = s.resize((2, 2), fill_value=-1)
-            ...
+            >>>
             >>> model.states.resize(1)
             >>> with model.lock():
             ...     s.set_state(0, [0, 1, 2])

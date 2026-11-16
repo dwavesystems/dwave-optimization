@@ -59,7 +59,7 @@ def locked(model: _Graph):
         variable, and prints a successor symbol.
 
         >>> from dwave.optimization import Model
-        ...
+        >>>
         >>> model = Model()
         >>> i = model.integer(lower_bound=-5, upper_bound=5)
         >>> j = i**2
@@ -117,7 +117,7 @@ class _ConstantCache:
 
         Examples:
             >>> from dwave.optimization import Model
-            ...
+            >>>
             >>> model = Model()
             >>> a = model.constant(4)
             >>> b = model.constant(4)
@@ -154,7 +154,7 @@ class Model(_Graph):
         problem with two jobs on three machines.
 
         >>> from dwave.optimization.generators import flow_shop_scheduling
-        ...
+        >>>
         >>> processing_times = [[10, 5, 7], [20, 10, 15]]
         >>> model = flow_shop_scheduling(processing_times=processing_times)
     """
@@ -207,11 +207,11 @@ class Model(_Graph):
             state with value :math:`i=2.0`.
 
             >>> from dwave.optimization import Model
-            ...
+            >>>
             >>> model = Model()
             >>> i = model.integer(lower_bound=-5, upper_bound=5)
             >>> c = model.constant(4)
-            >>> y = i**2 - c*i
+            >>> y = i**2 - c * i
             >>> model.minimize(y)
             >>> with model.lock():
             ...     model.states.resize(1)
@@ -314,8 +314,11 @@ class Model(_Graph):
             >>> from dwave.optimization.model import Model
             >>> import numpy as np
             >>> model = Model()
-            >>> b = model.binary([2, 3], lower_bound=[[0, 1, 1], [0, 1, 0]],
-            ... axes_sums_subject_to=[(1, ["<=", "==", ">="], [0, 2, 1])])
+            >>> b = model.binary(
+            ...     [2, 3],
+            ...     lower_bound=[[0, 1, 1], [0, 1, 0]],
+            ...     axes_sums_subject_to=[(1, ["<=", "==", ">="], [0, 2, 1])],
+            ... )
             >>> np.all(b.sum_constraints() == [(1, ["<=", "==", ">="], [0, 2, 1])])
             True
 
@@ -443,7 +446,7 @@ class Model(_Graph):
             >>> in_bin0 = bins_subsets[0].sum()
             >>> with model.lock():
             ...     model.states.resize(1)
-            ...     bins_set.set_state(0, [[0, 1, 1, 1, 0], [1, 0, 0, 0, 1]]) # Example solution
+            ...     bins_set.set_state(0, [[0, 1, 1, 1, 0], [1, 0, 0, 0, 1]])  # Example solution
             ...     print(in_bin0.state(0))
             3.0
 
@@ -567,10 +570,10 @@ class Model(_Graph):
             >>> disjoint_lists.num_disjoint_lists()
             4
             >>> with model.lock():
-            ...    model.states.resize(1)
-            ...    disjoint_lists.set_state(0, [[0, 1, 2], [3, 5, 6], [4], [7, 8, 9]])
-            ...    for i, disjoint_list in enumerate(disjoint_lists):
-            ...        print(f"Element {i}: {disjoint_list.state(0)}")
+            ...     model.states.resize(1)
+            ...     disjoint_lists.set_state(0, [[0, 1, 2], [3, 5, 6], [4], [7, 8, 9]])
+            ...     for i, disjoint_list in enumerate(disjoint_lists):
+            ...         print(f"Element {i}: {disjoint_list.state(0)}")
             Element 0: [0. 1. 2.]
             Element 1: [3. 5. 6.]
             Element 2: [4.]
@@ -623,8 +626,8 @@ class Model(_Graph):
             >>> b = model.binary()
             >>> _ = model.add_constraint(b)
             >>> model.states.resize(2)
-            >>> b.set_state(0, 1) # Feasible
-            >>> b.set_state(1, 0) # Infeasible
+            >>> b.set_state(0, 1)  # Feasible
+            >>> b.set_state(1, 0)  # Infeasible
             >>> with model.lock():
             ...     model.feasible(0)
             True
@@ -678,12 +681,12 @@ class Model(_Graph):
             >>> model = Model()
             >>> i = model.integer(shape=(2, 3), lower_bound=-5, upper_bound=5)
             >>> x = model.input(shape=(2, 1), lower_bound=-2, upper_bound=2, integral=True)
-            >>> y = x*i.sum(axis=1)
+            >>> y = x * i.sum(axis=1)
             >>> with model.lock():
-            ...    model.states.resize(1)
-            ...    i.set_state(0, [[1, 2, 3], [1, 1, 2]])
-            ...    x.set_state(0, [[1], [-1]])
-            ...    print(y.state(0))
+            ...     model.states.resize(1)
+            ...     i.set_state(0, [[1, 2, 3], [1, 1, 2]])
+            ...     x.set_state(0, [[1], [-1]])
+            ...     print(y.state(0))
             [[ 6.  4.]
              [-6. -4.]]
 
@@ -760,16 +763,16 @@ class Model(_Graph):
 
             >>> from dwave.optimization.model import Model
             >>> from dwave.optimization.mathematical import log
-            ...
+            >>>
             >>> model = Model()
             >>> i = model.integer(5, lower_bound=1, upper_bound=10)
             >>> i.shape()
             (5,)
             >>> a = log(i)
             >>> with model.lock():
-            ...    model.states.resize(1)
-            ...    i.set_state(0, [[1, 2, 3, 1, 2]])
-            ...    print(a.state(0)[0])
+            ...     model.states.resize(1)
+            ...     i.set_state(0, [[1, 2, 3, 1, 2]])
+            ...     print(a.state(0)[0])
             0.0
 
             This example adds a :math:`2`-sized integer symbol with a scalar
@@ -793,8 +796,12 @@ class Model(_Graph):
             >>> from dwave.optimization.model import Model
             >>> import numpy as np
             >>> model = Model()
-            >>> i = model.integer([2, 3], lower_bound=1, upper_bound=3,
-            ... axes_sums_subject_to=[(1, "<=", [2, 4, 5])])
+            >>> i = model.integer(
+            ...     [2, 3],
+            ...     lower_bound=1,
+            ...     upper_bound=3,
+            ...     axes_sums_subject_to=[(1, "<=", [2, 4, 5])],
+            ... )
             >>> np.all(i.sum_constraints() == [(1, ["<="], [2, 4, 5])])
             True
 
@@ -867,9 +874,9 @@ class Model(_Graph):
             >>> model = Model()
             >>> routes = model.list(99, min_size=2, max_size=4)
             >>> with model.lock():
-            ...    model.states.resize(2)
-            ...    routes.set_state(0, [10, 2, 44])
-            ...    routes.set_state(1, [67, 1])
+            ...     model.states.resize(2)
+            ...     routes.set_state(0, [10, 2, 44])
+            ...     routes.set_state(1, [67, 1])
 
         See Also:
             :class:`~dwave.optimization.symbols.ListVariable`: Generated
@@ -958,7 +965,7 @@ class Model(_Graph):
             >>> model = Model()
             >>> i = model.integer(lower_bound=-5, upper_bound=5)
             >>> c = model.constant(4)
-            >>> y = i*i - c*i
+            >>> y = i * i - c * i
             >>> model.minimize(y)
 
         See Also:
@@ -1005,11 +1012,11 @@ class Model(_Graph):
             >>> quad = {(0, 1): 1, (0, 2): 2, (1, 2): 3}
             >>> lin = {0: 0.5, 1: 1.2, 2: 2.0}
             >>> qm = model.quadratic_model(i, quadratic=quad, linear=lin)
-            ...
+            >>>
             >>> with model.lock():
-            ...    model.states.resize(1)
-            ...    i.set_state(0, [1, 3, 0])
-            ...    print(qm.state(0).round())
+            ...     model.states.resize(1)
+            ...     i.set_state(0, [1, 3, 0])
+            ...     print(qm.state(0).round())
             7.0
 
         See Also:
@@ -1048,10 +1055,10 @@ class Model(_Graph):
             >>> from dwave.optimization.model import Model
             >>> model = Model()
             >>> destinations = model.set(100, max_size=4)
-            ...
+            >>>
             >>> with model.lock():
-            ...    model.states.resize(1)
-            ...    destinations.set_state(0, [0, 22, 58])
+            ...     model.states.resize(1)
+            ...     destinations.set_state(0, [0, 22, 58])
 
         See Also:
             :class:`~dwave.optimization.symbols.SetVariable`: Generated
@@ -1075,10 +1082,10 @@ class Model(_Graph):
             object.
 
             >>> from dwave.optimization.generators import flow_shop_scheduling
-            ...
+            >>>
             >>> processing_times = [[10, 5, 7], [20, 10, 15]]
             >>> model = flow_shop_scheduling(processing_times=processing_times)
-            ...
+            >>>
             >>> my_file = model.to_file()
 
             The temporary file created above can be saved to disk, for example,
@@ -1138,8 +1145,8 @@ class Model(_Graph):
             This example uses `DAGVIZ <https://wimyedema.github.io/dagviz/>`_ to
             draw the NetworkX graph created in the example above.
 
-            >>> import dagviz                      # doctest: +SKIP
-            >>> r = dagviz.render_svg(G)           # doctest: +SKIP
+            >>> import dagviz  # doctest: +SKIP
+            >>> r = dagviz.render_svg(G)  # doctest: +SKIP
             >>> with open("model.svg", "w") as f:  # doctest: +SKIP
             ...     f.write(r)
 

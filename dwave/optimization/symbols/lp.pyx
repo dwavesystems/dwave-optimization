@@ -143,14 +143,14 @@ cdef class LinearProgram(Symbol):
     Examples:
 
         >>> from dwave.optimization import linprog, Model
-        ...
+        >>>
         >>> model = Model()
         >>> c = model.constant([-1, -2])
         >>> A_ub = model.constant([[1, 1]])
         >>> b_ub = model.constant([1])
         >>> res = linprog(c, A_ub=A_ub, b_ub=b_ub)
         >>> _ = model.add_constraint(res.success)  # tell the model you want feasible solutions
-        ...
+        >>>
         >>> with model.lock():
         ...     model.states.resize(1)
         ...     print(res.lp.feasible(), res.lp.objective_value(), res.lp.state())
