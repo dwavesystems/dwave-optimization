@@ -49,8 +49,8 @@ void BinaryOpNode<BinaryOp>::commit(State& state) const {
 
 template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
-    auto lhs_ptr = operands_[0];
-    auto rhs_ptr = operands_[1];
+    auto* lhs_ptr = operands_[0];
+    auto* rhs_ptr = operands_[1];
 
     std::vector<double> values;
 
@@ -82,7 +82,7 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
 
     } else {
         // this case is complicated we need to "stretch" dimensions into each other
-        assert(false && "not yet implemented");
+        assert(false and "not yet implemented");
         std::unreachable();
     }
 
@@ -117,7 +117,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
             rhs_diff = std::span(rhs_diff_copy);
         }
 
-        if (lhs_diff.size() && rhs_diff.size()) {
+        if (lhs_diff.size() and rhs_diff.size()) {
             // Both modified
             auto lit = lhs_ptr->begin(state);
             auto rit = rhs_ptr->begin(state);
@@ -132,7 +132,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
             };
 
             auto is_standard_update = [](const Update& up) {
-                return !up.removed() && !up.placed();
+                return not up.removed() and not up.placed();
             };
 
             ptr->update(std::move(lhs_diff) | std::views::transform(apply_op));
@@ -170,7 +170,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         } else {
             // The lhs did not change, so go through the changes on the rhs and apply them
             auto update_func = [&unary_func](Update update) {
-                if (!update.removed()) update.value = unary_func(update.value);
+                if (not update.removed()) update.value = unary_func(update.value);
                 return update;
             };
             ptr->update(std::move(rhs_diff) | std::views::transform(update_func));
@@ -190,14 +190,14 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         } else {
             // The rhs did not change, so go through the changes on the lhs and apply them
             auto update_func = [&unary_func](Update update) {
-                if (!update.removed()) update.value = unary_func(update.value);
+                if (not update.removed()) update.value = unary_func(update.value);
                 return update;
             };
             ptr->update(std::move(lhs_diff) | std::views::transform(update_func));
         }
     } else {
         // this case is complicated we need to "stretch" dimensions into eachother
-        assert(false && "not yet implemented");
+        assert(false and "not yet implemented");
         std::unreachable();
     }
 
@@ -220,7 +220,7 @@ void BinaryOpNode<BinaryOp>::revert(State& state) const {
 
 template <class BinaryOp>
 std::span<const ssize_t> BinaryOpNode<BinaryOp>::shape(const State& state) const {
-    if (!this->dynamic()) return this->shape();
+    if (not this->dynamic()) return this->shape();
 
     const auto [lhs, rhs] = operands_;
 

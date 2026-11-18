@@ -164,7 +164,7 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
         // We support limited broadcasting - one side must be a scalar.
         // If one size is a scalar, we also support dynamic arrays.
         // Otherwise both arrays must be the same shape and not be dynamic
-        if (lhs_ptr->size() == 1 || rhs_ptr->size() == 1) {
+        if (lhs_ptr->size() == 1 or rhs_ptr->size() == 1) {
             // This is allowed. Note that in this case, since `broadcast_shapes()`
             // was called prior to `calculate_values_minmax()` in the constructor
             // of this node, we do not need to check `lhs_ptr->shape()` against
@@ -173,8 +173,10 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
         } else if (lhs_ptr->sizeinfo().substitute(100) != rhs_ptr->sizeinfo().substitute(100)) {
             throw std::invalid_argument("arrays must have the same size or one must be a scalar");
         } else if (
-            lhs_ptr->shape().size() != rhs_ptr->shape().size() ||
-            !std::equal(lhs_ptr->shape().begin(), lhs_ptr->shape().end(), rhs_ptr->shape().begin())
+            lhs_ptr->shape().size() != rhs_ptr->shape().size() or
+            not std::equal(
+                lhs_ptr->shape().begin(), lhs_ptr->shape().end(), rhs_ptr->shape().begin()
+            )
         ) {
             throw std::invalid_argument("arrays must have the same shape or one must be a scalar");
         }
@@ -184,7 +186,7 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
             return SizeInfo(std::ranges::fold_left(shape, ssize_t{1}, op::multiply{}));
         }
 
-        if (lhs_ptr->dynamic() && rhs_ptr->dynamic()) {
+        if (lhs_ptr->dynamic() and rhs_ptr->dynamic()) {
             assert(lhs_ptr->sizeinfo() == rhs_ptr->sizeinfo());
             return lhs_ptr->sizeinfo();
         } else if (lhs_ptr->dynamic()) {
@@ -196,7 +198,7 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
         }
 
         // not possible for us to be dynamic and none of our predecessors to be
-        assert(false && "not implemeted");
+        assert(false and "not implemeted");
         std::unreachable();
     }
 
