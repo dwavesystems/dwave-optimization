@@ -51,23 +51,36 @@ class LinearProgramFeasibleNode : public ScalarOutputMixin<EqualityMixin<ArrayNo
     const LinearProgramNodeBase* lp_ptr_;
 };
 
+/// Constants and defaults for the LinearProgramNode.
+template <double INFINITY_VALUE>
+class LinearProgramConstantsAndDefaults {
+ public:
+    /// Feasibility tolerance
+    static constexpr double FEASIBILITY_TOLERANCE = 1e-07;
+
+    /// The default lower bound for variables
+    static const double default_lower_bound() { return 0.0; }
+
+    /// The default upper bound for variables
+    static const double default_upper_bound() { return INFINITY_VALUE; }
+
+    /// The default lower bound for rows (inequality constraints)
+    static const double default_row_lower_bound() { return -INFINITY_VALUE; }
+
+    /// The default upper bound for rows (inequality constraints)
+    static const double default_row_upper_bound() { return INFINITY_VALUE; }
+
+    /// The value of infinity
+    static const double infinity() { return INFINITY_VALUE; }
+};
+
 class LinearProgramNodeBase : public Node {
  public:
-    /// The default lower bound for variables
-    static const double default_lower_bound();
-
-    /// The default lower bound for variables
-    static const double default_upper_bound();
-
     /// Return whether the state is feasible for the LP model.
     virtual bool feasible(const State& state) const = 0;
 
     /// Return the arguments mapped to predecessor indices
     virtual std::unordered_map<std::string, ssize_t> get_arguments() const = 0;
-
-    /// Any upper bound equal to or greater (or lower bound less to or equal)
-    /// to this will be treated as unbounded.
-    static const double infinity();
 
     /// Return the objective value. Undefined when the LP is not feasible.
     virtual double objective_value(const State& state) const = 0;
@@ -100,7 +113,9 @@ class LinearProgramNodeBase : public Node {
 /// Following https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.linprog.html
 /// linprog(c, A_ub=None, b_ub=None, A_eq=None, b_eq=None, bounds=(0, None),
 ///         callback=None, options=None, x0=None, integrality=None)
-class LinearProgramNode : public EqualityMixin<LinearProgramNodeBase, LinearProgramNode> {
+class LinearProgramNode
+    : public EqualityMixin<LinearProgramNodeBase, LinearProgramNode>,
+      public LinearProgramConstantsAndDefaults<std::numeric_limits<double>::infinity()> {
  public:
     using linprog_type = std::function<std::vector<double>(
         std::span<const double> c,

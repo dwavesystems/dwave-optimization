@@ -24,8 +24,6 @@
 
 namespace dwave::optimization {
 
-static constexpr double FEASIBILITY_TOLERANCE = 1e-07;
-
 struct LPData {
     std::vector<double> c;
     std::vector<double> b_lb;
@@ -169,12 +167,6 @@ void LinearProgramNodeBase::check_input_arguments(
     }
 }
 
-const double LinearProgramNodeBase::default_lower_bound() { return 0.0; }
-
-const double LinearProgramNodeBase::default_upper_bound() { return LP_INFINITY; }
-
-const double LinearProgramNodeBase::infinity() { return LP_INFINITY; }
-
 LinearProgramNode::LinearProgramNode(
     ArrayNode* c_ptr,
     ArrayNode* b_lb_ptr,
@@ -258,7 +250,7 @@ void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp)
     if (b_lb_ptr_) {
         lp.b_lb.assign(b_lb_ptr_->begin(state), b_lb_ptr_->end(state));
     } else if (b_ub_ptr_) {
-        lp.b_lb.assign(b_ub_ptr_->size(), -std::numeric_limits<double>::infinity());
+        lp.b_lb.assign(b_ub_ptr_->size(), LinearProgramNode::default_row_lower_bound());
     }
 
     if (A_ptr_) {
@@ -268,7 +260,7 @@ void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp)
     if (b_ub_ptr_) {
         lp.b_ub.assign(b_ub_ptr_->begin(state), b_ub_ptr_->end(state));
     } else if (b_lb_ptr_) {
-        lp.b_ub.assign(b_lb_ptr_->size(), std::numeric_limits<double>::infinity());
+        lp.b_ub.assign(b_lb_ptr_->size(), LinearProgramNode::default_row_upper_bound());
     }
 
     assert(lp.b_lb.size() == lp.b_ub.size() && "b lower and upper bound sizes don't match");
@@ -289,7 +281,7 @@ void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp)
         assert(lb_ptr_->ndim() == 1);
         lp.lb.assign(lb_ptr_->begin(state), lb_ptr_->end(state));
     } else {
-        lp.lb.assign(c_ptr_->size(state), LinearProgramNodeBase::default_lower_bound());
+        lp.lb.assign(c_ptr_->size(state), LinearProgramNode::default_lower_bound());
     }
 
     if (ub_ptr_ && ub_ptr_->ndim() == 0) {
@@ -298,7 +290,7 @@ void LinearProgramNode::readout_predecessor_data(const State& state, LPData& lp)
         assert(ub_ptr_->ndim() == 1);
         lp.ub.assign(ub_ptr_->begin(state), ub_ptr_->end(state));
     } else {
-        lp.ub.assign(c_ptr_->size(state), LinearProgramNodeBase::default_upper_bound());
+        lp.ub.assign(c_ptr_->size(state), LinearProgramNode::default_upper_bound());
     }
 
     assert(lp.c.size() == lp.lb.size() && "c and lower bound sizes do not match");
