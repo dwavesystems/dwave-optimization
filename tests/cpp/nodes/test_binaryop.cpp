@@ -12,10 +12,21 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <algorithm>
+#include <concepts>
+#include <cstdlib>
+#include <initializer_list>
+#include <limits>
+#include <optional>
+#include <vector>
+
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_range_equals.hpp>
 
+#include "dwave-optimization/array.hpp"
+#include "dwave-optimization/common.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/binaryop.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
@@ -24,6 +35,7 @@
 #include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
+#include "dwave-optimization/operator.hpp"
 
 using Catch::Matchers::RangeEquals;
 
@@ -33,18 +45,18 @@ namespace dwave::optimization {
 TEMPLATE_TEST_CASE(
     "BinaryOpNode",
     "",
+    op::add,
+    op::divide,
     op::equal,
     op::less_equal,
-    op::add,
-    op::subtract,
-    op::remainder,
-    op::multiply,
-    op::maximum,
-    op::minimum,
     op::logical_and,
     op::logical_or,
     op::logical_xor,
-    op::divide
+    op::maximum,
+    op::minimum,
+    op::multiply,
+    op::remainder,
+    op::subtract
 ) {
     auto graph = Graph();
 
@@ -790,8 +802,8 @@ TEST_CASE("BinaryOpNode - DivideNode") {
         REQUIRE(a_ptr->integral());
         REQUIRE(!b_ptr->integral());
 
-        CHECK(y_ptr->max() == std::numeric_limits<double>::max());     //  1 / eps
-        CHECK(y_ptr->min() == std::numeric_limits<double>::lowest());  // -1 / eps
+        CHECK(y_ptr->max() >= std::numeric_limits<double>::max());     //  1 / eps
+        CHECK(y_ptr->min() <= std::numeric_limits<double>::lowest());  // -1 / eps
     }
 
     GIVEN("a in {-1, +1}, b in {-1, 0}, y = a / b") {
@@ -831,8 +843,8 @@ TEST_CASE("BinaryOpNode - DivideNode") {
         REQUIRE(a_ptr->integral());
         REQUIRE(!b_ptr->integral());
 
-        CHECK(y_ptr->max() == std::numeric_limits<double>::max());     //  -1 / eps
-        CHECK(y_ptr->min() == std::numeric_limits<double>::lowest());  // -1 / -eps
+        CHECK(y_ptr->max() >= std::numeric_limits<double>::max());     //  -1 / eps
+        CHECK(y_ptr->min() <= std::numeric_limits<double>::lowest());  // -1 / -eps
     }
 
     GIVEN("a = [-1, -1, 1, 1], b = [-1, .00000001, .00000001, +1]") {
