@@ -35,9 +35,6 @@ namespace dwave::optimization {
 template <class BinaryOp>
 class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNode<BinaryOp>>> {
  public:
-    // We need at least two nodes, and they must be the same shape
-    BinaryOpNode(ArrayNode* lhs_ptr, ArrayNode* rhs_ptr) : BinaryOpNode({}, lhs_ptr, rhs_ptr) {}
-
     BinaryOpNode(BinaryOp&& op, ArrayNode* lhs_ptr, ArrayNode* rhs_ptr) :
         ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNode<BinaryOp>>>(
             broadcast_shapes(lhs_ptr->shape(), rhs_ptr->shape())
@@ -50,6 +47,8 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
         this->add_predecessor_(lhs_ptr);
         this->add_predecessor_(rhs_ptr);
     }
+
+    BinaryOpNode(ArrayNode* lhs_ptr, ArrayNode* rhs_ptr) : BinaryOpNode({}, lhs_ptr, rhs_ptr) {}
 
     /// @copydoc Array::buff()
     const double* buff(const State& state) const override;

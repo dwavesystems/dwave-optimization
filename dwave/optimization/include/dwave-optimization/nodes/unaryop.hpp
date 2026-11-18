@@ -35,16 +35,17 @@ namespace dwave::optimization {
 template <class UnaryOp>
 class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    template <class... Args>
-    explicit UnaryOpNode(ArrayNode* node_ptr, Args&&... args) :
+    UnaryOpNode(UnaryOp&& op, ArrayNode* node_ptr) :
         ArrayOutputMixin(node_ptr->shape()),
-        op(std::forward<Args>(args)...),
+        op(std::move(op)),
         array_ptr_(node_ptr),
         domain_(calculate_domain_(node_ptr)),
         integral_(calculate_integral_(node_ptr)),
         sizeinfo_(array_ptr_->sizeinfo()) {
         add_predecessor_(node_ptr);
     }
+
+    explicit UnaryOpNode(ArrayNode* node_ptr) : UnaryOpNode({}, node_ptr) {}
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override {
