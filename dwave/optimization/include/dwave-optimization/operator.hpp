@@ -65,7 +65,7 @@ struct UnaryOpMixin {
         }
     }
 
-    constexpr bool operator==(const UnaryOpMixin<UnaryOp>& rhs) const {
+    constexpr bool operator==(const UnaryOpMixin<UnaryOp>&) const {
         static_assert(
             std::is_empty_v<UnaryOpMixin<UnaryOp>>,
             "non-empty operators should overload operator==()"
@@ -158,7 +158,7 @@ struct BinaryOpMixin {
         return out;
     }
 
-    constexpr bool operator==(const BinaryOpMixin<BinaryOp>& rhs) const {
+    constexpr bool operator==(const BinaryOpMixin<BinaryOp>&) const {
         static_assert(
             std::is_empty_v<BinaryOpMixin<BinaryOp>>,
             "non-empty operators should overload operator==()"
