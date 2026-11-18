@@ -35,16 +35,17 @@ namespace dwave::optimization {
 template <class UnaryOp>
 class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
  public:
-    template <class... Args>
-    explicit UnaryOpNode(ArrayNode* node_ptr, Args&&... args) :
+    UnaryOpNode(UnaryOp&& op, ArrayNode* node_ptr) :
         ArrayOutputMixin(node_ptr->shape()),
-        op(std::forward<Args>(args)...),
+        op(std::move(op)),
         array_ptr_(node_ptr),
         domain_(calculate_domain_(node_ptr)),
         integral_(calculate_integral_(node_ptr)),
         sizeinfo_(array_ptr_->sizeinfo()) {
         add_predecessor_(node_ptr);
     }
+
+    explicit UnaryOpNode(ArrayNode* node_ptr) : UnaryOpNode({}, node_ptr) {}
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override {
@@ -70,8 +71,9 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         return this->equal_to(*rhs_ptr);       // use the equal_to(const UnaryOpNode&) overload
     }
     bool equal_to(const UnaryOpNode& rhs) const {
-        // If we're the same type, then we just need to check we have the same predecessor
-        return this->array_ptr_ == rhs.array_ptr_;
+        // If we're the same type, then we just need to check we have the same operator and
+        // the same predecessor
+        return (op == rhs.op and array_ptr_ == rhs.array_ptr_);
     }
 
     /// @copydoc Node::initialize_state()
@@ -263,7 +265,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         assert(array_ptr_ != nullptr);
     }
 
-    UnaryOp op;
+    [[no_unique_address]] UnaryOp op;
 
     // This is redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant

@@ -14,169 +14,23 @@
 
 #include "dwave-optimization/nodes/binaryop.hpp"
 
+#include <algorithm>
+#include <cassert>
 #include <cmath>
-#include <limits>
+#include <functional>
 #include <ranges>
-#include <stdexcept>
-#include <type_traits>
+#include <span>
 #include <utility>
 #include <vector>
 
 #include "_state.hpp"
+#include "dwave-optimization/array.hpp"
+#include "dwave-optimization/common.hpp"
+#include "dwave-optimization/graph.hpp"
+#include "dwave-optimization/operator.hpp"
+#include "dwave-optimization/state.hpp"
 
 namespace dwave::optimization {
-
-template <class BinaryOp>
-std::pair<double, double> calculate_values_minmax(const Array* lhs_ptr, const Array* rhs_ptr) {
-    // Do some checks to ensure these array nodes can be used together with this op
-    // We support limited broadcasting - one side must be a scalar.
-    // If one size is a scalar, we also support dynamic arrays.
-    // Otherwise both arrays must be the same shape and not be dynamic
-    if (lhs_ptr->size() == 1 || rhs_ptr->size() == 1) {
-        // This is allowed. Note that in this case, since `broadcast_shapes()`
-        // was called prior to `calculate_values_minmax()` in the constructor
-        // of this node, we do not need to check `lhs_ptr->shape()` against
-        // `rhs_ptr->shape()` since `broadcast_shapes()` has certified that we
-        // can broadcast safely.
-    } else if (lhs_ptr->sizeinfo().substitute(100) != rhs_ptr->sizeinfo().substitute(100)) {
-        throw std::invalid_argument("arrays must have the same size or one must be a scalar");
-    } else if (
-        lhs_ptr->shape().size() != rhs_ptr->shape().size() ||
-        !std::equal(lhs_ptr->shape().begin(), lhs_ptr->shape().end(), rhs_ptr->shape().begin())
-    ) {
-        throw std::invalid_argument("arrays must have the same shape or one must be a scalar");
-    }
-
-    // If the output of the operation is boolean, then min/max is simple
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-    if constexpr (std::same_as<result_type, bool>) {
-        return {false, true};
-    }
-
-    // Otherwise the min and max depend on the predecessors
-
-    const auto lhs_low = lhs_ptr->min();
-    const auto lhs_high = lhs_ptr->max();
-    const auto rhs_low = rhs_ptr->min();
-    const auto rhs_high = rhs_ptr->max();
-
-    auto op = BinaryOp();
-
-    // these can result in inf. If we update propagation/initialization to handle
-    // that case we should update these as well.
-    if constexpr (std::same_as<BinaryOp, op::multiply>) {
-        // just get all possible combinations of values
-        std::array<double, 4> combos{
-            op(lhs_low, rhs_low),
-            op(lhs_low, rhs_high),
-            op(lhs_high, rhs_low),
-            op(lhs_high, rhs_high)
-        };
-
-        return std::make_pair(std::ranges::min(combos), std::ranges::max(combos));
-    }
-    if constexpr (std::same_as<BinaryOp, op::divide>) {
-        // safe_divide is, well, safe. So we start by calculating all combos.
-        // Though there are some possible other values depending on our rhs.
-        std::vector<double> combos = {
-            op(lhs_low, rhs_low),
-            op(lhs_low, rhs_high),
-            op(lhs_high, rhs_low),
-            op(lhs_high, rhs_high)
-        };
-
-        if (rhs_ptr->integral()) {
-            if (rhs_low < 0 && 0 < rhs_high) {
-                combos.emplace_back(op(1, 0));
-            }
-            if (rhs_low < -1 && -1 < rhs_high) {
-                combos.emplace_back(op(lhs_low, -1.0));
-                combos.emplace_back(op(lhs_high, -1.0));
-            }
-            if (rhs_low < 1 && 1 < rhs_high) {
-                combos.emplace_back(op(lhs_low, 1.0));
-                combos.emplace_back(op(lhs_high, 1.0));
-            }
-        } else {
-            if (rhs_low < 0 && 0 < rhs_high) {
-                // rhs's range includes zero, but it's not currently accounted for
-                // so let's do that.
-                // combos.emplace_back(op(1, 0));  // redundant because we're already max range
-                combos.emplace_back(std::numeric_limits<double>::max());
-                combos.emplace_back(std::numeric_limits<double>::lowest());
-            } else if (rhs_low == 0 && rhs_high != 0) {
-                // We can get very close to dividing by 0
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_low));
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), lhs_high));
-            } else if (rhs_low != 0 && rhs_high == 0) {
-                // We can get very close to dividing by -0
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_low));
-                combos.emplace_back(std::copysign(std::numeric_limits<double>::max(), -lhs_high));
-            }
-        }
-
-        return std::make_pair(std::ranges::min(combos), std::ranges::max(combos));
-    }
-    if constexpr (
-        std::same_as<BinaryOp, op::maximum> || std::same_as<BinaryOp, op::minimum> ||
-        std::same_as<BinaryOp, op::add>
-    ) {
-        return std::make_pair(op(lhs_low, rhs_low), op(lhs_high, rhs_high));
-    }
-    if constexpr (std::same_as<BinaryOp, op::subtract>) {
-        return std::make_pair(lhs_low - rhs_high, lhs_high - rhs_low);
-    }
-    if constexpr (std::same_as<BinaryOp, op::remainder>) {
-        // Lower bound is the smallest negative absolute value
-        return std::make_pair(
-            -rhs_high < rhs_low ? -rhs_high : rhs_low, -rhs_low > rhs_high ? -rhs_low : rhs_high
-        );
-    }
-
-    assert(false && "not implemeted yet");
-    std::unreachable();
-}
-
-template <class BinaryOp>
-bool calculate_integral(const Array* lhs_ptr, const Array* rhs_ptr) {
-    using result_type = typename std::invoke_result<BinaryOp, double&, double&>::type;
-
-    if constexpr (std::is_integral<result_type>::value) {
-        return true;
-    }
-
-    // The mathematical operations require a bit more fiddling.
-
-    if constexpr (std::is_same<BinaryOp, op::divide>::value) {
-        return false;
-    }
-    if constexpr (
-        std::is_same<BinaryOp, op::maximum>::value || std::is_same<BinaryOp, op::minimum>::value ||
-        std::is_same<BinaryOp, op::subtract>::value ||
-        std::is_same<BinaryOp, op::remainder>::value ||
-        std::is_same<BinaryOp, op::multiply>::value || std::is_same<BinaryOp, op::add>::value
-    ) {
-        return lhs_ptr->integral() && rhs_ptr->integral();
-    }
-
-    assert(false && "not implemeted yet");
-    std::unreachable();
-}
-
-template <class BinaryOp>
-BinaryOpNode<BinaryOp>::BinaryOpNode(ArrayNode* a_ptr, ArrayNode* b_ptr) :
-    ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNode<BinaryOp>>>(
-        broadcast_shapes(a_ptr->shape(), b_ptr->shape())
-    ),
-    operands_({a_ptr, b_ptr}),
-    values_info_(
-        calculate_values_minmax<BinaryOp>(operands_[0], operands_[1]),
-        calculate_integral<BinaryOp>(operands_[0], operands_[1])
-    ),
-    sizeinfo_(binaryop_calculate_sizeinfo(this, operands_[0], operands_[1])) {
-    this->add_predecessor_(a_ptr);
-    this->add_predecessor_(b_ptr);
-}
 
 template <class BinaryOp>
 double const* BinaryOpNode<BinaryOp>::buff(const State& state) const {
@@ -194,49 +48,9 @@ void BinaryOpNode<BinaryOp>::commit(State& state) const {
 }
 
 template <class BinaryOp>
-bool BinaryOpNode<BinaryOp>::equal_to(const BinaryOpNode& rhs) const {
-    // if we're the same type, then we just need to make sure we're operating
-    // on the same operands (subject to whether we're commutative or not.
-    // Once we switch to ufuncs, this gets even easier
-    if (std::ranges::equal(operands_, rhs.operands_)) return true;
-
-    // Once we switch to ufuncs
-    // https://github.com/dwavesystems/dwave-optimization/pull/412
-    // we can use ::communcative. For now we hardcode it.
-
-    // Dev note: This implementation doesn't check the pathalogical case op(x, x).
-    // While it would be mathematically correct, IMO it would be more confusing
-    // than helpful.
-
-    if constexpr (
-        std::same_as<BinaryOpNode, AddNode> or       //
-        std::same_as<BinaryOpNode, AndNode> or       //
-        std::same_as<BinaryOpNode, EqualNode> or     //
-        std::same_as<BinaryOpNode, MaximumNode> or   //
-        std::same_as<BinaryOpNode, MinimumNode> or   //
-        std::same_as<BinaryOpNode, MultiplyNode> or  //
-        std::same_as<BinaryOpNode, OrNode> or        //
-        std::same_as<BinaryOpNode, XorNode>
-    ) {
-        // commutative
-        return std::ranges::equal(operands_, rhs.operands_ | std::views::reverse);
-    } else {
-        // not commutative
-        static_assert(
-            std::same_as<BinaryOpNode, DivideNode> or     //
-            std::same_as<BinaryOpNode, LessEqualNode> or  //
-            std::same_as<BinaryOpNode, ModulusNode> or    //
-            std::same_as<BinaryOpNode, SubtractNode>
-        );
-    }
-
-    return false;
-}
-
-template <class BinaryOp>
 void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
-    auto lhs_ptr = operands_[0];
-    auto rhs_ptr = operands_[1];
+    auto* lhs_ptr = operands_[0];
+    auto* rhs_ptr = operands_[1];
 
     std::vector<double> values;
 
@@ -268,26 +82,11 @@ void BinaryOpNode<BinaryOp>::initialize_state(State& state) const {
 
     } else {
         // this case is complicated we need to "stretch" dimensions into each other
-        assert(false && "not yet implemented");
+        assert(false and "not yet implemented");
         std::unreachable();
     }
 
     this->template emplace_data_ptr_<ArrayNodeStateData>(state, std::move(values));
-}
-
-template <class BinaryOp>
-bool BinaryOpNode<BinaryOp>::integral() const {
-    return values_info_.integral;
-}
-
-template <class BinaryOp>
-double BinaryOpNode<BinaryOp>::max() const {
-    return this->values_info_.max;
-}
-
-template <class BinaryOp>
-double BinaryOpNode<BinaryOp>::min() const {
-    return this->values_info_.min;
 }
 
 template <class BinaryOp>
@@ -318,7 +117,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
             rhs_diff = std::span(rhs_diff_copy);
         }
 
-        if (lhs_diff.size() && rhs_diff.size()) {
+        if (lhs_diff.size() and rhs_diff.size()) {
             // Both modified
             auto lit = lhs_ptr->begin(state);
             auto rit = rhs_ptr->begin(state);
@@ -333,7 +132,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
             };
 
             auto is_standard_update = [](const Update& up) {
-                return !up.removed() && !up.placed();
+                return not up.removed() and not up.placed();
             };
 
             ptr->update(std::move(lhs_diff) | std::views::transform(apply_op));
@@ -371,7 +170,7 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         } else {
             // The lhs did not change, so go through the changes on the rhs and apply them
             auto update_func = [&unary_func](Update update) {
-                if (!update.removed()) update.value = unary_func(update.value);
+                if (not update.removed()) update.value = unary_func(update.value);
                 return update;
             };
             ptr->update(std::move(rhs_diff) | std::views::transform(update_func));
@@ -391,14 +190,14 @@ void BinaryOpNode<BinaryOp>::propagate(State& state) const {
         } else {
             // The rhs did not change, so go through the changes on the lhs and apply them
             auto update_func = [&unary_func](Update update) {
-                if (!update.removed()) update.value = unary_func(update.value);
+                if (not update.removed()) update.value = unary_func(update.value);
                 return update;
             };
             ptr->update(std::move(lhs_diff) | std::views::transform(update_func));
         }
     } else {
         // this case is complicated we need to "stretch" dimensions into eachother
-        assert(false && "not yet implemented");
+        assert(false and "not yet implemented");
         std::unreachable();
     }
 
@@ -421,7 +220,7 @@ void BinaryOpNode<BinaryOp>::revert(State& state) const {
 
 template <class BinaryOp>
 std::span<const ssize_t> BinaryOpNode<BinaryOp>::shape(const State& state) const {
-    if (!this->dynamic()) return this->shape();
+    if (not this->dynamic()) return this->shape();
 
     const auto [lhs, rhs] = operands_;
 
@@ -464,40 +263,8 @@ ssize_t BinaryOpNode<BinaryOp>::size_diff(const State& state) const {
     return this->template data_ptr_<ArrayNodeStateData>(state)->size_diff();
 }
 
-SizeInfo binaryop_calculate_sizeinfo(
-    const Array* node_ptr,
-    const Array* lhs_ptr,
-    const Array* rhs_ptr
-) {
-    if (!node_ptr->dynamic()) return SizeInfo(node_ptr->size());
-
-    if (lhs_ptr->dynamic() && rhs_ptr->dynamic()) {
-        assert(lhs_ptr->sizeinfo() == rhs_ptr->sizeinfo());
-        return lhs_ptr->sizeinfo();
-    } else if (lhs_ptr->dynamic()) {
-        assert(rhs_ptr->size() == 1);
-        return lhs_ptr->sizeinfo();
-    } else if (rhs_ptr->dynamic()) {
-        assert(lhs_ptr->size() == 1);
-        return rhs_ptr->sizeinfo();
-    }
-
-    // not possible for us to be dynamic and none of our predecessors to be
-    assert(false && "not implemeted");
-    std::unreachable();
-}
-
-template <class BinaryOp>
-SizeInfo BinaryOpNode<BinaryOp>::sizeinfo() const {
-    return this->sizeinfo_;
-}
-
-// Uncommented are the tested specializations
 template class BinaryOpNode<op::add>;
-template class BinaryOpNode<op::subtract>;
-template class BinaryOpNode<op::multiply>;
 template class BinaryOpNode<op::divide>;
-template class BinaryOpNode<op::remainder>;
 template class BinaryOpNode<op::equal>;
 template class BinaryOpNode<op::less_equal>;
 template class BinaryOpNode<op::logical_and>;
@@ -505,5 +272,8 @@ template class BinaryOpNode<op::logical_or>;
 template class BinaryOpNode<op::logical_xor>;
 template class BinaryOpNode<op::maximum>;
 template class BinaryOpNode<op::minimum>;
+template class BinaryOpNode<op::multiply>;
+template class BinaryOpNode<op::remainder>;
+template class BinaryOpNode<op::subtract>;
 
 }  // namespace dwave::optimization

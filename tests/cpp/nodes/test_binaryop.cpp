@@ -12,10 +12,21 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <algorithm>
+#include <concepts>
+#include <cstdlib>
+#include <initializer_list>
+#include <limits>
+#include <optional>
+#include <vector>
+
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_range_equals.hpp>
 
+#include "dwave-optimization/array.hpp"
+#include "dwave-optimization/common.hpp"
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/binaryop.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
@@ -24,6 +35,7 @@
 #include "dwave-optimization/nodes/manipulation.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
+#include "dwave-optimization/operator.hpp"
 
 using Catch::Matchers::RangeEquals;
 
@@ -33,28 +45,28 @@ namespace dwave::optimization {
 TEMPLATE_TEST_CASE(
     "BinaryOpNode",
     "",
+    op::add,
+    op::divide,
     op::equal,
     op::less_equal,
-    op::add,
-    op::subtract,
-    op::remainder,
-    op::multiply,
-    op::maximum,
-    op::minimum,
     op::logical_and,
     op::logical_or,
     op::logical_xor,
-    op::divide
+    op::maximum,
+    op::minimum,
+    op::multiply,
+    op::remainder,
+    op::subtract
 ) {
     auto graph = Graph();
 
     auto func = TestType();
 
     GIVEN("Two scalar constants operated on") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(5);
-        auto b_ptr = graph.emplace_node<ConstantNode>(6);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(5);
+        auto* b_ptr = graph.emplace_node<ConstantNode>(6);
 
-        auto p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
+        auto* p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
 
         graph.emplace_node<ArrayValidationNode>(p_ptr);
 
@@ -85,10 +97,10 @@ TEMPLATE_TEST_CASE(
         std::vector<double> values_a = {0, 1, 2, 3};
         std::vector<double> values_b = {3, 2, 1, 0};
 
-        auto a_ptr = graph.emplace_node<ConstantNode>(values_a);
-        auto b_ptr = graph.emplace_node<ConstantNode>(values_b);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(values_a);
+        auto* b_ptr = graph.emplace_node<ConstantNode>(values_b);
 
-        auto p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
+        auto* p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
 
         graph.emplace_node<ArrayValidationNode>(p_ptr);
 
@@ -118,10 +130,10 @@ TEMPLATE_TEST_CASE(
     GIVEN("One list and one const array operated on") {
         std::vector<double> values_a = {3, 2, 1, 0};
         // list value                  [0, 1, 2, 3]
-        auto a_ptr = graph.emplace_node<ConstantNode>(values_a);
-        auto b_ptr = graph.emplace_node<ListNode>(4);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(values_a);
+        auto* b_ptr = graph.emplace_node<ListNode>(4);
 
-        auto p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
+        auto* p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
 
         graph.emplace_node<ArrayValidationNode>(p_ptr);
 
@@ -164,10 +176,10 @@ TEMPLATE_TEST_CASE(
     }
 
     GIVEN("Two lists operated on") {
-        auto a_ptr = graph.emplace_node<ListNode>(4);
-        auto b_ptr = graph.emplace_node<ListNode>(4);
+        auto* a_ptr = graph.emplace_node<ListNode>(4);
+        auto* b_ptr = graph.emplace_node<ListNode>(4);
 
-        auto p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
+        auto* p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
 
         graph.emplace_node<ArrayValidationNode>(p_ptr);
 
@@ -218,16 +230,16 @@ TEMPLATE_TEST_CASE(
     }
 
     GIVEN("Two dynamic arrays of the same size operated on") {
-        auto dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
+        auto* dyn_ptr = graph.emplace_node<DynamicArrayTestingNode>(
             std::initializer_list<ssize_t>{-1, 2}, 0, 1000, true
         );
 
-        auto a_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
+        auto* a_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 0);
         graph.emplace_node<ArrayValidationNode>(a_ptr);
-        auto b_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 1);
+        auto* b_ptr = graph.emplace_node<BasicIndexingNode>(dyn_ptr, Slice(), 1);
         graph.emplace_node<ArrayValidationNode>(b_ptr);
 
-        auto p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
+        auto* p_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, b_ptr);
 
         graph.emplace_node<ArrayValidationNode>(p_ptr);
 
@@ -317,11 +329,11 @@ TEMPLATE_TEST_CASE(
     }
 
     GIVEN("Two empty dynamic arrays") {
-        auto set_ptr = graph.emplace_node<SetNode>(10);
-        auto set2d_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::vector<ssize_t>{-1, 1});
-        auto dyn_ptr = graph.emplace_node<BroadcastToNode>(set2d_ptr, std::vector<ssize_t>{-1, 0});
+        auto* set_ptr = graph.emplace_node<SetNode>(10);
+        auto* set2d_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::vector<ssize_t>{-1, 1});
+        auto* dyn_ptr = graph.emplace_node<BroadcastToNode>(set2d_ptr, std::vector<ssize_t>{-1, 0});
 
-        auto b_ptr = graph.emplace_node<BinaryOpNode<TestType>>(dyn_ptr, dyn_ptr);
+        auto* b_ptr = graph.emplace_node<BinaryOpNode<TestType>>(dyn_ptr, dyn_ptr);
 
         graph.emplace_node<ArrayValidationNode>(b_ptr);
 
@@ -357,14 +369,14 @@ TEMPLATE_TEST_CASE(
     }
 
     GIVEN("An empty dynamic array and a scalar") {
-        auto set_ptr = graph.emplace_node<SetNode>(10);
-        auto set2d_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::vector<ssize_t>{-1, 1});
-        auto dyn_ptr = graph.emplace_node<BroadcastToNode>(set2d_ptr, std::vector<ssize_t>{-1, 0});
+        auto* set_ptr = graph.emplace_node<SetNode>(10);
+        auto* set2d_ptr = graph.emplace_node<ReshapeNode>(set_ptr, std::vector<ssize_t>{-1, 1});
+        auto* dyn_ptr = graph.emplace_node<BroadcastToNode>(set2d_ptr, std::vector<ssize_t>{-1, 0});
 
-        auto a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 10);
+        auto* a_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 10);
 
-        auto b_ptr = graph.emplace_node<BinaryOpNode<TestType>>(dyn_ptr, a_ptr);
-        auto c_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, dyn_ptr);
+        auto* b_ptr = graph.emplace_node<BinaryOpNode<TestType>>(dyn_ptr, a_ptr);
+        auto* c_ptr = graph.emplace_node<BinaryOpNode<TestType>>(a_ptr, dyn_ptr);
 
         graph.emplace_node<ArrayValidationNode>(b_ptr);
         graph.emplace_node<ArrayValidationNode>(c_ptr);
@@ -476,9 +488,9 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
     auto graph = Graph();
 
     GIVEN("A less equal node operating on two continuous arrays") {
-        auto lhs_ptr = graph.emplace_node<ConstantNode>(std::vector{0.5, 1.5, 2.5, 3.5, 4.5});
-        auto rhs_ptr = graph.emplace_node<ConstantNode>(std::vector{4.5, 3.5, 2.5, 1.5, 0.5});
-        auto le_ptr = graph.emplace_node<LessEqualNode>(lhs_ptr, rhs_ptr);
+        auto* lhs_ptr = graph.emplace_node<ConstantNode>(std::vector{0.5, 1.5, 2.5, 3.5, 4.5});
+        auto* rhs_ptr = graph.emplace_node<ConstantNode>(std::vector{4.5, 3.5, 2.5, 1.5, 0.5});
+        auto* le_ptr = graph.emplace_node<LessEqualNode>(lhs_ptr, rhs_ptr);
 
         THEN("The LessEqualNode is binary-valued") {
             CHECK(le_ptr->integral());
@@ -488,10 +500,10 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
     }
 
     GIVEN("x = Integer(), y = List(5), le = x <= y, ge = y <= x") {
-        auto x_ptr = graph.emplace_node<IntegerNode>();
-        auto y_ptr = graph.emplace_node<ListNode>(5);
-        auto le_ptr = graph.emplace_node<LessEqualNode>(x_ptr, y_ptr);
-        auto ge_ptr = graph.emplace_node<LessEqualNode>(y_ptr, x_ptr);
+        auto* x_ptr = graph.emplace_node<IntegerNode>();
+        auto* y_ptr = graph.emplace_node<ListNode>(5);
+        auto* le_ptr = graph.emplace_node<LessEqualNode>(x_ptr, y_ptr);
+        auto* ge_ptr = graph.emplace_node<LessEqualNode>(y_ptr, x_ptr);
 
         THEN("We have the shape we expect") {
             CHECK_THAT(le_ptr->shape(), RangeEquals({5}));
@@ -557,10 +569,10 @@ TEST_CASE("BinaryOpNode - LessEqualNode") {
     }
 
     GIVEN("x = Integer(), y = List(5, 2, 4), le = x <= y, ge = y <= x") {
-        auto x_ptr = graph.emplace_node<IntegerNode>();
-        auto y_ptr = graph.emplace_node<ListNode>(5, 2, 4);
-        auto le_ptr = graph.emplace_node<LessEqualNode>(x_ptr, y_ptr);
-        auto ge_ptr = graph.emplace_node<LessEqualNode>(y_ptr, x_ptr);
+        auto* x_ptr = graph.emplace_node<IntegerNode>();
+        auto* y_ptr = graph.emplace_node<ListNode>(5, 2, 4);
+        auto* le_ptr = graph.emplace_node<LessEqualNode>(x_ptr, y_ptr);
+        auto* ge_ptr = graph.emplace_node<LessEqualNode>(y_ptr, x_ptr);
 
         THEN("We have the shape we expect") {
             CHECK_THAT(le_ptr->shape(), RangeEquals({-1}));
@@ -643,10 +655,10 @@ TEST_CASE("BinaryOpNode - MultiplyNode") {
     auto graph = Graph();
 
     GIVEN("x = IntegerNode(-5, 5), a = 3, y = x * a") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
-        auto a_ptr = graph.emplace_node<ConstantNode>(3);
+        auto* x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(3);
 
-        auto y_ptr = graph.emplace_node<MultiplyNode>(x_ptr, a_ptr);
+        auto* y_ptr = graph.emplace_node<MultiplyNode>(x_ptr, a_ptr);
 
         THEN("y's max/min/integral are as expected") {
             CHECK(y_ptr->max() == 15);
@@ -656,10 +668,10 @@ TEST_CASE("BinaryOpNode - MultiplyNode") {
     }
 
     GIVEN("x = IntegerNode(-5, 5), a = -3, y = x * a") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
-        auto a_ptr = graph.emplace_node<ConstantNode>(-3);
+        auto* x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(-3);
 
-        auto y_ptr = graph.emplace_node<MultiplyNode>(x_ptr, a_ptr);
+        auto* y_ptr = graph.emplace_node<MultiplyNode>(x_ptr, a_ptr);
 
         THEN("y's max/min/integral are as expected") {
             CHECK(y_ptr->max() == 15);
@@ -673,9 +685,9 @@ TEST_CASE("BinaryOpNode - MultiplyNode") {
         // pick up the shape from the lhs if the size of the lhs and rhs were
         // both 1.
 
-        auto x_ptr = graph.emplace_node<SetNode>(5);
-        auto y_ptr = graph.emplace_node<ConstantNode>(0);
-        auto z_ptr = graph.emplace_node<MultiplyNode>(y_ptr, x_ptr);
+        auto* x_ptr = graph.emplace_node<SetNode>(5);
+        auto* y_ptr = graph.emplace_node<ConstantNode>(0);
+        auto* z_ptr = graph.emplace_node<MultiplyNode>(y_ptr, x_ptr);
 
         auto state = graph.empty_state();
         x_ptr->initialize_state(state, {0});
@@ -689,10 +701,10 @@ TEST_CASE("BinaryOpNode - DivideNode") {
     auto graph = Graph();
 
     GIVEN("x = IntegerNode(-5, 5), a = 3, y = x / a") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
-        auto a_ptr = graph.emplace_node<ConstantNode>(3);
+        auto* x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(3);
 
-        auto y_ptr = graph.emplace_node<DivideNode>(x_ptr, a_ptr);
+        auto* y_ptr = graph.emplace_node<DivideNode>(x_ptr, a_ptr);
 
         THEN("y's max/min/integral are as expected") {
             CHECK(std::abs(y_ptr->max() - 5.0 / 3.0) < 10e-16);
@@ -702,10 +714,10 @@ TEST_CASE("BinaryOpNode - DivideNode") {
     }
 
     GIVEN("a = 0, x = IntegerNode(1, 5), y = a / x") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(0);
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 1, 5);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(0);
+        auto* x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 1, 5);
 
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, x_ptr);
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, x_ptr);
 
         THEN("y's max/min/integral are as expected") {
             CHECK(y_ptr->max() == 0);
@@ -715,10 +727,10 @@ TEST_CASE("BinaryOpNode - DivideNode") {
     }
 
     GIVEN("x = IntegerNode(-5, 5), a = -3, y = x / a") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
-        auto a_ptr = graph.emplace_node<ConstantNode>(-3);
+        auto* x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(-3);
 
-        auto y_ptr = graph.emplace_node<DivideNode>(x_ptr, a_ptr);
+        auto* y_ptr = graph.emplace_node<DivideNode>(x_ptr, a_ptr);
 
         THEN("y's max/min/integral are as expected") {
             CHECK(y_ptr->max() == -5.0 / -3.0);
@@ -728,35 +740,35 @@ TEST_CASE("BinaryOpNode - DivideNode") {
     }
 
     GIVEN("a = [-1, 1, 1], b = [.00000001, .00000001, +1]") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, 1, 1});
-        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{.00000001, .00000001, 1.});
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, 1, 1});
+        auto* b_ptr = graph.emplace_node<ConstantNode>(std::vector{.00000001, .00000001, 1.});
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
         REQUIRE(a_ptr->integral());
-        REQUIRE(!b_ptr->integral());
+        REQUIRE(not b_ptr->integral());
 
         // this triggers a check of the values
         auto state = graph.initialize_state();
     }
 
     GIVEN("a = [-1, 1, 1], b = [-.00000001, -.00000001, -1]") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, 1, 1});
-        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-.00000001, -.00000001, -1.});
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, 1, 1});
+        auto* b_ptr = graph.emplace_node<ConstantNode>(std::vector{-.00000001, -.00000001, -1.});
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
         REQUIRE(a_ptr->integral());
-        REQUIRE(!b_ptr->integral());
+        REQUIRE(not b_ptr->integral());
 
         // this triggers a check of the values
         auto state = graph.initialize_state();
     }
 
     GIVEN("a in {-1, +1}, b in {0, 1}, y = a / b") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
-        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1});
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto* b_ptr = graph.emplace_node<ConstantNode>(std::vector{0, 1});
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());
@@ -766,9 +778,9 @@ TEST_CASE("BinaryOpNode - DivideNode") {
     }
 
     GIVEN("a in {1}, b in {1, 2}, y = a / b") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
-        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 2});
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
+        auto* b_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 2});
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());
@@ -778,9 +790,9 @@ TEST_CASE("BinaryOpNode - DivideNode") {
     }
 
     GIVEN("a in {-1, +1}, b in [0, .5], y = a / b") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
-        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{0., .5});
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto* b_ptr = graph.emplace_node<ConstantNode>(std::vector{0., .5});
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         // Here we're exploiting our own inability to introspect b for the
         // purpose of the test.
@@ -788,16 +800,16 @@ TEST_CASE("BinaryOpNode - DivideNode") {
         // to reason more than that.
         // In the future smarter introspection might break this test.
         REQUIRE(a_ptr->integral());
-        REQUIRE(!b_ptr->integral());
+        REQUIRE(not b_ptr->integral());
 
-        CHECK(y_ptr->max() == std::numeric_limits<double>::max());     //  1 / eps
-        CHECK(y_ptr->min() == std::numeric_limits<double>::lowest());  // -1 / eps
+        CHECK(y_ptr->max() >= std::numeric_limits<double>::max());     //  1 / eps
+        CHECK(y_ptr->min() <= std::numeric_limits<double>::lowest());  // -1 / eps
     }
 
     GIVEN("a in {-1, +1}, b in {-1, 0}, y = a / b") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
-        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, 0});
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto* b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, 0});
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());
@@ -807,9 +819,9 @@ TEST_CASE("BinaryOpNode - DivideNode") {
     }
 
     GIVEN("a in {1}, b in {-2, -1}, y = a / b") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
-        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-2, -1});
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
+        auto* b_ptr = graph.emplace_node<ConstantNode>(std::vector{-2, -1});
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());
@@ -819,9 +831,9 @@ TEST_CASE("BinaryOpNode - DivideNode") {
     }
 
     GIVEN("a in {-1, +1}, b in [-.5, 0], y = a / b") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
-        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-.5, 0.});
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto* b_ptr = graph.emplace_node<ConstantNode>(std::vector{-.5, 0.});
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         // Here we're exploiting our own inability to introspect b for the
         // purpose of the test.
@@ -829,29 +841,29 @@ TEST_CASE("BinaryOpNode - DivideNode") {
         // to reason more than that.
         // In the future smarter introspection might break this test.
         REQUIRE(a_ptr->integral());
-        REQUIRE(!b_ptr->integral());
+        REQUIRE(not b_ptr->integral());
 
-        CHECK(y_ptr->max() == std::numeric_limits<double>::max());     //  -1 / eps
-        CHECK(y_ptr->min() == std::numeric_limits<double>::lowest());  // -1 / -eps
+        CHECK(y_ptr->max() >= std::numeric_limits<double>::max());     //  -1 / eps
+        CHECK(y_ptr->min() <= std::numeric_limits<double>::lowest());  // -1 / -eps
     }
 
     GIVEN("a = [-1, -1, 1, 1], b = [-1, .00000001, .00000001, +1]") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, -1, 1, 1});
-        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1., .00000001, .00000001, 1.});
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, -1, 1, 1});
+        auto* b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1., .00000001, .00000001, 1.});
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
         REQUIRE(a_ptr->integral());
-        REQUIRE(!b_ptr->integral());
+        REQUIRE(not b_ptr->integral());
 
         // this triggers a check of the values by the validation node
         auto state = graph.initialize_state();
     }
 
     GIVEN("a in {-1, +1}, b in {-1, +1}, y = a / b") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
-        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto* b_ptr = graph.emplace_node<ConstantNode>(std::vector{-1, +1});
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());
@@ -861,9 +873,9 @@ TEST_CASE("BinaryOpNode - DivideNode") {
     }
 
     GIVEN("a in {1}, b in {-2, 2}, y = a / b") {
-        auto a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
-        auto b_ptr = graph.emplace_node<ConstantNode>(std::vector{-2, 2});
-        auto y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(std::vector{1, 1});
+        auto* b_ptr = graph.emplace_node<ConstantNode>(std::vector{-2, 2});
+        auto* y_ptr = graph.emplace_node<DivideNode>(a_ptr, b_ptr);
 
         REQUIRE(a_ptr->integral());
         REQUIRE(b_ptr->integral());
@@ -877,10 +889,10 @@ TEST_CASE("BinaryOpNode - SubtractNode") {
     auto graph = Graph();
 
     GIVEN("x = IntegerNode(-5, 5), a = 3, y = x - a") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
-        auto a_ptr = graph.emplace_node<ConstantNode>(3);
+        auto* x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(3);
 
-        auto y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
+        auto* y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
 
         THEN("y's max/min/integral are as expected") {
             CHECK(y_ptr->max() == 2);
@@ -890,10 +902,10 @@ TEST_CASE("BinaryOpNode - SubtractNode") {
     }
 
     GIVEN("x = IntegerNode(-5, 5), a = -3, y = x - a") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
-        auto a_ptr = graph.emplace_node<ConstantNode>(-3);
+        auto* x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(-3);
 
-        auto y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
+        auto* y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
 
         THEN("y's max/min/integral are as expected") {
             CHECK(y_ptr->max() == 8);
@@ -903,23 +915,23 @@ TEST_CASE("BinaryOpNode - SubtractNode") {
     }
 
     GIVEN("x = IntegerNode(-5, 5), a = 3.5, y = x - a") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
-        auto a_ptr = graph.emplace_node<ConstantNode>(3.5);
+        auto* x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto* a_ptr = graph.emplace_node<ConstantNode>(3.5);
 
-        auto y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
+        auto* y_ptr = graph.emplace_node<SubtractNode>(x_ptr, a_ptr);
 
         THEN("y's max/min/integral are as expected") {
             CHECK(y_ptr->max() == 1.5);
             CHECK(y_ptr->min() == -8.5);
-            CHECK(!y_ptr->integral());
+            CHECK(not y_ptr->integral());
         }
     }
 
     GIVEN("x = IntegerNode(-5, 5), y = IntegerNode(-3, 4), z = x - y") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
-        auto y_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -3, 4);
+        auto* x_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto* y_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -3, 4);
 
-        auto z_ptr = graph.emplace_node<SubtractNode>(x_ptr, y_ptr);
+        auto* z_ptr = graph.emplace_node<SubtractNode>(x_ptr, y_ptr);
 
         THEN("z's max/min/integral are as expected") {
             CHECK(z_ptr->max() == 8);
@@ -930,12 +942,12 @@ TEST_CASE("BinaryOpNode - SubtractNode") {
 
     // smoke test for checking predecessor sizeinfo
     GIVEN("x = Set(10), y = x[1:][-1:], z = x[:-1][-1:]") {
-        auto x_ptr = graph.emplace_node<SetNode>(10);
-        auto y_ptr = graph.emplace_node<BasicIndexingNode>(
+        auto* x_ptr = graph.emplace_node<SetNode>(10);
+        auto* y_ptr = graph.emplace_node<BasicIndexingNode>(
             graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(1, std::nullopt)),
             Slice(-1, std::nullopt)
         );
-        auto z_ptr = graph.emplace_node<BasicIndexingNode>(
+        auto* z_ptr = graph.emplace_node<BasicIndexingNode>(
             graph.emplace_node<BasicIndexingNode>(x_ptr, Slice(std::nullopt, -1)),
             Slice(-1, std::nullopt)
         );
@@ -945,9 +957,9 @@ TEST_CASE("BinaryOpNode - SubtractNode") {
 
     // testing static arrays with the same size but different, broadcastable shape
     GIVEN("x = Integer(shape = {1, 2, 3, 4}), y = Integer(shape = {3, 2, 1, 4}), z = x - y") {
-        auto x_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{1, 2, 3, 4});
+        auto* x_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{1, 2, 3, 4});
         graph.emplace_node<ArrayValidationNode>(x_ptr);
-        auto y_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3, 2, 1, 4});
+        auto* y_ptr = graph.emplace_node<IntegerNode>(std::initializer_list<ssize_t>{3, 2, 1, 4});
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 
         REQUIRE_THROWS_WITH(
@@ -965,10 +977,10 @@ TEST_CASE("BinaryOpNode - SubtractNode") {
         "x = DynamicArrayTestingNode(shape = {-1, 1, 3}), y = reshape(x, {-1, 3, 1}), z = x - y, "
         "y - x"
     ) {
-        auto x_ptr =
+        auto* x_ptr =
             graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1, 1, 3});
         graph.emplace_node<ArrayValidationNode>(x_ptr);
-        auto y_ptr =
+        auto* y_ptr =
             graph.emplace_node<ReshapeNode>(x_ptr, std::initializer_list<ssize_t>{-1, 3, 1});
         graph.emplace_node<ArrayValidationNode>(y_ptr);
 

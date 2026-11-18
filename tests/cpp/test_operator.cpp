@@ -90,6 +90,42 @@ TEST_CASE("BinaryOpMixin corner selection") {
 
 }  // namespace mixins
 
+TEMPLATE_TEST_CASE(
+    "operators",
+    "",
+    absolute,
+    add,
+    cos,
+    divide,
+    equal,
+    exp,
+    expit,
+    less_equal,
+    log,
+    logical,
+    logical_and,
+    logical_not,
+    logical_or,
+    logical_xor,
+    maximum,
+    minimum,
+    multiply,
+    negative,
+    remainder,
+    rint,
+    sin,
+    sqrt,
+    square,
+    subtract,
+    tanh
+) {
+    // Simple operators should be regular
+    STATIC_REQUIRE(std::regular<TestType>);
+
+    // Simple operators should test equal to themselves
+    STATIC_REQUIRE(TestType{} == TestType{});
+}
+
 TEMPLATE_LIST_TEST_CASE("absolute", "", DTypes) {
     // Our various complilers are not in agreement about whether std::abs() is
     // constexpr or not, so we use CHECK() rather than STATIC_REQUIRE.

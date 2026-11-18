@@ -14,12 +14,15 @@
 
 #pragma once
 
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <concepts>
 #include <cstdlib>
 #include <limits>
+#include <type_traits>
 
+#include "dwave-optimization/common.hpp"
 #include "dwave-optimization/interval.hpp"
 #include "dwave-optimization/typing.hpp"
 
@@ -62,6 +65,17 @@ struct UnaryOpMixin {
         }
     }
 
+    constexpr bool operator==(const UnaryOpMixin<UnaryOp>&) const {
+        static_assert(
+            std::is_empty_v<UnaryOpMixin<UnaryOp>>,
+            "non-empty operators should overload operator==()"
+        );
+        return true;
+    }
+
+    /// Unary ops are marked a commutative for consistency
+    static constexpr bool commutative = true;
+
     /// The domain of the operator. `domain[n]` is the nth factor of the domain.
     /// Unary ops are assumed to be defined for all possible inputs unless they tell us otherwise.
     template <DType T>
@@ -72,10 +86,32 @@ struct UnaryOpMixin {
     /// The montonicity of the operator. `monotonicity[n]` is the monotonicity of the nth argument.
     /// Unary ops are assumed not to be monotonic unless they tell us otherwise.
     static constexpr std::array<Monotonicity, 1> monotonicity{Monotonicity::None};
+
+    /// The number of inputs.
+    static constexpr ssize_t nin = 1;
+
+    /// The number of ouputs;
+    static constexpr ssize_t nout = 1;
 };
 
 template <typename BinaryOp>
 struct BinaryOpMixin {
+    /// Default mix-type handling. By default we first promote using `promote_types`, then
+    /// call the single-type overload.
+    template <DType T, DType U>
+    static constexpr auto operator()(T lhs, U rhs) requires(not std::same_as<T, U>) {
+        using R = promote_types_t<T, U>;
+        return BinaryOp::operator()(static_cast<R>(lhs), static_cast<R>(rhs));
+    }
+    template <DType T, DType U>
+    requires(not std::same_as<T, U>) static constexpr auto operator()(
+        const interval<T>& lhs_enclosure,
+        const interval<U>& rhs_enclosure
+    ) {
+        using R = promote_types_t<T, U>;
+        return BinaryOp::operator()(interval<R>(lhs_enclosure), interval<R>(rhs_enclosure));
+    }
+
     template <DType T>
     requires(
         BinaryOp::monotonicity[0] != Monotonicity::None and
@@ -122,6 +158,14 @@ struct BinaryOpMixin {
         return out;
     }
 
+    constexpr bool operator==(const BinaryOpMixin<BinaryOp>&) const {
+        static_assert(
+            std::is_empty_v<BinaryOpMixin<BinaryOp>>,
+            "non-empty operators should overload operator==()"
+        );
+        return true;
+    }
+
     /// The domain of the operator. `domain[n]` is the nth factor of the domain.
     /// Binary ops are assumed to be defined for all possible inputs unless they tell us otherwise.
     template <DType T>
@@ -135,6 +179,12 @@ struct BinaryOpMixin {
         Monotonicity::None,
         Monotonicity::None
     };
+
+    /// The number of inputs.
+    static constexpr ssize_t nin = 2;
+
+    /// The number of ouputs;
+    static constexpr ssize_t nout = 1;
 };
 
 }  // namespace mixins
@@ -242,6 +292,8 @@ struct add : mixins::BinaryOpMixin<add> {
     }
     using BinaryOpMixin::operator();
 
+    static constexpr bool commutative = true;
+
     static constexpr std::array<Monotonicity, 2> monotonicity{
         Monotonicity::Increasing,
         Monotonicity::Increasing
@@ -308,52 +360,80 @@ struct divide : mixins::BinaryOpMixin<divide> {
         }
     }
 
-    template <DType T>
+    template <DType T, DType U>
+    static constexpr auto operator()(T lhs, U rhs) requires(not std::same_as<T, U>) {
+        using R = promote_types_t<T, U>;
+        return divide{}(static_cast<R>(lhs), static_cast<R>(rhs));
+    }
+
+    template <DType T, DType U>
     static constexpr auto operator()(
         const interval<T>& lhs_enclosure,
-        const interval<T>& rhs_enclosure
+        const interval<U>& rhs_enclosure
     ) {
         // If either lhs or rhs is an empty domain, then so is their division
         assert(static_cast<bool>(lhs_enclosure) and "lhs's enclosure cannot be empty");
         assert(static_cast<bool>(rhs_enclosure) and "rhs's enclosure cannot be empty");
 
-        if constexpr (std::integral<T>) {
-            // Unlike most other ufuncs, np.divide promotes all integer types (including bool)
-            // to double.
-            return operator()(interval<double>(lhs_enclosure), interval<double>(rhs_enclosure));
-        } else {
-            const auto& [lhs_infimum, lhs_supremum] = lhs_enclosure;
-            const auto& [rhs_infimum, rhs_supremum] = rhs_enclosure;
+        using P = promote_types<T, U>::type;
+        using R = std::conditional<std::floating_point<P>, P, double>::type;
 
-            // If either lhs or rhs is pinned to zero then so is our function
-            if (lhs_infimum == 0 and lhs_supremum == 0) return interval<T>(0, 0);
-            if (rhs_infimum == 0 and rhs_supremum == 0) return interval<T>(0, 0);
+        const auto& [lhs_infimum, lhs_supremum] = lhs_enclosure;
+        const auto& [rhs_infimum, rhs_supremum] = rhs_enclosure;
 
+        // If either lhs or rhs is pinned to zero then so is our function
+        if (lhs_infimum == T{0} and lhs_supremum == T{0}) return interval<R>(0, 0);
+        if (rhs_infimum == U{0} and rhs_supremum == U{0}) return interval<R>(0, 0);
+
+        interval<R> out;
+
+        // Because 1 / x -> +/-inf as x -> +/-0 we need to take into account
+        // the integrality of the denominator
+        if constexpr (std::signed_integral<U>) {
+            if (rhs_enclosure.contains(U{-1})) {
+                out |= divide{}(P{lhs_infimum}, P{-1});
+                out |= divide{}(P{lhs_supremum}, P{-1});
+            }
+            if (rhs_enclosure.contains(U{+1})) {
+                out |= divide{}(P{lhs_infimum}, P{+1});
+                out |= divide{}(P{lhs_supremum}, P{+1});
+            }
+        } else if constexpr (std::floating_point<U>) {
             // If rhs straddles 0, then we can get arbitrarily close to +/- inf
-            if (rhs_infimum < 0 and 0 < rhs_supremum) return interval<T>::all();
+            if (rhs_infimum < 0 and 0 < rhs_supremum) {
+                // We straddle zero
+                return interval<R>::all();
+            }
 
             // if rhs is non-negative or non-positive then the sign of lhs determines our range of
             // outputs
             if (rhs_infimum == 0 and 0 < rhs_supremum) {
-                if (0 <= lhs_infimum) return interval<T>::nonnegative();
-                if (lhs_supremum <= 0) return interval<T>::nonpositive();
-                return interval<T>::all();
+                if (0 <= lhs_infimum) return interval<R>::nonnegative();
+                if (lhs_supremum <= 0) return interval<R>::nonpositive();
+                return interval<R>::all();
             }
             if (rhs_infimum < 0 and rhs_supremum == 0) {
-                if (0 <= lhs_infimum) return interval<T>::nonpositive();
-                if (lhs_supremum <= 0) return interval<T>::nonnegative();
-                return interval<T>::all();
+                if (0 <= lhs_infimum) return interval<R>::nonpositive();
+                if (lhs_supremum <= 0) return interval<R>::nonnegative();
+                return interval<R>::all();
             }
-
-            // Otherwise we just need to include our four corners
-            interval<T> out;
-            out |= divide{}(lhs_infimum, rhs_infimum);
-            out |= divide{}(lhs_infimum, rhs_supremum);
-            out |= divide{}(lhs_supremum, rhs_infimum);
-            out |= divide{}(lhs_supremum, rhs_supremum);
-            return out;
+        } else {
+            static_assert(false, "unexpected dtype");
         }
+
+        // Add our safe value if we can possibly be divided by zero
+        if (rhs_enclosure.contains(U{0})) out |= R{0};
+
+        // Finally add our four corners
+        out |= divide{}(lhs_infimum, rhs_infimum);
+        out |= divide{}(lhs_infimum, rhs_supremum);
+        out |= divide{}(lhs_supremum, rhs_infimum);
+        out |= divide{}(lhs_supremum, rhs_supremum);
+
+        return out;
     }
+
+    static constexpr bool commutative = false;
 };
 
 struct equal : mixins::BinaryOpMixin<equal> {
@@ -385,6 +465,10 @@ struct equal : mixins::BinaryOpMixin<equal> {
 
         return {false, true};
     }
+
+    using BinaryOpMixin::operator();
+
+    static constexpr bool commutative = true;
 };
 
 struct exp : mixins::UnaryOpMixin<exp> {
@@ -437,6 +521,8 @@ struct less_equal : mixins::BinaryOpMixin<less_equal> {
         Monotonicity::Decreasing,
         Monotonicity::Increasing
     };
+
+    static constexpr bool commutative = false;
 };
 
 struct log : mixins::UnaryOpMixin<log> {
@@ -527,6 +613,10 @@ struct logical_and : mixins::BinaryOpMixin<logical_and> {
         // Otherwise we can output either true or false
         return {false, true};
     }
+
+    using BinaryOpMixin::operator();
+
+    static constexpr bool commutative = true;
 };
 
 struct logical_not : mixins::UnaryOpMixin<logical_not> {
@@ -579,6 +669,10 @@ struct logical_or : mixins::BinaryOpMixin<logical_or> {
         // Otherwise we can output either true or false
         return {false, true};
     }
+
+    using BinaryOpMixin::operator();
+
+    static constexpr bool commutative = true;
 };
 
 struct logical_xor : mixins::BinaryOpMixin<logical_xor> {
@@ -611,6 +705,10 @@ struct logical_xor : mixins::BinaryOpMixin<logical_xor> {
         const bool res = not lhs_enclosure.contains(0) xor not rhs_enclosure.contains(0);
         return {res, res};
     }
+
+    using BinaryOpMixin::operator();
+
+    static constexpr bool commutative = true;
 };
 
 struct maximum : mixins::BinaryOpMixin<maximum> {
@@ -630,6 +728,8 @@ struct maximum : mixins::BinaryOpMixin<maximum> {
         Monotonicity::Increasing,
         Monotonicity::Increasing
     };
+
+    static constexpr bool commutative = true;
 };
 
 struct minimum : mixins::BinaryOpMixin<minimum> {
@@ -649,6 +749,8 @@ struct minimum : mixins::BinaryOpMixin<minimum> {
         Monotonicity::Increasing,
         Monotonicity::Increasing
     };
+
+    static constexpr bool commutative = true;
 };
 
 struct multiply : mixins::BinaryOpMixin<multiply> {
@@ -731,6 +833,10 @@ struct multiply : mixins::BinaryOpMixin<multiply> {
         out |= multiply{}(lhs_enclosure.supremum, rhs_enclosure.supremum);
         return out;
     }
+
+    using BinaryOpMixin::operator();
+
+    static constexpr bool commutative = true;
 };
 
 struct negative : mixins::UnaryOpMixin<negative> {
@@ -814,6 +920,10 @@ struct remainder : mixins::BinaryOpMixin<remainder> {
             return bounds;
         }
     }
+
+    using BinaryOpMixin::operator();
+
+    static constexpr bool commutative = false;
 };
 
 struct rint : mixins::UnaryOpMixin<rint> {
@@ -1002,6 +1112,8 @@ struct subtract : mixins::BinaryOpMixin<subtract> {
         Monotonicity::Increasing,
         Monotonicity::Decreasing
     };
+
+    static constexpr bool commutative = false;
 };
 
 struct tanh : mixins::UnaryOpMixin<tanh> {
