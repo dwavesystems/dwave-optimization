@@ -65,6 +65,14 @@ struct UnaryOpMixin {
         }
     }
 
+    constexpr bool operator==(const UnaryOpMixin<UnaryOp>& rhs) const {
+        static_assert(
+            std::is_empty_v<UnaryOpMixin<UnaryOp>>,
+            "non-empty operators should overload operator==()"
+        );
+        return true;
+    }
+
     /// Unary ops are marked a commutative for consistency
     static constexpr bool commutative = true;
 
@@ -148,6 +156,14 @@ struct BinaryOpMixin {
         assert(static_cast<bool>(out));
 
         return out;
+    }
+
+    constexpr bool operator==(const BinaryOpMixin<BinaryOp>& rhs) const {
+        static_assert(
+            std::is_empty_v<BinaryOpMixin<BinaryOp>>,
+            "non-empty operators should overload operator==()"
+        );
+        return true;
     }
 
     /// The domain of the operator. `domain[n]` is the nth factor of the domain.

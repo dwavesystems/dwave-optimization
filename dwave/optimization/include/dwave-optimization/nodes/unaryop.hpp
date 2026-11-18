@@ -70,8 +70,9 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         return this->equal_to(*rhs_ptr);       // use the equal_to(const UnaryOpNode&) overload
     }
     bool equal_to(const UnaryOpNode& rhs) const {
-        // If we're the same type, then we just need to check we have the same predecessor
-        return this->array_ptr_ == rhs.array_ptr_;
+        // If we're the same type, then we just need to check we have the same operator and
+        // the same predecessor
+        return (op == rhs.op and array_ptr_ == rhs.array_ptr_);
     }
 
     /// @copydoc Node::initialize_state()
@@ -263,7 +264,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         assert(array_ptr_ != nullptr);
     }
 
-    UnaryOp op;
+    [[no_unique_address]] UnaryOp op;
 
     // This is redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant

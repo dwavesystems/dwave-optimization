@@ -64,6 +64,8 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
     /// same predecessors. If the BinaryOp is commutative, then permutations
     /// of predecessors are allowed.
     bool equal_to(const BinaryOpNode& rhs) const override {
+        if (op != rhs.op) return false;
+
         if constexpr (BinaryOp::commutative) {
             return std::ranges::is_permutation(operands_, rhs.operands_);
         } else {
@@ -204,7 +206,7 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
 
     void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
 
-    BinaryOp op;
+    [[no_unique_address]] BinaryOp op;
 
     // There are redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
