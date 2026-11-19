@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Fix ``roll()`` crashing the Python interpreter when its array is empty.
