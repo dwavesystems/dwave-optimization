@@ -18,12 +18,19 @@ import numpy as np
 
 from dwave.optimization._model import _Graph
 from dwave.optimization.model import ArraySymbol as _ArraySymbol
-from dwave.optimization.typing import ShapeLike
+from dwave.optimization.typing import (
+    ShapeLike,
+    _AxesSumsSubjectToType,
+    _ConstraintOperatorType,
+    _SumSubjectToType,
+)
+
+# Keep synced with type aliases in dwave/optimization/model.py
 
 _SumConstraint: typing.TypeAlias = list[
-    tuple[list[str], list[float]] | tuple[int, list[str], list[float]]
+    tuple[list[_ConstraintOperatorType], list[float]]
+    | tuple[int, list[_ConstraintOperatorType], list[float]]
 ]
-_AxesSubjetTo: typing.TypeAlias = list[tuple[int, str | list[str], float | list[float]]]
 
 class BinaryVariable(_ArraySymbol):
     def __init__(
@@ -32,8 +39,9 @@ class BinaryVariable(_ArraySymbol):
         shape: ShapeLike | None = None,
         lower_bound: np.typing.ArrayLike | None = None,
         upper_bound: np.typing.ArrayLike | None = None,
-        sum_subject_to: list[tuple[str, float]] | None = None,
-        axes_sums_subject_to: _AxesSubjetTo | None = None,
+        *,
+        sum_subject_to: _SumSubjectToType | None = None,
+        axes_sums_subject_to: _AxesSumsSubjectToType | None = None,
     ): ...
     def lower_bound(self) -> np.typing.NDArray[np.double]: ...
     def set_state(self, index: int, state: np.typing.ArrayLike) -> None: ...
@@ -47,8 +55,9 @@ class IntegerVariable(_ArraySymbol):
         shape: ShapeLike | None = None,
         lower_bound: np.typing.ArrayLike | None = None,
         upper_bound: np.typing.ArrayLike | None = None,
-        sum_subject_to: list[tuple[str, float]] | None = None,
-        axes_sums_subject_to: _AxesSubjetTo | None = None,
+        *,
+        sum_subject_to: _SumSubjectToType | None = None,
+        axes_sums_subject_to: _AxesSumsSubjectToType | None = None,
     ): ...
     def lower_bound(self) -> np.typing.NDArray[np.double]: ...
     def set_state(self, index: int, state: np.typing.ArrayLike) -> None: ...

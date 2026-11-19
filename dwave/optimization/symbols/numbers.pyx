@@ -14,11 +14,11 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import json
-
 import collections.abc
-import numpy as np
+import json
+import operator
 
+import numpy as np
 from cython.operator cimport typeid
 from libcpp.optional cimport nullopt, optional
 from libcpp.utility cimport move
@@ -81,23 +81,25 @@ cdef vector[NumberNode.SumConstraint] _convert_python_sum_constraints(
                 raise TypeError("Each axis sum constraint must be a tuple with "
                                 "three elements: axis, operator(s), bound(s)")
 
-            axis, py_ops, py_bounds = axis_constraint
-            if not isinstance(axis, int):
-                raise TypeError("Constrained axis must be an int or None.")
+            py_axis, py_ops, py_bounds = axis_constraint
+            try:
+                axis = operator.index(py_axis)
+            except TypeError as err:
+                raise TypeError("Constrained axis must be an int") from err
             cpp_axis = <Py_ssize_t> axis
 
             if isinstance(py_ops, str):
                 cpp_ops.resize(1)
                 # One operator defined for all slices.
                 cpp_ops[0] = _parse_python_operator(py_ops)
-            elif isinstance(py_ops, collections.abc.Iterable):
+            elif isinstance(py_ops, collections.abc.Sequence):
                 # Operator defined per slice.
                 cpp_ops.reserve(len(py_ops))
                 for op in py_ops:
                     cpp_ops.push_back(_parse_python_operator(op))
             else:
                 raise TypeError("Axis sum constraint operator(s) should be str or an"
-                                " iterable of str(s).")
+                                " sequence of str(s).")
 
             bound_array = np.asarray_chkfinite(py_bounds, dtype=np.double)
             if (bound_array.ndim <= 1):
@@ -131,8 +133,16 @@ cdef class BinaryVariable(ArraySymbol):
         :meth:`~dwave.optimization.model.Model.binary`: Instantiation and
         usage of this symbol.
     """
-    def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
-                 sum_subject_to=None, axes_sums_subject_to=None):
+    def __init__(
+        self,
+        _Graph model,
+        shape=None,
+        lower_bound=None,
+        upper_bound=None,
+        *,
+        sum_subject_to=None,
+        axes_sums_subject_to=None,
+    ):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )
@@ -358,8 +368,16 @@ cdef class IntegerVariable(ArraySymbol):
         :meth:`~dwave.optimization.model.Model.integer`: Instantiation and
         usage of this symbol.
     """
-    def __init__(self, _Graph model, shape=None, lower_bound=None, upper_bound=None,
-                 sum_subject_to=None, axes_sums_subject_to=None):
+    def __init__(
+        self,
+        _Graph model,
+        shape=None,
+        lower_bound=None,
+        upper_bound=None,
+        *,
+        sum_subject_to=None,
+        axes_sums_subject_to=None,
+    ):
         cdef vector[Py_ssize_t] cppshape = as_cppshape(
             tuple() if shape is None else shape
         )

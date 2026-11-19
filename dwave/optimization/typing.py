@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import collections.abc
 import typing
 
 import numpy.typing
@@ -31,5 +32,19 @@ ArraySymbolLike: typing.TypeAlias = ArraySymbol | numpy.typing.ArrayLike
 """Either a :class:`~dwave.optimization.ArraySymbol` or a NumPy |array-like|_.
 """
 
-ShapeLike: typing.TypeAlias = int | tuple[int, ...]
+ShapeLike: typing.TypeAlias = typing.SupportsIndex | collections.abc.Sequence[typing.SupportsIndex]
 """Objects that can be converted to a shape"""
+
+# These type aliases are used for BinaryVariable and IntegerVariable. We need them in more than
+# one place so we keep them here for a single source of truth.
+_ConstraintOperatorType: typing.TypeAlias = typing.Literal["==", "<=", ">="]
+_AxesSumsSubjectToType: typing.TypeAlias = collections.abc.Sequence[  # noqa: PYI047
+    tuple[
+        typing.SupportsIndex,
+        _ConstraintOperatorType | collections.abc.Sequence[_ConstraintOperatorType],
+        typing.SupportsFloat | collections.abc.Sequence[typing.SupportsFloat],
+    ],
+]
+_SumSubjectToType: typing.TypeAlias = collections.abc.Sequence[  # noqa: PYI047
+    tuple[_ConstraintOperatorType, typing.SupportsFloat]
+]
