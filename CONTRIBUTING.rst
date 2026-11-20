@@ -3,22 +3,22 @@ Contributing
 ============
 
 Ocean's `contributing guide <https://docs.dwavequantum.com/en/latest/ocean/contribute.html>`_
-has guidelines for contributing to Ocean packages. With the following changes
+has guidelines for contributing to Ocean packages. With the following changes:
 
-* ``dwave-optimization`` uses C++20.
+* ``dwave-optimization`` uses C++23.
 
 pre-commit
 ==========
 
-All changes must be formatted and checked by [ruff](https://docs.astral.sh/ruff/)
-and [clang-format](https://clang.llvm.org/docs/ClangFormat.html).
+All changes must be formatted and checked by `ruff <https://docs.astral.sh/ruff/>`_
+and `clang-format <https://clang.llvm.org/docs/ClangFormat.html>`_.
 
-To make this as easy as possible, you can setup [pre-commit](https://pre-commit.com/):
+To make this as easy as possible, you can setup `pre-commit <https://pre-commit.com/>`_.
 
-```bash
-pip install --group pre-commit
-pre-commit install
-```
+.. code-block:: bash
+
+    pip install --group pre-commit
+    pre-commit install
 
 Release Notes
 =============
