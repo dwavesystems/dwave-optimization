@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Fix ``IsInNode::propagate()`` keeping extra elements when its ``element`` array grew and shrank back within one change.
