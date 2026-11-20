@@ -783,6 +783,13 @@ class TestBinaryVariable(utils.SymbolTests):
         x = model.binary((2, 3), axes_sums_subject_to=[(0, ["<=", "=="], np.asarray([1, 2]))])
         self.assertEqual(x.sum_constraints(), [(0, ["<=", "=="], [1, 2])])
 
+        class Scalar:
+            def __float__(self):
+                return 1.0
+
+        x = model.binary((2, 3), sum_subject_to=[("==", Scalar())])
+        self.assertEqual(x.sum_constraints(), [(["=="], [1])])
+
         # infeasible sum constraint
         with self.assertRaises(ValueError):
             model.binary((2, 3), upper_bound=[0, 1, 0, 0, 1, 0], sum_subject_to=[(">=", 3)])
@@ -800,6 +807,8 @@ class TestBinaryVariable(utils.SymbolTests):
             )
 
         # incorrect number of operators and or bounds
+        with self.assertRaises(TypeError):
+            model.binary((2, 3), sum_subject_to=[("!=", 1)])  # `!=` is not allowed
         with self.assertRaises(TypeError):
             model.binary((2, 3), sum_subject_to=[("==", [0, 0, 0])])
         with self.assertRaises(TypeError):
