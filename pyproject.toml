@@ -3,7 +3,7 @@ requires = [
     # Same as dependency-groups.build, last refreshed October 2026
     "cython~=3.3.0",
     "meson~=1.12.0",
-    "meson-python~=0.20.0",
+    "meson-python~=0.22.0",
     "ninja~=1.13.0",
 ]
 build-backend = 'mesonpy'
@@ -63,7 +63,7 @@ build = [
     # Same as build-system.requires
     "cython~=3.3.0",
     "meson~=1.12.0",  # keep synced with .pre-commit-config.yaml
-    "meson-python~=0.20.0",
+    "meson-python~=0.22.0",
     "ninja~=1.13.0",
 ]
 blas-build = [
@@ -168,16 +168,6 @@ repair-wheel-command = [
 # wheel. 313t and 314t do not support abi wheels yet.
 select = "cp31[!01]-*"  # uses fnmatch, will fail for 3.20+ but good enough for now
 build-frontend = { name = "build", args = ["-Csetup-args=-Dpython.allow_limited_api=true", "--no-isolation"] }
-
-[[tool.cibuildwheel.overrides]]
-select = "*-????linux_*"
-inherit.repair-wheel-command = "prepend"
-repair-wheel-command = "python /project/dwave/optimization/_build/_fix_rpath.py {wheel}"
-
-[[tool.cibuildwheel.overrides]]
-select = "*-macosx_*"
-inherit.repair-wheel-command = "prepend"
-repair-wheel-command = "python ./dwave/optimization/_build/_fix_rpath.py {wheel}"
 
 [[tool.cibuildwheel.overrides]]
 # We need a universal build of scipy_openblas so we need to make one on the fly
