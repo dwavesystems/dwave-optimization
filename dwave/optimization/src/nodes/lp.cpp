@@ -308,7 +308,7 @@ void LinearProgramNode::initialize_state(State& state) const {
     }
 
     SolveResult result = linprog(
-        lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub, FEASIBILITY_TOLERANCE
+        lp.c, lp.b_lb, lp.A, lp.b_ub, lp.A_eq, lp.b_eq, lp.lb, lp.ub, feasibility_tolerance()
     );
     emplace_data_ptr_<LinearProgramNodeData>(state, std::move(result));
 }
@@ -331,7 +331,7 @@ void LinearProgramNode::initialize_state(
         lp.b_eq,
         lp.lb,
         lp.ub,
-        FEASIBILITY_TOLERANCE
+        feasibility_tolerance()
     );
 
     emplace_data_ptr_<LinearProgramNodeData>(state, std::move(result));
@@ -371,7 +371,7 @@ void LinearProgramNode::propagate(State& state) const {
             data->lp.b_eq,
             data->lp.lb,
             data->lp.ub,
-            FEASIBILITY_TOLERANCE
+            feasibility_tolerance()
         );
     } else {
         // otherwise, use our simplex method
@@ -384,7 +384,7 @@ void LinearProgramNode::propagate(State& state) const {
             data->lp.b_eq,
             data->lp.lb,
             data->lp.ub,
-            FEASIBILITY_TOLERANCE
+            feasibility_tolerance()
         );
     }
 
