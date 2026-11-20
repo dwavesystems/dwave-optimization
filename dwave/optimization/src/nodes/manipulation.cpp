@@ -1394,6 +1394,9 @@ void RollNode::revert(State& state) const { data_ptr_<ArrayNodeStateData>(state)
 
 // Act on the given array *in place*.
 void RollNode::rotate_(std::span<double> array, ssize_t shift) {
+    // an empty array has nothing to rotate, and positive_modulus_() would divide by its size of 0
+    if (array.empty()) return;
+
     // we want to turn shift into a number >=0,<array.size()
     shift = positive_modulus_(shift, array.size());
 

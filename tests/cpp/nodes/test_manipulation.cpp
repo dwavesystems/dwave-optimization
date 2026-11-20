@@ -1593,6 +1593,33 @@ TEST_CASE("RollNode") {
         }
     }
 
+    GIVEN("x = set(5), which can be empty") {
+        auto graph = Graph();
+        auto x_ptr = graph.emplace_node<SetNode>(5);
+
+        AND_GIVEN("r = roll(x, shift=1)") {
+            auto r_ptr = graph.emplace_node<RollNode>(x_ptr, 1);
+            graph.emplace_node<ArrayValidationNode>(r_ptr);
+
+            auto state = graph.empty_state();
+            x_ptr->initialize_state(state, std::vector<double>{});
+            graph.initialize_state(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals(std::vector<double>{}));
+
+            x_ptr->assign(state, {0, 1, 2});
+            graph.propagate(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals({2, 0, 1}));
+            graph.commit(state);
+
+            x_ptr->assign(state, std::vector<double>{});
+            graph.propagate(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals(std::vector<double>{}));
+
+            graph.revert(state);
+            CHECK_THAT(r_ptr->view(state), RangeEquals({2, 0, 1}));
+        }
+    }
+
     GIVEN("x = arange(10).reshape(2, 5)") {
         auto graph = Graph();
 

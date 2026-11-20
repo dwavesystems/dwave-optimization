@@ -4146,6 +4146,16 @@ class TestRoll(utils.SymbolTests):
         with model.lock():
             yield from symbols
 
+    def test_empty(self):
+        model = Model()
+        model.states.resize(1)
+
+        x = model.set(5)  # starts with min_size=0 elements, so empty
+        r = roll(x, shift=1)
+
+        with model.lock():
+            np.testing.assert_array_equal(r.state(0), [])
+
     def test_exceptions(self):
         model = Model()
 
