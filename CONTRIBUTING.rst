@@ -3,7 +3,7 @@ Contributing
 ============
 
 Ocean's `contributing guide <https://docs.dwavequantum.com/en/latest/ocean/contribute.html>`_
-has guidelines for contributing to Ocean packages. With the following changes:
+has guidelines for contributing to Ocean packages with these exceptions:
 
 * ``dwave-optimization`` uses C++23.
 
