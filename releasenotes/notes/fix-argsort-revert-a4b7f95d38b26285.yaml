@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Fix ``ArgSortNode::revert()``, which could leave the node returning wrong indices.
