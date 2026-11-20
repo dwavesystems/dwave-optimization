@@ -25,8 +25,6 @@ from dwave.optimization.typing import (
     _SumSubjectToType,
 )
 
-# Keep synced with type aliases in dwave/optimization/model.py
-
 _SumConstraint: typing.TypeAlias = list[
     tuple[list[_ConstraintOperatorType], list[float]]
     | tuple[int, list[_ConstraintOperatorType], list[float]]

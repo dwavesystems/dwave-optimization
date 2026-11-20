@@ -98,8 +98,7 @@ cdef vector[NumberNode.SumConstraint] _convert_python_sum_constraints(
                 for op in py_ops:
                     cpp_ops.push_back(_parse_python_operator(op))
             else:
-                raise TypeError("Axis sum constraint operator(s) should be str or an"
-                                " sequence of str(s).")
+                raise TypeError("Axis sum constraint operator(s) should be str or a sequence of str.")
 
             bound_array = np.asarray_chkfinite(py_bounds, dtype=np.double)
             if (bound_array.ndim <= 1):

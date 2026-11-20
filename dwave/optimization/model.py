@@ -247,7 +247,7 @@ class Model(_Graph):
     ) -> BinaryVariable:
         r"""Add a binary decision variable to the model.
 
-        A binary symbol is an array of `0`/`1` values assigned as a solution
+        A binary symbol is an array of :math:`0, 1` values assigned as a solution
         to the problem being modeled.
 
         .. tip::
@@ -307,7 +307,7 @@ class Model(_Graph):
                     \sum_{i=0}^9 x_i \leq 5
 
                 **Currently, at most one sum constraint may be provided.**
-                If provided, ``axes_sums_subject_to`` must ``None``.
+                If provided, ``axes_sums_subject_to`` must be ``None``.
 
                 .. versionadded:: 0.6.13
             axes_sums_subject_to:
@@ -318,7 +318,7 @@ class Model(_Graph):
 
                 - **axis** (``int``) - The axis that the constraint is applied to.
                 - **operator(s)** (``str`` or ``list[str]``) - The constraint
-                  operator(s) (``"<="``, ``"=="``, or ``">="``).
+                  operator (``"<="``, ``"=="``, or ``">="``).
                   A single operator applies to all slice along the axis; an
                   array specifies one operator per slice.
                 - **bound(s)** (``float | list[float]``) - The constraint bound. A
@@ -343,7 +343,7 @@ class Model(_Graph):
                     \forall i, \sum_{j=0}^2 x_{i,j} \leq 2
 
                 **Currently, at most one sum constraint may be provided.**
-                If provided, ``sum_subject_to`` must ``None``.
+                If provided, ``sum_subject_to`` must be ``None``.
 
                 .. versionadded:: 0.6.13
 
@@ -373,10 +373,11 @@ class Model(_Graph):
             array([1., 0.])
 
             This example adds a :math:`(2, 3)`-shaped binary symbol with
-            index-wise lower bounds and a sum constraint along axis `1`. Let
-            :math:`x_i` denote the sum of the values within
-            slice `i` along axis `1`. For each state defined for this symbol:
-            :math:`(x_0 \leq 0)`, :math:`(x_1 = 2)`, and :math:`(x_2 \geq 1)`.
+            index-wise lower bounds and a sum constraint along axis
+            :math:`1`. Let :math:`x_i` denote the sum of the values within
+            slice :math:`i` along axis :math:`1`. For each state defined for
+            this symbol: :math:`(x_0 \leq 0)`, :math:`(x_1 = 2)`, and
+            :math:`(x_2 \geq 1)`.
 
             >>> import numpy as np
             >>> from dwave.optimization.model import Model
@@ -839,7 +840,7 @@ class Model(_Graph):
                     \sum_{i=0}^9 y_i \leq 5
 
                 **Currently, at most one sum constraint may be provided.**
-                If provided, ``axes_sums_subject_to`` must ``None``.
+                If provided, ``axes_sums_subject_to`` must be ``None``.
 
                 .. versionadded:: 0.6.13
             axes_sums_subject_to:
@@ -850,7 +851,7 @@ class Model(_Graph):
 
                 - **axis** (``int``) - The axis that the constraint is applied to.
                 - **operator(s)** (``str`` or ``list[str]``) - The constraint
-                  operator(s) (``"<="``, ``"=="``, or ``">="``).
+                  operator (``"<="``, ``"=="``, or ``">="``).
                   A single operator applies to all slice along the axis; an
                   array specifies one operator per slice.
                 - **bound(s)** (``float | list[float]``) - The constraint bound. A
@@ -875,7 +876,7 @@ class Model(_Graph):
                     \forall i, \sum_{j=0}^2 y_{i,j} \leq 2
 
                 **Currently, at most one sum constraint may be provided.**
-                If provided, ``sum_subject_to`` must ``None``.
+                If provided, ``sum_subject_to`` must be ``None``.
 
                 .. versionadded:: 0.6.13
 
@@ -914,9 +915,9 @@ class Model(_Graph):
             True
 
             This example adds a :math:`(2, 3)`-shaped integer symbol with general
-            lower and upper bounds and a sum constraint along axis `1`.
-            Let :math:`x_i` denote the sum of the values within
-            slice `i` along axis `1`. For each state defined for this symbol:
+            lower and upper bounds and a sum constraint along axis :math:`1`.
+            Let :math:`x_i` denote the sum of the values within slice :math:`i`
+            along axis :math:`1`. For each state defined for this symbol:
             :math:`(x_0 \leq 2)`, :math:`(x_1 \leq 4)`, and :math:`(x_2 \leq 5)`.
 
             >>> import numpy as np
@@ -934,7 +935,7 @@ class Model(_Graph):
 
             This example adds a :math:`(6,)`-shaped integer symbol such that
             the sum of the values within the array is less than or equal
-            to `20`.
+            to :math:`20`.
 
             >>> import numpy as np
             >>> from dwave.optimization.model import Model
