@@ -331,7 +331,7 @@ cdef class _Graph:
 
             if not expected.items() <= header_data.items():
                 raise ValueError(
-                    "header data does not match the deserialized CQM. "
+                    "header data does not match the deserialized model. "
                     f"Expected {expected!r} to be a subset of {header_data!r}"
                     )
 

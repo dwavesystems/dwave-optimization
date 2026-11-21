@@ -310,6 +310,10 @@ cdef class LinearProgram(Symbol):
 
         return np.asarray(state)
 
+    def state_size(self):
+        # While LP is not an array, it nevertheless has a state size of the order of the inputs' size
+        return sum(s.state_size() for s in self.iter_predecessors())
+
     @classmethod
     def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
         with zf.open(directory + "arguments.json", "r") as f:
