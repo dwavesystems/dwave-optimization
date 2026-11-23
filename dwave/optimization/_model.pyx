@@ -12,14 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import collections.abc
 import dataclasses
 import fractions
 import itertools
-import json
 import numbers
-import struct
-import zipfile
 
 import numpy as np
 
@@ -33,7 +29,6 @@ from libcpp.memory cimport make_shared
 from libcpp.span cimport span
 from libcpp.typeindex cimport type_index
 from libcpp.unordered_map cimport unordered_map
-from libcpp.utility cimport move
 from libcpp.vector cimport vector
 
 import dwave.optimization.mathematical
@@ -42,24 +37,12 @@ from dwave.optimization.libcpp cimport dynamic_cast_ptr
 from dwave.optimization.libcpp.array cimport broadcast_shapes
 from dwave.optimization.states cimport States
 from dwave.optimization.utilities import (
-    _file_object_arg,
-    _lock,
     _NoValue,
     _split_indices,
     _TypeError_to_NotImplemented,
 )
 
 __all__ = []
-
-
-DEFAULT_SERIALIZATION_VERSION = (1, 0)
-"""A 2-tuple encoding the default serialization format used for serializing models."""
-
-KNOWN_SERIALIZATION_VERSIONS = (
-    (0, 1),
-    (1, 0),
-)
-"""A tuple of 2-tuples listing all serialization versions supported."""
 
 
 # Store a mapping from the type_index of each C++ Node type to the relevant
@@ -111,8 +94,12 @@ cdef class _Graph:
         self._graph = self._owning_ptr.get()
 
     @staticmethod
-    cdef _Graph from_shared_ptr(shared_ptr[Graph] ptr):
-        cdef _Graph model = _Graph.__new__(_Graph)
+    cdef _Graph from_shared_ptr(cls, shared_ptr[Graph] ptr):
+        """Return a _Graph from a shared_ptr. We would like this to be a classmethod
+        but unfortunately Cython does not allow cdef classmethods. So we make cls
+        an explicit argument instead.
+        """
+        cdef _Graph model = cls.__new__(cls)
 
         model._owning_ptr = ptr
         model._graph = model._owning_ptr.get()
@@ -211,404 +198,6 @@ cdef class _Graph:
             states
         """
         return sum(sym.state_size() for sym in self.iter_decisions())
-
-    @classmethod
-    @_file_object_arg("rb")  # translate str/bytes file inputs into file objects
-    def from_file(cls, file, *,
-                  check_header = True,  # undocumented until fixed, see
-                                        # https://github.com/dwavesystems/dwave-optimization/issues/22
-                  substitute = None,
-                  lock = False,         # maybe want to change default in the future? But for now
-                                        # maintain backwards compatibility pre 0.6.0
-                  ):
-        """Construct a model from the given file.
-
-        Args:
-            file:
-                File pointer to a readable, seekable file-like object encoding
-                a model. Strings are interpreted as a file name. Files are not
-                rewound to the beginning.
-            substitute:
-                A mapping of symbol substitutions to make when loading the file.
-                The keys are strings giving the node class name to be substituted.
-                The values are callables to create a different node.
-                The callable should have the same signature as the substituted
-                symbol's constructor.
-            lock:
-                Whether to return a locked model. Only locked models will include
-                any saved intermediate states.
-
-        Returns:
-            A model.
-
-        Examples:
-
-            This example serializes a model to a
-            `buffered I/O <https://docs.python.org/3/library/io.html#binary-i-o>`_
-            object, then creates a new model from that object.
-
-            >>> from dwave.optimization.generators import flow_shop_scheduling
-            >>>
-            >>> processing_times = [[10, 5, 7], [20, 10, 15]]
-            >>> model = flow_shop_scheduling(processing_times=processing_times)
-            >>> my_file = model.to_file()
-            >>>
-            >>> from dwave.optimization import Model
-            >>> new_model = Model.from_file(my_file)
-
-        See also:
-            :meth:`.into_file`, :meth:`.to_file`
-
-            :meth:`~dwave.optimization.states.States.from_file` Restores states
-            from a file
-
-        .. versionchanged:: 0.6.0
-            Add the ``substitute`` and ``lock`` keyword-only arguments.
-
-        """
-        import dwave.optimization.symbols as symbols
-
-        if substitute is None:
-            substitute = dict()
-        elif not isinstance(substitute, collections.abc.Mapping):
-            raise TypeError("expected substitute to be a mapping of node names to classes")
-
-        version, header_data = _Graph._from_file_header(file)
-
-        cdef _Graph model = cls()
-
-        with zipfile.ZipFile(file, mode="r") as zf:
-            model_info = json.loads(zf.read("info.json"))
-
-            num_nodes = model_info.get("num_nodes")
-            if not isinstance(num_nodes, int) or num_nodes < 0:
-                raise ValueError("expected num_nodes to be a positive integer")
-
-            with zf.open("nodetypes.txt", "r") as fcls, zf.open("adj.adjlist", "r") as fadj:
-                for lineno, (classname, adjlist) in enumerate(zip(fcls, fadj)):
-                    # get the predecessors
-                    node_id, *predecessor_ids = map(int, adjlist.split(b" "))
-                    if node_id != lineno:  # sanity check
-                        raise ValueError("unexpected adj.adjlist format")
-
-                    predecessors = []
-                    for pid in predecessor_ids:
-                        if not 0 <= pid < node_id:
-                            raise ValueError("unexpected predecessor id")
-                        predecessors.append(symbol_from_ptr(model, model._graph.nodes()[pid].get()))
-
-                    # now make the node
-                    directory = f"nodes/{node_id}/"
-                    classname = classname.decode("UTF-8").rstrip("\n")
-
-                    # take advanctage of the symbols all being in the same namespace
-                    # and the fact that we (currently) encode them all by name
-                    node_cls = substitute.get(classname, getattr(symbols, classname, None))
-
-                    if not issubclass(node_cls, Symbol):
-                        raise ValueError("encoded model has an unsupported node type")
-
-                    node_cls._from_zipfile(zf, directory, model, predecessors=predecessors)
-
-            objective_buff = zf.read("objective.json")
-            if objective_buff:
-                objective_id = json.loads(objective_buff)
-                if not isinstance(objective_id, int) or objective_id >= model.num_nodes():
-                    raise ValueError("objective must be an integer and a valid node id")
-                model.minimize(symbol_from_ptr(model, model._graph.nodes()[objective_id].get()))
-
-            for cid in json.loads(zf.read("constraints.json")):
-                model.add_constraint(symbol_from_ptr(model, model._graph.nodes()[cid].get()))
-
-            if lock:
-                model.lock()
-
-            # Finally load any states from the file.
-            model.states._from_zipfile(zf, version=version)
-
-        if check_header:
-            expected = model._header_data(only_decision=False)
-
-            if not expected.items() <= header_data.items():
-                raise ValueError(
-                    "header data does not match the deserialized CQM. "
-                    f"Expected {expected!r} to be a subset of {header_data!r}"
-                    )
-
-        return model
-
-    @staticmethod
-    def _from_file_header(file):
-        """Read/validate the header from a model file.
-
-        Advances the stream position to the end of the header.
-
-        Returns:
-            The serialization version as a 2-tuple.
-
-            The header data as a dict.
-        """
-        prefix = b"DWNL"
-
-        read_prefix = file.read(len(prefix))
-        if read_prefix != prefix:
-            raise ValueError("Unknown file type. Expected magic string "
-                             f"{prefix!r} but received {read_prefix!r} "
-                             "instead")
-
-        version = tuple(file.read(2))
-
-        if version not in KNOWN_SERIALIZATION_VERSIONS:
-            raise ValueError("Unknown serialization format. Expected one of "
-                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
-                             "instead. Upgrading your dwave-optimization version may help.")
-
-        header_len = struct.unpack('<I', file.read(4))[0]
-        header_data = json.loads(file.read(header_len).decode('ascii'))
-
-        return version, header_data
-
-    def _header_data(self, *, only_decision, max_num_states=float('inf')):
-        """The header data associated with the model (but not the states)."""
-        num_nodes = self.num_decisions() if only_decision else self.num_nodes()
-        try:
-            num_states = max(0, min(self.states.size(), max_num_states))
-        except AttributeError:
-            num_states = 0
-
-        decision_state_size = self.decision_state_size()
-        state_size = decision_state_size if only_decision else self.state_size()
-
-        return dict(
-            decision_state_size=decision_state_size,
-            num_nodes=num_nodes,
-            state_size=state_size,
-            num_states=num_states,
-        )
-
-    @_file_object_arg("wb")  # translate str/bytes file inputs into file objects
-    @_lock
-    def into_file(self, file, *,
-                  max_num_states = 0,
-                  only_decision = False,
-                  version = None,
-                  ):
-        """Serialize the model into an existing file.
-
-        Args:
-            file:
-                File pointer to an existing writeable, seekable
-                file-like object encoding a model. Strings are
-                interpreted as a file name.
-            max_num_states:
-                Maximum number of states to serialize along with the model.
-                The number of states serialized is the minimum between
-                :meth:`~dwave.optimization.states.States.size` and the specified
-                ``max_num_states`` value.
-            only_decision:
-                If ``True``, only decision variables are serialized.
-                If ``False``, all symbols are serialized.
-            version:
-                A 2-tuple indicating which serialization version to use.
-
-        See also:
-            :meth:`.from_file`, :meth:`.to_file`
-
-            :meth:`~dwave.optimization.states.States.into_file` Saves states to
-            an existing file
-
-        Format Specification (Version 1.0):
-
-            This format is inspired by the `NPY format`_
-
-            The first 4 bytes are a magic string: exactly "DWNL".
-
-            The next 1 byte is an unsigned byte: the major version of the file
-            format.
-
-            The next 1 byte is an unsigned byte: the minor version of the file
-            format.
-
-            The next 4 bytes form a little-endian unsigned int, the length of
-            the header data HEADER_LEN.
-
-            The next HEADER_LEN bytes form the header data. This is a
-            json-serialized dictionary. The dictionary contains the following
-            key/values: ``decision_state_size``, ``num_nodes``, ``num_states``,
-            and ``state_size``. It is terminated by a newline character and
-            padded with spaces to make the entire length of the entire header
-            divisible by 64.
-
-            Following the header, the remaining data is encoded as a zip file.
-            All arrays are saved using the NumPy serialization format, see
-            :func:`numpy.save()`.
-
-            The information in the header is also saved in a json-formatted
-            file ``info.json``.
-
-            The serialization version is saved in a file ``version.txt``.
-
-            Each node is listed by type in a file ``nodetypes.txt``.
-
-            The adjacency of the nodes is saved in an adjacency format file,
-            ``adj.adjlist``. E.g., a graph with edges `a->b`, `a->c`, `b->d`
-            would be saved as
-
-            .. code-block::
-
-                a b c
-                b d
-                c
-                d
-
-            The id of the object is stored in ``objective.json``, and the list
-            of constraint symbols are stored by id in ``constraints.json``.
-
-            Finally each symbol has symbol-specific storage in a directory.
-
-            .. code-block::
-
-                nodes/
-                    <symbol id>/
-                        <symbol-specific storage>
-                    ...
-
-            The states, if also saved, are saved according to
-            :meth:`States.into_file()`.
-
-        Format Specification (Version 0.1):
-
-            Prior to version 1.0, states were saved differently.
-
-        .. versionchanged:: 0.5.2
-            Added the ``version`` keyword-only argument.
-        .. versionchanged:: 0.6.0
-            Added support for serialization format version 1.0.
-
-        .. _NPY format: https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html
-        """
-        from dwave.optimization.symbols.reduce import Prod, Sum  # see note below
-
-        version, model_info = self._into_file_header(
-            file,
-            version=version,
-            max_num_states=max_num_states,
-            only_decision=only_decision,
-        )
-
-        num_states = model_info["num_states"]
-
-        encoder = json.JSONEncoder(separators=(',', ':'))
-
-        # The rest of it is a zipfile
-        with zipfile.ZipFile(file, mode="w") as zf:
-            zf.writestr("info.json", encoder.encode(model_info))
-            zf.writestr("version.txt", ".".join(map(str, version)))
-
-            # Do three passes over the nodes
-
-            # If we're only encoding the decision variables then we want to stop early.
-            # We know that we're topologically sorted so the first num_decisions are
-            # exactly the decision variables.
-            stop = self.num_decisions() if only_decision else self.num_nodes()
-
-            # On the first pass we made a nodetypes.txt file that has the node names
-            with zf.open("nodetypes.txt", "w", force_zip64=True) as f:
-                for node in itertools.islice(self.iter_symbols(), 0, stop):
-                    # There is a backwards compatibility break here in 0.6.8 where
-                    # we unified PartialReduce and Reduce. For compatibility going
-                    # backwards though, we want to use the PartialReduce alias
-                    if isinstance(node, Prod) and node.axes():
-                        f.write(b"PartialProd\n")
-                        continue
-                    if isinstance(node, Sum) and node.axes():
-                        f.write(b"PartialSum\n")
-                        continue
-
-                    f.write(type(node).__name__.encode("UTF-8"))
-                    f.write(b"\n")
-
-            # On the second pass we encode the adjacency
-            with zf.open("adj.adjlist", "w", force_zip64=True) as f:
-                # We don't actually need to make the Python symbols here, but it's convenient
-                # Also, if we're only_decision then there will never be predecessors, but
-                # let's reuse the code for now.
-                stop = self.num_decisions() if only_decision else self.num_nodes()
-                for node in itertools.islice(self.iter_symbols(), 0, stop):
-                    f.write(f"{node.topological_index()}".encode("UTF-8"))
-                    for pred in node.iter_predecessors():
-                        f.write(f" {pred.topological_index()}".encode("UTF-8"))
-                    f.write(b"\n")
-
-            # On the third pass, we allow nodes to save whatever info they want
-            # to in a nested node/<topological_index> directory
-            for node in itertools.islice(self.iter_symbols(), 0, stop):
-                directory = f"nodes/{node.topological_index()}/"
-                node._into_zipfile(zf, directory)
-
-            # If we're saving states, do a fourth pass saving the states.
-            if num_states > 0:
-                self.states._into_zipfile(zf, num_states=num_states, version=version)
-
-            # Encode the objective and the constraints
-            if self._graph.objective():
-                objective = symbol_from_ptr(self, self._graph.objective())
-            else:
-                objective = None
-            if objective is not None and objective.topological_index() < stop:
-                zf.writestr("objective.json", encoder.encode(objective.topological_index()))
-            else:
-                zf.writestr("objective.json", b"")
-
-            constraints = []  # todo: not yet available at the python level
-            for c in self.iter_constraints():
-                if c is not None and c.topological_index() < stop:
-                    constraints.append(c.topological_index())
-            zf.writestr("constraints.json", encoder.encode(constraints))
-
-    def _into_file_header(self, file, *, version, max_num_states, only_decision):
-        """Write the header that precedes the zipfile part of the serialization.
-
-        Also handles some input checking.
-        """
-        if version is None:
-            version = DEFAULT_SERIALIZATION_VERSION
-        elif version not in KNOWN_SERIALIZATION_VERSIONS:
-            raise ValueError("Unknown serialization format. Expected one of "
-                             f"{KNOWN_SERIALIZATION_VERSIONS} but received {version} "
-                             "instead. Upgrading your dwave-optimization version may help.")
-
-        model_info = self._header_data(
-            max_num_states=max_num_states,
-            only_decision=only_decision,
-        )
-
-        encoder = json.JSONEncoder(separators=(',', ':'))
-
-        # The first 4 bytes are DWNL
-        file.write(b"DWNL")
-
-        # The next 1 byte is an unsigned byte encoding the major version of the
-        # file format
-        # The next 1 byte is an unsigned byte encoding the minor version of the
-        # file format
-        file.write(bytes(version))
-
-        # The next 4 bytes form a little-endian unsigned int, the length of
-        # the header data `HEADER_LEN`.
-
-        # The next `HEADER_LEN` bytes form the header data. This will be `data`
-        # json-serialized and encoded with 'ascii'.
-        header_data = encoder.encode(model_info).encode("ascii")
-
-        # Now pad to make the entire header divisible by 64
-        padding = b' '*(64 - (len(header_data) + 4 + 2 + 4)  % 64)
-
-        file.write(struct.pack('<I', len(header_data) + len(padding)))  # header length
-        file.write(header_data)
-        file.write(padding)
-
-        return version, model_info
 
     cpdef bool is_locked(self) noexcept:
         """Lock status of the model.
@@ -728,6 +317,11 @@ cdef class _Graph:
         for i in range(nodes.size()):
             yield symbol_from_ptr(self, nodes[i].get())
 
+    def _ith_node(self, Py_ssize_t i):
+        if i < 0 or self.num_nodes() <= i:
+            raise IndexError(f"{i} is out of bounds for a model with {self.num_nodes()} nodes")
+        return symbol_from_ptr(self, self._graph.nodes()[i].get())
+
     def lock(self):
         """Lock the model.
 
@@ -740,7 +334,32 @@ cdef class _Graph:
         # We do it lazily for performance
 
     def minimize(self, ArraySymbol value):
-        """Set the objective value to minimize."""
+        """Set the objective value to minimize.
+
+        Optimization problems have an :term:`objective` and/or
+        :term:`constraints <constraint>`. The objective expresses one or more
+        aspects of the problem that should be minimized (equivalent to
+        maximization when multiplied by a minus sign). For example, an optimized
+        itinerary might minimize the value of distance traveled or cost of
+        transportation or travel time.
+
+        Args:
+            value: Value of the cost function to minimize.
+
+        Examples:
+            This example minimizes a simple polynomial, :math:`y = i^2 - 4i`,
+            within bounds.
+
+            >>> from dwave.optimization import Model
+            >>> model = Model()
+            >>> i = model.integer(lower_bound=-5, upper_bound=5)
+            >>> c = model.constant(4)
+            >>> y = i * i - c * i
+            >>> model.minimize(y)
+
+        See Also:
+            :meth:`.feasible`, :meth:`.objective`
+        """
         if value is None:
             raise ValueError("value cannot be None")
         if value.size() < 1:
@@ -903,6 +522,53 @@ cdef class _Graph:
             :meth:`.iter_symbols`, :meth:`.num_nodes`
         """
         return self.num_nodes()
+
+    @property
+    def objective(self):
+        """Objective to be minimized.
+
+        Created when you use the :meth:`.minimize` method and associated with
+        the :class:`~dwave.optimization.model.ArraySymbol` being minimized; as
+        such, supports such methods as
+        :meth:`~dwave.optimization.model.ArraySymbol.state`,
+        :meth:`~dwave.optimization.model.ArraySymbol.reshape`,
+        :meth:`~dwave.optimization.model.ArraySymbol.max`, etc.
+
+        Examples:
+            This example prints the value of the :term:`objective` of a model
+            representing the simple polynomial, :math:`y = i^2 - 4i`, for a
+            state with value :math:`i=2.0`.
+
+            >>> from dwave.optimization import Model
+            >>>
+            >>> model = Model()
+            >>> i = model.integer(lower_bound=-5, upper_bound=5)
+            >>> c = model.constant(4)
+            >>> y = i**2 - c * i
+            >>> model.minimize(y)
+            >>> with model.lock():
+            ...     model.states.resize(1)
+            ...     i.set_state(0, 2.0)
+            ...     print(f"Objective = {model.objective.state(0)}")
+            Objective = -4.0
+
+        See Also:
+            :class:`~dwave.optimization.model.ArraySymbol`: Symbol created by
+            the :meth:`.minimize` method
+
+            :meth:`.minimize`,
+            :meth:`~dwave.optimization.model.ArraySymbol.state`
+        """
+        cdef ArrayNode* objective_ptr = self._graph.objective()
+
+        if not objective_ptr:
+            return None
+        
+        return symbol_from_ptr(self, objective_ptr)
+
+    @objective.setter
+    def objective(self, ArraySymbol value):
+        self.minimize(value)
 
     def remove_redundant_symbols(self, time_limit_s=None):
         """Remove redundant symbols from the model.

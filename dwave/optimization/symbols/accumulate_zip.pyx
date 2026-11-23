@@ -21,6 +21,7 @@ from libcpp.vector cimport vector
 
 from dwave.optimization.expression import Expression
 from dwave.optimization._model cimport _Graph, _register, ArraySymbol, Symbol, symbol_from_ptr
+from dwave.optimization.model import Model
 from dwave.optimization.libcpp cimport dynamic_cast_ptr, get, holds_alternative
 from dwave.optimization.libcpp.graph cimport ArrayNode
 from dwave.optimization.libcpp.nodes.lambda_ cimport AccumulateZipNode
@@ -212,9 +213,7 @@ cdef class AccumulateZip(ArraySymbol):
         """
         # Create a model from the shared_ptr held by the node. We need to be careful
         # not to modify it! That leads to undefined behavior.
-        # There is also an asymmetry here where we serialize as a _Graph and then
-        # load as Model. Right now that's OK, but we need to formalize that process.
-        cdef _Graph expr = _Graph.from_shared_ptr(self.ptr.expression_ptr())
+        cdef _Graph expr = _Graph.from_shared_ptr(Model, self.ptr.expression_ptr())
         assert expr._graph.topologically_sorted()
         assert expr._lock_count > 0  
         with zf.open(directory + "expression.nl", mode="w") as f:

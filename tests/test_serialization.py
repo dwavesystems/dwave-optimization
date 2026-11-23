@@ -120,7 +120,7 @@ class TestSerialization(unittest.TestCase):
 
     def test_model(self):
         """For all models, test the serializing and deserializing results in the same model."""
-        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+        for version in dwave.optimization.model.KNOWN_SERIALIZATION_VERSIONS:
             for name in self.iter_names():
                 with self.subTest(version=version, model=name):
                     base_model = getattr(self, "make_" + name)()
@@ -130,7 +130,7 @@ class TestSerialization(unittest.TestCase):
 
     def test_states(self):
         """For all models, test the serializing and deserializing results in the same states."""
-        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+        for version in dwave.optimization.model.KNOWN_SERIALIZATION_VERSIONS:
             for name in self.iter_names():
                 _ = getattr(self, "make_" + name)
 

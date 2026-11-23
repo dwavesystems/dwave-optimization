@@ -32,7 +32,7 @@ cdef object symbol_from_ptr(_Graph model, Node* ptr)
 
 cdef class _Graph:
     @staticmethod
-    cdef _Graph from_shared_ptr(shared_ptr[Graph])
+    cdef _Graph from_shared_ptr(object cls, shared_ptr[Graph])
 
     cpdef bool is_locked(self) noexcept
     cpdef Py_ssize_t num_constraints(self) noexcept

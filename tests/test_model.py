@@ -505,7 +505,7 @@ class TestModelSerialization(unittest.TestCase):
         W = model.constant(np.arange(25).reshape((5, 5)))
         model.minimize(W[x, :][:, x].sum())
 
-        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+        for version in dwave.optimization.model.KNOWN_SERIALIZATION_VERSIONS:
             with self.subTest(version=version):
                 # Serialize, then deserialize the model
                 with model.to_file(version=version) as f:
@@ -580,7 +580,7 @@ class TestModelSerialization(unittest.TestCase):
                 self.assertIs(type(n0), type(n1))
 
     def test_invalid_version_from_file(self):
-        from dwave.optimization._model import DEFAULT_SERIALIZATION_VERSION
+        from dwave.optimization.model import DEFAULT_SERIALIZATION_VERSION
 
         model = Model()
         with io.BytesIO() as f:
@@ -647,7 +647,7 @@ class TestModelSerialization(unittest.TestCase):
         # don't set state 1
         x.state(2)  # default initialize
 
-        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+        for version in dwave.optimization.model.KNOWN_SERIALIZATION_VERSIONS:
             with self.subTest(version=version):
                 with model.to_file(max_num_states=model.states.size()) as f:
                     new = Model.from_file(f)

@@ -20,6 +20,7 @@ import zipfile
 from libcpp.utility cimport move
 
 from dwave.optimization.model cimport _Graph
+from dwave.optimization.model import Model
 from dwave.optimization.utilities import _file_object_arg
 
 __all__ = ["States"]
@@ -205,7 +206,7 @@ cdef class States:
             raise NotImplementedError("appending states is not (yet) implemented")
 
         # Validate the header, and get the serialization version.
-        version, _ = _Graph._from_file_header(file)
+        version, _ = Model._from_file_header(file)
 
         with zipfile.ZipFile(file, mode="r") as zf:
             self._from_zipfile(zf, version=version)
