@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Fix an out-of-bounds read in ``deduplicate_diff()`` when a dynamic array grows and then shrinks back within one change.
