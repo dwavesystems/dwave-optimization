@@ -421,10 +421,8 @@ void IsInNode::propagate(State& state) const {
     }
     node_data->add_or_rm_test_elements.clear();
 
-    // Resize if necessary
-    if (element_ptr_->size_diff(state) != 0) {
-        node_data->trim_to(element_ptr_->size(state));
-    }
+    // Resize if necessary, also when size_diff() is 0: `element` may have grown and shrunk back
+    node_data->trim_to(element_ptr_->size(state));
     assert(set_data_is_correct(state, element_ptr_, *node_data));
 }
 

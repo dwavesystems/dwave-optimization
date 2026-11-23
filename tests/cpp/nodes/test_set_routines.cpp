@@ -451,6 +451,21 @@ TEST_CASE("IsInNode") {
                         );
                     }
                 }
+
+                AND_WHEN("We commit, grow and shrink set2 back to its size, and propagate") {
+                    graph.commit(state);
+
+                    set2_ptr->grow(state);
+                    set2_ptr->shrink(state);
+                    // set2 should be [3, 1, 6, 7]
+
+                    graph.propagate(state);
+
+                    THEN("The isin's state is correct") {
+                        CHECK(isin_ptr->size(state) == 4);
+                        CHECK_THAT(isin_ptr->view(state), RangeEquals({0.0, 0.0, 0.0, 0.0}));
+                    }
+                }
             }
         }
     }
