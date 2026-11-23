@@ -18,7 +18,6 @@
 
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
-#include "dwave-optimization/nodes/indexing.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/sorting.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
@@ -167,34 +166,29 @@ TEST_CASE("ArgSortNode") {
         }
     }
 
-    GIVEN("A constant node indexed by a dynamic set node, and an argsort node") {
-        auto c_ptr = graph.emplace_node<ConstantNode>(std::vector{5.0, 7.0, 6.0});
-        auto set_ptr = graph.emplace_node<SetNode>(3);
-        auto indexed_ptr = graph.emplace_node<AdvancedIndexingNode>(c_ptr, set_ptr);
-        auto argsort_ptr = graph.emplace_node<ArgSortNode>(indexed_ptr);
+    GIVEN("A dynamic array node and an argsort node") {
+        auto arr_ptr =
+            graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1});
+        auto argsort_ptr = graph.emplace_node<ArgSortNode>(arr_ptr);
         graph.emplace_node<ArrayValidationNode>(argsort_ptr);
 
-        WHEN("We grow the set to two elements and commit") {
-            auto state = graph.initialize_state();
-            set_ptr->grow(state);
-            set_ptr->grow(state);
-            graph.propagate(state);
-            graph.commit(state);
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            arr_ptr->initialize_state(state, {5.0, 7.0, 6.0});
+            graph.initialize_state(state);
 
-            AND_WHEN("We shrink and regrow the set, propagate, and revert") {
-                set_ptr->shrink(state);
-                set_ptr->grow(state);
-                // the indexing node's diff now has an update with old == value
+            AND_WHEN("We set a value to itself, propagate, and revert") {
+                // the array's diff now has an update with old == value
+                arr_ptr->set(state, 1, 7.0);
                 graph.propagate(state);
                 graph.revert(state);
 
-                AND_WHEN("We grow the set and propagate") {
-                    set_ptr->grow(state);
-                    // c[set] should now be [5, 7, 6]
+                AND_WHEN("We change another value and propagate") {
+                    arr_ptr->set(state, 0, 8.0);
                     graph.propagate(state);
 
                     THEN("The argsort's state is correct") {
-                        CHECK_THAT(argsort_ptr->view(state), RangeEquals({0, 2, 1}));
+                        CHECK_THAT(argsort_ptr->view(state), RangeEquals({2, 1, 0}));
                     }
                 }
             }
