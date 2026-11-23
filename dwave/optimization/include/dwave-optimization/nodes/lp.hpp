@@ -53,21 +53,29 @@ class LinearProgramFeasibleNode : public ScalarOutputMixin<EqualityMixin<ArrayNo
 
 class LinearProgramNodeBase : public Node {
  public:
-    /// The default lower bound for variables
-    static const double default_lower_bound();
+    /// Feasibility tolerance
+    static constexpr double feasibility_tolerance() { return 1e-07; }
+
+    /// The value of infinity
+    static constexpr double infinity() { return std::numeric_limits<double>::infinity(); }
 
     /// The default lower bound for variables
-    static const double default_upper_bound();
+    static constexpr double default_lower_bound() { return 0.0; }
+
+    /// The default upper bound for variables
+    static constexpr double default_upper_bound() { return infinity(); }
+
+    /// The default lower bound for rows (inequality constraints)
+    static constexpr double default_row_lower_bound() { return -infinity(); }
+
+    /// The default upper bound for rows (inequality constraints)
+    static constexpr double default_row_upper_bound() { return infinity(); }
 
     /// Return whether the state is feasible for the LP model.
     virtual bool feasible(const State& state) const = 0;
 
     /// Return the arguments mapped to predecessor indices
     virtual std::unordered_map<std::string, ssize_t> get_arguments() const = 0;
-
-    /// Any upper bound equal to or greater (or lower bound less to or equal)
-    /// to this will be treated as unbounded.
-    static const double infinity();
 
     /// Return the objective value. Undefined when the LP is not feasible.
     virtual double objective_value(const State& state) const = 0;
