@@ -20,6 +20,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "dwave-optimization/interval.hpp"
+#include "dwave-optimization/nodes/binaryop.hpp"
+#include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/operator.hpp"
 #include "dwave-optimization/typing.hpp"
 
@@ -1808,6 +1810,79 @@ TEMPLATE_LIST_TEST_CASE("tanh", "", DTypes) {
         CHECK(op(interval<TestType>(0, 1)) == interval(op(TestType{0}), op(TestType{1})));
         if constexpr (not std::same_as<bool, TestType>) {
             CHECK(op(interval<TestType>(-2, 3)) == interval(op(TestType{-2}), op(TestType{3})));
+        }
+    }
+}
+
+TEST_CASE("UnaryExpressionOp") {
+    GIVEN("An identity expression over doubles") {
+        auto expression = Graph();
+        expression.set_objective(
+            // Make the input explicitly non-integral
+            expression.emplace_node<InputNode>(
+                std::vector<ssize_t>{}, std::nullopt, std::nullopt, false
+            )
+        );
+
+        THEN("Can create a UnaryExpressionOp with the proper input/output types") {
+            CHECK_NOTHROW(op::UnaryExpressionOp<double, double>{std::move(expression)});
+        }
+    }
+
+    GIVEN("An identity expression over doubles") {
+        auto expression = Graph();
+        expression.set_objective(
+            // Make the input explicitly non-integral
+            expression.emplace_node<InputNode>(
+                std::vector<ssize_t>{}, std::nullopt, std::nullopt, false
+            )
+        );
+
+        THEN("Can create a UnaryExpressionOp with narrower input type") {
+            CHECK_NOTHROW(op::UnaryExpressionOp<float, double>{std::move(expression)});
+        }
+    }
+
+    GIVEN("An identity expression over doubles") {
+        auto expression = Graph();
+        expression.set_objective(
+            // Make the input explicitly non-integral
+            expression.emplace_node<InputNode>(
+                std::vector<ssize_t>{}, std::nullopt, std::nullopt, false
+            )
+        );
+
+        THEN("Can create a UnaryExpressionOp with narrower output type, because inf is allowed") {
+            CHECK_NOTHROW(op::UnaryExpressionOp<double, float>{std::move(expression)});
+        }
+    }
+
+    GIVEN("An identity expression over doubles with limited domain") {
+        auto expression = Graph();
+        expression.set_objective(
+            // Make the input explicitly non-integral
+            expression.emplace_node<InputNode>(std::vector<ssize_t>{}, -10, 10, false)
+        );
+
+        THEN("Can create a UnaryExpressionOp with wider input type") {
+            CHECK_NOTHROW(op::UnaryExpressionOp<float, double>{std::move(expression)});
+        }
+    }
+
+    GIVEN("A expression computing -3 * (x + 4) over integers -1000, 1000") {
+        auto expression = Graph();
+        expression.set_objective(expression.emplace_node<MultiplyNode>(
+            expression.emplace_node<AddNode>(
+                expression.emplace_node<ConstantNode>(4),
+                // Make the input explicitly non-integral
+                expression.emplace_node<InputNode>(std::vector<ssize_t>{}, -1000, 1000, true)
+            ),
+            expression.emplace_node<ConstantNode>(-3)
+        ));
+        REQUIRE(expression.objective()->integral());
+
+        THEN("Can create a UnaryExpressionOp with a wider input type") {
+            CHECK_NOTHROW(op::UnaryExpressionOp<long long, long long>{std::move(expression)});
         }
     }
 }

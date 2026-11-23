@@ -20,10 +20,13 @@
 #include <concepts>
 #include <cstdlib>
 #include <limits>
+#include <stdexcept>
 #include <type_traits>
 
 #include "dwave-optimization/common.hpp"
+#include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/interval.hpp"
+#include "dwave-optimization/nodes/inputs.hpp"
 #include "dwave-optimization/typing.hpp"
 
 namespace dwave::optimization::op {
@@ -41,7 +44,7 @@ struct UnaryOpMixin {
     }) static constexpr auto operator()(const interval<T>& x_enclosure) {
         assert(static_cast<bool>(x_enclosure) and "x's enclosure cannot be empty");
         assert(
-            x_enclosure <= UnaryOp::template domain<T>[0] and
+            x_enclosure <= UnaryOp::template domain<T>()[0] and
             "x's enclosure must be a subset of the unary op's domain"
         );
 
@@ -79,7 +82,10 @@ struct UnaryOpMixin {
     /// The domain of the operator. `domain[n]` is the nth factor of the domain.
     /// Unary ops are assumed to be defined for all possible inputs unless they tell us otherwise.
     template <DType T>
-    static constexpr std::array<interval<T>, 1> domain{interval<T>::all()};
+    static constexpr std::array<interval<T>, 1> domain() {
+        return {interval<T>::all()};
+    }
+
     // Note: because we use intervals to encode the domain, this is technically the bounding
     // box rather than the domain.
 
@@ -533,7 +539,7 @@ struct log : mixins::UnaryOpMixin<log> {
     template <DType T>
     static constexpr auto operator()(T x) {
         assert((std::integral<T> or not std::isnan(x)) and "x cannot be nan");
-        assert(domain<T>[0].contains(x) and "x must be non-negative");
+        assert(domain<T>()[0].contains(x) and "x must be non-negative");
 
         // NumPy uses the smallest floating point it can and we follow.
         if constexpr (can_cast<T, float>) {
@@ -547,7 +553,9 @@ struct log : mixins::UnaryOpMixin<log> {
     using UnaryOpMixin::operator();
 
     template <DType T>
-    static constexpr std::array<interval<T>, 1> domain{interval<T>::nonnegative()};
+    static constexpr std::array<interval<T>, 1> domain() {
+        return {interval<T>::nonnegative()};
+    };
 
     static constexpr std::array<Monotonicity, 1> monotonicity{Monotonicity::Increasing};
 };
@@ -989,7 +997,7 @@ struct sqrt : mixins::UnaryOpMixin<sqrt> {
 
     template <DType T>
     static constexpr auto operator()(T x) {
-        assert(domain<T>[0].contains(x) and "x must be non-negative");
+        assert(domain<T>()[0].contains(x) and "x must be non-negative");
 
         // NumPy uses the smallest floating point it can and we follow.
         if constexpr (can_cast<T, float>) {
@@ -1003,7 +1011,9 @@ struct sqrt : mixins::UnaryOpMixin<sqrt> {
     using UnaryOpMixin::operator();
 
     template <DType T>
-    static constexpr std::array<interval<T>, 1> domain{interval<T>::nonnegative()};
+    static constexpr std::array<interval<T>, 1> domain() {
+        return {interval<T>::nonnegative()};
+    };
 
     static constexpr std::array<Monotonicity, 1> monotonicity{Monotonicity::Increasing};
 };
@@ -1135,6 +1145,67 @@ struct tanh : mixins::UnaryOpMixin<tanh> {
     using UnaryOpMixin::operator();
 
     static constexpr std::array<Monotonicity, 1> monotonicity{Monotonicity::Increasing};
+};
+
+template <DType InputType, DType OutputType>
+struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp<InputType, OutputType>> {
+    UnaryExpressionOp(Graph&& expression) :
+        UnaryExpressionOp(std::make_shared<Graph>(std::move(expression))) {};
+
+    UnaryExpressionOp(std::shared_ptr<Graph> expression_ptr) : expression_ptr(expression_ptr) {
+        if (expression_ptr->num_decisions() != 0) {
+            throw std::invalid_argument("Given expression should not have any decision variables");
+        } else if (expression_ptr->num_inputs() != 1) {
+            throw std::invalid_argument("Given expression should have exactly one input");
+        } else if (not expression_ptr->objective()) {
+            throw std::invalid_argument("Given expression must have the objective set");
+        } else if (std::is_integral_v<InputType> != expression_ptr->inputs()[0]->integral()) {
+            throw std::invalid_argument("OutputType must match integrality of expression output");
+        } else if (std::is_integral_v<OutputType> != expression_ptr->objective()->integral()) {
+            throw std::invalid_argument("OutputType must match integrality of expression output");
+        } else if (
+            not std::floating_point<OutputType> and
+            (expression_ptr->objective()->min() < std::numeric_limits<OutputType>::lowest() or
+             expression_ptr->objective()->max() > std::numeric_limits<OutputType>::max())
+        ) {
+            // Float types contain inf which is a valid part of the domain/range, so no point to
+            // checking the bounds against what the type supports
+            throw std::invalid_argument(
+                "Given expression has a larger output range than the OutputType's"
+            );
+        }
+    };
+
+    OutputType operator()(InputType x) const {
+        auto state = expression_ptr->empty_state();
+        expression_ptr->inputs()[0]->initialize_state(state, {x});
+        expression_ptr->initialize_state(state);
+        return expression_ptr->objective()->view(state)[0];
+    };
+
+    interval<OutputType> operator()(const interval<InputType>& x_enclosure) {
+        return interval<OutputType>(
+            expression_ptr->objective()->min(), expression_ptr->objective()->max()
+        );
+    }
+
+    bool operator==(const UnaryExpressionOp&) const {
+        // Until we have a standard way of testing equality of `Graph`s, I think it's safest to say
+        // that these are never equal
+        return false;
+    }
+
+    template <DType T>
+    std::array<interval<T>, 1> domain() {
+        if constexpr (std::same_as<T, InputType>) {
+            return {interval<OutputType>(
+                expression_ptr->inputs()[0]->min(), expression_ptr->inputs()[0]->max()
+            )};
+        }
+        throw std::invalid_argument("Operator does not support this input type");
+    };
+
+    std::shared_ptr<Graph> expression_ptr;
 };
 
 }  // namespace dwave::optimization::op

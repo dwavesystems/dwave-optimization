@@ -12,17 +12,21 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
+#include <cmath>
+
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_range_equals.hpp>
 
 #include "dwave-optimization/graph.hpp"
+#include "dwave-optimization/nodes/binaryop.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
 #include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/indexing.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/testing.hpp"
 #include "dwave-optimization/nodes/unaryop.hpp"
+#include "dwave-optimization/operator.hpp"
 
 using Catch::Matchers::RangeEquals;
 
@@ -592,6 +596,92 @@ TEST_CASE("UnaryOpNode - SquareRootNode") {
         auto* c_ptr = graph.emplace_node<ConstantNode>(c);
         CHECK_THROWS(graph.emplace_node<SqrtNode>(c_ptr));
     }
+}
+
+TEST_CASE("UnaryOpNode - UnaryExpressionNode") {
+    auto graph = Graph();
+
+    GIVEN("A expression computing -3 * (x + 4), an integer node, and the UnaryExpressionNode") {
+        auto expression = Graph();
+        expression.set_objective(expression.emplace_node<MultiplyNode>(
+            expression.emplace_node<AddNode>(
+                expression.emplace_node<ConstantNode>(4), expression.emplace_node<InputNode>()
+            ),
+            expression.emplace_node<ConstantNode>(-3)
+        ));
+        REQUIRE(not expression.objective()->integral());
+
+        auto* i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
+        auto* c_ptr = graph.emplace_node<AddNode>(i_ptr, graph.emplace_node<ConstantNode>(0.5));
+
+        auto* unexp_ptr = graph.emplace_node<UnaryExpressionNode>(
+            op::UnaryExpressionOp<double, double>{std::move(expression)}, c_ptr
+        );
+
+        auto state = graph.empty_state();
+        i_ptr->initialize_state(state, {1});
+        graph.initialize_state(state);
+
+        THEN("The output of the UnaryExpressionNode is correct") {
+            CHECK_THAT(unexp_ptr->view(state), RangeEquals({-16.5}));
+        }
+    }
+
+    GIVEN("A expression computing -3 * (x + 4), an integer node, and the UnaryExpressionNode") {
+        auto expression = Graph();
+        expression.set_objective(expression.emplace_node<MultiplyNode>(
+            expression.emplace_node<AddNode>(
+                expression.emplace_node<ConstantNode>(4),
+                expression.emplace_node<InputNode>(std::vector<ssize_t>{}, -5, -1, false)
+            ),
+            expression.emplace_node<ConstantNode>(-3)
+        ));
+        REQUIRE(not expression.objective()->integral());
+        REQUIRE(expression.objective()->min() == -9);
+        REQUIRE(expression.objective()->max() == 3);
+
+        auto* i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 3);
+        auto* c_ptr = graph.emplace_node<AddNode>(i_ptr, graph.emplace_node<ConstantNode>(-4.5));
+
+        auto* unexp_ptr = graph.emplace_node<UnaryExpressionNode>(
+            op::UnaryExpressionOp<double, double>{std::move(expression)}, c_ptr
+        );
+
+        auto state = graph.empty_state();
+        i_ptr->initialize_state(state, {1});
+        graph.initialize_state(state);
+
+        THEN("The output of the UnaryExpressionNode is correct") {
+            CHECK_THAT(unexp_ptr->view(state), RangeEquals({-1.5}));
+        }
+    }
+
+    // GIVEN("A expression computing -3 * (x + 4) over integers, an integer node, and the
+    // UnaryExpressionNode") {
+    //     auto expression = Graph();
+    //     expression.set_objective(
+    //         expression.emplace_node<MultiplyNode>(
+    //             expression.emplace_node<AddNode>(
+    //                 expression.emplace_node<ConstantNode>(4),
+    //                 expression.emplace_node<InputNode>(std::vector<ssize_t>{}, std::nullopt,
+    //                 std::nullopt, true)
+    //             ),
+    //             expression.emplace_node<ConstantNode>(-3)
+    //         )
+    //     );
+    //
+    //     REQUIRE(expression.objective()->integral());
+    //
+    //     auto* i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
+    //
+    //     auto* unexp_ptr =
+    //     graph.emplace_node<IntegralUnaryExpressionNode>(op::UnaryExpressionOp<long long, long
+    //     long>{std::move(expression)}, i_ptr);
+    //
+    //     THEN("The UnaryExpressionNode is integral") {
+    //         CHECK(unexp_ptr->integral());
+    //     }
+    // }
 }
 
 }  // namespace dwave::optimization
