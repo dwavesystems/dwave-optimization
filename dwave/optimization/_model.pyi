@@ -15,13 +15,14 @@
 import collections.abc
 import dataclasses
 import fractions
+import os
 import types
 import typing
 
 import numpy
 
 import dwave.optimization.typing
-from dwave.optimization import symbols
+from dwave.optimization import Model, symbols
 from dwave.optimization.utilities import _NoValue, _NoValueType
 
 _AxisLike: typing.TypeAlias = int | tuple[int, ...] | None
@@ -140,3 +141,32 @@ def _broadcast_shapes(
     lhs: collections.abc.Iterable[int],
     rhs: collections.abc.Iterable[int],
 ) -> tuple[int, ...]: ...
+
+class States:
+    def __init__(self, model: Model) -> None: ...
+    def __len__(self) -> int: ...
+    def clear(self) -> None: ...
+    def from_file(
+        self,
+        file: bytes | os.PathLike[str] | str | typing.BinaryIO,
+        *,
+        replace: bool = True,
+        check_header: bool = True,
+    ) -> Model: ...
+    def from_future(
+        self,
+        future: object,
+        result_hook: collections.abc.Callable[[Model, object], None],
+    ) -> None: ...
+    def initialize(self) -> None: ...
+    def into_file(
+        self,
+        file: bytes | os.PathLike[str] | str | typing.BinaryIO,
+        *,
+        version: None | tuple[int, int] = None,
+    ) -> None: ...
+    def _reset_intermediate_states(self) -> None: ...
+    def resize(self, n: int) -> None: ...
+    def resolve(self) -> None: ...
+    def size(self) -> int: ...
+    def to_file(self) -> typing.BinaryIO: ...

@@ -194,19 +194,6 @@ py.extension_module(
 )
 
 py.extension_module(
-    'states',
-    'dwave/optimization/states.pyx',
-    dependencies: libdwave_optimization,
-    gnu_symbol_visibility: 'default',
-    install: true,
-    install_rpath: host_machine.system() == 'darwin' ? '@loader_path' : '$ORIGIN',
-    override_options: ['cython_language=cpp'],
-    cython_args: ['-Xfreethreading_compatible=True'],
-    subdir: 'dwave/optimization/',
-    limited_api: limited_api,
-)
-
-py.extension_module(
     '_utilities',
     'dwave/optimization/_utilities.pyx',
     gnu_symbol_visibility: 'default',

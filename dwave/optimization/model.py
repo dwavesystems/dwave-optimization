@@ -44,8 +44,7 @@ import zipfile
 
 import numpy as np
 
-from dwave.optimization._model import ArraySymbol, Symbol, _Graph
-from dwave.optimization.states import States
+from dwave.optimization._model import ArraySymbol, States, Symbol, _Graph
 from dwave.optimization.utilities import _file_object_arg, _lock
 
 if typing.TYPE_CHECKING:

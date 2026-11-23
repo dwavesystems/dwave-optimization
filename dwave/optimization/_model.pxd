@@ -18,6 +18,7 @@ from libc.stdint cimport uintptr_t
 from libcpp cimport bool
 from libcpp.memory cimport shared_ptr
 from libcpp.typeinfo cimport type_info
+from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.graph cimport ArrayNode, Graph, Node
 from dwave.optimization.libcpp.state cimport State
@@ -93,3 +94,24 @@ cdef class ArraySymbol(Symbol):
     # a pointer to Node* and we can theoretically dynamic cast each time.
     # But again, it's cheap and it simplifies things.
     cdef ArrayNode* array_ptr
+
+
+cdef class States:
+    cdef void attach_states(self, vector[State]) noexcept
+    cdef vector[State] detach_states(self)
+    cpdef resolve(self)
+    cpdef Py_ssize_t size(self) except -1
+
+    # In order to not create a circular reference, we only hold a weakref
+    # to the model from the states. This introduces some overhead, but it
+    # makes sure that the Model is promptly garbage collected
+    cdef readonly object _model_ref
+
+    # The state(s) of the model kept as a ragged vector-of-vectors (each
+    # State is a vector).
+    # Accessors should check the length of the state when accessing!
+    cdef vector[State] _states
+
+    # Object that contains or will contain the information needed to construct states
+    cdef readonly object _future
+    cdef readonly object _result_hook
