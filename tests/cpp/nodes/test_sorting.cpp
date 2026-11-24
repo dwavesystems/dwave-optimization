@@ -166,6 +166,35 @@ TEST_CASE("ArgSortNode") {
         }
     }
 
+    GIVEN("A dynamic array node and an argsort node") {
+        auto arr_ptr =
+            graph.emplace_node<DynamicArrayTestingNode>(std::initializer_list<ssize_t>{-1});
+        auto argsort_ptr = graph.emplace_node<ArgSortNode>(arr_ptr);
+        graph.emplace_node<ArrayValidationNode>(argsort_ptr);
+
+        WHEN("We initialize a state") {
+            auto state = graph.empty_state();
+            arr_ptr->initialize_state(state, {5.0, 7.0, 6.0});
+            graph.initialize_state(state);
+
+            AND_WHEN("We set a value to itself, propagate, and revert") {
+                // the array's diff now has an update with old == value
+                arr_ptr->set(state, 1, 7.0);
+                graph.propagate(state);
+                graph.revert(state);
+
+                AND_WHEN("We change another value and propagate") {
+                    arr_ptr->set(state, 0, 8.0);
+                    graph.propagate(state);
+
+                    THEN("The argsort's state is correct") {
+                        CHECK_THAT(argsort_ptr->view(state), RangeEquals({2, 1, 0}));
+                    }
+                }
+            }
+        }
+    }
+
     SECTION("equality") {
         auto graph = Graph();
 

@@ -153,11 +153,12 @@ void ArgSortNode::revert(State& state) const {
 
     // Revert the changes to `order` by going over the predecessor's previous updates in reverse
     for (const Update& update : node_data->predecessor_updates | std::views::reverse) {
-        if (!update.placed()) {
-            node_data->order.insert(std::make_pair(update.old, update.index));
-        }
+        // Erase before inserting: both pairs are the same when update.old == update.value
         if (!update.removed()) {
             node_data->order.erase(std::make_pair(update.value, update.index));
+        }
+        if (!update.placed()) {
+            node_data->order.insert(std::make_pair(update.old, update.index));
         }
     }
 
