@@ -691,6 +691,9 @@ void Graph::topological_sort() {
 }
 
 void Node::initialize_state(State& state) const {
+    // Note to Contributors:
+    //     There should be no throw statements in initialize_state.
+    //     Assert statements should be used to ensure correctness in development.
     assert(topological_index_ >= 0 and "must be topologically sorted");
     assert(static_cast<int>(state.size()) > topological_index_ and "unexpected state length");
     assert(state[topological_index_] == nullptr and "already initialized state");
