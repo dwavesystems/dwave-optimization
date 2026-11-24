@@ -270,6 +270,10 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         // very very nice.
         if constexpr (std::same_as<UnaryOp, op::rint>) return true;
 
+        // For now, we query UnaryExpressionOp whether it's integral because it always returns a
+        // double on invocation
+        if constexpr (std::same_as<UnaryOp, op::UnaryExpressionOp>) return op.integral();
+
         // Otherwise, we ask our op what an integer input would result in.
         if (array_ptr->integral()) {
             return std::integral<decltype(op(int()))>;

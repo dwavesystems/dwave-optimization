@@ -1196,10 +1196,10 @@ struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp> {
         }
     }
 
-    bool operator==(const UnaryExpressionOp&) const {
+    bool operator==(const UnaryExpressionOp& other) const {
         // Until we have a standard way of testing equality of `Graph`s, I think it's safest to say
-        // that these are never equal
-        return false;
+        // that these are only equal if they point to the same expression.
+        return expression_ptr == other.expression_ptr;
     }
 
     template <DType T>
@@ -1233,6 +1233,8 @@ struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp> {
             std::unreachable();
         }
     };
+
+    bool integral() { return expression_ptr->objective()->integral(); }
 
     std::shared_ptr<Graph> expression_ptr;
 };

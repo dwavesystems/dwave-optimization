@@ -1837,6 +1837,11 @@ TEST_CASE("UnaryExpressionOp") {
                     std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max()
                 )
             );
+
+            AND_THEN("We can check the op copyable") {
+                op::UnaryExpressionOp copy(expr_op);
+                CHECK(copy == expr_op);
+            }
         }
     }
 
