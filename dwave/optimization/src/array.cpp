@@ -519,7 +519,7 @@ void deduplicate_diff(std::vector<Update>& diff) {
         }
 
         // In case the very last value is a place and removal, discard it
-        if (diff[new_index].null()) {
+        if (new_index >= 0 and diff[new_index].null()) {
             new_index--;
         }
     }

@@ -875,6 +875,20 @@ TEST_CASE("Test deduplicate_diff") {
             }
         }
     }
+
+    GIVEN("A list of updates that grows by two and shrinks back") {
+        std::vector<Update> updates = {
+            Update::placement(0, 1),
+            Update::placement(1, 2),
+            Update::removal(1, 2),
+            Update::removal(0, 1)
+        };
+
+        WHEN("We call deduplicate_diff") {
+            deduplicate_diff(updates);
+            THEN("deduplicate_diff() discards all of the updates") { CHECK(updates.size() == 0); }
+        }
+    }
 }
 
 // Adapted from NumPy
