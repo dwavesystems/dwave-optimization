@@ -15,6 +15,7 @@
 #include <cmath>
 #include <concepts>
 #include <limits>
+#include <optional>
 
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -1824,65 +1825,71 @@ TEST_CASE("UnaryExpressionOp") {
             )
         );
 
-        THEN("Can create a UnaryExpressionOp with the proper input/output types") {
-            CHECK_NOTHROW(op::UnaryExpressionOp<double, double>{std::move(expression)});
-        }
-    }
+        THEN("Can create a UnaryExpressionOp and it has the correct domain") {
+            op::UnaryExpressionOp expr_op{std::move(expression)};
 
-    GIVEN("An identity expression over doubles") {
-        auto expression = Graph();
-        expression.set_objective(
-            // Make the input explicitly non-integral
-            expression.emplace_node<InputNode>(
-                std::vector<ssize_t>{}, std::nullopt, std::nullopt, false
-            )
-        );
-
-        THEN("Can create a UnaryExpressionOp with narrower input type") {
-            CHECK_NOTHROW(op::UnaryExpressionOp<float, double>{std::move(expression)});
-        }
-    }
-
-    GIVEN("An identity expression over doubles") {
-        auto expression = Graph();
-        expression.set_objective(
-            // Make the input explicitly non-integral
-            expression.emplace_node<InputNode>(
-                std::vector<ssize_t>{}, std::nullopt, std::nullopt, false
-            )
-        );
-
-        THEN("Can create a UnaryExpressionOp with narrower output type, because inf is allowed") {
-            CHECK_NOTHROW(op::UnaryExpressionOp<double, float>{std::move(expression)});
+            CHECK(expr_op.template domain<bool>()[0] == interval<bool>::all());
+            CHECK(expr_op.template domain<int>()[0] == interval<int>::all());
+            CHECK(expr_op.template domain<float>()[0] == interval<float>::all());
+            CHECK(
+                expr_op.template domain<double>()[0] ==
+                interval<double>(
+                    std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max()
+                )
+            );
         }
     }
 
     GIVEN("An identity expression over doubles with limited domain") {
         auto expression = Graph();
-        expression.set_objective(
-            // Make the input explicitly non-integral
-            expression.emplace_node<InputNode>(std::vector<ssize_t>{}, -10, 10, false)
-        );
+        expression.set_objective(expression.emplace_node<InputNode>(
+            // Maximum is inside double range but outside float
+            std::vector<ssize_t>{},
+            -5,
+            1e40,
+            false
+        ));
 
-        THEN("Can create a UnaryExpressionOp with wider input type") {
-            CHECK_NOTHROW(op::UnaryExpressionOp<float, double>{std::move(expression)});
+        THEN("Can create a UnaryExpressionOp and it has the correct domain") {
+            op::UnaryExpressionOp expr_op{std::move(expression)};
+
+            CHECK(expr_op.template domain<bool>()[0] == interval<bool>::all());
+            CHECK(
+                expr_op.template domain<int>()[0] ==
+                (interval<int>(-5, 0) | interval<int>::nonnegative())
+            );
+            CHECK(
+                expr_op.template domain<float>()[0] ==
+                (interval<float>(-5, 0) | interval<float>::nonnegative())
+            );
+            CHECK(expr_op.template domain<double>()[0] == interval<double>(-5, 1e40));
         }
     }
 
-    GIVEN("A expression computing -3 * (x + 4) over integers -1000, 1000") {
+    GIVEN("An identity expression over integers") {
         auto expression = Graph();
-        expression.set_objective(expression.emplace_node<MultiplyNode>(
-            expression.emplace_node<AddNode>(
-                expression.emplace_node<ConstantNode>(4),
-                // Make the input explicitly non-integral
-                expression.emplace_node<InputNode>(std::vector<ssize_t>{}, -1000, 1000, true)
-            ),
-            expression.emplace_node<ConstantNode>(-3)
+        expression.set_objective(expression.emplace_node<InputNode>(
+            std::vector<ssize_t>{}, std::nullopt, std::nullopt, true
         ));
-        REQUIRE(expression.objective()->integral());
 
-        THEN("Can create a UnaryExpressionOp with a wider input type") {
-            CHECK_NOTHROW(op::UnaryExpressionOp<long long, long long>{std::move(expression)});
+        THEN("Can create a UnaryExpressionOp and it has the correct domain") {
+            op::UnaryExpressionOp expr_op{std::move(expression)};
+
+            CHECK(expr_op.template domain<bool>()[0] == interval<bool>::all());
+            CHECK(expr_op.template domain<long>()[0] == interval<long>::all());
+            CHECK(expr_op.template domain<long long>()[0] == interval<long long>::all());
+            // For now, InputNode, given no bounds, will report the min and max as the lowest/max of
+            // double even if it is integral. Perhaps technically this is the true min/max because
+            // the representable integers include ones larger than 2^64. Either way, these checks
+            // should likely be corrected when InputNode is able to actually propagate an integer
+            // type and the limits become what is representable by e.g. `long long int`.
+            CHECK(expr_op.template domain<float>()[0] == interval<float>::all());
+            CHECK(
+                expr_op.template domain<double>()[0] ==
+                interval<double>(
+                    std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max()
+                )
+            );
         }
     }
 }

@@ -335,10 +335,7 @@ extern template class UnaryOpNode<op::square>;
 using TanhNode = UnaryOpNode<op::tanh>;
 extern template class UnaryOpNode<op::tanh>;
 
-using UnaryExpressionNode = UnaryOpNode<op::UnaryExpressionOp<double, double>>;
-extern template class UnaryOpNode<op::UnaryExpressionOp<double, double>>;
-
-using IntegralUnaryExpressionNode = UnaryOpNode<op::UnaryExpressionOp<long long, long long>>;
-extern template class UnaryOpNode<op::UnaryExpressionOp<long long, long long>>;
+using UnaryExpressionNode = UnaryOpNode<op::UnaryExpressionOp>;
+extern template class UnaryOpNode<op::UnaryExpressionOp>;
 
 }  // namespace dwave::optimization

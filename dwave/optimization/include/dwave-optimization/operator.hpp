@@ -22,6 +22,7 @@
 #include <limits>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 
 #include "dwave-optimization/common.hpp"
 #include "dwave-optimization/graph.hpp"
@@ -1147,8 +1148,7 @@ struct tanh : mixins::UnaryOpMixin<tanh> {
     static constexpr std::array<Monotonicity, 1> monotonicity{Monotonicity::Increasing};
 };
 
-template <DType InputType, DType OutputType>
-struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp<InputType, OutputType>> {
+struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp> {
     UnaryExpressionOp(Graph&& expression) :
         UnaryExpressionOp(std::make_shared<Graph>(std::move(expression))) {};
 
@@ -1159,34 +1159,41 @@ struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp<InputType, Out
             throw std::invalid_argument("Given expression should have exactly one input");
         } else if (not expression_ptr->objective()) {
             throw std::invalid_argument("Given expression must have the objective set");
-        } else if (std::is_integral_v<InputType> != expression_ptr->inputs()[0]->integral()) {
-            throw std::invalid_argument("OutputType must match integrality of expression output");
-        } else if (std::is_integral_v<OutputType> != expression_ptr->objective()->integral()) {
-            throw std::invalid_argument("OutputType must match integrality of expression output");
-        } else if (
-            not std::floating_point<OutputType> and
-            (expression_ptr->objective()->min() < std::numeric_limits<OutputType>::lowest() or
-             expression_ptr->objective()->max() > std::numeric_limits<OutputType>::max())
-        ) {
-            // Float types contain inf which is a valid part of the domain/range, so no point to
-            // checking the bounds against what the type supports
-            throw std::invalid_argument(
-                "Given expression has a larger output range than the OutputType's"
-            );
         }
     };
 
-    OutputType operator()(InputType x) const {
+    template <DType T>
+    double operator()(T x) const {
         auto state = expression_ptr->empty_state();
-        expression_ptr->inputs()[0]->initialize_state(state, {x});
+
+        if (can_cast<T, long long> and expression_ptr->inputs()[0]->integral()) {
+            expression_ptr->inputs()[0]->initialize_state(
+                state, {static_cast<double>(static_cast<long long>(x))}
+            );
+        } else {
+            static_assert(
+                can_cast<T, double> and "UnaryExpressionOp argument must be castable to double"
+            );
+            expression_ptr->inputs()[0]->initialize_state(state, {static_cast<double>(x)});
+        }
+
         expression_ptr->initialize_state(state);
+
+        // Whether the output (objective) is integral or not, it always returns a double anyway
         return expression_ptr->objective()->view(state)[0];
     };
 
-    interval<OutputType> operator()(const interval<InputType>& x_enclosure) {
-        return interval<OutputType>(
-            expression_ptr->objective()->min(), expression_ptr->objective()->max()
-        );
+    template <DType T>
+    interval<double> operator()(const interval<T>& x_enclosure) {
+        if (expression_ptr->objective()->integral()) {
+            return interval<long long>(
+                expression_ptr->objective()->min(), expression_ptr->objective()->max()
+            );
+        } else {
+            return interval<double>(
+                expression_ptr->objective()->min(), expression_ptr->objective()->max()
+            );
+        }
     }
 
     bool operator==(const UnaryExpressionOp&) const {
@@ -1197,12 +1204,34 @@ struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp<InputType, Out
 
     template <DType T>
     std::array<interval<T>, 1> domain() {
-        if constexpr (std::same_as<T, InputType>) {
-            return {interval<OutputType>(
-                expression_ptr->inputs()[0]->min(), expression_ptr->inputs()[0]->max()
-            )};
+        using limits = std::numeric_limits<T>;
+
+        auto* input = expression_ptr->inputs()[0];
+
+        if constexpr (std::is_integral_v<T>) {
+            auto safe_cast = [](double v) -> T {
+                constexpr double representable_max =
+                    static_cast<double>(limits::max() / 2 + 1) * 2.0;
+                static_assert(
+                    not std::signed_integral<T> or -representable_max == limits::lowest()
+                );
+
+                if (v >= representable_max) return limits::max();
+                if constexpr (std::signed_integral<T>) {
+                    if (v <= limits::lowest()) return limits::lowest();
+                } else {
+                    if (v <= 0.0) return 0;
+                }
+                return static_cast<T>(v);
+            };
+
+            return {interval<T>(safe_cast(input->min()), safe_cast(input->max()))};
+        } else if constexpr (std::floating_point<T>) {
+            return {interval<T>(static_cast<T>(input->min()), static_cast<T>(input->max()))};
+        } else {
+            assert(false and "unknown DType, not integral or floating point");
+            std::unreachable();
         }
-        throw std::invalid_argument("Operator does not support this input type");
     };
 
     std::shared_ptr<Graph> expression_ptr;

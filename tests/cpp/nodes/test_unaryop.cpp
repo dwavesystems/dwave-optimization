@@ -615,7 +615,7 @@ TEST_CASE("UnaryOpNode - UnaryExpressionNode") {
         auto* c_ptr = graph.emplace_node<AddNode>(i_ptr, graph.emplace_node<ConstantNode>(0.5));
 
         auto* unexp_ptr = graph.emplace_node<UnaryExpressionNode>(
-            op::UnaryExpressionOp<double, double>{std::move(expression)}, c_ptr
+            op::UnaryExpressionOp{std::move(expression)}, c_ptr
         );
 
         auto state = graph.empty_state();
@@ -644,7 +644,7 @@ TEST_CASE("UnaryOpNode - UnaryExpressionNode") {
         auto* c_ptr = graph.emplace_node<AddNode>(i_ptr, graph.emplace_node<ConstantNode>(-4.5));
 
         auto* unexp_ptr = graph.emplace_node<UnaryExpressionNode>(
-            op::UnaryExpressionOp<double, double>{std::move(expression)}, c_ptr
+            op::UnaryExpressionOp{std::move(expression)}, c_ptr
         );
 
         auto state = graph.empty_state();

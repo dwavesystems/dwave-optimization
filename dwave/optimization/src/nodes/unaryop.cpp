@@ -29,6 +29,6 @@ template class UnaryOpNode<op::sin>;
 template class UnaryOpNode<op::square>;
 template class UnaryOpNode<op::sqrt>;
 template class UnaryOpNode<op::tanh>;
-template class UnaryOpNode<op::UnaryExpressionOp<double, double>>;
+template class UnaryOpNode<op::UnaryExpressionOp>;
 
 }  // namespace dwave::optimization
