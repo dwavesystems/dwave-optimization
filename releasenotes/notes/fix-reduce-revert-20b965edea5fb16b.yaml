@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Fix ``MaxNode`` and ``MinNode`` keeping a removed value after a change is reverted.
