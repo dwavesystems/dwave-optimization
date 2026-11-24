@@ -16,8 +16,13 @@ import functools
 import numbers
 import os
 import types
+import typing
 
 __all__ = []
+
+# Some types we can re-use until we get 3.12+ generic functions.
+P = typing.ParamSpec("P")
+R = typing.TypeVar("R")
 
 
 # Adopted from NumPy under BSD license
@@ -47,30 +52,66 @@ class _NoValueType:
 _NoValue = _NoValueType()
 
 
-def _file_object_arg(mode: str):
-    """In several methods we want to accept a file name or a file-like object.
+def _file_object_arg(
+    *,
+    arg_index: int,
+    arg_name: str,
+    mode: str,
+) -> typing.Callable[[typing.Callable[P, R]], typing.Callable[P, R]]:
+    """Replace an path-like argument with a file-like object.
 
-    The ``mode`` argument is the same as for ``open()``.
+    This decorator could be generalized, but for now let's err on the side of
+    simplicity and add features only as-needed.
 
-    This method assumes that the file argument is the first one. We could
-    generalize if we need to.
+    Cython doesn't work nicely with inspect.Signature, so we specify the index and the
+    name of the argument we wish to replace explicitly.
+    This also means that the file argument cannot be keyword-only.
+    We also don't check for consistency.
+
+    We use `mode` is for path-like inputs, we don't check that open files match
+    open files, match. It's up to the wrapped function to check that the
+    file-like has the properties it desires.
+
+    Decorated functions/methods should widen the typing of the file arg to
+    include all pathlike/filelike `str | os.Path[str] | typing.IO`.
     """
+    if arg_index < 0:
+        raise ValueError("arg_index must be non-negative")
 
     def decorator(method):
         @functools.wraps(method)
-        def _method(cls_or_self, file, *args, **kwargs):
-            if isinstance(file, (str, bytes, os.PathLike)):
-                with open(os.fspath(file), mode) as fobj:
-                    return method(cls_or_self, fobj, *args, **kwargs)
+        def _method(*args, **kwargs):
+            if arg_index < len(args):
+                # do something
+                file = args[arg_index]
+                is_arg = True
+            elif arg_name in kwargs:
+                # do something else
+                file = kwargs[arg_name]
+                is_arg = False
             else:
-                return method(cls_or_self, file, *args, **kwargs)
+                raise ValueError(f"missing argument: {arg_name}")
+
+            if isinstance(file, (str, bytes, os.PathLike)):
+                args = list(args)  # want to be able to mutate it
+
+                with open(os.fspath(file), mode) as f:
+                    if is_arg:
+                        args[arg_index] = f
+                    else:
+                        kwargs[arg_name] = f
+
+                    return method(*args, **kwargs)
+            else:
+                # assume it's a file and pass through
+                return method(*args, **kwargs)
 
         return _method
 
     return decorator
 
 
-def _lock(method):
+def _lock(method: typing.Callable[P, R]) -> typing.Callable[P, R]:
     """Decorator for Model methods that lock the model for the duration."""
 
     @functools.wraps(method)
@@ -87,7 +128,11 @@ def _lock(method):
 def _split_indices(
     shape: tuple[int, ...],
     index: tuple[int | slice | types.EllipsisType | object | None, ...],
-):
+) -> tuple[
+    tuple[int, ...],
+    tuple[slice | int, ...],
+    tuple[slice | object, ...],
+]:
     """Given a combined indexing operation, split into several steps.
 
     Args:
@@ -160,7 +205,7 @@ def _split_indices(
     return tuple(newaxes), tuple(basic), tuple(advanced)
 
 
-def _TypeError_to_NotImplemented(f):
+def _TypeError_to_NotImplemented(f: typing.Callable[P, R]) -> typing.Callable[P, R]:
     """Convert any TypeErrors raised by the given function into NotImplemented."""
 
     @functools.wraps(f)
