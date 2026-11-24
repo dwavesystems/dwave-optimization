@@ -206,6 +206,9 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::sizeinfo()
     SizeInfo sizeinfo() const override { return this->sizeinfo_; }
 
+ protected:
+    [[no_unique_address]] UnaryOp op;
+
  private:
     // It would be more convenient to use ArrayStateData from _state.hpp
     // but we don't currently have that in a public header.
@@ -297,8 +300,6 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         assert(array_ptr_ != nullptr);
     }
 
-    [[no_unique_address]] UnaryOp op;
-
     // This is redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
     ArrayNode* array_ptr_;
@@ -348,7 +349,14 @@ extern template class UnaryOpNode<op::square>;
 using TanhNode = UnaryOpNode<op::tanh>;
 extern template class UnaryOpNode<op::tanh>;
 
-using UnaryExpressionNode = UnaryOpNode<op::unary_expression_op>;
-extern template class UnaryOpNode<op::unary_expression_op>;
+class UnaryExpressionNode : public UnaryOpNode<op::unary_expression_op> {
+ public:
+    UnaryExpressionNode(op::unary_expression_op&& op, ArrayNode* node_ptr) :
+        UnaryOpNode<op::unary_expression_op>(std::move(op), node_ptr) {}
+    UnaryExpressionNode(std::shared_ptr<Graph> expression_ptr, ArrayNode* node_ptr) :
+        UnaryOpNode<op::unary_expression_op>(op::unary_expression_op(expression_ptr), node_ptr) {}
+
+    std::shared_ptr<Graph>& expression_ptr() { return op.expression_ptr; }
+};
 
 }  // namespace dwave::optimization
