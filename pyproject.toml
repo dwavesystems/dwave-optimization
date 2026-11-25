@@ -65,6 +65,11 @@ build = [
     "meson~=1.12.0",  # keep synced with .pre-commit-config.yaml
     "meson-python~=0.22.0",
     "ninja~=1.13.0",
+
+    # This is required by meson-python for isolated installs
+    # See https://github.com/mesonbuild/meson-python/issues/938
+    # When/if PEP 725 is done we can use that.
+    "patchelf~=0.19.3; sys_platform == 'linux'",  # Version last refreshed November 2026
 ]
 blas-build = [
     {include-group = "build"},
