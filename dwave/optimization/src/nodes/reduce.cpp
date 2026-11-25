@@ -362,7 +362,10 @@ class ReduceNodeData : public NodeStateData {
         // Then try to remove the value
         auto inverse = ufunc.inverse(reductions_[index], value);
         if (not inverse.has_value()) {
-            // We broke the reduction, so mark it as invalid and return
+            // We broke the reduction, so save the old value, mark it as invalid and return
+            if (flags_.is_unchanged(index)) {
+                reductions_diff_.emplace_back(index, reductions_[index]);
+            }
             flags_.mark_invalid(index);
             return;
         }

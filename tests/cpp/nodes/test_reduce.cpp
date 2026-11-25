@@ -479,6 +479,17 @@ TEST_CASE("MaxNode/MinNode") {
                     CHECK(max_ptr->view(state)[0] == 2);
                     CHECK(min_ptr->view(state)[0] == 1);
                 }
+
+                AND_WHEN("We revert") {
+                    list_ptr->revert(state);
+                    max_ptr->revert(state);
+                    min_ptr->revert(state);
+
+                    THEN("The min and max are reverted") {
+                        CHECK(max_ptr->view(state)[0] == 3);
+                        CHECK(min_ptr->view(state)[0] == 1);
+                    }
+                }
             }
 
             WHEN("We swap out the min value for something smaller [ 0 2 3 | 1 4 ]") {
