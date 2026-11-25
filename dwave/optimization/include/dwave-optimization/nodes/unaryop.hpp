@@ -46,7 +46,7 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         add_predecessor_(node_ptr);
     }
 
-    explicit UnaryOpNode(ArrayNode* node_ptr) requires(std::is_default_constructible_v<UnaryOp>)
+    explicit UnaryOpNode(ArrayNode* node_ptr) requires(std::default_initializable<UnaryOp>)
         : UnaryOpNode({}, node_ptr) {}
 
     /// @copydoc Array::buff()
@@ -224,11 +224,11 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     };
 
     // Calculate the min/max of the op applied to array_ptr
-    static interval<double> calculate_domain_(UnaryOp& op, const Array* array_ptr) {
+    static interval<double> calculate_domain_(const UnaryOp& op, const Array* array_ptr) {
         std::variant<interval<double>, interval<long long>> array_domain;
         if (array_ptr->integral() and std::invocable<UnaryOp, long long>) {
             array_domain = interval<long long>(array_ptr->min(), array_ptr->max());
-        } else if (std::invocable<UnaryOp, double>) {
+        } else if constexpr (std::invocable<UnaryOp, double>) {
             array_domain = interval<double>(array_ptr->min(), array_ptr->max());
         } else {
             throw std::invalid_argument("Predecessor has incompatible output type with operator");
@@ -264,15 +264,15 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
 
     // Determine whether the op applied to array_ptr will always result in an
     // integral output.
-    static bool calculate_integral_(UnaryOp& op, const Array* array_ptr) {
+    static bool calculate_integral_(const UnaryOp& op, const Array* array_ptr) {
         // rint() actually always returns a floating point. But it is an integral
         // floating point. This is a place where having proper dtypes would be
         // very very nice.
         if constexpr (std::same_as<UnaryOp, op::rint>) return true;
 
-        // For now, we query UnaryExpressionOp whether it's integral because it always returns a
+        // For now, we query unary_expression_op whether it's integral because it always returns a
         // double on invocation
-        if constexpr (std::same_as<UnaryOp, op::UnaryExpressionOp>) return op.integral();
+        if constexpr (std::same_as<UnaryOp, op::unary_expression_op>) return op.integral();
 
         // Otherwise, we ask our op what an integer input would result in.
         if (array_ptr->integral()) {
@@ -339,7 +339,7 @@ extern template class UnaryOpNode<op::square>;
 using TanhNode = UnaryOpNode<op::tanh>;
 extern template class UnaryOpNode<op::tanh>;
 
-using UnaryExpressionNode = UnaryOpNode<op::UnaryExpressionOp>;
-extern template class UnaryOpNode<op::UnaryExpressionOp>;
+using UnaryExpressionNode = UnaryOpNode<op::unary_expression_op>;
+extern template class UnaryOpNode<op::unary_expression_op>;
 
 }  // namespace dwave::optimization

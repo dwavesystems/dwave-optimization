@@ -1148,11 +1148,11 @@ struct tanh : mixins::UnaryOpMixin<tanh> {
     static constexpr std::array<Monotonicity, 1> monotonicity{Monotonicity::Increasing};
 };
 
-struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp> {
-    UnaryExpressionOp(Graph&& expression) :
-        UnaryExpressionOp(std::make_shared<Graph>(std::move(expression))) {};
+struct unary_expression_op : mixins::UnaryOpMixin<unary_expression_op> {
+    unary_expression_op(Graph&& expression) :
+        unary_expression_op(std::make_shared<Graph>(std::move(expression))) {};
 
-    UnaryExpressionOp(std::shared_ptr<Graph> expression_ptr) : expression_ptr(expression_ptr) {
+    unary_expression_op(std::shared_ptr<Graph> expression_ptr) : expression_ptr(expression_ptr) {
         if (expression_ptr->num_decisions() != 0) {
             throw std::invalid_argument("Given expression should not have any decision variables");
         } else if (expression_ptr->num_inputs() != 1) {
@@ -1172,7 +1172,7 @@ struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp> {
             );
         } else {
             static_assert(
-                can_cast<T, double> and "UnaryExpressionOp argument must be castable to double"
+                can_cast<T, double> and "unary_expression_op argument must be castable to double"
             );
             expression_ptr->inputs()[0]->initialize_state(state, {static_cast<double>(x)});
         }
@@ -1184,7 +1184,7 @@ struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp> {
     };
 
     template <DType T>
-    interval<double> operator()(const interval<T>& x_enclosure) {
+    interval<double> operator()(const interval<T>& x_enclosure) const {
         if (expression_ptr->objective()->integral()) {
             return interval<long long>(
                 expression_ptr->objective()->min(), expression_ptr->objective()->max()
@@ -1196,14 +1196,14 @@ struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp> {
         }
     }
 
-    bool operator==(const UnaryExpressionOp& other) const {
+    bool operator==(const unary_expression_op& other) const {
         // Until we have a standard way of testing equality of `Graph`s, I think it's safest to say
         // that these are only equal if they point to the same expression.
         return expression_ptr == other.expression_ptr;
     }
 
     template <DType T>
-    std::array<interval<T>, 1> domain() {
+    std::array<interval<T>, 1> domain() const {
         using limits = std::numeric_limits<T>;
 
         auto* input = expression_ptr->inputs()[0];
@@ -1234,7 +1234,7 @@ struct UnaryExpressionOp : mixins::UnaryOpMixin<UnaryExpressionOp> {
         }
     };
 
-    bool integral() { return expression_ptr->objective()->integral(); }
+    bool integral() const { return expression_ptr->objective()->integral(); }
 
     std::shared_ptr<Graph> expression_ptr;
 };

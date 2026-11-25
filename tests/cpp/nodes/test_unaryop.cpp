@@ -12,8 +12,6 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-#include <cmath>
-
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_range_equals.hpp>
@@ -615,7 +613,7 @@ TEST_CASE("UnaryOpNode - UnaryExpressionNode") {
         auto* c_ptr = graph.emplace_node<AddNode>(i_ptr, graph.emplace_node<ConstantNode>(0.5));
 
         auto* unexp_ptr = graph.emplace_node<UnaryExpressionNode>(
-            op::UnaryExpressionOp{std::move(expression)}, c_ptr
+            op::unary_expression_op{std::move(expression)}, c_ptr
         );
 
         auto state = graph.empty_state();
@@ -644,7 +642,7 @@ TEST_CASE("UnaryOpNode - UnaryExpressionNode") {
         auto* c_ptr = graph.emplace_node<AddNode>(i_ptr, graph.emplace_node<ConstantNode>(-4.5));
 
         auto* unexp_ptr = graph.emplace_node<UnaryExpressionNode>(
-            op::UnaryExpressionOp{std::move(expression)}, c_ptr
+            op::unary_expression_op{std::move(expression)}, c_ptr
         );
 
         auto state = graph.empty_state();
@@ -676,7 +674,7 @@ TEST_CASE("UnaryOpNode - UnaryExpressionNode") {
         auto* i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
 
         auto* unexp_ptr = graph.emplace_node<UnaryExpressionNode>(
-            op::UnaryExpressionOp{std::move(expression)}, i_ptr
+            op::unary_expression_op{std::move(expression)}, i_ptr
         );
 
         THEN("The UnaryExpressionNode is integral") { CHECK(unexp_ptr->integral()); }
@@ -692,10 +690,10 @@ TEST_CASE("UnaryOpNode - UnaryExpressionNode") {
 
         THEN("UnaryExpressionNodes created from them show as unequal to each") {
             auto* unexp0_ptr = graph.emplace_node<UnaryExpressionNode>(
-                op::UnaryExpressionOp{std::move(exp0)}, i_ptr
+                op::unary_expression_op{std::move(exp0)}, i_ptr
             );
             auto* unexp1_ptr = graph.emplace_node<UnaryExpressionNode>(
-                op::UnaryExpressionOp{std::move(exp1)}, i_ptr
+                op::unary_expression_op{std::move(exp1)}, i_ptr
             );
 
             CHECK(unexp0_ptr->equal_to(*unexp0_ptr));

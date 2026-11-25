@@ -1815,7 +1815,7 @@ TEMPLATE_LIST_TEST_CASE("tanh", "", DTypes) {
     }
 }
 
-TEST_CASE("UnaryExpressionOp") {
+TEST_CASE("unary_expression_op") {
     GIVEN("An identity expression over doubles") {
         auto expression = Graph();
         expression.set_objective(
@@ -1825,8 +1825,8 @@ TEST_CASE("UnaryExpressionOp") {
             )
         );
 
-        THEN("Can create a UnaryExpressionOp and it has the correct domain") {
-            op::UnaryExpressionOp expr_op{std::move(expression)};
+        THEN("Can create a unary_expression_op and it has the correct domain") {
+            op::unary_expression_op expr_op{std::move(expression)};
 
             CHECK(expr_op.template domain<bool>()[0] == interval<bool>::all());
             CHECK(expr_op.template domain<int>()[0] == interval<int>::all());
@@ -1839,7 +1839,7 @@ TEST_CASE("UnaryExpressionOp") {
             );
 
             AND_THEN("We can check the op copyable") {
-                op::UnaryExpressionOp copy(expr_op);
+                op::unary_expression_op copy(expr_op);
                 CHECK(copy == expr_op);
             }
         }
@@ -1855,8 +1855,8 @@ TEST_CASE("UnaryExpressionOp") {
             false
         ));
 
-        THEN("Can create a UnaryExpressionOp and it has the correct domain") {
-            op::UnaryExpressionOp expr_op{std::move(expression)};
+        THEN("Can create a unary_expression_op and it has the correct domain") {
+            op::unary_expression_op expr_op{std::move(expression)};
 
             CHECK(expr_op.template domain<bool>()[0] == interval<bool>::all());
             CHECK(
@@ -1877,8 +1877,8 @@ TEST_CASE("UnaryExpressionOp") {
             std::vector<ssize_t>{}, std::nullopt, std::nullopt, true
         ));
 
-        THEN("Can create a UnaryExpressionOp and it has the correct domain") {
-            op::UnaryExpressionOp expr_op{std::move(expression)};
+        THEN("Can create a unary_expression_op and it has the correct domain") {
+            op::unary_expression_op expr_op{std::move(expression)};
 
             CHECK(expr_op.template domain<bool>()[0] == interval<bool>::all());
             CHECK(expr_op.template domain<long>()[0] == interval<long>::all());
