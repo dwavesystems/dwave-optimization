@@ -24,6 +24,8 @@
 
 namespace dwave::optimization {
 
+namespace {
+
 // todo: consider promoting this function to some public namespace.
 // NOTE: this does not check that dynamic arrays have the same (dynamic) size
 // (i.e. does not use sizeinfo()), only that their remaining static dimensions
@@ -47,6 +49,26 @@ std::span<const ssize_t> same_shape(
     return node_ptr->shape();
 }
 
+std::vector<double> extract(
+    const State& state,
+    const std::ranges::view auto condition,
+    const std::ranges::view auto arr
+) {
+    std::vector<double> values;
+    values.reserve(condition.size());
+
+    for (
+        auto cit = condition.begin(), arrit = arr.begin(); cit != std::default_sentinel;
+        ++cit, ++arrit
+    ) {
+        if (*cit) {
+            values.emplace_back(*arrit);
+        }
+    }
+    return values;
+}
+}  // namespace
+
 /// ExtractNode
 
 ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr) :
@@ -65,25 +87,6 @@ ExtractNode::ExtractNode(ArrayNode* condition_ptr, ArrayNode* arr_ptr) :
 
 double const* ExtractNode::buff(const State& state) const {
     return data_ptr_<ArrayNodeStateData>(state)->buff();
-}
-
-std::vector<double> extract(
-    const State& state,
-    const std::ranges::view auto condition,
-    const std::ranges::view auto arr
-) {
-    std::vector<double> values;
-    values.reserve(condition.size());
-
-    for (
-        auto cit = condition.begin(), arrit = arr.begin(); cit != std::default_sentinel;
-        ++cit, ++arrit
-    ) {
-        if (*cit) {
-            values.emplace_back(*arrit);
-        }
-    }
-    return values;
 }
 
 void ExtractNode::commit(State& state) const {
@@ -197,6 +200,8 @@ SizeInfo ExtractNode::sizeinfo() const { return this->sizeinfo_; }
 
 /// WhereNode
 
+namespace {
+
 struct WhereNodeData : ArrayNodeStateData {
     // Initialize the state with the values given
     explicit WhereNodeData(std::vector<double>&& values) noexcept :
@@ -274,6 +279,7 @@ SizeInfo wherenode_calculate_sizeinfo(const Array* node_ptr, const Array* condit
     // all three predecessor arrays should be the same (dynamic) size
     return condition_ptr->sizeinfo();
 }
+}  // namespace
 
 WhereNode::WhereNode(ArrayNode* condition_ptr, ArrayNode* x_ptr, ArrayNode* y_ptr) :
     ArrayOutputMixin(same_shape(x_ptr, y_ptr)),

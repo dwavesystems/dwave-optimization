@@ -28,6 +28,7 @@
 
 namespace dwave::optimization {
 
+namespace {
 template <class BinaryOp>
 class ReduceNodeData : public NodeStateData {
  public:
@@ -794,6 +795,7 @@ SizeInfo reducenode_calculate_sizeinfo(
     // Node size is derived from its predecessor's size.
     return array_ptr->sizeinfo() / product(keep_axes(array_ptr->shape(), axes));
 }
+}  // namespace
 
 template <class BinaryOp>
 ReduceNode<BinaryOp>::ReduceNode(ArrayNode* array_ptr) : ReduceNode(array_ptr, {}) {}

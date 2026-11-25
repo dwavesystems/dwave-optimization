@@ -31,6 +31,7 @@
 
 namespace dwave::optimization {
 
+namespace {
 // 2d matrix multiplication with a BLAS-like interface.
 //
 // This function will overloaded by an implementation that uses SciPy OpenBLAS
@@ -363,32 +364,6 @@ ValuesInfo get_values_info(const ArrayNode* x_ptr, const ArrayNode* y_ptr) {
     return values_info;
 }
 
-std::vector<ssize_t> atleast_2d_shape(std::span<const ssize_t> shape, bool vector_as_row) {
-    // If vector_as_row is true, treat vector as shape (1, size), else as shape (size, 1)
-    if (shape.size() == 0) return {1, 1};
-    if (shape.size() == 1 and vector_as_row) return {1, shape[0]};
-    if (shape.size() == 1 and not vector_as_row) return {shape[0], 1};
-    return {shape.begin(), shape.end()};
-}
-
-class MatrixMultiplyNodeData : public ArrayNodeStateData {
- public:
-    explicit MatrixMultiplyNodeData(std::vector<double>&& values, std::span<const ssize_t> shape) :
-        ArrayNodeStateData(std::move(values)), shape(shape.begin(), shape.end()) {}
-
-    std::vector<double> output;
-    std::vector<ssize_t> shape;
-};
-
-MatrixMultiplyNode::MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr) :
-    ArrayOutputMixin(output_shape(x_ptr, y_ptr)),
-    operands_{x_ptr, y_ptr},
-    sizeinfo_(get_sizeinfo(x_ptr, y_ptr)),
-    values_info_(get_values_info(x_ptr, y_ptr)) {
-    add_predecessor_(x_ptr);
-    add_predecessor_(y_ptr);
-}
-
 ssize_t get_leading_leap(std::span<const ssize_t> shape) {
     assert(shape.size() >= 1);
     if (shape.size() == 1) return 0;  // handles broadcasting for the vector case
@@ -405,6 +380,26 @@ ssize_t get_leading_subspace_size(
     return std::reduce(
         shape.begin(), shape.begin() + penultimate_axis, 1, std::multiplies<ssize_t>()
     );
+}
+
+class MatrixMultiplyNodeData : public ArrayNodeStateData {
+ public:
+    explicit MatrixMultiplyNodeData(std::vector<double>&& values, std::span<const ssize_t> shape) :
+        ArrayNodeStateData(std::move(values)), shape(shape.begin(), shape.end()) {}
+
+    std::vector<double> output;
+    std::vector<ssize_t> shape;
+};
+
+}  // namespace
+
+MatrixMultiplyNode::MatrixMultiplyNode(ArrayNode* x_ptr, ArrayNode* y_ptr) :
+    ArrayOutputMixin(output_shape(x_ptr, y_ptr)),
+    operands_{x_ptr, y_ptr},
+    sizeinfo_(get_sizeinfo(x_ptr, y_ptr)),
+    values_info_(get_values_info(x_ptr, y_ptr)) {
+    add_predecessor_(x_ptr);
+    add_predecessor_(y_ptr);
 }
 
 void MatrixMultiplyNode::matmul_(

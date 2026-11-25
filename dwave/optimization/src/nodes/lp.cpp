@@ -24,6 +24,7 @@
 
 namespace dwave::optimization {
 
+namespace {
 struct LPData {
     std::vector<double> c;
     std::vector<double> b_lb;
@@ -41,6 +42,7 @@ struct LinearProgramNodeData : NodeStateData {
     LPData lp;
     SolveResult result;
 };
+}  // namespace
 
 LinearProgramFeasibleNode::LinearProgramFeasibleNode(LinearProgramNodeBase* lp_ptr) :
     lp_ptr_(lp_ptr) {

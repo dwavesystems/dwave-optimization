@@ -25,6 +25,7 @@
 
 namespace dwave::optimization {
 
+namespace {
 // Matches ARangeNode::array_or_int
 using array_or_int = std::variant<const Array*, ssize_t>;
 
@@ -260,6 +261,7 @@ const SizeInfo calculate_arange_sizeinfo(
 
     return sizeinfo;
 }
+}  // namespace
 
 // For all of the constructors, we force them to use the array_or_int overload
 // by casting explicitly. That's the one that does the error checking etc.

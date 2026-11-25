@@ -25,6 +25,7 @@
 
 namespace dwave::optimization {
 
+namespace {
 template <class BinaryOp>
 struct InverseOp {
     static bool constexpr exists() { return false; }
@@ -145,17 +146,18 @@ ValuesInfo calculate_values_info(const std::vector<Array*>& operands) {
     std::unreachable();
 }
 
-template <class BinaryOp>
-NaryOpNode<BinaryOp>::NaryOpNode(ArrayNode* node_ptr) : ArrayOutputMixin(node_ptr->shape()) {
-    add_node(node_ptr);
-}
-
 // Enforce that the given span is nonempty and return the first element
 ArrayNode* nonempty(std::span<ArrayNode*> node_ptrs) {
     if (node_ptrs.empty()) {
         throw std::invalid_argument("Must supply at least one predecessor");
     }
     return node_ptrs[0];
+}
+}  // namespace
+
+template <class BinaryOp>
+NaryOpNode<BinaryOp>::NaryOpNode(ArrayNode* node_ptr) : ArrayOutputMixin(node_ptr->shape()) {
+    add_node(node_ptr);
 }
 
 template <class BinaryOp>

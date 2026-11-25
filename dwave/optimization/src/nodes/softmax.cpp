@@ -23,6 +23,7 @@
 
 namespace dwave::optimization {
 
+namespace {
 struct SoftMaxNodeDataHelper_ {
     SoftMaxNodeDataHelper_(std::vector<double> input) : values(std::move(input)) {
         // Compute softmax.
@@ -56,6 +57,7 @@ struct SoftMaxNodeStateData : public ArrayNodeStateData {
     double prior_denominator;
     std::vector<bool> index_changed;
 };
+}  // namespace
 
 SoftMaxNode::SoftMaxNode(ArrayNode* arr_ptr) :
     ArrayOutputMixin(arr_ptr->shape()), arr_ptr_(arr_ptr), sizeinfo_(arr_ptr_->sizeinfo()) {

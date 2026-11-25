@@ -24,6 +24,7 @@
 
 namespace dwave::optimization {
 
+namespace {
 class AccumulateZipNodeData : public ArrayNodeStateData {
  public:
     explicit AccumulateZipNodeData(
@@ -40,6 +41,7 @@ class AccumulateZipNodeData : public ArrayNodeStateData {
 
     State register_;
 };
+}  // namespace
 
 AccumulateZipNode::AccumulateZipNode(
     std::shared_ptr<Graph> expression_ptr,

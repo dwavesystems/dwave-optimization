@@ -18,6 +18,7 @@
 
 namespace dwave::optimization {
 
+namespace {
 class ArrayValidationNodeData : public dwave::optimization::NodeStateData {
  public:
     explicit ArrayValidationNodeData(std::ranges::random_access_range auto&& data) :
@@ -43,6 +44,7 @@ void check_shape(
         return size == expected_size;
     })());
 }
+}  // namespace
 
 ArrayValidationNode::ArrayValidationNode(ArrayNode* node_ptr) : array_ptr(node_ptr) {
     // shape and strides match the ndim
@@ -278,6 +280,7 @@ void ArrayValidationNode::revert(State& state) const {
     node_data->current_data = node_data->old_data;
 }
 
+namespace {
 class DynamicArrayTestingNodeData : public dwave::optimization::NodeStateData {
  public:
     DynamicArrayTestingNodeData() = default;
@@ -342,6 +345,7 @@ class DynamicArrayTestingNodeData : public dwave::optimization::NodeStateData {
     std::vector<ssize_t> current_shape;
     std::vector<ssize_t> old_shape;
 };
+}  // namespace
 
 DynamicArrayTestingNode::DynamicArrayTestingNode(std::initializer_list<ssize_t> shape) :
     DynamicArrayTestingNode(shape, std::nullopt, std::nullopt, false) {}

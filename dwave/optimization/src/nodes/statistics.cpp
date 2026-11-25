@@ -140,6 +140,7 @@ void BinCountNode::revert(State& state) const {
 
 SizeInfo BinCountNode::sizeinfo() const { return SizeInfo(size_); }
 
+namespace {
 std::pair<double, double> calculate_values_minmax_(const Array* arr_ptr) {
     // Predecessor is static or dynamic but always non-empty. Therefore,
     // mean is always computed and will fall within min/max of predecessor.
@@ -156,6 +157,7 @@ std::pair<double, double> calculate_values_minmax_(const Array* arr_ptr) {
     // min/max of predecessor. If necessary, extend meannode min/max.
     return std::make_pair(std::min(arr_ptr->min(), 0.0), std::max(arr_ptr->max(), 0.0));
 }
+}  // namespace
 
 MeanNode::MeanNode(ArrayNode* arr_ptr) :
     ScalarOutputMixin<EqualityMixin<ArrayNode>, true>(),
