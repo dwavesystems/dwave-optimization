@@ -2069,7 +2069,7 @@ class TestInput(utils.SymbolTests):
             inp.set_state(0, [0, 1, 2, 3])
 
     def test_state_serialization(self):
-        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+        for version in dwave.optimization.model.KNOWN_SERIALIZATION_VERSIONS:
             if version < self.MIN_SERIALIZATION_VERSION:
                 continue
             with self.subTest(version=version):

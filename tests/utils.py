@@ -181,7 +181,7 @@ class SymbolTests(abc.ABC, unittest.TestCase):
         self.assertIn(type(x).__name__, dwave.optimization.symbols.__all__)
 
     def test_serialization(self):
-        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+        for version in dwave.optimization.model.KNOWN_SERIALIZATION_VERSIONS:
             if version < self.MIN_SERIALIZATION_VERSION:
                 continue
             with self.subTest(version=version):
@@ -199,7 +199,7 @@ class SymbolTests(abc.ABC, unittest.TestCase):
                     self.assertIs(type(x), type(y))
 
     def test_state_serialization(self):
-        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+        for version in dwave.optimization.model.KNOWN_SERIALIZATION_VERSIONS:
             if version < self.MIN_SERIALIZATION_VERSION:
                 continue
             with self.subTest(version=version):

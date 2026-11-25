@@ -153,7 +153,7 @@ class TestStatesSerialization(unittest.TestCase):
         new = Model()
         a = new.list(10)
 
-        for version in dwave.optimization._model.KNOWN_SERIALIZATION_VERSIONS:
+        for version in dwave.optimization.model.KNOWN_SERIALIZATION_VERSIONS:
             with self.subTest(version=version):
                 with model.states.to_file() as f:
                     new.states.from_file(f)
