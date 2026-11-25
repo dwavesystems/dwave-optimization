@@ -340,8 +340,8 @@ cdef class _Graph:
         :term:`constraints <constraint>`. The objective expresses one or more
         aspects of the problem that should be minimized (equivalent to
         maximization when multiplied by a minus sign). For example, an optimized
-        itinerary might minimize the value of distance traveled or cost of
-        transportation or travel time.
+        itinerary might minimize the value of distance traveled, cost of
+        transportation, or travel time.
 
         Args:
             value: Value of the cost function to minimize.
