@@ -673,11 +673,17 @@ TEST_CASE("UnaryOpNode - UnaryExpressionNode") {
 
         auto* i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
 
-        auto* unexp_ptr = graph.emplace_node<UnaryExpressionNode>(
-            op::unary_expression_op{std::move(expression)}, i_ptr
-        );
+        auto exp_op1 = op::unary_expression_op{std::move(expression)};
+        auto exp_op2 = exp_op1;
+
+        auto* unexp_ptr = graph.emplace_node<UnaryExpressionNode>(std::move(exp_op1), i_ptr);
 
         THEN("The UnaryExpressionNode is integral") { CHECK(unexp_ptr->integral()); }
+
+        AND_GIVEN("A non-integral predecessor node") {
+            auto* a_ptr = graph.emplace_node<AddNode>(i_ptr, graph.emplace_node<ConstantNode>(1.3));
+            CHECK_THROWS(UnaryExpressionNode(std::move(exp_op2), a_ptr));
+        }
     }
 
     GIVEN("Two different expressions") {

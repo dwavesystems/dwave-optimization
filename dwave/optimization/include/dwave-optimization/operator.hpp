@@ -1164,19 +1164,16 @@ struct unary_expression_op : mixins::UnaryOpMixin<unary_expression_op> {
 
     template <DType T>
     double operator()(T x) const {
+        // Here we simply always cast to double and then return a double, following the current
+        // paradigm of how all ArrayNodes work (so as if the expression were just a normal part of
+        // the model). This can be revisited when we have full support for typed output.
+        static_assert(
+            can_cast<T, double> and "unary_expression_op argument must be castable to double"
+        );
+
         auto state = expression_ptr->empty_state();
 
-        if (can_cast<T, long long> and expression_ptr->inputs()[0]->integral()) {
-            expression_ptr->inputs()[0]->initialize_state(
-                state, {static_cast<double>(static_cast<long long>(x))}
-            );
-        } else {
-            static_assert(
-                can_cast<T, double> and "unary_expression_op argument must be castable to double"
-            );
-            expression_ptr->inputs()[0]->initialize_state(state, {static_cast<double>(x)});
-        }
-
+        expression_ptr->inputs()[0]->initialize_state(state, {static_cast<double>(x)});
         expression_ptr->initialize_state(state);
 
         // Whether the output (objective) is integral or not, it always returns a double anyway
@@ -1233,6 +1230,10 @@ struct unary_expression_op : mixins::UnaryOpMixin<unary_expression_op> {
             std::unreachable();
         }
     };
+
+    std::array<bool, 1> domain_integrality() const {
+        return {expression_ptr->inputs()[0]->integral()};
+    }
 
     bool integral() const { return expression_ptr->objective()->integral(); }
 

@@ -43,6 +43,15 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         domain_(calculate_domain_(this->op, node_ptr)),
         integral_(calculate_integral_(this->op, node_ptr)),
         sizeinfo_(array_ptr_->sizeinfo()) {
+        if constexpr (std::same_as<UnaryOp, op::unary_expression_op>) {
+            // Check that the integrality of the predecessor and the expression match
+            if (this->op.domain_integrality()[0] and not array_ptr_->integral()) {
+                throw std::invalid_argument(
+                    "Predecessor must be integral if the expression input is integral"
+                );
+            }
+        }
+
         add_predecessor_(node_ptr);
     }
 
