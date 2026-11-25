@@ -324,6 +324,9 @@ class Node {
     /// Subclasses will in general want to update their state and/or filter
     /// the list of successors that need to be updated.
     virtual void propagate(State& state) const {
+        // Note to Contributors:
+        //     There should be no throw statements in initialize_state.
+        //     Assert statements should be used to ensure correctness in development.
         for (const auto& sv : successors()) {
             sv->update(state, sv.index);
         }

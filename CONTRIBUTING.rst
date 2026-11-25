@@ -6,6 +6,13 @@ Ocean's `contributing guide <https://docs.dwavequantum.com/en/latest/ocean/contr
 has guidelines for contributing to Ocean packages with these exceptions:
 
 * ``dwave-optimization`` uses C++23.
+* Where possible, classes, methods, and functions should be declared, defined, included, and
+imported in alphabetical order.
+  
+  * Memory aid: This applies to `hpp`, `cpp`, `pxd`, `pyi`, and `pyx` files.
+
+* The name of private class members, as well as private functions and classes only defined in a 
+`cpp` file must have a trailing underscore (e.g. `constexpr double some_constant_ = 1.23`).
 
 pre-commit
 ==========
