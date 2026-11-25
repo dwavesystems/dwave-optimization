@@ -133,11 +133,11 @@ struct BinaryOpMixin {
         assert(static_cast<bool>(rhs_enclosure) and "rhs's enclosure cannot be empty");
 
         assert(
-            lhs_enclosure <= BinaryOp::template domain<T>[0] and
+            lhs_enclosure <= BinaryOp::template domain<T>()[0] and
             "lhs's enclosure must be a subset of the binary op's domain"
         );
         assert(
-            rhs_enclosure <= BinaryOp::template domain<T>[1] and
+            rhs_enclosure <= BinaryOp::template domain<T>()[1] and
             "rhs's enclosure must be a subset of the binary op's domain"
         );
 
@@ -176,7 +176,9 @@ struct BinaryOpMixin {
     /// The domain of the operator. `domain[n]` is the nth factor of the domain.
     /// Binary ops are assumed to be defined for all possible inputs unless they tell us otherwise.
     template <DType T>
-    static constexpr std::array<interval<T>, 2> domain{interval<T>::all(), interval<T>::all()};
+    static constexpr std::array<interval<T>, 2> domain() {
+        return {interval<T>::all(), interval<T>::all()};
+    }
     // Note: because we use intervals to encode the domain, this is technically the bounding
     // box rather than the domain.
 
@@ -1228,6 +1230,88 @@ struct unary_expression_op : mixins::UnaryOpMixin<unary_expression_op> {
     }
 
     bool integral() const { return expression_ptr->objective()->integral(); }
+
+    std::shared_ptr<Graph> expression_ptr;
+};
+
+struct binary_expression_op : mixins::BinaryOpMixin<binary_expression_op> {
+    binary_expression_op(Graph&& expression) :
+        binary_expression_op(std::make_shared<Graph>(std::move(expression))) {};
+
+    binary_expression_op(std::shared_ptr<Graph> expression_ptr) : expression_ptr(expression_ptr) {
+        if (expression_ptr->num_decisions() != 0) {
+            throw std::invalid_argument("Given expression should not have any decision variables");
+        } else if (expression_ptr->num_inputs() != 2) {
+            throw std::invalid_argument("Given expression should have exactly two inputs");
+        } else if (not expression_ptr->objective()) {
+            throw std::invalid_argument("Given expression must have the objective set");
+        }
+    };
+
+    template <DType T, DType U>
+    double operator()(T x, U y) const {
+        auto state = expression_ptr->empty_state();
+
+        expression_ptr->inputs()[0]->initialize_state(state, {x});
+        expression_ptr->inputs()[1]->initialize_state(state, {y});
+        expression_ptr->initialize_state(state);
+
+        // Whether the output (objective) is integral or not, it always returns a double anyway
+        return expression_ptr->objective()->view(state)[0];
+    };
+
+    template <DType T, DType U>
+    interval<double> operator()(const interval<T>&, const interval<U>&) const {
+        return {expression_ptr->objective()->min(), expression_ptr->objective()->max()};
+    }
+
+    bool operator==(const binary_expression_op& other) const {
+        // Until we have a standard way of testing equality of `Graph`s, I think it's safest to say
+        // that these are only equal if they point to the same expression.
+        return expression_ptr == other.expression_ptr;
+    }
+
+    template <DType T>
+    std::array<interval<T>, 2> domain() const {
+        using limits = std::numeric_limits<T>;
+
+        auto cast = [](auto* input) -> interval<T> {
+            if constexpr (std::is_integral_v<T>) {
+                auto safe_cast = [](double v) -> T {
+                    constexpr double representable_max =
+                        static_cast<double>(limits::max() / 2 + 1) * 2.0;
+                    static_assert(
+                        not std::signed_integral<T> or -representable_max == limits::lowest()
+                    );
+
+                    if (v >= representable_max) return limits::max();
+                    if constexpr (std::signed_integral<T>) {
+                        if (v <= limits::lowest()) return limits::lowest();
+                    } else {
+                        if (v <= 0.0) return 0;
+                    }
+                    return static_cast<T>(v);
+                };
+
+                return interval<T>(safe_cast(input->min()), safe_cast(input->max()));
+            } else if constexpr (std::floating_point<T>) {
+                return interval<T>(static_cast<T>(input->min()), static_cast<T>(input->max()));
+            } else {
+                assert(false and "unknown DType, not integral or floating point");
+                std::unreachable();
+            }
+        };
+
+        return {cast(expression_ptr->inputs()[0]), cast(expression_ptr->inputs()[1])};
+    };
+
+    bool integral() const { return expression_ptr->objective()->integral(); }
+
+    std::array<bool, 2> domain_integrality() const {
+        return {expression_ptr->inputs()[0]->integral(), expression_ptr->inputs()[1]->integral()};
+    }
+
+    static constexpr bool commutative = false;
 
     std::shared_ptr<Graph> expression_ptr;
 };

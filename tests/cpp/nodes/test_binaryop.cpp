@@ -995,4 +995,130 @@ TEST_CASE("BinaryOpNode - SubtractNode") {
     }
 }
 
+TEST_CASE("BinaryOpNode - BinaryExpressionNode") {
+    auto graph = Graph();
+
+    GIVEN("A expression computing -3 * (x + y), an integer node, and the BinaryExpressionNode") {
+        auto expression = Graph();
+        expression.set_objective(expression.emplace_node<MultiplyNode>(
+            expression.emplace_node<AddNode>(
+                expression.emplace_node<InputNode>(), expression.emplace_node<InputNode>()
+            ),
+            expression.emplace_node<ConstantNode>(-3)
+        ));
+        REQUIRE(not expression.objective()->integral());
+
+        auto* i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
+        auto* c_ptr = graph.emplace_node<AddNode>(i_ptr, graph.emplace_node<ConstantNode>(0.4));
+        auto* d_ptr = graph.emplace_node<AddNode>(i_ptr, graph.emplace_node<ConstantNode>(0.6));
+
+        auto* binexp_ptr = graph.emplace_node<BinaryExpressionNode>(
+            op::binary_expression_op{std::move(expression)}, c_ptr, d_ptr
+        );
+
+        auto state = graph.empty_state();
+        i_ptr->initialize_state(state, {1});
+        graph.initialize_state(state);
+
+        THEN("The output of the BinaryExpressionNode is correct") {
+            CHECK_THAT(binexp_ptr->view(state), RangeEquals({-9.0}));
+        }
+    }
+
+    GIVEN("A expression computing -3 * (x + y), an integer node, and the BinaryExpressionNode") {
+        auto expression = Graph();
+        auto* inp0_ptr = expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 0, 2, false);
+        auto* inp1_ptr = expression.emplace_node<InputNode>(std::vector<ssize_t>{}, -5, -1, false);
+
+        expression.set_objective(expression.emplace_node<MultiplyNode>(
+            expression.emplace_node<AddNode>(inp0_ptr, inp1_ptr),
+            expression.emplace_node<ConstantNode>(-3)
+        ));
+        REQUIRE(not expression.objective()->integral());
+        REQUIRE(expression.objective()->min() == -3);
+        REQUIRE(expression.objective()->max() == 15);
+
+        auto* i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, 0, 2);
+        auto* c_ptr = graph.emplace_node<AddNode>(i_ptr, graph.emplace_node<ConstantNode>(-4.5));
+
+        auto* binexp_ptr = graph.emplace_node<BinaryExpressionNode>(
+            op::binary_expression_op{std::move(expression)}, i_ptr, c_ptr
+        );
+
+        auto state = graph.empty_state();
+        i_ptr->initialize_state(state, {1});
+        graph.initialize_state(state);
+
+        THEN("The output of the BinaryExpressionNode is correct") {
+            CHECK_THAT(binexp_ptr->view(state), RangeEquals({7.5}));
+        }
+    }
+
+    GIVEN(
+        "A expression computing -3 * (x + y) over integers, an integer node, and the "
+        "BinaryExpressionNode"
+    ) {
+        auto expression = Graph();
+        expression.set_objective(expression.emplace_node<MultiplyNode>(
+            expression.emplace_node<AddNode>(
+                expression.emplace_node<InputNode>(
+                    std::vector<ssize_t>{}, std::nullopt, std::nullopt, true
+                ),
+                expression.emplace_node<InputNode>(
+                    std::vector<ssize_t>{}, std::nullopt, std::nullopt, true
+                )
+            ),
+            expression.emplace_node<ConstantNode>(-3)
+        ));
+
+        REQUIRE(expression.objective()->integral());
+
+        auto* i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
+        auto* j_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{});
+
+        auto exp_op1 = op::binary_expression_op{std::move(expression)};
+        auto exp_op2 = exp_op1;
+
+        auto* binexp_ptr =
+            graph.emplace_node<BinaryExpressionNode>(std::move(exp_op1), i_ptr, j_ptr);
+
+        THEN("The BinaryExpressionNode is integral") { CHECK(binexp_ptr->integral()); }
+
+        AND_GIVEN("A non-integral predecessor node") {
+            auto* a_ptr = graph.emplace_node<AddNode>(i_ptr, graph.emplace_node<ConstantNode>(1.3));
+            CHECK_THROWS(BinaryExpressionNode(std::move(exp_op2), a_ptr, j_ptr));
+        }
+    }
+
+    GIVEN("Two different expressions") {
+        auto exp0 = Graph();
+        exp0.emplace_node<InputNode>();
+        exp0.set_objective(exp0.emplace_node<InputNode>());
+
+        auto exp1 = Graph();
+        exp1.emplace_node<InputNode>();
+        exp1.set_objective(exp1.emplace_node<InputNode>(std::vector<ssize_t>{}, -5, 5, false));
+
+        auto* i_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+        auto* j_ptr = graph.emplace_node<IntegerNode>(std::vector<ssize_t>{}, -5, 5);
+
+        THEN("BinaryExpressionNodes created from them show as unequal to each") {
+            auto* binexp0_ptr = graph.emplace_node<BinaryExpressionNode>(
+                op::binary_expression_op{std::move(exp0)}, i_ptr, j_ptr
+            );
+            auto op1 = op::binary_expression_op{std::move(exp1)};
+            auto op1_copy = op::binary_expression_op(op1);
+            auto* binexp1_ptr =
+                graph.emplace_node<BinaryExpressionNode>(std::move(op1), i_ptr, j_ptr);
+            auto* binexp1_copy_ptr =
+                graph.emplace_node<BinaryExpressionNode>(std::move(op1_copy), i_ptr, j_ptr);
+
+            CHECK(binexp0_ptr->equal_to(*binexp0_ptr));
+            CHECK(binexp1_ptr->equal_to(*binexp1_ptr));
+            CHECK(not binexp0_ptr->equal_to(*binexp1_ptr));
+            CHECK(binexp1_ptr->equal_to(*binexp1_copy_ptr));
+        }
+    }
+}
+
 }  // namespace dwave::optimization

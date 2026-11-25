@@ -1899,4 +1899,141 @@ TEST_CASE("unary_expression_op") {
     }
 }
 
+TEST_CASE("binary_expression_op") {
+    GIVEN("An expression for x + y over doubles") {
+        auto expression = Graph();
+        expression.set_objective(expression.emplace_node<AddNode>(
+            // Make the inputs explicitly non-integral
+            expression.emplace_node<InputNode>(
+                std::vector<ssize_t>{}, std::nullopt, std::nullopt, false
+            ),
+            expression.emplace_node<InputNode>(
+                std::vector<ssize_t>{}, std::nullopt, std::nullopt, false
+            )
+        ));
+
+        THEN("Can create a binary_expression_op and it has the correct domain") {
+            op::binary_expression_op expr_op{std::move(expression)};
+
+            CHECK(
+                expr_op.template domain<bool>() ==
+                std::array{interval<bool>::all(), interval<bool>::all()}
+            );
+            CHECK(
+                expr_op.template domain<int>() ==
+                std::array{interval<int>::all(), interval<int>::all()}
+            );
+            CHECK(
+                expr_op.template domain<float>() ==
+                std::array{interval<float>::all(), interval<float>::all()}
+            );
+            CHECK(
+                expr_op.template domain<double>() ==
+                std::array{
+                    interval<double>(
+                        std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max()
+                    ),
+                    interval<double>(
+                        std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max()
+                    )
+                }
+            );
+
+            AND_THEN("We can check the op copyable") {
+                op::binary_expression_op copy(expr_op);
+                CHECK(copy == expr_op);
+            }
+        }
+    }
+
+    GIVEN("An expression x + y over doubles with limited domains") {
+        auto expression = Graph();
+        auto* inp0_ptr =
+            expression.emplace_node<InputNode>(std::vector<ssize_t>{}, 1, std::nullopt, false);
+        // Maximum is inside double range but outside float
+        auto* inp1_ptr =
+            expression.emplace_node<InputNode>(std::vector<ssize_t>{}, -5, 1e40, false);
+        expression.set_objective(expression.emplace_node<AddNode>(inp0_ptr, inp1_ptr));
+
+        THEN("Can create a binary_expression_op and it has the correct domain") {
+            op::binary_expression_op expr_op{std::move(expression)};
+
+            CHECK(
+                expr_op.template domain<bool>() ==
+                std::array{interval<bool>{1, 1}, interval<bool>::all()}
+            );
+            CHECK(
+                expr_op.template domain<int>() ==
+                std::array{
+                    interval<int>(1, std::numeric_limits<int>::max()),
+                    (interval<int>(-5, 0) | interval<int>::nonnegative())
+                }
+            );
+            CHECK(
+                expr_op.template domain<float>() ==
+                std::array{
+                    interval<float>(1, std::numeric_limits<float>::infinity()),
+                    (interval<float>(-5, 0) | interval<float>::nonnegative())
+                }
+            );
+            CHECK(
+                expr_op.template domain<double>() ==
+                std::array{
+                    interval<double>(1, std::numeric_limits<double>::max()),
+                    interval<double>(-5, 1e40)
+                }
+            );
+        }
+    }
+
+    GIVEN("An expression x + y over integers") {
+        auto expression = Graph();
+        expression.set_objective(expression.emplace_node<AddNode>(
+            expression.emplace_node<InputNode>(
+                std::vector<ssize_t>{}, std::nullopt, std::nullopt, true
+            ),
+            expression.emplace_node<InputNode>(
+                std::vector<ssize_t>{}, std::nullopt, std::nullopt, true
+            )
+        ));
+
+        THEN("Can create a binary_expression_op and it has the correct domain") {
+            op::binary_expression_op expr_op{std::move(expression)};
+
+            CHECK(
+                expr_op.template domain<bool>() ==
+                std::array{interval<bool>::all(), interval<bool>::all()}
+            );
+            CHECK(
+                expr_op.template domain<long>() ==
+                std::array{interval<long>::all(), interval<long>::all()}
+            );
+            CHECK(
+                expr_op.template domain<long long>() ==
+                std::array{interval<long long>::all(), interval<long long>::all()}
+            );
+            // For now, InputNode, given no bounds, will report the min and max as the lowest/max of
+            // double even if it is integral. Perhaps technically this is the true min/max because
+            // the representable integers include ones larger than 2^64. Either way, these checks
+            // should likely be corrected when InputNode is able to actually propagate an integer
+            // type and the limits become what is representable by e.g. `long long int`.
+            CHECK(
+                expr_op.template domain<float>() ==
+                std::array{interval<float>::all(), interval<float>::all()}
+            );
+            CHECK(
+                expr_op.template domain<double>() ==
+                std::array{
+                    interval<double>(
+                        std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max()
+                    ),
+                    interval<double>(
+                        std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max()
+                    )
+                }
+            );
+        }
+    }
+}
+
 }  // namespace dwave::optimization::op
