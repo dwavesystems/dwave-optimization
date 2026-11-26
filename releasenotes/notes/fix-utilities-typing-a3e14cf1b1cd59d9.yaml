@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Add typing to some utility decorators, thereby improving the typing accross
+    many methods and functions.
+fixes:
+  - |
+    Fix passing ``file`` as a keyword argument to ``Model.from_file()``,
+    ``Model.to_file()``, ``States.from_file()``, and ``States.to_file()``.

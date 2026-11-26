@@ -68,9 +68,10 @@ def _file_object_arg(
     This also means that the file argument cannot be keyword-only.
     We also don't check for consistency.
 
-    We use `mode` is for path-like inputs, we don't check that open files match
-    open files, match. It's up to the wrapped function to check that the
-    file-like has the properties it desires.
+    We use `mode` for path-like inputs.
+    We don't check that open files match
+    It's up to the wrapped function to check that the file-like has the properties
+    it desires.
 
     Decorated functions/methods should widen the typing of the file arg to
     include all pathlike/filelike `str | os.Path[str] | typing.IO`.
@@ -82,15 +83,13 @@ def _file_object_arg(
         @functools.wraps(method)
         def _method(*args, **kwargs):
             if arg_index < len(args):
-                # do something
                 file = args[arg_index]
                 is_arg = True
             elif arg_name in kwargs:
-                # do something else
                 file = kwargs[arg_name]
                 is_arg = False
             else:
-                raise ValueError(f"missing argument: {arg_name}")
+                raise TypeError(f"missing argument: {arg_name}")
 
             if isinstance(file, (str, bytes, os.PathLike)):
                 args = list(args)  # want to be able to mutate it
