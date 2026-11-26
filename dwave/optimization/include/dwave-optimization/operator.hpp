@@ -1182,15 +1182,7 @@ struct unary_expression_op : mixins::UnaryOpMixin<unary_expression_op> {
 
     template <DType T>
     interval<double> operator()(const interval<T>& x_enclosure) const {
-        if (expression_ptr->objective()->integral()) {
-            return interval<long long>(
-                expression_ptr->objective()->min(), expression_ptr->objective()->max()
-            );
-        } else {
-            return interval<double>(
-                expression_ptr->objective()->min(), expression_ptr->objective()->max()
-            );
-        }
+        return {expression_ptr->objective()->min(), expression_ptr->objective()->max()};
     }
 
     bool operator==(const unary_expression_op& other) const {
