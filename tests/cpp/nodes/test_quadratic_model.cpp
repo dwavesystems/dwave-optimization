@@ -17,6 +17,7 @@
 
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
+#include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/quadratic_model.hpp"
 
@@ -254,6 +255,41 @@ TEST_CASE("QuadraticModelNode") {
                     CHECK_THAT(qnode_ptr->view(state), RangeEquals({430}));
                 }
             }
+        }
+    }
+
+    GIVEN("QuadraticModelNodes with the same or different biases and predecessors") {
+        auto* x_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{5});
+        auto* y_ptr = graph.emplace_node<BinaryNode>(std::initializer_list<ssize_t>{5});
+
+        QuadraticModel other_qmodel{qmodel};
+        other_qmodel.add_quadratic(0, 1, 1);
+
+        Node* a_ptr = graph.emplace_node<QuadraticModelNode>(x_ptr, QuadraticModel{qmodel});
+        Node* b_ptr = graph.emplace_node<QuadraticModelNode>(x_ptr, QuadraticModel{qmodel});
+        Node* c_ptr = graph.emplace_node<QuadraticModelNode>(x_ptr, std::move(other_qmodel));
+        Node* d_ptr = graph.emplace_node<QuadraticModelNode>(y_ptr, QuadraticModel{qmodel});
+
+        THEN("Only the nodes with the same biases and predecessor are equal") {
+            CHECK(a_ptr->equal_to(*a_ptr));
+            CHECK(a_ptr->equal_to(*b_ptr));
+            CHECK(not a_ptr->equal_to(*c_ptr));
+            CHECK(not a_ptr->equal_to(*d_ptr));
+        }
+    }
+
+    GIVEN("A QuadraticModelNode whose predecessor is replaced") {
+        auto* zeros_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{0, 0, 0, 0, 0});
+        auto* ones_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{1, 1, 1, 1, 1});
+        auto* qnode_ptr = graph.emplace_node<QuadraticModelNode>(zeros_ptr, std::move(qmodel));
+
+        ones_ptr->take_successors(*zeros_ptr);
+
+        THEN("It reads from the new predecessor") {
+            CHECK_THAT(qnode_ptr->predecessors(), RangeEquals({ones_ptr}));
+
+            auto state = graph.initialize_state();
+            CHECK_THAT(qnode_ptr->view(state), RangeEquals({70}));
         }
     }
 }

@@ -3940,6 +3940,17 @@ class TestQuadraticModel(utils.SymbolTests):
         with self.assertRaises(ValueError):
             model.quadratic_model(x, ([], []))
 
+    def test_remove_redundant_symbols(self):
+        model = Model()
+        x = model.binary(2)
+
+        model.quadratic_model(x, {(0, 1): 1})
+        model.quadratic_model(x, {(0, 1): 2})
+        self.assertEqual(model.remove_redundant_symbols(), 0)  # different biases
+
+        model.quadratic_model(x, {(0, 1): 1})
+        self.assertEqual(model.remove_redundant_symbols(), 1)  # same as the first
+
     def test_qubo(self):
         num_variables = 5
         model = Model()

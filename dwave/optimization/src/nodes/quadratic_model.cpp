@@ -299,6 +299,10 @@ std::span<const Update> QuadraticModelNode::diff(const State& state) const {
     return data_ptr_<QuadraticModelNodeData>(state)->diff();
 }
 
+bool QuadraticModelNode::equal_to(const QuadraticModelNode& rhs) const {
+    return array_ptr_ == rhs.array_ptr_ and quadratic_model_ == rhs.quadratic_model_;
+}
+
 void QuadraticModelNode::commit(State& state) const {
     data_ptr_<QuadraticModelNodeData>(state)->commit();
 }
@@ -367,6 +371,17 @@ void QuadraticModelNode::propagate(State& state) const {
 QuadraticModel* QuadraticModelNode::get_quadratic_model() {
     QuadraticModel* qm_ptr = &quadratic_model_;
     return qm_ptr;
+}
+
+void QuadraticModelNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+    assert(std::ranges::equal(array_ptr_->shape(), array_ptr->shape()));
+
+    assert(index == 0);
+    array_ptr_ = array_ptr;
 }
 
 }  // namespace dwave::optimization
