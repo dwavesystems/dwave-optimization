@@ -25,8 +25,9 @@ All symbols inherit from the :class:`Symbol` class and therefore inherit its
 methods.
 
 .. autoclass:: Symbol
+    :inherited-members:
     :members:
-    :member-order: bysource
+    :member-order: alphabetical
 
 ArraySymbol
 ===========

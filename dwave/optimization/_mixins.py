@@ -82,8 +82,85 @@ class _SymbolMixin:
         cls = type(self)
         return f"<{cls.__module__}.{cls.__qualname__} at {self.id():#x}>"
 
+    @classmethod
+    def _from_zipfile(cls, zf, directory, model, predecessors):
+        """Construct a symbol from a compressed file.
+
+        Args:
+            zf:
+                File pointer to a compressed file encoding
+                a symbol. Strings are interpreted as a file name.
+            directory:
+                Directory where the file is located.
+            model:
+                The relevant :class:`~dwave.optimization.model.Model`.
+            predecessors:
+                Not currently supported.
+
+        Returns:
+            A symbol.
+
+        See Also:
+            :meth:`._into_zipfile`
+        """
+        # Many symbols are constructed using this pattern, so we do it as default.
+        return cls(*predecessors)
+
     @abc.abstractmethod
     def id(self) -> int: ...
+
+    def _into_zipfile(self, zf, directory):
+        """Store symbol-specific information to a compressed file.
+
+        Args:
+            zf:
+                File pointer to a compressed file to store the
+                symbol. Strings are interpreted as a file name.
+            directory:
+                Directory where the file is located.
+
+        Returns:
+            A compressed file.
+
+        See Also:
+            :meth:`._from_zipfile`
+        """
+        # By default we don't save anything beyond what is saved by the model
+
+    def _states_from_zipfile(self, *_, **__) -> typing.NoReturn:
+        # unlike node serialization, by default we raise an error because if
+        # this is being called, it must have a state
+        raise NotImplementedError(
+            f"{type(self).__name__} has not implemented state deserialization"
+        )
+
+    def _states_into_zipfile(self, *_, **__) -> typing.NoReturn:
+        # unlike node serialization, by default we raise an error because if
+        # this is being called, it must have a state
+        raise NotImplementedError(f"{type(self).__name__} has not implemented state serialization")
+
+    def state_size(self) -> int:
+        """Return an estimated size, in bytes, of a symbol's state.
+
+        The number of bytes returned by this method is only an estimate. Some
+        symbols hold additional information that is not accounted for.
+
+        For most symbols, which are arrays, this method is
+        subclassed by the :class:`~dwave.optimization.model.ArraySymbol`
+        class's :meth:`~dwave.optimization.model.ArraySymbol.state_size`
+        method.
+
+        Returns:
+            int: Estimated size in bytes.
+
+        See Also:
+            :meth:`ArraySymbol.state_size()` An estimate of the size of an array
+            symbol's state.
+
+            :meth:`Model.state_size()` An estimate of the size of a model's
+            state.
+        """
+        return 0
 
 
 class _ArraySymbolMixin(_SymbolMixin):

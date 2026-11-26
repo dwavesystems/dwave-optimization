@@ -775,29 +775,6 @@ cdef class Symbol(_Empty, _SymbolMixin):
         sym.initialize_node(model, <Node*>(PyCapsule_GetPointer(capsule, 'Node*')))
         return sym
 
-    @classmethod
-    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
-        """Construct a symbol from a compressed file.
-
-        Args:
-            zf:
-                File pointer to a compressed file encoding
-                a symbol. Strings are interpreted as a file name.
-            directory:
-                Directory where the file is located.
-            model:
-                The relevant :class:`~dwave.optimization.model.Model`.
-            predecessors:
-                Not currently supported.
-        Returns:
-            A symbol.
-
-        See also:
-            :meth:`._into_zipfile`
-        """
-        # Many symbols are constructed using this pattern, so we do it as default.
-        return cls(*predecessors)
-
     def has_state(self, Py_ssize_t index = 0):
         """Return the initialization status of the indexed state.
 
@@ -882,24 +859,6 @@ cdef class Symbol(_Empty, _SymbolMixin):
         # But this is unique to each node, and functions as an id rather than
         # as a pointer, so that's OK.
         return <uintptr_t>self.node_ptr
-
-    def _into_zipfile(self, zf, directory):
-        """Store symbol-specific information to a compressed file.
-
-        Args:
-            zf:
-                File pointer to a compressed file to store the
-                symbol. Strings are interpreted as a file name.
-            directory:
-                Directory where the file is located.
-        Returns:
-            A compressed file.
-
-        See also:
-            :meth:`._from_zipfile`
-        """
-        # By default we don't save anything beyond what is saved by the model
-        pass
 
     def iter_predecessors(self):
         """Iterate over a symbol's predecessors in the model.
@@ -1041,39 +1000,6 @@ cdef class Symbol(_Empty, _SymbolMixin):
         except TypeError:
             return False
         return not self.expired() and self.id() == other_.id()
-
-    def _states_from_zipfile(self, *_, **__):
-        # unlike node serialization, by default we raise an error because if
-        # this is being called, it must have a state
-        raise NotImplementedError(f"{type(self).__name__} has not implemented state deserialization")
-
-    def _states_into_zipfile(self, *_, **__):
-        # unlike node serialization, by default we raise an error because if
-        # this is being called, it must have a state
-        raise NotImplementedError(f"{type(self).__name__} has not implemented state serialization")
-
-    def state_size(self):
-        """Return an estimated size, in bytes, of a symbol's state.
-
-        The number of bytes returned by this method is only an estimate. Some
-        symbols hold additional information that is not accounted for.
-
-        For most symbols, which are arrays, this method is
-        subclassed by the :class:`~dwave.optimization.model.ArraySymbol`
-        class's :meth:`~dwave.optimization.model.ArraySymbol.state_size`
-        method.
-
-        Returns:
-            int: Estimated size in bytes.
-
-        See also:
-            :meth:`ArraySymbol.state_size()` An estimate of the size of an array
-            symbol's state.
-
-            :meth:`Model.state_size()` An estimate of the size of a model's
-            state.
-        """
-        return 0
 
     def topological_index(self):
         """Return the topological index of the symbol.
