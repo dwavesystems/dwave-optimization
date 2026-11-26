@@ -21,6 +21,7 @@
 
 namespace dwave::optimization {
 
+namespace {
 class Matrix {
  public:
     Matrix(ssize_t n, ssize_t m) : n_(n), m_(m) { buffer_.resize(n_ * m_); }
@@ -486,6 +487,7 @@ LP translate_LP_to_simple(
 
     return LP(std::move(c_), c0, std::move(A_), std::move(b));
 }
+}  // namespace
 
 void SolveResult::_postprocess_solution_variables(
     std::span<const double> lb,

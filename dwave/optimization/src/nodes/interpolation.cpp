@@ -20,6 +20,7 @@
 
 namespace dwave::optimization {
 
+namespace {
 std::pair<double, double> calculate_minmax(const std::vector<double>& c) {
     if (c.size() == 0) {
         return std::make_pair(0.0, 0.0);
@@ -30,6 +31,7 @@ std::pair<double, double> calculate_minmax(const std::vector<double>& c) {
 
     return std::make_pair(low, high);
 }
+}  // namespace
 
 BSplineNode::BSplineNode(
     ArrayNode* array_ptr,

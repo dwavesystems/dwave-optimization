@@ -26,6 +26,8 @@ namespace dwave::optimization {
 // Given a collection, check that it is a valid sub-permutation of range(n),
 // and then "augment" it so that the values not in collection are appended onto
 // the end.
+
+namespace {
 std::vector<double> augment_collection_(std::vector<double> values, const ssize_t n) {
     // First check that our given values has the values we expect
     if (not std::ranges::all_of(values, is_integer)) {
@@ -307,6 +309,7 @@ class CollectionStateData_ : public NodeStateData, public CheckpointableState {
 
 CollectionCheckpoint_::CollectionCheckpoint_(CollectionStateData_& state) :
     DiffCheckpoint(state, state.all_updates_), size_(state.size()) {}
+}  // namespace
 
 CollectionNode::CollectionNode(ssize_t primary_set_size, ssize_t min_size, ssize_t max_size) :
     ArrayOutputMixin((min_size == max_size) ? max_size : Array::DYNAMIC_SIZE),
@@ -442,6 +445,7 @@ ssize_t CollectionNode::size_diff(const State& state) const {
     return data_ptr_<CollectionStateData_>(state)->size_diff();
 }
 
+namespace {
 // DisjointBitSetsNode is on the way out, so let's do the simplest possible
 // implementation for now.
 class DisjointBitSetsCheckpoint_ : public LinkedListCheckpoint {
@@ -563,6 +567,7 @@ struct DisjointBitSetsNodeData_ : CheckpointableState, NodeStateData {
     std::vector<double> data;
     std::vector<std::vector<Update>> diffs;
 };
+}  // namespace
 
 DisjointBitSetsNode::DisjointBitSetsNode(ssize_t primary_set_size, ssize_t num_disjoint_sets) :
     primary_set_size_(primary_set_size), num_disjoint_sets_(num_disjoint_sets) {
@@ -662,6 +667,7 @@ double DisjointBitSetNode::min() const { return 0; }
 
 double DisjointBitSetNode::max() const { return 1; }
 
+namespace {
 // DisjointListsNode is on the way out, so let's do the simplest possible
 // implementation for now.
 class DisjointListsCheckpoint_ : public LinkedListCheckpoint {
@@ -898,6 +904,7 @@ struct DisjointListStateData_ : CheckpointableState, NodeStateData {
     std::vector<ssize_t> list_sizes;  // used for the span returned by shape()
     std::vector<ssize_t> previous_list_sizes;
 };
+}  // namespace
 
 DisjointListsNode::DisjointListsNode(ssize_t primary_set_size, ssize_t num_disjoint_lists) :
     primary_set_size_(primary_set_size), num_disjoint_lists_(num_disjoint_lists) {

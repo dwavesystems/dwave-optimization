@@ -22,6 +22,7 @@ namespace dwave::optimization {
 
 // IsDisjointCoverNode *******************************************************************
 
+namespace {
 struct IsDisjointCoverNodeData : public NodeStateData {
  private:
     // simple wrapper around ssize_t with default value 1, indicating no violations
@@ -110,6 +111,7 @@ struct IsDisjointCoverNodeData : public NodeStateData {
     std::vector<ssize_t> elements_decremented;
     std::vector<ssize_t> elements_incremented;
 };
+}  // namespace
 
 IsDisjointCoverNode::IsDisjointCoverNode(
     std::span<ArrayNode*> node_ptrs,
@@ -220,6 +222,8 @@ void IsDisjointCoverNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
 }
 
 // IsInNode *******************************************************************
+
+namespace {
 struct IsInNodeSetData {
     IsInNodeSetData() = default;
 
@@ -265,19 +269,12 @@ struct IsInNodeData : public ArrayNodeStateData {
     std::vector<Update> test_element_updates;
 };
 
-IsInNode::IsInNode(ArrayNode* element_ptr, ArrayNode* test_elements_ptr) :
-    ArrayOutputMixin(element_ptr->shape()),
-    element_ptr_(element_ptr),
-    test_elements_ptr_(test_elements_ptr) {
-    add_predecessor_(element_ptr);
-    add_predecessor_(test_elements_ptr);
-}
-
-double const* IsInNode::buff(const State& state) const {
-    return data_ptr_<IsInNodeData>(state)->buff();
-}
-
-bool set_data_is_correct(State& state, const Array* element_ptr, IsInNodeData& node_data) {
+// This function is only used in asserts, hence the maybe_unused attribute
+[[maybe_unused]] bool set_data_is_correct(
+    State& state,
+    const Array* element_ptr,
+    IsInNodeData& node_data
+) {
     for (ssize_t i = 0, stop = element_ptr->size(state); i < stop; ++i) {
         const double value = element_ptr->view(state)[i];
 
@@ -292,6 +289,39 @@ bool set_data_is_correct(State& state, const Array* element_ptr, IsInNodeData& n
         if (*index_ptr != i) return false;
     }
     return true;
+}
+
+inline void rm_index(IsInNodeData*& node_data, const ssize_t index, const double key) {
+    auto set_data_it = node_data->set_data.find(key);
+    // find() should be successful since we need to remove the index
+    assert(set_data_it != node_data->set_data.end());
+    // Vector containing indices of `element` with value `key`
+    std::vector<ssize_t>& indices_vec = set_data_it->second.element_indices;
+    // Find index of `indices_vec` equal to `rm_index`
+    auto index_ptr = std::find(indices_vec.begin(), indices_vec.end(), index);
+    // find() should be successful since we need to remove the index
+    assert(index_ptr != indices_vec.end());
+    // swap and pop
+    *index_ptr = indices_vec.back();
+    indices_vec.pop_back();
+
+    // Reduce bloating
+    if (indices_vec.empty() && set_data_it->second.test_elements_count == 0) {
+        node_data->set_data.erase(set_data_it);
+    }
+}
+}  // namespace
+
+IsInNode::IsInNode(ArrayNode* element_ptr, ArrayNode* test_elements_ptr) :
+    ArrayOutputMixin(element_ptr->shape()),
+    element_ptr_(element_ptr),
+    test_elements_ptr_(test_elements_ptr) {
+    add_predecessor_(element_ptr);
+    add_predecessor_(test_elements_ptr);
+}
+
+double const* IsInNode::buff(const State& state) const {
+    return data_ptr_<IsInNodeData>(state)->buff();
 }
 
 void IsInNode::commit(State& state) const {
@@ -319,26 +349,6 @@ bool IsInNode::integral() const { return true; }  // All values are true/false
 double IsInNode::min() const { return 0.0; }  // All values are true/false
 
 double IsInNode::max() const { return 1.0; }  // All values are true/false
-
-inline void rm_index(IsInNodeData*& node_data, const ssize_t index, const double key) {
-    auto set_data_it = node_data->set_data.find(key);
-    // find() should be successful since we need to remove the index
-    assert(set_data_it != node_data->set_data.end());
-    // Vector containing indices of `element` with value `key`
-    std::vector<ssize_t>& indices_vec = set_data_it->second.element_indices;
-    // Find index of `indices_vec` equal to `rm_index`
-    auto index_ptr = std::find(indices_vec.begin(), indices_vec.end(), index);
-    // find() should be successful since we need to remove the index
-    assert(index_ptr != indices_vec.end());
-    // swap and pop
-    *index_ptr = indices_vec.back();
-    indices_vec.pop_back();
-
-    // Reduce bloating
-    if (indices_vec.empty() && set_data_it->second.test_elements_count == 0) {
-        node_data->set_data.erase(set_data_it);
-    }
-}
 
 void IsInNode::propagate(State& state) const {
     const std::span<const Update> test_elements_diff = test_elements_ptr_->diff(state);

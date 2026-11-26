@@ -18,6 +18,7 @@
 
 namespace dwave::optimization {
 
+namespace {
 std::span<const ssize_t> disallow_dynamic(std::span<const ssize_t> shape) {
     if (shape.size() && shape[0] < 0) throw std::invalid_argument("shape cannot be dynamic");
     return shape;
@@ -32,6 +33,7 @@ ValuesInfo calculate_values_info(std::span<const double> buffer) {
         std::ranges::min(buffer), std::ranges::max(buffer), std::ranges::all_of(buffer, is_integer)
     );
 }
+}  // namespace
 
 ConstantNode::ConstantNode(const double* data_ptr, std::initializer_list<ssize_t> shape) :
     ArrayOutputMixin(disallow_dynamic(shape)),

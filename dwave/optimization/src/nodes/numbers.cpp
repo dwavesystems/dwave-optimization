@@ -73,6 +73,7 @@ NumberNode::SumConstraint::Operator NumberNode::SumConstraint::op(const ssize_t 
     return operators_[slice];
 }
 
+namespace {
 class NumberNodeCheckpoint_ : public DiffCheckpoint {
  public:
     using slice_cache_type = std::vector<std::vector<ssize_t>>;
@@ -339,68 +340,6 @@ void NumberNodeStateData::update_(
     slice_cache_.emplace_back(std::move(slices));  // Cache the slices.
 }
 
-void NumberNode::assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const {
-    auto state_data = data_ptr_<NumberNodeStateData>(state);
-
-    auto* checkpoint_ptr = static_cast<NumberNodeCheckpoint_*>(checkpoint.get());
-
-    assert(checkpoint_ptr == state_data->last_checkpoint());
-
-    // Check if there are any changes not otherwise tracked by a checkpoint that we need
-    // to revert first.
-    // A better way would be to implement a partial revert on our state class, but this
-    // is not a path we care about greatly so let's err on the side of simple and well-
-    // tested.
-    if (ssize_t excess_updates = state_data->diff().size() - checkpoint_ptr->drop()) {
-        assert(excess_updates > 0);
-
-        for (
-            const auto& [idx, old, _] :
-            state_data->diff() | std::views::reverse | std::views::take(excess_updates)
-        ) {
-            state_data->set(idx, old, std::nullopt);
-        }
-    }
-
-    auto [updates, optional_slice_cache] = checkpoint_ptr->detach_updates();
-
-    if (optional_slice_cache.has_value()) {
-        assert(sum_constraints_.size() > 0);
-
-        auto slices_rit = std::ranges::rbegin(*optional_slice_cache);
-
-        for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
-            state_data->set(idx, old, *(slices_rit++));
-        }
-    } else {
-        assert(updates.empty() or sum_constraints_.empty());
-
-        // in this case we don't need to do anything to update the slice data
-        for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
-            state_data->set(idx, old, std::nullopt);
-        }
-    }
-
-    checkpoint_ptr->drop() = state_data->diff().size();
-}
-
-void NumberNode::assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const {
-    assign_from_checkpoint(state, checkpoint);  // call the lvalue version
-    checkpoint.reset();
-}
-
-double const* NumberNode::buff(const State& state) const noexcept {
-    return data_ptr_<NumberNodeStateData>(state)->buff();
-}
-
-std::span<const Update> NumberNode::diff(const State& state) const noexcept {
-    return data_ptr_<NumberNodeStateData>(state)->diff();
-}
-
-double NumberNode::min() const { return min_; }
-
-double NumberNode::max() const { return max_; }
-
 /// Given a NumberNode and an assignment of its variables (`number_data`),
 /// compute and return a vector containing the sum of values for each slice
 /// along the specified `axis`*.
@@ -489,34 +428,6 @@ bool satisfies_sum_constraint(
         }
     }
     return true;
-}
-
-void NumberNode::initialize_state(State& state, std::vector<double>&& number_data) const {
-    if (number_data.size() != static_cast<size_t>(size())) {
-        throw std::invalid_argument("Size of data provided does not match node size");
-    }
-
-    for (ssize_t index = 0, stop = size(); index < stop; ++index) {
-        if (!is_valid(index, number_data[index])) {
-            throw std::invalid_argument("Invalid data provided for node");
-        }
-    }
-
-    if (sum_constraints_.size() == 0) {  // No sum constraints to consider.
-        emplace_data_ptr_<NumberNodeStateData>(state, *this, std::move(number_data));
-    } else {
-        // Given the assignment to NumberNode `number_data`, compute the sum
-        // of the values within each slice per sum constraint.
-        auto sum_constraints_lhs = get_sum_constraints_lhs(*this, number_data);
-
-        if (!satisfies_sum_constraint(sum_constraints_, sum_constraints_lhs)) {
-            throw std::invalid_argument("Initialized values do not satisfy sum constraint(s).");
-        }
-
-        emplace_data_ptr_<NumberNodeStateData>(
-            state, *this, std::move(number_data), std::move(sum_constraints_lhs)
-        );
-    }
 }
 
 /// Given a `span` (used for strides or shape data), reorder the values
@@ -701,6 +612,206 @@ void construct_state_given_exactly_one_sum_constraint(
     }
 }
 
+template <bool maximum>
+double get_extreme_index_wise_bound(const std::vector<double>& bound) {
+    assert(bound.size() > 0);
+    std::vector<double>::const_iterator it;
+    if (maximum) {
+        it = std::max_element(bound.begin(), bound.end());
+    } else {
+        it = std::min_element(bound.begin(), bound.end());
+    }
+    return *it;
+}
+
+void check_index_wise_bounds(
+    const NumberNode& node,
+    const std::vector<double>& lower_bounds_,
+    const std::vector<double>& upper_bounds_
+) {
+    bool index_wise_bound = false;
+    // If lower bound is index-wise, it must be correct size.
+    if (lower_bounds_.size() > 1) {
+        index_wise_bound = true;
+        if (static_cast<ssize_t>(lower_bounds_.size()) != node.size()) {
+            throw std::invalid_argument("lower_bound must match size of node");
+        }
+    }
+    // If upper bound is index-wise, it must be correct size.
+    if (upper_bounds_.size() > 1) {
+        index_wise_bound = true;
+        if (static_cast<ssize_t>(upper_bounds_.size()) != node.size()) {
+            throw std::invalid_argument("upper_bound must match size of node");
+        }
+    }
+    // If at least one of the bounds is index-wise, check that there are no
+    // violations at any of the indices.
+    if (index_wise_bound) {
+        for (ssize_t i = 0, stop = node.size(); i < stop; ++i) {
+            if (node.lower_bound(i) > node.upper_bound(i)) {
+                throw std::invalid_argument("Bounds of index " + std::to_string(i) + " clash");
+            }
+        }
+    }
+}
+
+/// Check the user defined sum constraint(s).
+void check_sum_constraints(const NumberNode& node) {
+    const std::vector<NumberNode::SumConstraint>& sum_constraints = node.sum_constraints();
+    if (sum_constraints.size() == 0) return;  // No sum constraints to check.
+
+    const std::span<const ssize_t> shape = node.shape();
+    // Used to assess if an axis is subject to multiple constraints.
+    std::vector<bool> constrained_axis(shape.size(), false);
+    // Used to assess if array is subject to multiple constraints.
+    bool constrained_array = false;
+
+    for (const NumberNode::SumConstraint& constraint : sum_constraints) {
+        const std::optional<const ssize_t> axis = constraint.axis();
+        const ssize_t num_operators = static_cast<ssize_t>(constraint.num_operators());
+        const ssize_t num_bounds = static_cast<ssize_t>(constraint.num_bounds());
+
+        // Handle the case where the constraint applies to the entire array.
+        if (!axis.has_value()) {
+            // Checked in SumConstraint constructor
+            assert(num_operators == 1 && num_bounds == 1);
+
+            if (constrained_array)
+                throw std::invalid_argument(
+                    "Cannot define multiple sum constraints for the entire number array."
+                );
+            constrained_array = true;
+            continue;
+        }
+
+        assert(axis.has_value());
+
+        if (*axis < 0 || *axis >= static_cast<ssize_t>(shape.size())) {
+            throw std::invalid_argument("Invalid constrained axis given number array shape.");
+        }
+
+        if ((num_operators > 1) && (num_operators != shape[*axis])) {
+            throw std::invalid_argument("Invalid number of operators given number array shape.");
+        }
+
+        if ((num_bounds > 1) && (num_bounds != shape[*axis])) {
+            throw std::invalid_argument("Invalid number of bounds given number array shape.");
+        }
+
+        // Checked in SumConstraint constructor
+        assert(num_operators == num_bounds || num_operators == 1 || num_bounds == 1);
+
+        if (constrained_axis[*axis]) {
+            throw std::invalid_argument(
+                "Cannot define multiple sum constraints for a single axis."
+            );
+        }
+        constrained_axis[*axis] = true;
+    }
+
+    // *Currently*, we only support one sum constraint.
+    if (sum_constraints.size() > 1) {
+        throw std::invalid_argument("Can define at most one sum constraint per number array.");
+    }
+
+    // There are fasters ways to check whether the sum constraints are feasible.
+    // For now, fully attempt to construct a state and throw if impossible.
+    std::vector<double> values;
+    values.reserve(node.size());
+    construct_state_given_exactly_one_sum_constraint(node, values);
+}
+}  // namespace
+
+void NumberNode::assign_from_checkpoint(State& state, checkpoint_type& checkpoint) const {
+    auto state_data = data_ptr_<NumberNodeStateData>(state);
+
+    auto* checkpoint_ptr = static_cast<NumberNodeCheckpoint_*>(checkpoint.get());
+
+    assert(checkpoint_ptr == state_data->last_checkpoint());
+
+    // Check if there are any changes not otherwise tracked by a checkpoint that we need
+    // to revert first.
+    // A better way would be to implement a partial revert on our state class, but this
+    // is not a path we care about greatly so let's err on the side of simple and well-
+    // tested.
+    if (ssize_t excess_updates = state_data->diff().size() - checkpoint_ptr->drop()) {
+        assert(excess_updates > 0);
+
+        for (
+            const auto& [idx, old, _] :
+            state_data->diff() | std::views::reverse | std::views::take(excess_updates)
+        ) {
+            state_data->set(idx, old, std::nullopt);
+        }
+    }
+
+    auto [updates, optional_slice_cache] = checkpoint_ptr->detach_updates();
+
+    if (optional_slice_cache.has_value()) {
+        assert(sum_constraints_.size() > 0);
+
+        auto slices_rit = std::ranges::rbegin(*optional_slice_cache);
+
+        for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
+            state_data->set(idx, old, *(slices_rit++));
+        }
+    } else {
+        assert(updates.empty() or sum_constraints_.empty());
+
+        // in this case we don't need to do anything to update the slice data
+        for (const auto& [idx, old, _] : std::move(updates) | std::views::reverse) {
+            state_data->set(idx, old, std::nullopt);
+        }
+    }
+
+    checkpoint_ptr->drop() = state_data->diff().size();
+}
+
+void NumberNode::assign_from_checkpoint(State& state, checkpoint_type&& checkpoint) const {
+    assign_from_checkpoint(state, checkpoint);  // call the lvalue version
+    checkpoint.reset();
+}
+
+double const* NumberNode::buff(const State& state) const noexcept {
+    return data_ptr_<NumberNodeStateData>(state)->buff();
+}
+
+std::span<const Update> NumberNode::diff(const State& state) const noexcept {
+    return data_ptr_<NumberNodeStateData>(state)->diff();
+}
+
+double NumberNode::min() const { return min_; }
+
+double NumberNode::max() const { return max_; }
+
+void NumberNode::initialize_state(State& state, std::vector<double>&& number_data) const {
+    if (number_data.size() != static_cast<size_t>(size())) {
+        throw std::invalid_argument("Size of data provided does not match node size");
+    }
+
+    for (ssize_t index = 0, stop = size(); index < stop; ++index) {
+        if (!is_valid(index, number_data[index])) {
+            throw std::invalid_argument("Invalid data provided for node");
+        }
+    }
+
+    if (sum_constraints_.size() == 0) {  // No sum constraints to consider.
+        emplace_data_ptr_<NumberNodeStateData>(state, *this, std::move(number_data));
+    } else {
+        // Given the assignment to NumberNode `number_data`, compute the sum
+        // of the values within each slice per sum constraint.
+        auto sum_constraints_lhs = get_sum_constraints_lhs(*this, number_data);
+
+        if (!satisfies_sum_constraint(sum_constraints_, sum_constraints_lhs)) {
+            throw std::invalid_argument("Initialized values do not satisfy sum constraint(s).");
+        }
+
+        emplace_data_ptr_<NumberNodeStateData>(
+            state, *this, std::move(number_data), std::move(sum_constraints_lhs)
+        );
+    }
+}
+
 void NumberNode::initialize_state(State& state) const {
     std::vector<double> values;
     values.reserve(size());
@@ -819,115 +930,6 @@ const std::vector<std::vector<double>>& NumberNode::sum_constraints_lhs(const St
     return data_ptr_<NumberNodeStateData>(state)->sum_constraints_lhs;
 }
 
-template <bool maximum>
-double get_extreme_index_wise_bound(const std::vector<double>& bound) {
-    assert(bound.size() > 0);
-    std::vector<double>::const_iterator it;
-    if (maximum) {
-        it = std::max_element(bound.begin(), bound.end());
-    } else {
-        it = std::min_element(bound.begin(), bound.end());
-    }
-    return *it;
-}
-
-void check_index_wise_bounds(
-    const NumberNode& node,
-    const std::vector<double>& lower_bounds_,
-    const std::vector<double>& upper_bounds_
-) {
-    bool index_wise_bound = false;
-    // If lower bound is index-wise, it must be correct size.
-    if (lower_bounds_.size() > 1) {
-        index_wise_bound = true;
-        if (static_cast<ssize_t>(lower_bounds_.size()) != node.size()) {
-            throw std::invalid_argument("lower_bound must match size of node");
-        }
-    }
-    // If upper bound is index-wise, it must be correct size.
-    if (upper_bounds_.size() > 1) {
-        index_wise_bound = true;
-        if (static_cast<ssize_t>(upper_bounds_.size()) != node.size()) {
-            throw std::invalid_argument("upper_bound must match size of node");
-        }
-    }
-    // If at least one of the bounds is index-wise, check that there are no
-    // violations at any of the indices.
-    if (index_wise_bound) {
-        for (ssize_t i = 0, stop = node.size(); i < stop; ++i) {
-            if (node.lower_bound(i) > node.upper_bound(i)) {
-                throw std::invalid_argument("Bounds of index " + std::to_string(i) + " clash");
-            }
-        }
-    }
-}
-
-/// Check the user defined sum constraint(s).
-void check_sum_constraints(const NumberNode& node) {
-    const std::vector<NumberNode::SumConstraint>& sum_constraints = node.sum_constraints();
-    if (sum_constraints.size() == 0) return;  // No sum constraints to check.
-
-    const std::span<const ssize_t> shape = node.shape();
-    // Used to assess if an axis is subject to multiple constraints.
-    std::vector<bool> constrained_axis(shape.size(), false);
-    // Used to assess if array is subject to multiple constraints.
-    bool constrained_array = false;
-
-    for (const NumberNode::SumConstraint& constraint : sum_constraints) {
-        const std::optional<const ssize_t> axis = constraint.axis();
-        const ssize_t num_operators = static_cast<ssize_t>(constraint.num_operators());
-        const ssize_t num_bounds = static_cast<ssize_t>(constraint.num_bounds());
-
-        // Handle the case where the constraint applies to the entire array.
-        if (!axis.has_value()) {
-            // Checked in SumConstraint constructor
-            assert(num_operators == 1 && num_bounds == 1);
-
-            if (constrained_array)
-                throw std::invalid_argument(
-                    "Cannot define multiple sum constraints for the entire number array."
-                );
-            constrained_array = true;
-            continue;
-        }
-
-        assert(axis.has_value());
-
-        if (*axis < 0 || *axis >= static_cast<ssize_t>(shape.size())) {
-            throw std::invalid_argument("Invalid constrained axis given number array shape.");
-        }
-
-        if ((num_operators > 1) && (num_operators != shape[*axis])) {
-            throw std::invalid_argument("Invalid number of operators given number array shape.");
-        }
-
-        if ((num_bounds > 1) && (num_bounds != shape[*axis])) {
-            throw std::invalid_argument("Invalid number of bounds given number array shape.");
-        }
-
-        // Checked in SumConstraint constructor
-        assert(num_operators == num_bounds || num_operators == 1 || num_bounds == 1);
-
-        if (constrained_axis[*axis]) {
-            throw std::invalid_argument(
-                "Cannot define multiple sum constraints for a single axis."
-            );
-        }
-        constrained_axis[*axis] = true;
-    }
-
-    // *Currently*, we only support one sum constraint.
-    if (sum_constraints.size() > 1) {
-        throw std::invalid_argument("Can define at most one sum constraint per number array.");
-    }
-
-    // There are fasters ways to check whether the sum constraints are feasible.
-    // For now, fully attempt to construct a state and throw if impossible.
-    std::vector<double> values;
-    values.reserve(node.size());
-    construct_state_given_exactly_one_sum_constraint(node, values);
-}
-
 // Base class to be used as interfaces.
 NumberNode::NumberNode(
     std::span<const ssize_t> shape,
@@ -955,6 +957,7 @@ NumberNode::NumberNode(
 
 // Integer Node ***************************************************************
 
+namespace {
 /// Check the user defined sum constraint for IntegerNode.
 void check_sum_constraint_integrality(
     const std::vector<NumberNode::SumConstraint>& sum_constraints
@@ -972,6 +975,7 @@ void check_sum_constraint_integrality(
         }
     }
 }
+}  // namespace
 
 IntegerNode::IntegerNode(
     std::span<const ssize_t> shape,
@@ -1141,6 +1145,7 @@ double IntegerNode::default_value(ssize_t index) const {
 
 // Binary Node ****************************************************************
 
+namespace {
 template <bool upper_bound>
 double get_bool_bound(const double bound) {
     if (upper_bound) {
@@ -1168,151 +1173,6 @@ std::vector<double> limit_bound_to_bool_domain(std::optional<std::vector<double>
     for (double& value : *bound) value = get_bool_bound<upper_bound>(value);
     return *bound;
 }
-
-BinaryNode::BinaryNode(
-    std::span<const ssize_t> shape,
-    std::optional<std::vector<double>> lower_bound,
-    std::optional<std::vector<double>> upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    IntegerNode(
-        shape,
-        limit_bound_to_bool_domain<false>(lower_bound),
-        limit_bound_to_bool_domain<true>(upper_bound),
-        std::move(sum_constraints)
-    ) {}
-
-BinaryNode::BinaryNode(
-    std::initializer_list<ssize_t> shape,
-    std::optional<std::vector<double>> lower_bound,
-    std::optional<std::vector<double>> upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    BinaryNode(
-        std::span(shape),
-        std::move(lower_bound),
-        std::move(upper_bound),
-        std::move(sum_constraints)
-    ) {}
-BinaryNode::BinaryNode(
-    ssize_t size,
-    std::optional<std::vector<double>> lower_bound,
-    std::optional<std::vector<double>> upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    BinaryNode({size}, std::move(lower_bound), std::move(upper_bound), std::move(sum_constraints)) {
-}
-
-BinaryNode::BinaryNode(
-    std::span<const ssize_t> shape,
-    double lower_bound,
-    std::optional<std::vector<double>> upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    BinaryNode(
-        shape,
-        std::vector<double>{lower_bound},
-        std::move(upper_bound),
-        std::move(sum_constraints)
-    ) {}
-BinaryNode::BinaryNode(
-    std::initializer_list<ssize_t> shape,
-    double lower_bound,
-    std::optional<std::vector<double>> upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    BinaryNode(
-        std::span(shape),
-        std::vector<double>{lower_bound},
-        std::move(upper_bound),
-        std::move(sum_constraints)
-    ) {}
-BinaryNode::BinaryNode(
-    ssize_t size,
-    double lower_bound,
-    std::optional<std::vector<double>> upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    BinaryNode(
-        {size},
-        std::vector<double>{lower_bound},
-        std::move(upper_bound),
-        std::move(sum_constraints)
-    ) {}
-
-BinaryNode::BinaryNode(
-    std::span<const ssize_t> shape,
-    std::optional<std::vector<double>> lower_bound,
-    double upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    BinaryNode(
-        shape,
-        std::move(lower_bound),
-        std::vector<double>{upper_bound},
-        std::move(sum_constraints)
-    ) {}
-BinaryNode::BinaryNode(
-    std::initializer_list<ssize_t> shape,
-    std::optional<std::vector<double>> lower_bound,
-    double upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    BinaryNode(
-        std::span(shape),
-        std::move(lower_bound),
-        std::vector<double>{upper_bound},
-        std::move(sum_constraints)
-    ) {}
-BinaryNode::BinaryNode(
-    ssize_t size,
-    std::optional<std::vector<double>> lower_bound,
-    double upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    BinaryNode(
-        {size},
-        std::move(lower_bound),
-        std::vector<double>{upper_bound},
-        std::move(sum_constraints)
-    ) {}
-
-BinaryNode::BinaryNode(
-    std::span<const ssize_t> shape,
-    double lower_bound,
-    double upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    BinaryNode(
-        shape,
-        std::vector<double>{lower_bound},
-        std::vector<double>{upper_bound},
-        std::move(sum_constraints)
-    ) {}
-BinaryNode::BinaryNode(
-    std::initializer_list<ssize_t> shape,
-    double lower_bound,
-    double upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    BinaryNode(
-        std::span(shape),
-        std::vector<double>{lower_bound},
-        std::vector<double>{upper_bound},
-        std::move(sum_constraints)
-    ) {}
-BinaryNode::BinaryNode(
-    ssize_t size,
-    double lower_bound,
-    double upper_bound,
-    std::vector<SumConstraint> sum_constraints
-) :
-    BinaryNode(
-        {size},
-        std::vector<double>{lower_bound},
-        std::vector<double>{upper_bound},
-        std::move(sum_constraints)
-    ) {}
 
 /// State dependent data attached to NumberNode
 struct BinaryNodeStateData : public NumberNodeStateData {
@@ -1560,6 +1420,152 @@ void BinaryNodeStateData::compute_slice_indices_(const BinaryNode& node) {
         }
     }
 }
+}  // namespace
+
+BinaryNode::BinaryNode(
+    std::span<const ssize_t> shape,
+    std::optional<std::vector<double>> lower_bound,
+    std::optional<std::vector<double>> upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    IntegerNode(
+        shape,
+        limit_bound_to_bool_domain<false>(lower_bound),
+        limit_bound_to_bool_domain<true>(upper_bound),
+        std::move(sum_constraints)
+    ) {}
+
+BinaryNode::BinaryNode(
+    std::initializer_list<ssize_t> shape,
+    std::optional<std::vector<double>> lower_bound,
+    std::optional<std::vector<double>> upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    BinaryNode(
+        std::span(shape),
+        std::move(lower_bound),
+        std::move(upper_bound),
+        std::move(sum_constraints)
+    ) {}
+BinaryNode::BinaryNode(
+    ssize_t size,
+    std::optional<std::vector<double>> lower_bound,
+    std::optional<std::vector<double>> upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    BinaryNode({size}, std::move(lower_bound), std::move(upper_bound), std::move(sum_constraints)) {
+}
+
+BinaryNode::BinaryNode(
+    std::span<const ssize_t> shape,
+    double lower_bound,
+    std::optional<std::vector<double>> upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    BinaryNode(
+        shape,
+        std::vector<double>{lower_bound},
+        std::move(upper_bound),
+        std::move(sum_constraints)
+    ) {}
+BinaryNode::BinaryNode(
+    std::initializer_list<ssize_t> shape,
+    double lower_bound,
+    std::optional<std::vector<double>> upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    BinaryNode(
+        std::span(shape),
+        std::vector<double>{lower_bound},
+        std::move(upper_bound),
+        std::move(sum_constraints)
+    ) {}
+BinaryNode::BinaryNode(
+    ssize_t size,
+    double lower_bound,
+    std::optional<std::vector<double>> upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    BinaryNode(
+        {size},
+        std::vector<double>{lower_bound},
+        std::move(upper_bound),
+        std::move(sum_constraints)
+    ) {}
+
+BinaryNode::BinaryNode(
+    std::span<const ssize_t> shape,
+    std::optional<std::vector<double>> lower_bound,
+    double upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    BinaryNode(
+        shape,
+        std::move(lower_bound),
+        std::vector<double>{upper_bound},
+        std::move(sum_constraints)
+    ) {}
+BinaryNode::BinaryNode(
+    std::initializer_list<ssize_t> shape,
+    std::optional<std::vector<double>> lower_bound,
+    double upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    BinaryNode(
+        std::span(shape),
+        std::move(lower_bound),
+        std::vector<double>{upper_bound},
+        std::move(sum_constraints)
+    ) {}
+BinaryNode::BinaryNode(
+    ssize_t size,
+    std::optional<std::vector<double>> lower_bound,
+    double upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    BinaryNode(
+        {size},
+        std::move(lower_bound),
+        std::vector<double>{upper_bound},
+        std::move(sum_constraints)
+    ) {}
+
+BinaryNode::BinaryNode(
+    std::span<const ssize_t> shape,
+    double lower_bound,
+    double upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    BinaryNode(
+        shape,
+        std::vector<double>{lower_bound},
+        std::vector<double>{upper_bound},
+        std::move(sum_constraints)
+    ) {}
+BinaryNode::BinaryNode(
+    std::initializer_list<ssize_t> shape,
+    double lower_bound,
+    double upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    BinaryNode(
+        std::span(shape),
+        std::vector<double>{lower_bound},
+        std::vector<double>{upper_bound},
+        std::move(sum_constraints)
+    ) {}
+BinaryNode::BinaryNode(
+    ssize_t size,
+    double lower_bound,
+    double upper_bound,
+    std::vector<SumConstraint> sum_constraints
+) :
+    BinaryNode(
+        {size},
+        std::vector<double>{lower_bound},
+        std::vector<double>{upper_bound},
+        std::move(sum_constraints)
+    ) {}
 
 void BinaryNode::revert(State& state) const noexcept {
     data_ptr_<BinaryNodeStateData>(state)->revert();

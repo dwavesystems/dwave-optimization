@@ -24,6 +24,7 @@ using size_type = ssize_t;
 // On some architectures it will allow for 80 bits of precision.
 using hi_res_t = long double;
 
+namespace {
 struct QuadraticModelNodeData : public NodeStateData {
     explicit QuadraticModelNodeData(
         double value,
@@ -70,6 +71,7 @@ struct QuadraticModelNodeData : public NodeStateData {
     // Save the index and previous values to be able to revert.
     std::vector<std::pair<int, double>> effective_changes_;
 };
+}  // namespace
 
 QuadraticModel::QuadraticModel(index_type num_variables) : num_variables_(num_variables) {
     if (num_variables_ < 0) {

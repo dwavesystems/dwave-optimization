@@ -20,8 +20,7 @@
 
 namespace dwave::optimization {
 
-/// ArgSortNode
-
+namespace {
 struct ArgSortNodeDataHelper_ {
     ArgSortNodeDataHelper_(std::vector<double> values) {
         for (ssize_t index = 0, stop = values.size(); index < stop; index++) {
@@ -47,6 +46,7 @@ struct ArgSortNodeData : public ArrayNodeStateData {
     std::set<std::pair<double, ssize_t>> order;
     std::vector<Update> predecessor_updates;
 };
+}  // namespace
 
 ArgSortNode::ArgSortNode(ArrayNode* arr_ptr) :
     ArrayOutputMixin(arr_ptr->shape()),

@@ -80,6 +80,42 @@ struct IndexingNodeData : NodeStateData {
 
 // AdvancedIndexingNode *******************************************************
 
+namespace {
+std::pair<ssize_t, ssize_t> get_mapped_index(
+    const std::vector<AdvancedIndexingNode::array_or_slice>& indices,
+    const std::span<const ssize_t>& strides,
+    const std::span<const ssize_t>& item_strides,
+    const std::span<const ssize_t>& shape,
+    const std::span<const ssize_t>& mapped_item_strides,
+    ssize_t itemsize,
+    ssize_t index
+) {
+    ssize_t offset = 0;
+    ssize_t subspace_index = 0;
+    ssize_t mapped_axis = 0;
+    bool hit_first_array = false;
+    assert(indices.size() == strides.size());
+    assert(indices.size() == item_strides.size());
+    assert(indices.size() == shape.size());
+    assert(item_strides.empty() || item_strides.data() != nullptr);
+    for (ssize_t i = 0; i < static_cast<ssize_t>(indices.size()); ++i) {
+        ssize_t item_stride = item_strides[i];
+        ssize_t axis_index = (index / item_stride) % shape[i];
+        if (std::holds_alternative<ArrayNode*>(indices[i])) {
+            offset += axis_index * strides[i] / itemsize;
+            // Only increase the mapped axis on the first array indexer. We just skip
+            // over all the axes due to the indexer arrays by increasing mapped_axis
+            // by their dimension.
+            mapped_axis += hit_first_array ? 0 : std::get<ArrayNode*>(indices[i])->ndim();
+            hit_first_array = true;
+        } else {
+            assert(mapped_axis < static_cast<ssize_t>(mapped_item_strides.size()));
+            subspace_index += axis_index * mapped_item_strides[mapped_axis++] / itemsize;
+        }
+    }
+    return std::make_pair(offset, subspace_index);
+}
+
 struct AdvancedIndexingNodeData : NodeStateData {
  public:
     AdvancedIndexingNodeData(
@@ -227,6 +263,7 @@ struct AdvancedIndexingNodeData : NodeStateData {
     std::unordered_map<ssize_t, std::vector<ssize_t>> reverse_offsets;
     const bool maintain_reverse_offset_map;
 };
+}  // namespace
 
 struct AdvancedIndexingNode::IndexParser_ {
     IndexParser_(Array* array_ptr, std::vector<array_or_slice>&& indices) :
@@ -859,41 +896,6 @@ std::span<const ssize_t> AdvancedIndexingNode::shape(const State& state) const {
     );
 }
 
-std::pair<ssize_t, ssize_t> get_mapped_index(
-    const std::vector<AdvancedIndexingNode::array_or_slice>& indices,
-    const std::span<const ssize_t>& strides,
-    const std::span<const ssize_t>& item_strides,
-    const std::span<const ssize_t>& shape,
-    const std::span<const ssize_t>& mapped_item_strides,
-    ssize_t itemsize,
-    ssize_t index
-) {
-    ssize_t offset = 0;
-    ssize_t subspace_index = 0;
-    ssize_t mapped_axis = 0;
-    bool hit_first_array = false;
-    assert(indices.size() == strides.size());
-    assert(indices.size() == item_strides.size());
-    assert(indices.size() == shape.size());
-    assert(item_strides.empty() || item_strides.data() != nullptr);
-    for (ssize_t i = 0; i < static_cast<ssize_t>(indices.size()); ++i) {
-        ssize_t item_stride = item_strides[i];
-        ssize_t axis_index = (index / item_stride) % shape[i];
-        if (std::holds_alternative<ArrayNode*>(indices[i])) {
-            offset += axis_index * strides[i] / itemsize;
-            // Only increase the mapped axis on the first array indexer. We just skip
-            // over all the axes due to the indexer arrays by increasing mapped_axis
-            // by their dimension.
-            mapped_axis += hit_first_array ? 0 : std::get<ArrayNode*>(indices[i])->ndim();
-            hit_first_array = true;
-        } else {
-            assert(mapped_axis < static_cast<ssize_t>(mapped_item_strides.size()));
-            subspace_index += axis_index * mapped_item_strides[mapped_axis++] / itemsize;
-        }
-    }
-    return std::make_pair(offset, subspace_index);
-}
-
 void AdvancedIndexingNode::propagate(State& state) const {
     // Check if there are no updates.
     if (array_ptr_->diff(state).empty()) {
@@ -1165,124 +1167,7 @@ void AdvancedIndexingNode::update_dynamic_shape(State& state) const {
 
 // BasicIndexingNode **********************************************************
 
-// Helper class for determining the shape/strides/start of the view induced by
-// the given indices
-struct BasicIndexingNode::IndexParser_ {
-    IndexParser_(Array* array_ptr, std::vector<slice_or_int>&& indices) {
-        // some input validation
-        assert(array_ptr->ndim() >= 0);  // should always be true
-        if (static_cast<std::size_t>(array_ptr->ndim()) > indices.size()) {
-            throw std::invalid_argument("too few indices for the array");
-        }
-        if (static_cast<std::size_t>(array_ptr->ndim()) < indices.size()) {
-            throw std::invalid_argument("too many indices for the array");
-        }
-
-        if (!array_ptr->contiguous()) {
-            // we should handle this at the Python level
-            throw std::invalid_argument("cannot slice a non-contiguous array");
-        }
-
-        // first count the number of dimensions and use that to allocate the
-        // shape and strides
-        for (const slice_or_int& index : indices) {
-            this->ndim += std::holds_alternative<Slice>(index);
-        }
-        if (this->ndim) {
-            this->strides = std::make_unique<ssize_t[]>(ndim);
-            this->shape = std::make_unique<ssize_t[]>(ndim);
-        }
-
-        // now do the parsing
-        const auto array_strides = array_ptr->strides();
-        const auto array_shape = array_ptr->shape();
-
-        ssize_t array_dim = 0;  // current dim in the array
-        ssize_t view_dim = 0;   // current dim in the view
-        for (const slice_or_int& index : indices) {
-            assert(array_dim >= view_dim);  // view.ndim <= array.ndim
-
-            if (std::holds_alternative<Slice>(index)) {
-                const Slice& slice = std::get<Slice>(index);
-
-                if (slice.step == 0) {
-                    throw std::invalid_argument("step cannot be 0");
-                }
-                if (slice.step < 0) {
-                    // todo: only disallow this on dynamic arrays
-                    throw std::invalid_argument("step cannot be negative");
-                }
-
-                if (array_dim == 0 && array_ptr->dynamic()) {
-                    // Handle the dynamic case
-
-                    // First dimension is dynamic
-                    this->shape[view_dim] = DYNAMIC_SIZE;
-                    this->strides[view_dim] = slice.step * array_strides[array_dim];
-
-                    this->axis0_slice = slice;
-
-                    // Skip start for dynamic axis 0 as it will be adjusted later with
-                    // the predecessor's state
-                } else {
-                    assert(array_shape[array_dim] >= 0);
-
-                    // fit the slice to the array dimension. This handles
-                    // negative indices and the like
-                    Slice fitted = slice.fit(array_shape[array_dim]);
-
-                    // Fit the slice to the actual dimension size to get the new size
-                    this->shape[view_dim] = fitted.size();
-
-                    // For the strides, we only care about the slice's step times the
-                    // array's strides
-                    this->strides[view_dim] = fitted.step * array_strides[array_dim];
-
-                    // For the start, it's defined by the (fitted) slice's start
-                    // Note that the start is in terms of doubles, but strides are in terms
-                    // of bytes, so we have to be careful
-                    // We
-                    this->start += fitted.start * array_strides[array_dim] / array_ptr->itemsize();
-                }
-
-                ++view_dim;
-            } else {
-                ssize_t idx = std::get<ssize_t>(index);
-
-                if (array_dim == 0 && array_ptr->dynamic()) {
-                    throw std::invalid_argument(
-                        "integer index not allowed on first dimension of dynamic array"
-                    );
-                } else if (idx < 0) {
-                    // Negative indexing on a dimension with a known size
-                    // We do one pass of fitting, and then raise an error if it's still
-                    // negative or out of range
-                    idx += array_shape[array_dim];
-                }
-
-                if (idx < 0 || idx >= array_shape[array_dim]) {
-                    // todo: better error message? Needs testing from Python
-                    throw std::invalid_argument("index out of range");
-                }
-
-                // Integer indices only affect the start, they drop the dimension
-                // so there is no strides/shape to worry about for this axis
-                this->start += idx * array_strides[array_dim] / array_ptr->itemsize();
-            }
-
-            ++array_dim;  // we are always stepping through the array
-        }
-    }
-
-    ssize_t ndim = 0;
-    std::unique_ptr<ssize_t[]> strides = nullptr;
-    std::unique_ptr<ssize_t[]> shape = nullptr;
-
-    ssize_t start = 0;
-
-    std::optional<Slice> axis0_slice;
-};
-
+namespace {
 SizeInfo basicindexing_calculate_sizeinfo(
     const Array* this_node_ptr,
     const Array* array_ptr_,
@@ -1414,6 +1299,141 @@ SizeInfo basicindexing_calculate_sizeinfo(
 
     return sizeinfo.substitute(1);
 }
+
+ssize_t get_smallest_size_during_diff(ssize_t initial_size, const std::span<const Update> diff) {
+    ssize_t minimum_size = initial_size;
+    ssize_t size = initial_size;
+    for (const auto& update : diff) {
+        if (update.placed()) {
+            size++;
+        } else if (update.removed()) {
+            size--;
+            assert(size >= 0);
+            minimum_size = std::min(size, minimum_size);
+        }
+    }
+
+    return minimum_size;
+}
+}  // namespace
+
+// Helper class for determining the shape/strides/start of the view induced by
+// the given indices
+struct BasicIndexingNode::IndexParser_ {
+    IndexParser_(Array* array_ptr, std::vector<slice_or_int>&& indices) {
+        // some input validation
+        assert(array_ptr->ndim() >= 0);  // should always be true
+        if (static_cast<std::size_t>(array_ptr->ndim()) > indices.size()) {
+            throw std::invalid_argument("too few indices for the array");
+        }
+        if (static_cast<std::size_t>(array_ptr->ndim()) < indices.size()) {
+            throw std::invalid_argument("too many indices for the array");
+        }
+
+        if (!array_ptr->contiguous()) {
+            // we should handle this at the Python level
+            throw std::invalid_argument("cannot slice a non-contiguous array");
+        }
+
+        // first count the number of dimensions and use that to allocate the
+        // shape and strides
+        for (const slice_or_int& index : indices) {
+            this->ndim += std::holds_alternative<Slice>(index);
+        }
+        if (this->ndim) {
+            this->strides = std::make_unique<ssize_t[]>(ndim);
+            this->shape = std::make_unique<ssize_t[]>(ndim);
+        }
+
+        // now do the parsing
+        const auto array_strides = array_ptr->strides();
+        const auto array_shape = array_ptr->shape();
+
+        ssize_t array_dim = 0;  // current dim in the array
+        ssize_t view_dim = 0;   // current dim in the view
+        for (const slice_or_int& index : indices) {
+            assert(array_dim >= view_dim);  // view.ndim <= array.ndim
+
+            if (std::holds_alternative<Slice>(index)) {
+                const Slice& slice = std::get<Slice>(index);
+
+                if (slice.step == 0) {
+                    throw std::invalid_argument("step cannot be 0");
+                }
+                if (slice.step < 0) {
+                    // todo: only disallow this on dynamic arrays
+                    throw std::invalid_argument("step cannot be negative");
+                }
+
+                if (array_dim == 0 && array_ptr->dynamic()) {
+                    // Handle the dynamic case
+
+                    // First dimension is dynamic
+                    this->shape[view_dim] = DYNAMIC_SIZE;
+                    this->strides[view_dim] = slice.step * array_strides[array_dim];
+
+                    this->axis0_slice = slice;
+
+                    // Skip start for dynamic axis 0 as it will be adjusted later with
+                    // the predecessor's state
+                } else {
+                    assert(array_shape[array_dim] >= 0);
+
+                    // fit the slice to the array dimension. This handles
+                    // negative indices and the like
+                    Slice fitted = slice.fit(array_shape[array_dim]);
+
+                    // Fit the slice to the actual dimension size to get the new size
+                    this->shape[view_dim] = fitted.size();
+
+                    // For the strides, we only care about the slice's step times the
+                    // array's strides
+                    this->strides[view_dim] = fitted.step * array_strides[array_dim];
+
+                    // For the start, it's defined by the (fitted) slice's start
+                    // Note that the start is in terms of doubles, but strides are in terms
+                    // of bytes, so we have to be careful
+                    // We
+                    this->start += fitted.start * array_strides[array_dim] / array_ptr->itemsize();
+                }
+
+                ++view_dim;
+            } else {
+                ssize_t idx = std::get<ssize_t>(index);
+
+                if (array_dim == 0 && array_ptr->dynamic()) {
+                    throw std::invalid_argument(
+                        "integer index not allowed on first dimension of dynamic array"
+                    );
+                } else if (idx < 0) {
+                    // Negative indexing on a dimension with a known size
+                    // We do one pass of fitting, and then raise an error if it's still
+                    // negative or out of range
+                    idx += array_shape[array_dim];
+                }
+
+                if (idx < 0 || idx >= array_shape[array_dim]) {
+                    // todo: better error message? Needs testing from Python
+                    throw std::invalid_argument("index out of range");
+                }
+
+                // Integer indices only affect the start, they drop the dimension
+                // so there is no strides/shape to worry about for this axis
+                this->start += idx * array_strides[array_dim] / array_ptr->itemsize();
+            }
+
+            ++array_dim;  // we are always stepping through the array
+        }
+    }
+
+    ssize_t ndim = 0;
+    std::unique_ptr<ssize_t[]> strides = nullptr;
+    std::unique_ptr<ssize_t[]> shape = nullptr;
+
+    ssize_t start = 0;
+
+    std::optional<Slice> axis0_slice;
+};
 
 BasicIndexingNode::BasicIndexingNode(ArrayNode* array_ptr, std::vector<slice_or_int> indices) :
     BasicIndexingNode(array_ptr, IndexParser_(array_ptr, std::move(indices))) {}
@@ -1608,22 +1628,6 @@ void BasicIndexingNode::initialize_state(State& state) const {
 
 ssize_t BasicIndexingNode::dynamic_start(ssize_t slice_start) const {
     return slice_start * this->array_ptr_->strides()[0] / static_cast<ssize_t>(sizeof(double));
-}
-
-ssize_t get_smallest_size_during_diff(ssize_t initial_size, const std::span<const Update> diff) {
-    ssize_t minimum_size = initial_size;
-    ssize_t size = initial_size;
-    for (const auto& update : diff) {
-        if (update.placed()) {
-            size++;
-        } else if (update.removed()) {
-            size--;
-            assert(size >= 0);
-            minimum_size = std::min(size, minimum_size);
-        }
-    }
-
-    return minimum_size;
 }
 
 bool BasicIndexingNode::integral() const { return this->values_info_.integral; }
