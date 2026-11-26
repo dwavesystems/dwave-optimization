@@ -18,6 +18,7 @@ from libc.stdint cimport uintptr_t
 from libcpp cimport bool
 from libcpp.memory cimport shared_ptr
 from libcpp.typeinfo cimport type_info
+from libcpp.vector cimport vector
 
 from dwave.optimization.libcpp.graph cimport ArrayNode, Graph, Node
 from dwave.optimization.libcpp.state cimport State
@@ -28,6 +29,10 @@ __all__ = []
 cdef void _register(object cls, const type_info& typeinfo)
 
 cdef object symbol_from_ptr(_Graph model, Node* ptr)
+
+
+cdef class _Empty:
+    pass
 
 
 cdef class _Graph:
@@ -54,7 +59,7 @@ cdef class _Graph:
     cdef readonly Py_ssize_t _lock_count
 
 
-cdef class Symbol:
+cdef class Symbol(_Empty):
     # Inheriting nodes must call this method from their __init__()
     cdef void initialize_node(self, _Graph model, Node* node_ptr) noexcept
 
@@ -93,3 +98,23 @@ cdef class ArraySymbol(Symbol):
     # a pointer to Node* and we can theoretically dynamic cast each time.
     # But again, it's cheap and it simplifies things.
     cdef ArrayNode* array_ptr
+
+
+cdef class States(_Empty):
+    cdef void attach_states(self, vector[State]) noexcept
+    cdef vector[State] detach_states(self)
+    cpdef Py_ssize_t size(self) except -1
+
+    # In order to not create a circular reference, we only hold a weakref
+    # to the model from the states. This introduces some overhead, but it
+    # makes sure that the Model is promptly garbage collected
+    cdef readonly object _model_ref
+
+    # The state(s) of the model kept as a ragged vector-of-vectors (each
+    # State is a vector).
+    # Accessors should check the length of the state when accessing!
+    cdef vector[State] _states
+
+    # Object that contains or will contain the information needed to construct states
+    cdef public object _future
+    cdef public object _result_hook

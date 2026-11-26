@@ -32,6 +32,13 @@ class TestArraySymbol(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ArraySymbols cannot be constructed directly"):
             ArraySymbol()
 
+        for name in dir(ArraySymbol):
+            attr = getattr(ArraySymbol, name, None)
+            self.assertFalse(
+                getattr(attr, "__isabstractmethod__", False),
+                f"ArraySymbol.{name} is marked abstract and not overridden",
+            )
+
     def test_bool(self):
         from dwave.optimization.model import ArraySymbol
 
@@ -680,6 +687,13 @@ class TestSymbol(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "Symbols cannot be constructed directly"):
             Symbol()
+
+        for name in dir(Symbol):
+            attr = getattr(Symbol, name, None)
+            self.assertFalse(
+                getattr(attr, "__isabstractmethod__", False),
+                f"Symbol.{name} is marked abstract and not overridden",
+            )
 
     def test_id(self):
         model = Model()

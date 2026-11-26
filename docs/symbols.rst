@@ -25,8 +25,9 @@ All symbols inherit from the :class:`Symbol` class and therefore inherit its
 methods.
 
 .. autoclass:: Symbol
+    :inherited-members:
     :members:
-    :member-order: bysource
+    :member-order: alphabetical
 
 ArraySymbol
 ===========
@@ -35,9 +36,10 @@ Most mathematical symbols inherit from the :class:`ArraySymbol` class and
 therefore inherit its methods.
 
 .. autoclass:: ArraySymbol
+    :inherited-members: Symbol
     :members:
+    :member-order: alphabetical
     :show-inheritance:
-    :member-order: bysource
 
 .. _symbols_model_symbols:
 

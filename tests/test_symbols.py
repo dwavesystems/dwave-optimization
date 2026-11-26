@@ -1803,6 +1803,12 @@ class TestDisjointListsVariable(utils.SymbolTests):
 
 
 class TestDivide(utils.BinaryOpTests):
+    def assertDictSuperset(self, super, sub):
+        # Allow ourselves to add more information to `ArraySymbol.info`
+        for key, value in sub.items():
+            self.assertIn(key, super)
+            self.assertEqual(super[key], value)
+
     def generate_symbols(self):
         model = Model()
 
@@ -1863,25 +1869,25 @@ class TestDivide(utils.BinaryOpTests):
         _, _, _, _, a, b, q, r, s = model.iter_symbols()
 
         self.assertIsInstance(a, dwave.optimization.symbols.Divide)
-        self.assertEqual(
+        self.assertDictSuperset(
             dataclasses.asdict(a.info()),
             dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
         )
 
         self.assertIsInstance(b, dwave.optimization.symbols.Divide)
-        self.assertEqual(
+        self.assertDictSuperset(
             dataclasses.asdict(b.info()),
             dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
         )
 
         self.assertIsInstance(q, dwave.optimization.symbols.Divide)
-        self.assertEqual(
+        self.assertDictSuperset(
             dataclasses.asdict(q.info()),
             dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
         )
 
         self.assertIsInstance(r, dwave.optimization.symbols.Divide)
-        self.assertEqual(
+        self.assertDictSuperset(
             dataclasses.asdict(r.info()),
             dict(min=-100000000000.0, max=100000000000.0, integral=False, size=1),
         )

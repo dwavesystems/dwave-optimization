@@ -22,6 +22,7 @@ import unittest
 import numpy as np
 
 import dwave.optimization
+import dwave.optimization.states
 from dwave.optimization import Model
 
 

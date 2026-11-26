@@ -1,0 +1,6 @@
+---
+features:
+  - Add ``c_contiguous`` field to the data class returned by ``ArraySymbol.info()``.
+  - Support exponentiation of ``ArraySymbol`` by non-negative integers.
+upgrade:
+  - Make ``States.to_file()`` a context manager.
