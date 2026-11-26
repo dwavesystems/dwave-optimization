@@ -127,11 +127,15 @@ __all__ = [
     "where",
 ]
 
+# Some types we can re-use until we get 3.12+ generic functions.
+P = typing.ParamSpec("P")
+R = typing.TypeVar("R")
+
 
 def _binaryop(
     binaryop: type,
     naryop: type | None = None,
-) -> collections.abc.Callable[..., collections.abc.Callable[..., ArraySymbol]]:
+) -> typing.Callable[[typing.Callable[P, R]], typing.Callable[P, R]]:
     def decorator(
         f: collections.abc.Callable[..., ArraySymbol],
     ) -> collections.abc.Callable[..., ArraySymbol]:
@@ -222,7 +226,7 @@ See Also:
 
 
 @_binaryop(binaryop=Add, naryop=NaryAdd)
-def add(x1: ArraySymbolLike, x2: ArraySymbolLike, *xi: ArraySymbolLike) -> ArraySymbol:
+def add(x1: ArraySymbolLike, x2: ArraySymbolLike, *xi: ArraySymbolLike) -> Add | NaryAdd:
     r"""Sum element-wise two or more symbols and arrays.
 
     Equivalently, you can use the ``+`` operator (e.g., :code:`i + j`).
@@ -1963,7 +1967,7 @@ def multiply(
     x1: ArraySymbolLike,
     x2: ArraySymbolLike,
     *xi: ArraySymbolLike,
-) -> ArraySymbol:
+) -> Multiply | NaryMultiply:
     r"""Multiply element-wise two or more symbols and arrays.
 
     Equivalently, you can use the ``*`` operator (e.g., :code:`i * j`).

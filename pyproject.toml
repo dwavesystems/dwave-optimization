@@ -214,6 +214,7 @@ extend-select = [
 ]
 ignore = [
     # In some cases it's more readable to use generator syntax
+    "C401",  # unnecessary-generator-set
     "C402",  # unnecessary-generator-dict
 
     # We are OK with dict/tuple/list/etc literals e.g., dict() rather than {}

@@ -31,6 +31,10 @@ cdef void _register(object cls, const type_info& typeinfo)
 cdef object symbol_from_ptr(_Graph model, Node* ptr)
 
 
+cdef class _Empty:
+    pass
+
+
 cdef class _Graph:
     @staticmethod
     cdef _Graph from_shared_ptr(object cls, shared_ptr[Graph])
@@ -55,7 +59,7 @@ cdef class _Graph:
     cdef readonly Py_ssize_t _lock_count
 
 
-cdef class Symbol:
+cdef class Symbol(_Empty):
     # Inheriting nodes must call this method from their __init__()
     cdef void initialize_node(self, _Graph model, Node* node_ptr) noexcept
 
