@@ -100,10 +100,9 @@ cdef class ArraySymbol(Symbol):
     cdef ArrayNode* array_ptr
 
 
-cdef class States:
+cdef class States(_Empty):
     cdef void attach_states(self, vector[State]) noexcept
     cdef vector[State] detach_states(self)
-    cpdef resolve(self)
     cpdef Py_ssize_t size(self) except -1
 
     # In order to not create a circular reference, we only hold a weakref
@@ -117,5 +116,5 @@ cdef class States:
     cdef vector[State] _states
 
     # Object that contains or will contain the information needed to construct states
-    cdef readonly object _future
-    cdef readonly object _result_hook
+    cdef public object _future
+    cdef public object _result_hook

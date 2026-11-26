@@ -37,6 +37,7 @@ from dwave.optimization.libcpp cimport dynamic_cast_ptr
 from dwave.optimization.libcpp.array cimport broadcast_shapes
 from dwave.optimization._mixins import (
     _ArraySymbolMixin,
+    _StatesMixin,
     _SymbolMixin,
     ArrayInfo,
     ArraySizeInfo,
@@ -80,6 +81,10 @@ cdef object symbol_from_ptr(_Graph model, Node* node_ptr):
     cap = PyCapsule_New(node_ptr, 'Node*', NULL)
 
     return cls._from_ptr(model, cap)
+
+
+cdef class _Empty:
+    pass
 
 
 cdef class _Graph:
@@ -1516,7 +1521,7 @@ def _broadcast_shapes(vector[Py_ssize_t] lhs, vector[Py_ssize_t] rhs):
     return tuple(broadcast_shapes(span[Py_ssize_t](lhs), span[Py_ssize_t](rhs)))
 
 
-cdef class States:
+cdef class States(_Empty, _StatesMixin):
     r"""States of a model.
 
     :ref:`States <opt_model_construction_nl_states>` represent assignments of
@@ -1638,133 +1643,6 @@ cdef class States:
         self._states.swap(states)
         return move(states)
 
-    @_file_object_arg(arg_index=1, arg_name ="file", mode="rb")  # convert path-like into file-like
-    def from_file(self, file, *,
-                  replace = True,       # undoc until supported
-                  check_header = True,  # undocumented until fixed, see
-                                        # https://github.com/dwavesystems/dwave-optimization/issues/22
-                  ):
-        """Construct states from the given file.
-
-        Args:
-            file:
-                File pointer to a readable, seekable file-like object encoding
-                the states. Strings are interpreted as a file name.
-            replace (bool):
-                Currently only the default is supported.
-            check_header (bool):
-                Currently unsupported.
-
-        Returns:
-            States as assigned in the file.
-
-        Examples:
-
-            This example creates a simple model, sets two states, and then saves
-            those states to a
-            `buffered I/O <https://docs.python.org/3/library/io.html#binary-i-o>`_
-            object. It clears and then restores the states from file.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(5, lower_bound=-10, upper_bound=10)
-            >>> j = i**2 + 1
-            >>>
-            >>> with model.lock():
-            ...     model.states.resize(2)
-            ...     i.set_state(0, [-10, -5, 0, 5, 10])
-            ...     i.set_state(1, [-8, -3, 1, 4, 9])
-            ...     my_file = model.states.to_file()        # Save the states
-            ...
-            >>> model.states.clear()                        # Clear the states
-            >>> model.states.size()
-            0
-            >>> model.states.from_file(my_file)             # Restore the states
-            >>> with model.lock():
-            ...     print(j.state(0))
-            ...     print(j.state(1))
-            [101.  26.   1.  26. 101.]
-            [65. 10.  2. 17. 82.]
-
-        See Also:
-            :meth:`.into_file`, :meth:`.to_file`
-
-            :meth:`~dwave.optimization.model.Model.from_file` Restores a model
-            from a file
-        """
-        if not replace:
-            raise NotImplementedError("appending states is not (yet) implemented")
-
-        # Validate the header, and get the serialization version.
-        version, _ = self._model()._from_file_header(file)
-
-        with zipfile.ZipFile(file, mode="r") as zf:
-            self._from_zipfile(zf, version=version)
-
-    def _from_zipfile(self, zf, *, version):
-        """Given a zipfile containing a serialized model, attempt to extract the
-        state(s) associated with any node types that might save them.
-
-        ``zf`` must be a :class:`zipfile.ZipFile`.
-        """
-        self.resolve()
-
-        model_info = json.loads(zf.read("info.json"))
-
-        # Read any states that have been encoded
-        num_states = model_info.get("num_states")
-        if not isinstance(num_states, int) or num_states < 0:
-            raise ValueError("expected num_states to be a positive integer")
-        elif not num_states:
-            return  # no states to load, so just return early
-
-        # Get a refcounted model for the duration of this function.
-        cdef _Graph model = self._model()
-
-        # We'll be overwriting the states, so clear everything that's in there
-        model.states.resize(0)
-        model.states.resize(num_states)
-
-        for symbol in model.iter_decisions():
-            symbol._states_from_zipfile(
-                zf,
-                num_states=num_states,
-                version=version,
-            )
-
-        for symbol in model.iter_inputs():
-            symbol._states_from_zipfile(
-                zf,
-                num_states=num_states,
-                version=version,
-            )
-
-    def from_future(self, future, result_hook):
-        """Populate the states from the result of a future computation.
-
-        A :class:`~dwave.cloud.computation.Future` object is returned by the
-        :term:`solver` to which you submit your problem model. This enables
-        asynchronous problem submission.
-
-        This method is intended for use by developers of the Ocean SDK.
-
-        Args:
-            future: A :ref:`future <asyncio-futures>` object such as a
-                :class:`~dwave.cloud.computation.Future` object.
-
-            result_hook: Method executed to retrieve the Future.
-
-        See Also:
-            :meth:`.from_file`, :meth:`.resolve`
-
-            :meth:`~dwave.optimization.model.Model.from_file` Restores a model
-            from a file
-        """
-        self.resize(0)  # always clears self first
-
-        self._future = future
-        self._result_hook = result_hook
-
     def initialize(self):
         """Initialize any uninitialized states.
 
@@ -1782,179 +1660,6 @@ cdef class States:
         for i in range(self._states.size()):
             self._states[i].resize(model.num_nodes())
             model._graph.initialize_state(self._states[i])
-
-    @_file_object_arg(arg_index=1, arg_name ="file", mode="wb")  # convert path-like into file-like
-    def into_file(self, file, *,
-                  version = None,
-                  ):
-        """Serialize the states into an existing  file.
-
-        Args:
-            file:
-                File pointer to an existing writeable, seekable file-like
-                object encoding a model. Strings are interpreted as a file
-                name.
-            version:
-                A 2-tuple indicating which serialization version to use; for
-                example, ``(1, 0)`` represents version 1.0. By default, uses the
-                latest version.
-
-        Examples:
-            This example creates a simple model, sets two states, and then saves
-            those states to a
-            `buffered I/O <https://docs.python.org/3/library/io.html#binary-i-o>`_
-            object. It then changes a state and saves into the previously
-            created file.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(5, lower_bound=-10, upper_bound=10)
-            >>> j = i**2 + 1
-            >>>
-            >>> with model.lock():
-            ...     model.states.resize(2)
-            ...     i.set_state(0, [-10, -5, 0, 5, 10])
-            ...     i.set_state(1, [-8, -3, 1, 4, 9])
-            ...     my_file = model.states.to_file()        # Save the states
-            >>> my_file.seek(0)
-            0
-            >>> with model.lock():                          # Change a state
-            ...     model.states.resize(2)
-            ...     i.set_state(0, [-10, -5, 0, 5, 10])
-            ...     i.set_state(1, [-10, -4, 2, 6, 10])
-            ...     model.states.into_file(my_file)         # Save into file
-
-        See Also:
-            :meth:`.from_file`, :meth:`.to_file`
-
-            :meth:`~dwave.optimization.model.Model.into_file` Saves a model
-            into an existing file
-
-        Format Specification (Version 1.0):
-
-            The first section of the file is the header, as described in
-            :meth:`Model.into_file()`.
-
-            Following the header, the remaining data is encoded as a zip file.
-            All arrays are saved using the NumPy serialization format, see
-            :func:`numpy.save()`.
-
-            The information in the header is also saved in a json-formatted
-            file ``info.json``.
-
-            The serialization version is saved in a file ``version.txt``.
-
-            The states have the following structure.
-
-            Symbols with a state that's uniquely determined by their predecessor's
-            states do not have their states serialized.
-
-            .. _dwopt-nondeterministic-state-ref:
-
-            .. note::
-
-                Beginning with ``dwave-optimization`` version 0.8.0, all
-                non-decisions are treated as having a deterministic state.
-                This means any intermediate states in the serialized file are
-                ignored as an implementation detail.
-
-            For symbols with a fixed shape and which have all states initialized,
-            the states are stored as a ``(num_states, *symbol.shape())`` array.
-
-            .. code-block::
-
-                nodes/
-                    <symbol id>/
-                        states.npy
-                    ...
-
-            For symbols without a fixed shape, or for which not all states are
-            initialized, the states are each saved in a separate array.
-
-            .. code-block::
-
-                nodes/
-                    <node id>/
-                        states/
-                            <state index>/
-                                array.npy
-                            ...
-                    ...
-
-            This format allows the states and the model to be saved in the same
-            file, sharing the header.
-
-        Format Specification (Version 0.1):
-
-            Saved as a :class:`Model` encoding only the decision symbols.
-
-        .. versionchanged:: 0.5.2
-            Added the ``version`` keyword-only argument.
-        .. versionchanged:: 0.6.0
-            Added support for serialization format version 1.0.
-        .. versionchanged:: 0.8.0
-            Non-decisions no longer serialize their states.
-            See :ref:`Note <dwopt-nondeterministic-state-ref>` above.
-        """
-        self.resolve()
-
-        if isinstance(version, tuple) and version < (1, 0):
-            # In serialization version 0.1, we saved a model with only
-            # decisions encoding the states.
-            return self._model().into_file(
-                file,
-                only_decision=True,
-                max_num_states=self.size(),
-                version=version,
-                )
-
-        model = self._model()  # get a ref-counted model
-
-        version, model_info = model._into_file_header(
-            file,
-            version=version,
-            max_num_states=self.size(),
-            only_decision=False,
-        )
-
-        num_states = model_info["num_states"]
-
-        encoder = json.JSONEncoder(separators=(',', ':'))
-
-        with zipfile.ZipFile(file, mode="w") as zf:
-            zf.writestr("info.json", encoder.encode(model_info))
-            zf.writestr("version.txt", ".".join(map(str, version)))
-
-            self._into_zipfile(zf, num_states=num_states, version=version)
-
-    def _into_zipfile(self, zf, *, num_states, version):
-        """Given a zipfile containing a serialized model, attempt to save the
-        state(s) associated with any node types that might save them.
-
-        ``zf`` must be a :class:`zipfile.ZipFile`.
-        """
-        if num_states <= 0:
-            # nothing so save, so shortcut
-            return
-
-        model = self._model()  # get a ref-counted model
-
-        for symbol in model.iter_decisions():
-            symbol._states_into_zipfile(
-                zf,
-                num_states=num_states,
-                version=version,
-            )
-
-        # If the model is not locked then the Inputs definitely won't have
-        # states.
-        if model.is_locked():
-            for symbol in model.iter_inputs():
-                symbol._states_into_zipfile(
-                    zf,
-                    num_states=num_states,
-                    version=version,
-                )
 
     def _model(self):
         """Get a ref-counted Model object."""
@@ -2005,28 +1710,6 @@ cdef class States:
 
         self._states.resize(n)
 
-    cpdef resolve(self):
-        """Block until states are retrieved from any pending future computations.
-
-        A :class:`~dwave.cloud.computation.Future` object is returned by the
-        :term:`solver` to which you submit your problem model. This enables
-        asynchronous problem submission.
-
-        This method is intended for use by developers of the Ocean SDK.
-
-        See Also:
-            :meth:`.from_future`
-        """
-        if self._future is not None:
-            # The existance of _future means that anything we do to the
-            # state will block. So we remove it before calling the hook.
-            future = self._future
-            self._future = None
-            result_hook = self._result_hook
-            self._result_hook = None
-
-            result_hook(self._model(), future)
-
     cpdef Py_ssize_t size(self) except -1:
         """Number of model states.
 
@@ -2045,55 +1728,3 @@ cdef class States:
         """
         self.resolve()
         return self._states.size()
-
-    def to_file(self, **kwargs):
-        """Serialize the states to a new file-like object.
-
-        Examples:
-
-            This example creates a simple model, sets two states, and then saves
-            those states to a
-            `buffered I/O <https://docs.python.org/3/library/io.html#binary-i-o>`_
-            object.
-
-            >>> from dwave.optimization import Model
-            >>> model = Model()
-            >>> i = model.integer(5, lower_bound=-10, upper_bound=10)
-            >>> j = i**2 + 1
-            >>>
-            >>> with model.lock():
-            ...     model.states.resize(2)
-            ...     i.set_state(0, [-10, -5, 0, 5, 10])
-            ...     i.set_state(1, [-8, -3, 1, 4, 9])
-            ...     my_file = model.states.to_file()        # Save the states
-
-            The temporary file created above can be saved to disk, for example,
-            using Python's :mod:`shutil` module.
-
-            .. testcode::
-                :skipif: True
-
-                import shutil
-
-                my_file.seek(0)  # Move cursor to start
-                with open("my_file.bin", "wb") as f:
-                    shutil.copyfileobj(my_file, f)
-
-        See Also:
-            :meth:`.from_file`, :meth:`.into_file`
-
-            :meth:`~dwave.optimization.model.Model.to_file` Saves a model
-            into a file
-        """
-        file = tempfile.TemporaryFile(mode="w+b")
-
-        # into_file can raise an exception, in which case we close off the
-        # tempfile before returning
-        try:
-            self.into_file(file, **kwargs)
-        except Exception:
-            file.close()
-            raise
-
-        file.seek(0)
-        return file
