@@ -148,7 +148,7 @@ cdef class States:
         self._states.swap(states)
         return move(states)
 
-    @_file_object_arg("rb")  # translate str/bytes file inputs into file objects
+    @_file_object_arg(arg_index=1, arg_name="file", mode="rb")  # translate str/bytes file inputs into file objects  
     def from_file(self, file, *,
                   replace = True,       # undoc until supported
                   check_header = True,  # undocumented until fixed, see
@@ -293,7 +293,7 @@ cdef class States:
             self._states[i].resize(model.num_nodes())
             model._graph.initialize_state(self._states[i])
 
-    @_file_object_arg("wb")  # translate str/bytes file inputs into file objects
+    @_file_object_arg(arg_index=1, arg_name="file", mode="wb")  # translate str/bytes file inputs into file objects
     def into_file(self, file, *,
                   version = None,
                   ):

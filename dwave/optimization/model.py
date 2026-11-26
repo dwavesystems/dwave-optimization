@@ -684,10 +684,10 @@ class Model(_Graph):
         return all(sym.state(index) for sym in self.iter_constraints())
 
     @classmethod
-    @_file_object_arg("rb")  # translate str/bytes file inputs into file objects
+    @_file_object_arg(arg_index=1, arg_name="file", mode="rb")  # convert path-like into file-like
     def from_file(
         cls,
-        file: bytes | os.PathLike[str] | str | typing.BinaryIO,
+        file: str | os.PathLike[str] | typing.BinaryIO,
         *,
         check_header: bool = True,
         substitute: collections.abc.Mapping[str, collections.abc.Callable[..., type]] | None = None,
@@ -1127,11 +1127,11 @@ class Model(_Graph):
             axes_sums_subject_to=axes_sums_subject_to,
         )
 
-    @_file_object_arg("wb")  # translate str/bytes file inputs into file objects
+    @_file_object_arg(arg_index=1, arg_name="file", mode="wb")  # convert path-like into file-like
     @_lock
     def into_file(
         self,
-        file: bytes | os.PathLike[str] | str | typing.BinaryIO,
+        file: str | os.PathLike[str] | typing.BinaryIO,
         *,
         max_num_states: int = 0,
         only_decision: bool = False,
