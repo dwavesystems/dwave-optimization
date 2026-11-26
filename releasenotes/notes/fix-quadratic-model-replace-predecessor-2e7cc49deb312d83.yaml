@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fix wrong values or a crash after ``Model.remove_redundant_symbols()`` merges the input of a quadratic model
+    with an identical symbol.

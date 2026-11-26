@@ -100,6 +100,9 @@ class QuadraticModelNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>> {
     void propagate(State& state) const override;
     QuadraticModel* get_quadratic_model();
 
+ protected:
+    void replace_predecessor_(ssize_t index, Node* node_ptr) override;
+
  private:
     // Redundant, because we could dynamic_cast each time from predecessors(),
     // but this is more performant

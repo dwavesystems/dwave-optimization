@@ -17,6 +17,7 @@
 
 #include "dwave-optimization/graph.hpp"
 #include "dwave-optimization/nodes/collections.hpp"
+#include "dwave-optimization/nodes/constants.hpp"
 #include "dwave-optimization/nodes/numbers.hpp"
 #include "dwave-optimization/nodes/quadratic_model.hpp"
 
@@ -254,6 +255,21 @@ TEST_CASE("QuadraticModelNode") {
                     CHECK_THAT(qnode_ptr->view(state), RangeEquals({430}));
                 }
             }
+        }
+    }
+
+    GIVEN("A QuadraticModelNode whose predecessor is replaced") {
+        auto* zeros_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{0, 0, 0, 0, 0});
+        auto* ones_ptr = graph.emplace_node<ConstantNode>(std::vector<double>{1, 1, 1, 1, 1});
+        auto* qnode_ptr = graph.emplace_node<QuadraticModelNode>(zeros_ptr, std::move(qmodel));
+
+        ones_ptr->take_successors(*zeros_ptr);
+
+        THEN("It reads from the new predecessor") {
+            CHECK_THAT(qnode_ptr->predecessors(), RangeEquals({ones_ptr}));
+
+            auto state = graph.initialize_state();
+            CHECK_THAT(qnode_ptr->view(state), RangeEquals({70}));
         }
     }
 }

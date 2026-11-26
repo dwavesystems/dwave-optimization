@@ -369,4 +369,15 @@ QuadraticModel* QuadraticModelNode::get_quadratic_model() {
     return qm_ptr;
 }
 
+void QuadraticModelNode::replace_predecessor_(ssize_t index, Node* node_ptr) {
+    Node::replace_predecessor_(index, node_ptr);
+
+    ArrayNode* array_ptr = dynamic_cast<ArrayNode*>(node_ptr);
+    assert(array_ptr != nullptr);
+    assert(std::ranges::equal(array_ptr_->shape(), array_ptr->shape()));
+
+    assert(index == 0);
+    array_ptr_ = array_ptr;
+}
+
 }  // namespace dwave::optimization
