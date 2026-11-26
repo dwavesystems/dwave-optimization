@@ -1095,14 +1095,6 @@ cdef class Symbol(_Empty, _SymbolMixin):
         index = self.node_ptr.topological_index()
         return index if index >= 0 else None
 
-def _as_array_symbol(model, symbol):
-    if isinstance(symbol, ArraySymbol):
-        return symbol
-    try:
-        return model.constant(symbol)
-    except TypeError as err:
-        raise TypeError(f"{symbol!r} cannot be interpreted as an array symbol") from err
-
 
 # Ideally this wouldn't subclass Symbol, but Cython only allows a single
 # extension base class, so to support that we assume all ArraySymbols are

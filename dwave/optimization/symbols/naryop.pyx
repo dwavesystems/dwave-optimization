@@ -18,7 +18,6 @@ from cython.operator cimport typeid
 from libcpp.vector cimport vector
 
 from dwave.optimization._model cimport _Graph, _register, ArraySymbol, Symbol
-from dwave.optimization._model import _as_array_symbol
 from dwave.optimization.libcpp cimport dynamic_cast_ptr
 from dwave.optimization.libcpp.graph cimport ArrayNode
 from dwave.optimization.libcpp.nodes.naryop cimport (
@@ -27,6 +26,15 @@ from dwave.optimization.libcpp.nodes.naryop cimport (
     NaryMinimumNode,
     NaryMultiplyNode,
 )
+
+
+def _as_array_symbol(model, symbol):
+    if isinstance(symbol, ArraySymbol):
+        return symbol
+    try:
+        return model.constant(symbol)
+    except TypeError as err:
+        raise TypeError(f"{symbol!r} cannot be interpreted as an array symbol") from err
 
 
 cdef class NaryAdd(ArraySymbol):
