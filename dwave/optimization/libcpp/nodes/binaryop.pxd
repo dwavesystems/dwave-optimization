@@ -12,7 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.libcpp.graph cimport ArrayNode
+from libcpp.memory cimport shared_ptr
+
+from dwave.optimization.libcpp.graph cimport ArrayNode, Graph
 
 
 cdef extern from "dwave-optimization/nodes/binaryop.hpp" namespace "dwave::optimization" nogil:
@@ -21,6 +23,9 @@ cdef extern from "dwave-optimization/nodes/binaryop.hpp" namespace "dwave::optim
 
     cdef cppclass AndNode(ArrayNode):
         pass
+
+    cdef cppclass BinaryExpressionNode(ArrayNode):
+        shared_ptr[Graph] expression_ptr()
 
     cdef cppclass DivideNode(ArrayNode):
         pass

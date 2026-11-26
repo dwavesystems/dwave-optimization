@@ -19,6 +19,7 @@ from dwave.optimization.symbols.accumulate_zip import AccumulateZip
 from dwave.optimization.symbols.binaryop import (
     Add,
     And,
+    BinaryExpressionOp,
     Divide,
     Equal,
     LessEqual,
@@ -126,6 +127,7 @@ __all__ = [
     "BSpline",
     "BasicIndexing",
     "BinCount",
+    "BinaryExpressionOp",
     "BinaryVariable",
     "BroadcastTo",
     "Concatenate",

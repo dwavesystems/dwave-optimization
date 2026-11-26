@@ -714,6 +714,81 @@ class TestBasicIndexing(utils.SymbolTests):
         self.assertEqual(model.set(10)[::2].state_size(), 5 * 8)
 
 
+class TestBinaryExpression(utils.SymbolTests):
+    rng = np.random.default_rng(1)
+
+    def generate_symbols(self):
+        model = Model()
+
+        @dwave.optimization.expression
+        def expr(x, y):
+            return x + y
+
+        a = model.constant(1.3)
+        b = model.constant(1.4)
+
+        bin_op = dwave.optimization.symbols.BinaryExpressionOp(expr, a, b)
+
+        model.lock()
+
+        yield bin_op
+
+    def test_malformed_expression(self):
+        model = Model()
+
+        a = model.constant(1.3)
+        b = model.constant(1.4)
+
+        # Too many inputs
+        @dwave.optimization.expression
+        def expr(x, y, z):
+            return x + y + z
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.BinaryExpressionOp(expr, a, b)
+
+    def test_mismatched_expression(self):
+        model = Model()
+
+        a = model.constant(1.3)
+        b = model.constant(1.4)
+
+        # Disjoint domain
+        @dwave.optimization.expression(x=dict(lower_bound=-2, upper_bound=-1))
+        def expr1(x, y):
+            return x + y
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.BinaryExpressionOp(expr1, a, b)
+
+        # Integral domain
+        @dwave.optimization.expression(x=dict(integral=True))
+        def expr2(x, y):
+            return x + y
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.BinaryExpressionOp(expr2, a, b)
+
+    def test_shaped(self):
+        model = Model()
+
+        a_data = np.array([[1, 2, 3], [4, 5, 6]])
+        a = model.constant(a_data)
+        b = model.constant(a_data + 1)
+
+        @dwave.optimization.expression
+        def expr(x, y):
+            return x + y - 1
+
+        op_a = dwave.optimization.symbols.BinaryExpressionOp(expr, a, b)
+
+        model.lock()
+
+        model.states.resize(1)
+
+        np.testing.assert_array_equal(2 * a_data, op_a.state())
+
+
 class TestBinaryVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()

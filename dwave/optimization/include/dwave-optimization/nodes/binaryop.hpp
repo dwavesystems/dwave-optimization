@@ -150,7 +150,17 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
         }
 
         return std::visit(
-            [&op](const auto& lhs, const auto& rhs) -> interval<double> { return op(lhs, rhs); },
+            [&op]<DType U, DType V>(
+                const interval<U>& lhs, const interval<V>& rhs
+            ) -> interval<double> {
+                if (not(lhs <= op.template domain<U>()[0] and rhs <= op.template domain<V>()[1])) {
+                    throw std::invalid_argument(
+                        "Predecessor has output range that is not contained with the domain of one "
+                        "of the operator's operands"
+                    );
+                }
+                return op(lhs, rhs);
+            },
             lhs_enclosure,
             rhs_enclosure
         );
