@@ -35,10 +35,15 @@ class QuadraticModel {
         index_type num_smaller_neighbors;
         std::vector<index_type> neighbors;
         std::vector<bias_type> biases;
+
+        bool operator==(const neighborhood&) const = default;
     };
 
  public:
     QuadraticModel(index_type num_variables);
+
+    /// Two models are equal if they store exactly the same biases.
+    bool operator==(const QuadraticModel&) const = default;
 
     ssize_t num_variables() const noexcept;
     ssize_t num_interactions() const noexcept;
@@ -78,12 +83,16 @@ class QuadraticModel {
     friend class QuadraticModelNode;
 };
 
-class QuadraticModelNode : public ScalarOutputMixin<EqualityMixin<ArrayNode>> {
+class QuadraticModelNode : public ScalarOutputMixin<EqualityMixin<ArrayNode, QuadraticModelNode>> {
  public:
     QuadraticModelNode(ArrayNode* state_node_ptr, QuadraticModel&& quadratic_model);
 
     double const* buff(const State& state) const override;
     std::span<const Update> diff(const State& state) const override;
+
+    /// @copydoc Node::equal_to()
+    bool equal_to(const QuadraticModelNode& rhs) const override;
+
     void commit(State& state) const override;
     void revert(State& state) const override;
     void initialize_state(State& state) const override;

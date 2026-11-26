@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Fix ``Model.remove_redundant_symbols()`` merging quadratic models that have different biases.

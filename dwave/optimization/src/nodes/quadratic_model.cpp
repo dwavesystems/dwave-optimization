@@ -299,6 +299,10 @@ std::span<const Update> QuadraticModelNode::diff(const State& state) const {
     return data_ptr_<QuadraticModelNodeData>(state)->diff();
 }
 
+bool QuadraticModelNode::equal_to(const QuadraticModelNode& rhs) const {
+    return array_ptr_ == rhs.array_ptr_ and quadratic_model_ == rhs.quadratic_model_;
+}
+
 void QuadraticModelNode::commit(State& state) const {
     data_ptr_<QuadraticModelNodeData>(state)->commit();
 }
