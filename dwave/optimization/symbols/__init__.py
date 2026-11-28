@@ -110,6 +110,7 @@ from dwave.optimization.symbols.unaryop import (
     Square,
     SquareRoot,
     Tanh,
+    UnaryExpressionOp,
 )
 
 __all__ = [
@@ -188,6 +189,7 @@ __all__ = [
     "Sum",
     "Tanh",
     "Transpose",
+    "UnaryExpressionOp",
     "Where",
     "Xor",
 ]

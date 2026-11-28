@@ -12,7 +12,24 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.symbols._unaryop import _UnaryOpNodeType, _UnaryOpSymbol
+from dwave.optimization.symbols._unaryop import UnaryExpressionOp, _UnaryOpNodeType, _UnaryOpSymbol
+
+__all__ = [
+    "Absolute",
+    "Cos",
+    "Exp",
+    "Expit",
+    "Log",
+    "Logical",
+    "Negative",
+    "Not",
+    "Rint",
+    "Sin",
+    "Square",
+    "SquareRoot",
+    "Tanh",
+    "UnaryExpressionOp",
+]
 
 
 class Absolute(_UnaryOpSymbol, node_type=_UnaryOpNodeType.Absolute):
