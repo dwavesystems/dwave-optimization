@@ -19,6 +19,7 @@ from dwave.optimization.symbols.accumulate_zip import AccumulateZip
 from dwave.optimization.symbols.binaryop import (
     Add,
     And,
+    BinaryExpressionOp,
     Divide,
     Equal,
     LessEqual,
@@ -110,6 +111,7 @@ from dwave.optimization.symbols.unaryop import (
     Square,
     SquareRoot,
     Tanh,
+    UnaryExpressionOp,
 )
 
 __all__ = [
@@ -125,6 +127,7 @@ __all__ = [
     "BSpline",
     "BasicIndexing",
     "BinCount",
+    "BinaryExpressionOp",
     "BinaryVariable",
     "BroadcastTo",
     "Concatenate",
@@ -188,6 +191,7 @@ __all__ = [
     "Sum",
     "Tanh",
     "Transpose",
+    "UnaryExpressionOp",
     "Where",
     "Xor",
 ]

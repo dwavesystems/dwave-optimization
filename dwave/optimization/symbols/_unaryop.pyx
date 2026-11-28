@@ -16,7 +16,8 @@
 
 from cython.operator cimport typeid
 
-from dwave.optimization._model cimport _Graph, _register, ArraySymbol 
+from dwave.optimization._model cimport _Graph, _register, ArraySymbol
+from dwave.optimization.libcpp cimport dynamic_cast_ptr
 from dwave.optimization.libcpp.graph cimport ArrayNode
 from dwave.optimization.libcpp.nodes.unaryop cimport (
     AbsoluteNode,
@@ -32,7 +33,10 @@ from dwave.optimization.libcpp.nodes.unaryop cimport (
     SquareNode,
     SqrtNode,
     TanhNode,
+    UnaryExpressionNode,
 )
+from dwave.optimization.expression import Expression
+from dwave.optimization.model import Model
 
 # We need to be able to expose the available node types to the Python level,
 # so unfortunately we need this enum and giant if-branches
@@ -121,3 +125,119 @@ class _UnaryOpSymbol(ArraySymbol):
             raise RuntimeError(f"unexpected _UnaryOpNodeType: {<object>node_type!r}")
 
         (<ArraySymbol>self).initialize_arraynode(model, ptr)
+
+
+cdef class UnaryExpressionOp(ArraySymbol):
+    """Performs arbitrary operation element-wise over operand symbol.
+
+    .. note:: This symbol is used by direct instantiation, as shown in the
+        example below.
+
+    Performs an element-wise operation on a single operand, as specified by a
+    :class:`~dwave.optimization.expression.Expression`.
+
+    Args:
+        expression (:class:`~dwave.optimization.expression.Expression`):
+            An unary (single argument) operation perform on the input array,
+            specified as an expression.
+        operand (:class:`~dwave.optimization.model.Symbol`):
+            Operand to the element-wise operation.
+
+    Examples:
+        This example directly adds an :class:`.UnaryExpressionOp` symbol to a model
+        that multiplies the operand by two and adds one.
+
+        >>> from dwave.optimization import expression, Model
+        >>> from dwave.optimization.symbols import UnaryExpressionOp
+        >>>
+        >>> model = Model()
+
+        >>> @expression
+        ... def expr(x):
+        ...     return 2 * x + 1
+        >>>
+        >>> a = model.constant([1, 2, 3])
+        >>> op_a = UnaryExpressionOp(expr, a)
+        >>> with model.lock():
+        ...     model.states.resize(1)
+        ...     print(op_a.state(0))
+        [3. 5. 7.]
+
+    .. versionadded:: 0.8.1
+    """
+
+    def __init__(self, expression, operand):
+        if not isinstance(expression, Expression):
+            raise TypeError("expression must be of type Expression")
+
+        # Get the underlying Graph representing our expression, and make sure it matches our
+        # expectations.
+        # Much of this is re-checked at the C++ level, but we can raise nicer errors here
+        cdef _Graph expr = expression._model
+        if expr is None:
+            raise TypeError("expression has not been initialized")  # user bypassed __init__()
+        for symbol in expr.iter_decisions():
+            raise ValueError(
+                "expression must only have inputs and constants as roots, "
+                f"received an expression with {type(symbol).__name__} as a root"
+            )
+
+        if expr.num_inputs() != 1:
+            raise ValueError("expression must have exactly one input")
+
+        # Convert the operand into something we can pass to C++
+        cdef _Graph model = operand.model
+        cdef ArrayNode* cppoperand = (<ArraySymbol?>operand).array_ptr
+
+        self.ptr = model._graph.emplace_node[UnaryExpressionNode](expr._owning_ptr, cppoperand)
+
+        self.initialize_arraynode(model, self.ptr)
+
+    @classmethod
+    def _from_ptr(cls, model, capsule):
+        cdef UnaryExpressionOp sym = super()._from_ptr(model, capsule)
+
+        sym.ptr = dynamic_cast_ptr[UnaryExpressionNode](sym.node_ptr)
+        if not sym.ptr:
+            raise TypeError(f"given pointer cannot construct a UnaryExpressionOp")
+
+        return sym
+
+    @classmethod
+    def _from_zipfile(cls, zf, directory, _Graph model, predecessors):
+        from dwave.optimization import Model  # avoid circular import
+
+        expression = Expression.__new__(Expression)  # bypass the __init__
+        with zf.open(directory + "expression.nl", "r") as f:
+            expression._model = Model.from_file(f)
+            expression._model.lock()
+
+        return UnaryExpressionOp(expression, predecessors[0])
+
+    def _into_zipfile(self, zf, directory):
+        """Store a UnaryExpressionOp symbol as a compressed file.
+
+        Args:
+            zf:
+                File pointer to a compressed file to store the
+                UnaryExpressionOp symbol. Strings are interpreted as a
+                file name.
+            directory:
+                Directory where the file is located.
+        Returns:
+            A compressed file.
+
+        See also:
+            :meth:`._from_zipfile`
+        """
+        # Create a model from the shared_ptr held by the node. We need to be careful
+        # not to modify it! That leads to undefined behavior.
+        cdef _Graph expr = _Graph.from_shared_ptr(Model, self.ptr.expression_ptr())
+        assert expr._graph.topologically_sorted()
+        assert expr._lock_count > 0  
+        with zf.open(directory + "expression.nl", mode="w") as f:
+            expr.into_file(f)
+
+    cdef UnaryExpressionNode* ptr
+
+_register(UnaryExpressionOp, typeid(UnaryExpressionNode))

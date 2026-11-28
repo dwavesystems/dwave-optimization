@@ -20,6 +20,7 @@
 #include <ranges>
 #include <span>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -39,13 +40,23 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         ArrayOutputMixin(node_ptr->shape()),
         op(std::move(op)),
         array_ptr_(node_ptr),
-        domain_(calculate_domain_(node_ptr)),
-        integral_(calculate_integral_(node_ptr)),
+        domain_(calculate_domain_(this->op, node_ptr)),
+        integral_(calculate_integral_(this->op, node_ptr)),
         sizeinfo_(array_ptr_->sizeinfo()) {
+        if constexpr (std::same_as<UnaryOp, op::unary_expression_op>) {
+            // Check that the integrality of the predecessor and the expression match
+            if (this->op.domain_integrality()[0] and not array_ptr_->integral()) {
+                throw std::invalid_argument(
+                    "Predecessor must be integral if the expression input is integral"
+                );
+            }
+        }
+
         add_predecessor_(node_ptr);
     }
 
-    explicit UnaryOpNode(ArrayNode* node_ptr) : UnaryOpNode({}, node_ptr) {}
+    explicit UnaryOpNode(ArrayNode* node_ptr) requires(std::default_initializable<UnaryOp>)
+        : UnaryOpNode({}, node_ptr) {}
 
     /// @copydoc Array::buff()
     double const* buff(const State& state) const override {
@@ -195,6 +206,9 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     /// @copydoc Array::sizeinfo()
     SizeInfo sizeinfo() const override { return this->sizeinfo_; }
 
+ protected:
+    [[no_unique_address]] UnaryOp op;
+
  private:
     // It would be more convenient to use ArrayStateData from _state.hpp
     // but we don't currently have that in a public header.
@@ -222,40 +236,61 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
     };
 
     // Calculate the min/max of the op applied to array_ptr
-    static interval<double> calculate_domain_(const Array* array_ptr) {
-        interval<double> array_domain = interval<double>(array_ptr->min(), array_ptr->max());
-
-        if constexpr (std::same_as<UnaryOp, op::sqrt>) {
-            if (not(array_domain <= UnaryOp::template domain<double>[0])) {
-                throw std::invalid_argument("SquareRoot's predecessors must be non-negative");
-            }
+    static interval<double> calculate_domain_(const UnaryOp& op, const Array* array_ptr) {
+        std::variant<interval<double>, interval<long long>> array_domain;
+        if (array_ptr->integral() and std::invocable<UnaryOp, long long>) {
+            array_domain = interval<long long>(array_ptr->min(), array_ptr->max());
+        } else if constexpr (std::invocable<UnaryOp, double>) {
+            array_domain = interval<double>(array_ptr->min(), array_ptr->max());
+        } else {
+            throw std::invalid_argument("Predecessor has incompatible output type with operator");
         }
-        if constexpr (std::same_as<UnaryOp, op::log>) {
-            if (not(array_domain <= UnaryOp::template domain<double>[0])) {
-                throw std::invalid_argument("Log's predecessors must be non-negative");
-            }
-        }
-
-        // All the other ufuncs should have unbounded domains but as a sanity check...
-        assert(array_domain <= UnaryOp::template domain<double>[0]);
 
         // The range of our UnaryOp, i.e. the output min/max of our UnaryOpNode
-        return UnaryOp{}(array_domain);
+        return std::visit(
+            [&op]<DType T>(const interval<T>& domain) -> interval<double> {
+                if constexpr (std::same_as<UnaryOp, op::sqrt>) {
+                    if (not(domain <= UnaryOp::template domain<double>()[0])) {
+                        throw std::invalid_argument(
+                            "SquareRoot's predecessors must be non-negative"
+                        );
+                    }
+                }
+                if constexpr (std::same_as<UnaryOp, op::log>) {
+                    if (not(domain <= UnaryOp::template domain<double>()[0])) {
+                        throw std::invalid_argument("Log's predecessors must be non-negative");
+                    }
+                }
+
+                if (not(domain <= op.template domain<T>()[0])) {
+                    throw std::invalid_argument(
+                        "Predecessor has output range that is not contained with the domain of the "
+                        "operator"
+                    );
+                }
+                return op(domain);
+            },
+            array_domain
+        );
     }
 
     // Determine whether the op applied to array_ptr will always result in an
     // integral output.
-    static bool calculate_integral_(const Array* array_ptr) {
+    static bool calculate_integral_(const UnaryOp& op, const Array* array_ptr) {
         // rint() actually always returns a floating point. But it is an integral
         // floating point. This is a place where having proper dtypes would be
         // very very nice.
         if constexpr (std::same_as<UnaryOp, op::rint>) return true;
 
+        // For now, we query unary_expression_op whether it's integral because it always returns a
+        // double on invocation
+        if constexpr (std::same_as<UnaryOp, op::unary_expression_op>) return op.integral();
+
         // Otherwise, we ask our op what an integer input would result in.
         if (array_ptr->integral()) {
-            return std::integral<decltype(UnaryOp{}(int()))>;
+            return std::integral<decltype(op(int()))>;
         } else {
-            return std::integral<decltype(UnaryOp{}(double()))>;
+            return std::integral<decltype(op(double()))>;
         }
     }
 
@@ -264,8 +299,6 @@ class UnaryOpNode : public ArrayOutputMixin<ArrayNode> {
         array_ptr_ = dynamic_cast<ArrayNode*>(node_ptr);
         assert(array_ptr_ != nullptr);
     }
-
-    [[no_unique_address]] UnaryOp op;
 
     // This is redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
@@ -315,5 +348,15 @@ extern template class UnaryOpNode<op::square>;
 
 using TanhNode = UnaryOpNode<op::tanh>;
 extern template class UnaryOpNode<op::tanh>;
+
+class UnaryExpressionNode : public UnaryOpNode<op::unary_expression_op> {
+ public:
+    UnaryExpressionNode(op::unary_expression_op&& op, ArrayNode* node_ptr) :
+        UnaryOpNode<op::unary_expression_op>(std::move(op), node_ptr) {}
+    UnaryExpressionNode(std::shared_ptr<Graph> expression_ptr, ArrayNode* node_ptr) :
+        UnaryOpNode<op::unary_expression_op>(op::unary_expression_op(expression_ptr), node_ptr) {}
+
+    std::shared_ptr<Graph>& expression_ptr() { return op.expression_ptr; }
+};
 
 }  // namespace dwave::optimization

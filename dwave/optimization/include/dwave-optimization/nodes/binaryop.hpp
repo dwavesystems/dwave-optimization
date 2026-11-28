@@ -41,14 +41,26 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
         ),
         op(std::move(op)),
         operands_({lhs_ptr, rhs_ptr}),
-        domain_(calculate_domain_(op, operands_[0], operands_[1])),
-        integral_(calculate_integral_(op, operands_[0], operands_[1])),
+        domain_(calculate_domain_(this->op, operands_[0], operands_[1])),
+        integral_(calculate_integral_(this->op, operands_[0], operands_[1])),
         sizeinfo_(calculate_sizeinfo_(shape(), operands_[0], operands_[1])) {
+        if constexpr (std::same_as<BinaryOp, op::binary_expression_op>) {
+            // Check that the integrality of the predecessor and the expression match
+            if ((this->op.domain_integrality()[0] and not lhs_ptr->integral()) or
+                (this->op.domain_integrality()[1] and not rhs_ptr->integral())) {
+                throw std::invalid_argument(
+                    "Predecessor must be integral if the expression input is integral"
+                );
+            }
+        }
+
         this->add_predecessor_(lhs_ptr);
         this->add_predecessor_(rhs_ptr);
     }
 
-    BinaryOpNode(ArrayNode* lhs_ptr, ArrayNode* rhs_ptr) : BinaryOpNode({}, lhs_ptr, rhs_ptr) {}
+    BinaryOpNode(ArrayNode* lhs_ptr, ArrayNode* rhs_ptr)
+        requires(std::default_initializable<BinaryOp>)
+        : BinaryOpNode({}, lhs_ptr, rhs_ptr) {}
 
     /// @copydoc Array::buff()
     const double* buff(const State& state) const override;
@@ -114,9 +126,12 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
     /// @copydoc Array::sizeinfo()
     SizeInfo sizeinfo() const override { return this->sizeinfo_; }
 
+ protected:
+    [[no_unique_address]] BinaryOp op;
+
  private:
     static interval<double> calculate_domain_(
-        BinaryOp& op,
+        const BinaryOp& op,
         const Array* lhs_ptr,
         const Array* rhs_ptr
     ) {
@@ -135,13 +150,31 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
         }
 
         return std::visit(
-            [&op](const auto& lhs, const auto& rhs) -> interval<double> { return op(lhs, rhs); },
+            [&op]<DType U, DType V>(
+                const interval<U>& lhs, const interval<V>& rhs
+            ) -> interval<double> {
+                if (not(lhs <= op.template domain<U>()[0] and rhs <= op.template domain<V>()[1])) {
+                    throw std::invalid_argument(
+                        "Predecessor has output range that is not contained with the domain of one "
+                        "of the operator's operands"
+                    );
+                }
+                return op(lhs, rhs);
+            },
             lhs_enclosure,
             rhs_enclosure
         );
     }
 
-    static bool calculate_integral_(BinaryOp& op, const Array* lhs_ptr, const Array* rhs_ptr) {
+    static bool calculate_integral_(
+        const BinaryOp& op,
+        const Array* lhs_ptr,
+        const Array* rhs_ptr
+    ) {
+        // For now, we query binary_expression_op whether it's integral because it always returns a
+        // double on invocation
+        if constexpr (std::same_as<BinaryOp, op::binary_expression_op>) return op.integral();
+
         if (lhs_ptr->integral() and rhs_ptr->integral()) {
             return std::integral<decltype(op(int{}, int{}))>;
         } else if (lhs_ptr->integral()) {
@@ -205,8 +238,6 @@ class BinaryOpNode : public ArrayOutputMixin<EqualityMixin<ArrayNode, BinaryOpNo
 
     void replace_predecessor_(ssize_t previous_index, Node* node_ptr) override;
 
-    [[no_unique_address]] BinaryOp op;
-
     // There are redundant, because we could dynamic_cast each time from
     // predecessors(), but this is more performant
     std::array<Array*, 2> operands_;
@@ -255,5 +286,23 @@ extern template class BinaryOpNode<op::subtract>;
 
 using XorNode = BinaryOpNode<op::logical_xor>;
 extern template class BinaryOpNode<op::logical_xor>;
+
+class BinaryExpressionNode : public BinaryOpNode<op::binary_expression_op> {
+ public:
+    BinaryExpressionNode(op::binary_expression_op&& op, ArrayNode* lhs_ptr, ArrayNode* rhs_ptr) :
+        BinaryOpNode<op::binary_expression_op>(std::move(op), lhs_ptr, rhs_ptr) {}
+    BinaryExpressionNode(
+        std::shared_ptr<Graph> expression_ptr,
+        ArrayNode* lhs_ptr,
+        ArrayNode* rhs_ptr
+    ) :
+        BinaryOpNode<op::binary_expression_op>(
+            op::binary_expression_op(expression_ptr),
+            lhs_ptr,
+            rhs_ptr
+        ) {}
+
+    std::shared_ptr<Graph>& expression_ptr() { return op.expression_ptr; }
+};
 
 }  // namespace dwave::optimization

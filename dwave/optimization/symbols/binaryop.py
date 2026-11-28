@@ -12,7 +12,27 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dwave.optimization.symbols._binaryop import _BinaryOpNodeType, _BinaryOpSymbol
+from dwave.optimization.symbols._binaryop import (
+    BinaryExpressionOp,
+    _BinaryOpNodeType,
+    _BinaryOpSymbol,
+)
+
+__all__ = [
+    "Add",
+    "And",
+    "BinaryExpressionOp",
+    "Divide",
+    "Equal",
+    "LessEqual",
+    "Maximum",
+    "Minimum",
+    "Modulus",
+    "Multiply",
+    "Or",
+    "Subtract",
+    "Xor",
+]
 
 
 class Add(_BinaryOpSymbol, node_type=_BinaryOpNodeType.Add):

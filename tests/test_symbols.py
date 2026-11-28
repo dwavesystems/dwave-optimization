@@ -714,6 +714,81 @@ class TestBasicIndexing(utils.SymbolTests):
         self.assertEqual(model.set(10)[::2].state_size(), 5 * 8)
 
 
+class TestBinaryExpression(utils.SymbolTests):
+    rng = np.random.default_rng(1)
+
+    def generate_symbols(self):
+        model = Model()
+
+        @dwave.optimization.expression
+        def expr(x, y):
+            return x + y
+
+        a = model.constant(1.3)
+        b = model.constant(1.4)
+
+        bin_op = dwave.optimization.symbols.BinaryExpressionOp(expr, a, b)
+
+        model.lock()
+
+        yield bin_op
+
+    def test_malformed_expression(self):
+        model = Model()
+
+        a = model.constant(1.3)
+        b = model.constant(1.4)
+
+        # Too many inputs
+        @dwave.optimization.expression
+        def expr(x, y, z):
+            return x + y + z
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.BinaryExpressionOp(expr, a, b)
+
+    def test_mismatched_expression(self):
+        model = Model()
+
+        a = model.constant(1.3)
+        b = model.constant(1.4)
+
+        # Disjoint domain
+        @dwave.optimization.expression(x=dict(lower_bound=-2, upper_bound=-1))
+        def expr1(x, y):
+            return x + y
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.BinaryExpressionOp(expr1, a, b)
+
+        # Integral domain
+        @dwave.optimization.expression(x=dict(integral=True))
+        def expr2(x, y):
+            return x + y
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.BinaryExpressionOp(expr2, a, b)
+
+    def test_shaped(self):
+        model = Model()
+
+        a_data = np.array([[1, 2, 3], [4, 5, 6]])
+        a = model.constant(a_data)
+        b = model.constant(a_data + 1)
+
+        @dwave.optimization.expression
+        def expr(x, y):
+            return x + y - 1
+
+        op_a = dwave.optimization.symbols.BinaryExpressionOp(expr, a, b)
+
+        model.lock()
+
+        model.states.resize(1)
+
+        np.testing.assert_array_equal(2 * a_data, op_a.state())
+
+
 class TestBinaryVariable(utils.SymbolTests):
     def generate_symbols(self):
         model = Model()
@@ -4634,6 +4709,77 @@ class TestTranspose(utils.SymbolTests):
         with model.lock():
             expected = np.array([[0, 3], [1, 4], [2, 5]])
             np.testing.assert_array_almost_equal(transpose.state(0), expected)
+
+
+class TestUnaryExpression(utils.SymbolTests):
+    rng = np.random.default_rng(1)
+
+    def generate_symbols(self):
+        model = Model()
+
+        @dwave.optimization.expression
+        def expr(a):
+            return a + 1
+
+        a = model.constant(1.3)
+
+        op_a = dwave.optimization.symbols.UnaryExpressionOp(expr, a)
+
+        model.lock()
+
+        yield op_a
+
+    def test_malformed_expression(self):
+        model = Model()
+
+        a = model.constant(1.3)
+
+        # Too many inputs
+        @dwave.optimization.expression
+        def expr1(x, y):
+            return x + y
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.UnaryExpressionOp(expr1, a)
+
+    def test_mismatched_expression(self):
+        model = Model()
+
+        a = model.constant(1.3)
+
+        # Disjoint domain
+        @dwave.optimization.expression(x=dict(lower_bound=-2, upper_bound=-1))
+        def expr1(x):
+            return x + 1
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.UnaryExpressionOp(expr1, a)
+
+        # Integral domain
+        @dwave.optimization.expression(x=dict(integral=True))
+        def expr2(x):
+            return x + 1
+
+        with self.assertRaises(ValueError):
+            dwave.optimization.symbols.UnaryExpressionOp(expr2, a)
+
+    def test_shaped(self):
+        model = Model()
+
+        a_data = np.array([[1, 2, 3], [4, 5, 6]])
+        a = model.constant(a_data)
+
+        @dwave.optimization.expression
+        def expr(a):
+            return a + 1
+
+        op_a = dwave.optimization.symbols.UnaryExpressionOp(expr, a)
+
+        model.lock()
+
+        model.states.resize(1)
+
+        np.testing.assert_array_equal(a_data + 1, op_a.state())
 
 
 class TestWhere(utils.SymbolTests):

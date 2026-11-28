@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from dwave.optimization.expression import Expression
 from dwave.optimization.model import ArraySymbol as _ArraySymbol
 
 class _UnaryOpNodeType:
@@ -32,3 +33,6 @@ class _UnaryOpNodeType:
 class _UnaryOpSymbol(_ArraySymbol):
     def __init_subclass__(cls, /, node_type: int): ...
     def __init__(self, x: _ArraySymbol): ...
+
+class UnaryExpressionOp(_ArraySymbol):
+    def __init__(self, expression: Expression, operand: _ArraySymbol): ...

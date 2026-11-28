@@ -275,5 +275,6 @@ template class BinaryOpNode<op::minimum>;
 template class BinaryOpNode<op::multiply>;
 template class BinaryOpNode<op::remainder>;
 template class BinaryOpNode<op::subtract>;
+template class BinaryOpNode<op::binary_expression_op>;
 
 }  // namespace dwave::optimization
